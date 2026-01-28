@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.model.CollectionSearchCache;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.CollectionSearchCacheRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -31,6 +32,12 @@ public class CollectionSearchCacheService {
 
     private final CollectionSearchCacheRepository cacheRepository;
     private final ObjectMapper objectMapper;
+    private final TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     /**
      * Default cache time-to-live: 24 hours.
@@ -46,10 +53,11 @@ public class CollectionSearchCacheService {
      * @return Optional containing cached results if found and valid
      */
     public Optional<CachedSearchResult> getCachedResults(Long collectionId, String query, Long userId) {
+        Long orgId = getRequiredOrganizationId();
         String queryHash = hashQuery(query);
 
         Optional<CollectionSearchCache> cached = cacheRepository
-                .findByCollectionIdAndQueryHashAndUserId(collectionId, queryHash, userId);
+                .findByOrganizationIdAndCollectionIdAndQueryHashAndUserId(orgId, collectionId, queryHash, userId);
 
         if (cached.isPresent()) {
             CollectionSearchCache cache = cached.get();
@@ -97,6 +105,7 @@ public class CollectionSearchCacheService {
     @Transactional
     public void cacheResults(Long collectionId, String query, Long userId,
                              List<Map<String, Object>> results, String expandedQuery) {
+        Long orgId = getRequiredOrganizationId();
         String queryHash = hashQuery(query);
 
         try {
@@ -104,7 +113,7 @@ public class CollectionSearchCacheService {
 
             // Check if cache entry already exists
             Optional<CollectionSearchCache> existing = cacheRepository
-                    .findByCollectionIdAndQueryHashAndUserId(collectionId, queryHash, userId);
+                    .findByOrganizationIdAndCollectionIdAndQueryHashAndUserId(orgId, collectionId, queryHash, userId);
 
             CollectionSearchCache cache;
             if (existing.isPresent()) {
@@ -117,6 +126,7 @@ public class CollectionSearchCacheService {
             } else {
                 // Create new cache entry
                 cache = CollectionSearchCache.builder()
+                        .organizationId(orgId)
                         .collectionId(collectionId)
                         .userId(userId)
                         .query(query)
@@ -144,7 +154,8 @@ public class CollectionSearchCacheService {
      */
     @Transactional
     public void invalidateCollectionCache(Long collectionId) {
-        cacheRepository.deleteByCollectionId(collectionId);
+        Long orgId = getRequiredOrganizationId();
+        cacheRepository.deleteByOrganizationIdAndCollectionId(orgId, collectionId);
         log.info("Invalidated search cache for collection {}", collectionId);
     }
 
@@ -155,6 +166,8 @@ public class CollectionSearchCacheService {
     @Scheduled(fixedRate = 3600000) // Every hour
     @Transactional
     public void cleanupExpiredCache() {
+        // Note: This scheduled job cleans all orgs - using deprecated method intentionally
+        // In production, consider iterating over all orgs or using a global cleanup
         int deleted = cacheRepository.deleteExpiredCache(LocalDateTime.now());
         if (deleted > 0) {
             log.info("Cleaned up {} expired cache entries", deleted);
@@ -187,7 +200,8 @@ public class CollectionSearchCacheService {
      * Get cache statistics for monitoring.
      */
     public Map<String, Object> getCacheStats(Long collectionId) {
-        long count = cacheRepository.countByCollectionId(collectionId);
+        Long orgId = getRequiredOrganizationId();
+        long count = cacheRepository.countByOrganizationIdAndCollectionId(orgId, collectionId);
         return Map.of(
                 "collectionId", collectionId,
                 "cacheEntries", count,

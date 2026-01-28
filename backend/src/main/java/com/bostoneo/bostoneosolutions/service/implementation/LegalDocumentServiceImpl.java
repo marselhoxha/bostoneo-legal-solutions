@@ -11,6 +11,7 @@ import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.service.LegalDocumentService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
@@ -45,19 +46,33 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
-    
+    private final TenantService tenantService;
+
     // Base directory for document storage
     private final String BASE_UPLOAD_DIR = System.getProperty("user.home") + "/bostoneosolutions/documents/";
 
+    /**
+     * Get the current organization ID from tenant context.
+     * Throws RuntimeException if no organization context is available.
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
     @Override
     public CustomHttpResponse<List<LegalDocument>> getAllDocuments() {
-        List<LegalDocument> documents = documentRepository.findAll(Sort.by(Sort.Direction.DESC, "updatedAt"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<LegalDocument> documents = documentRepository.findByOrganizationId(orgId);
         return new CustomHttpResponse<>(200, "Documents retrieved successfully", documents);
     }
 
     @Override
     public CustomHttpResponse<Page<LegalDocument>> getDocumentsPaged(int page, int size) {
-        Page<LegalDocument> documents = documentRepository.findAll(
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Page<LegalDocument> documents = documentRepository.findByOrganizationId(orgId,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"))
         );
         return new CustomHttpResponse<>(200, "Documents retrieved successfully", documents);
@@ -65,7 +80,9 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
 
     @Override
     public CustomHttpResponse<LegalDocument> getDocumentById(Long id) {
-        LegalDocument document = documentRepository.findById(id)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify document belongs to current organization
+        LegalDocument document = documentRepository.findByIdAndOrganizationId(id, orgId)
                 .orElseThrow(() -> new EntityNotFoundException("Document not found with id: " + id));
         return new CustomHttpResponse<>(200, "Document retrieved successfully", document);
     }
@@ -74,14 +91,16 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
     public CustomHttpResponse<List<LegalDocument>> getDocumentsByCaseId(Long caseId) {
         try {
             log.info("Fetching documents for case ID: {}", caseId);
-            
+            Long orgId = getRequiredOrganizationId();
+
             if (caseId == null) {
                 throw new IllegalArgumentException("Case ID cannot be null");
             }
-            
-            List<LegalDocument> documents = documentRepository.findByCaseId(caseId);
+
+            // SECURITY: Use tenant-filtered query
+            List<LegalDocument> documents = documentRepository.findByCaseIdAndOrganizationId(caseId, orgId);
             log.info("Found {} documents for case ID: {}", documents.size(), caseId);
-            
+
             return new CustomHttpResponse<>(200, "Case documents retrieved successfully", documents);
         } catch (Exception e) {
             log.error("Error fetching documents for case ID {}: {}", caseId, e.getMessage(), e);
@@ -91,8 +110,11 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
 
     @Override
     public CustomHttpResponse<LegalDocument> createDocument(LegalDocumentDTO documentDTO) {
+        Long orgId = getRequiredOrganizationId();
+
         LegalDocument document = new LegalDocument();
         BeanUtils.copyProperties(documentDTO, document);
+        document.setOrganizationId(orgId);  // SECURITY: Set organization context
         if (document.getStatus() == null) {
             document.setStatus(DocumentStatus.DRAFT);
         }
@@ -105,7 +127,10 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
 
     @Override
     public CustomHttpResponse<LegalDocument> updateDocument(Long id, LegalDocumentDTO documentDTO) {
-        LegalDocument existingDocument = documentRepository.findById(id)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify document belongs to current organization
+        LegalDocument existingDocument = documentRepository.findByIdAndOrganizationId(id, orgId)
                 .orElseThrow(() -> new EntityNotFoundException("Document not found with id: " + id));
 
         // Don't update these fields
@@ -129,7 +154,10 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
 
     @Override
     public CustomHttpResponse<Void> deleteDocument(Long id) {
-        LegalDocument document = documentRepository.findById(id)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify document belongs to current organization
+        LegalDocument document = documentRepository.findByIdAndOrganizationId(id, orgId)
                 .orElseThrow(() -> new EntityNotFoundException("Document not found with id: " + id));
         
         // Delete the physical file if it exists
@@ -159,9 +187,10 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
     @Override
     public CustomHttpResponse<LegalDocument> uploadDocument(MultipartFile file, String documentData) {
         try {
-            log.info("📄 DOCUMENT UPLOAD STARTED - File: {}, Size: {} bytes", file.getOriginalFilename(), file.getSize());
+            Long orgId = getRequiredOrganizationId();
+            log.info("📄 DOCUMENT UPLOAD STARTED - File: {}, Size: {} bytes, OrgId: {}", file.getOriginalFilename(), file.getSize(), orgId);
             log.info("📄 Document data received: {}", documentData);
-            
+
             // Parse document data
             LegalDocumentDTO documentDTO = objectMapper.readValue(documentData, LegalDocumentDTO.class);
             log.info("📄 Parsed document DTO - Case ID: {}, Uploaded by: {}", documentDTO.getCaseId(), documentDTO.getUploadedBy());
@@ -187,13 +216,16 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
             // Create and save document metadata
             LegalDocument document = new LegalDocument();
             BeanUtils.copyProperties(documentDTO, document);
-            
+
+            // SECURITY: Set organization context
+            document.setOrganizationId(orgId);
+
             // Set file properties
             document.setUrl(fullPath.toString());
             document.setFileName(originalFilename);
             document.setFileType(file.getContentType());
             document.setFileSize(file.getSize());
-            
+
             // Set default values if needed
             if (document.getStatus() == null) {
                 document.setStatus(DocumentStatus.DRAFT);
@@ -208,9 +240,10 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
             // Send notification for document upload
             try {
                 log.info("🔔 Starting notification process for document upload...");
-                if (savedDocument.getCaseId() != null) {
+                if (savedDocument.getCaseId() != null && savedDocument.getOrganizationId() != null) {
                     log.info("🔔 Looking up case with ID: {}", savedDocument.getCaseId());
-                    LegalCase legalCase = legalCaseRepository.findById(savedDocument.getCaseId()).orElse(null);
+                    // SECURITY: Use tenant-filtered query
+                    LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(savedDocument.getCaseId(), savedDocument.getOrganizationId()).orElse(null);
                     if (legalCase != null) {
                         log.info("🔔 Found case: {}", legalCase.getTitle());
                         String title = "Document Uploaded";
@@ -245,7 +278,10 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
     @Override
     public byte[] downloadDocument(Long id) {
         try {
-            LegalDocument document = documentRepository.findById(id)
+            Long orgId = getRequiredOrganizationId();
+
+            // SECURITY: Verify document belongs to current organization
+            LegalDocument document = documentRepository.findByIdAndOrganizationId(id, orgId)
                     .orElseThrow(() -> new EntityNotFoundException("Document not found with id: " + id));
             
             Path filePath = Paths.get(document.getUrl());

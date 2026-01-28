@@ -7,6 +7,7 @@ import com.bostoneo.bostoneosolutions.model.AIFamilyLawCalculation;
 import com.bostoneo.bostoneosolutions.enumeration.FamilyLawCaseType;
 import com.bostoneo.bostoneosolutions.enumeration.FamilyLawStatus;
 import com.bostoneo.bostoneosolutions.enumeration.CalculationType;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AIFamilyLawCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.AIFamilyLawCalculationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,10 +33,13 @@ public class AIFamilyLawServiceImpl implements AIFamilyLawService {
     private final AIFamilyLawCalculationRepository calculationRepository;
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
+    private final TenantService tenantService;
 
     @Override
     public AIFamilyLawCase createFamilyLawCase(AIFamilyLawCase familyCase) {
         log.info("Creating family law case for client: {}", familyCase.getClientId());
+        // SECURITY: Set organization ID from current tenant context
+        familyCase.setOrganizationId(tenantService.requireCurrentOrganizationId());
         familyCase.setCreatedAt(LocalDateTime.now());
         familyCase.setUpdatedAt(LocalDateTime.now());
         return caseRepository.save(familyCase);
@@ -60,24 +64,34 @@ public class AIFamilyLawServiceImpl implements AIFamilyLawService {
 
     @Override
     public AIFamilyLawCase getFamilyLawCaseById(Long id) {
-        return caseRepository.findById(id)
+        // SECURITY: Use tenant-filtered lookup to prevent cross-tenant access
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return caseRepository.findByIdAndOrganizationId(id, orgId)
                 .orElseThrow(() -> new RuntimeException("Family law case not found with ID: " + id));
     }
 
     @Override
     public Page<AIFamilyLawCase> getFamilyLawCasesByType(FamilyLawCaseType caseType, Pageable pageable) {
-        return caseRepository.findByCaseType(caseType, pageable);
+        // SECURITY: Filter by organization
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return caseRepository.findByCaseTypeAndOrganizationId(caseType, orgId, pageable);
     }
 
     @Override
     public Page<AIFamilyLawCase> getFamilyLawCasesByStatus(FamilyLawStatus status, Pageable pageable) {
-        return caseRepository.findByStatus(status, pageable);
+        // SECURITY: Filter by organization
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return caseRepository.findByStatusAndOrganizationId(status, orgId, pageable);
     }
 
     @Override
     public void deleteFamilyLawCase(Long id) {
         log.info("Deleting family law case with ID: {}", id);
-        caseRepository.deleteById(id);
+        // SECURITY: Verify case belongs to current tenant before deleting
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        AIFamilyLawCase existing = caseRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Family law case not found with ID: " + id));
+        caseRepository.delete(existing);
     }
 
     @Override

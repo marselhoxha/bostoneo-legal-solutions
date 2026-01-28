@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.model.CaseRoleAssignment;
 import com.bostoneo.bostoneosolutions.model.Permission;
 import com.bostoneo.bostoneosolutions.model.Role;
 import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.CaseRoleAssignmentRepository;
 import com.bostoneo.bostoneosolutions.repository.PermissionRepository;
 import com.bostoneo.bostoneosolutions.repository.RoleRepository;
@@ -29,6 +30,7 @@ public class RoleServiceImpl implements RoleService {
     private final CaseRoleAssignmentRepository<CaseRoleAssignment> caseRoleRepository;
     private final PermissionRepository<Permission> permissionRepository;
     private final UserRepository<User> userRepository;
+    private final TenantService tenantService;
     
     @Override
     public Role getRoleByUserId(Long id) {
@@ -126,7 +128,16 @@ public class RoleServiceImpl implements RoleService {
     
     @Override
     public List<User> getUsersByRoleId(Long roleId) {
-        return roleRepository.getUsersByRoleId(roleId);
+        List<User> allUsers = roleRepository.getUsersByRoleId(roleId);
+        // SECURITY: Filter users by current organization
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (orgId != null) {
+            return allUsers.stream()
+                .filter(user -> orgId.equals(user.getOrganizationId()))
+                .collect(Collectors.toList());
+        }
+        // If no org context (system call), return all users
+        return allUsers;
     }
     
     @Override

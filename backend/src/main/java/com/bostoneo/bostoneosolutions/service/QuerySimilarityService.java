@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.model.AIResearchCache;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AIResearchCacheRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class QuerySimilarityService {
 
     private final AIResearchCacheRepository cacheRepository;
+    private final TenantService tenantService;
 
     // Similarity threshold (0.0 to 1.0)
     private static final double SIMILARITY_THRESHOLD = 0.75;
@@ -29,11 +31,23 @@ public class QuerySimilarityService {
      * CRITICAL: Only returns cache entries from the same research mode AND same case
      * to prevent FAST mode results from being returned for THOROUGH queries (and vice versa)
      * and to prevent cross-case cache pollution
+     * SECURITY: Only returns cache entries from the same organization
      */
     public Optional<AIResearchCache> findSimilarCachedQuery(String query, String searchType, String jurisdiction, String researchMode, String caseId) {
-        List<AIResearchCache> validCaches = cacheRepository.findByQueryTypeAndIsValidTrue(
-            com.bostoneo.bostoneosolutions.enumeration.QueryType.valueOf(searchType.toUpperCase())
-        );
+        // SECURITY: Get current organization and filter cache by org
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+        List<AIResearchCache> validCaches;
+        if (orgId != null) {
+            validCaches = cacheRepository.findByOrganizationIdAndQueryTypeAndIsValidTrue(
+                orgId,
+                com.bostoneo.bostoneosolutions.enumeration.QueryType.valueOf(searchType.toUpperCase())
+            );
+        } else {
+            // Fallback for system-level operations (should rarely happen)
+            validCaches = cacheRepository.findByQueryTypeAndIsValidTrue(
+                com.bostoneo.bostoneosolutions.enumeration.QueryType.valueOf(searchType.toUpperCase())
+            );
+        }
 
         if (validCaches.isEmpty()) {
             return Optional.empty();
@@ -221,8 +235,13 @@ public class QuerySimilarityService {
      * Find queries that are likely duplicates or near-duplicates
      */
     public List<DuplicateGroup> findDuplicateQueries() {
-        List<AIResearchCache> allCaches = cacheRepository.findAll().stream()
+        // Use tenant-filtered query
+        List<AIResearchCache> allCaches = tenantService.getCurrentOrganizationId()
+            .map(orgId -> cacheRepository.findByOrganizationId(orgId))
+            .orElseThrow(() -> new RuntimeException("Organization context required"))
+            .stream()
             .filter(cache -> cache.getIsValid() &&
+                           cache.getExpiresAt() != null &&
                            cache.getExpiresAt().isAfter(LocalDateTime.now()))
             .collect(Collectors.toList());
 

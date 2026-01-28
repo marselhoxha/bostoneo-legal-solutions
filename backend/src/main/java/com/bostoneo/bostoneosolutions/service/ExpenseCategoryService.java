@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.dto.ExpenseCategoryDTO;
 import com.bostoneo.bostoneosolutions.model.ExpenseCategory;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.ExpenseCategoryRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -16,28 +17,42 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ExpenseCategoryService {
     private final ExpenseCategoryRepository expenseCategoryRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     public List<ExpenseCategoryDTO> getAllCategories() {
-        return expenseCategoryRepository.findAll().stream()
+        Long orgId = getRequiredOrganizationId();
+        return expenseCategoryRepository.findByOrganizationId(orgId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     public ExpenseCategoryDTO getCategoryById(Long id) {
-        return expenseCategoryRepository.findById(id)
+        Long orgId = getRequiredOrganizationId();
+        return expenseCategoryRepository.findByIdAndOrganizationId(id, orgId)
                 .map(this::convertToDTO)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found with id: " + id));
     }
 
     @Transactional
     public ExpenseCategoryDTO createCategory(ExpenseCategoryDTO categoryDTO) {
+        Long orgId = getRequiredOrganizationId();
         ExpenseCategory category = convertToEntity(categoryDTO);
+        category.setOrganizationId(orgId);
         return convertToDTO(expenseCategoryRepository.save(category));
     }
 
     @Transactional
     public ExpenseCategoryDTO updateCategory(Long id, ExpenseCategoryDTO categoryDTO) {
-        ExpenseCategory existingCategory = expenseCategoryRepository.findById(id)
+        Long orgId = getRequiredOrganizationId();
+        ExpenseCategory existingCategory = expenseCategoryRepository.findByIdAndOrganizationId(id, orgId)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found with id: " + id));
 
         existingCategory.setName(categoryDTO.getName());
@@ -50,7 +65,8 @@ public class ExpenseCategoryService {
                 throw new IllegalArgumentException("Category cannot be its own parent");
             }
             
-            ExpenseCategory parent = expenseCategoryRepository.findById(categoryDTO.getParentId())
+            // SECURITY: Use tenant-filtered query for parent category
+            ExpenseCategory parent = expenseCategoryRepository.findByIdAndOrganizationId(categoryDTO.getParentId(), orgId)
                     .orElseThrow(() -> new EntityNotFoundException("Parent category not found with id: " + categoryDTO.getParentId()));
             existingCategory.setParent(parent);
         } else {
@@ -66,6 +82,10 @@ public class ExpenseCategoryService {
 
     @Transactional
     public void deleteCategory(Long id) {
+        Long orgId = getRequiredOrganizationId();
+        if (!expenseCategoryRepository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new EntityNotFoundException("Category not found with id: " + id);
+        }
         if (hasChildCategories(id)) {
             throw new IllegalStateException("Cannot delete category with child categories");
         }
@@ -73,7 +93,8 @@ public class ExpenseCategoryService {
     }
 
     public boolean hasChildCategories(Long parentId) {
-        return expenseCategoryRepository.existsByParentId(parentId);
+        Long orgId = getRequiredOrganizationId();
+        return expenseCategoryRepository.existsByParentIdAndOrganizationId(parentId, orgId);
     }
 
     private ExpenseCategoryDTO convertToDTO(ExpenseCategory category) {
@@ -89,11 +110,13 @@ public class ExpenseCategoryService {
     }
 
     private ExpenseCategory convertToEntity(ExpenseCategoryDTO categoryDTO) {
+        Long orgId = getRequiredOrganizationId();
         ExpenseCategory category = new ExpenseCategory();
         category.setName(categoryDTO.getName());
         category.setColor(categoryDTO.getColor());
         if (categoryDTO.getParentId() != null) {
-            ExpenseCategory parent = expenseCategoryRepository.findById(categoryDTO.getParentId())
+            // SECURITY: Use tenant-filtered query for parent category
+            ExpenseCategory parent = expenseCategoryRepository.findByIdAndOrganizationId(categoryDTO.getParentId(), orgId)
                     .orElseThrow(() -> new EntityNotFoundException("Parent category not found with id: " + categoryDTO.getParentId()));
             category.setParent(parent);
         }

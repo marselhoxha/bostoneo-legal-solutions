@@ -71,9 +71,11 @@ public class FileManagerServiceImpl implements FileManagerService {
                 }
             }
         } catch (Exception e) {
-            log.debug("Could not get current user from security context: {}", e.getMessage());
+            log.warn("Could not get current user from security context: {}", e.getMessage());
         }
-        return 1L; // Default fallback
+        // SECURITY: Throw exception instead of returning hardcoded ID
+        // A hardcoded fallback could allow unauthenticated operations to be attributed to wrong user
+        throw new RuntimeException("Authentication required - could not determine current user");
     }
 
     private String getCurrentUserName() {
@@ -118,33 +120,47 @@ public class FileManagerServiceImpl implements FileManagerService {
     private final RoleService roleService;
     private final TenantService tenantService;
 
+    /**
+     * Get the current organization ID from tenant context.
+     * Throws RuntimeException if no organization context is available.
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
     @Override
     @Transactional(readOnly = true)
     public Page<FileItemDTO> getFiles(Pageable pageable, Long folderId, Long caseId, String search, String fileType) {
+        Long orgId = getRequiredOrganizationId();
         log.info("Getting files with pagination: page={}, size={}, folderId={}, caseId={}, search={}, fileType={}", 
                 pageable.getPageNumber(), pageable.getPageSize(), folderId, caseId, search, fileType);
         
         Page<FileItem> filesPage;
         
         if (StringUtils.hasText(search)) {
-            filesPage = fileItemRepository.searchByNameOrDescription(search, pageable);
+            // SECURITY: Use tenant-filtered search
+            filesPage = fileItemRepository.searchByNameOrDescriptionAndOrganizationId(search, orgId, pageable);
         } else if (caseId != null && caseId == -1L) {
             // Special case: -1 means personal files (no case association)
             Long currentUserId = getCurrentUserId();
-            filesPage = fileItemRepository.findPersonalDocuments(currentUserId, folderId, pageable);
+            filesPage = fileItemRepository.findPersonalDocumentsByOrganization(currentUserId, folderId, orgId, pageable);
         } else if (folderId != null || caseId != null || StringUtils.hasText(fileType)) {
             // Handle media file type specially
             if ("media".equalsIgnoreCase(fileType)) {
-                filesPage = fileItemRepository.findMediaFiles(pageable);
+                // SECURITY: Use tenant-filtered query
+                filesPage = fileItemRepository.findMediaFilesByOrganization(orgId, pageable);
             } else {
                 String mimeTypePattern = null;
                 if (StringUtils.hasText(fileType)) {
                     mimeTypePattern = getMimeTypePattern(fileType);
                 }
-                filesPage = fileItemRepository.findWithFilters(folderId, caseId, mimeTypePattern, null, null, null, pageable);
+                // SECURITY: Use tenant-filtered query
+                filesPage = fileItemRepository.findWithFiltersByOrganization(folderId, caseId, mimeTypePattern, null, null, null, orgId, pageable);
             }
         } else {
-            filesPage = fileItemRepository.findByDeletedFalse(pageable);
+            // SECURITY: Use tenant-filtered query
+            filesPage = fileItemRepository.findByDeletedFalseAndOrganizationId(orgId, pageable);
         }
         
         List<FileItemDTO> fileItemDTOs = filesPage.getContent().stream()
@@ -158,14 +174,16 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public FileItemDTO getFile(Long fileId) {
         log.info("Getting file with ID: {}", fileId);
-        
-        FileItem fileItem = fileItemRepository.findById(fileId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify file belongs to current organization
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
-        
+
         if (fileItem.getDeleted()) {
             throw new RuntimeException("File has been deleted");
         }
-        
+
         return convertToFileItemDTO(fileItem);
     }
     
@@ -173,14 +191,16 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public String getFilePath(Long fileId) {
         log.info("Getting file path for file ID: {}", fileId);
-        
-        FileItem fileItem = fileItemRepository.findById(fileId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify file belongs to current organization
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
-        
+
         if (fileItem.getDeleted()) {
             throw new RuntimeException("File has been deleted");
         }
-        
+
         // Return the stored file path
         return fileItem.getFilePath();
     }
@@ -255,14 +275,16 @@ public class FileManagerServiceImpl implements FileManagerService {
         }
     }
     
-    private FileItem createFileRecord(String fileName, MultipartFile file, String storedFilePath, 
+    private FileItem createFileRecord(String fileName, MultipartFile file, String storedFilePath,
                                      Long folderId, Long caseId, String tags) {
         try {
             log.info("Creating file record for: {}", fileName);
             Long currentUserId = getCurrentUserId();
-            log.info("Current user ID: {}", currentUserId);
-            
+            Long orgId = getRequiredOrganizationId();
+            log.info("Current user ID: {}, Organization ID: {}", currentUserId, orgId);
+
             FileItem fileItem = FileItem.builder()
+                    .organizationId(orgId)  // SECURITY: Set organization context
                     .name(fileName)
                     .originalName(file.getOriginalFilename())
                     .size(file.getSize())
@@ -303,6 +325,7 @@ public class FileManagerServiceImpl implements FileManagerService {
                 for (String tagName : tagArray) {
                     if (StringUtils.hasText(tagName.trim())) {
                         FileTag tag = FileTag.builder()
+                                .organizationId(orgId)
                                 .fileId(fileItem.getId())
                                 .tagName(tagName.trim())
                                 .createdBy(currentUserId)
@@ -327,8 +350,10 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Override
     public FileItemDTO updateFile(Long fileId, UpdateFileRequestDTO request) {
         log.info("Updating file with ID: {}", fileId);
-        
-        FileItem fileItem = fileItemRepository.findById(fileId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify file belongs to current organization
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
         
         if (StringUtils.hasText(request.getName())) {
@@ -348,8 +373,10 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Override
     public void deleteFile(Long fileId) {
         log.info("Soft deleting file with ID: {}", fileId);
-        
-        FileItem fileItem = fileItemRepository.findById(fileId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify file belongs to current organization
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
         
         if (Boolean.TRUE.equals(fileItem.getDeleted())) {
@@ -369,8 +396,10 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional
     public FileItemDTO restoreFile(Long fileId) {
         log.info("Restoring file with ID: {}", fileId);
-        
-        FileItem fileItem = fileItemRepository.findById(fileId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify file belongs to current organization
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
         
         if (!Boolean.TRUE.equals(fileItem.getDeleted())) {
@@ -392,8 +421,10 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional
     public void permanentlyDeleteFile(Long fileId) {
         log.info("Permanently deleting file with ID: {}", fileId);
-        
-        FileItem fileItem = fileItemRepository.findById(fileId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify file belongs to current organization
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
         
         log.info("Found file: {} (deleted: {})", fileItem.getName(), fileItem.getDeleted());
@@ -407,24 +438,25 @@ public class FileManagerServiceImpl implements FileManagerService {
         
         try {
             // Delete related data first to avoid foreign key constraints
+            // SECURITY: Use tenant-filtered delete
             log.info("Deleting file access logs for file ID: {}", fileId);
-            fileAccessLogRepository.deleteByFileId(fileId);
+            fileAccessLogRepository.deleteByFileIdAndOrganizationId(fileId, orgId);
             log.info("Deleted file access logs");
             
             log.info("Deleting file comments for file ID: {}", fileId);
-            fileCommentRepository.deleteByFileId(fileId);
+            fileCommentRepository.deleteByFileIdAndOrganizationId(fileId, orgId);
             log.info("Deleted file comments");
             
             log.info("Deleting file tags for file ID: {}", fileId);
-            fileTagRepository.deleteByFileId(fileId);
+            fileTagRepository.deleteByOrganizationIdAndFileId(orgId, fileId);
             log.info("Deleted file tags");
-            
+
             log.info("Deleting file shares for file ID: {}", fileId);
-            fileShareRepository.deleteByFileId(fileId);
+            fileShareRepository.deleteByFileIdAndOrganizationId(fileId, orgId);
             log.info("Deleted file shares");
             
             log.info("Deleting file versions for file ID: {}", fileId);
-            fileVersionRepository.deleteByFileId(fileId);
+            fileVersionRepository.deleteByFileIdAndOrganizationId(fileId, orgId);
             log.info("Deleted file versions");
             
             // Now delete the file item
@@ -454,10 +486,12 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Override
     @Transactional(readOnly = true)
     public Page<FileItemDTO> getDeletedFiles(Pageable pageable) {
-        log.info("Getting deleted files with pagination: page={}, size={}", 
+        log.info("Getting deleted files with pagination: page={}, size={}",
                 pageable.getPageNumber(), pageable.getPageSize());
-        
-        Page<FileItem> deletedFiles = fileItemRepository.findByDeletedTrueOrderByDeletedAtDesc(pageable);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Page<FileItem> deletedFiles = fileItemRepository.findByDeletedTrueAndOrganizationIdOrderByDeletedAtDesc(orgId, pageable);
         
         List<FileItemDTO> fileItemDTOs = deletedFiles.getContent().stream()
                 .map(this::convertToFileItemDTO)
@@ -470,8 +504,10 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional
     public void moveFile(Long fileId, Long targetFolderId) {
         log.info("Moving file {} to folder {}", fileId, targetFolderId);
-        
-        FileItem fileItem = fileItemRepository.findById(fileId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify file belongs to current organization
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
         
         if (fileItem.getDeleted()) {
@@ -488,8 +524,10 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional
     public void copyFile(Long fileId, Long targetFolderId) {
         log.info("Copying file {} to folder {}", fileId, targetFolderId);
-        
-        FileItem originalFile = fileItemRepository.findById(fileId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify file belongs to current organization
+        FileItem originalFile = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
         
         if (originalFile.getDeleted()) {
@@ -500,8 +538,9 @@ public class FileManagerServiceImpl implements FileManagerService {
         String newFileName = "copy_" + System.currentTimeMillis() + "_" + originalFile.getOriginalName();
         String newFilePath = originalFile.getFilePath().replace(originalFile.getOriginalName(), newFileName);
         
-        // Create new file record
+        // Create new file record with organization context
         FileItem newFile = FileItem.builder()
+                .organizationId(orgId)  // SECURITY: Set organization context
                 .name(originalFile.getName() + " (Copy)")
                 .originalName(originalFile.getOriginalName())
                 .size(originalFile.getSize())
@@ -529,8 +568,10 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Override
     @Transactional
     public FileItemDTO toggleFileStar(Long fileId) {
-        // Get the current file state
-        FileItem fileItem = fileItemRepository.findById(fileId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify file belongs to current organization
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
         
         log.info("[STAR DEBUG] File {} - DB current starred: {} (raw: {})", 
@@ -558,8 +599,10 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Override
     @Transactional
     public FileItemDTO toggleShareWithClient(Long fileId) {
-        // Get the current file state
-        FileItem fileItem = fileItemRepository.findById(fileId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify file belongs to current organization
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
 
         log.info("[SHARE DEBUG] File {} - DB current sharedWithClient: {}",
@@ -589,10 +632,10 @@ public class FileManagerServiceImpl implements FileManagerService {
     public FolderDTO getRootFolder() {
         log.info("Getting root folder");
 
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         List<Folder> rootFolders = tenantService.getCurrentOrganizationId()
             .map(orgId -> folderRepository.findRootFoldersByOrganization(orgId))
-            .orElseGet(() -> folderRepository.findRootFolders());
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
 
         if (rootFolders.isEmpty()) {
             // Create default root folder
@@ -626,10 +669,12 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public FolderDTO getFolder(Long folderId) {
         log.info("Getting folder with ID: {}", folderId);
-        
-        Folder folder = folderRepository.findById(folderId)
-                .orElseThrow(() -> new RuntimeException("Folder not found with ID: " + folderId));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Folder folder = folderRepository.findByIdAndOrganizationId(folderId, orgId)
+                .orElseThrow(() -> new RuntimeException("Folder not found or access denied: " + folderId));
+
         return convertToFolderDTO(folder);
     }
     
@@ -637,9 +682,16 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public List<FolderDTO> getSubfolders(Long parentFolderId) {
         log.info("Getting subfolders for parent folder ID: {}", parentFolderId);
-        
-        List<Folder> subfolders = folderRepository.findByParentFolderIdAndDeletedFalse(parentFolderId);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify parent folder belongs to current organization (if not root)
+        if (parentFolderId != null && !folderRepository.existsByIdAndOrganizationId(parentFolderId, orgId)) {
+            throw new RuntimeException("Folder not found or access denied: " + parentFolderId);
+        }
+
+        // SECURITY: Use tenant-filtered query directly
+        List<Folder> subfolders = folderRepository.findByParentFolderIdAndDeletedFalseAndOrganizationId(parentFolderId, orgId);
+
         return subfolders.stream()
                 .map(this::convertToFolderDTO)
                 .collect(Collectors.toList());
@@ -666,8 +718,10 @@ public class FileManagerServiceImpl implements FileManagerService {
         log.info("Creating folder: {} with parentId: {}, caseId: {}", 
                 request.getName(), request.getParentFolderIdValue(), request.getCaseId());
         
+        Long orgId = getRequiredOrganizationId();
         Long parentFolderId = request.getParentFolderIdValue();
-        Optional<Folder> existingFolder = folderRepository.findByNameAndParent(request.getName(), parentFolderId);
+        // SECURITY: Check for existing folder only within current organization using tenant-filtered query
+        Optional<Folder> existingFolder = folderRepository.findByNameAndParentAndOrganizationId(request.getName(), parentFolderId, orgId);
         if (existingFolder.isPresent()) {
             log.warn("Folder already exists: {} in parent: {}", request.getName(), parentFolderId);
             // Return existing folder instead of throwing error
@@ -690,9 +744,11 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Override
     public FolderDTO updateFolder(Long folderId, UpdateFolderRequestDTO request) {
         log.info("Updating folder with ID: {}", folderId);
-        
-        Folder folder = folderRepository.findById(folderId)
-                .orElseThrow(() -> new RuntimeException("Folder not found with ID: " + folderId));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Folder folder = folderRepository.findByIdAndOrganizationId(folderId, orgId)
+                .orElseThrow(() -> new RuntimeException("Folder not found or access denied: " + folderId));
         
         if (StringUtils.hasText(request.getName())) {
             folder.setName(request.getName());
@@ -706,37 +762,39 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional
     public void deleteFolder(Long folderId) {
         log.info("Deleting folder with ID: {}", folderId);
-        
-        Folder folder = folderRepository.findById(folderId)
-                .orElseThrow(() -> new RuntimeException("Folder not found with ID: " + folderId));
-        
-        // Recursively delete all contents first
-        deleteFolderContentsRecursively(folderId);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Folder folder = folderRepository.findByIdAndOrganizationId(folderId, orgId)
+                .orElseThrow(() -> new RuntimeException("Folder not found or access denied: " + folderId));
+
+        // Recursively delete all contents first (with org filter)
+        deleteFolderContentsRecursively(folderId, orgId);
+
         // Now delete the folder itself
         folder.setDeleted(true);
         folderRepository.save(folder);
-        
+
         log.info("Successfully deleted folder with ID: {}", folderId);
     }
-    
-    private void deleteFolderContentsRecursively(Long folderId) {
+
+    private void deleteFolderContentsRecursively(Long folderId, Long orgId) {
         log.debug("Deleting contents of folder with ID: {}", folderId);
-        
-        // First, delete all files in this folder
-        List<FileItem> files = fileItemRepository.findByFolderIdAndDeletedFalse(folderId);
+
+        // SECURITY: First, delete all files in this folder using tenant-filtered query
+        List<FileItem> files = fileItemRepository.findByFolderIdAndDeletedFalseAndOrganizationId(folderId, orgId);
         for (FileItem file : files) {
             log.debug("Soft deleting file: {} (ID: {})", file.getName(), file.getId());
             file.setDeleted(true);
             file.setDeletedAt(LocalDateTime.now());
             fileItemRepository.save(file);
         }
-        
-        // Then, recursively delete all subfolders
-        List<Folder> subFolders = folderRepository.findByParentFolderIdAndDeletedFalse(folderId);
+
+        // SECURITY: Then, recursively delete all subfolders using tenant-filtered query
+        List<Folder> subFolders = folderRepository.findByParentFolderIdAndDeletedFalseAndOrganizationId(folderId, orgId);
         for (Folder subFolder : subFolders) {
             log.debug("Recursively deleting subfolder: {} (ID: {})", subFolder.getName(), subFolder.getId());
-            deleteFolderContentsRecursively(subFolder.getId()); // Recursive call
+            deleteFolderContentsRecursively(subFolder.getId(), orgId); // Recursive call with org filter
             subFolder.setDeleted(true);
             folderRepository.save(subFolder);
         }
@@ -746,9 +804,11 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional
     public void moveFolder(Long folderId, Long targetFolderId) {
         log.info("Moving folder {} to folder {}", folderId, targetFolderId);
-        
-        Folder folder = folderRepository.findById(folderId)
-                .orElseThrow(() -> new RuntimeException("Folder not found with ID: " + folderId));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Folder folder = folderRepository.findByIdAndOrganizationId(folderId, orgId)
+                .orElseThrow(() -> new RuntimeException("Folder not found or access denied: " + folderId));
         
         if (folder.getDeleted()) {
             throw new RuntimeException("Cannot move a deleted folder");
@@ -767,19 +827,21 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public Page<CaseDTO> getActiveCases(Pageable pageable) {
         log.info("Getting active cases");
-        
+        Long orgId = getRequiredOrganizationId();
+
         List<CaseStatus> activeStatuses = Arrays.asList(
-            CaseStatus.ACTIVE, 
-            CaseStatus.OPEN, 
+            CaseStatus.ACTIVE,
+            CaseStatus.OPEN,
             CaseStatus.IN_PROGRESS
         );
-        
-        Page<LegalCase> casesPage = legalCaseRepository.findByStatusIn(activeStatuses, pageable);
-        
+
+        // SECURITY: Use tenant-filtered query
+        Page<LegalCase> casesPage = legalCaseRepository.findByOrganizationIdAndStatusIn(orgId, activeStatuses, pageable);
+
         List<CaseDTO> caseDTOs = casesPage.getContent().stream()
                 .map(this::convertToCaseDTO)
                 .collect(Collectors.toList());
-        
+
         return new PageImpl<>(caseDTOs, pageable, casesPage.getTotalElements());
     }
     
@@ -787,31 +849,36 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public Page<CaseDTO> getCases(List<String> statuses, String search, Pageable pageable) {
         log.info("Getting cases with filters - statuses: {}, search: {}", statuses, search);
-        
+        Long orgId = getRequiredOrganizationId();
+
         Page<LegalCase> casesPage;
-        
+
         if (statuses != null && !statuses.isEmpty()) {
             List<CaseStatus> caseStatuses = statuses.stream()
                     .map(CaseStatus::valueOf)
                     .collect(Collectors.toList());
-            
+
             if (search != null && !search.trim().isEmpty()) {
-                casesPage = legalCaseRepository.searchCasesByStatus(caseStatuses, search.trim(), pageable);
+                // SECURITY: Use tenant-filtered query
+                casesPage = legalCaseRepository.searchCasesByOrganizationAndStatus(orgId, caseStatuses, search.trim(), pageable);
             } else {
-                casesPage = legalCaseRepository.findByStatusIn(caseStatuses, pageable);
+                // SECURITY: Use tenant-filtered query
+                casesPage = legalCaseRepository.findByOrganizationIdAndStatusIn(orgId, caseStatuses, pageable);
             }
         } else {
             if (search != null && !search.trim().isEmpty()) {
-                casesPage = legalCaseRepository.searchCases(search.trim(), pageable);
+                // SECURITY: Use tenant-filtered query
+                casesPage = legalCaseRepository.searchCasesByOrganization(orgId, search.trim(), pageable);
             } else {
-                casesPage = legalCaseRepository.findAll(pageable);
+                // SECURITY: Use tenant-filtered query
+                casesPage = legalCaseRepository.findByOrganizationId(orgId, pageable);
             }
         }
-        
+
         List<CaseDTO> caseDTOs = casesPage.getContent().stream()
                 .map(this::convertToCaseDTO)
                 .collect(Collectors.toList());
-        
+
         return new PageImpl<>(caseDTOs, pageable, casesPage.getTotalElements());
     }
 
@@ -819,9 +886,11 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public List<FileItemDTO> getCaseFiles(Long caseId) {
         log.info("Getting files for case ID: {}", caseId);
-        
-        List<FileItem> files = fileItemRepository.findByCaseIdAndDeletedFalse(caseId);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        List<FileItem> files = fileItemRepository.findByCaseIdAndDeletedFalseAndOrganizationId(caseId, orgId);
+
         return files.stream()
                 .map(this::convertToFileItemDTO)
                 .collect(Collectors.toList());
@@ -831,10 +900,11 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public List<FolderDTO> getCaseFolders(Long caseId) {
         log.info("Getting root folders for case ID: {}", caseId);
-        
-        // Get only root folders associated with this case
-        List<Folder> folders = folderRepository.findRootFoldersByCaseId(caseId);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        List<Folder> folders = folderRepository.findRootFoldersByCaseIdAndOrganization(orgId, caseId);
+
         return folders.stream()
                 .map(this::convertToFolderDTO)
                 .collect(Collectors.toList());
@@ -844,9 +914,11 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public List<FileVersionDTO> getFileVersions(Long fileId) {
         log.info("Getting versions for file ID: {}", fileId);
-        
-        List<FileVersion> versions = fileVersionRepository.findByFileIdAndIsDeletedFalseOrderByVersionNumberDesc(fileId);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        List<FileVersion> versions = fileVersionRepository.findByOrganizationIdAndFileIdAndIsDeletedFalseOrderByVersionNumberDesc(orgId, fileId);
+
         return versions.stream()
                 .map(this::convertToFileVersionDTO)
                 .collect(Collectors.toList());
@@ -855,9 +927,11 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Override
     public FileVersionDTO uploadFileVersion(Long fileId, MultipartFile file, String comment) {
         log.info("Uploading new version for file ID: {}", fileId);
-        
-        FileItem fileItem = fileItemRepository.findById(fileId)
-                .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied: " + fileId));
         
         if (Boolean.TRUE.equals(fileItem.getDeleted())) {
             throw new RuntimeException("Cannot upload version for deleted file");
@@ -877,9 +951,9 @@ public class FileManagerServiceImpl implements FileManagerService {
             
             Integer highestVersion = fileVersionRepository.findHighestVersionNumberIncludingDeleted(fileId);
             Integer newVersionNumber = (highestVersion != null ? highestVersion : 0) + 1;
-            
-            // Mark all previous versions as not current
-            List<FileVersion> existingVersions = fileVersionRepository.findByFileIdAndIsDeletedFalseOrderByVersionNumberDesc(fileId);
+
+            // Mark all previous versions as not current - SECURITY: Use tenant-filtered query
+            List<FileVersion> existingVersions = fileVersionRepository.findByOrganizationIdAndFileIdAndIsDeletedFalseOrderByVersionNumberDesc(orgId, fileId);
             for (FileVersion version : existingVersions) {
                 version.setIsCurrent(false);
                 fileVersionRepository.save(version);
@@ -921,9 +995,9 @@ public class FileManagerServiceImpl implements FileManagerService {
                 
                 Set<Long> notificationUserIds = new HashSet<>();
                 
-                // Get users assigned to the case if this file is related to a case
-                if (fileItem.getCaseId() != null) {
-                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(fileItem.getCaseId());
+                // SECURITY: Get users assigned to the case if this file is related to a case (with org filter)
+                if (fileItem.getCaseId() != null && fileItem.getOrganizationId() != null) {
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(fileItem.getCaseId(), fileItem.getOrganizationId());
                     for (CaseAssignment assignment : caseAssignments) {
                         if (assignment.getAssignedTo() != null) {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
@@ -965,24 +1039,32 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Override
     public FileVersionDTO getFileVersion(Long fileId, Long versionId) {
         log.info("Getting version {} for file ID: {}", versionId, fileId);
-        
-        FileVersion version = fileVersionRepository.findById(versionId)
-                .orElseThrow(() -> new RuntimeException("Version not found with ID: " + versionId));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: First verify the file belongs to this organization
+        fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied: " + fileId));
+
+        // SECURITY: Use tenant-filtered query for version
+        FileVersion version = fileVersionRepository.findByIdAndOrganizationId(versionId, orgId)
+                .orElseThrow(() -> new RuntimeException("Version not found or access denied: " + versionId));
+
         if (!version.getFileId().equals(fileId)) {
             throw new RuntimeException("Version does not belong to the specified file");
         }
-        
+
         return convertToFileVersionDTO(version);
     }
 
     @Override
     public byte[] downloadFileVersion(Long versionId) {
         log.info("Downloading version with ID: {}", versionId);
-        
-        FileVersion version = fileVersionRepository.findById(versionId)
-                .orElseThrow(() -> new RuntimeException("Version not found with ID: " + versionId));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        FileVersion version = fileVersionRepository.findByIdAndOrganizationId(versionId, orgId)
+                .orElseThrow(() -> new RuntimeException("Version not found or access denied: " + versionId));
+
         try {
             Resource resource = fileStorageService.loadFileAsResource(version.getFilePath());
             return resource.getInputStream().readAllBytes();
@@ -996,11 +1078,16 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional
     public void restoreFileVersion(Long fileId, Long versionId) {
         log.info("Restoring version {} as new current version for file ID: {}", versionId, fileId);
-        
-        // Get the version to restore
-        FileVersion versionToRestore = fileVersionRepository.findById(versionId)
-                .orElseThrow(() -> new RuntimeException("Version not found with ID: " + versionId));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: First verify the file belongs to this organization
+        fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied: " + fileId));
+
+        // SECURITY: Use tenant-filtered query for version
+        FileVersion versionToRestore = fileVersionRepository.findByIdAndOrganizationId(versionId, orgId)
+                .orElseThrow(() -> new RuntimeException("Version not found or access denied: " + versionId));
+
         if (!versionToRestore.getFileId().equals(fileId)) {
             throw new RuntimeException("Version does not belong to the specified file");
         }
@@ -1012,23 +1099,23 @@ public class FileManagerServiceImpl implements FileManagerService {
         // IMPROVED APPROACH: Handle the constraint properly
         // The constraint 'unique_current_version' appears to enforce uniqueness on (file_id, is_current)
         // This means we can only have ONE record with is_current=true and ONE with is_current=false per file
-        
+
         // Step 1: Find the highest version number (including deleted versions)
         Integer highestVersionNumber = fileVersionRepository.findHighestVersionNumberIncludingDeleted(fileId);
         if (highestVersionNumber == null) {
-            // Fallback: get from all versions
-            List<FileVersion> allVersions = fileVersionRepository.findByFileIdOrderByVersionNumberDesc(fileId);
+            // Fallback: get from all versions - SECURITY: Use tenant-filtered query
+            List<FileVersion> allVersions = fileVersionRepository.findByOrganizationIdAndFileIdOrderByVersionNumberDesc(orgId, fileId);
             highestVersionNumber = allVersions.stream()
                     .map(FileVersion::getVersionNumber)
                     .max(Integer::compareTo)
                     .orElse(0);
         }
-        
+
         Integer nextVersionNumber = highestVersionNumber + 1;
         log.info("Creating new version {} for file {}", nextVersionNumber, fileId);
-        
-        // Step 2: Mark all existing versions as non-current (since we fixed the DB constraint)
-        List<FileVersion> activeVersions = fileVersionRepository.findByFileIdAndIsDeletedFalseOrderByVersionNumberDesc(fileId);
+
+        // Step 2: Mark all existing versions as non-current (since we fixed the DB constraint) - SECURITY: Use tenant-filtered query
+        List<FileVersion> activeVersions = fileVersionRepository.findByOrganizationIdAndFileIdAndIsDeletedFalseOrderByVersionNumberDesc(orgId, fileId);
         log.info("Found {} active versions for file {}", activeVersions.size(), fileId);
         
         for (FileVersion version : activeVersions) {
@@ -1080,10 +1167,10 @@ public class FileManagerServiceImpl implements FileManagerService {
             throw new RuntimeException("Failed to create new version: " + e.getMessage(), e);
         }
         
-        // Update the file item
-        FileItem fileItem = fileItemRepository.findById(fileId)
-                .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
-        
+        // Update the file item - already verified organization at method start
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied: " + fileId));
+
         fileItem.setVersion(newCurrentVersion.getVersionNumber());
         fileItem.setSize(newCurrentVersion.getFileSize());
         fileItem.setName(newCurrentVersion.getFileName());
@@ -1102,10 +1189,16 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional
     public void deleteFileVersion(Long fileId, Long versionId) {
         log.info("Deleting version {} of file ID: {}", versionId, fileId);
-        
-        FileVersion version = fileVersionRepository.findById(versionId)
-                .orElseThrow(() -> new RuntimeException("Version not found with ID: " + versionId));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: First verify the file belongs to this organization
+        fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied: " + fileId));
+
+        // SECURITY: Use tenant-filtered query for version
+        FileVersion version = fileVersionRepository.findByIdAndOrganizationId(versionId, orgId)
+                .orElseThrow(() -> new RuntimeException("Version not found or access denied: " + versionId));
+
         if (!version.getFileId().equals(fileId)) {
             throw new RuntimeException("Version does not belong to the specified file");
         }
@@ -1139,11 +1232,14 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Override
     public void shareFile(Long fileId, ShareFileRequestDTO request) {
         log.info("Sharing file ID: {} with request: {}", fileId, request);
-        
-        FileItem fileItem = fileItemRepository.findById(fileId)
-                .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
+                .orElseThrow(() -> new RuntimeException("File not found or access denied: " + fileId));
         
         FileShare fileShare = FileShare.builder()
+                .organizationId(orgId)
                 .fileId(fileId)
                 .sharedWithUserId(request.getSharedWithUserId())
                 .sharedWithEmail(request.getSharedWithEmail())
@@ -1165,13 +1261,15 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public Page<FileItemDTO> searchFiles(String query, Pageable pageable, String fileType, Long caseId) {
         log.info("Searching files with query: {}, fileType: {}, caseId: {}", query, fileType, caseId);
-        
-        Page<FileItem> searchResults = fileItemRepository.searchByNameOrDescription(query, pageable);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered search
+        Page<FileItem> searchResults = fileItemRepository.searchByNameOrDescriptionAndOrganizationId(query, orgId, pageable);
+
         List<FileItemDTO> resultDTOs = searchResults.getContent().stream()
                 .map(this::convertToFileItemDTO)
                 .collect(Collectors.toList());
-        
+
         return new PageImpl<>(resultDTOs, pageable, searchResults.getTotalElements());
     }
 
@@ -1179,11 +1277,14 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public FileManagerStatsDTO getStats() {
         log.info("Getting file manager statistics");
-        
-        Long totalFiles = fileItemRepository.countActiveFiles();
-        Long totalFolders = folderRepository.countActiveFolders();
-        Long totalSize = fileItemRepository.getTotalStorageSize();
-        Long recentUploads = fileAccessLogRepository.countAccessesSince(LocalDateTime.now().minusDays(7));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered queries
+        Long totalFiles = fileItemRepository.countActiveFilesByOrganization(orgId);
+        Long totalFolders = folderRepository.countByOrganization(orgId); // SECURITY: Tenant-filtered
+        Long totalSize = fileItemRepository.getTotalStorageSizeByOrganization(orgId);
+        // SECURITY: Use tenant-filtered query
+        Long recentUploads = fileAccessLogRepository.countAccessesSinceByOrganization(orgId, LocalDateTime.now().minusDays(7));
         
         // Calculate storage values
         Long usedSpace = totalSize != null ? totalSize : 0L;
@@ -1208,9 +1309,11 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public List<FileItemDTO> getRecentFiles(int limit) {
         log.info("Getting recent files with limit: {}", limit);
-        
-        List<FileItem> recentFiles = fileItemRepository.findRecentFiles(LocalDateTime.now().minusDays(30));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        List<FileItem> recentFiles = fileItemRepository.findRecentFilesByOrganization(orgId, LocalDateTime.now().minusDays(30));
+
         return recentFiles.stream()
                 .limit(limit)
                 .map(this::convertToFileItemDTO)
@@ -1221,9 +1324,11 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public List<FileItemDTO> getStarredFiles() {
         log.info("Getting starred files");
-        
-        List<FileItem> starredFiles = fileItemRepository.findStarredFiles();
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        List<FileItem> starredFiles = fileItemRepository.findStarredFilesByOrganization(orgId);
+
         return starredFiles.stream()
                 .map(this::convertToFileItemDTO)
                 .collect(Collectors.toList());
@@ -1299,28 +1404,31 @@ public class FileManagerServiceImpl implements FileManagerService {
     
     private Integer calculateSubfolderCount(Long folderId) {
         try {
-            List<Folder> subfolders = folderRepository.findByParentFolderIdAndDeletedFalse(folderId);
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Use tenant-filtered query
+            List<Folder> subfolders = folderRepository.findByParentFolderIdAndDeletedFalseAndOrganizationId(folderId, orgId);
             return subfolders.size();
         } catch (Exception e) {
             log.warn("Error calculating subfolder count for folder {}: {}", folderId, e.getMessage());
             return 0;
         }
     }
-    
+
     private Long calculateFolderSize(Long folderId) {
         try {
+            Long orgId = getRequiredOrganizationId();
             // Get direct files size
             Long directFilesSize = fileItemRepository.sumSizeByFolderIdAndDeletedFalse(folderId);
             if (directFilesSize == null) {
                 directFilesSize = 0L;
             }
-            
-            // Get subfolders and their sizes recursively
-            List<Folder> subfolders = folderRepository.findByParentFolderIdAndDeletedFalse(folderId);
+
+            // SECURITY: Get subfolders using tenant-filtered query and their sizes recursively
+            List<Folder> subfolders = folderRepository.findByParentFolderIdAndDeletedFalseAndOrganizationId(folderId, orgId);
             Long subfoldersSize = subfolders.stream()
                     .mapToLong(subfolder -> calculateFolderSize(subfolder.getId()))
                     .sum();
-            
+
             return directFilesSize + subfoldersSize;
         } catch (Exception e) {
             log.warn("Error calculating folder size for folder {}: {}", folderId, e.getMessage());
@@ -1404,27 +1512,32 @@ public class FileManagerServiceImpl implements FileManagerService {
         if (folderId == null) {
             return "";
         }
-        
+
+        Long orgId = getRequiredOrganizationId();
         List<String> pathSegments = new ArrayList<>();
-        Folder currentFolder = folderRepository.findById(folderId).orElse(null);
-        
+        // SECURITY: Use tenant-filtered query
+        Folder currentFolder = folderRepository.findByIdAndOrganizationId(folderId, orgId).orElse(null);
+
         while (currentFolder != null) {
             pathSegments.add(0, currentFolder.getName());
             if (currentFolder.getParentFolderId() != null) {
-                currentFolder = folderRepository.findById(currentFolder.getParentFolderId()).orElse(null);
+                // SECURITY: Use tenant-filtered query
+                currentFolder = folderRepository.findByIdAndOrganizationId(currentFolder.getParentFolderId(), orgId).orElse(null);
             } else {
                 currentFolder = null;
             }
         }
-        
+
         return String.join("/", pathSegments);
     }
     
     /**
-     * Check if a file with the given name already exists in the folder
+     * Check if a file with the given name already exists in the folder - TENANT FILTERED
      */
     private boolean fileExistsInFolder(Long folderId, String fileName) {
-        List<FileItem> existingFiles = fileItemRepository.findByFolderIdAndDeletedFalse(folderId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<FileItem> existingFiles = fileItemRepository.findByFolderIdAndDeletedFalseAndOrganizationId(folderId, orgId);
         return existingFiles.stream()
                 .anyMatch(file -> fileName.equals(file.getOriginalName()));
     }

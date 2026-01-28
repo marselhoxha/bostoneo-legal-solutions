@@ -34,9 +34,21 @@ public interface BoldSignService {
     SignatureRequestDTO sendSignatureRequest(Long requestId, Long userId);
 
     /**
-     * Get signature request by ID
+     * Send a draft signature request - TENANT FILTERED
      */
+    SignatureRequestDTO sendSignatureRequest(Long requestId, Long organizationId, Long userId);
+
+    /**
+     * Get signature request by ID
+     * @deprecated Use getSignatureRequestByIdAndOrganization for tenant isolation
+     */
+    @Deprecated
     SignatureRequestDTO getSignatureRequest(Long id);
+
+    /**
+     * SECURITY: Get signature request by ID with tenant isolation
+     */
+    SignatureRequestDTO getSignatureRequestByIdAndOrganization(Long id, Long organizationId);
 
     /**
      * Get signature request by BoldSign document ID
@@ -65,23 +77,51 @@ public interface BoldSignService {
 
     /**
      * Void/cancel a signature request
+     * @deprecated Use voidSignatureRequest with organizationId for tenant isolation
      */
+    @Deprecated
     SignatureRequestDTO voidSignatureRequest(Long requestId, String reason, Long userId);
 
     /**
-     * Send a reminder for a pending signature request
+     * SECURITY: Void/cancel a signature request with tenant isolation
      */
+    SignatureRequestDTO voidSignatureRequest(Long requestId, Long organizationId, String reason, Long userId);
+
+    /**
+     * Send a reminder for a pending signature request
+     * @deprecated Use sendReminder with organizationId for tenant isolation
+     */
+    @Deprecated
     SignatureRequestDTO sendReminder(Long requestId, Long userId);
 
     /**
-     * Get embedded signing URL for a signer
+     * SECURITY: Send a reminder with tenant isolation
      */
+    SignatureRequestDTO sendReminder(Long requestId, Long organizationId, Long userId);
+
+    /**
+     * Get embedded signing URL for a signer
+     * @deprecated Use getEmbeddedSigningUrl with organizationId for tenant isolation
+     */
+    @Deprecated
     String getEmbeddedSigningUrl(Long requestId, String signerEmail);
 
     /**
-     * Download the signed document
+     * SECURITY: Get embedded signing URL with tenant isolation
      */
+    String getEmbeddedSigningUrl(Long requestId, Long organizationId, String signerEmail);
+
+    /**
+     * Download the signed document
+     * @deprecated Use downloadSignedDocument with organizationId for tenant isolation
+     */
+    @Deprecated
     byte[] downloadSignedDocument(Long requestId);
+
+    /**
+     * SECURITY: Download signed document with tenant isolation
+     */
+    byte[] downloadSignedDocument(Long requestId, Long organizationId);
 
     /**
      * Download the audit trail PDF for a document
@@ -95,8 +135,15 @@ public interface BoldSignService {
 
     /**
      * Refresh status from BoldSign
+     * @deprecated Use refreshStatus with organizationId for tenant isolation
      */
+    @Deprecated
     SignatureRequestDTO refreshStatus(Long requestId);
+
+    /**
+     * SECURITY: Refresh status with tenant isolation
+     */
+    SignatureRequestDTO refreshStatus(Long requestId, Long organizationId);
 
     // ==================== Embedded URLs ====================
 
@@ -221,8 +268,15 @@ public interface BoldSignService {
 
     /**
      * Get template by ID
+     * @deprecated Use getTemplateByIdAndOrganization for tenant isolation
      */
+    @Deprecated
     SignatureTemplateDTO getTemplate(Long id);
+
+    /**
+     * SECURITY: Get template by ID with tenant isolation
+     */
+    SignatureTemplateDTO getTemplateByIdAndOrganization(Long id, Long organizationId);
 
     /**
      * Create a new template
@@ -231,13 +285,27 @@ public interface BoldSignService {
 
     /**
      * Update a template
+     * @deprecated Use updateTemplate with organizationId for tenant isolation
      */
+    @Deprecated
     SignatureTemplateDTO updateTemplate(Long id, SignatureTemplateDTO template);
 
     /**
-     * Delete (deactivate) a template
+     * SECURITY: Update a template with tenant isolation
      */
+    SignatureTemplateDTO updateTemplate(Long id, Long organizationId, SignatureTemplateDTO template);
+
+    /**
+     * Delete (deactivate) a template
+     * @deprecated Use deleteTemplate with organizationId for tenant isolation
+     */
+    @Deprecated
     void deleteTemplate(Long id);
+
+    /**
+     * SECURITY: Delete template with tenant isolation
+     */
+    void deleteTemplate(Long id, Long organizationId);
 
     /**
      * Get template categories
@@ -248,8 +316,15 @@ public interface BoldSignService {
 
     /**
      * Get audit logs for a signature request
+     * @deprecated Use getAuditLogs with organizationId for tenant isolation
      */
+    @Deprecated
     List<SignatureAuditLogDTO> getAuditLogs(Long signatureRequestId);
+
+    /**
+     * SECURITY: Get audit logs with tenant isolation
+     */
+    List<SignatureAuditLogDTO> getAuditLogs(Long signatureRequestId, Long organizationId);
 
     /**
      * Get audit logs for an organization

@@ -37,6 +37,12 @@ public class ResearchActionService {
     private final TaskManagementService taskManagementService;
     private final CalendarEventService calendarEventService;
     private final CaseNoteService caseNoteService;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     /**
      * Generate action suggestions from research findings
@@ -176,14 +182,20 @@ public class ResearchActionService {
      * Get pending actions for a user
      */
     public List<ResearchActionItem> getPendingActions(Long userId) {
-        return actionRepository.findByUserIdAndActionStatusOrderByCreatedAtDesc(userId, ActionStatus.PENDING);
+        Long orgId = getRequiredOrganizationId();
+        return actionRepository.findByOrganizationIdAndUserIdAndActionStatusOrderByCreatedAtDesc(orgId, userId, ActionStatus.PENDING);
     }
 
     /**
      * Get actions for a research session
      */
     public List<ResearchActionItem> getSessionActions(Long sessionId) {
-        return actionRepository.findByResearchSessionIdOrderByCreatedAtDesc(sessionId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify session belongs to current organization
+        if (!sessionRepository.findByIdAndOrganizationId(sessionId, orgId).isPresent()) {
+            throw new RuntimeException("Session not found or access denied: " + sessionId);
+        }
+        return actionRepository.findByOrganizationIdAndResearchSessionIdOrderByCreatedAtDesc(orgId, sessionId);
     }
 
     /**
@@ -191,8 +203,10 @@ public class ResearchActionService {
      */
     @Transactional
     public void dismissAction(Long actionId) {
-        ResearchActionItem action = actionRepository.findById(actionId)
-            .orElseThrow(() -> new RuntimeException("Action not found: " + actionId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        ResearchActionItem action = actionRepository.findByIdAndOrganizationId(actionId, orgId)
+            .orElseThrow(() -> new RuntimeException("Action not found or access denied: " + actionId));
 
         action.setActionStatus(ActionStatus.DISMISSED);
         action.setDismissedAt(LocalDateTime.now());
@@ -205,9 +219,11 @@ public class ResearchActionService {
     @Transactional
     public void completeAction(Long actionId) {
         log.info("🎯 Completing action with ID: {}", actionId);
+        Long orgId = getRequiredOrganizationId();
 
-        ResearchActionItem action = actionRepository.findById(actionId)
-            .orElseThrow(() -> new RuntimeException("Action not found: " + actionId));
+        // SECURITY: Use tenant-filtered query
+        ResearchActionItem action = actionRepository.findByIdAndOrganizationId(actionId, orgId)
+            .orElseThrow(() -> new RuntimeException("Action not found or access denied: " + actionId));
 
         log.info("📋 Found action: {} - Current status: {}", action.getActionType(), action.getActionStatus());
 
@@ -225,10 +241,11 @@ public class ResearchActionService {
     @Transactional
     public Object executeAction(Long actionId, ExecuteActionRequest request) {
         log.info("⚡ Executing action {} of type {}", actionId, request.getActionType());
+        Long orgId = getRequiredOrganizationId();
 
-        // Get the action
-        ResearchActionItem action = actionRepository.findById(actionId)
-            .orElseThrow(() -> new RuntimeException("Action not found: " + actionId));
+        // Get the action - SECURITY: Use tenant-filtered query
+        ResearchActionItem action = actionRepository.findByIdAndOrganizationId(actionId, orgId)
+            .orElseThrow(() -> new RuntimeException("Action not found or access denied: " + actionId));
 
         Object result = null;
 
@@ -378,19 +395,22 @@ public class ResearchActionService {
      * Ensure a conversation session exists for the given session ID
      * Creates one in ai_conversation_sessions table if it doesn't exist
      * This is needed because research_action_items has a foreign key to ai_conversation_sessions
+     * SECURITY: Uses org-filtered queries for tenant isolation
      */
     private void ensureSessionExists(Long sessionId, Long userId) {
         try {
-            // Check if session exists in ai_conversation_sessions using native query
-            Long count = actionRepository.countSessionsById(sessionId);
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Check if session exists with organization filter
+            Long count = actionRepository.countSessionsByIdAndOrganizationId(sessionId, orgId);
 
             if (count == null || count == 0) {
-                log.info("Creating new conversation session with ID: {} for user: {}", sessionId, userId);
+                log.info("Creating new conversation session with ID: {} for user: {} in org: {}", sessionId, userId, orgId);
 
-                // Insert into ai_conversation_sessions table using native query
-                actionRepository.createConversationSession(
+                // SECURITY: Insert with organization_id
+                actionRepository.createConversationSessionWithOrganization(
                     sessionId,
                     userId,
+                    orgId,
                     "Legal Research Session",
                     "legal_research"
                 );

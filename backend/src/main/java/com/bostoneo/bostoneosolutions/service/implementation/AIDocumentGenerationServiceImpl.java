@@ -37,6 +37,12 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
     private final LegalCaseRepository caseRepository;
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public AILegalTemplate createTemplate(AILegalTemplate template) {
@@ -66,8 +72,10 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
 
     @Override
     public AILegalTemplate getTemplateById(Long id) {
-        return templateRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Template not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use proper tenant-filtered query instead of post-filter pattern
+        return templateRepository.findByIdAndAccessibleByOrganization(id, orgId)
+                .orElseThrow(() -> new RuntimeException("Template not found or access denied: " + id));
     }
 
     @Override
@@ -99,7 +107,13 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
 
     @Override
     public void deleteTemplate(Long id) {
+        Long orgId = getRequiredOrganizationId();
         log.info("Deleting template with ID: {}", id);
+
+        // SECURITY: Use strict org-only query (can't delete system templates)
+        AILegalTemplate template = templateRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Template not found, is a system template, or access denied: " + id));
+
         templateRepository.deleteById(id);
     }
 
@@ -153,8 +167,10 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
                 log.info("Auto-filling template {} with case data {}", templateId, caseId);
                 
                 AILegalTemplate template = getTemplateById(templateId);
-                LegalCase legalCase = caseRepository.findById(caseId)
-                        .orElseThrow(() -> new RuntimeException("Case not found: " + caseId));
+                Long orgId = getRequiredOrganizationId();
+                // SECURITY: Use tenant-filtered query
+                LegalCase legalCase = caseRepository.findByIdAndOrganizationId(caseId, orgId)
+                        .orElseThrow(() -> new RuntimeException("Case not found or access denied: " + caseId));
                 
                 // Extract variables from case data
                 Map<String, Object> caseVariables = extractCaseVariables(legalCase);
@@ -310,20 +326,26 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
 
     @Override
     public Page<AIDocumentGenerationLog> getGenerationHistory(Long userId, Pageable pageable) {
-        return generationLogRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return generationLogRepository.findByOrganizationIdAndUserIdOrderByCreatedAtDesc(orgId, userId, pageable);
     }
 
     @Override
     public Page<AIDocumentGenerationLog> getTemplateUsageStats(Long templateId, Pageable pageable) {
-        return generationLogRepository.findByTemplateIdOrderByCreatedAtDesc(templateId, pageable);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return generationLogRepository.findByOrganizationIdAndTemplateIdOrderByCreatedAtDesc(orgId, templateId, pageable);
     }
 
     @Override
-    public AIDocumentGenerationLog saveGenerationLog(Long templateId, Long userId, Long caseId, 
-                                                     GenerationType type, Map<String, Object> inputData, 
+    public AIDocumentGenerationLog saveGenerationLog(Long templateId, Long userId, Long caseId,
+                                                     GenerationType type, Map<String, Object> inputData,
                                                      String result, boolean success) {
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             AIDocumentGenerationLog log = AIDocumentGenerationLog.builder()
+                    .organizationId(orgId) // SECURITY: Set organization ID
                     .templateId(templateId)
                     .userId(userId)
                     .caseId(caseId)
@@ -350,8 +372,10 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
     public CompletableFuture<String> applyStyleGuide(String content, Long styleGuideId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                AIStyleGuide styleGuide = styleGuideRepository.findById(styleGuideId)
-                        .orElseThrow(() -> new RuntimeException("Style guide not found: " + styleGuideId));
+                Long orgId = getRequiredOrganizationId();
+                // SECURITY: Use proper tenant-filtered query instead of post-filter pattern
+                AIStyleGuide styleGuide = styleGuideRepository.findByIdAndAccessibleByOrganization(styleGuideId, orgId)
+                        .orElseThrow(() -> new RuntimeException("Style guide not found or access denied: " + styleGuideId));
                 
                 String prompt = String.format("""
                     Apply the following style guide to this legal document:

@@ -11,6 +11,7 @@ import com.bostoneo.bostoneosolutions.repository.CalendarEventRepository;
 import com.bostoneo.bostoneosolutions.service.EmailService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.ReminderQueueService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,15 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
     
     @Autowired
     private NotificationService notificationService;
-    
+
+    @Autowired
+    private TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMMM d, yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a");
 
@@ -91,10 +100,10 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
                 log.error("Failed to get authenticated user from security context", e);
             }
             
-            // If still null after trying security context, use system user as last resort
+            // SECURITY: Fail if we can't determine the user - don't use hardcoded fallback
             if (userId == null) {
-                log.warn("Using system user ID as last resort for event {}", event.getId());
-                userId = 1L; 
+                log.error("Cannot create reminder for event {} - user ID cannot be determined", event.getId());
+                throw new RuntimeException("Cannot create reminder - event has no userId and authentication context unavailable");
             }
         }
         
@@ -117,10 +126,12 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
         
         for (ReminderQueueItem reminder : pendingReminders) {
             try {
-                Optional<CalendarEvent> eventOpt = calendarEventRepository.findById(reminder.getEventId());
-                
+                // SECURITY: Use org-filtered query to ensure event belongs to same org as reminder
+                Optional<CalendarEvent> eventOpt = calendarEventRepository.findByIdAndOrganizationId(
+                        reminder.getEventId(), reminder.getOrganizationId());
+
                 if (eventOpt.isEmpty()) {
-                    log.error("Event not found for reminder: {}", reminder.getId());
+                    log.error("Event not found for reminder: {} (org: {})", reminder.getId(), reminder.getOrganizationId());
                     markReminderAsFailed(reminder.getId(), "Event not found");
                     continue;
                 }
@@ -209,28 +220,58 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
 
     @Override
     public void markReminderAsSent(Long reminderId) {
-        reminderQueueRepository.findById(reminderId).ifPresent(reminder -> {
-            reminder.setStatus("SENT");
-            reminder.setLastAttempt(LocalDateTime.now());
-            reminderQueueRepository.save(reminder);
-        });
+        // SECURITY: Use org-filtered query when called from user context
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (orgId != null) {
+            reminderQueueRepository.findByIdAndOrganizationId(reminderId, orgId).ifPresent(reminder -> {
+                reminder.setStatus("SENT");
+                reminder.setLastAttempt(LocalDateTime.now());
+                reminderQueueRepository.save(reminder);
+            });
+        } else {
+            // Internal/scheduled calls without org context
+            reminderQueueRepository.findById(reminderId).ifPresent(reminder -> {
+                reminder.setStatus("SENT");
+                reminder.setLastAttempt(LocalDateTime.now());
+                reminderQueueRepository.save(reminder);
+            });
+        }
     }
 
     @Override
     public void markReminderAsFailed(Long reminderId, String errorMessage) {
-        reminderQueueRepository.findById(reminderId).ifPresent(reminder -> {
-            reminder.setStatus("FAILED");
-            reminder.setLastAttempt(LocalDateTime.now());
-            reminder.setErrorMessage(errorMessage);
-            reminder.setRetryCount(reminder.getRetryCount() + 1);
-            reminderQueueRepository.save(reminder);
-        });
+        // SECURITY: Use org-filtered query when called from user context
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (orgId != null) {
+            reminderQueueRepository.findByIdAndOrganizationId(reminderId, orgId).ifPresent(reminder -> {
+                reminder.setStatus("FAILED");
+                reminder.setLastAttempt(LocalDateTime.now());
+                reminder.setErrorMessage(errorMessage);
+                reminder.setRetryCount(reminder.getRetryCount() + 1);
+                reminderQueueRepository.save(reminder);
+            });
+        } else {
+            // Internal/scheduled calls without org context
+            reminderQueueRepository.findById(reminderId).ifPresent(reminder -> {
+                reminder.setStatus("FAILED");
+                reminder.setLastAttempt(LocalDateTime.now());
+                reminder.setErrorMessage(errorMessage);
+                reminder.setRetryCount(reminder.getRetryCount() + 1);
+                reminderQueueRepository.save(reminder);
+            });
+        }
     }
 
     @Override
     public void deleteRemindersForEvent(Long eventId) {
-        List<ReminderQueueItem> reminders = reminderQueueRepository.findByEventId(eventId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify the event belongs to the current organization
+        calendarEventRepository.findByIdAndOrganizationId(eventId, orgId)
+            .orElseThrow(() -> new RuntimeException("Event not found or access denied: " + eventId));
+
+        // SECURITY: Use tenant-filtered query
+        List<ReminderQueueItem> reminders = reminderQueueRepository.findByOrganizationIdAndEventId(orgId, eventId);
         reminderQueueRepository.deleteAll(reminders);
-        log.info("Deleted {} reminders for event {}", reminders.size(), eventId);
+        log.info("Deleted {} reminders for event {} in org {}", reminders.size(), eventId, orgId);
     }
 } 

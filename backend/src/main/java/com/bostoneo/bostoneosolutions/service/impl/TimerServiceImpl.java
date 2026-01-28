@@ -38,6 +38,12 @@ public class TimerServiceImpl implements TimerService {
     private final TimeTrackingService timeTrackingService;
     private final BillingRateService billingRateService;
     private final CaseRateConfigurationService caseRateConfigurationService;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public ActiveTimerDTO startTimer(Long userId, StartTimerRequest request) {
@@ -110,10 +116,12 @@ public class TimerServiceImpl implements TimerService {
     @Override
     public ActiveTimerDTO pauseTimer(Long userId, Long timerId) {
         log.info("Pausing timer {} for user {}", timerId, userId);
-        
-        ActiveTimer timer = activeTimerRepository.findById(timerId)
-            .orElseThrow(() -> new RuntimeException("Timer not found with id: " + timerId));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        ActiveTimer timer = activeTimerRepository.findByIdAndOrganizationId(timerId, orgId)
+            .orElseThrow(() -> new RuntimeException("Timer not found or access denied: " + timerId));
+
         if (!timer.getUserId().equals(userId)) {
             throw new RuntimeException("Timer does not belong to user");
         }
@@ -144,10 +152,12 @@ public class TimerServiceImpl implements TimerService {
     @Override
     public ActiveTimerDTO resumeTimer(Long userId, Long timerId) {
         log.info("Resuming timer {} for user {}", timerId, userId);
-        
-        ActiveTimer timer = activeTimerRepository.findById(timerId)
-            .orElseThrow(() -> new RuntimeException("Timer not found with id: " + timerId));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        ActiveTimer timer = activeTimerRepository.findByIdAndOrganizationId(timerId, orgId)
+            .orElseThrow(() -> new RuntimeException("Timer not found or access denied: " + timerId));
+
         if (!timer.getUserId().equals(userId)) {
             throw new RuntimeException("Timer does not belong to user");
         }
@@ -198,15 +208,16 @@ public class TimerServiceImpl implements TimerService {
     @Override
     public void stopTimer(Long userId, Long timerId) {
         log.info("Stopping timer {} for user {}", timerId, userId);
-        
-        // Check if timer exists first
-        ActiveTimer timer = activeTimerRepository.findById(timerId).orElse(null);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        ActiveTimer timer = activeTimerRepository.findByIdAndOrganizationId(timerId, orgId).orElse(null);
+
         if (timer == null) {
             log.warn("Timer {} not found - may have already been stopped", timerId);
             return; // Timer already stopped/deleted, this is OK
         }
-        
+
         // Check if timer belongs to user
         if (!timer.getUserId().equals(userId)) {
             throw new RuntimeException("Timer does not belong to user");
@@ -250,8 +261,10 @@ public class TimerServiceImpl implements TimerService {
     @Override
     public void stopAllTimers(Long userId) {
         log.info("Stopping all timers for user {}", userId);
+        Long orgId = getRequiredOrganizationId();
 
-        List<ActiveTimer> activeTimers = activeTimerRepository.findByUserIdAndIsActive(userId, true);
+        // SECURITY: Use tenant-filtered query
+        List<ActiveTimer> activeTimers = activeTimerRepository.findByOrganizationIdAndUserIdAndIsActive(orgId, userId, true);
         for (ActiveTimer timer : activeTimers) {
             stopTimer(userId, timer.getId());
         }
@@ -261,9 +274,10 @@ public class TimerServiceImpl implements TimerService {
     @Transactional(readOnly = true)
     public List<ActiveTimerDTO> getActiveTimers(Long userId) {
         log.info("Getting all timers (running and paused) for user {}", userId);
+        Long orgId = getRequiredOrganizationId();
 
-        // Get ALL timers for user (both running and paused)
-        List<ActiveTimer> timers = activeTimerRepository.findAllTimersByUser(userId);
+        // SECURITY: Use tenant-filtered query
+        List<ActiveTimer> timers = activeTimerRepository.findByOrganizationIdAndUserId(orgId, userId);
         return timers.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -273,8 +287,10 @@ public class TimerServiceImpl implements TimerService {
     @Transactional(readOnly = true)
     public List<ActiveTimerDTO> getAllActiveTimers() {
         log.info("Getting all active timers");
+        Long orgId = getRequiredOrganizationId();
 
-        List<ActiveTimer> timers = activeTimerRepository.findByIsActive(true);
+        // SECURITY: Use tenant-filtered query
+        List<ActiveTimer> timers = activeTimerRepository.findByOrganizationIdAndIsActive(orgId, true);
         return timers.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -284,9 +300,11 @@ public class TimerServiceImpl implements TimerService {
     @Transactional(readOnly = true)
     public ActiveTimerDTO getActiveTimer(Long timerId) {
         log.info("Getting timer {}", timerId);
+        Long orgId = getRequiredOrganizationId();
 
-        ActiveTimer timer = activeTimerRepository.findById(timerId)
-                .orElseThrow(() -> new RuntimeException("Timer not found with id: " + timerId));
+        // SECURITY: Use tenant-filtered query
+        ActiveTimer timer = activeTimerRepository.findByIdAndOrganizationId(timerId, orgId)
+                .orElseThrow(() -> new RuntimeException("Timer not found or access denied: " + timerId));
 
         return mapToDTO(timer);
     }
@@ -295,8 +313,10 @@ public class TimerServiceImpl implements TimerService {
     @Transactional(readOnly = true)
     public ActiveTimerDTO getActiveTimerForCase(Long userId, Long legalCaseId) {
         log.info("Getting active timer for user {} and case {}", userId, legalCaseId);
+        Long orgId = getRequiredOrganizationId();
 
-        return activeTimerRepository.findByUserIdAndLegalCaseIdAndIsActive(userId, legalCaseId, true)
+        // SECURITY: Use tenant-filtered query
+        return activeTimerRepository.findByOrganizationIdAndUserIdAndLegalCaseIdAndIsActive(orgId, userId, legalCaseId, true)
                 .map(this::mapToDTO)
                 .orElse(null);
     }
@@ -304,21 +324,27 @@ public class TimerServiceImpl implements TimerService {
     @Override
     @Transactional(readOnly = true)
     public boolean hasActiveTimer(Long userId) {
-        return activeTimerRepository.hasActiveTimer(userId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return activeTimerRepository.hasActiveTimerByOrganization(orgId, userId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean hasActiveTimerForCase(Long userId, Long legalCaseId) {
-        return activeTimerRepository.findByUserIdAndLegalCaseIdAndIsActive(userId, legalCaseId, true).isPresent();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return activeTimerRepository.findByOrganizationIdAndUserIdAndLegalCaseIdAndIsActive(orgId, userId, legalCaseId, true).isPresent();
     }
 
     @Override
     public TimeEntryDTO convertTimerToTimeEntry(Long userId, Long timerId, String description) {
         log.info("Converting timer {} to time entry for user {}", timerId, userId);
+        Long orgId = getRequiredOrganizationId();
 
-        ActiveTimer timer = activeTimerRepository.findById(timerId)
-                .orElseThrow(() -> new RuntimeException("Timer not found with id: " + timerId));
+        // SECURITY: Use tenant-filtered query
+        ActiveTimer timer = activeTimerRepository.findByIdAndOrganizationId(timerId, orgId)
+                .orElseThrow(() -> new RuntimeException("Timer not found or access denied: " + timerId));
 
         if (!timer.getUserId().equals(userId)) {
             throw new RuntimeException("Timer does not belong to user");
@@ -389,9 +415,11 @@ public class TimerServiceImpl implements TimerService {
     @Override
     public void updateTimerDescription(Long userId, Long timerId, String description) {
         log.info("Updating description for timer {} for user {}", timerId, userId);
+        Long orgId = getRequiredOrganizationId();
 
-        ActiveTimer timer = activeTimerRepository.findById(timerId)
-                .orElseThrow(() -> new RuntimeException("Timer not found with id: " + timerId));
+        // SECURITY: Use tenant-filtered query
+        ActiveTimer timer = activeTimerRepository.findByIdAndOrganizationId(timerId, orgId)
+                .orElseThrow(() -> new RuntimeException("Timer not found or access denied: " + timerId));
 
         if (!timer.getUserId().equals(userId)) {
             throw new RuntimeException("Timer does not belong to user");
@@ -404,26 +432,31 @@ public class TimerServiceImpl implements TimerService {
     @Override
     public void deleteTimer(Long timerId) {
         log.info("Deleting timer {}", timerId);
+        Long orgId = getRequiredOrganizationId();
 
-        if (!activeTimerRepository.existsById(timerId)) {
-            throw new RuntimeException("Timer not found with id: " + timerId);
-        }
+        // SECURITY: Verify ownership before deletion
+        ActiveTimer timer = activeTimerRepository.findByIdAndOrganizationId(timerId, orgId)
+                .orElseThrow(() -> new RuntimeException("Timer not found or access denied: " + timerId));
 
-        activeTimerRepository.deleteById(timerId);
+        activeTimerRepository.delete(timer);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Long getTotalActiveTimersCount() {
-        return (long) activeTimerRepository.findByIsActive(true).size();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return activeTimerRepository.countActiveByOrganizationId(orgId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ActiveTimerDTO> getLongRunningTimers(Integer hoursThreshold) {
         log.info("Getting timers running longer than {} hours", hoursThreshold);
+        Long orgId = getRequiredOrganizationId();
 
-        List<ActiveTimer> allActiveTimers = activeTimerRepository.findByIsActive(true);
+        // SECURITY: Use tenant-filtered query
+        List<ActiveTimer> allActiveTimers = activeTimerRepository.findByOrganizationIdAndIsActive(orgId, true);
         long thresholdMillis = hoursThreshold * 3600L * 1000L;
         Date now = new Date();
 
@@ -439,7 +472,11 @@ public class TimerServiceImpl implements TimerService {
         String caseNumber = null;
 
         try {
-            LegalCase legalCase = legalCaseRepository.findById(timer.getLegalCaseId()).orElse(null);
+            // SECURITY: Use tenant-filtered query - timer org matches case org
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            LegalCase legalCase = orgId != null
+                ? legalCaseRepository.findByIdAndOrganizationId(timer.getLegalCaseId(), orgId).orElse(null)
+                : null;
             if (legalCase != null) {
                 caseName = legalCase.getTitle();
                 caseNumber = legalCase.getCaseNumber();

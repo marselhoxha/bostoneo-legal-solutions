@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.dto.InvoiceAnalyticsDTO;
 import com.bostoneo.bostoneosolutions.dto.AgingReportDTO;
 import com.bostoneo.bostoneosolutions.enumeration.InvoiceStatus;
 import com.bostoneo.bostoneosolutions.model.Invoice;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,20 @@ import java.util.HashMap;
 public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Get all invoices filtered by current tenant
+     */
+    private List<Invoice> getAllInvoicesForTenant() {
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> invoiceRepository.findByOrganizationId(orgId))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     // Total earnings from paid invoices
     public double calculateTotalEarnings() {
-        return invoiceRepository.findAll().stream()
+        return getAllInvoicesForTenant().stream()
                 .filter(invoice -> invoice.getStatus() == InvoiceStatus.PAID)
                 .mapToDouble(invoice -> invoice.getTotalAmount().doubleValue())
                 .sum();
@@ -32,11 +43,15 @@ public class InvoiceService {
 
     // Count paid vs unpaid invoices
     public InvoiceAnalyticsDTO countPaidVsUnpaidInvoices() {
-        long paidCount = invoiceRepository.countByStatus(InvoiceStatus.PAID);
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
+        // SECURITY: Use tenant-filtered queries
+        long paidCount = invoiceRepository.countByStatusAndOrganizationId(InvoiceStatus.PAID, orgId);
 
         // Count "PENDING" and "OVERDUE" statuses separately and sum them
-        long pendingCount = invoiceRepository.countByStatus(InvoiceStatus.PENDING);
-        long overdueCount = invoiceRepository.countByStatus(InvoiceStatus.OVERDUE);
+        long pendingCount = invoiceRepository.countByStatusAndOrganizationId(InvoiceStatus.PENDING, orgId);
+        long overdueCount = invoiceRepository.countByStatusAndOrganizationId(InvoiceStatus.OVERDUE, orgId);
 
         // Unpaid invoices are those that are either "PENDING" or "OVERDUE"
         long unpaidCount = pendingCount + overdueCount;
@@ -47,13 +62,15 @@ public class InvoiceService {
 
     // Count overdue invoices
     public long countOverdueInvoices() {
-        return invoiceRepository.countByStatus(InvoiceStatus.OVERDUE);
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        return invoiceRepository.countByStatusAndOrganizationId(InvoiceStatus.OVERDUE, orgId);
     }
     
     // Generate aging report
     public AgingReportDTO generateAgingReport() {
-        List<Invoice> unpaidInvoices = invoiceRepository.findAll().stream()
-                .filter(invoice -> invoice.getStatus() != InvoiceStatus.PAID && 
+        List<Invoice> unpaidInvoices = getAllInvoicesForTenant().stream()
+                .filter(invoice -> invoice.getStatus() != InvoiceStatus.PAID &&
                                   invoice.getStatus() != InvoiceStatus.CANCELLED)
                 .toList();
         
@@ -108,8 +125,8 @@ public class InvoiceService {
     // Collection efficiency metrics
     public Map<String, Object> getCollectionEfficiencyMetrics() {
         Map<String, Object> metrics = new HashMap<>();
-        
-        List<Invoice> allInvoices = invoiceRepository.findAll();
+
+        List<Invoice> allInvoices = getAllInvoicesForTenant();
         List<Invoice> paidInvoices = allInvoices.stream()
                 .filter(inv -> inv.getStatus() == InvoiceStatus.PAID)
                 .toList();
@@ -136,9 +153,11 @@ public class InvoiceService {
                 .average()
                 .orElse(0);
         
-        // Write-off rate
-        long cancelledCount = invoiceRepository.countByStatus(InvoiceStatus.CANCELLED);
-        double writeOffRate = allInvoices.size() > 0 ? 
+        // Write-off rate - SECURITY: Use tenant-filtered count
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        long cancelledCount = invoiceRepository.countByStatusAndOrganizationId(InvoiceStatus.CANCELLED, orgId);
+        double writeOffRate = allInvoices.size() > 0 ?
             ((double) cancelledCount / allInvoices.size()) * 100 : 0;
         
         metrics.put("collectionRate", collectionRate);

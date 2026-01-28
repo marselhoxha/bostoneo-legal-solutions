@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.dto.TemplateGenerationRequest;
 import com.bostoneo.bostoneosolutions.dto.TemplateGenerationResponse;
 import com.bostoneo.bostoneosolutions.enumeration.DocumentContextType;
 import com.bostoneo.bostoneosolutions.model.*;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.*;
 import com.bostoneo.bostoneosolutions.service.ai.AIService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,38 +31,54 @@ public class AITemplateService {
     
     @Autowired
     private AIStyleGuideRepository styleGuideRepository;
-    
+
+    @Autowired
+    private TenantService tenantService;
+
     @Autowired
     private AIService aiService;
-    
+
     @Autowired
     private ObjectMapper objectMapper;
 
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
+    /**
+     * Get all templates accessible to the current organization (own + public approved)
+     */
     public List<AILegalTemplate> getAllTemplates() {
-        return templateRepository.findAll();
+        Long orgId = getRequiredOrganizationId();
+        return templateRepository.findAccessibleByOrganization(orgId);
     }
 
     public List<AILegalTemplate> getTemplatesByCategory(String category) {
-        return templateRepository.findAll().stream()
+        return getAllTemplates().stream()
             .filter(t -> t.getCategory().toString().equalsIgnoreCase(category))
             .collect(Collectors.toList());
     }
 
     public List<AILegalTemplate> getTemplatesByJurisdiction(String jurisdiction) {
-        return templateRepository.findAll().stream()
+        return getAllTemplates().stream()
             .filter(t -> t.getJurisdiction().equalsIgnoreCase(jurisdiction))
             .collect(Collectors.toList());
     }
 
     public AILegalTemplate getTemplateById(Long id) {
-        return templateRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Template not found with id: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query (includes own + public approved)
+        return templateRepository.findByIdAndAccessibleByOrganization(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Template not found or access denied: " + id));
     }
 
     public AILegalTemplate createTemplate(AILegalTemplate template) {
+        Long orgId = getRequiredOrganizationId();
+        template.setOrganizationId(orgId); // SECURITY: Set organization ID
         template.setCreatedAt(LocalDateTime.now());
         template.setUpdatedAt(LocalDateTime.now());
-        
+
         AILegalTemplate savedTemplate = templateRepository.save(template);
         
         if (template.getVariableMappings() != null) {
@@ -72,8 +89,11 @@ public class AITemplateService {
     }
 
     public AILegalTemplate updateTemplate(Long id, AILegalTemplate templateUpdate) {
-        AILegalTemplate existingTemplate = getTemplateById(id);
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Only allow updating own templates (not public ones)
+        AILegalTemplate existingTemplate = templateRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Template not found or access denied for update: " + id));
+
         existingTemplate.setName(templateUpdate.getName());
         existingTemplate.setCategory(templateUpdate.getCategory());
         existingTemplate.setJurisdiction(templateUpdate.getJurisdiction());
@@ -98,15 +118,19 @@ public class AITemplateService {
     }
 
     public void deleteTemplate(Long id) {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before deletion
+        if (!templateRepository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new RuntimeException("Template not found or access denied for deletion: " + id);
+        }
         // variableRepository.deleteByTemplateId(id);
         templateRepository.deleteById(id);
     }
 
     public Map<String, Object> autoFillTemplate(Long templateId, Long caseId) {
         AILegalTemplate template = getTemplateById(templateId);
-        List<AITemplateVariable> variables = variableRepository.findAll().stream()
-            .filter(v -> v.getTemplateId().equals(templateId))
-            .collect(Collectors.toList());
+        // SECURITY: Use findByTemplateId instead of findAll to avoid cross-tenant data access
+        List<AITemplateVariable> variables = variableRepository.findByTemplateId(templateId);
         
         Map<String, Object> filledData = new HashMap<>();
         filledData.put("templateId", templateId);
@@ -156,9 +180,8 @@ public class AITemplateService {
         }
         
         Set<String> contentVariables = extractVariables(template.getTemplateContent());
-        List<AITemplateVariable> definedVariables = variableRepository.findAll().stream()
-            .filter(v -> v.getTemplateId().equals(templateId))
-            .collect(Collectors.toList());
+        // SECURITY: Use findByTemplateId instead of findAll to avoid cross-tenant data access
+        List<AITemplateVariable> definedVariables = variableRepository.findByTemplateId(templateId);
         Set<String> definedVariableNames = definedVariables.stream()
             .map(AITemplateVariable::getVariableName)
             .collect(Collectors.toSet());
@@ -179,15 +202,21 @@ public class AITemplateService {
     }
 
     public List<AIStyleGuide> getAllStyleGuides() {
-        return styleGuideRepository.findAll();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return styleGuideRepository.findByOrganizationIdAndIsActiveTrue(orgId);
     }
 
     public AIStyleGuide getStyleGuideById(Long id) {
-        return styleGuideRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Style guide not found with id: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return styleGuideRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Style guide not found or access denied: " + id));
     }
 
     public AIStyleGuide createStyleGuide(AIStyleGuide styleGuide) {
+        Long orgId = getRequiredOrganizationId();
+        styleGuide.setOrganizationId(orgId); // SECURITY: Set organization ID
         styleGuide.setCreatedAt(LocalDateTime.now());
         styleGuide.setUpdatedAt(LocalDateTime.now());
         return styleGuideRepository.save(styleGuide);
@@ -318,7 +347,9 @@ public class AITemplateService {
     }
 
     public List<Map<String, Object>> searchTemplates(String query) {
-        List<AILegalTemplate> allTemplates = templateRepository.findAll();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query - only search accessible templates
+        List<AILegalTemplate> allTemplates = templateRepository.findAccessibleByOrganization(orgId);
         List<Map<String, Object>> results = new ArrayList<>();
 
         String lowerQuery = query.toLowerCase();
@@ -426,9 +457,8 @@ public class AITemplateService {
 
         // Get AI suggestions if requested
         if (request.isUseAiSuggestions()) {
-            List<AITemplateVariable> variables = variableRepository.findAll().stream()
-                .filter(v -> v.getTemplateId().equals(request.getTemplateId()))
-                .collect(Collectors.toList());
+            // SECURITY: Use findByTemplateId instead of findAll to avoid cross-tenant data access
+            List<AITemplateVariable> variables = variableRepository.findByTemplateId(request.getTemplateId());
 
             for (AITemplateVariable variable : variables) {
                 if (!variableValues.containsKey(variable.getVariableName()) ||
@@ -487,9 +517,8 @@ public class AITemplateService {
 
     public Map<String, Object> suggestVariableValues(Long templateId, Map<String, Object> context) {
         AILegalTemplate template = getTemplateById(templateId);
-        List<AITemplateVariable> variables = variableRepository.findAll().stream()
-            .filter(v -> v.getTemplateId().equals(templateId))
-            .collect(Collectors.toList());
+        // SECURITY: Use findByTemplateId instead of findAll to avoid cross-tenant data access
+        List<AITemplateVariable> variables = variableRepository.findByTemplateId(templateId);
 
         Map<String, Object> suggestions = new HashMap<>();
         suggestions.put("templateId", templateId);

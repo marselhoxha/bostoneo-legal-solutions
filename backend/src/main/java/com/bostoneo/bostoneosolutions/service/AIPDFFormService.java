@@ -27,6 +27,7 @@ public class AIPDFFormService {
 
     private final AIPDFFormFieldRepository pdfFormFieldRepository;
     private final AILegalTemplateRepository templateRepository;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
 
     @Value("${app.pdf-forms.storage-path:uploads/pdf-forms}")
     private String pdfStoragePath;
@@ -35,9 +36,16 @@ public class AIPDFFormService {
     private String documentsOutputPath;
 
     public AIPDFFormService(AIPDFFormFieldRepository pdfFormFieldRepository,
-                           AILegalTemplateRepository templateRepository) {
+                           AILegalTemplateRepository templateRepository,
+                           com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService) {
         this.pdfFormFieldRepository = pdfFormFieldRepository;
         this.templateRepository = templateRepository;
+        this.tenantService = tenantService;
+    }
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     public List<Map<String, Object>> getAvailableTemplates() {
@@ -83,8 +91,11 @@ public class AIPDFFormService {
     }
 
     public Map<String, Object> fillPDFForm(Long templateId, Map<String, Object> caseData) {
-        AILegalTemplate template = templateRepository.findById(templateId)
-            .orElseThrow(() -> new RuntimeException("Template not found: " + templateId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use proper tenant-filtered query instead of post-filter pattern
+        // This prevents timing attacks and doesn't leak existence of records
+        AILegalTemplate template = templateRepository.findByIdAndAccessibleByOrganization(templateId, orgId)
+            .orElseThrow(() -> new RuntimeException("Template not found or access denied: " + templateId));
 
         if (!"PDF_FORM".equals(template.getTemplateType()) && !"HYBRID".equals(template.getTemplateType())) {
             throw new RuntimeException("Template is not a PDF form template");

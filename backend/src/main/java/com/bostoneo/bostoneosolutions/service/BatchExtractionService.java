@@ -34,6 +34,12 @@ public class BatchExtractionService {
     private final AIDocumentAnalysisRepository analysisRepository;
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     /**
      * Predefined extraction templates for common legal document types.
@@ -137,11 +143,14 @@ public class BatchExtractionService {
         List<String> fields = template == ExtractionTemplate.CUSTOM && customFields != null ?
                 customFields : template.getDefaultFields();
 
+        // SECURITY: Get org context BEFORE fetching data
+        Long orgId = getRequiredOrganizationId();
+
         log.info("Starting batch extraction for collection {}, template: {}, fields: {}",
                 collectionId, template, fields);
 
-        // Get all analysis IDs in the collection
-        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionId(collectionId);
+        // Get all analysis IDs in the collection - SECURITY: Use tenant-filtered query
+        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionIdAndOrganizationId(orgId, collectionId);
         if (analysisIds.isEmpty()) {
             return CompletableFuture.completedFuture(BatchExtractionResult.builder()
                     .documents(new ArrayList<>())
@@ -153,14 +162,14 @@ public class BatchExtractionService {
                     .build());
         }
 
-        // Get all chunks for the collection
-        List<DocumentChunk> allChunks = chunkRepository.findByAnalysisIdIn(analysisIds);
+        // Get all chunks for the collection - SECURITY: Use tenant-filtered query
+        List<DocumentChunk> allChunks = chunkRepository.findByAnalysisIdInAndOrganizationId(analysisIds, orgId);
 
         // Build document name and type map
         Map<Long, String> documentNames = new HashMap<>();
         Map<Long, String> documentTypes = new HashMap<>();
         for (Long analysisId : analysisIds) {
-            analysisRepository.findById(analysisId).ifPresent(analysis -> {
+            analysisRepository.findByIdAndOrganizationId(analysisId, orgId).ifPresent(analysis -> {
                 documentNames.put(analysisId, analysis.getFileName());
                 documentTypes.put(analysisId, analysis.getDetectedType());
             });

@@ -12,6 +12,7 @@ import com.bostoneo.bostoneosolutions.repository.AttorneyAvailabilityRepository;
 import com.bostoneo.bostoneosolutions.repository.AttorneyRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.service.AttorneyAvailabilityService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,20 +37,28 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
     private final AppointmentRequestRepository appointmentRequestRepository;
     private final UserRepository userRepository;
     private final AttorneyRepository attorneyRepository;
+    private final TenantService tenantService;
 
     private static final String[] DAY_NAMES = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     /**
      * Get the attorney record ID from the user ID
      * Creates an attorney record if one doesn't exist
      */
     private Long getAttorneyIdFromUserId(Long userId) {
-        return attorneyRepository.findByUserId(userId)
+        Long orgId = getRequiredOrganizationId();
+        return attorneyRepository.findByUserIdAndOrganizationId(userId, orgId)
                 .map(Attorney::getId)
                 .orElseGet(() -> {
                     // Auto-create attorney record if it doesn't exist
                     log.info("Creating attorney record for user: {}", userId);
                     Attorney newAttorney = Attorney.builder()
+                            .organizationId(orgId)
                             .userId(userId)
                             .practiceAreas("[]")
                             .isActive(true)
@@ -63,9 +72,14 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
 
     /**
      * Get user ID from attorney ID (for name lookup)
+     * SECURITY: Use tenant-filtered query
      */
     private Long getUserIdFromAttorneyId(Long attorneyId) {
-        return attorneyRepository.findById(attorneyId)
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (orgId == null) {
+            return attorneyId; // Fallback if no org context
+        }
+        return attorneyRepository.findByIdAndOrganizationId(attorneyId, orgId)
                 .map(Attorney::getUserId)
                 .orElse(attorneyId); // Fallback to using attorneyId as userId for backwards compatibility
     }
@@ -73,7 +87,8 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
     @Override
     public List<AttorneyAvailabilityDTO> getAvailabilityByAttorneyId(Long attorneyId) {
         log.info("Getting all availability for attorney: {}", attorneyId);
-        return availabilityRepository.findByAttorneyIdOrderByDayOfWeekAscStartTimeAsc(attorneyId)
+        Long orgId = getRequiredOrganizationId();
+        return availabilityRepository.findByOrganizationIdAndAttorneyIdOrderByDayOfWeekAscStartTimeAsc(orgId, attorneyId)
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -82,7 +97,8 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
     @Override
     public List<AttorneyAvailabilityDTO> getActiveAvailabilityByAttorneyId(Long attorneyId) {
         log.info("Getting active availability for attorney: {}", attorneyId);
-        return availabilityRepository.findByAttorneyIdAndIsActiveTrueOrderByDayOfWeekAscStartTimeAsc(attorneyId)
+        Long orgId = getRequiredOrganizationId();
+        return availabilityRepository.findByOrganizationIdAndAttorneyIdAndIsActiveTrueOrderByDayOfWeekAscStartTimeAsc(orgId, attorneyId)
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -91,14 +107,16 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
     @Override
     public List<AttorneyAvailabilityDTO> setWeeklyAvailability(Long attorneyId, List<AttorneyAvailabilityDTO> availabilityList) {
         log.info("Setting weekly availability for attorney: {}", attorneyId);
+        Long orgId = getRequiredOrganizationId();
 
-        // Delete existing availability
-        availabilityRepository.deleteByAttorneyId(attorneyId);
+        // Delete existing availability - SECURITY: Use tenant-filtered delete
+        availabilityRepository.deleteByAttorneyIdAndOrganizationId(attorneyId, orgId);
 
         // Create new availability records
         List<AttorneyAvailability> savedAvailability = new ArrayList<>();
         for (AttorneyAvailabilityDTO dto : availabilityList) {
             AttorneyAvailability availability = AttorneyAvailability.builder()
+                    .organizationId(orgId) // SECURITY: Set organization ID
                     .attorneyId(attorneyId)
                     .dayOfWeek(dto.getDayOfWeek())
                     .startTime(dto.getStartTime())
@@ -118,9 +136,11 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
     @Override
     public AttorneyAvailabilityDTO updateAvailability(Long id, AttorneyAvailabilityDTO dto) {
         log.info("Updating availability with ID: {}", id);
+        Long orgId = getRequiredOrganizationId();
 
-        AttorneyAvailability availability = availabilityRepository.findById(id)
-                .orElseThrow(() -> new ApiException("Availability not found with ID: " + id));
+        // SECURITY: Use tenant-filtered query
+        AttorneyAvailability availability = availabilityRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new ApiException("Availability not found or access denied"));
 
         if (dto.getStartTime() != null) {
             availability.setStartTime(dto.getStartTime());
@@ -144,8 +164,10 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
     @Override
     public AttorneyAvailabilityDTO toggleDayActive(Long attorneyId, Integer dayOfWeek, Boolean isActive) {
         log.info("Toggling day {} active status to {} for attorney: {}", dayOfWeek, isActive, attorneyId);
+        Long orgId = getRequiredOrganizationId();
 
-        Optional<AttorneyAvailability> availabilityOpt = availabilityRepository.findByAttorneyIdAndDayOfWeek(attorneyId, dayOfWeek);
+        // SECURITY: Use proper tenant-filtered query instead of post-filter pattern
+        Optional<AttorneyAvailability> availabilityOpt = availabilityRepository.findByOrganizationIdAndAttorneyIdAndDayOfWeek(orgId, attorneyId, dayOfWeek);
 
         if (availabilityOpt.isPresent()) {
             AttorneyAvailability availability = availabilityOpt.get();
@@ -154,6 +176,7 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
         } else {
             // Create new availability for the day with default times
             AttorneyAvailability newAvailability = AttorneyAvailability.builder()
+                    .organizationId(orgId) // SECURITY: Set organization ID
                     .attorneyId(attorneyId)
                     .dayOfWeek(dayOfWeek)
                     .startTime(LocalTime.of(9, 0))
@@ -169,16 +192,19 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
     @Override
     public void deleteAvailability(Long attorneyId) {
         log.info("Deleting all availability for attorney: {}", attorneyId);
-        availabilityRepository.deleteByAttorneyId(attorneyId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered delete to only delete within current organization
+        availabilityRepository.deleteByAttorneyIdAndOrganizationId(attorneyId, orgId);
     }
 
     @Override
     public List<AvailableSlotDTO> getAvailableSlots(Long attorneyId, LocalDate date, Integer durationMinutes) {
         log.info("Getting available slots for attorney {} on date {} with duration {}", attorneyId, date, durationMinutes);
+        Long orgId = getRequiredOrganizationId();
 
         int dayOfWeek = getDayOfWeekValue(date);
         List<AttorneyAvailability> availabilityList = availabilityRepository
-                .findByAttorneyIdAndDayOfWeekAndIsActiveTrue(attorneyId, dayOfWeek);
+                .findByOrganizationIdAndAttorneyIdAndDayOfWeekAndIsActiveTrue(orgId, attorneyId, dayOfWeek);
 
         if (availabilityList.isEmpty()) {
             return new ArrayList<>();
@@ -237,12 +263,14 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
 
     @Override
     public boolean hasAvailability(Long attorneyId) {
-        return availabilityRepository.existsByAttorneyIdAndIsActiveTrue(attorneyId);
+        Long orgId = getRequiredOrganizationId();
+        return availabilityRepository.existsByOrganizationIdAndAttorneyIdAndIsActiveTrue(orgId, attorneyId);
     }
 
     @Override
     public void initializeDefaultAvailability(Long attorneyId) {
         log.info("Initializing default availability for attorney: {}", attorneyId);
+        Long orgId = getRequiredOrganizationId();
 
         if (hasAvailability(attorneyId)) {
             log.info("Attorney {} already has availability set up", attorneyId);
@@ -252,6 +280,7 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
         // Create default availability for Monday-Friday 9 AM - 5 PM
         for (int dayOfWeek = 1; dayOfWeek <= 5; dayOfWeek++) {
             AttorneyAvailability availability = AttorneyAvailability.builder()
+                    .organizationId(orgId) // SECURITY: Set organization ID
                     .attorneyId(attorneyId)
                     .dayOfWeek(dayOfWeek)
                     .startTime(LocalTime.of(9, 0))
@@ -268,8 +297,10 @@ public class AttorneyAvailabilityServiceImpl implements AttorneyAvailabilityServ
      * Check if a time slot is available (no conflicting appointments)
      */
     private boolean isSlotAvailable(Long attorneyId, LocalDateTime start, LocalDateTime end) {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query to check only within current organization
         List<AppointmentRequest> conflicts = appointmentRequestRepository
-                .findConflictingAppointments(attorneyId, start, end);
+                .findConflictingAppointmentsByOrganization(orgId, attorneyId, start, end);
         return conflicts.isEmpty();
     }
 

@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.service.implementation;
 
 import com.bostoneo.bostoneosolutions.model.IntakeSubmission;
 import com.bostoneo.bostoneosolutions.model.Lead;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.IntakeSubmissionRepository;
 import com.bostoneo.bostoneosolutions.repository.LeadRepository;
 import com.bostoneo.bostoneosolutions.service.IntakeSubmissionService;
@@ -27,9 +28,15 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
 
     private final IntakeSubmissionRepository intakeSubmissionRepository;
     private final LeadRepository leadRepository;
+    private final TenantService tenantService;
     private final ObjectMapper objectMapper;
     private final AuthenticatedWebSocketHandler webSocketHandler;
     private final NotificationService notificationService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     // Valid status transitions
     private static final Map<String, Set<String>> VALID_TRANSITIONS = Map.of(
@@ -42,29 +49,46 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
 
     @Override
     public IntakeSubmission save(IntakeSubmission intakeSubmission) {
+        // SECURITY: Set organization ID if not already set
+        if (intakeSubmission.getOrganizationId() == null) {
+            intakeSubmission.setOrganizationId(getRequiredOrganizationId());
+        }
         return intakeSubmissionRepository.save(intakeSubmission);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<IntakeSubmission> findById(Long id) {
-        return intakeSubmissionRepository.findById(id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return intakeSubmissionRepository.findByIdAndOrganizationId(id, orgId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> findAll() {
-        return intakeSubmissionRepository.findAll();
+        // Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationId(orgId))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<IntakeSubmission> findAll(Pageable pageable) {
-        return intakeSubmissionRepository.findAll(pageable);
+        // Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationId(orgId, pageable))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     public void deleteById(Long id) {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before deletion
+        if (!intakeSubmissionRepository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new RuntimeException("Intake submission not found or access denied: " + id);
+        }
         intakeSubmissionRepository.deleteById(id);
     }
 
@@ -115,9 +139,11 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     public IntakeSubmission updateSubmissionData(Long id, String submissionData, Long userId) {
         log.info("Updating submission data for ID: {} by user: {}", id, userId);
-        
-        IntakeSubmission submission = intakeSubmissionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        IntakeSubmission submission = intakeSubmissionRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found or access denied: " + id));
         
         submission.setSubmissionData(submissionData);
         // Recalculate priority score with new data
@@ -129,9 +155,11 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     public IntakeSubmission reviewSubmission(Long id, Long reviewedBy, String notes) {
         log.info("Reviewing submission ID: {} by user: {}", id, reviewedBy);
-        
-        IntakeSubmission submission = intakeSubmissionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        IntakeSubmission submission = intakeSubmissionRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found or access denied: " + id));
         
         if (!canTransitionToStatus(submission.getStatus(), "REVIEWED")) {
             throw new RuntimeException("Invalid status transition from " + submission.getStatus() + " to REVIEWED");
@@ -153,9 +181,11 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     public IntakeSubmission convertToLead(Long id, Long reviewedBy, String notes) {
         log.info("Converting submission ID: {} to lead by user: {}", id, reviewedBy);
-        
-        IntakeSubmission submission = intakeSubmissionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        IntakeSubmission submission = intakeSubmissionRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found or access denied: " + id));
         
         if (!canTransitionToStatus(submission.getStatus(), "CONVERTED_TO_LEAD")) {
             throw new RuntimeException("Invalid status transition from " + submission.getStatus() + " to CONVERTED_TO_LEAD");
@@ -183,9 +213,11 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     public IntakeSubmission rejectSubmission(Long id, Long reviewedBy, String reason) {
         log.info("Rejecting submission ID: {} by user: {} for reason: {}", id, reviewedBy, reason);
-        
-        IntakeSubmission submission = intakeSubmissionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        IntakeSubmission submission = intakeSubmissionRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found or access denied: " + id));
         
         if (!canTransitionToStatus(submission.getStatus(), "REJECTED")) {
             throw new RuntimeException("Invalid status transition from " + submission.getStatus() + " to REJECTED");
@@ -207,9 +239,11 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     public IntakeSubmission markAsSpam(Long id, Long reviewedBy, String reason) {
         log.info("Marking submission ID: {} as spam by user: {} for reason: {}", id, reviewedBy, reason);
-        
-        IntakeSubmission submission = intakeSubmissionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        IntakeSubmission submission = intakeSubmissionRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found or access denied: " + id));
         
         if (!canTransitionToStatus(submission.getStatus(), "SPAM")) {
             throw new RuntimeException("Invalid status transition from " + submission.getStatus() + " to SPAM");
@@ -231,8 +265,10 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     public List<IntakeSubmission> bulkReview(List<Long> submissionIds, Long reviewedBy, String notes) {
         log.info("Bulk reviewing {} submissions by user: {}", submissionIds.size(), reviewedBy);
-        
-        List<IntakeSubmission> submissions = intakeSubmissionRepository.findAllById(submissionIds);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query for bulk operations
+        List<IntakeSubmission> submissions = intakeSubmissionRepository.findAllByIdInAndOrganizationId(submissionIds, orgId);
         List<IntakeSubmission> updated = new ArrayList<>();
         
         for (IntakeSubmission submission : submissions) {
@@ -251,8 +287,10 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     public List<IntakeSubmission> bulkReject(List<Long> submissionIds, Long reviewedBy, String reason) {
         log.info("Bulk rejecting {} submissions by user: {}", submissionIds.size(), reviewedBy);
-        
-        List<IntakeSubmission> submissions = intakeSubmissionRepository.findAllById(submissionIds);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query for bulk operations
+        List<IntakeSubmission> submissions = intakeSubmissionRepository.findAllByIdInAndOrganizationId(submissionIds, orgId);
         List<IntakeSubmission> updated = new ArrayList<>();
         
         for (IntakeSubmission submission : submissions) {
@@ -271,8 +309,10 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     public List<IntakeSubmission> bulkMarkAsSpam(List<Long> submissionIds, Long reviewedBy, String reason) {
         log.info("Bulk marking {} submissions as spam by user: {}", submissionIds.size(), reviewedBy);
-        
-        List<IntakeSubmission> submissions = intakeSubmissionRepository.findAllById(submissionIds);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query for bulk operations
+        List<IntakeSubmission> submissions = intakeSubmissionRepository.findAllByIdInAndOrganizationId(submissionIds, orgId);
         List<IntakeSubmission> updated = new ArrayList<>();
         
         for (IntakeSubmission submission : submissions) {
@@ -291,8 +331,10 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     public List<IntakeSubmission> bulkConvertToLead(List<Long> submissionIds, Long reviewedBy, String notes) {
         log.info("Bulk converting {} submissions to leads by user: {}", submissionIds.size(), reviewedBy);
-        
-        List<IntakeSubmission> submissions = intakeSubmissionRepository.findAllById(submissionIds);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query for bulk operations
+        List<IntakeSubmission> submissions = intakeSubmissionRepository.findAllByIdInAndOrganizationId(submissionIds, orgId);
         List<IntakeSubmission> updated = new ArrayList<>();
         
         for (IntakeSubmission submission : submissions) {
@@ -316,37 +358,55 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> findByStatus(String status) {
-        return intakeSubmissionRepository.findByStatus(status);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationIdAndStatus(orgId, status))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<IntakeSubmission> findByStatus(String status, Pageable pageable) {
-        return intakeSubmissionRepository.findByStatus(status, pageable);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationIdAndStatus(orgId, status, pageable))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> findPendingSubmissions() {
-        return intakeSubmissionRepository.findByStatus("PENDING");
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationIdAndStatus(orgId, "PENDING"))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<IntakeSubmission> findPendingSubmissions(Pageable pageable) {
-        return intakeSubmissionRepository.findByStatus("PENDING", pageable);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationIdAndStatus(orgId, "PENDING", pageable))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> findByFormId(Long formId) {
-        return intakeSubmissionRepository.findByFormId(formId);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationIdAndFormId(orgId, formId))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> findByReviewedBy(Long reviewedBy) {
-        return intakeSubmissionRepository.findByReviewedBy(reviewedBy);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationIdAndReviewedBy(orgId, reviewedBy))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
@@ -395,9 +455,11 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
 
     @Override
     public IntakeSubmission updatePriorityScore(Long id, Integer priorityScore) {
-        IntakeSubmission submission = intakeSubmissionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found with ID: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        IntakeSubmission submission = intakeSubmissionRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found or access denied: " + id));
+
         submission.setPriorityScore(priorityScore);
         return save(submission);
     }
@@ -405,55 +467,81 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> findHighPrioritySubmissions(Integer minScore) {
-        return intakeSubmissionRepository.findByPriorityScoreGreaterThanEqualOrderByPriorityScoreDesc(minScore);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationIdAndPriorityScoreGreaterThanEqualOrderByPriorityScoreDesc(orgId, minScore))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> findPendingOrderByPriority() {
-        return intakeSubmissionRepository.findPendingOrderByPriorityAndCreatedAt();
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findPendingByOrganizationOrderByPriorityAndCreatedAt(orgId))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<IntakeSubmission> findPendingOrderByPriority(Pageable pageable) {
-        return intakeSubmissionRepository.findPendingOrderByPriorityAndCreatedAt(pageable);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findPendingByOrganizationOrderByPriorityAndCreatedAt(orgId, pageable))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public long countByStatus(String status) {
-        return intakeSubmissionRepository.countByStatus(status);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.countByOrganizationIdAndStatus(orgId, status))
+            .orElse(0L);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Object[]> getStatusStatistics() {
-        return intakeSubmissionRepository.countByStatusGrouped();
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.countByOrganizationIdGroupedByStatus(orgId))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> findSubmissionsByDateRange(Timestamp startDate, Timestamp endDate) {
-        return intakeSubmissionRepository.findByCreatedAtBetween(startDate, endDate);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationIdAndCreatedAtBetween(orgId, startDate, endDate))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> findByPracticeArea(String practiceArea) {
-        return intakeSubmissionRepository.findByPracticeArea(practiceArea);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationIdAndPracticeArea(orgId, practiceArea))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> findRecentByStatus(String status, Timestamp since) {
-        return intakeSubmissionRepository.findByStatusAndCreatedAtAfter(status, since);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeSubmissionRepository.findByOrganizationIdAndStatusAndCreatedAtAfter(orgId, status, since))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     public IntakeSubmission addTags(Long id, List<String> tags, Long userId) {
-        IntakeSubmission submission = intakeSubmissionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        IntakeSubmission submission = intakeSubmissionRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found or access denied: " + id));
         
         try {
             List<String> currentTags = new ArrayList<>();
@@ -476,8 +564,10 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
 
     @Override
     public IntakeSubmission removeTags(Long id, List<String> tags, Long userId) {
-        IntakeSubmission submission = intakeSubmissionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        IntakeSubmission submission = intakeSubmissionRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found or access denied: " + id));
         
         try {
             List<String> currentTags = new ArrayList<>();
@@ -500,9 +590,11 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
 
     @Override
     public IntakeSubmission updateNotes(Long id, String notes, Long userId) {
-        IntakeSubmission submission = intakeSubmissionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found with ID: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        IntakeSubmission submission = intakeSubmissionRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found or access denied: " + id));
+
         submission.setNotes(notes);
         return save(submission);
     }
@@ -527,18 +619,22 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
 
     @Override
     public IntakeSubmission linkToLead(Long submissionId, Long leadId, Long userId) {
-        IntakeSubmission submission = intakeSubmissionRepository.findById(submissionId)
-            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found with ID: " + submissionId));
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        IntakeSubmission submission = intakeSubmissionRepository.findByIdAndOrganizationId(submissionId, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found or access denied: " + submissionId));
+
         submission.setLeadId(leadId);
         return save(submission);
     }
 
     @Override
     public IntakeSubmission unlinkFromLead(Long submissionId, Long userId) {
-        IntakeSubmission submission = intakeSubmissionRepository.findById(submissionId)
-            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found with ID: " + submissionId));
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        IntakeSubmission submission = intakeSubmissionRepository.findByIdAndOrganizationId(submissionId, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeSubmission not found or access denied: " + submissionId));
+
         submission.setLeadId(null);
         return save(submission);
     }
@@ -595,15 +691,15 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
                 "timestamp", System.currentTimeMillis()
             );
             
-            // Send via WebSocket for real-time updates
-            webSocketHandler.broadcastMessage(notificationData);
-            
-            // ALSO send via FCM for offline/background notifications to user 1 (you)
+            // SECURITY: Send via WebSocket only to users in the same organization
+            webSocketHandler.broadcastToOrganization(submission.getOrganizationId(), notificationData);
+
+            // ALSO send via FCM for offline/background notifications
             String title = (String) notificationData.get("title");
             String message = (String) notificationData.get("message");
             notificationService.sendCrmNotification(title, message, 1L, "NEW_SUBMISSION", notificationData);
-            
-            log.info("Sent new submission notification (WebSocket + FCM) for submission ID: {}", submission.getId());
+
+            log.info("Sent new submission notification (WebSocket + FCM) for submission ID: {} in org: {}", submission.getId(), submission.getOrganizationId());
             
         } catch (Exception e) {
             log.error("Failed to send new submission notification for submission ID: {}", submission.getId(), e);
@@ -635,15 +731,15 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
                 "timestamp", System.currentTimeMillis()
             );
             
-            // Send via WebSocket for real-time updates
-            webSocketHandler.broadcastMessage(notificationData);
-            
+            // SECURITY: Send via WebSocket only to users in the same organization
+            webSocketHandler.broadcastToOrganization(submission.getOrganizationId(), notificationData);
+
             // ALSO send via FCM for offline/background notifications
             String title = (String) notificationData.get("title");
             String message = (String) notificationData.get("message");
             notificationService.sendBroadcastNotification(title, message, "LEAD_CONVERSION", notificationData);
-            
-            log.info("Sent lead conversion notification (WebSocket + FCM) for submission ID: {} to lead ID: {}", submission.getId(), lead.getId());
+
+            log.info("Sent lead conversion notification (WebSocket + FCM) for submission ID: {} to lead ID: {} in org: {}", submission.getId(), lead.getId(), submission.getOrganizationId());
             
         } catch (Exception e) {
             log.error("Failed to send lead conversion notification for submission ID: {}", submission.getId(), e);
@@ -698,8 +794,8 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
                 "timestamp", System.currentTimeMillis()
             );
             
-            // Send via WebSocket for real-time updates
-            webSocketHandler.broadcastMessage(notificationData);
+            // SECURITY: Send via WebSocket only to users in the same organization
+            webSocketHandler.broadcastToOrganization(submission.getOrganizationId(), notificationData);
             
             // ALSO send via FCM for offline/background notifications
             notificationService.sendBroadcastNotification(title, message, notificationType, notificationData);
@@ -724,17 +820,20 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     @Transactional(readOnly = true)
     public Page<IntakeSubmission> findByFilters(String status, String practiceArea, String priority, Pageable pageable) {
-        // This would need custom query methods in repository, for now use basic filtering
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
         if (status != null) {
-            return intakeSubmissionRepository.findByStatus(status, pageable);
+            return intakeSubmissionRepository.findByOrganizationIdAndStatus(orgId, status, pageable);
         }
-        return intakeSubmissionRepository.findAll(pageable);
+        return intakeSubmissionRepository.findByOrganizationId(orgId, pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> findByPriorityThreshold(int threshold) {
-        return intakeSubmissionRepository.findByPriorityScoreGreaterThanEqual(threshold);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return intakeSubmissionRepository.findByOrganizationIdAndPriorityScoreGreaterThanEqualOrderByPriorityScoreDesc(orgId, threshold);
     }
 
     @Override
@@ -793,15 +892,17 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> getSubmissionCountsByStatus() {
-        List<Object[]> statusCounts = intakeSubmissionRepository.getStatusStatistics();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<Object[]> statusCounts = intakeSubmissionRepository.countByOrganizationIdGroupedByStatus(orgId);
         Map<String, Long> result = new HashMap<>();
-        
+
         for (Object[] row : statusCounts) {
             String status = (String) row[0];
             Long count = (Long) row[1];
             result.put(status, count);
         }
-        
+
         return result;
     }
 
@@ -815,8 +916,9 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     @Transactional(readOnly = true)
     public List<IntakeSubmission> getRecentSubmissions(int limit) {
-        // This would need a custom repository method with limit - for now use basic findAll
-        List<IntakeSubmission> all = intakeSubmissionRepository.findAll();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<IntakeSubmission> all = intakeSubmissionRepository.findByOrganizationId(orgId);
         return all.stream()
             .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
             .limit(limit)
@@ -826,20 +928,23 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> getSubmissionsByPriorityRange() {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<IntakeSubmission> all = intakeSubmissionRepository.findByOrganizationId(orgId);
         Map<String, Long> priorityDistribution = new HashMap<>();
-        
+
         // High priority (75-100)
-        List<IntakeSubmission> highPriority = intakeSubmissionRepository.findByPriorityScoreGreaterThanEqual(75);
-        priorityDistribution.put("HIGH", (long) highPriority.size());
-        
+        long highCount = all.stream().filter(s -> s.getPriorityScore() != null && s.getPriorityScore() >= 75).count();
+        priorityDistribution.put("HIGH", highCount);
+
         // Medium priority (40-74)
-        List<IntakeSubmission> mediumPriority = intakeSubmissionRepository.findByPriorityScoreBetween(40, 74);
-        priorityDistribution.put("MEDIUM", (long) mediumPriority.size());
-        
+        long mediumCount = all.stream().filter(s -> s.getPriorityScore() != null && s.getPriorityScore() >= 40 && s.getPriorityScore() < 75).count();
+        priorityDistribution.put("MEDIUM", mediumCount);
+
         // Low priority (0-39)
-        List<IntakeSubmission> lowPriority = intakeSubmissionRepository.findByPriorityScoreLessThan(40);
-        priorityDistribution.put("LOW", (long) lowPriority.size());
-        
+        long lowCount = all.stream().filter(s -> s.getPriorityScore() == null || s.getPriorityScore() < 40).count();
+        priorityDistribution.put("LOW", lowCount);
+
         return priorityDistribution;
     }
 }

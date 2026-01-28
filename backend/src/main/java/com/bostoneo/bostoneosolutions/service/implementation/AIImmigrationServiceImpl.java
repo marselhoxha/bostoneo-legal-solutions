@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.model.AIImmigrationCase;
 import com.bostoneo.bostoneosolutions.model.AIImmigrationDocument;
 import com.bostoneo.bostoneosolutions.enumeration.ImmigrationCaseType;
 import com.bostoneo.bostoneosolutions.enumeration.ImmigrationStatus;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AIImmigrationCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.AIImmigrationDocumentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,10 +32,13 @@ public class AIImmigrationServiceImpl implements AIImmigrationService {
     private final AIImmigrationDocumentRepository documentRepository;
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
+    private final TenantService tenantService;
 
     @Override
     public AIImmigrationCase createImmigrationCase(AIImmigrationCase immigrationCase) {
         log.info("Creating immigration case for case: {}", immigrationCase.getCaseId());
+        // SECURITY: Set organization ID from current tenant context
+        immigrationCase.setOrganizationId(tenantService.requireCurrentOrganizationId());
         immigrationCase.setCreatedAt(LocalDateTime.now());
         immigrationCase.setUpdatedAt(LocalDateTime.now());
         return caseRepository.save(immigrationCase);
@@ -44,37 +48,47 @@ public class AIImmigrationServiceImpl implements AIImmigrationService {
     public AIImmigrationCase updateImmigrationCase(Long id, AIImmigrationCase immigrationCase) {
         log.info("Updating immigration case with ID: {}", id);
         AIImmigrationCase existing = getImmigrationCaseById(id);
-        
+
         existing.setFormType(immigrationCase.getFormType());
         existing.setStatus(immigrationCase.getStatus());
         existing.setBeneficiaryName(immigrationCase.getBeneficiaryName());
         existing.setPriorityDate(immigrationCase.getPriorityDate());
         existing.setNextActionDate(immigrationCase.getNextActionDate());
         existing.setUpdatedAt(LocalDateTime.now());
-        
+
         return caseRepository.save(existing);
     }
 
     @Override
     public AIImmigrationCase getImmigrationCaseById(Long id) {
-        return caseRepository.findById(id)
+        // SECURITY: Use tenant-filtered lookup to prevent cross-tenant access
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return caseRepository.findByIdAndOrganizationId(id, orgId)
                 .orElseThrow(() -> new RuntimeException("Immigration case not found with ID: " + id));
     }
 
     @Override
     public Page<AIImmigrationCase> getImmigrationCasesByType(ImmigrationCaseType caseType, Pageable pageable) {
-        return caseRepository.findByCaseType(caseType, pageable);
+        // SECURITY: Filter by organization
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return caseRepository.findByFormTypeAndOrganizationId(caseType.toString(), orgId, pageable);
     }
 
     @Override
     public Page<AIImmigrationCase> getImmigrationCasesByStatus(ImmigrationStatus status, Pageable pageable) {
-        return caseRepository.findByStatus(status, pageable);
+        // SECURITY: Filter by organization
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return caseRepository.findByStatusAndOrganizationId(status, orgId, pageable);
     }
 
     @Override
     public void deleteImmigrationCase(Long id) {
         log.info("Deleting immigration case with ID: {}", id);
-        caseRepository.deleteById(id);
+        // SECURITY: Verify case belongs to current tenant before deleting
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        AIImmigrationCase existing = caseRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Immigration case not found with ID: " + id));
+        caseRepository.delete(existing);
     }
 
     @Override

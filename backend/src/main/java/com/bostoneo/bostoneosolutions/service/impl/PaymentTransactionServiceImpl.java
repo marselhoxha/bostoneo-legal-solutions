@@ -35,11 +35,19 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
     private final NotificationService notificationService;
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final InvoiceRepository invoiceRepository;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     @Transactional
     public PaymentTransaction createTransaction(PaymentTransactionDTO dto) {
+        Long orgId = getRequiredOrganizationId();
         PaymentTransaction transaction = PaymentTransaction.builder()
+                .organizationId(orgId) // SECURITY: Set organization ID
                 .invoiceId(dto.getInvoiceId())
                 .transactionType(dto.getTransactionType())
                 .transactionStatus("PENDING")
@@ -53,45 +61,55 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
                 .notes(dto.getNotes())
                 .createdBy(dto.getCreatedBy())
                 .build();
-        
+
         return transactionRepository.save(transaction);
     }
 
     @Override
     public Optional<PaymentTransaction> getTransaction(Long id) {
-        return transactionRepository.findById(id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return transactionRepository.findByIdAndOrganizationId(id, orgId);
     }
 
     @Override
     public Page<PaymentTransaction> getTransactionsByInvoice(Long invoiceId, Pageable pageable) {
-        return transactionRepository.findByInvoiceId(invoiceId, pageable);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return transactionRepository.findByOrganizationIdAndInvoiceId(orgId, invoiceId, pageable);
     }
 
     @Override
     public List<PaymentTransaction> getPendingTransactions() {
-        return transactionRepository.findByTransactionStatus("PENDING");
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return transactionRepository.findByOrganizationIdAndTransactionStatus(orgId, "PENDING");
     }
 
     @Override
     @Transactional
     public PaymentTransaction updateTransactionStatus(Long id, String status, String notes) {
-        PaymentTransaction transaction = transactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before update
+        PaymentTransaction transaction = transactionRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found or access denied"));
+
         transaction.setTransactionStatus(status);
         if (notes != null) {
-            transaction.setNotes(transaction.getNotes() != null ? 
+            transaction.setNotes(transaction.getNotes() != null ?
                 transaction.getNotes() + "\n" + notes : notes);
         }
-        
+
         return transactionRepository.save(transaction);
     }
 
     @Override
     @Transactional
     public PaymentTransaction completeTransaction(Long id) {
-        PaymentTransaction transaction = transactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before completion
+        PaymentTransaction transaction = transactionRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found or access denied"));
         
         transaction.setTransactionStatus("COMPLETED");
         transaction.setCompletionDate(LocalDate.now());
@@ -115,8 +133,8 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
         
         // Send payment received notifications
         try {
-            // Get invoice details for notification
-            Optional<Invoice> invoiceOpt = invoiceRepository.findById(transaction.getInvoiceId());
+            // Get invoice details for notification - SECURITY: Use tenant-filtered query
+            Optional<Invoice> invoiceOpt = invoiceRepository.findByIdAndOrganizationId(transaction.getInvoiceId(), orgId);
             if (invoiceOpt.isPresent()) {
                 Invoice invoice = invoiceOpt.get();
                 String title = "Payment Received";
@@ -127,7 +145,7 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
                 
                 // Get users assigned to the case if this invoice is related to a case
                 if (invoice.getLegalCaseId() != null) {
-                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(invoice.getLegalCaseId());
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(invoice.getLegalCaseId(), orgId);
                     for (CaseAssignment assignment : caseAssignments) {
                         if (assignment.getAssignedTo() != null) {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
@@ -156,15 +174,19 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
     @Override
     @Transactional
     public void cancelTransaction(Long id) {
-        PaymentTransaction transaction = transactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before cancellation
+        PaymentTransaction transaction = transactionRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found or access denied"));
+
         transaction.setTransactionStatus("CANCELLED");
         transactionRepository.save(transaction);
     }
 
     @Override
     public List<PaymentTransaction> getTransactionsByType(String type) {
-        return transactionRepository.findByTransactionType(type);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return transactionRepository.findByOrganizationIdAndTransactionType(orgId, type);
     }
 }

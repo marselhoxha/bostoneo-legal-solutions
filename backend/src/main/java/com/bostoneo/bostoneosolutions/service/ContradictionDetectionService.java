@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.model.DocumentChunk;
 import com.bostoneo.bostoneosolutions.repository.AIDocumentAnalysisRepository;
 import com.bostoneo.bostoneosolutions.repository.CollectionDocumentRepository;
 import com.bostoneo.bostoneosolutions.repository.DocumentChunkRepository;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +39,12 @@ public class ContradictionDetectionService {
     private final ClaudeSonnet4Service claudeService;
     private final SemanticSearchService semanticSearchService;
     private final ObjectMapper objectMapper;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     // Executor for parallel document processing
     private static final ExecutorService parallelExecutor = Executors.newFixedThreadPool(
@@ -95,9 +102,10 @@ public class ContradictionDetectionService {
      * @return ContradictionDetectionResult with found contradictions
      */
     @Cacheable(value = "contradiction_results",
-            key = "#collectionId + '-' + (#topics != null ? #topics.hashCode() : 'all')",
+            key = "T(com.bostoneo.bostoneosolutions.multitenancy.TenantContext).getCurrentTenant() + '-' + #collectionId + '-' + (#topics != null ? #topics.hashCode() : 'all')",
             unless = "#result.contradictions.isEmpty() && #result.summary.contains('Error')")
     public ContradictionDetectionResult detectContradictionsCached(Long collectionId, List<String> topics) {
+        // SECURITY: Include organization ID in cache key to prevent cross-tenant cache leakage
         log.info("Cache MISS for contradiction detection - running analysis for collection {}", collectionId);
         return detectContradictions(collectionId, topics).join();
     }
@@ -120,10 +128,12 @@ public class ContradictionDetectionService {
      */
     public CompletableFuture<ContradictionDetectionResult> detectContradictions(Long collectionId, List<String> topics) {
         long startTime = System.currentTimeMillis();
+        // SECURITY: Get org context BEFORE fetching data
+        Long orgId = getRequiredOrganizationId();
         log.info("Starting contradiction detection for collection {}, topics: {}", collectionId, topics);
 
-        // Get all analysis IDs in the collection
-        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionId(collectionId);
+        // Get all analysis IDs in the collection - SECURITY: Use tenant-filtered query
+        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionIdAndOrganizationId(orgId, collectionId);
         if (analysisIds.size() < 2) {
             log.warn("Collection {} has fewer than 2 documents - cannot detect contradictions", collectionId);
             return CompletableFuture.completedFuture(ContradictionDetectionResult.builder()
@@ -135,14 +145,14 @@ public class ContradictionDetectionService {
                     .build());
         }
 
-        // Get all chunks for the collection
-        List<DocumentChunk> allChunks = chunkRepository.findByAnalysisIdIn(analysisIds);
+        // Get all chunks for the collection - SECURITY: Use tenant-filtered query
+        List<DocumentChunk> allChunks = chunkRepository.findByAnalysisIdInAndOrganizationId(analysisIds, orgId);
         log.info("Found {} chunks across {} documents", allChunks.size(), analysisIds.size());
 
         // Build document name map for citations
         Map<Long, String> documentNames = new HashMap<>();
         for (Long analysisId : analysisIds) {
-            analysisRepository.findById(analysisId).ifPresent(analysis ->
+            analysisRepository.findByIdAndOrganizationId(analysisId, orgId).ifPresent(analysis ->
                     documentNames.put(analysisId, analysis.getFileName()));
         }
 
@@ -426,10 +436,12 @@ public class ContradictionDetectionService {
      */
     public CompletableFuture<ContradictionDetectionResult> detectContradictionsParallel(Long collectionId, List<String> topics) {
         long startTime = System.currentTimeMillis();
+        // SECURITY: Get org context BEFORE fetching data
+        Long orgIdForNames = getRequiredOrganizationId();
         log.info("Starting PARALLEL contradiction detection for collection {}", collectionId);
 
-        // Get all analysis IDs in the collection
-        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionId(collectionId);
+        // Get all analysis IDs in the collection - SECURITY: Use tenant-filtered query
+        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionIdAndOrganizationId(orgIdForNames, collectionId);
         if (analysisIds.size() < 2) {
             return CompletableFuture.completedFuture(ContradictionDetectionResult.builder()
                     .contradictions(new ArrayList<>())
@@ -440,18 +452,18 @@ public class ContradictionDetectionService {
                     .build());
         }
 
-        // Build document name map
+        // Build document name map - SECURITY: Use tenant-filtered query
         Map<Long, String> documentNames = new HashMap<>();
         for (Long analysisId : analysisIds) {
-            analysisRepository.findById(analysisId).ifPresent(analysis ->
+            analysisRepository.findByIdAndOrganizationId(analysisId, orgIdForNames).ifPresent(analysis ->
                     documentNames.put(analysisId, analysis.getFileName()));
         }
 
-        // Get chunks grouped by document
+        // Get chunks grouped by document - SECURITY: Use tenant-filtered query
         Map<Long, List<DocumentChunk>> chunksByDocument = new HashMap<>();
         int totalChunks = 0;
         for (Long analysisId : analysisIds) {
-            List<DocumentChunk> chunks = chunkRepository.findByAnalysisIdOrderByChunkIndexAsc(analysisId);
+            List<DocumentChunk> chunks = chunkRepository.findByAnalysisIdAndOrganizationIdOrderByChunkIndexAsc(analysisId, orgIdForNames);
             chunksByDocument.put(analysisId, chunks);
             totalChunks += chunks.size();
         }
@@ -469,6 +481,8 @@ public class ContradictionDetectionService {
         log.info("Generated {} document pairs for parallel comparison", documentPairs.size());
 
         // Process pairs in parallel (max 3 concurrent to avoid rate limiting)
+        // SECURITY: Capture org ID to pass to async tasks (ThreadLocal context is lost in executor)
+        final Long capturedOrgId = orgIdForNames;
         List<CompletableFuture<List<Contradiction>>> pairFutures = new ArrayList<>();
         int batchSize = 3;
 
@@ -478,6 +492,8 @@ public class ContradictionDetectionService {
             for (long[] pair : batch) {
                 CompletableFuture<List<Contradiction>> pairFuture = CompletableFuture.supplyAsync(() -> {
                     try {
+                        // SECURITY: Set tenant context in async thread
+                        TenantContext.setCurrentTenant(capturedOrgId);
                         return compareDocumentPair(
                                 pair[0], pair[1],
                                 chunksByDocument.get(pair[0]),
@@ -488,6 +504,9 @@ public class ContradictionDetectionService {
                     } catch (Exception e) {
                         log.error("Failed to compare documents {} and {}", pair[0], pair[1], e);
                         return new ArrayList<Contradiction>();
+                    } finally {
+                        // SECURITY: Clear tenant context after async execution
+                        TenantContext.clear();
                     }
                 }, parallelExecutor);
 

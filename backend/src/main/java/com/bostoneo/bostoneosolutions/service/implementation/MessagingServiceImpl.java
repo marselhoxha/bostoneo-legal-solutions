@@ -13,6 +13,7 @@ import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
 import com.bostoneo.bostoneosolutions.service.MessagingService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.TwilioService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,21 +42,33 @@ public class MessagingServiceImpl implements MessagingService {
     private final TwilioService twilioService;
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final ThreadAttorneyStatusRepository threadAttorneyStatusRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Get the current organization ID from tenant context.
+     * Throws ApiException if no organization context is available.
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new ApiException("Organization context required"));
+    }
 
     @Override
     public List<ClientPortalMessageThreadDTO> getThreadsForAttorney(Long userId) {
-        // Get threads directly assigned to this attorney
-        List<MessageThread> ownThreads = threadRepository.findByAttorneyIdOrderByLastMessageAtDesc(userId);
+        Long orgId = getRequiredOrganizationId();
 
-        // Get case IDs where this attorney is assigned
-        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveAssignmentsByUserId(userId);
+        // Get threads directly assigned to this attorney (with org filtering)
+        List<MessageThread> ownThreads = threadRepository.findByAttorneyIdAndOrganizationIdOrderByLastMessageAtDesc(userId, orgId);
+
+        // SECURITY: Get case IDs where this attorney is assigned (with org filtering)
+        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveAssignmentsByUserIdAndOrganizationId(userId, orgId);
         List<Long> assignedCaseIds = assignments.stream()
                 .map(a -> a.getLegalCase().getId())
                 .collect(Collectors.toList());
 
-        // Get threads for all assigned cases (even if not directly owned by this attorney)
+        // Get threads for all assigned cases (even if not directly owned by this attorney) - with org filtering
         List<MessageThread> caseThreads = assignedCaseIds.isEmpty() ?
-                List.of() : threadRepository.findByCaseIdInOrderByLastMessageAtDesc(assignedCaseIds);
+                List.of() : threadRepository.findByCaseIdInAndOrganizationIdOrderByLastMessageAtDesc(assignedCaseIds, orgId);
 
         // Merge and deduplicate threads (own threads first, then case threads)
         java.util.Set<Long> seenIds = new java.util.HashSet<>();
@@ -92,18 +105,22 @@ public class MessagingServiceImpl implements MessagingService {
 
     @Override
     public List<ClientPortalMessageThreadDTO> getThreadsByCase(Long caseId) {
-        List<MessageThread> threads = threadRepository.findByCaseIdOrderByLastMessageAtDesc(caseId);
+        Long orgId = getRequiredOrganizationId();
+        List<MessageThread> threads = threadRepository.findByCaseIdAndOrganizationIdOrderByLastMessageAtDesc(caseId, orgId);
         return threads.stream().map(this::mapToThreadDTO).collect(Collectors.toList());
     }
 
     @Override
     public List<ClientPortalMessageDTO> getMessagesForAttorney(Long userId, Long threadId) {
-        MessageThread thread = threadRepository.findById(threadId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify thread belongs to current organization
+        MessageThread thread = threadRepository.findByIdAndOrganizationId(threadId, orgId)
                 .orElseThrow(() -> new ApiException("Thread not found"));
 
-        // Mark client messages as read (for message-level tracking)
+        // Mark client messages as read (for message-level tracking) - with org filtering
         LocalDateTime readAt = LocalDateTime.now();
-        int markedCount = messageRepository.markAsRead(threadId, Message.SenderType.CLIENT, readAt);
+        int markedCount = messageRepository.markAsReadByOrganization(threadId, orgId, Message.SenderType.CLIENT, readAt);
 
         // CRITICAL FIX: Mark as read ONLY for THIS attorney, not all attorneys
         // This uses the per-attorney status table instead of the shared thread field
@@ -114,7 +131,8 @@ public class MessagingServiceImpl implements MessagingService {
             sendReadReceiptToClient(thread, userId, readAt);
         }
 
-        List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtAsc(threadId);
+        // Get messages with org filtering
+        List<Message> messages = messageRepository.findByThreadIdAndOrganizationIdOrderByCreatedAtAsc(threadId, orgId);
 
         // Debug: Log read status of messages
         for (Message msg : messages) {
@@ -130,8 +148,9 @@ public class MessagingServiceImpl implements MessagingService {
      * This does NOT affect other attorneys' unread counts.
      */
     private void markThreadAsReadForAttorney(Long threadId, Long attorneyUserId, LocalDateTime readAt) {
+        Long orgId = getRequiredOrganizationId();
         ThreadAttorneyStatus status = threadAttorneyStatusRepository
-                .findByThreadIdAndAttorneyUserId(threadId, attorneyUserId)
+                .findByOrganizationIdAndThreadIdAndAttorneyUserId(orgId, threadId, attorneyUserId)
                 .orElse(null);
 
         if (status != null) {
@@ -142,6 +161,7 @@ public class MessagingServiceImpl implements MessagingService {
         } else {
             // Create new status record marked as read
             status = ThreadAttorneyStatus.builder()
+                    .organizationId(orgId)
                     .threadId(threadId)
                     .attorneyUserId(attorneyUserId)
                     .unreadCount(0)
@@ -157,12 +177,15 @@ public class MessagingServiceImpl implements MessagingService {
      * Creates one with the current thread's unread count if it doesn't exist.
      */
     private void ensureAttorneyStatusExists(Long threadId, Long attorneyUserId) {
-        if (!threadAttorneyStatusRepository.existsByThreadIdAndAttorneyUserId(threadId, attorneyUserId)) {
-            MessageThread thread = threadRepository.findById(threadId).orElse(null);
+        Long orgId = getRequiredOrganizationId();
+        if (!threadAttorneyStatusRepository.existsByOrganizationIdAndThreadIdAndAttorneyUserId(orgId, threadId, attorneyUserId)) {
+            // SECURITY: Use tenant-filtered query
+            MessageThread thread = threadRepository.findByIdAndOrganizationId(threadId, orgId).orElse(null);
             int initialUnread = thread != null && thread.getUnreadByAttorney() != null
                     ? thread.getUnreadByAttorney() : 0;
 
             ThreadAttorneyStatus status = ThreadAttorneyStatus.builder()
+                    .organizationId(orgId)
                     .threadId(threadId)
                     .attorneyUserId(attorneyUserId)
                     .unreadCount(initialUnread)
@@ -178,8 +201,9 @@ public class MessagingServiceImpl implements MessagingService {
      * This ensures each attorney has their own unread count when one attorney sends a message.
      */
     private void incrementUnreadForOtherAttorneys(MessageThread thread, Long senderUserId) {
-        // Get all attorney user IDs for this thread
-        List<Long> attorneyUserIds = getAttorneyUserIdsForThread(thread);
+        Long orgId = thread.getOrganizationId();
+        // Get all attorney user IDs for this thread - SECURITY: pass org ID from thread
+        List<Long> attorneyUserIds = getAttorneyUserIdsForThread(thread, orgId);
 
         for (Long attorneyUserId : attorneyUserIds) {
             // Skip the sender - they shouldn't get an unread count for their own message
@@ -188,7 +212,7 @@ public class MessagingServiceImpl implements MessagingService {
             }
 
             ThreadAttorneyStatus status = threadAttorneyStatusRepository
-                    .findByThreadIdAndAttorneyUserId(thread.getId(), attorneyUserId)
+                    .findByOrganizationIdAndThreadIdAndAttorneyUserId(orgId, thread.getId(), attorneyUserId)
                     .orElse(null);
 
             if (status != null) {
@@ -199,6 +223,7 @@ public class MessagingServiceImpl implements MessagingService {
             } else {
                 // Create new status record with unread count of 1
                 status = ThreadAttorneyStatus.builder()
+                        .organizationId(orgId)
                         .threadId(thread.getId())
                         .attorneyUserId(attorneyUserId)
                         .unreadCount(1)
@@ -212,8 +237,9 @@ public class MessagingServiceImpl implements MessagingService {
 
     /**
      * Get all attorney user IDs for a thread (thread owner + case assignments).
+     * SECURITY: Uses org-filtered query for case assignments.
      */
-    private List<Long> getAttorneyUserIdsForThread(MessageThread thread) {
+    private List<Long> getAttorneyUserIdsForThread(MessageThread thread, Long organizationId) {
         List<Long> attorneyUserIds = new java.util.ArrayList<>();
 
         // 1. Thread owner (attorney_id)
@@ -221,9 +247,9 @@ public class MessagingServiceImpl implements MessagingService {
             attorneyUserIds.add(thread.getAttorneyId());
         }
 
-        // 2. Case-assigned attorneys
-        if (thread.getCaseId() != null) {
-            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(thread.getCaseId());
+        // 2. Case-assigned attorneys - SECURITY: use org-filtered query
+        if (thread.getCaseId() != null && organizationId != null) {
+            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(thread.getCaseId(), organizationId);
             for (CaseAssignment assignment : assignments) {
                 if (assignment.getAssignedTo() != null) {
                     Long userId = assignment.getAssignedTo().getId();
@@ -242,7 +268,9 @@ public class MessagingServiceImpl implements MessagingService {
      */
     private void sendReadReceiptToClient(MessageThread thread, Long attorneyUserId, LocalDateTime readAt) {
         try {
-            Client client = clientRepository.findById(thread.getClientId()).orElse(null);
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Use tenant-filtered query
+            Client client = clientRepository.findByIdAndOrganizationId(thread.getClientId(), orgId).orElse(null);
             if (client == null || client.getUserId() == null) return;
 
             User attorney = userRepository.get(attorneyUserId);
@@ -264,10 +292,14 @@ public class MessagingServiceImpl implements MessagingService {
 
     @Override
     public ClientPortalMessageDTO sendReply(Long userId, Long threadId, String content) {
-        MessageThread thread = threadRepository.findById(threadId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify thread belongs to current organization
+        MessageThread thread = threadRepository.findByIdAndOrganizationId(threadId, orgId)
                 .orElseThrow(() -> new ApiException("Thread not found"));
 
         Message message = Message.builder()
+                .organizationId(orgId)
                 .threadId(threadId)
                 .senderId(userId)
                 .senderType(Message.SenderType.ATTORNEY)
@@ -301,7 +333,10 @@ public class MessagingServiceImpl implements MessagingService {
 
     @Override
     public ClientPortalMessageDTO sendSmsReply(Long userId, Long threadId, String content, String toPhone) {
-        MessageThread thread = threadRepository.findById(threadId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify thread belongs to current organization
+        MessageThread thread = threadRepository.findByIdAndOrganizationId(threadId, orgId)
                 .orElseThrow(() -> new ApiException("Thread not found"));
 
         // Send the SMS via Twilio
@@ -313,6 +348,7 @@ public class MessagingServiceImpl implements MessagingService {
 
         // Create message record with SMS channel
         Message message = Message.builder()
+                .organizationId(orgId)
                 .threadId(threadId)
                 .senderId(userId)
                 .senderType(Message.SenderType.ATTORNEY)
@@ -346,25 +382,27 @@ public class MessagingServiceImpl implements MessagingService {
 
     @Override
     public int getUnreadCount(Long userId) {
+        Long orgId = getRequiredOrganizationId();
+
         // Use per-attorney unread tracking for accurate counts
         // This ensures each attorney has their own unread count
-        Integer perAttorneyCount = threadAttorneyStatusRepository.getTotalUnreadCountForAttorney(userId);
+        Integer perAttorneyCount = threadAttorneyStatusRepository.getTotalUnreadCountForAttorneyByOrganizationId(orgId, userId);
         if (perAttorneyCount != null && perAttorneyCount > 0) {
             return perAttorneyCount;
         }
 
-        // Fallback to legacy behavior for backwards compatibility
-        // (in case status records haven't been created yet)
-        Integer directCount = threadRepository.countUnreadByAttorney(userId);
+        // Fallback to legacy behavior for backwards compatibility (with org filtering)
+        Integer directCount = threadRepository.countUnreadByAttorneyAndOrganizationId(userId, orgId);
         int total = directCount != null ? directCount : 0;
 
-        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveAssignmentsByUserId(userId);
+        // SECURITY: Use org-filtered query for case assignments
+        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveAssignmentsByUserIdAndOrganizationId(userId, orgId);
         List<Long> assignedCaseIds = assignments.stream()
                 .map(a -> a.getLegalCase().getId())
                 .collect(Collectors.toList());
 
         if (!assignedCaseIds.isEmpty()) {
-            List<MessageThread> caseThreads = threadRepository.findByCaseIdInOrderByLastMessageAtDesc(assignedCaseIds);
+            List<MessageThread> caseThreads = threadRepository.findByCaseIdInAndOrganizationIdOrderByLastMessageAtDesc(assignedCaseIds, orgId);
             for (MessageThread thread : caseThreads) {
                 if (thread.getAttorneyId() != null && thread.getAttorneyId().equals(userId)) {
                     continue;
@@ -378,7 +416,10 @@ public class MessagingServiceImpl implements MessagingService {
 
     @Override
     public void closeThread(Long threadId) {
-        MessageThread thread = threadRepository.findById(threadId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify thread belongs to current organization
+        MessageThread thread = threadRepository.findByIdAndOrganizationId(threadId, orgId)
                 .orElseThrow(() -> new ApiException("Thread not found"));
         thread.setStatus(MessageThread.ThreadStatus.CLOSED);
         threadRepository.save(thread);
@@ -387,27 +428,35 @@ public class MessagingServiceImpl implements MessagingService {
     @Override
     @Transactional
     public void deleteThread(Long threadId) {
-        MessageThread thread = threadRepository.findById(threadId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify thread belongs to current organization
+        MessageThread thread = threadRepository.findByIdAndOrganizationId(threadId, orgId)
                 .orElseThrow(() -> new ApiException("Thread not found"));
-        // Delete all messages in the thread first
-        messageRepository.deleteByThreadId(threadId);
+        // Delete all messages in the thread first (with org filtering)
+        messageRepository.deleteByThreadIdAndOrganizationId(threadId, orgId);
         // Then delete the thread
         threadRepository.delete(thread);
     }
 
     @Override
     public ClientPortalMessageThreadDTO startThreadWithClient(Long attorneyId, Long clientId, Long caseId, String subject, String initialMessage) {
-        Client client = clientRepository.findById(clientId)
-                .orElseThrow(() -> new ApiException("Client not found"));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Client client = clientRepository.findByIdAndOrganizationId(clientId, orgId)
+                .orElseThrow(() -> new ApiException("Client not found or access denied"));
 
         // Validate case if provided
         if (caseId != null) {
-            caseRepository.findById(caseId)
-                    .orElseThrow(() -> new ApiException("Case not found"));
+            // SECURITY: Use tenant-filtered query
+            caseRepository.findByIdAndOrganizationId(caseId, orgId)
+                    .orElseThrow(() -> new ApiException("Case not found or access denied"));
         }
 
-        // Create thread
+        // Create thread with organization context
         MessageThread thread = MessageThread.builder()
+                .organizationId(orgId)
                 .caseId(caseId)
                 .clientId(clientId)
                 .attorneyId(attorneyId)
@@ -419,8 +468,9 @@ public class MessagingServiceImpl implements MessagingService {
                 .build();
         thread = threadRepository.save(thread);
 
-        // Create initial message
+        // Create initial message with organization context
         Message message = Message.builder()
+                .organizationId(orgId)
                 .threadId(thread.getId())
                 .senderId(attorneyId)
                 .senderType(Message.SenderType.ATTORNEY)
@@ -448,17 +498,22 @@ public class MessagingServiceImpl implements MessagingService {
 
     @Override
     public List<ClientDTO> getClientsForAttorney(Long attorneyId) {
-        // Get all clients - in a real app you might filter by cases assigned to this attorney
-        List<Client> clients = clientRepository.findAll();
+        // Get clients filtered by organization context
+        List<Client> clients = tenantService.getCurrentOrganizationId()
+            .map(orgId -> clientRepository.findByOrganizationId(orgId))
+            .orElseThrow(() -> new ApiException("Organization context required"));
+
         return clients.stream()
                 .map(c -> new ClientDTO(c.getId(), c.getName(), c.getEmail()))
                 .collect(Collectors.toList());
     }
 
     private ClientPortalMessageThreadDTO mapToThreadDTO(MessageThread thread) {
+        Long orgId = getRequiredOrganizationId();
         String caseNumber = null;
         if (thread.getCaseId() != null) {
-            LegalCase legalCase = caseRepository.findById(thread.getCaseId()).orElse(null);
+            // SECURITY: Use tenant-filtered query
+            LegalCase legalCase = caseRepository.findByIdAndOrganizationId(thread.getCaseId(), orgId).orElse(null);
             if (legalCase != null) caseNumber = legalCase.getCaseNumber();
         }
 
@@ -466,7 +521,8 @@ public class MessagingServiceImpl implements MessagingService {
         String clientPhone = null;
         String clientEmail = null;
         String clientImageUrl = null;
-        Client client = clientRepository.findById(thread.getClientId()).orElse(null);
+        // SECURITY: Use tenant-filtered query
+        Client client = clientRepository.findByIdAndOrganizationId(thread.getClientId(), orgId).orElse(null);
         if (client != null) {
             clientName = client.getName();
             clientPhone = client.getPhone();
@@ -492,7 +548,8 @@ public class MessagingServiceImpl implements MessagingService {
             }
         }
 
-        List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtDesc(thread.getId());
+        // SECURITY: Use tenant-filtered query
+        List<Message> messages = messageRepository.findByThreadIdAndOrganizationIdOrderByCreatedAtDesc(thread.getId(), orgId);
         String lastMessage = messages.isEmpty() ? "" : messages.get(0).getContent();
         Long lastSenderId = messages.isEmpty() ? null : messages.get(0).getSenderId();
         String lastSenderType = messages.isEmpty() ? null : messages.get(0).getSenderType().name();
@@ -539,9 +596,11 @@ public class MessagingServiceImpl implements MessagingService {
      * Each attorney sees their own unread count, not a shared one.
      */
     private ClientPortalMessageThreadDTO mapToThreadDTOForAttorney(MessageThread thread, Long attorneyUserId) {
+        Long orgId = getRequiredOrganizationId();
         String caseNumber = null;
         if (thread.getCaseId() != null) {
-            LegalCase legalCase = caseRepository.findById(thread.getCaseId()).orElse(null);
+            // SECURITY: Use tenant-filtered query
+            LegalCase legalCase = caseRepository.findByIdAndOrganizationId(thread.getCaseId(), orgId).orElse(null);
             if (legalCase != null) caseNumber = legalCase.getCaseNumber();
         }
 
@@ -549,7 +608,8 @@ public class MessagingServiceImpl implements MessagingService {
         String clientPhone = null;
         String clientEmail = null;
         String clientImageUrl = null;
-        Client client = clientRepository.findById(thread.getClientId()).orElse(null);
+        // SECURITY: Use tenant-filtered query
+        Client client = clientRepository.findByIdAndOrganizationId(thread.getClientId(), orgId).orElse(null);
         if (client != null) {
             clientName = client.getName();
             clientPhone = client.getPhone();
@@ -573,7 +633,8 @@ public class MessagingServiceImpl implements MessagingService {
             }
         }
 
-        List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtDesc(thread.getId());
+        // SECURITY: Use tenant-filtered query
+        List<Message> messages = messageRepository.findByThreadIdAndOrganizationIdOrderByCreatedAtDesc(thread.getId(), orgId);
         String lastMessage = messages.isEmpty() ? "" : messages.get(0).getContent();
         Long lastSenderId = messages.isEmpty() ? null : messages.get(0).getSenderId();
         String lastSenderType = messages.isEmpty() ? null : messages.get(0).getSenderType().name();
@@ -620,8 +681,9 @@ public class MessagingServiceImpl implements MessagingService {
      * Falls back to shared count if no per-attorney record exists.
      */
     private int getUnreadCountForAttorney(Long threadId, Long attorneyUserId, Integer fallbackCount) {
+        Long orgId = getRequiredOrganizationId();
         return threadAttorneyStatusRepository
-                .findByThreadIdAndAttorneyUserId(threadId, attorneyUserId)
+                .findByOrganizationIdAndThreadIdAndAttorneyUserId(orgId, threadId, attorneyUserId)
                 .map(ThreadAttorneyStatus::getUnreadCount)
                 .orElse(fallbackCount != null ? fallbackCount : 0);
     }
@@ -631,7 +693,7 @@ public class MessagingServiceImpl implements MessagingService {
         String senderImageUrl = null;
 
         if (message.getSenderType() == Message.SenderType.CLIENT) {
-            Client client = clientRepository.findByUserId(message.getSenderId());
+            Client client = clientRepository.findByOrganizationIdAndUserId(getRequiredOrganizationId(), message.getSenderId());
             if (client != null) {
                 senderName = client.getName();
                 // Get client image - try Client first, then fallback to User
@@ -669,7 +731,9 @@ public class MessagingServiceImpl implements MessagingService {
     }
 
     private void notifyClientOfReply(MessageThread thread, Long attorneyId, String content) {
-        Client client = clientRepository.findById(thread.getClientId()).orElse(null);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Client client = clientRepository.findByIdAndOrganizationId(thread.getClientId(), orgId).orElse(null);
         if (client == null || client.getUserId() == null) return;
 
         try {
@@ -700,7 +764,7 @@ public class MessagingServiceImpl implements MessagingService {
             // Get sender name for the notification
             String senderName = "Unknown";
             if (message.getSenderType() == Message.SenderType.CLIENT) {
-                Client client = clientRepository.findByUserId(message.getSenderId());
+                Client client = clientRepository.findByOrganizationIdAndUserId(getRequiredOrganizationId(), message.getSenderId());
                 if (client != null) senderName = client.getName();
             } else {
                 User user = userRepository.get(message.getSenderId());
@@ -719,7 +783,9 @@ public class MessagingServiceImpl implements MessagingService {
 
             if ("CLIENT".equals(recipientType)) {
                 // Notify client
-                Client client = clientRepository.findById(thread.getClientId()).orElse(null);
+                Long orgId = getRequiredOrganizationId();
+                // SECURITY: Use tenant-filtered query
+                Client client = clientRepository.findByIdAndOrganizationId(thread.getClientId(), orgId).orElse(null);
                 if (client != null && client.getUserId() != null) {
                     webSocketHandler.sendNotificationToUser(client.getUserId().toString(), wsMessage);
                     log.debug("WebSocket notification sent to client user {}", client.getUserId());
@@ -769,9 +835,9 @@ public class MessagingServiceImpl implements MessagingService {
                 attorneyUserIds.add(thread.getAttorneyId());
             }
 
-            // Include all attorneys assigned to the case (if case exists)
-            if (thread.getCaseId() != null) {
-                List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(thread.getCaseId());
+            // Include all attorneys assigned to the case (if case exists) - SECURITY: use org-filtered query
+            if (thread.getCaseId() != null && thread.getOrganizationId() != null) {
+                List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(thread.getCaseId(), thread.getOrganizationId());
                 for (CaseAssignment assignment : assignments) {
                     if (assignment.getAssignedTo() != null) {
                         Long attorneyUserId = assignment.getAssignedTo().getId();

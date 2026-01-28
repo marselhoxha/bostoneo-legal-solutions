@@ -32,6 +32,7 @@ import com.bostoneo.bostoneosolutions.service.ClientPortalService;
 import com.bostoneo.bostoneosolutions.service.FileManagerService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.CaseActivityService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +77,15 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     private final MessageRepository messageRepository;
     private final AuthenticatedWebSocketHandler webSocketHandler;
     private final ThreadAttorneyStatusRepository threadAttorneyStatusRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new ApiException("Organization context required"));
+    }
 
     // =====================================================
     // CLIENT PROFILE
@@ -110,9 +120,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public Page<ClientPortalCaseDTO> getClientCases(Long userId, int page, int size) {
         Client client = getClientByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
 
-        // Get cases where client name matches
-        Page<LegalCase> cases = legalCaseRepository.findByClientNameIgnoreCase(client.getName(), PageRequest.of(page, size));
+        // SECURITY: Get cases where client name matches WITHIN this organization only
+        Page<LegalCase> cases = legalCaseRepository.findByOrganizationIdAndClientNameIgnoreCase(orgId, client.getName(), PageRequest.of(page, size));
 
         List<ClientPortalCaseDTO> caseDTOs = cases.getContent().stream()
                 .map(this::mapToCaseDTO)
@@ -127,7 +138,9 @@ public class ClientPortalServiceImpl implements ClientPortalService {
             throw new ApiException("You do not have access to this case");
         }
 
-        LegalCase legalCase = legalCaseRepository.findById(caseId)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
                 .orElseThrow(() -> new ApiException("Case not found"));
 
         return mapToCaseDTO(legalCase);
@@ -137,12 +150,14 @@ public class ClientPortalServiceImpl implements ClientPortalService {
      * Convert user ID to attorney ID from attorneys table
      */
     private Long getAttorneyIdFromUserId(Long assignedUserId) {
-        return attorneyRepository.findByUserId(assignedUserId)
+        Long orgId = getRequiredOrganizationId();
+        return attorneyRepository.findByUserIdAndOrganizationId(assignedUserId, orgId)
                 .map(Attorney::getId)
                 .orElseGet(() -> {
                     // Auto-create attorney record if it doesn't exist
                     log.info("Creating attorney record for user: {}", assignedUserId);
                     Attorney newAttorney = Attorney.builder()
+                            .organizationId(orgId)
                             .userId(assignedUserId)
                             .practiceAreas("[]")
                             .isActive(true)
@@ -159,9 +174,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
         if (!verifyCaseAccess(userId, caseId)) {
             throw new ApiException("You do not have access to this case");
         }
+        Long orgId = getRequiredOrganizationId();
 
-        // Find lead attorney for the case from case assignments
-        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(caseId);
+        // SECURITY: Find lead attorney for the case from case assignments (with org filter)
+        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(caseId, orgId);
 
         // First look for lead attorney
         for (CaseAssignment assignment : assignments) {
@@ -197,9 +213,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public Page<ClientPortalDocumentDTO> getClientDocuments(Long userId, int page, int size) {
         Client client = getClientByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
 
-        // Get all cases for this client
-        List<LegalCase> clientCases = legalCaseRepository.findAllByClientNameIgnoreCase(client.getName());
+        // SECURITY: Get all cases for this client WITHIN this organization only
+        List<LegalCase> clientCases = legalCaseRepository.findAllByOrganizationIdAndClientNameIgnoreCase(orgId, client.getName());
 
         if (clientCases.isEmpty()) {
             return new PageImpl<>(new ArrayList<>(), PageRequest.of(page, size), 0);
@@ -259,7 +276,9 @@ public class ClientPortalServiceImpl implements ClientPortalService {
         }
 
         Client client = getClientByUserId(userId);
-        LegalCase legalCase = legalCaseRepository.findById(caseId)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
                 .orElseThrow(() -> new ApiException("Case not found"));
 
         try {
@@ -273,7 +292,8 @@ public class ClientPortalServiceImpl implements ClientPortalService {
             );
 
             // Update the file item with additional info
-            FileItem fileItem = fileItemRepository.findById(uploadResponse.getFileId())
+            // SECURITY: Use tenant-filtered query
+            FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(uploadResponse.getFileId(), orgId)
                     .orElseThrow(() -> new ApiException("Failed to save document"));
 
             // Update with client-uploaded document info
@@ -324,8 +344,9 @@ public class ClientPortalServiceImpl implements ClientPortalService {
             throw new ApiException("You do not have access to this document");
         }
 
-        // Verify document belongs to the case
-        FileItem fileItem = fileItemRepository.findById(documentId)
+        // Verify document belongs to the case - SECURITY: Use tenant-filtered query
+        Long orgId = getRequiredOrganizationId();
+        FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(documentId, orgId)
                 .orElseThrow(() -> new ApiException("Document not found"));
 
         if (!caseId.equals(fileItem.getCaseId())) {
@@ -343,8 +364,8 @@ public class ClientPortalServiceImpl implements ClientPortalService {
 
     private void notifyAttorneyOfNewDocument(Client client, LegalCase legalCase, FileItem document) {
         try {
-            // Get attorneys assigned to this case
-            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(legalCase.getId());
+            // SECURITY: Get attorneys assigned to this case (with org filter)
+            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(legalCase.getId(), legalCase.getOrganizationId());
 
             for (CaseAssignment assignment : assignments) {
                 // Notify lead attorneys and co-counsel
@@ -388,11 +409,11 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     }
 
     private ClientPortalDocumentDTO mapToDocumentDTO(FileItem fileItem) {
-        // Get case info
+        // Get case info - SECURITY: Use tenant-filtered query
         String caseNumber = null;
         String caseName = null;
-        if (fileItem.getCaseId() != null) {
-            LegalCase legalCase = legalCaseRepository.findById(fileItem.getCaseId()).orElse(null);
+        if (fileItem.getCaseId() != null && fileItem.getOrganizationId() != null) {
+            LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(fileItem.getCaseId(), fileItem.getOrganizationId()).orElse(null);
             if (legalCase != null) {
                 caseNumber = legalCase.getCaseNumber();
                 caseName = legalCase.getTitle();
@@ -454,10 +475,11 @@ public class ClientPortalServiceImpl implements ClientPortalService {
             throw new ApiException("You do not have access to this case");
         }
 
-        // Find the attorney for this case
+        // Find the attorney for this case - SECURITY: use org-filtered query
         Long attorneyId = null;
+        Long orgId = getRequiredOrganizationId();
         if (request.getCaseId() != null) {
-            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(request.getCaseId());
+            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(request.getCaseId(), orgId);
             for (CaseAssignment assignment : assignments) {
                 if (assignment.getRoleType() == CaseRoleType.LEAD_ATTORNEY) {
                     attorneyId = assignment.getAssignedTo().getId();
@@ -504,8 +526,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public void cancelAppointment(Long userId, Long appointmentId) {
         Client client = getClientByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
 
-        AppointmentRequest appointment = appointmentRequestRepository.findById(appointmentId)
+        // SECURITY: Use tenant-filtered query
+        AppointmentRequest appointment = appointmentRequestRepository.findByIdAndOrganizationId(appointmentId, orgId)
                 .orElseThrow(() -> new ApiException("Appointment not found"));
 
         // Verify appointment belongs to this client
@@ -538,8 +562,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public ClientPortalAppointmentDTO rescheduleAppointment(Long userId, Long appointmentId, String newDateTime, String reason) {
         Client client = getClientByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
 
-        AppointmentRequest appointment = appointmentRequestRepository.findById(appointmentId)
+        // SECURITY: Use tenant-filtered query
+        AppointmentRequest appointment = appointmentRequestRepository.findByIdAndOrganizationId(appointmentId, orgId)
                 .orElseThrow(() -> new ApiException("Appointment not found"));
 
         // Verify appointment belongs to this client
@@ -698,9 +724,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     }
 
     private ClientPortalAppointmentDTO mapToAppointmentDTO(AppointmentRequest appointment) {
+        // SECURITY: Use tenant-filtered query
         String caseNumber = null;
-        if (appointment.getCaseId() != null) {
-            LegalCase legalCase = legalCaseRepository.findById(appointment.getCaseId()).orElse(null);
+        if (appointment.getCaseId() != null && appointment.getOrganizationId() != null) {
+            LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(appointment.getCaseId(), appointment.getOrganizationId()).orElse(null);
             if (legalCase != null) {
                 caseNumber = legalCase.getCaseNumber();
             }
@@ -784,8 +811,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public List<ClientPortalMessageDTO> getThreadMessages(Long userId, Long threadId) {
         Client client = getClientByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
 
-        MessageThread thread = messageThreadRepository.findById(threadId)
+        // SECURITY: Use tenant-filtered query
+        MessageThread thread = messageThreadRepository.findByIdAndOrganizationId(threadId, orgId)
                 .orElseThrow(() -> new ApiException("Thread not found"));
 
         if (!thread.getClientId().equals(client.getId())) {
@@ -821,7 +850,8 @@ public class ClientPortalServiceImpl implements ClientPortalService {
             }
         }
 
-        List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtAsc(threadId);
+        // SECURITY: Use tenant-filtered query
+        List<Message> messages = messageRepository.findByThreadIdAndOrganizationIdOrderByCreatedAtAsc(threadId, orgId);
 
         // Debug: Log read status of messages
         for (Message msg : messages) {
@@ -835,8 +865,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public ClientPortalMessageDTO sendMessage(Long userId, Long threadId, String content) {
         Client client = getClientByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
 
-        MessageThread thread = messageThreadRepository.findById(threadId)
+        // SECURITY: Use tenant-filtered query
+        MessageThread thread = messageThreadRepository.findByIdAndOrganizationId(threadId, orgId)
                 .orElseThrow(() -> new ApiException("Thread not found"));
 
         if (!thread.getClientId().equals(client.getId())) {
@@ -877,12 +909,13 @@ public class ClientPortalServiceImpl implements ClientPortalService {
      * This includes the thread owner and all attorneys assigned to the case.
      */
     private void incrementUnreadForAllAttorneys(MessageThread thread) {
+        Long orgId = thread.getOrganizationId();
         // Get all attorney user IDs for this thread
         List<Long> attorneyUserIds = getAttorneyUserIdsForThread(thread);
 
         for (Long attorneyUserId : attorneyUserIds) {
             ThreadAttorneyStatus status = threadAttorneyStatusRepository
-                    .findByThreadIdAndAttorneyUserId(thread.getId(), attorneyUserId)
+                    .findByOrganizationIdAndThreadIdAndAttorneyUserId(orgId, thread.getId(), attorneyUserId)
                     .orElse(null);
 
             if (status != null) {
@@ -891,6 +924,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
             } else {
                 // Create new status record with unread=1
                 status = ThreadAttorneyStatus.builder()
+                        .organizationId(orgId)
                         .threadId(thread.getId())
                         .attorneyUserId(attorneyUserId)
                         .unreadCount(1)
@@ -909,12 +943,14 @@ public class ClientPortalServiceImpl implements ClientPortalService {
         }
 
         Client client = getClientByUserId(userId);
-        LegalCase legalCase = legalCaseRepository.findById(caseId)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
                 .orElseThrow(() -> new ApiException("Case not found"));
 
-        // Find lead attorney for this case
+        // SECURITY: Find lead attorney for this case (with org filter)
         Long attorneyId = null;
-        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(caseId);
+        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(caseId, orgId);
         for (CaseAssignment assignment : assignments) {
             if (assignment.getRoleType() == CaseRoleType.LEAD_ATTORNEY) {
                 attorneyId = assignment.getAssignedTo().getId();
@@ -965,16 +1001,18 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public void deleteThread(Long userId, Long threadId) {
         Client client = getClientByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
 
-        MessageThread thread = messageThreadRepository.findById(threadId)
+        // SECURITY: Use tenant-filtered query
+        MessageThread thread = messageThreadRepository.findByIdAndOrganizationId(threadId, orgId)
                 .orElseThrow(() -> new ApiException("Thread not found"));
 
         if (!thread.getClientId().equals(client.getId())) {
             throw new ApiException("You do not have access to this thread");
         }
 
-        // Delete all messages in the thread first (due to FK constraint)
-        messageRepository.deleteByThreadId(threadId);
+        // Delete all messages in the thread first (due to FK constraint) - SECURITY: Use tenant-filtered
+        messageRepository.deleteByThreadIdAndOrganizationId(threadId, orgId);
 
         // Delete the thread
         messageThreadRepository.delete(thread);
@@ -983,9 +1021,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     }
 
     private ClientPortalMessageThreadDTO mapToThreadDTO(MessageThread thread, String clientName) {
+        // SECURITY: Use tenant-filtered query
         String caseNumber = null;
-        if (thread.getCaseId() != null) {
-            LegalCase legalCase = legalCaseRepository.findById(thread.getCaseId()).orElse(null);
+        if (thread.getCaseId() != null && thread.getOrganizationId() != null) {
+            LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(thread.getCaseId(), thread.getOrganizationId()).orElse(null);
             if (legalCase != null) {
                 caseNumber = legalCase.getCaseNumber();
             }
@@ -1022,8 +1061,9 @@ public class ClientPortalServiceImpl implements ClientPortalService {
             }
         }
 
-        // Get last message for preview
-        List<Message> messages = messageRepository.findByThreadIdOrderByCreatedAtDesc(thread.getId());
+        // Get last message for preview - SECURITY: Use tenant-filtered query
+        Long orgId = getRequiredOrganizationId();
+        List<Message> messages = messageRepository.findByThreadIdAndOrganizationIdOrderByCreatedAtDesc(thread.getId(), orgId);
         String lastMessage = messages.isEmpty() ? "" : messages.get(0).getContent();
         Long lastSenderId = messages.isEmpty() ? null : messages.get(0).getSenderId();
         String lastSenderType = messages.isEmpty() ? "" : messages.get(0).getSenderType().name();
@@ -1064,7 +1104,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
         String senderImageUrl = null;
 
         if (message.getSenderType() == Message.SenderType.CLIENT) {
-            Client client = clientRepository.findByUserId(message.getSenderId());
+            Client client = clientRepository.findByOrganizationIdAndUserId(getRequiredOrganizationId(), message.getSenderId());
             if (client != null) {
                 senderName = client.getName();
                 // Get client image - try Client first, then fallback to User
@@ -1140,9 +1180,11 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public Page<ClientPortalInvoiceDTO> getClientInvoices(Long userId, int page, int size) {
         Client client = getClientByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("issueDate").descending());
-        Page<com.bostoneo.bostoneosolutions.model.Invoice> invoices = invoiceRepository.findByClientId(client.getId(), pageable);
+        // SECURITY: Use tenant-filtered query
+        Page<com.bostoneo.bostoneosolutions.model.Invoice> invoices = invoiceRepository.findByOrganizationIdAndClientId(orgId, client.getId(), pageable);
 
         List<ClientPortalInvoiceDTO> dtos = invoices.getContent().stream()
             .map(this::mapToClientPortalInvoiceDTO)
@@ -1154,8 +1196,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public ClientPortalInvoiceDTO getInvoice(Long userId, Long invoiceId) {
         Client client = getClientByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
 
-        com.bostoneo.bostoneosolutions.model.Invoice invoice = invoiceRepository.findById(invoiceId)
+        // SECURITY: Use tenant-filtered query
+        com.bostoneo.bostoneosolutions.model.Invoice invoice = invoiceRepository.findByIdAndOrganizationId(invoiceId, orgId)
             .orElseThrow(() -> new ApiException("Invoice not found"));
 
         // Verify invoice belongs to this client
@@ -1190,9 +1234,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public ClientPortalDashboardDTO getDashboardData(Long userId) {
         Client client = getClientByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
 
-        // Get client's cases
-        List<LegalCase> clientCases = legalCaseRepository.findAllByClientNameIgnoreCase(client.getName());
+        // SECURITY: Get client's cases WITHIN this organization only
+        List<LegalCase> clientCases = legalCaseRepository.findAllByOrganizationIdAndClientNameIgnoreCase(orgId, client.getName());
 
         int activeCases = (int) clientCases.stream()
                 .filter(c -> c.getStatus() != null && !c.getStatus().name().equals("CLOSED"))
@@ -1207,7 +1252,8 @@ public class ClientPortalServiceImpl implements ClientPortalService {
         int totalDocuments = 0;
         int recentDocuments = 0;
         if (!caseIds.isEmpty()) {
-            List<FileItem> sharedDocuments = fileItemRepository.findByCaseIdInAndSharedWithClientTrue(caseIds);
+            // SECURITY: Use tenant-filtered query
+            List<FileItem> sharedDocuments = fileItemRepository.findByCaseIdInAndSharedWithClientTrueAndOrganizationId(caseIds, orgId);
             totalDocuments = sharedDocuments.size();
 
             // Count documents from last 30 days
@@ -1264,19 +1310,26 @@ public class ClientPortalServiceImpl implements ClientPortalService {
 
     @Override
     public boolean verifyClientAccess(Long userId, Long clientId) {
-        Client client = clientRepository.findByUserId(userId);
+        Client client = clientRepository.findByOrganizationIdAndUserId(getRequiredOrganizationId(), userId);
         return client != null && client.getId().equals(clientId);
     }
 
     @Override
     public boolean verifyCaseAccess(Long userId, Long caseId) {
-        Client client = clientRepository.findByUserId(userId);
+        Client client = clientRepository.findByOrganizationIdAndUserId(getRequiredOrganizationId(), userId);
         if (client == null) {
             return false;
         }
 
-        // Check if case belongs to this client
-        LegalCase legalCase = legalCaseRepository.findById(caseId).orElse(null);
+        // SECURITY: Get organization ID for tenant isolation
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (orgId == null) {
+            log.warn("No organization context for user {} when verifying case access", userId);
+            return false;
+        }
+
+        // SECURITY: Check if case belongs to this client WITHIN this organization
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId).orElse(null);
         if (legalCase == null) {
             return false;
         }
@@ -1287,7 +1340,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
 
     @Override
     public Long getClientIdForUser(Long userId) {
-        Client client = clientRepository.findByUserId(userId);
+        Client client = clientRepository.findByOrganizationIdAndUserId(getRequiredOrganizationId(), userId);
         return client != null ? client.getId() : null;
     }
 
@@ -1296,7 +1349,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     // =====================================================
 
     private Client getClientByUserId(Long userId) {
-        Client client = clientRepository.findByUserId(userId);
+        Client client = clientRepository.findByOrganizationIdAndUserId(getRequiredOrganizationId(), userId);
         if (client == null) {
             throw new ApiException("Client profile not found for this user");
         }
@@ -1340,11 +1393,11 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                 )
                 : null;
 
-        // Get all assigned attorneys
+        // SECURITY: Get all assigned attorneys (with org filter)
         String attorneyName = null;
         List<String> assignedAttorneys = new ArrayList<>();
         try {
-            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(legalCase.getId());
+            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(legalCase.getId(), legalCase.getOrganizationId());
             String leadAttorneyName = null;
             for (CaseAssignment assignment : assignments) {
                 String fullName = assignment.getAssignedTo().getFirstName() + " " + assignment.getAssignedTo().getLastName();
@@ -1394,7 +1447,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
             String senderName = "Unknown";
             String senderImageUrl = null;
             if (message.getSenderType() == Message.SenderType.CLIENT) {
-                Client client = clientRepository.findByUserId(message.getSenderId());
+                Client client = clientRepository.findByOrganizationIdAndUserId(getRequiredOrganizationId(), message.getSenderId());
                 if (client != null) {
                     senderName = client.getName();
                     senderImageUrl = client.getImageUrl();
@@ -1435,8 +1488,10 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                     }
                 }
             } else {
-                // Notify client
-                Client client = clientRepository.findById(thread.getClientId()).orElse(null);
+                // Notify client - SECURITY: Use tenant-filtered query
+                Client client = thread.getOrganizationId() != null
+                    ? clientRepository.findByIdAndOrganizationId(thread.getClientId(), thread.getOrganizationId()).orElse(null)
+                    : null;
                 if (client != null && client.getUserId() != null) {
                     webSocketHandler.sendNotificationToUser(client.getUserId().toString(), wsMessage);
                     log.debug("WebSocket notification sent to client user {}", client.getUserId());
@@ -1450,13 +1505,15 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     /**
      * Get all attorney user IDs assigned to a case.
      * Used for notifications and display purposes.
+     * SECURITY: Uses org-filtered query.
      */
     private List<Long> getAssignedAttorneyUserIds(Long caseId) {
         List<Long> attorneyUserIds = new ArrayList<>();
         if (caseId == null) return attorneyUserIds;
 
         try {
-            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(caseId);
+            Long orgId = getRequiredOrganizationId();
+            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(caseId, orgId);
             for (CaseAssignment assignment : assignments) {
                 if (assignment.getAssignedTo() != null) {
                     attorneyUserIds.add(assignment.getAssignedTo().getId());

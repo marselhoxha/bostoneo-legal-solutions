@@ -32,6 +32,12 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
     private final CommunicationLogRepository communicationLogRepository;
     private final NotificationService notificationService;
     private final AuthenticatedWebSocketHandler webSocketHandler;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     @Transactional
@@ -76,19 +82,24 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
             return null;
         }
 
+        Long orgId = getRequiredOrganizationId();
+
         // Normalize phone number - try different formats
         String normalized = normalizePhoneNumber(phoneNumber);
 
+        // SECURITY: Include organization_id in query
         String sql = """
             SELECT id FROM clients
-            WHERE REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '(', ''), ')', '')
+            WHERE organization_id = :orgId
+            AND (REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '(', ''), ')', '')
                   LIKE CONCAT('%', :phoneDigits)
             OR phone = :phone
-            OR phone = :normalizedPhone
+            OR phone = :normalizedPhone)
             LIMIT 1
             """;
 
         Map<String, Object> params = new HashMap<>();
+        params.put("orgId", orgId);
         params.put("phone", phoneNumber);
         params.put("normalizedPhone", normalized);
         params.put("phoneDigits", extractDigits(phoneNumber).substring(Math.max(0, extractDigits(phoneNumber).length() - 10)));
@@ -106,24 +117,31 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
     public Long getPrimaryCaseForClient(Long clientId) {
         if (clientId == null) return null;
 
-        // Get the most recent active case for this client
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Include organization_id in query
         String sql = """
             SELECT id FROM legal_cases
-            WHERE client_id = :clientId
+            WHERE organization_id = :orgId
+            AND client_id = :clientId
             AND status IN ('OPEN', 'ACTIVE', 'IN_PROGRESS', 'PENDING')
             ORDER BY created_at DESC
             LIMIT 1
             """;
 
-        Map<String, Object> params = Map.of("clientId", clientId);
+        Map<String, Object> params = new HashMap<>();
+        params.put("orgId", orgId);
+        params.put("clientId", clientId);
 
         try {
             List<Long> results = jdbc.query(sql, params, (rs, rowNum) -> rs.getLong("id"));
             if (results.isEmpty()) {
                 // No active case, get the most recent case
+                // SECURITY: Include organization_id in query
                 sql = """
                     SELECT id FROM legal_cases
-                    WHERE client_id = :clientId
+                    WHERE organization_id = :orgId
+                    AND client_id = :clientId
                     ORDER BY created_at DESC
                     LIMIT 1
                     """;
@@ -137,10 +155,13 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
     }
 
     private MessageThread findOrCreateSmsThread(Long clientId, Long caseId) {
-        // Look for an existing SMS thread for this client
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Include organization_id in query
         String sql = """
             SELECT * FROM message_threads
-            WHERE client_id = :clientId
+            WHERE organization_id = :orgId
+            AND client_id = :clientId
             AND subject LIKE '%SMS%'
             AND status = 'OPEN'
             ORDER BY updated_at DESC
@@ -148,6 +169,7 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
             """;
 
         Map<String, Object> params = new HashMap<>();
+        params.put("orgId", orgId);
         params.put("clientId", clientId);
 
         List<MessageThread> threads = jdbc.query(sql, params, (rs, rowNum) -> {
@@ -360,6 +382,7 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
      */
     private List<Long> getAttorneyUserIdsForThread(MessageThread thread) {
         List<Long> attorneyUserIds = new ArrayList<>();
+        Long orgId = getRequiredOrganizationId();
 
         // 1. Thread owner (attorney_id)
         if (thread.getAttorneyId() != null) {
@@ -369,14 +392,19 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
         // 2. Case-assigned attorneys
         if (thread.getCaseId() != null && thread.getCaseId() > 0) {
             try {
+                // SECURITY: Include organization_id in query
                 String sql = """
                     SELECT user_id FROM case_assignments
-                    WHERE case_id = :caseId
+                    WHERE organization_id = :orgId
+                    AND case_id = :caseId
                     AND is_active = true
                     AND user_id IS NOT NULL
                     """;
-                List<Long> caseAttorneys = jdbc.query(sql,
-                    Map.of("caseId", thread.getCaseId()),
+                Map<String, Object> params = new HashMap<>();
+                params.put("orgId", orgId);
+                params.put("caseId", thread.getCaseId());
+
+                List<Long> caseAttorneys = jdbc.query(sql, params,
                     (rs, rowNum) -> rs.getLong("user_id"));
 
                 for (Long userId : caseAttorneys) {
@@ -397,10 +425,12 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
      */
     private Long getClientUserId(Long clientId) {
         if (clientId == null) return null;
+        Long orgId = getRequiredOrganizationId();
         try {
+            // SECURITY: Include organization_id in query
             return jdbc.queryForObject(
-                    "SELECT user_id FROM clients WHERE id = :clientId",
-                    Map.of("clientId", clientId),
+                    "SELECT user_id FROM clients WHERE id = :clientId AND organization_id = :orgId",
+                    Map.of("clientId", clientId, "orgId", orgId),
                     Long.class
             );
         } catch (Exception e) {
@@ -413,10 +443,12 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
 
     private String getClientName(Long clientId) {
         if (clientId == null) return null;
+        Long orgId = getRequiredOrganizationId();
         try {
+            // SECURITY: Include organization_id in query
             return jdbc.queryForObject(
-                    "SELECT name FROM clients WHERE id = :clientId",
-                    Map.of("clientId", clientId),
+                    "SELECT name FROM clients WHERE id = :clientId AND organization_id = :orgId",
+                    Map.of("clientId", clientId, "orgId", orgId),
                     String.class
             );
         } catch (Exception e) {
@@ -426,10 +458,12 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
 
     private String getCaseNumber(Long caseId) {
         if (caseId == null) return null;
+        Long orgId = getRequiredOrganizationId();
         try {
+            // SECURITY: Include organization_id in query
             return jdbc.queryForObject(
-                    "SELECT case_number FROM legal_cases WHERE id = :caseId",
-                    Map.of("caseId", caseId),
+                    "SELECT case_number FROM legal_cases WHERE id = :caseId AND organization_id = :orgId",
+                    Map.of("caseId", caseId, "orgId", orgId),
                     String.class
             );
         } catch (Exception e) {
@@ -439,16 +473,22 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
 
     private Long getLeadAttorneyForCase(Long caseId) {
         if (caseId == null) return null;
+        Long orgId = getRequiredOrganizationId();
         try {
+            // SECURITY: Include organization_id in query
             String sql = """
                 SELECT user_id FROM case_assignments
-                WHERE case_id = :caseId
+                WHERE organization_id = :orgId
+                AND case_id = :caseId
                 AND role_type IN ('LEAD_ATTORNEY', 'ATTORNEY', 'OWNER')
                 AND status = 'ACTIVE'
                 ORDER BY FIELD(role_type, 'LEAD_ATTORNEY', 'OWNER', 'ATTORNEY')
                 LIMIT 1
                 """;
-            List<Long> results = jdbc.query(sql, Map.of("caseId", caseId),
+            Map<String, Object> params = new HashMap<>();
+            params.put("orgId", orgId);
+            params.put("caseId", caseId);
+            List<Long> results = jdbc.query(sql, params,
                     (rs, rowNum) -> rs.getLong("user_id"));
             return results.isEmpty() ? null : results.get(0);
         } catch (Exception e) {

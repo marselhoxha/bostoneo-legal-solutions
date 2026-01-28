@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.model.*;
 import com.bostoneo.bostoneosolutions.repository.*;
 import com.bostoneo.bostoneosolutions.service.LeadConversionService;
 import com.bostoneo.bostoneosolutions.service.LeadService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,13 +27,21 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     private final ConflictCheckRepository conflictCheckRepository;
     private final LeadService leadService;
     private final ObjectMapper objectMapper;
+    private final TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public Client convertToClientOnly(Long leadId, Map<String, Object> additionalClientData, Long convertedBy) {
         log.info("Converting lead ID: {} to Client Only by user: {}", leadId, convertedBy);
-        
-        Lead lead = leadRepository.findById(leadId)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + leadId));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(leadId, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + leadId));
         
         // Perform conflict check
         performConflictCheck(leadId, "CLIENT_ONLY", convertedBy);
@@ -63,9 +72,11 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     @Override
     public LegalCase convertToMatterOnly(Long leadId, Map<String, Object> caseData, Long convertedBy) {
         log.info("Converting lead ID: {} to Matter Only by user: {}", leadId, convertedBy);
-        
-        Lead lead = leadRepository.findById(leadId)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + leadId));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(leadId, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + leadId));
         
         // Perform conflict check
         performConflictCheck(leadId, "MATTER_ONLY", convertedBy);
@@ -96,9 +107,11 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     @Override
     public ConversionResult convertToClientAndMatter(Long leadId, Map<String, Object> clientData, Map<String, Object> caseData, Long convertedBy) {
         log.info("Converting lead ID: {} to Client AND Matter by user: {}", leadId, convertedBy);
-        
-        Lead lead = leadRepository.findById(leadId)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + leadId));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(leadId, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + leadId));
         
         // Perform conflict check
         ConflictCheck conflictCheck = performConflictCheck(leadId, "CLIENT_AND_MATTER", convertedBy);
@@ -150,9 +163,11 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     @Override
     public ConflictCheck performConflictCheck(Long leadId, String conversionType, Long checkedBy) {
         log.info("Performing conflict check for lead ID: {} with conversion type: {}", leadId, conversionType);
-        
-        Lead lead = leadRepository.findById(leadId)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + leadId));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(leadId, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + leadId));
         
         // Create conflict check record
         ConflictCheck conflictCheck = ConflictCheck.builder()
@@ -190,15 +205,19 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     @Override
     @Transactional(readOnly = true)
     public List<ConflictCheck> findConflictsByLead(Long leadId) {
-        return conflictCheckRepository.findByLeadId(leadId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return conflictCheckRepository.findByOrganizationIdAndLeadId(orgId, leadId);
     }
 
     @Override
     public ConflictCheck resolveConflict(Long conflictCheckId, String resolution, String resolutionNotes, Long resolvedBy) {
         log.info("Resolving conflict ID: {} with resolution: {} by user: {}", conflictCheckId, resolution, resolvedBy);
-        
-        ConflictCheck conflictCheck = conflictCheckRepository.findById(conflictCheckId)
-            .orElseThrow(() -> new RuntimeException("ConflictCheck not found with ID: " + conflictCheckId));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        ConflictCheck conflictCheck = conflictCheckRepository.findByIdAndOrganizationId(conflictCheckId, orgId)
+            .orElseThrow(() -> new RuntimeException("ConflictCheck not found or access denied: " + conflictCheckId));
         
         conflictCheck.setResolution(resolution);
         conflictCheck.setResolutionNotes(resolutionNotes);
@@ -304,7 +323,9 @@ public class LeadConversionServiceImpl implements LeadConversionService {
 
     @Override
     public boolean canConvertLead(Long leadId, String conversionType) {
-        Lead lead = leadRepository.findById(leadId).orElse(null);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(leadId, orgId).orElse(null);
         if (lead == null) {
             return false;
         }
@@ -490,7 +511,9 @@ public class LeadConversionServiceImpl implements LeadConversionService {
                     fullName, lead.getId(), lead.getEmail());
             }
             
-            List<Client> existingClientsByName = clientRepository.findByNameIgnoreCase(fullName);
+            // SECURITY: Use org-filtered query
+            Long orgId = getRequiredOrganizationId();
+            List<Client> existingClientsByName = clientRepository.findByOrganizationIdAndNameIgnoreCase(orgId, fullName);
             
             // Add specific logging for Emily Davis
             if (fullName.contains("Emily") || fullName.contains("Davis")) {
@@ -509,7 +532,9 @@ public class LeadConversionServiceImpl implements LeadConversionService {
         
         // Check for existing clients with same email
         if (lead.getEmail() != null && !lead.getEmail().trim().isEmpty()) {
-            List<Client> existingClientsByEmail = clientRepository.findByEmail(lead.getEmail());
+            // SECURITY: Use org-filtered query
+            Long emailOrgId = getRequiredOrganizationId();
+            List<Client> existingClientsByEmail = clientRepository.findByOrganizationIdAndEmail(emailOrgId, lead.getEmail());
             
             // Add specific logging for Emily Davis
             if (lead.getEmail().contains("emily") || (fullName != null && fullName.contains("Emily"))) {
@@ -533,7 +558,9 @@ public class LeadConversionServiceImpl implements LeadConversionService {
 
     private void clearExistingConflicts(Long leadId) {
         log.info("Clearing existing conflict records for lead ID: {}", leadId);
-        List<ConflictCheck> existingConflicts = conflictCheckRepository.findByLeadId(leadId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<ConflictCheck> existingConflicts = conflictCheckRepository.findByOrganizationIdAndLeadId(orgId, leadId);
         if (!existingConflicts.isEmpty()) {
             log.info("Deleting {} existing conflict records for lead ID: {}", existingConflicts.size(), leadId);
             conflictCheckRepository.deleteAll(existingConflicts);

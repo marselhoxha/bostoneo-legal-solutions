@@ -71,7 +71,12 @@ public class InvoiceServiceImpl implements IInvoiceService {
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final ClientRepository clientRepository;
     private final TenantService tenantService;
-    
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
     @AuditLog(action = "CREATE", entityType = "INVOICE", description = "Created new invoice", includeResult = true)
     public Invoice createInvoice(Invoice invoice) {
         log.info("Creating new invoice for client ID: {}", invoice.getClientId());
@@ -128,9 +133,9 @@ public class InvoiceServiceImpl implements IInvoiceService {
             
             Set<Long> notificationUserIds = new HashSet<>();
             
-            // Get users assigned to the case if this invoice is related to a case
-            if (savedInvoice.getLegalCaseId() != null) {
-                List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(savedInvoice.getLegalCaseId());
+            // SECURITY: Get users assigned to the case if this invoice is related to a case (with org filter)
+            if (savedInvoice.getLegalCaseId() != null && savedInvoice.getOrganizationId() != null) {
+                List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(savedInvoice.getLegalCaseId(), savedInvoice.getOrganizationId());
                 for (CaseAssignment assignment : caseAssignments) {
                     if (assignment.getAssignedTo() != null) {
                         notificationUserIds.add(assignment.getAssignedTo().getId());
@@ -139,8 +144,9 @@ public class InvoiceServiceImpl implements IInvoiceService {
             }
             
             // Notify the client user if they have a linked user account
-            if (savedInvoice.getClientId() != null) {
-                clientRepository.findById(savedInvoice.getClientId()).ifPresent(client -> {
+            // SECURITY: Use tenant-filtered query
+            if (savedInvoice.getClientId() != null && savedInvoice.getOrganizationId() != null) {
+                clientRepository.findByIdAndOrganizationId(savedInvoice.getClientId(), savedInvoice.getOrganizationId()).ifPresent(client -> {
                     if (client.getUserId() != null) {
                         String clientTitle = "New Invoice Available";
                         String clientMessage = String.format("A new invoice %s for $%.2f is ready for your review",
@@ -177,18 +183,20 @@ public class InvoiceServiceImpl implements IInvoiceService {
     @AuditLog(action = "CREATE", entityType = "INVOICE", description = "Created invoice from time entries", includeResult = true)
     public Invoice createInvoiceFromTimeEntries(Invoice invoice, List<Long> timeEntryIds) {
         log.info("Creating invoice from {} time entries for client ID: {}", timeEntryIds.size(), invoice.getClientId());
-        
+        Long orgId = getRequiredOrganizationId();
+
         // Validate invoice
         invoiceValidator.validateForCreateFromTimeEntries(invoice);
-        
+
         // Fetch time entries
         List<TimeEntry> timeEntries = new ArrayList<>();
         List<Long> failedTimeEntryIds = new ArrayList<>();
-        
+
         for (Long timeEntryId : timeEntryIds) {
             try {
-                TimeEntry timeEntry = timeEntryRepository.findById(timeEntryId)
-                    .orElseThrow(() -> new RuntimeException("Time entry not found: " + timeEntryId));
+                // SECURITY: Use tenant-filtered query
+                TimeEntry timeEntry = timeEntryRepository.findByIdAndOrganizationId(timeEntryId, orgId)
+                    .orElseThrow(() -> new RuntimeException("Time entry not found or access denied: " + timeEntryId));
                 
                 // Validate time entry can be invoiced
                 if (timeEntry.getInvoiceId() != null) {
@@ -271,7 +279,8 @@ public class InvoiceServiceImpl implements IInvoiceService {
         invoiceRepository.flush();
         
         // Verify line items were saved
-        Invoice verifyInvoice = invoiceRepository.findByIdWithLineItems(savedInvoice.getId())
+        // SECURITY: Use tenant-filtered query
+        Invoice verifyInvoice = invoiceRepository.findByIdWithLineItemsAndOrganizationId(savedInvoice.getId(), orgId)
             .orElseThrow(() -> new RuntimeException("Failed to verify saved invoice"));
         
         log.info("Invoice created successfully with ID: {} and number: {} from {} time entries", 
@@ -312,10 +321,11 @@ public class InvoiceServiceImpl implements IInvoiceService {
     private String generateInvoiceNumber() {
         // Get the current year
         int year = LocalDate.now().getYear();
-        
-        // Find the last invoice number for this year
-        List<Invoice> recentInvoices = invoiceRepository.findTop1ByInvoiceNumberStartingWithOrderByIdDesc("INV-" + year);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Find the last invoice number for this year WITHIN THE ORGANIZATION
+        List<Invoice> recentInvoices = invoiceRepository.findTop1ByOrganizationIdAndInvoiceNumberStartingWithOrderByIdDesc(orgId, "INV-" + year);
+
         long nextNumber = 1;
         if (!recentInvoices.isEmpty()) {
             String lastNumber = recentInvoices.get(0).getInvoiceNumber();
@@ -329,23 +339,29 @@ public class InvoiceServiceImpl implements IInvoiceService {
                 }
             }
         }
-        
+
         return String.format("INV-%d-%04d", year, nextNumber);
     }
     
     public Invoice getInvoiceById(Long id) {
-        return invoiceRepository.findByIdWithLineItems(id)
-            .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return invoiceRepository.findByIdWithLineItemsAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Invoice not found or access denied: " + id));
     }
-    
+
     public Invoice getInvoiceByNumber(String invoiceNumber) {
-        return invoiceRepository.findByInvoiceNumber(invoiceNumber)
-            .orElseThrow(() -> new RuntimeException("Invoice not found with number: " + invoiceNumber));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return invoiceRepository.findByInvoiceNumberAndOrganizationId(invoiceNumber, orgId)
+            .orElseThrow(() -> new RuntimeException("Invoice not found or access denied: " + invoiceNumber));
     }
-    
+
     private Invoice getInvoiceWithLineItems(Long id) {
-        return invoiceRepository.findByIdWithLineItems(id)
-            .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return invoiceRepository.findByIdWithLineItemsAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Invoice not found or access denied: " + id));
     }
     
     public Page<Invoice> getInvoices(int page, int size, String sortBy, String sortDirection) {
@@ -353,50 +369,58 @@ public class InvoiceServiceImpl implements IInvoiceService {
             Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         return tenantService.getCurrentOrganizationId()
             .map(orgId -> invoiceRepository.findByOrganizationId(orgId, pageable))
-            .orElseGet(() -> invoiceRepository.findAll(pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
-    
+
     public Page<Invoice> getInvoicesByClient(Long clientId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         return tenantService.getCurrentOrganizationId()
             .map(orgId -> invoiceRepository.findByOrganizationIdAndClientId(orgId, clientId, pageable))
-            .orElseGet(() -> invoiceRepository.findByClientId(clientId, pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
-    
+
     public Page<Invoice> getInvoicesByCase(Long caseId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return invoiceRepository.findByLegalCaseId(caseId, pageable);
+
+        // Use tenant-filtered query - throw exception if no organization context
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> invoiceRepository.findByOrganizationIdAndLegalCaseId(orgId, caseId, pageable))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
-    
+
     public Page<Invoice> getInvoicesByStatus(InvoiceStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         return tenantService.getCurrentOrganizationId()
             .map(orgId -> invoiceRepository.findByOrganizationIdAndStatus(orgId, status, pageable))
-            .orElseGet(() -> invoiceRepository.findByStatus(status, pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
     
     public Page<Invoice> getInvoicesByFilters(Long clientId, Long caseId, InvoiceStatus status,
             LocalDate startDate, LocalDate endDate, Double minAmount, Double maxAmount, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        log.info("Getting invoices with filters - clientId: {}, caseId: {}, status: {}, startDate: {}, endDate: {}, minAmount: {}, maxAmount: {}", 
+        log.info("Getting invoices with filters - clientId: {}, caseId: {}, status: {}, startDate: {}, endDate: {}, minAmount: {}, maxAmount: {}",
                 clientId, caseId, status, startDate, endDate, minAmount, maxAmount);
-        
-        // Use the repository method with filters
-        return invoiceRepository.findByFilters(
-                clientId, 
-                caseId, 
-                status, 
-                startDate, 
-                endDate, 
-                minAmount, 
-                maxAmount, 
+
+        // Use tenant-filtered query - throw exception if no organization context
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+
+        return invoiceRepository.findByOrganizationIdAndFilters(
+                orgId,
+                clientId,
+                caseId,
+                status,
+                startDate,
+                endDate,
+                minAmount,
+                maxAmount,
                 pageable);
     }
     
@@ -502,78 +526,46 @@ public class InvoiceServiceImpl implements IInvoiceService {
     }
     
     public List<TimeEntry> getUnbilledTimeEntries(Long clientId, Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+
         if (caseId != null) {
-            // Look for both APPROVED and BILLING_APPROVED entries that haven't been invoiced yet
-            List<TimeEntry> approvedEntries = timeEntryRepository.findByLegalCaseIdAndStatusAndInvoiceIdIsNull(
-                    caseId, TimeEntryStatus.APPROVED);
-            List<TimeEntry> billingApprovedEntries = timeEntryRepository.findByLegalCaseIdAndStatusAndInvoiceIdIsNull(
-                    caseId, TimeEntryStatus.BILLING_APPROVED);
-            
+            // SECURITY: Use tenant-filtered queries
+            List<TimeEntry> approvedEntries = timeEntryRepository.findByOrganizationIdAndLegalCaseIdAndStatusAndInvoiceIdIsNull(
+                    orgId, caseId, TimeEntryStatus.APPROVED);
+            List<TimeEntry> billingApprovedEntries = timeEntryRepository.findByOrganizationIdAndLegalCaseIdAndStatusAndInvoiceIdIsNull(
+                    orgId, caseId, TimeEntryStatus.BILLING_APPROVED);
+
             // Combine both lists
             List<TimeEntry> allUnbilledEntries = new ArrayList<>();
             allUnbilledEntries.addAll(approvedEntries);
             allUnbilledEntries.addAll(billingApprovedEntries);
-            
-            log.info("Found {} unbilled entries for case {}: {} APPROVED, {} BILLING_APPROVED", 
+
+            log.info("Found {} unbilled entries for case {}: {} APPROVED, {} BILLING_APPROVED",
                     allUnbilledEntries.size(), caseId, approvedEntries.size(), billingApprovedEntries.size());
-            
+
             return allUnbilledEntries;
         }
-        
-        // If no specific case ID, return entries for all cases of the client
+
+        // If no specific case ID, get entries for all cases of the client (within org)
         if (clientId != null) {
             log.info("Getting unbilled entries for all cases of client: {}", clientId);
-            
-            // For now, use a hardcoded mapping for known clients
-            // In production, this should query the legal_cases table
-            List<Long> caseIds = new ArrayList<>();
-            
-            // Map known client IDs to their case IDs based on our database
-            switch (clientId.intValue()) {
-                case 1: // Acme Corporation
-                    caseIds.addAll(List.of(51L, 52L, 53L));
-                    break;
-                case 143: // Elena Martinez
-                    caseIds.add(1L);
-                    break;
-                case 166: // TechVision Inc.
-                    caseIds.add(2L);
-                    break;
-                case 158: // Robert Johnson
-                    caseIds.add(3L);
-                    break;
-                case 156: // Nexus Technologies Inc.
-                    caseIds.add(8L);
-                    break;
-                case 141: // Charles River Conservation Group
-                    caseIds.add(12L);
-                    break;
-                default:
-                    log.warn("No case mapping found for client ID: {}", clientId);
-                    return List.of();
-            }
-            
-            log.info("Found {} cases for client {}: {}", caseIds.size(), clientId, caseIds);
-            
-            // Get unbilled entries for all these cases
+
+            // SECURITY: Use tenant-filtered query to get all unbilled entries for client
+            List<TimeEntry> approvedEntries = timeEntryRepository.findUnbilledByOrganizationIdAndClientId(
+                    orgId, clientId, TimeEntryStatus.APPROVED);
+            List<TimeEntry> billingApprovedEntries = timeEntryRepository.findUnbilledByOrganizationIdAndClientId(
+                    orgId, clientId, TimeEntryStatus.BILLING_APPROVED);
+
             List<TimeEntry> allUnbilledEntries = new ArrayList<>();
-            
-            for (Long currentCaseId : caseIds) {
-                List<TimeEntry> approvedEntries = timeEntryRepository.findByLegalCaseIdAndStatusAndInvoiceIdIsNull(
-                        currentCaseId, TimeEntryStatus.APPROVED);
-                List<TimeEntry> billingApprovedEntries = timeEntryRepository.findByLegalCaseIdAndStatusAndInvoiceIdIsNull(
-                        currentCaseId, TimeEntryStatus.BILLING_APPROVED);
-                
-                allUnbilledEntries.addAll(approvedEntries);
-                allUnbilledEntries.addAll(billingApprovedEntries);
-            }
-            
-            log.info("Found {} total unbilled entries for client {} across {} cases", 
-                    allUnbilledEntries.size(), clientId, caseIds.size());
-            
+            allUnbilledEntries.addAll(approvedEntries);
+            allUnbilledEntries.addAll(billingApprovedEntries);
+
+            log.info("Found {} total unbilled entries for client {} in org {}",
+                    allUnbilledEntries.size(), clientId, orgId);
+
             return allUnbilledEntries;
         }
-        
+
         log.warn("Both clientId and caseId are null - cannot retrieve unbilled entries");
         return List.of();
     }
@@ -1009,11 +1001,15 @@ public class InvoiceServiceImpl implements IInvoiceService {
     }
     
     public Map<String, Object> getInvoiceStatistics() {
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+
         Map<String, Object> stats = new HashMap<>();
-        stats.put("totalInvoices", invoiceRepository.count());
-        stats.put("paidInvoices", invoiceRepository.countByStatus(InvoiceStatus.PAID));
-        stats.put("pendingInvoices", invoiceRepository.countByStatus(InvoiceStatus.PENDING));
-        stats.put("overdueInvoices", invoiceRepository.countByStatus(InvoiceStatus.OVERDUE));
+        // SECURITY: Use tenant-filtered queries
+        stats.put("totalInvoices", invoiceRepository.countByOrganizationId(orgId));
+        stats.put("paidInvoices", invoiceRepository.countByOrganizationIdAndStatus(orgId, InvoiceStatus.PAID));
+        stats.put("pendingInvoices", invoiceRepository.countByOrganizationIdAndStatus(orgId, InvoiceStatus.PENDING));
+        stats.put("overdueInvoices", invoiceRepository.countByOrganizationIdAndStatus(orgId, InvoiceStatus.OVERDUE));
         return stats;
     }
     

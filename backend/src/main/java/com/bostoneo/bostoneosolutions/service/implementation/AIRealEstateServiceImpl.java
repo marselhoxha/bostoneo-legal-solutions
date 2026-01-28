@@ -6,6 +6,8 @@ import com.bostoneo.bostoneosolutions.model.AIRealEstateTransaction;
 import com.bostoneo.bostoneosolutions.model.AIRealEstateDocument;
 import com.bostoneo.bostoneosolutions.enumeration.RealEstateTransactionType;
 import com.bostoneo.bostoneosolutions.enumeration.PropertyType;
+import com.bostoneo.bostoneosolutions.enumeration.TransactionType;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AIRealEstateTransactionRepository;
 import com.bostoneo.bostoneosolutions.repository.AIRealEstateDocumentRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,10 +31,13 @@ public class AIRealEstateServiceImpl implements AIRealEstateService {
     private final AIRealEstateTransactionRepository transactionRepository;
     private final AIRealEstateDocumentRepository documentRepository;
     private final ClaudeSonnet4Service claudeService;
+    private final TenantService tenantService;
 
     @Override
     public AIRealEstateTransaction createTransaction(AIRealEstateTransaction transaction) {
         log.info("Creating real estate transaction for case: {}", transaction.getCaseId());
+        // SECURITY: Set organization ID from current tenant context
+        transaction.setOrganizationId(tenantService.requireCurrentOrganizationId());
         transaction.setCreatedAt(LocalDateTime.now());
         transaction.setUpdatedAt(LocalDateTime.now());
         return transactionRepository.save(transaction);
@@ -42,7 +47,7 @@ public class AIRealEstateServiceImpl implements AIRealEstateService {
     public AIRealEstateTransaction updateTransaction(Long id, AIRealEstateTransaction transaction) {
         log.info("Updating real estate transaction with ID: {}", id);
         AIRealEstateTransaction existing = getTransactionById(id);
-        
+
         existing.setTransactionType(transaction.getTransactionType());
         existing.setPropertyType(transaction.getPropertyType());
         existing.setPropertyAddress(transaction.getPropertyAddress());
@@ -50,30 +55,40 @@ public class AIRealEstateServiceImpl implements AIRealEstateService {
         existing.setClosingDate(transaction.getClosingDate());
         existing.setTransactionType(transaction.getTransactionType());
         existing.setUpdatedAt(LocalDateTime.now());
-        
+
         return transactionRepository.save(existing);
     }
 
     @Override
     public AIRealEstateTransaction getTransactionById(Long id) {
-        return transactionRepository.findById(id)
+        // SECURITY: Use tenant-filtered lookup to prevent cross-tenant access
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return transactionRepository.findByIdAndOrganizationId(id, orgId)
                 .orElseThrow(() -> new RuntimeException("Real estate transaction not found with ID: " + id));
     }
 
     @Override
     public Page<AIRealEstateTransaction> getTransactionsByType(RealEstateTransactionType type, Pageable pageable) {
-        return transactionRepository.findByTransactionType(type, pageable);
+        // SECURITY: Filter by organization
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return transactionRepository.findByTransactionTypeAndOrganizationId(TransactionType.valueOf(type.name()), orgId, pageable);
     }
 
     @Override
     public Page<AIRealEstateTransaction> getTransactionsByPropertyType(PropertyType propertyType, Pageable pageable) {
-        return transactionRepository.findByPropertyType(propertyType, pageable);
+        // SECURITY: Filter by organization
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return transactionRepository.findByPropertyTypeAndOrganizationId(propertyType, orgId, pageable);
     }
 
     @Override
     public void deleteTransaction(Long id) {
         log.info("Deleting real estate transaction with ID: {}", id);
-        transactionRepository.deleteById(id);
+        // SECURITY: Verify transaction belongs to current tenant before deleting
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        AIRealEstateTransaction existing = transactionRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Real estate transaction not found with ID: " + id));
+        transactionRepository.delete(existing);
     }
 
     @Override

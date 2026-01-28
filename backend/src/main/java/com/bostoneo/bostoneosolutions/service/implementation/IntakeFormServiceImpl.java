@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
 import com.bostoneo.bostoneosolutions.model.IntakeForm;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.IntakeFormRepository;
 import com.bostoneo.bostoneosolutions.service.IntakeFormService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -24,7 +25,13 @@ import java.util.Optional;
 public class IntakeFormServiceImpl implements IntakeFormService {
 
     private final IntakeFormRepository intakeFormRepository;
+    private final TenantService tenantService;
     private final ObjectMapper objectMapper;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     // Available practice areas as constants
     private static final List<String> PRACTICE_AREAS = Arrays.asList(
@@ -39,56 +46,83 @@ public class IntakeFormServiceImpl implements IntakeFormService {
     @Override
     public IntakeForm save(IntakeForm intakeForm) {
         log.debug("Saving intake form: {}", intakeForm.getName());
+        // SECURITY: Set organization ID if not already set
+        if (intakeForm.getOrganizationId() == null) {
+            intakeForm.setOrganizationId(getRequiredOrganizationId());
+        }
         return intakeFormRepository.save(intakeForm);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<IntakeForm> findById(Long id) {
-        return intakeFormRepository.findById(id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return intakeFormRepository.findByIdAndOrganizationId(id, orgId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeForm> findAll() {
-        return intakeFormRepository.findAll();
+        // Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeFormRepository.findByOrganizationId(orgId))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<IntakeForm> findAll(Pageable pageable) {
-        return intakeFormRepository.findAll(pageable);
+        // Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeFormRepository.findByOrganizationId(orgId, pageable))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     public void deleteById(Long id) {
         log.info("Deleting intake form with ID: {}", id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before deletion
+        if (!intakeFormRepository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new RuntimeException("Intake form not found or access denied: " + id);
+        }
         intakeFormRepository.deleteById(id);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean existsById(Long id) {
-        return intakeFormRepository.existsById(id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return intakeFormRepository.existsByIdAndOrganizationId(id, orgId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeForm> findByPracticeArea(String practiceArea) {
-        return intakeFormRepository.findByPracticeArea(practiceArea);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeFormRepository.findByOrganizationIdAndPracticeArea(orgId, practiceArea))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeForm> findPublishedFormsByPracticeArea(String practiceArea) {
-        return intakeFormRepository.findPublishedFormsByPracticeArea(practiceArea);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeFormRepository.findPublishedFormsByOrganizationAndPracticeArea(orgId, practiceArea))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeForm> findAvailablePracticeAreas() {
-        // Return forms grouped by practice area
-        return intakeFormRepository.findByPracticeAreas(PRACTICE_AREAS);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> intakeFormRepository.findByOrganizationIdAndPracticeAreas(orgId, PRACTICE_AREAS))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
@@ -110,9 +144,11 @@ public class IntakeFormServiceImpl implements IntakeFormService {
     @Override
     public IntakeForm updateForm(Long id, IntakeForm intakeForm, Long userId) {
         log.info("Updating intake form ID: {} by user: {}", id, userId);
-        
-        IntakeForm existing = intakeFormRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeForm not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        IntakeForm existing = intakeFormRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeForm not found or access denied: " + id));
         
         // Update fields
         existing.setName(intakeForm.getName());
@@ -130,9 +166,11 @@ public class IntakeFormServiceImpl implements IntakeFormService {
     @Override
     public IntakeForm publishForm(Long id, Long userId) {
         log.info("Publishing intake form ID: {} by user: {}", id, userId);
-        
-        IntakeForm form = intakeFormRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeForm not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        IntakeForm form = intakeFormRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeForm not found or access denied: " + id));
         
         form.setStatus("PUBLISHED");
         form.setIsPublic(true);
@@ -144,9 +182,11 @@ public class IntakeFormServiceImpl implements IntakeFormService {
     @Override
     public IntakeForm unpublishForm(Long id, Long userId) {
         log.info("Unpublishing intake form ID: {} by user: {}", id, userId);
-        
-        IntakeForm form = intakeFormRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeForm not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        IntakeForm form = intakeFormRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeForm not found or access denied: " + id));
         
         form.setStatus("DRAFT");
         form.setIsPublic(false);
@@ -158,9 +198,11 @@ public class IntakeFormServiceImpl implements IntakeFormService {
     @Override
     public IntakeForm duplicateForm(Long id, String newName, Long userId) {
         log.info("Duplicating intake form ID: {} with new name: {} by user: {}", id, newName, userId);
-        
-        IntakeForm original = intakeFormRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeForm not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        IntakeForm original = intakeFormRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeForm not found or access denied: " + id));
         
         IntakeForm duplicate = IntakeForm.builder()
             .name(newName)
@@ -184,13 +226,21 @@ public class IntakeFormServiceImpl implements IntakeFormService {
     @Override
     @Transactional(readOnly = true)
     public List<IntakeForm> findPublicForms() {
-        return intakeFormRepository.findPublishedPublicForms();
+        // SECURITY: Use tenant-filtered query - even public forms should be scoped to organization
+        Long orgId = getRequiredOrganizationId();
+        return intakeFormRepository.findPublishedByOrganization(orgId).stream()
+            .filter(form -> Boolean.TRUE.equals(form.getIsPublic()))
+            .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeForm> findByPracticeAreaAndPublic(String practiceArea, boolean isPublic) {
-        return intakeFormRepository.findByPracticeAreaAndIsPublic(practiceArea, isPublic);
+        // SECURITY: Use tenant-filtered query
+        Long orgId = getRequiredOrganizationId();
+        return intakeFormRepository.findByOrganizationIdAndPracticeArea(orgId, practiceArea).stream()
+            .filter(form -> Boolean.TRUE.equals(form.getIsPublic()) == isPublic)
+            .toList();
     }
 
     @Override
@@ -203,45 +253,57 @@ public class IntakeFormServiceImpl implements IntakeFormService {
     @Override
     @Transactional(readOnly = true)
     public List<IntakeForm> findByStatus(String status) {
-        return intakeFormRepository.findByStatus(status);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return intakeFormRepository.findByOrganizationIdAndStatus(orgId, status);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeForm> findByFormType(String formType) {
-        return intakeFormRepository.findByFormType(formType);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return intakeFormRepository.findByOrganizationIdAndFormType(orgId, formType);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<IntakeForm> findByCreatedBy(Long userId, Pageable pageable) {
-        return intakeFormRepository.findByCreatedBy(userId, pageable);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return intakeFormRepository.findByOrganizationIdAndCreatedBy(orgId, userId, pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public long countPublishedByPracticeArea(String practiceArea) {
-        return intakeFormRepository.countPublishedByPracticeArea(practiceArea);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return intakeFormRepository.countPublishedByOrganizationAndPracticeArea(orgId, practiceArea);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<IntakeForm> getDefaultFormsForAllPracticeAreas() {
-        return intakeFormRepository.findByPracticeAreas(PRACTICE_AREAS);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return intakeFormRepository.findByOrganizationIdAndPracticeAreas(orgId, PRACTICE_AREAS);
     }
 
     @Override
     public IntakeForm updateFormConfiguration(Long id, String formConfig, Long userId) {
         log.info("Updating form configuration for ID: {} by user: {}", id, userId);
-        
-        IntakeForm form = intakeFormRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeForm not found with ID: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        IntakeForm form = intakeFormRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeForm not found or access denied: " + id));
+
         // Validate form configuration
         if (!validateFormConfiguration(formConfig)) {
             throw new RuntimeException("Invalid form configuration JSON");
         }
-        
+
         form.setFormConfig(formConfig);
         return save(form);
     }
@@ -249,13 +311,15 @@ public class IntakeFormServiceImpl implements IntakeFormService {
     @Override
     public IntakeForm updateFormSettings(Long id, String successMessage, String redirectUrl, Long userId) {
         log.info("Updating form settings for ID: {} by user: {}", id, userId);
-        
-        IntakeForm form = intakeFormRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("IntakeForm not found with ID: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        IntakeForm form = intakeFormRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("IntakeForm not found or access denied: " + id));
+
         form.setSuccessMessage(successMessage);
         form.setRedirectUrl(redirectUrl);
-        
+
         return save(form);
     }
 
@@ -282,9 +346,10 @@ public class IntakeFormServiceImpl implements IntakeFormService {
     @Override
     public IntakeForm findOrCreateGeneralForm() {
         log.info("Finding or creating general intake form");
-        
-        // Try to find existing general form
-        List<IntakeForm> generalForms = intakeFormRepository.findByName("General Consultation Form");
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Try to find existing general form within this organization
+        List<IntakeForm> generalForms = intakeFormRepository.findByOrganizationIdAndName(orgId, "General Consultation Form");
         if (!generalForms.isEmpty()) {
             IntakeForm existingForm = generalForms.get(0);
             log.info("Found existing general form with ID: {}", existingForm.getId());
@@ -314,9 +379,10 @@ public class IntakeFormServiceImpl implements IntakeFormService {
     @Override
     public IntakeForm findOrCreateFormForPracticeArea(String practiceArea) {
         log.info("Finding or creating intake form for practice area: {}", practiceArea);
-        
-        // Try to find existing form for this practice area
-        List<IntakeForm> existingForms = intakeFormRepository.findByPracticeArea(practiceArea);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Try to find existing form for this practice area within this organization
+        List<IntakeForm> existingForms = intakeFormRepository.findByOrganizationIdAndPracticeArea(orgId, practiceArea);
         if (!existingForms.isEmpty()) {
             IntakeForm existingForm = existingForms.get(0);
             log.info("Found existing form for {} with ID: {}", practiceArea, existingForm.getId());

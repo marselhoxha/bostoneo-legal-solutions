@@ -23,16 +23,33 @@ import java.util.stream.Collectors;
 public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationService {
 
     private final CaseRateConfigurationRepository repository;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+    private final com.bostoneo.bostoneosolutions.repository.LegalCaseRepository legalCaseRepository;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
+    private void verifyCaseBelongsToOrganization(Long legalCaseId) {
+        Long orgId = getRequiredOrganizationId();
+        if (!legalCaseRepository.existsByIdAndOrganizationId(legalCaseId, orgId)) {
+            throw new RuntimeException("Case not found or access denied: " + legalCaseId);
+        }
+    }
 
     @Override
     public CaseRateConfigurationDTO createCaseRateConfiguration(CaseRateConfigurationDTO dto) {
         log.info("Creating case rate configuration for case: {}", dto.getLegalCaseId());
-        
+
+        // SECURITY: Verify case belongs to current organization
+        verifyCaseBelongsToOrganization(dto.getLegalCaseId());
+
         // Check if configuration already exists for this case
         if (repository.existsByLegalCaseIdAndIsActive(dto.getLegalCaseId(), true)) {
             throw new RuntimeException("Rate configuration already exists for case: " + dto.getLegalCaseId());
         }
-        
+
         CaseRateConfiguration entity = mapToEntity(dto);
         CaseRateConfiguration saved = repository.save(entity);
         return mapToDTO(saved);
@@ -41,9 +58,11 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     public CaseRateConfigurationDTO updateCaseRateConfiguration(Long id, CaseRateConfigurationDTO dto) {
         log.info("Updating case rate configuration: {}", id);
-        
-        CaseRateConfiguration existing = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rate configuration not found with id: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        CaseRateConfiguration existing = repository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new RuntimeException("Rate configuration not found or access denied: " + id));
         
         // Update fields
         existing.setDefaultRate(dto.getDefaultRate());
@@ -60,19 +79,24 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     @Transactional(readOnly = true)
     public Optional<CaseRateConfigurationDTO> getCaseRateConfiguration(Long id) {
-        return repository.findById(id).map(this::mapToDTO);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return repository.findByIdAndOrganizationId(id, orgId).map(this::mapToDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<CaseRateConfigurationDTO> getCaseRateConfigurationByCase(Long legalCaseId) {
+        verifyCaseBelongsToOrganization(legalCaseId);
         return repository.findByLegalCaseIdAndIsActive(legalCaseId, true).map(this::mapToDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CaseRateConfigurationDTO> getAllCaseRateConfigurations() {
-        return repository.findAll().stream()
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return repository.findByOrganizationId(orgId).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -80,7 +104,9 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     @Transactional(readOnly = true)
     public List<CaseRateConfigurationDTO> getActiveCaseRateConfigurations() {
-        return repository.findByIsActive(true).stream()
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return repository.findByOrganizationIdAndIsActive(orgId, true).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -88,6 +114,10 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     @Transactional(readOnly = true)
     public List<CaseRateConfigurationDTO> getCaseRateConfigurationsByCases(List<Long> legalCaseIds) {
+        // SECURITY: Verify all cases belong to current organization
+        for (Long caseId : legalCaseIds) {
+            verifyCaseBelongsToOrganization(caseId);
+        }
         return repository.findByLegalCaseIdInAndIsActive(legalCaseIds, true).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -96,16 +126,23 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     public void deleteCaseRateConfiguration(Long id) {
         log.info("Deleting case rate configuration: {}", id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before deletion
+        if (!repository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new RuntimeException("Rate configuration not found or access denied: " + id);
+        }
         repository.deleteById(id);
     }
 
     @Override
     public void deactivateCaseRateConfiguration(Long id) {
         log.info("Deactivating case rate configuration: {}", id);
-        
-        CaseRateConfiguration config = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rate configuration not found with id: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        CaseRateConfiguration config = repository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new RuntimeException("Rate configuration not found or access denied: " + id));
+
         config.setIsActive(false);
         repository.save(config);
     }
@@ -113,9 +150,12 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     @Transactional(readOnly = true)
     public BigDecimal calculateEffectiveRate(Long legalCaseId, BigDecimal baseRate, boolean isWeekend, boolean isAfterHours, boolean isEmergency) {
-        log.debug("Calculating effective rate for case: {}, baseRate: {}, weekend: {}, afterHours: {}, emergency: {}", 
+        log.debug("Calculating effective rate for case: {}, baseRate: {}, weekend: {}, afterHours: {}, emergency: {}",
                   legalCaseId, baseRate, isWeekend, isAfterHours, isEmergency);
-        
+
+        // SECURITY: Verify case belongs to current organization
+        verifyCaseBelongsToOrganization(legalCaseId);
+
         Optional<CaseRateConfiguration> configOpt = repository.findByLegalCaseIdAndIsActive(legalCaseId, true);
         
         if (configOpt.isPresent()) {
@@ -146,6 +186,7 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getDefaultRateForCase(Long legalCaseId) {
+        verifyCaseBelongsToOrganization(legalCaseId);
         return repository.findByLegalCaseIdAndIsActive(legalCaseId, true)
                 .map(CaseRateConfiguration::getDefaultRate)
                 .orElse(new BigDecimal("250.00")); // Default fallback rate
@@ -154,6 +195,7 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     @Transactional(readOnly = true)
     public boolean allowsMultipliers(Long legalCaseId) {
+        verifyCaseBelongsToOrganization(legalCaseId);
         return repository.findByLegalCaseIdAndIsActive(legalCaseId, true)
                 .map(CaseRateConfiguration::getAllowMultipliers)
                 .orElse(true); // Default to allowing multipliers
@@ -162,6 +204,7 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getWeekendMultiplier(Long legalCaseId) {
+        verifyCaseBelongsToOrganization(legalCaseId);
         return repository.findByLegalCaseIdAndIsActive(legalCaseId, true)
                 .map(CaseRateConfiguration::getWeekendMultiplier)
                 .orElse(new BigDecimal("1.5"));
@@ -170,6 +213,7 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getAfterHoursMultiplier(Long legalCaseId) {
+        verifyCaseBelongsToOrganization(legalCaseId);
         return repository.findByLegalCaseIdAndIsActive(legalCaseId, true)
                 .map(CaseRateConfiguration::getAfterHoursMultiplier)
                 .orElse(new BigDecimal("1.25"));
@@ -178,6 +222,7 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getEmergencyMultiplier(Long legalCaseId) {
+        verifyCaseBelongsToOrganization(legalCaseId);
         return repository.findByLegalCaseIdAndIsActive(legalCaseId, true)
                 .map(CaseRateConfiguration::getEmergencyMultiplier)
                 .orElse(new BigDecimal("2.0"));
@@ -186,6 +231,7 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     @Transactional(readOnly = true)
     public boolean existsForCase(Long legalCaseId) {
+        verifyCaseBelongsToOrganization(legalCaseId);
         return repository.existsByLegalCaseIdAndIsActive(legalCaseId, true);
     }
 
@@ -217,7 +263,10 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     public CaseRateConfigurationDTO getOrCreateDefaultConfiguration(Long legalCaseId) {
         log.info("Getting or creating default configuration for case: {}", legalCaseId);
-        
+
+        // SECURITY: Verify case belongs to current organization
+        verifyCaseBelongsToOrganization(legalCaseId);
+
         Optional<CaseRateConfiguration> existing = repository.findByLegalCaseIdAndIsActive(legalCaseId, true);
         
         if (existing.isPresent()) {
@@ -243,7 +292,10 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     public void syncWithCaseDefaults(Long legalCaseId, BigDecimal defaultRate) {
         log.info("Syncing rate configuration with case defaults for case: {}", legalCaseId);
-        
+
+        // SECURITY: Verify case belongs to current organization
+        verifyCaseBelongsToOrganization(legalCaseId);
+
         Optional<CaseRateConfiguration> configOpt = repository.findByLegalCaseIdAndIsActive(legalCaseId, true);
         
         if (configOpt.isPresent()) {
@@ -259,20 +311,26 @@ public class CaseRateConfigurationServiceImpl implements CaseRateConfigurationSe
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getAverageDefaultRate() {
-        BigDecimal average = repository.getAverageDefaultRate();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        BigDecimal average = repository.getAverageDefaultRateByOrganization(orgId);
         return average != null ? average : BigDecimal.ZERO;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Long getCountWithMultipliersEnabled() {
-        return repository.countWithMultipliersEnabled();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return repository.countWithMultipliersEnabledByOrganization(orgId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CaseRateConfigurationDTO> getCasesByRateRange(BigDecimal minRate, BigDecimal maxRate) {
-        return repository.findByDefaultRateBetweenAndIsActive(minRate, maxRate, true).stream()
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return repository.findByOrganizationIdAndDefaultRateBetweenAndIsActive(orgId, minRate, maxRate).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }

@@ -1,7 +1,11 @@
 package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.dto.OrganizationDTO;
+import com.bostoneo.bostoneosolutions.dto.OrganizationStatsDTO;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.model.Organization;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -86,4 +90,39 @@ public interface OrganizationService {
                                                    Boolean emailEnabled, Boolean signatureReminderEmail,
                                                    Boolean signatureReminderSms, Boolean signatureReminderWhatsapp,
                                                    String signatureReminderDays);
+
+    /**
+     * Get paginated list of all organizations
+     */
+    Page<OrganizationDTO> getAllOrganizationsPaginated(Pageable pageable);
+
+    /**
+     * Get organization statistics
+     */
+    OrganizationStatsDTO getOrganizationStats(Long organizationId);
+
+    /**
+     * Get count of users in an organization
+     */
+    Integer getUserCountByOrganization(Long organizationId);
+
+    /**
+     * Get count of cases in an organization
+     */
+    Integer getCaseCountByOrganization(Long organizationId);
+
+    /**
+     * Get count of documents in an organization
+     */
+    Integer getDocumentCountByOrganization(Long organizationId);
+
+    /**
+     * Get count of clients in an organization
+     */
+    Integer getClientCountByOrganization(Long organizationId);
+
+    /**
+     * Get users belonging to an organization
+     */
+    Page<UserDTO> getUsersByOrganization(Long organizationId, Pageable pageable);
 }

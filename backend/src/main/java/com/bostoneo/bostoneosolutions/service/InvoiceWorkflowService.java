@@ -7,6 +7,8 @@ import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
 import com.bostoneo.bostoneosolutions.repository.InvoiceWorkflowExecutionRepository;
 import com.bostoneo.bostoneosolutions.repository.InvoiceWorkflowRuleRepository;
 import com.bostoneo.bostoneosolutions.repository.ClientRepository;
+import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,22 +27,32 @@ import java.util.Map;
 @Slf4j
 @Transactional
 public class InvoiceWorkflowService {
-    
+
     private final InvoiceWorkflowRuleRepository workflowRuleRepository;
     private final InvoiceWorkflowExecutionRepository executionRepository;
     private final InvoiceReminderRepository reminderRepository;
     private final InvoiceRepository invoiceRepository;
     private final EmailService emailService;
     private final ClientRepository clientRepository;
+    private final OrganizationRepository organizationRepository;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
     
     /**
      * Trigger workflows for a specific event
+     * NOTE: Workflow rules are GLOBAL (shared across all organizations)
+     * Execution history is tenant-filtered
      */
     public void triggerWorkflows(Invoice invoice, InvoiceWorkflowRule.TriggerEvent event, String oldStatus) {
         log.info("Triggering workflows for invoice {} with event {}", invoice.getInvoiceNumber(), event);
-        
+
         List<InvoiceWorkflowRule> rules;
         try {
+            // GLOBAL: Workflow rules are shared across all organizations
             rules = workflowRuleRepository.findByTriggerEventAndIsActiveTrue(event);
         } catch (Exception e) {
             log.warn("Workflow tables not available or accessible, skipping workflow execution: {}", e.getMessage());
@@ -73,46 +85,66 @@ public class InvoiceWorkflowService {
     
     /**
      * Process scheduled workflows (runs every hour)
+     * NOTE: Workflow rules are GLOBAL, but invoices are processed per organization
      */
     @Scheduled(cron = "0 0 * * * *") // Every hour
     public void processScheduledWorkflows() {
-        
+        log.info("Processing scheduled invoice workflows");
+
+        // GLOBAL: Get all active scheduled workflow rules (shared across all orgs)
         List<InvoiceWorkflowRule> scheduledRules = workflowRuleRepository
             .findByTriggerEventAndIsActiveTrue(InvoiceWorkflowRule.TriggerEvent.SCHEDULED);
-        
-        for (InvoiceWorkflowRule rule : scheduledRules) {
-            processScheduledRule(rule);
+
+        // Process rules for each organization's invoices
+        List<Organization> organizations = organizationRepository.findAll();
+        for (Organization org : organizations) {
+            try {
+                // Set tenant context for this organization
+                TenantContext.setCurrentTenant(org.getId());
+
+                for (InvoiceWorkflowRule rule : scheduledRules) {
+                    processScheduledRule(rule, org.getId());
+                }
+            } catch (Exception e) {
+                log.error("Error processing scheduled workflows for org {}: {}", org.getId(), e.getMessage());
+            } finally {
+                TenantContext.clear();
+            }
         }
     }
-    
-    private void processScheduledRule(InvoiceWorkflowRule rule) {
+
+    private void processScheduledRule(InvoiceWorkflowRule rule, Long orgId) {
         Map<String, Object> config = rule.getActionConfig();
-        
+
         if (config.containsKey("days_before_due")) {
             int daysBefore = ((Number) config.get("days_before_due")).intValue();
             LocalDate targetDate = LocalDate.now().plusDays(daysBefore);
-            
-            List<Invoice> invoices = invoiceRepository.findByDueDateAndStatusIn(
-                targetDate, 
+
+            // SECURITY: Use tenant-filtered query
+            List<Invoice> invoices = invoiceRepository.findByOrganizationIdAndDueDateAndStatusIn(
+                orgId,
+                targetDate,
                 Arrays.asList(InvoiceStatus.ISSUED, InvoiceStatus.PENDING)
             );
-            
+
             for (Invoice invoice : invoices) {
                 if (!hasExecutedRecently(rule, invoice, 24)) { // Check if executed in last 24 hours
                     executeWorkflow(rule, invoice);
                 }
             }
         }
-        
+
         if (config.containsKey("days_after_due")) {
             int daysAfter = ((Number) config.get("days_after_due")).intValue();
             LocalDate targetDate = LocalDate.now().minusDays(daysAfter);
-            
-            List<Invoice> invoices = invoiceRepository.findByDueDateLessThanEqualAndStatusIn(
+
+            // SECURITY: Use tenant-filtered query
+            List<Invoice> invoices = invoiceRepository.findByOrganizationIdAndDueDateLessThanEqualAndStatusIn(
+                orgId,
                 targetDate,
                 Arrays.asList(InvoiceStatus.ISSUED, InvoiceStatus.PENDING)
             );
-            
+
             for (Invoice invoice : invoices) {
                 if (!hasExecutedRecently(rule, invoice, 24)) {
                     executeWorkflow(rule, invoice);
@@ -156,10 +188,10 @@ public class InvoiceWorkflowService {
         boolean sendToClient = (Boolean) config.getOrDefault("send_to_client", true);
         boolean attachPdf = (Boolean) config.getOrDefault("attach_pdf", false);
         
-        // Get client email
+        // Get client email - SECURITY: Use tenant-filtered query
         final String[] clientEmailHolder = {null};
-        if (invoice.getClientId() != null) {
-            clientRepository.findById(invoice.getClientId()).ifPresent(client -> {
+        if (invoice.getClientId() != null && invoice.getOrganizationId() != null) {
+            clientRepository.findByIdAndOrganizationId(invoice.getClientId(), invoice.getOrganizationId()).ifPresent(client -> {
                 // Assuming client has getEmail() method
                 try {
                     clientEmailHolder[0] = (String) client.getClass().getMethod("getEmail").invoke(client);

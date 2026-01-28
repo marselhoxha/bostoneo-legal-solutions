@@ -3,6 +3,7 @@ package com.bostoneo.bostoneosolutions.service.implementation;
 import com.bostoneo.bostoneosolutions.model.Receipt;
 import com.bostoneo.bostoneosolutions.repository.ReceiptRepository;
 import com.bostoneo.bostoneosolutions.service.ReceiptService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +20,20 @@ import java.util.Date;
 public class ReceiptServiceImpl implements ReceiptService {
 
     private final ReceiptRepository receiptRepository;
+    private final TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public CustomHttpResponse<Receipt> uploadReceipt(MultipartFile file) {
+        Long orgId = getRequiredOrganizationId();
         try {
             // Create a new Receipt entity
             Receipt receipt = Receipt.builder()
+                    .organizationId(orgId) // SECURITY: Set organization ID
                     .fileName(file.getOriginalFilename())
                     .contentType(file.getContentType())
                     .fileSize(file.getSize())
@@ -35,7 +44,7 @@ public class ReceiptServiceImpl implements ReceiptService {
 
             // Save the receipt
             Receipt savedReceipt = receiptRepository.save(receipt);
-            
+
             // Return the saved receipt without the content to reduce response size
             Receipt responseReceipt = Receipt.builder()
                     .id(savedReceipt.getId())
@@ -45,7 +54,7 @@ public class ReceiptServiceImpl implements ReceiptService {
                     .createdAt(savedReceipt.getCreatedAt())
                     .updatedAt(savedReceipt.getUpdatedAt())
                     .build();
-            
+
             return new CustomHttpResponse<>(201, "Receipt uploaded successfully", responseReceipt);
         } catch (IOException e) {
             throw new RuntimeException("Failed to upload receipt: " + e.getMessage());
@@ -54,18 +63,22 @@ public class ReceiptServiceImpl implements ReceiptService {
 
     @Override
     public CustomHttpResponse<Receipt> getReceiptById(Long id) {
-        Receipt receipt = receiptRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Receipt not found with id: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Receipt receipt = receiptRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new EntityNotFoundException("Receipt not found or access denied: " + id));
+
         return new CustomHttpResponse<>(200, "Receipt retrieved successfully", receipt);
     }
 
     @Override
     public CustomHttpResponse<Void> deleteReceipt(Long id) {
-        if (!receiptRepository.existsById(id)) {
-            throw new EntityNotFoundException("Receipt not found with id: " + id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before deletion
+        if (!receiptRepository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new EntityNotFoundException("Receipt not found or access denied: " + id);
         }
-        
+
         receiptRepository.deleteById(id);
         return new CustomHttpResponse<>(200, "Receipt deleted successfully", null);
     }

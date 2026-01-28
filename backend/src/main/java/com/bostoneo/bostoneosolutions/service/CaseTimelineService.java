@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.model.CaseTimelineProgress;
 import com.bostoneo.bostoneosolutions.model.CaseTimelineTemplate;
 import com.bostoneo.bostoneosolutions.model.Client;
 import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.CaseTimelineProgressRepository;
 import com.bostoneo.bostoneosolutions.repository.CaseTimelineTemplateRepository;
 import com.bostoneo.bostoneosolutions.repository.ClientRepository;
@@ -33,21 +34,33 @@ public class CaseTimelineService {
     private final LegalCaseRepository legalCaseRepository;
     private final ClientRepository clientRepository;
     private final NotificationService notificationService;
+    private final TenantService tenantService;
 
     /**
-     * Get the timeline for a specific case
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
+    /**
+     * Get the timeline for a specific case - TENANT FILTERED
      */
     public CaseTimelineDTO getCaseTimeline(Long caseId) {
-        LegalCase legalCase = legalCaseRepository.findById(caseId)
+        Long orgId = getRequiredOrganizationId();
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
                 .orElseThrow(() -> new RuntimeException("Case not found: " + caseId));
 
         // Initialize timeline if not already done
         if (!Boolean.TRUE.equals(legalCase.getTimelineInitialized())) {
             initializeTimeline(caseId);
-            legalCase = legalCaseRepository.findById(caseId).orElseThrow();
+            // SECURITY: Use tenant-filtered query
+            legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId).orElseThrow();
         }
 
-        List<CaseTimelineProgress> progressList = progressRepository.findByCaseIdOrderByPhaseOrderAsc(caseId);
+        // SECURITY: Use tenant-filtered query
+        List<CaseTimelineProgress> progressList = progressRepository.findByOrganizationIdAndCaseIdOrderByPhaseOrderAsc(orgId, caseId);
 
         if (progressList.isEmpty()) {
             // Return empty timeline for case types without templates
@@ -121,11 +134,12 @@ public class CaseTimelineService {
     }
 
     /**
-     * Initialize timeline for a case based on its type
+     * Initialize timeline for a case based on its type - TENANT FILTERED
      */
     @Transactional
     public void initializeTimeline(Long caseId) {
-        LegalCase legalCase = legalCaseRepository.findById(caseId)
+        Long orgId = getRequiredOrganizationId();
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
                 .orElseThrow(() -> new RuntimeException("Case not found: " + caseId));
 
         // Don't reinitialize if already done
@@ -169,11 +183,12 @@ public class CaseTimelineService {
     }
 
     /**
-     * Update the current phase of a case
+     * Update the current phase of a case - TENANT FILTERED
      */
     @Transactional
     public CaseTimelineDTO updateCurrentPhase(Long caseId, Integer newPhaseOrder, String notes, Long updatedBy) {
-        LegalCase legalCase = legalCaseRepository.findById(caseId)
+        Long orgId = getRequiredOrganizationId();
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
                 .orElseThrow(() -> new RuntimeException("Case not found: " + caseId));
 
         // Initialize if needed
@@ -181,7 +196,8 @@ public class CaseTimelineService {
             initializeTimeline(caseId);
         }
 
-        List<CaseTimelineProgress> allPhases = progressRepository.findByCaseIdOrderByPhaseOrderAsc(caseId);
+        // SECURITY: Use tenant-filtered query
+        List<CaseTimelineProgress> allPhases = progressRepository.findByOrganizationIdAndCaseIdOrderByPhaseOrderAsc(orgId, caseId);
         String newPhaseName = null;
 
         for (CaseTimelineProgress phase : allPhases) {
@@ -227,10 +243,13 @@ public class CaseTimelineService {
      */
     @Transactional
     public CaseTimelineDTO completePhase(Long caseId, Integer phaseOrder, String notes, Long updatedBy) {
-        CaseTimelineProgress phase = progressRepository.findByCaseIdAndPhaseOrder(caseId, phaseOrder)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        CaseTimelineProgress phase = progressRepository.findByOrganizationIdAndCaseIdAndPhaseOrder(orgId, caseId, phaseOrder)
                 .orElseThrow(() -> new RuntimeException("Phase not found"));
 
-        LegalCase legalCase = legalCaseRepository.findById(caseId).orElseThrow();
+        // SECURITY: Use tenant-filtered query
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId).orElseThrow();
         String completedPhaseName = phase.getPhaseName();
 
         phase.setStatus(CaseTimelineProgress.TimelinePhaseStatus.COMPLETED);
@@ -239,8 +258,8 @@ public class CaseTimelineService {
         phase.setUpdatedBy(updatedBy);
         progressRepository.save(phase);
 
-        // Move to next phase if exists
-        Optional<CaseTimelineProgress> nextPhase = progressRepository.findByCaseIdAndPhaseOrder(caseId, phaseOrder + 1);
+        // Move to next phase if exists - SECURITY: Use tenant-filtered query
+        Optional<CaseTimelineProgress> nextPhase = progressRepository.findByOrganizationIdAndCaseIdAndPhaseOrder(orgId, caseId, phaseOrder + 1);
         String nextPhaseName = null;
         if (nextPhase.isPresent()) {
             nextPhase.get().setStatus(CaseTimelineProgress.TimelinePhaseStatus.IN_PROGRESS);
@@ -272,10 +291,13 @@ public class CaseTimelineService {
      */
     @Transactional
     public CaseTimelineDTO skipPhase(Long caseId, Integer phaseOrder, String reason, Long updatedBy) {
-        CaseTimelineProgress phase = progressRepository.findByCaseIdAndPhaseOrder(caseId, phaseOrder)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        CaseTimelineProgress phase = progressRepository.findByOrganizationIdAndCaseIdAndPhaseOrder(orgId, caseId, phaseOrder)
                 .orElseThrow(() -> new RuntimeException("Phase not found"));
 
-        LegalCase legalCase = legalCaseRepository.findById(caseId).orElseThrow();
+        // SECURITY: Use tenant-filtered query
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId).orElseThrow();
         String skippedPhaseName = phase.getPhaseName();
 
         phase.setStatus(CaseTimelineProgress.TimelinePhaseStatus.SKIPPED);
@@ -366,8 +388,9 @@ public class CaseTimelineService {
      */
     private void sendClientNotification(LegalCase legalCase, String actionType, String phaseName, String nextPhaseName) {
         try {
-            // Find client by name (case-insensitive match)
-            List<Client> clients = clientRepository.findByNameIgnoreCase(legalCase.getClientName());
+            // SECURITY: Find client by name within organization
+            Long orgId = getRequiredOrganizationId();
+            List<Client> clients = clientRepository.findByOrganizationIdAndNameIgnoreCase(orgId, legalCase.getClientName());
 
             if (clients.isEmpty()) {
                 log.warn("No client found for case {} with client name: {}", legalCase.getId(), legalCase.getClientName());

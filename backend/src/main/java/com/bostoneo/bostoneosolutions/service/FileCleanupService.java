@@ -1,7 +1,10 @@
 package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.model.FileItem;
+import com.bostoneo.bostoneosolutions.model.Organization;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.FileItemRepository;
+import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
 import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +23,16 @@ public class FileCleanupService {
 
     private final FileItemRepository fileItemRepository;
     private final FileStorageService fileStorageService;
+    private final OrganizationRepository organizationRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID (for manual cleanup)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Value("${app.file-cleanup.retention-days:30}")
     private int retentionDays;
@@ -33,6 +46,7 @@ public class FileCleanupService {
     /**
      * Scheduled cleanup task that runs daily at 2 AM
      * Permanently deletes files that have been soft-deleted for more than the retention period
+     * TENANT ISOLATED: Processes each organization separately
      */
     @Scheduled(cron = "${app.file-cleanup.cron:0 0 2 * * ?}")
     @Transactional
@@ -46,44 +60,48 @@ public class FileCleanupService {
         log.info("Starting automatic cleanup of files deleted before: {}", cutoffDate);
 
         try {
-            List<FileItem> filesToDelete = fileItemRepository.findDeletedFilesOlderThan(cutoffDate);
-            
-            if (filesToDelete.isEmpty()) {
-                log.info("No files found for cleanup");
-                return;
-            }
+            // Process each organization separately for proper tenant isolation
+            List<Organization> organizations = organizationRepository.findAll();
+            int totalDeleted = 0;
+            int totalFailed = 0;
 
-            log.info("Found {} files to permanently delete", filesToDelete.size());
+            for (Organization org : organizations) {
+                Long orgId = org.getId();
+                List<FileItem> filesToDelete = fileItemRepository.findDeletedFilesOlderThanByOrganization(cutoffDate, orgId);
 
-            int deletedCount = 0;
-            int failedCount = 0;
+                if (filesToDelete.isEmpty()) {
+                    continue;
+                }
 
-            // Process files in batches to avoid memory issues
-            for (int i = 0; i < filesToDelete.size(); i += batchSize) {
-                int endIndex = Math.min(i + batchSize, filesToDelete.size());
-                List<FileItem> batch = filesToDelete.subList(i, endIndex);
-                
-                for (FileItem fileItem : batch) {
+                log.info("Found {} files to permanently delete for organization {}", filesToDelete.size(), orgId);
+
+                // Process files in batches
+                for (int i = 0; i < filesToDelete.size(); i += batchSize) {
+                    int endIndex = Math.min(i + batchSize, filesToDelete.size());
+                    List<FileItem> batch = filesToDelete.subList(i, endIndex);
+
+                    for (FileItem fileItem : batch) {
+                        try {
+                            permanentlyDeleteFile(fileItem);
+                            totalDeleted++;
+                        } catch (Exception e) {
+                            log.error("Failed to permanently delete file {}: {}", fileItem.getId(), e.getMessage());
+                            totalFailed++;
+                        }
+                    }
+
+                    // Small delay between batches
                     try {
-                        permanentlyDeleteFile(fileItem);
-                        deletedCount++;
-                    } catch (Exception e) {
-                        log.error("Failed to permanently delete file {}: {}", fileItem.getId(), e.getMessage());
-                        failedCount++;
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        log.warn("Cleanup interrupted");
+                        return;
                     }
                 }
-                
-                // Small delay between batches to reduce system load
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    log.warn("Cleanup interrupted");
-                    break;
-                }
             }
 
-            log.info("Cleanup completed. Successfully deleted: {}, Failed: {}", deletedCount, failedCount);
+            log.info("Cleanup completed. Successfully deleted: {}, Failed: {}", totalDeleted, totalFailed);
 
         } catch (Exception e) {
             log.error("Error during automatic file cleanup: {}", e.getMessage(), e);
@@ -113,14 +131,15 @@ public class FileCleanupService {
     }
 
     /**
-     * Manual cleanup method for immediate execution
+     * Manual cleanup method for immediate execution - TENANT FILTERED
      */
     public CleanupResult performManualCleanup() {
+        Long orgId = getRequiredOrganizationId();
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(retentionDays);
-        log.info("Starting manual cleanup of files deleted before: {}", cutoffDate);
+        log.info("Starting manual cleanup of files deleted before: {} for organization: {}", cutoffDate, orgId);
 
-        List<FileItem> filesToDelete = fileItemRepository.findDeletedFilesOlderThan(cutoffDate);
-        
+        List<FileItem> filesToDelete = fileItemRepository.findDeletedFilesOlderThanByOrganization(cutoffDate, orgId);
+
         int deletedCount = 0;
         int failedCount = 0;
 
@@ -140,11 +159,12 @@ public class FileCleanupService {
     }
 
     /**
-     * Get count of files that would be cleaned up
+     * Get count of files that would be cleaned up - TENANT FILTERED
      */
     public int getCleanupCandidatesCount() {
+        Long orgId = getRequiredOrganizationId();
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(retentionDays);
-        return fileItemRepository.findDeletedFilesOlderThan(cutoffDate).size();
+        return fileItemRepository.findDeletedFilesOlderThanByOrganization(cutoffDate, orgId).size();
     }
 
     /**

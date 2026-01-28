@@ -39,14 +39,30 @@ public class ClientServiceImpl implements ClientService {
     private final EntityManager entityManager;
     private final TenantService tenantService;
 
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
     @Override
     public Client createClient(Client client) {
-       client.setCreatedAt(new Date());
-       return clientRepository.save(client);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Set organization ID for tenant isolation
+        client.setOrganizationId(orgId);
+        client.setCreatedAt(new Date());
+        return clientRepository.save(client);
     }
 
     @Override
     public Client updateClient(Client client) {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify client belongs to current organization before update
+        if (client.getId() != null) {
+            clientRepository.findByIdAndOrganizationId(client.getId(), orgId)
+                    .orElseThrow(() -> new RuntimeException("Client not found or access denied"));
+        }
+        // Ensure organization ID is preserved
+        client.setOrganizationId(orgId);
         return clientRepository.save(client);
     }
 
@@ -54,40 +70,46 @@ public class ClientServiceImpl implements ClientService {
     public Page<Client> getClients(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         return tenantService.getCurrentOrganizationId()
             .map(orgId -> clientRepository.findByOrganizationId(orgId, pageable))
-            .orElseGet(() -> clientRepository.findAll(pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     public Iterable<Client> getClients() {
-        return clientRepository.findAll();
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> (Iterable<Client>) clientRepository.findByOrganizationId(orgId))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     public Client getClient(Long id) {
-        return clientRepository.findById(id).get();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return clientRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Client not found or access denied: " + id));
     }
 
     @Override
     public Page<Client> searchClients(String name, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        // Use tenant-filtered search if organization context is available
+        // Use tenant-filtered search - throw exception if no organization context
         return tenantService.getCurrentOrganizationId()
             .map(orgId -> clientRepository.findByOrganizationIdAndNameContaining(orgId, name, pageable))
-            .orElseGet(() -> clientRepository.findByNameContaining(name, pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     public List<Client> getClientsWithUnbilledTimeEntries() {
         log.info("Retrieving clients with unbilled time entries");
 
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         List<Client> clients = tenantService.getCurrentOrganizationId()
             .map(orgId -> clientRepository.findClientsWithUnbilledTimeEntriesByOrganization(orgId))
-            .orElseGet(() -> clientRepository.findClientsWithUnbilledTimeEntries());
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
 
         log.info("Found {} clients with unbilled time entries", clients.size());
         return clients;
@@ -96,8 +118,10 @@ public class ClientServiceImpl implements ClientService {
     @Override
     public void deleteClient(Long id) {
         log.info("Attempting to delete client with ID: " + id);
+        Long orgId = getRequiredOrganizationId();
 
-        Optional<Client> clientOptional = clientRepository.findById(id);
+        // SECURITY: Use tenant-filtered query
+        Optional<Client> clientOptional = clientRepository.findByIdAndOrganizationId(id, orgId);
 
         if (clientOptional.isPresent()) {
             Client client = clientOptional.get();
@@ -135,7 +159,11 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     public Page<Invoice> getInvoices(int page, int size) {
-        return invoiceRepository.findAll(PageRequest.of(page, size));
+        Pageable pageable = PageRequest.of(page, size);
+        // Use tenant-filtered query if organization context is available
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> invoiceRepository.findByOrganizationId(orgId, pageable))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
@@ -148,15 +176,21 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     public void addInvoiceToClient(Long id, Invoice invoice) {
+        Long orgId = getRequiredOrganizationId();
         invoice.setInvoiceNumber(RandomStringUtils.randomAlphanumeric(8).toUpperCase());
-        Client client = clientRepository.findById(id).get();
+        // SECURITY: Use tenant-filtered query
+        Client client = clientRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Client not found or access denied: " + id));
         invoice.setClient(client);
         invoiceRepository.save(invoice);
     }
 
     @Override
     public Invoice getInvoice(Long id) {
-        return invoiceRepository.findById(id).get();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return invoiceRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Invoice not found or access denied: " + id));
     }
 
 
@@ -165,8 +199,10 @@ public class ClientServiceImpl implements ClientService {
     @AuditLog(action = "DELETE", entityType = "INVOICE", description = "Deleted invoice and updated dependent expenses")
     public void deleteInvoice(Long id) {
         log.info("Attempting to delete invoice with ID: {}", id);
+        Long orgId = getRequiredOrganizationId();
 
-        Optional<Invoice> invoiceOptional = invoiceRepository.findById(id);
+        // SECURITY: Use tenant-filtered query
+        Optional<Invoice> invoiceOptional = invoiceRepository.findByIdAndOrganizationId(id, orgId);
 
         if (invoiceOptional.isPresent()) {
             Invoice invoice = invoiceOptional.get();
@@ -216,17 +252,19 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     public Stats getStats() {
-        return jdbc.queryForObject(STATS_QUERY, Map.of(), new StatsRowMapper());
+        // SECURITY: Use tenant-filtered stats query
+        Long orgId = getRequiredOrganizationId();
+        return jdbc.queryForObject(STATS_QUERY, Map.of("organizationId", orgId), new StatsRowMapper());
     }
 
     @Override
     public Page<Client> getClientsForUser(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         return tenantService.getCurrentOrganizationId()
             .map(orgId -> clientRepository.findByOrganizationId(orgId, pageable))
-            .orElseGet(() -> clientRepository.findAll(pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
     
     @Override
@@ -248,9 +286,11 @@ public class ClientServiceImpl implements ClientService {
     @Override
     public Stats getLimitedStats() {
         // Return limited stats for non-admin users
-        // Could be filtered based on user's accessible data
+        // SECURITY: Use tenant-filtered count
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
         Stats stats = new Stats();
-        stats.setTotalClients((int) clientRepository.count());
+        stats.setTotalClients((int) clientRepository.countByOrganizationId(orgId));
         stats.setTotalInvoices(0);
         stats.setTotalBilled(0.0);
         return stats;

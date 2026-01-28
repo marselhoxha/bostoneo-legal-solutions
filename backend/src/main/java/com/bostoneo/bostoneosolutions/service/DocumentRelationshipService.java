@@ -22,6 +22,12 @@ public class DocumentRelationshipService {
 
     private final DocumentRelationshipRepository relationshipRepository;
     private final AIDocumentAnalysisRepository analysisRepository;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     /**
      * Create a new relationship between two documents
@@ -29,12 +35,14 @@ public class DocumentRelationshipService {
     @Transactional
     public DocumentRelationship createRelationship(Long sourceAnalysisId, Long targetAnalysisId,
                                                     String relationshipType, String description, Long userId) {
-        // Validate documents exist
-        if (!analysisRepository.existsById(sourceAnalysisId)) {
-            throw new IllegalArgumentException("Source document not found: " + sourceAnalysisId);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Validate documents exist AND belong to current organization
+        if (!analysisRepository.existsByIdAndOrganizationId(sourceAnalysisId, orgId)) {
+            throw new IllegalArgumentException("Source document not found or access denied: " + sourceAnalysisId);
         }
-        if (!analysisRepository.existsById(targetAnalysisId)) {
-            throw new IllegalArgumentException("Target document not found: " + targetAnalysisId);
+        if (!analysisRepository.existsByIdAndOrganizationId(targetAnalysisId, orgId)) {
+            throw new IllegalArgumentException("Target document not found or access denied: " + targetAnalysisId);
         }
 
         // Check for duplicate
@@ -58,6 +66,7 @@ public class DocumentRelationshipService {
      * Get all relationships for a document with document details
      */
     public List<Map<String, Object>> getRelationshipsWithDetails(Long analysisId) {
+        Long orgId = getRequiredOrganizationId();
         List<DocumentRelationship> relationships = relationshipRepository.findAllByAnalysisId(analysisId);
 
         return relationships.stream().map(rel -> {
@@ -71,9 +80,9 @@ public class DocumentRelationshipService {
             boolean isSource = rel.getSourceAnalysisId().equals(analysisId);
             result.put("direction", isSource ? "outgoing" : "incoming");
 
-            // Get the related document details
+            // Get the related document details - SECURITY: Use tenant-filtered query
             Long relatedId = isSource ? rel.getTargetAnalysisId() : rel.getSourceAnalysisId();
-            Optional<AIDocumentAnalysis> relatedDoc = analysisRepository.findById(relatedId);
+            Optional<AIDocumentAnalysis> relatedDoc = analysisRepository.findByIdAndOrganizationId(relatedId, orgId);
 
             if (relatedDoc.isPresent()) {
                 AIDocumentAnalysis doc = relatedDoc.get();
@@ -94,14 +103,26 @@ public class DocumentRelationshipService {
      * Get relationships where document is the source (outgoing)
      */
     public List<DocumentRelationship> getOutgoingRelationships(Long analysisId) {
-        return relationshipRepository.findBySourceAnalysisId(analysisId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify analysis belongs to current organization
+        if (!analysisRepository.existsByIdAndOrganizationId(analysisId, orgId)) {
+            throw new IllegalArgumentException("Document not found or access denied: " + analysisId);
+        }
+        // SECURITY: Use tenant-filtered repository method
+        return relationshipRepository.findBySourceAnalysisIdAndOrganizationId(analysisId, orgId);
     }
 
     /**
      * Get relationships where document is the target (incoming)
      */
     public List<DocumentRelationship> getIncomingRelationships(Long analysisId) {
-        return relationshipRepository.findByTargetAnalysisId(analysisId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify analysis belongs to current organization
+        if (!analysisRepository.existsByIdAndOrganizationId(analysisId, orgId)) {
+            throw new IllegalArgumentException("Document not found or access denied: " + analysisId);
+        }
+        // SECURITY: Use tenant-filtered repository method
+        return relationshipRepository.findByTargetAnalysisIdAndOrganizationId(analysisId, orgId);
     }
 
     /**
@@ -109,7 +130,13 @@ public class DocumentRelationshipService {
      */
     @Transactional
     public void deleteRelationship(Long relationshipId) {
+        Long orgId = getRequiredOrganizationId();
         log.info("Deleting document relationship: {}", relationshipId);
+
+        // SECURITY: Use tenant-filtered query directly
+        DocumentRelationship relationship = relationshipRepository.findByIdAndOrganizationId(relationshipId, orgId)
+            .orElseThrow(() -> new IllegalArgumentException("Relationship not found or access denied: " + relationshipId));
+
         relationshipRepository.deleteById(relationshipId);
     }
 
@@ -118,8 +145,10 @@ public class DocumentRelationshipService {
      */
     @Transactional
     public void deleteAllRelationshipsForDocument(Long analysisId) {
-        log.info("Deleting all relationships for document: {}", analysisId);
-        relationshipRepository.deleteBySourceAnalysisIdOrTargetAnalysisId(analysisId, analysisId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Deleting all relationships for document: {} in org: {}", analysisId, orgId);
+        // SECURITY: Use tenant-filtered delete
+        relationshipRepository.deleteBySourceOrTargetAndOrganizationId(analysisId, analysisId, orgId);
     }
 
     /**

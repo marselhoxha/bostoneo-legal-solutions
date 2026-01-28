@@ -31,6 +31,12 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     private final BillingRateRepository billingRateRepository;
     private final TimeEntryRepository timeEntryRepository;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public BigDecimal calculateEffectiveRate(Long userId, Long legalCaseId, LocalDate date, LocalTime timeOfDay) {
@@ -56,17 +62,18 @@ public class BillingRateServiceImpl implements BillingRateService {
     @Override
     public BigDecimal getUserBaseRate(Long userId) {
         log.debug("Getting base rate for user: {}", userId);
-        
-        // Try to find user-specific rate first
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
         List<BillingRate> userRates = billingRateRepository
-            .findByUserIdAndIsActive(userId, true);
-            
+            .findByOrganizationIdAndUserIdAndIsActive(orgId, userId, true);
+
         if (!userRates.isEmpty()) {
             BillingRate latestRate = userRates.get(0);
             log.debug("Found user-specific rate: {}", latestRate.getRateAmount());
             return latestRate.getRateAmount();
         }
-        
+
         // Default rates by role (in a real system, get user role from UserService)
         return getDefaultRateByRole("ATTORNEY"); // Simplified for now
     }
@@ -74,10 +81,12 @@ public class BillingRateServiceImpl implements BillingRateService {
     @Override
     public BigDecimal getCaseSpecificRate(Long legalCaseId, Long userId) {
         log.debug("Checking case-specific rate for case: {}, user: {}", legalCaseId, userId);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
         List<BillingRate> caseRates = billingRateRepository
-            .findByLegalCaseId(legalCaseId);
-            
+            .findByOrganizationIdAndLegalCaseId(orgId, legalCaseId);
+
         if (!caseRates.isEmpty()) {
             // Find the rate for this specific user if it exists
             for (BillingRate rate : caseRates) {
@@ -88,17 +97,19 @@ public class BillingRateServiceImpl implements BillingRateService {
                 }
             }
         }
-        
+
         return null; // No case-specific rate found
     }
     
     @Override
     public BigDecimal getClientSpecificRate(Long clientId, String userRole) {
         log.debug("Getting client-specific rate for client: {}, role: {}", clientId, userRole);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
         List<BillingRate> clientRates = billingRateRepository
-            .findByClientId(clientId);
-            
+            .findByOrganizationIdAndClientId(orgId, clientId);
+
         if (!clientRates.isEmpty()) {
             for (BillingRate rate : clientRates) {
                 if (rate.getIsActive()) {
@@ -108,7 +119,7 @@ public class BillingRateServiceImpl implements BillingRateService {
                 }
             }
         }
-        
+
         return null; // No client-specific rate found
     }
     
@@ -177,20 +188,23 @@ public class BillingRateServiceImpl implements BillingRateService {
     @Override
     public BillingRateDTO createBillingRate(BillingRateDTO billingRateDTO) {
         log.info("Creating billing rate for user: {}", billingRateDTO.getUserId());
-        
+
         // Validate the rate structure
         if (!isValidRateStructure(billingRateDTO)) {
             throw new IllegalArgumentException("Invalid billing rate structure");
         }
-        
+
         // Check for overlapping rates
         if (hasOverlappingRate(billingRateDTO)) {
             throw new IllegalArgumentException("Overlapping billing rate exists for the same period");
         }
-        
+
+        Long orgId = getRequiredOrganizationId();
         BillingRate billingRate = convertToEntity(billingRateDTO);
+        // SECURITY: Set organization ID when creating
+        billingRate.setOrganizationId(orgId);
         BillingRate savedRate = billingRateRepository.save(billingRate);
-        
+
         log.info("Created billing rate with ID: {}", savedRate.getId());
         return convertToDTO(savedRate);
     }
@@ -198,9 +212,11 @@ public class BillingRateServiceImpl implements BillingRateService {
     @Override
     public BillingRateDTO updateBillingRate(Long id, BillingRateDTO billingRateDTO) {
         log.info("Updating billing rate with ID: {}", id);
-        
-        BillingRate existingRate = billingRateRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Billing rate not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        BillingRate existingRate = billingRateRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new IllegalArgumentException("Billing rate not found or access denied: " + id));
         
         // Set the ID for overlap checking
         billingRateDTO.setId(id);
@@ -231,28 +247,36 @@ public class BillingRateServiceImpl implements BillingRateService {
     @Override
     public BillingRateDTO getBillingRate(Long id) {
         log.debug("Retrieving billing rate with ID: {}", id);
-        
-        BillingRate billingRate = billingRateRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Billing rate not found with ID: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        BillingRate billingRate = billingRateRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new IllegalArgumentException("Billing rate not found or access denied: " + id));
+
         return convertToDTO(billingRate);
     }
 
     @Override
     public Page<BillingRateDTO> getBillingRates(int page, int size) {
+        Long orgId = getRequiredOrganizationId();
         Pageable pageable = PageRequest.of(page, size);
-        return billingRateRepository.findAll(pageable).map(this::convertToDTO);
+        // SECURITY: Use tenant-filtered query
+        return billingRateRepository.findByOrganizationId(orgId, pageable).map(this::convertToDTO);
     }
 
     @Override
     public Page<BillingRateDTO> getBillingRatesByUser(Long userId, int page, int size) {
+        Long orgId = getRequiredOrganizationId();
         Pageable pageable = PageRequest.of(page, size);
-        return billingRateRepository.findByUserId(userId, pageable).map(this::convertToDTO);
+        // SECURITY: Use tenant-filtered query
+        return billingRateRepository.findByOrganizationIdAndUserId(orgId, userId, pageable).map(this::convertToDTO);
     }
 
     @Override
     public List<BillingRateDTO> getActiveBillingRatesForUser(Long userId) {
-        return billingRateRepository.findByUserIdAndIsActive(userId, true)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return billingRateRepository.findByOrganizationIdAndUserIdAndIsActive(orgId, userId, true)
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -260,7 +284,9 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     @Override
     public List<BillingRateDTO> getBillingRatesByMatterType(Long matterTypeId) {
-        return billingRateRepository.findByMatterTypeId(matterTypeId)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return billingRateRepository.findByOrganizationIdAndMatterTypeId(orgId, matterTypeId)
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -268,7 +294,9 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     @Override
     public List<BillingRateDTO> getBillingRatesByClient(Long clientId) {
-        return billingRateRepository.findByClientId(clientId)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return billingRateRepository.findByOrganizationIdAndClientId(orgId, clientId)
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -276,7 +304,9 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     @Override
     public List<BillingRateDTO> getBillingRatesByCase(Long legalCaseId) {
-        return billingRateRepository.findByLegalCaseId(legalCaseId)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return billingRateRepository.findByOrganizationIdAndLegalCaseId(orgId, legalCaseId)
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -284,6 +314,11 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     @Override
     public void deleteBillingRate(Long id) {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before deletion
+        if (!billingRateRepository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new IllegalArgumentException("Billing rate not found or access denied: " + id);
+        }
         billingRateRepository.deleteById(id);
     }
 
@@ -294,7 +329,9 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     @Override
     public void deactivateBillingRate(Long id, LocalDate endDate) {
-        billingRateRepository.findById(id).ifPresent(rate -> {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        billingRateRepository.findByIdAndOrganizationId(id, orgId).ifPresent(rate -> {
             rate.setIsActive(false);
             rate.setEndDate(endDate);
             billingRateRepository.save(rate);
@@ -366,7 +403,9 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     @Override
     public BigDecimal getEffectiveRate(Long userId, Long legalCaseId, Long clientId, Long matterTypeId, LocalDate date) {
-        List<BillingRate> rates = billingRateRepository.findMostSpecificRate(userId, legalCaseId, clientId, matterTypeId, date);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<BillingRate> rates = billingRateRepository.findMostSpecificRateByOrganization(orgId, userId, legalCaseId, clientId, matterTypeId, date);
         if (!rates.isEmpty()) {
             return rates.get(0).getRateAmount();
         }
@@ -385,7 +424,9 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     @Override
     public BillingRateDTO getMostSpecificRate(Long userId, Long legalCaseId, Long clientId, Long matterTypeId, LocalDate date) {
-        List<BillingRate> rates = billingRateRepository.findMostSpecificRate(userId, legalCaseId, clientId, matterTypeId, date);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<BillingRate> rates = billingRateRepository.findMostSpecificRateByOrganization(orgId, userId, legalCaseId, clientId, matterTypeId, date);
         if (!rates.isEmpty()) {
             return convertToDTO(rates.get(0));
         }
@@ -394,7 +435,9 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     @Override
     public List<BillingRateDTO> getRateHistoryForUser(Long userId) {
-        return billingRateRepository.getRateHistoryForUser(userId)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return billingRateRepository.getRateHistoryForUserByOrganization(orgId, userId)
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -402,7 +445,9 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     @Override
     public List<BillingRateDTO> getEffectiveRatesForUser(Long userId, LocalDate date) {
-        return billingRateRepository.findEffectiveRatesForUser(userId, date)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return billingRateRepository.findEffectiveRatesForUserByOrganization(orgId, userId, date)
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -410,7 +455,9 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     @Override
     public List<BillingRateDTO> getCurrentActiveRates() {
-        return billingRateRepository.findCurrentActiveRates()
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return billingRateRepository.findCurrentActiveRatesByOrganization(orgId)
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -438,38 +485,44 @@ public class BillingRateServiceImpl implements BillingRateService {
 
     @Override
     public BigDecimal getAverageRateByUser(Long userId) {
-        List<BillingRate> rates = billingRateRepository.findByUserIdAndIsActive(userId, true);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<BillingRate> rates = billingRateRepository.findByOrganizationIdAndUserIdAndIsActive(orgId, userId, true);
         if (rates.isEmpty()) {
             return BigDecimal.ZERO;
         }
-        
+
         BigDecimal sum = rates.stream()
             .map(BillingRate::getRateAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+
         return sum.divide(BigDecimal.valueOf(rates.size()));
     }
 
     @Override
     public BigDecimal getAverageRateByMatterType(Long matterTypeId) {
-        List<BillingRate> rates = billingRateRepository.findByMatterTypeId(matterTypeId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<BillingRate> rates = billingRateRepository.findByOrganizationIdAndMatterTypeId(orgId, matterTypeId);
         if (rates.isEmpty()) {
             return BigDecimal.ZERO;
         }
-        
+
         BigDecimal sum = rates.stream()
             .filter(rate -> rate.getIsActive())
             .map(BillingRate::getRateAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+
         long count = rates.stream().filter(rate -> rate.getIsActive()).count();
-        
+
         return count > 0 ? sum.divide(BigDecimal.valueOf(count)) : BigDecimal.ZERO;
     }
 
     @Override
     public List<BillingRateDTO> getRatesByType(RateType rateType) {
-        return billingRateRepository.findByRateType(rateType)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return billingRateRepository.findByOrganizationIdAndRateType(orgId, rateType)
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -511,12 +564,13 @@ public class BillingRateServiceImpl implements BillingRateService {
     @Override
     public Map<String, Object> getBillingRateUsageAnalytics(Long userId) {
         log.info("Getting billing rate usage analytics for user: {}", userId);
-        
+        Long orgId = getRequiredOrganizationId();
+
         Map<String, Object> analytics = new HashMap<>();
-        
+
         try {
-            // Get all billing rates for the user
-            List<BillingRate> userRates = billingRateRepository.getRateHistoryForUser(userId);
+            // SECURITY: Use tenant-filtered query
+            List<BillingRate> userRates = billingRateRepository.getRateHistoryForUserByOrganization(orgId, userId);
             
             // Calculate basic rate statistics
             long totalRates = userRates.size();
@@ -570,12 +624,14 @@ public class BillingRateServiceImpl implements BillingRateService {
     @Override
     public Map<String, Object> getRatePerformanceAnalytics(Long rateId) {
         log.info("Getting performance analytics for billing rate: {}", rateId);
-        
+        Long orgId = getRequiredOrganizationId();
+
         Map<String, Object> performance = new HashMap<>();
-        
+
         try {
-            BillingRate rate = billingRateRepository.findById(rateId)
-                .orElseThrow(() -> new IllegalArgumentException("Billing rate not found with ID: " + rateId));
+            // SECURITY: Use tenant-filtered query
+            BillingRate rate = billingRateRepository.findByIdAndOrganizationId(rateId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Billing rate not found or access denied: " + rateId));
             
             // Basic rate information
             performance.put("rateId", rateId);
@@ -617,12 +673,13 @@ public class BillingRateServiceImpl implements BillingRateService {
     @Override
     public Map<String, Object> getTimeEntriesByBillingRate(Long userId) {
         log.info("Getting time entries grouped by billing rate for user: {}", userId);
-        
+        Long orgId = getRequiredOrganizationId();
+
         Map<String, Object> result = new HashMap<>();
-        
+
         try {
-            // Get all billing rates for the user
-            List<BillingRate> userRates = billingRateRepository.getRateHistoryForUser(userId);
+            // SECURITY: Use tenant-filtered query
+            List<BillingRate> userRates = billingRateRepository.getRateHistoryForUserByOrganization(orgId, userId);
             
             Map<String, Object> rateGroups = new HashMap<>();
             BigDecimal totalBilled = BigDecimal.ZERO;

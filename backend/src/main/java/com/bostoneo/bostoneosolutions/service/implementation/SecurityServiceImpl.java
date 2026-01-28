@@ -8,6 +8,7 @@ import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
 import com.bostoneo.bostoneosolutions.repository.CaseTaskRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.service.SecurityService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -21,10 +22,11 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 public class SecurityServiceImpl implements SecurityService {
-    
+
     private final UserRepository userRepository;
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final CaseTaskRepository caseTaskRepository;
+    private final TenantService tenantService;
     
     @Override
     public boolean isCurrentUser(Long userId) {
@@ -71,31 +73,37 @@ public class SecurityServiceImpl implements SecurityService {
         if (auth == null || auth.getPrincipal() == null) {
             return false;
         }
-        
+
         // Check if user has general task access permission
         if (auth.getAuthorities().contains(new SimpleGrantedAuthority("task:read:all"))) {
             return true;
         }
-        
-        Optional<CaseTask> taskOpt = caseTaskRepository.findById(taskId);
+
+        // SECURITY: Use tenant-filtered query
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (orgId == null) {
+            return false;
+        }
+
+        Optional<CaseTask> taskOpt = caseTaskRepository.findByIdAndOrganizationId(taskId, orgId);
         if (taskOpt.isEmpty()) {
             return false;
         }
-        
+
         CaseTask task = taskOpt.get();
-        
+
         if (auth.getPrincipal() instanceof UserDTO) {
             UserDTO currentUser = (UserDTO) auth.getPrincipal();
-            
+
             // Check if user is the task assignee
             if (task.getAssignedTo() != null && task.getAssignedTo().getId().equals(currentUser.getId())) {
                 return true;
             }
-            
+
             // Check if user has access to the case
             return hasAccessToCase(task.getLegalCase().getId());
         }
-        
+
         return false;
     }
     
@@ -105,19 +113,25 @@ public class SecurityServiceImpl implements SecurityService {
         if (auth == null || auth.getPrincipal() == null) {
             return false;
         }
-        
-        Optional<CaseTask> taskOpt = caseTaskRepository.findById(taskId);
+
+        // SECURITY: Use tenant-filtered query
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (orgId == null) {
+            return false;
+        }
+
+        Optional<CaseTask> taskOpt = caseTaskRepository.findByIdAndOrganizationId(taskId, orgId);
         if (taskOpt.isEmpty()) {
             return false;
         }
-        
+
         CaseTask task = taskOpt.get();
-        
+
         if (auth.getPrincipal() instanceof UserDTO) {
             UserDTO currentUser = (UserDTO) auth.getPrincipal();
             return task.getAssignedTo() != null && task.getAssignedTo().getId().equals(currentUser.getId());
         }
-        
+
         return false;
     }
     

@@ -1,13 +1,18 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
 import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.Organization;
 import com.bostoneo.bostoneosolutions.model.OrganizationInvitation;
 import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.repository.OrganizationInvitationRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.service.EmailService;
 import com.bostoneo.bostoneosolutions.service.OrganizationInvitationService;
+import com.bostoneo.bostoneosolutions.service.OrganizationService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +29,17 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
 
     private final OrganizationInvitationRepository invitationRepository;
     private final UserRepository<User> userRepository;
+    private final EmailService emailService;
+    private final OrganizationService organizationService;
+    private final TenantService tenantService;
+
+    @Value("${app.frontend.url:http://localhost:4200}")
+    private String frontendUrl;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public OrganizationInvitation createInvitation(Long organizationId, String email, String role, Long createdBy) {
@@ -52,8 +68,8 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
         OrganizationInvitation saved = invitationRepository.save(invitation);
         log.info("Created invitation ID: {} for email: {}", saved.getId(), email);
 
-        // TODO: Send invitation email
-        // emailService.sendInvitationEmail(invitation);
+        // Send invitation email
+        sendInvitationEmailAsync(saved, organizationId);
 
         return saved;
     }
@@ -113,9 +129,11 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
     @Override
     public OrganizationInvitation resendInvitation(Long invitationId) {
         log.info("Resending invitation: {}", invitationId);
+        Long orgId = getRequiredOrganizationId();
 
-        OrganizationInvitation invitation = invitationRepository.findById(invitationId)
-                .orElseThrow(() -> new ApiException("Invitation not found"));
+        // SECURITY: Use tenant-filtered query
+        OrganizationInvitation invitation = invitationRepository.findByIdAndOrganizationId(invitationId, orgId)
+                .orElseThrow(() -> new ApiException("Invitation not found or access denied"));
 
         if (invitation.isAccepted()) {
             throw new ApiException("Cannot resend an accepted invitation");
@@ -127,8 +145,8 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
 
         OrganizationInvitation saved = invitationRepository.save(invitation);
 
-        // TODO: Send invitation email
-        // emailService.sendInvitationEmail(invitation);
+        // Resend invitation email
+        sendInvitationEmailAsync(saved, saved.getOrganizationId());
 
         log.info("Resent invitation to: {}", invitation.getEmail());
         return saved;
@@ -137,9 +155,11 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
     @Override
     public void cancelInvitation(Long invitationId) {
         log.info("Cancelling invitation: {}", invitationId);
+        Long orgId = getRequiredOrganizationId();
 
-        OrganizationInvitation invitation = invitationRepository.findById(invitationId)
-                .orElseThrow(() -> new ApiException("Invitation not found"));
+        // SECURITY: Use tenant-filtered query
+        OrganizationInvitation invitation = invitationRepository.findByIdAndOrganizationId(invitationId, orgId)
+                .orElseThrow(() -> new ApiException("Invitation not found or access denied"));
 
         if (invitation.isAccepted()) {
             throw new ApiException("Cannot cancel an accepted invitation");
@@ -162,5 +182,34 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
         // Delete invitations expired more than 30 days ago
         LocalDateTime cutoff = LocalDateTime.now().minusDays(30);
         invitationRepository.deleteByExpiresAtBefore(cutoff);
+    }
+
+    /**
+     * Send invitation email asynchronously
+     */
+    private void sendInvitationEmailAsync(OrganizationInvitation invitation, Long organizationId) {
+        try {
+            // Get organization name
+            String organizationName = organizationService.getOrganizationById(organizationId)
+                    .map(org -> org.getName())
+                    .orElse("Bostoneo Legal Solutions");
+
+            // Build invitation URL
+            String inviteUrl = frontendUrl + "/accept-invite/" + invitation.getToken();
+
+            // Send email asynchronously
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                emailService.sendInvitationEmail(
+                        invitation.getEmail(),
+                        organizationName,
+                        invitation.getRole(),
+                        inviteUrl,
+                        7 // 7 days expiration
+                );
+            });
+        } catch (Exception e) {
+            log.error("Failed to send invitation email: {}", e.getMessage());
+            // Don't throw - invitation was created successfully, email failure shouldn't rollback
+        }
     }
 }

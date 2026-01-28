@@ -15,7 +15,9 @@ import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.ReminderQueueService;
 import com.bostoneo.bostoneosolutions.service.RoleService;
 import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
+import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
 import com.bostoneo.bostoneosolutions.model.CaseAssignment;
+import com.bostoneo.bostoneosolutions.model.Organization;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +54,12 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     private final RoleService roleService;
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final TenantService tenantService;
+    private final OrganizationRepository organizationRepository;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public CalendarEventDTO createEvent(CalendarEventDTO eventDTO) {
@@ -87,8 +95,10 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         
         // Link to legal case if caseId is provided
         if (eventDTO.getCaseId() != null) {
-            LegalCase legalCase = legalCaseRepository.findById(eventDTO.getCaseId())
-                    .orElseThrow(() -> new EntityNotFoundException("Case not found with ID: " + eventDTO.getCaseId()));
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Use tenant-filtered query
+            LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(eventDTO.getCaseId(), orgId)
+                    .orElseThrow(() -> new EntityNotFoundException("Case not found or access denied: " + eventDTO.getCaseId()));
             event.setLegalCase(legalCase);
             event.setCaseId(legalCase.getId());
         }
@@ -126,9 +136,9 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                     notificationUserIds.add(savedEvent.getUserId());
                 }
 
-                // Get users assigned to the case if this event is related to a case
-                if (savedEvent.getCaseId() != null) {
-                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(savedEvent.getCaseId());
+                // SECURITY: Get users assigned to the case if this event is related to a case (with org filter)
+                if (savedEvent.getCaseId() != null && savedEvent.getOrganizationId() != null) {
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(savedEvent.getCaseId(), savedEvent.getOrganizationId());
                     for (CaseAssignment assignment : caseAssignments) {
                         if (assignment.getAssignedTo() != null) {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
@@ -155,10 +165,12 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public CalendarEventDTO getEventById(Long id) {
         //log.info("Fetching calendar event with ID: {}", id);
-        
-        CalendarEvent event = calendarEventRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Calendar event not found with ID: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        CalendarEvent event = calendarEventRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new EntityNotFoundException("Calendar event not found or access denied: " + id));
+
         return CalendarEventDTOMapper.fromCalendarEvent(event);
     }
 
@@ -168,10 +180,10 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
         PageRequest pageRequest = PageRequest.of(page, size);
 
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         Page<CalendarEvent> eventsPage = tenantService.getCurrentOrganizationId()
             .map(orgId -> calendarEventRepository.findByOrganizationId(orgId, pageRequest))
-            .orElseGet(() -> calendarEventRepository.findAll(pageRequest));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
 
         List<CalendarEventDTO> eventDTOs = eventsPage.getContent().stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
@@ -183,10 +195,12 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public CalendarEventDTO updateEvent(Long id, CalendarEventDTO eventDTO) {
         //log.info("Updating calendar event: {}", id);
-        
-        CalendarEvent event = calendarEventRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Calendar event not found with ID: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        CalendarEvent event = calendarEventRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new EntityNotFoundException("Calendar event not found or access denied: " + id));
+
         // Store old reminder settings for comparison
         Integer oldReminderMinutes = event.getReminderMinutes();
         List<Integer> oldAdditionalReminders = event.getAdditionalRemindersList();
@@ -232,8 +246,9 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         
         // Handle case reference update if needed
         if (eventDTO.getCaseId() != null && !eventDTO.getCaseId().equals(updatedEvent.getCaseId())) {
-            LegalCase legalCase = legalCaseRepository.findById(eventDTO.getCaseId())
-                    .orElseThrow(() -> new EntityNotFoundException("Case not found with ID: " + eventDTO.getCaseId()));
+            // SECURITY: Use tenant-filtered query (orgId already fetched at start of method)
+            LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(eventDTO.getCaseId(), orgId)
+                    .orElseThrow(() -> new EntityNotFoundException("Case not found or access denied: " + eventDTO.getCaseId()));
             updatedEvent.setLegalCase(legalCase);
             updatedEvent.setCaseId(legalCase.getId());
         }
@@ -244,19 +259,23 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public void deleteEvent(Long id) {
         //log.info("Deleting calendar event with ID: {}", id);
-        
-        if (!calendarEventRepository.existsById(id)) {
-            throw new EntityNotFoundException("Calendar event not found with ID: " + id);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify ownership before deletion
+        if (!calendarEventRepository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new EntityNotFoundException("Calendar event not found or access denied: " + id);
         }
-        
+
         calendarEventRepository.deleteById(id);
     }
 
     @Override
     public List<CalendarEventDTO> getEventsByCaseId(Long caseId) {
         //log.info("Fetching calendar events for case ID: {}", caseId);
-        
-        return calendarEventRepository.findByCaseId(caseId).stream()
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        return calendarEventRepository.findByOrganizationIdAndCaseId(orgId, caseId).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
                 .collect(Collectors.toList());
     }
@@ -264,8 +283,10 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public List<CalendarEventDTO> getEventsByCaseIdAndDateRange(Long caseId, LocalDateTime startDate, LocalDateTime endDate) {
         //log.info("Fetching calendar events for case ID: {} between {} and {}", caseId, startDate, endDate);
-        
-        return calendarEventRepository.findByCaseIdAndDateRange(caseId, startDate, endDate).stream()
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        return calendarEventRepository.findByOrganizationIdAndCaseIdAndDateRange(orgId, caseId, startDate, endDate).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
                 .collect(Collectors.toList());
     }
@@ -273,8 +294,10 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public List<CalendarEventDTO> getEventsByUserId(Long userId) {
         //log.info("Fetching calendar events for user ID: {}", userId);
-        
-        return calendarEventRepository.findByUserId(userId).stream()
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        return calendarEventRepository.findByOrganizationIdAndUserId(orgId, userId).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
                 .collect(Collectors.toList());
     }
@@ -282,8 +305,10 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public List<CalendarEventDTO> getEventsByUserIdAndDateRange(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
         //log.info("Fetching calendar events for user ID: {} between {} and {}", userId, startDate, endDate);
-        
-        return calendarEventRepository.findByUserIdAndDateRange(userId, startDate, endDate).stream()
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        return calendarEventRepository.findByOrganizationIdAndUserIdAndDateRange(orgId, userId, startDate, endDate).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
                 .collect(Collectors.toList());
     }
@@ -291,8 +316,10 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public List<CalendarEventDTO> getEventsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
         //log.info("Fetching calendar events between {} and {}", startDate, endDate);
-        
-        return calendarEventRepository.findByDateRange(startDate, endDate).stream()
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        return calendarEventRepository.findByOrganizationIdAndDateRange(orgId, startDate, endDate).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
                 .collect(Collectors.toList());
     }
@@ -300,11 +327,13 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public List<CalendarEventDTO> getUpcomingEvents(int days) {
         //log.info("Fetching upcoming calendar events for the next {} days", days);
-        
+        Long orgId = getRequiredOrganizationId();
+
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime endDate = now.plusDays(days);
-        
-        return calendarEventRepository.findByDateRange(now, endDate).stream()
+
+        // SECURITY: Use tenant-filtered query
+        return calendarEventRepository.findByOrganizationIdAndDateRange(orgId, now, endDate).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
                 .collect(Collectors.toList());
     }
@@ -313,11 +342,13 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     public List<CalendarEventDTO> getTodayEvents() {
         LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
+        Long orgId = getRequiredOrganizationId();
 
         log.info("Fetching today's calendar events - Server date: {}, Range: {} to {}",
                 LocalDate.now(), startOfDay, endOfDay);
 
-        List<CalendarEvent> events = calendarEventRepository.findByDateRange(startOfDay, endOfDay);
+        // SECURITY: Use tenant-filtered query
+        List<CalendarEvent> events = calendarEventRepository.findByOrganizationIdAndDateRange(orgId, startOfDay, endOfDay);
         log.info("Found {} events for today", events.size());
 
         return events.stream()
@@ -328,8 +359,10 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public List<CalendarEventDTO> getEventsByStatus(String status) {
         //log.info("Fetching calendar events with status: {}", status);
-        
-        return calendarEventRepository.findByStatus(status).stream()
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        return calendarEventRepository.findByOrganizationIdAndStatus(orgId, status).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
                 .collect(Collectors.toList());
     }
@@ -337,8 +370,10 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public List<CalendarEventDTO> getEventsByType(String eventType) {
         //log.info("Fetching calendar events with type: {}", eventType);
-        
-        return calendarEventRepository.findByEventType(eventType).stream()
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        return calendarEventRepository.findByOrganizationIdAndEventType(orgId, eventType).stream()
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
                 .collect(Collectors.toList());
     }
@@ -346,17 +381,21 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public void processEventReminders() {
         //log.info("Processing calendar event reminders");
-        
-        // Calculate reminder time threshold for each event based on its reminderMinutes
+
+        // TENANT ISOLATED: Process each organization separately
         LocalDateTime now = LocalDateTime.now();
-        
-        List<CalendarEvent> eventsRequiringReminders = calendarEventRepository.findEventsRequiringReminders(now);
-        
-        for (CalendarEvent event : eventsRequiringReminders) {
-            // Process reminder for this event
-            processEventReminder(event);
+        List<Organization> organizations = organizationRepository.findAll();
+
+        for (Organization org : organizations) {
+            List<CalendarEvent> eventsRequiringReminders = calendarEventRepository
+                    .findEventsRequiringRemindersByOrganizationId(org.getId(), now);
+
+            for (CalendarEvent event : eventsRequiringReminders) {
+                // Process reminder for this event
+                processEventReminder(event);
+            }
         }
-        
+
         // Also process additional reminders for deadlines
         processAdditionalReminders();
     }
@@ -720,9 +759,11 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public void processReminderForEvent(Long eventId) {
         //log.info("Processing reminder for specific event ID: {}", eventId);
-        
-        CalendarEvent event = calendarEventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Calendar event not found with ID: " + eventId));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        CalendarEvent event = calendarEventRepository.findByIdAndOrganizationId(eventId, orgId)
+                .orElseThrow(() -> new EntityNotFoundException("Calendar event not found or access denied: " + eventId));
         
         // Check if event has already passed
         LocalDateTime now = LocalDateTime.now();
@@ -736,9 +777,9 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         event.setRemindersSent(null);
         calendarEventRepository.save(event);
         
-        // Reload the event to get the updated version
-        event = calendarEventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Calendar event not found with ID: " + eventId));
+        // Reload the event to get the updated version - SECURITY: Use tenant-filtered query
+        event = calendarEventRepository.findByIdAndOrganizationId(eventId, orgId)
+                .orElseThrow(() -> new EntityNotFoundException("Calendar event not found or access denied: " + eventId));
         
         // Process this specific event's reminder
         processEventReminder(event);
@@ -865,16 +906,19 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Override
     public Page<CalendarEventDTO> getEventsForCases(Set<Long> caseIds, int page, int size) {
         //log.info("Fetching calendar events for case IDs: {}", caseIds);
-        
+        Long orgId = getRequiredOrganizationId();
+
         if (caseIds == null || caseIds.isEmpty()) {
             return Page.empty(PageRequest.of(page, size));
         }
-        
-        Page<CalendarEvent> eventsPage = calendarEventRepository.findByCaseIdIn(
-            new ArrayList<>(caseIds), 
+
+        // SECURITY: Use tenant-filtered query
+        Page<CalendarEvent> eventsPage = calendarEventRepository.findByOrganizationIdAndCaseIdIn(
+            orgId,
+            new ArrayList<>(caseIds),
             PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "startTime"))
         );
-        
+
         return eventsPage.map(CalendarEventDTOMapper::fromCalendarEvent);
     }
     
@@ -904,24 +948,26 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         
         // CLIENT: Only events they're invited to
         if ("ROLE_CLIENT".equals(userRole)) {
+            Long orgId = getRequiredOrganizationId();
             // Get user's case IDs
             Set<Long> userCaseIds = roleService.getUserCaseIds(userId);
-            
+
             if (userCaseIds.isEmpty()) {
                 return Page.empty(PageRequest.of(page, size));
             }
-            
-            // Get events for user's cases
-            Page<CalendarEvent> eventsPage = calendarEventRepository.findByCaseIdIn(
+
+            // SECURITY: Get events for user's cases with tenant filtering
+            Page<CalendarEvent> eventsPage = calendarEventRepository.findByOrganizationIdAndCaseIdIn(
+                orgId,
                 new ArrayList<>(userCaseIds),
                 PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "startTime"))
             );
-            
+
             // Filter to only client-visible event types
             Set<String> clientVisibleTypes = Set.of(
                 "HEARING", "APPOINTMENT", "COURT_DATE", "CLIENT_MEETING", "PUBLIC"
             );
-            
+
             List<CalendarEventDTO> filteredEvents = eventsPage.getContent().stream()
                 .filter(event -> {
                     // Include if it's a public event or client-visible type
@@ -930,20 +976,22 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                 })
                 .map(CalendarEventDTOMapper::fromCalendarEvent)
                 .collect(Collectors.toList());
-            
+
             return new PageImpl<>(filteredEvents, PageRequest.of(page, size), eventsPage.getTotalElements());
         }
-        
+
         // PARALEGAL: View all, edit assigned
         if ("ROLE_PARALEGAL".equals(userRole)) {
-            // Get all events
-            Page<CalendarEvent> allEventsPage = calendarEventRepository.findAll(
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Get all events with tenant filtering
+            Page<CalendarEvent> allEventsPage = calendarEventRepository.findByOrganizationId(
+                orgId,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "startTime"))
             );
-            
+
             // Get paralegal's assigned case IDs
             Set<Long> assignedCaseIds = roleService.getUserCaseIds(userId);
-            
+
             // Map events and mark which ones they can edit
             List<CalendarEventDTO> eventDTOs = allEventsPage.getContent().stream()
                 .map(event -> {
@@ -955,7 +1003,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                     return dto;
                 })
                 .collect(Collectors.toList());
-            
+
             return new PageImpl<>(eventDTOs, PageRequest.of(page, size), allEventsPage.getTotalElements());
         }
         

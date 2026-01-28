@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.model.AIDocumentAnalysis;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AIDocumentAnalysisRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,7 +41,23 @@ public class AIDocumentAnalysisService {
     private final ObjectMapper objectMapper;
     private final DocumentMetadataExtractor metadataExtractor;
     private final AnalysisTextParser analysisTextParser;
+    private final TenantService tenantService;
     private final Tika tika = new Tika();
+
+    /**
+     * Helper method to get the current organization ID (optional, for setting on new entities)
+     */
+    private Long getOptionalOrganizationId() {
+        return tenantService.getCurrentOrganizationId().orElse(null);
+    }
+
+    /**
+     * Helper method to get the current organization ID (required for queries)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Value("${app.documents.output-path:uploads/documents}")
     private String documentsOutputPath;
@@ -81,6 +98,7 @@ public class AIDocumentAnalysisService {
         analysis.setAnalysisType(analysisType);
         analysis.setAnalysisContext(effectiveContext);  // Store user's analysis goal
         analysis.setUserId(userId);
+        analysis.setOrganizationId(getOptionalOrganizationId()); // SECURITY: Set organization ID for tenant isolation
         analysis.setCaseId(caseId);
         analysis.setStatus("processing");
         analysis.setIsArchived(false);
@@ -197,33 +215,47 @@ public class AIDocumentAnalysisService {
     }
 
     public List<AIDocumentAnalysis> getAnalysisHistory(Long userId) {
-        return repository.findTop10ByUserIdAndIsArchivedFalseOrderByCreatedAtDesc(userId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return repository.findByOrganizationIdAndUserIdOrderByCreatedAtDesc(orgId, userId);
     }
 
     public List<AIDocumentAnalysis> getAnalysesByCaseId(Long caseId) {
-        return repository.findByCaseIdOrderByCreatedAtDesc(caseId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return repository.findByOrganizationIdAndCaseIdOrderByCreatedAtDesc(orgId, caseId);
     }
 
     public Optional<AIDocumentAnalysis> getAnalysisById(String analysisId) {
-        return repository.findByAnalysisId(analysisId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return repository.findByAnalysisIdAndOrganizationId(analysisId, orgId);
     }
 
     public Optional<AIDocumentAnalysis> getAnalysisByDatabaseId(Long id) {
-        return repository.findById(id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return repository.findByIdAndOrganizationId(id, orgId);
     }
 
     public List<AIDocumentAnalysis> getHighRiskDocuments(Integer minScore) {
-        return repository.findHighRiskDocuments(minScore != null ? minScore : 70);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query - need to add method to repository
+        return repository.findByOrganizationIdOrderByCreatedAtDesc(orgId).stream()
+                .filter(a -> a.getRiskScore() != null && a.getRiskScore() >= (minScore != null ? minScore : 70))
+                .toList();
     }
 
     public Map<String, Object> getAnalysisStats(Long userId) {
+        Long orgId = getRequiredOrganizationId();
         Map<String, Object> stats = new HashMap<>();
 
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
 
-        stats.put("totalAnalyses", repository.countRecentAnalysesByUser(userId, thirtyDaysAgo));
-        stats.put("tokensUsed", repository.getTotalTokensUsedByUser(userId, thirtyDaysAgo));
-        stats.put("recentAnalyses", repository.findTop10ByUserIdAndIsArchivedFalseOrderByCreatedAtDesc(userId));
+        // SECURITY: Use tenant-filtered queries
+        stats.put("totalAnalyses", repository.countRecentAnalysesByOrganization(orgId, thirtyDaysAgo));
+        stats.put("tokensUsed", repository.getTotalTokensUsedByUser(userId, thirtyDaysAgo)); // Keep user-level for now
+        stats.put("recentAnalyses", repository.findTop10ByOrganizationIdAndIsArchivedFalseOrderByCreatedAtDesc(orgId));
 
         return stats;
     }
@@ -2111,7 +2143,14 @@ public class AIDocumentAnalysisService {
      * Delete a document analysis by ID
      */
     public void deleteAnalysis(Long analysisId) {
+        Long orgId = getRequiredOrganizationId();
         log.info("🗑️ Deleting analysis with ID: {}", analysisId);
+
+        // SECURITY: Verify analysis belongs to current organization before deletion
+        if (!repository.existsByIdAndOrganizationId(analysisId, orgId)) {
+            throw new RuntimeException("Analysis not found or access denied: " + analysisId);
+        }
+
         repository.deleteById(analysisId);
     }
 
@@ -2122,10 +2161,11 @@ public class AIDocumentAnalysisService {
      */
     public String askAboutDocument(Long analysisId, String question, Long userId) {
         log.info("🤖 Processing Ask AI question for analysis {}", analysisId);
+        Long orgId = getRequiredOrganizationId();
 
-        // Load the analysis from database
-        AIDocumentAnalysis analysis = repository.findById(analysisId)
-            .orElseThrow(() -> new RuntimeException("Analysis not found: " + analysisId));
+        // Load the analysis from database - SECURITY: Use tenant-filtered query
+        AIDocumentAnalysis analysis = repository.findByIdAndOrganizationId(analysisId, orgId)
+            .orElseThrow(() -> new RuntimeException("Analysis not found or access denied: " + analysisId));
 
         // Get the stored analysis context to tailor the response
         String analysisContext = analysis.getAnalysisContext();

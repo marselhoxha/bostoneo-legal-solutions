@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.model.AIPatentApplication;
 import com.bostoneo.bostoneosolutions.model.AIPatentPriorArt;
 import com.bostoneo.bostoneosolutions.enumeration.PatentType;
 import com.bostoneo.bostoneosolutions.enumeration.PatentStatus;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AIPatentApplicationRepository;
 import com.bostoneo.bostoneosolutions.repository.AIPatentPriorArtRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,10 +29,13 @@ public class AIPatentServiceImpl implements AIPatentService {
     private final AIPatentApplicationRepository applicationRepository;
     private final AIPatentPriorArtRepository priorArtRepository;
     private final ClaudeSonnet4Service claudeService;
+    private final TenantService tenantService;
 
     @Override
     public AIPatentApplication createPatentApplication(AIPatentApplication application) {
         log.info("Creating patent application for client: {}", application.getClientId());
+        // SECURITY: Set organization ID from current tenant context
+        application.setOrganizationId(tenantService.requireCurrentOrganizationId());
         application.setCreatedAt(LocalDateTime.now());
         application.setUpdatedAt(LocalDateTime.now());
         return applicationRepository.save(application);
@@ -41,37 +45,47 @@ public class AIPatentServiceImpl implements AIPatentService {
     public AIPatentApplication updatePatentApplication(Long id, AIPatentApplication application) {
         log.info("Updating patent application with ID: {}", id);
         AIPatentApplication existing = getPatentApplicationById(id);
-        
+
         existing.setPatentType(application.getPatentType());
         existing.setStatus(application.getStatus());
         existing.setTitle(application.getTitle());
         existing.setTechnologyArea(application.getTechnologyArea());
         existing.setExaminationDate(application.getExaminationDate());
         existing.setUpdatedAt(LocalDateTime.now());
-        
+
         return applicationRepository.save(existing);
     }
 
     @Override
     public AIPatentApplication getPatentApplicationById(Long id) {
-        return applicationRepository.findById(id)
+        // SECURITY: Use tenant-filtered lookup to prevent cross-tenant access
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return applicationRepository.findByIdAndOrganizationId(id, orgId)
                 .orElseThrow(() -> new RuntimeException("Patent application not found with ID: " + id));
     }
 
     @Override
     public Page<AIPatentApplication> getApplicationsByType(PatentType patentType, Pageable pageable) {
-        return applicationRepository.findByPatentType(patentType, pageable);
+        // SECURITY: Filter by organization
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return applicationRepository.findByPatentTypeAndOrganizationId(patentType, orgId, pageable);
     }
 
     @Override
     public Page<AIPatentApplication> getApplicationsByStatus(PatentStatus status, Pageable pageable) {
-        return applicationRepository.findByStatus(status, pageable);
+        // SECURITY: Filter by organization
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return applicationRepository.findByStatusAndOrganizationId(status, orgId, pageable);
     }
 
     @Override
     public void deletePatentApplication(Long id) {
         log.info("Deleting patent application with ID: {}", id);
-        applicationRepository.deleteById(id);
+        // SECURITY: Verify application belongs to current tenant before deleting
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        AIPatentApplication existing = applicationRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Patent application not found with ID: " + id));
+        applicationRepository.delete(existing);
     }
 
     @Override

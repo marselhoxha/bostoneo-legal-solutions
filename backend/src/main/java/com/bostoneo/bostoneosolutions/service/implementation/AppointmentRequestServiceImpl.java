@@ -10,10 +10,13 @@ import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.repository.AppointmentRequestRepository;
 import com.bostoneo.bostoneosolutions.repository.ClientRepository;
 import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
+import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.model.Organization;
 import com.bostoneo.bostoneosolutions.service.AppointmentRequestService;
 import com.bostoneo.bostoneosolutions.service.CalendarEventService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -41,6 +44,13 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     private final LegalCaseRepository legalCaseRepository;
     private final CalendarEventService calendarEventService;
     private final NotificationService notificationService;
+    private final TenantService tenantService;
+    private final OrganizationRepository organizationRepository;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     // =====================================================
     // CLIENT OPERATIONS
@@ -49,10 +59,11 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public AppointmentRequestDTO createAppointmentRequest(AppointmentRequestDTO request) {
         log.info("Creating appointment request for client: {}", request.getClientId());
+        Long orgId = getRequiredOrganizationId();
 
-        // Validate client exists
-        Client client = clientRepository.findById(request.getClientId())
-                .orElseThrow(() -> new ApiException("Client not found"));
+        // SECURITY: Use tenant-filtered query to validate client exists
+        Client client = clientRepository.findByIdAndOrganizationId(request.getClientId(), orgId)
+                .orElseThrow(() -> new ApiException("Client not found or access denied"));
 
         // Validate attorney exists
         User attorney = userRepository.get(request.getAttorneyId());
@@ -62,12 +73,14 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
 
         // Validate case if provided
         if (request.getCaseId() != null) {
-            legalCaseRepository.findById(request.getCaseId())
-                    .orElseThrow(() -> new ApiException("Case not found"));
+            // SECURITY: Use tenant-filtered query
+            legalCaseRepository.findByIdAndOrganizationId(request.getCaseId(), orgId)
+                    .orElseThrow(() -> new ApiException("Case not found or access denied"));
         }
 
-        // Check for conflicts
-        List<AppointmentRequest> conflicts = appointmentRequestRepository.findConflictingAppointments(
+        // Check for conflicts - SECURITY: Use tenant-filtered query
+        List<AppointmentRequest> conflicts = appointmentRequestRepository.findConflictingAppointmentsByOrganization(
+                orgId,
                 request.getAttorneyId(),
                 request.getPreferredDatetime(),
                 request.getPreferredDatetime().plusMinutes(request.getDurationMinutes() != null ? request.getDurationMinutes() : 30)
@@ -78,6 +91,7 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
         }
 
         AppointmentRequest appointment = AppointmentRequest.builder()
+                .organizationId(orgId) // SECURITY: Set organization ID
                 .clientId(request.getClientId())
                 .attorneyId(request.getAttorneyId())
                 .caseId(request.getCaseId())
@@ -102,15 +116,17 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public Page<AppointmentRequestDTO> getClientAppointments(Long clientId, int page, int size) {
         log.info("Getting appointments for client: {}", clientId);
+        Long orgId = getRequiredOrganizationId();
         Pageable pageable = PageRequest.of(page, size);
-        return appointmentRequestRepository.findByClientIdOrderByPreferredDatetimeDesc(clientId, pageable)
+        return appointmentRequestRepository.findByOrganizationIdAndClientIdOrderByPreferredDatetimeDesc(orgId, clientId, pageable)
                 .map(this::toDTO);
     }
 
     @Override
     public List<AppointmentRequestDTO> getClientUpcomingAppointments(Long clientId) {
         log.info("Getting upcoming appointments for client: {}", clientId);
-        return appointmentRequestRepository.findUpcomingByClientId(clientId, LocalDateTime.now())
+        Long orgId = getRequiredOrganizationId();
+        return appointmentRequestRepository.findUpcomingByOrganizationAndClientId(orgId, clientId, LocalDateTime.now())
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -119,7 +135,8 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public List<AppointmentRequestDTO> getClientPendingAppointments(Long clientId) {
         log.info("Getting pending appointments for client: {}", clientId);
-        return appointmentRequestRepository.findByClientIdAndStatusOrderByPreferredDatetimeAsc(clientId, "PENDING")
+        Long orgId = getRequiredOrganizationId();
+        return appointmentRequestRepository.findByOrganizationIdAndClientIdAndStatusOrderByPreferredDatetimeAsc(orgId, clientId, "PENDING")
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -128,9 +145,11 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public AppointmentRequestDTO cancelAppointmentByClient(Long appointmentId, Long clientId, String reason) {
         log.info("Client {} cancelling appointment: {}", clientId, appointmentId);
+        Long orgId = getRequiredOrganizationId();
 
-        AppointmentRequest appointment = appointmentRequestRepository.findById(appointmentId)
-                .orElseThrow(() -> new ApiException("Appointment not found"));
+        // SECURITY: Use tenant-filtered query
+        AppointmentRequest appointment = appointmentRequestRepository.findByIdAndOrganizationId(appointmentId, orgId)
+                .orElseThrow(() -> new ApiException("Appointment not found or access denied"));
 
         if (!appointment.getClientId().equals(clientId)) {
             throw new ApiException("You don't have permission to cancel this appointment");
@@ -161,7 +180,7 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     private void sendCancellationNotificationToAttorney(AppointmentRequest appointment, String reason) {
         try {
             // Get client name
-            Client client = clientRepository.findById(appointment.getClientId()).orElse(null);
+            Client client = clientRepository.findByIdAndOrganizationId(appointment.getClientId(), appointment.getOrganizationId()).orElse(null);
             String clientName = client != null ? client.getName() : "A client";
 
             // Format the date
@@ -218,15 +237,17 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public Page<AppointmentRequestDTO> getAttorneyAppointments(Long attorneyId, int page, int size) {
         log.info("Getting appointments for attorney: {}", attorneyId);
+        Long orgId = getRequiredOrganizationId();
         Pageable pageable = PageRequest.of(page, size);
-        return appointmentRequestRepository.findByAttorneyIdOrderByPreferredDatetimeDesc(attorneyId, pageable)
+        return appointmentRequestRepository.findByOrganizationIdAndAttorneyIdOrderByPreferredDatetimeDesc(orgId, attorneyId, pageable)
                 .map(this::toDTO);
     }
 
     @Override
     public List<AppointmentRequestDTO> getAttorneyPendingRequests(Long attorneyId) {
         log.info("Getting pending requests for attorney: {}", attorneyId);
-        return appointmentRequestRepository.findByAttorneyIdAndStatusOrderByCreatedAtAsc(attorneyId, "PENDING")
+        Long orgId = getRequiredOrganizationId();
+        return appointmentRequestRepository.findByOrganizationIdAndAttorneyIdAndStatusOrderByCreatedAtAsc(orgId, attorneyId, "PENDING")
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -235,7 +256,8 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public List<AppointmentRequestDTO> getAttorneyUpcomingAppointments(Long attorneyId) {
         log.info("Getting upcoming appointments for attorney: {}", attorneyId);
-        return appointmentRequestRepository.findUpcomingByAttorneyId(attorneyId, LocalDateTime.now())
+        Long orgId = getRequiredOrganizationId();
+        return appointmentRequestRepository.findUpcomingByOrganizationAndAttorneyId(orgId, attorneyId, LocalDateTime.now())
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -243,15 +265,18 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
 
     @Override
     public long countAttorneyPendingRequests(Long attorneyId) {
-        return appointmentRequestRepository.countByAttorneyIdAndStatus(attorneyId, "PENDING");
+        Long orgId = getRequiredOrganizationId();
+        return appointmentRequestRepository.countByOrganizationIdAndAttorneyIdAndStatus(orgId, attorneyId, "PENDING");
     }
 
     @Override
     public AppointmentRequestDTO confirmAppointment(Long appointmentId, Long attorneyId, AppointmentRequestDTO confirmationDetails) {
         log.info("Attorney {} confirming appointment: {}", attorneyId, appointmentId);
+        Long orgId = getRequiredOrganizationId();
 
-        AppointmentRequest appointment = appointmentRequestRepository.findById(appointmentId)
-                .orElseThrow(() -> new ApiException("Appointment not found"));
+        // SECURITY: Use tenant-filtered query
+        AppointmentRequest appointment = appointmentRequestRepository.findByIdAndOrganizationId(appointmentId, orgId)
+                .orElseThrow(() -> new ApiException("Appointment not found or access denied"));
 
         if (!appointment.getAttorneyId().equals(attorneyId)) {
             throw new ApiException("You don't have permission to confirm this appointment");
@@ -299,7 +324,8 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     private void sendConfirmationNotificationToClient(AppointmentRequest appointment) {
         try {
             // Get client's user ID
-            Client client = clientRepository.findById(appointment.getClientId())
+            // SECURITY: Use tenant-filtered query
+            Client client = clientRepository.findByIdAndOrganizationId(appointment.getClientId(), appointment.getOrganizationId())
                     .orElse(null);
             if (client == null || client.getUserId() == null) {
                 log.warn("Could not find client or client user ID for appointment {}", appointment.getId());
@@ -354,9 +380,11 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public AppointmentRequestDTO rescheduleAppointment(Long appointmentId, Long attorneyId, AppointmentRequestDTO rescheduleDetails) {
         log.info("Attorney {} rescheduling appointment: {}", attorneyId, appointmentId);
+        Long orgId = getRequiredOrganizationId();
 
-        AppointmentRequest appointment = appointmentRequestRepository.findById(appointmentId)
-                .orElseThrow(() -> new ApiException("Appointment not found"));
+        // SECURITY: Use tenant-filtered query
+        AppointmentRequest appointment = appointmentRequestRepository.findByIdAndOrganizationId(appointmentId, orgId)
+                .orElseThrow(() -> new ApiException("Appointment not found or access denied"));
 
         if (!appointment.getAttorneyId().equals(attorneyId)) {
             throw new ApiException("You don't have permission to reschedule this appointment");
@@ -366,8 +394,9 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
             throw new ApiException("Cannot reschedule an appointment that is " + appointment.getStatus().toLowerCase());
         }
 
-        // Check for conflicts with new time
-        List<AppointmentRequest> conflicts = appointmentRequestRepository.findConflictingAppointments(
+        // Check for conflicts with new time - SECURITY: Use tenant-filtered query
+        List<AppointmentRequest> conflicts = appointmentRequestRepository.findConflictingAppointmentsByOrganization(
+                orgId,
                 attorneyId,
                 rescheduleDetails.getConfirmedDatetime(),
                 rescheduleDetails.getConfirmedDatetime().plusMinutes(appointment.getDurationMinutes())
@@ -394,9 +423,11 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public AppointmentRequestDTO approveReschedule(Long appointmentId, Long attorneyId) {
         log.info("Attorney {} approving reschedule for appointment: {}", attorneyId, appointmentId);
+        Long orgId = getRequiredOrganizationId();
 
-        AppointmentRequest appointment = appointmentRequestRepository.findById(appointmentId)
-                .orElseThrow(() -> new ApiException("Appointment not found"));
+        // SECURITY: Use tenant-filtered query
+        AppointmentRequest appointment = appointmentRequestRepository.findByIdAndOrganizationId(appointmentId, orgId)
+                .orElseThrow(() -> new ApiException("Appointment not found or access denied"));
 
         if (!appointment.getAttorneyId().equals(attorneyId)) {
             throw new ApiException("You don't have permission to approve this reschedule request");
@@ -435,9 +466,11 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public AppointmentRequestDTO declineReschedule(Long appointmentId, Long attorneyId, String reason) {
         log.info("Attorney {} declining reschedule for appointment: {}", attorneyId, appointmentId);
+        Long orgId = getRequiredOrganizationId();
 
-        AppointmentRequest appointment = appointmentRequestRepository.findById(appointmentId)
-                .orElseThrow(() -> new ApiException("Appointment not found"));
+        // SECURITY: Use tenant-filtered query
+        AppointmentRequest appointment = appointmentRequestRepository.findByIdAndOrganizationId(appointmentId, orgId)
+                .orElseThrow(() -> new ApiException("Appointment not found or access denied"));
 
         if (!appointment.getAttorneyId().equals(attorneyId)) {
             throw new ApiException("You don't have permission to decline this reschedule request");
@@ -468,8 +501,10 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
 
     @Override
     public List<AppointmentRequestDTO> getAttorneyPendingRescheduleRequests(Long attorneyId) {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
         List<AppointmentRequest> pendingReschedules = appointmentRequestRepository
-                .findByAttorneyIdAndStatusOrderByPreferredDatetimeAsc(attorneyId, "PENDING_RESCHEDULE");
+                .findByOrganizationIdAndAttorneyIdAndStatusOrderByCreatedAtAsc(orgId, attorneyId, "PENDING_RESCHEDULE");
         return pendingReschedules.stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -507,7 +542,7 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
      */
     private void sendRescheduleApprovedNotificationToClient(AppointmentRequest appointment) {
         try {
-            Client client = clientRepository.findById(appointment.getClientId()).orElse(null);
+            Client client = clientRepository.findByIdAndOrganizationId(appointment.getClientId(), appointment.getOrganizationId()).orElse(null);
             if (client == null || client.getUserId() == null) {
                 log.warn("Could not find client or client user ID for appointment {}", appointment.getId());
                 return;
@@ -549,7 +584,7 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
      */
     private void sendRescheduleDeclinedNotificationToClient(AppointmentRequest appointment, String reason) {
         try {
-            Client client = clientRepository.findById(appointment.getClientId()).orElse(null);
+            Client client = clientRepository.findByIdAndOrganizationId(appointment.getClientId(), appointment.getOrganizationId()).orElse(null);
             if (client == null || client.getUserId() == null) {
                 log.warn("Could not find client or client user ID for appointment {}", appointment.getId());
                 return;
@@ -590,9 +625,11 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public AppointmentRequestDTO cancelAppointmentByAttorney(Long appointmentId, Long attorneyId, String reason) {
         log.info("Attorney {} cancelling appointment: {}", attorneyId, appointmentId);
+        Long orgId = getRequiredOrganizationId();
 
-        AppointmentRequest appointment = appointmentRequestRepository.findById(appointmentId)
-                .orElseThrow(() -> new ApiException("Appointment not found"));
+        // SECURITY: Use tenant-filtered query
+        AppointmentRequest appointment = appointmentRequestRepository.findByIdAndOrganizationId(appointmentId, orgId)
+                .orElseThrow(() -> new ApiException("Appointment not found or access denied"));
 
         if (!appointment.getAttorneyId().equals(attorneyId)) {
             throw new ApiException("You don't have permission to cancel this appointment");
@@ -623,7 +660,8 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     private void sendDeclineNotificationToClient(AppointmentRequest appointment, String reason) {
         try {
             // Get client's user ID
-            Client client = clientRepository.findById(appointment.getClientId())
+            // SECURITY: Use tenant-filtered query
+            Client client = clientRepository.findByIdAndOrganizationId(appointment.getClientId(), appointment.getOrganizationId())
                     .orElse(null);
             if (client == null || client.getUserId() == null) {
                 log.warn("Could not find client or client user ID for appointment {}", appointment.getId());
@@ -667,9 +705,11 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public AppointmentRequestDTO completeAppointment(Long appointmentId, Long attorneyId, String notes) {
         log.info("Attorney {} completing appointment: {}", attorneyId, appointmentId);
+        Long orgId = getRequiredOrganizationId();
 
-        AppointmentRequest appointment = appointmentRequestRepository.findById(appointmentId)
-                .orElseThrow(() -> new ApiException("Appointment not found"));
+        // SECURITY: Use tenant-filtered query
+        AppointmentRequest appointment = appointmentRequestRepository.findByIdAndOrganizationId(appointmentId, orgId)
+                .orElseThrow(() -> new ApiException("Appointment not found or access denied"));
 
         if (!appointment.getAttorneyId().equals(attorneyId)) {
             throw new ApiException("You don't have permission to complete this appointment");
@@ -694,7 +734,8 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public List<AppointmentRequestDTO> getAppointmentsByCase(Long caseId) {
         log.info("Getting appointments for case: {}", caseId);
-        return appointmentRequestRepository.findByCaseIdOrderByPreferredDatetimeDesc(caseId)
+        Long orgId = getRequiredOrganizationId();
+        return appointmentRequestRepository.findByOrganizationIdAndCaseIdOrderByPreferredDatetimeDesc(orgId, caseId)
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -707,9 +748,10 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     @Override
     public AppointmentRequestDTO getAppointmentById(Long id) {
         log.info("Getting appointment by ID: {}", id);
-        return appointmentRequestRepository.findById(id)
+        Long orgId = getRequiredOrganizationId();
+        return appointmentRequestRepository.findByIdAndOrganizationId(id, orgId)
                 .map(this::toDTO)
-                .orElseThrow(() -> new ApiException("Appointment not found"));
+                .orElseThrow(() -> new ApiException("Appointment not found or access denied"));
     }
 
     // =====================================================
@@ -720,39 +762,43 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
     public void processAppointmentReminders() {
         log.debug("Processing appointment reminders...");
 
+        // TENANT ISOLATED: Process each organization separately
         LocalDateTime now = LocalDateTime.now();
+        List<Organization> organizations = organizationRepository.findAll();
 
-        // Process 24-hour reminders
-        LocalDateTime twentyFourHoursFromNow = now.plusHours(24);
-        LocalDateTime twentyThreeHoursFromNow = now.plusHours(23);
-        List<AppointmentRequest> needing24hReminder = appointmentRequestRepository
-                .findNeedingReminder24h(twentyThreeHoursFromNow, twentyFourHoursFromNow);
+        for (Organization org : organizations) {
+            // Process 24-hour reminders
+            LocalDateTime twentyFourHoursFromNow = now.plusHours(24);
+            LocalDateTime twentyThreeHoursFromNow = now.plusHours(23);
+            List<AppointmentRequest> needing24hReminder = appointmentRequestRepository
+                    .findNeedingReminder24hByOrganizationId(org.getId(), twentyThreeHoursFromNow, twentyFourHoursFromNow);
 
-        for (AppointmentRequest appointment : needing24hReminder) {
-            try {
-                send24HourReminder(appointment);
-                appointment.setReminder24hSent(true);
-                appointmentRequestRepository.save(appointment);
-                log.info("Sent 24-hour reminder for appointment: {}", appointment.getId());
-            } catch (Exception e) {
-                log.error("Failed to send 24-hour reminder for appointment {}: {}", appointment.getId(), e.getMessage());
+            for (AppointmentRequest appointment : needing24hReminder) {
+                try {
+                    send24HourReminder(appointment);
+                    appointment.setReminder24hSent(true);
+                    appointmentRequestRepository.save(appointment);
+                    log.info("Sent 24-hour reminder for appointment: {}", appointment.getId());
+                } catch (Exception e) {
+                    log.error("Failed to send 24-hour reminder for appointment {}: {}", appointment.getId(), e.getMessage());
+                }
             }
-        }
 
-        // Process 1-hour reminders
-        LocalDateTime oneHourFromNow = now.plusHours(1);
-        LocalDateTime fiftyMinutesFromNow = now.plusMinutes(50);
-        List<AppointmentRequest> needing1hReminder = appointmentRequestRepository
-                .findNeedingReminder1h(fiftyMinutesFromNow, oneHourFromNow);
+            // Process 1-hour reminders
+            LocalDateTime oneHourFromNow = now.plusHours(1);
+            LocalDateTime fiftyMinutesFromNow = now.plusMinutes(50);
+            List<AppointmentRequest> needing1hReminder = appointmentRequestRepository
+                    .findNeedingReminder1hByOrganizationId(org.getId(), fiftyMinutesFromNow, oneHourFromNow);
 
-        for (AppointmentRequest appointment : needing1hReminder) {
-            try {
-                send1HourReminder(appointment);
-                appointment.setReminder1hSent(true);
-                appointmentRequestRepository.save(appointment);
-                log.info("Sent 1-hour reminder for appointment: {}", appointment.getId());
-            } catch (Exception e) {
-                log.error("Failed to send 1-hour reminder for appointment {}: {}", appointment.getId(), e.getMessage());
+            for (AppointmentRequest appointment : needing1hReminder) {
+                try {
+                    send1HourReminder(appointment);
+                    appointment.setReminder1hSent(true);
+                    appointmentRequestRepository.save(appointment);
+                    log.info("Sent 1-hour reminder for appointment: {}", appointment.getId());
+                } catch (Exception e) {
+                    log.error("Failed to send 1-hour reminder for appointment {}: {}", appointment.getId(), e.getMessage());
+                }
             }
         }
 
@@ -779,9 +825,10 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
         CalendarEventDTO eventDTO = new CalendarEventDTO();
 
         // Build title with case information for better context
+        // SECURITY: Use tenant-filtered query
         String eventTitle = appointment.getTitle();
-        if (appointment.getCaseId() != null) {
-            LegalCase legalCase = legalCaseRepository.findById(appointment.getCaseId()).orElse(null);
+        if (appointment.getCaseId() != null && appointment.getOrganizationId() != null) {
+            LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(appointment.getCaseId(), appointment.getOrganizationId()).orElse(null);
             if (legalCase != null) {
                 // Format: "Client Meeting - Case Title (CASE-NUMBER)"
                 eventTitle = String.format("%s - %s (%s)",
@@ -794,7 +841,7 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
         // Get client name for description
         String clientInfo = "";
         if (appointment.getClientId() != null) {
-            Client client = clientRepository.findById(appointment.getClientId()).orElse(null);
+            Client client = clientRepository.findByIdAndOrganizationId(appointment.getClientId(), appointment.getOrganizationId()).orElse(null);
             if (client != null) {
                 clientInfo = "Client: " + client.getName() + "\n";
             }
@@ -853,11 +900,12 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
                 .updatedAt(entity.getUpdatedAt())
                 .build();
 
-        // Enrich with names
+        // Enrich with names - SECURITY: Use tenant-filtered queries
+        Long orgId = entity.getOrganizationId();
         if (entity.getClient() != null) {
             dto.setClientName(entity.getClient().getName());
-        } else if (entity.getClientId() != null) {
-            clientRepository.findById(entity.getClientId())
+        } else if (entity.getClientId() != null && orgId != null) {
+            clientRepository.findByIdAndOrganizationId(entity.getClientId(), orgId)
                     .ifPresent(client -> dto.setClientName(client.getName()));
         }
 
@@ -870,8 +918,8 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
 
         if (entity.getLegalCase() != null) {
             dto.setCaseNumber(entity.getLegalCase().getCaseNumber());
-        } else if (entity.getCaseId() != null) {
-            legalCaseRepository.findById(entity.getCaseId())
+        } else if (entity.getCaseId() != null && orgId != null) {
+            legalCaseRepository.findByIdAndOrganizationId(entity.getCaseId(), orgId)
                     .ifPresent(legalCase -> dto.setCaseNumber(legalCase.getCaseNumber()));
         }
 

@@ -77,6 +77,11 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final TenantService tenantService;
 
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
     @Override
     public LegalCaseDTO createCase(LegalCaseDTO caseDTO) {
         LegalCase legalCase = legalCaseDTOMapper.toEntity(caseDTO);
@@ -86,9 +91,11 @@ public class LegalCaseServiceImpl implements LegalCaseService {
 
     @Override
     public LegalCaseDTO updateCase(Long id, LegalCaseDTO caseDTO) {
-        LegalCase existingCase = legalCaseRepository.findById(id)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        LegalCase existingCase = legalCaseRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + id));
+
         // Capture old values for notification comparison
         String oldStatus = existingCase.getStatus() != null ? existingCase.getStatus().toString() : null;
         String oldPriority = existingCase.getPriority() != null ? existingCase.getPriority().toString() : null;
@@ -136,7 +143,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
                 // Get all users assigned to this case
                 Set<Long> notificationUserIds = new HashSet<>();
                 try {
-                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(existingCase.getId());
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(existingCase.getId(), orgId);
                     for (CaseAssignment assignment : caseAssignments) {
                         if (assignment.getAssignedTo() != null) {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
@@ -174,7 +181,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
                 // Get all users assigned to this case
                 Set<Long> notificationUserIds = new HashSet<>();
                 try {
-                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(existingCase.getId());
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(existingCase.getId(), orgId);
                     for (CaseAssignment assignment : caseAssignments) {
                         if (assignment.getAssignedTo() != null) {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
@@ -207,8 +214,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
 
     @Override
     public LegalCaseDTO getCase(Long id) {
-        LegalCase legalCase = legalCaseRepository.findById(id)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + id));
         return legalCaseDTOMapper.toDTO(legalCase);
     }
 
@@ -224,10 +233,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         // Sort by created_at descending to show newest cases first
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         Page<LegalCase> cases = tenantService.getCurrentOrganizationId()
             .map(orgId -> legalCaseRepository.findByOrganizationId(orgId, pageable))
-            .orElseGet(() -> legalCaseRepository.findAll(pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
 
         return cases.map(this::toDTOWithAttorneys);
     }
@@ -238,9 +247,9 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     private LegalCaseDTO toDTOWithAttorneys(LegalCase legalCase) {
         LegalCaseDTO dto = legalCaseDTOMapper.toDTO(legalCase);
 
-        // Fetch and populate assigned attorneys
+        // Fetch and populate assigned attorneys - SECURITY: use org-filtered query
         try {
-            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(legalCase.getId());
+            List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(legalCase.getId(), legalCase.getOrganizationId());
             if (assignments != null && !assignments.isEmpty()) {
                 List<AssignedAttorneyDTO> attorneys = assignments.stream()
                     .filter(a -> a.getAssignedTo() != null)
@@ -279,11 +288,14 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         String userRole = user.getRoleName();
         log.info("User ID: {} has role: {}", userId, userRole);
         
-        // Admin users can see all cases
+        // Admin users can see all cases (within their organization)
         if ("ROLE_ADMIN".equals(userRole) || "ROLE_ATTORNEY".equals(userRole) || "ROLE_MANAGER".equals(userRole) ||
             "MANAGING_PARTNER".equals(userRole) || "SENIOR_PARTNER".equals(userRole) || "OF_COUNSEL".equals(userRole)) {
             log.info("User has admin/senior role, returning all cases");
-            Page<LegalCase> cases = legalCaseRepository.findAll(
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Use tenant-filtered query
+            Page<LegalCase> cases = legalCaseRepository.findByOrganizationId(
+                orgId,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
             );
             return cases.map(this::toDTOWithAttorneys);
@@ -309,15 +321,17 @@ public class LegalCaseServiceImpl implements LegalCaseService {
             if (caseIds.isEmpty()) {
                 return Page.empty(PageRequest.of(page, size));
             }
-            
-            // Get cases by IDs with pagination, sorted by newest first
-            Page<LegalCase> cases = legalCaseRepository.findByIdIn(
+
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Get cases by IDs with tenant filtering
+            Page<LegalCase> cases = legalCaseRepository.findByOrganizationIdAndIdIn(
+                orgId,
                 caseIds,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
             );
             return cases.map(legalCaseDTOMapper::toDTO);
         }
-        
+
         // CLIENT: See only cases where explicitly assigned
         // Note: Client users have ROLE_USER role in this system
         if ("ROLE_CLIENT".equals(userRole) || "ROLE_USER".equals(userRole)) {
@@ -343,8 +357,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
             
             log.info("Found {} active case assignments for user ID: {}, case IDs: {}", caseIds.size(), userId, caseIds);
 
-            // Get cases by IDs with pagination, sorted by newest first
-            Page<LegalCase> cases = legalCaseRepository.findByIdIn(
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Get cases by IDs with tenant filtering
+            Page<LegalCase> cases = legalCaseRepository.findByOrganizationIdAndIdIn(
+                orgId,
                 caseIds,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
             );
@@ -366,7 +382,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         
         // SECRETARY: See case list with limited details
         if ("ROLE_SECRETARY".equals(userRole)) {
-            Page<LegalCase> allCases = legalCaseRepository.findAll(
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Use tenant-filtered query
+            Page<LegalCase> allCases = legalCaseRepository.findByOrganizationId(
+                orgId,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
             );
 
@@ -403,28 +422,32 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         log.info("Searching cases with term: {}", search);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        // Use tenant-filtered search if organization context is available
+        // Use tenant-filtered search - throw exception if no organization context
         Page<LegalCase> cases = tenantService.getCurrentOrganizationId()
             .map(orgId -> legalCaseRepository.searchCasesByOrganization(orgId, search, pageable))
-            .orElseGet(() -> legalCaseRepository.searchCases(search, pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
 
         return cases.map(this::toDTOWithAttorneys);
     }
 
     @Override
     public Page<LegalCaseDTO> searchCasesByTitle(String title, int page, int size) {
-        Page<LegalCase> cases = legalCaseRepository.findByTitleContainingIgnoreCase(
-            title,
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        Long orgId = getRequiredOrganizationId();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // SECURITY: Use tenant-filtered search
+        Page<LegalCase> cases = legalCaseRepository.findByOrganizationIdAndTitleContainingIgnoreCase(
+            orgId, title, pageable
         );
         return cases.map(legalCaseDTOMapper::toDTO);
     }
 
     @Override
     public Page<LegalCaseDTO> searchCasesByClientName(String clientName, int page, int size) {
-        Page<LegalCase> cases = legalCaseRepository.findByClientNameContainingIgnoreCase(
-            clientName,
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        Long orgId = getRequiredOrganizationId();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // SECURITY: Use tenant-filtered search
+        Page<LegalCase> cases = legalCaseRepository.findByOrganizationIdAndClientNameContainingIgnoreCase(
+            orgId, clientName, pageable
         );
         return cases.map(legalCaseDTOMapper::toDTO);
     }
@@ -433,19 +456,21 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     public Page<LegalCaseDTO> getCasesByStatus(CaseStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         Page<LegalCase> cases = tenantService.getCurrentOrganizationId()
             .map(orgId -> legalCaseRepository.findByOrganizationIdAndStatus(orgId, status, pageable))
-            .orElseGet(() -> legalCaseRepository.findByStatus(status, pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
 
         return cases.map(legalCaseDTOMapper::toDTO);
     }
 
     @Override
     public Page<LegalCaseDTO> getCasesByType(String type, int page, int size) {
-        Page<LegalCase> cases = legalCaseRepository.findByType(
-            type,
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
+        Long orgId = getRequiredOrganizationId();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // SECURITY: Use tenant-filtered query
+        Page<LegalCase> cases = legalCaseRepository.findByOrganizationIdAndType(
+            orgId, type, pageable
         );
         return cases.map(legalCaseDTOMapper::toDTO);
     }
@@ -453,11 +478,12 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     @Override
     public Page<LegalCaseDTO> getCasesByClientId(Long clientId, int page, int size) {
         log.info("Getting cases for client ID: {}", clientId);
-        
-        // First, get the client to find their name
-        Client client = clientRepository.findById(clientId)
-            .orElseThrow(() -> new RuntimeException("Client not found with id: " + clientId));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query to get the client
+        Client client = clientRepository.findByIdAndOrganizationId(clientId, orgId)
+            .orElseThrow(() -> new RuntimeException("Client not found or access denied: " + clientId));
+
         // Search cases by client name since LegalCase uses clientName field
         Page<LegalCase> cases = legalCaseRepository.findByClientNameContainingIgnoreCase(
             client.getName(),
@@ -469,16 +495,20 @@ public class LegalCaseServiceImpl implements LegalCaseService {
 
     @Override
     public void deleteCase(Long id) {
-        if (!legalCaseRepository.existsById(id)) {
-            throw new LegalCaseException("Case not found with id: " + id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before deletion
+        if (!legalCaseRepository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new LegalCaseException("Case not found or access denied: " + id);
         }
         legalCaseRepository.deleteById(id);
     }
 
     @Override
     public LegalCaseDTO updateCaseStatus(Long id, CaseStatus status) {
-        LegalCase legalCase = legalCaseRepository.findById(id)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + id));
         legalCase.setStatus(status);
         legalCase = legalCaseRepository.save(legalCase);
         return legalCaseDTOMapper.toDTO(legalCase);
@@ -488,9 +518,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     
     @Override
     public List<DocumentDTO> getCaseDocuments(Long caseId) {
-        // Check if case exists
-        legalCaseRepository.findById(caseId)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + caseId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Check if case exists with tenant filtering
+        legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + caseId));
             
         log.info("Getting documents for case: {}", caseId);
         
@@ -541,11 +572,12 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     }
     
     @Override
-    public DocumentDTO uploadDocument(Long caseId, MultipartFile file, String title, 
+    public DocumentDTO uploadDocument(Long caseId, MultipartFile file, String title,
                                     String type, String category, String description, String tags, UserDTO user) {
-        // Check if case exists
-        LegalCase legalCase = legalCaseRepository.findById(caseId)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + caseId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Check if case exists with tenant filtering
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + caseId));
             
         log.info("Uploading document for case: {}", caseId);
         
@@ -697,9 +729,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     
     @Override
     public DocumentDTO getDocument(Long caseId, Long documentId) {
-        // Check if case exists
-        legalCaseRepository.findById(caseId)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + caseId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Check if case exists with tenant filtering
+        legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + caseId));
             
         log.info("Retrieving document with id: {} for case: {}", documentId, caseId);
         
@@ -745,9 +778,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     
     @Override
     public void deleteDocument(Long caseId, Long documentId) {
-        // Check if case exists
-        legalCaseRepository.findById(caseId)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + caseId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Check if case exists with tenant filtering
+        legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + caseId));
             
         // Check if document exists and belongs to the case
         CustomHttpResponse<LegalDocument> docResponse = documentService.getDocumentById(documentId);
@@ -773,9 +807,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     
     @Override
     public Resource downloadDocument(Long caseId, Long documentId) {
-        // Check if case exists
-        legalCaseRepository.findById(caseId)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + caseId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Check if case exists with tenant filtering
+        legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + caseId));
             
         log.info("Downloading document with id: {} for case: {}", documentId, caseId);
         
@@ -810,11 +845,12 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     }
     
     @Override
-    public DocumentVersionDTO uploadNewDocumentVersion(Long caseId, Long documentId, 
+    public DocumentVersionDTO uploadNewDocumentVersion(Long caseId, Long documentId,
                                                     MultipartFile file, String notes, Long uploadedBy) {
-        // Check if case exists
-        legalCaseRepository.findById(caseId)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + caseId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Check if case exists with tenant filtering
+        legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + caseId));
             
         log.info("Uploading new version for document: {} in case: {}", documentId, caseId);
         
@@ -879,9 +915,9 @@ public class LegalCaseServiceImpl implements LegalCaseService {
                 
                 Set<Long> notificationUserIds = new HashSet<>();
                 
-                // Get users assigned to the case if this document is related to a case
-                if (document.getCaseId() != null) {
-                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(document.getCaseId());
+                // SECURITY: Get users assigned to the case if this document is related to a case (with org filter)
+                if (document.getCaseId() != null && document.getOrganizationId() != null) {
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(document.getCaseId(), document.getOrganizationId());
                     for (CaseAssignment assignment : caseAssignments) {
                         if (assignment.getAssignedTo() != null) {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
@@ -942,9 +978,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     
     @Override
     public List<DocumentVersionDTO> getDocumentVersions(Long caseId, Long documentId) {
-        // Check if case exists
-        legalCaseRepository.findById(caseId)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + caseId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Check if case exists with tenant filtering
+        legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + caseId));
             
         // Check if document exists and belongs to the case
         CustomHttpResponse<LegalDocument> docResponse = documentService.getDocumentById(documentId);
@@ -990,9 +1027,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     
     @Override
     public Resource downloadDocumentVersion(Long caseId, Long documentId, Long versionId) {
-        // Check if case exists
-        legalCaseRepository.findById(caseId)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + caseId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Check if case exists with tenant filtering
+        legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + caseId));
             
         // Check if document exists and belongs to the case
         CustomHttpResponse<LegalDocument> docResponse = documentService.getDocumentById(documentId);
@@ -1006,11 +1044,11 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         }
             
         log.info("Downloading version {} of document: {} for case: {}", versionId, documentId, caseId);
-        
+
         try {
-            // Get the version entity
-            DocumentVersion version = documentVersionRepository.findById(versionId)
-                .orElseThrow(() -> new EntityNotFoundException("Version not found with id: " + versionId));
+            // SECURITY: Use tenant-filtered query
+            DocumentVersion version = documentVersionRepository.findByIdAndOrganizationId(versionId, orgId)
+                .orElseThrow(() -> new EntityNotFoundException("Version not found or access denied: " + versionId));
             
             // Verify the version belongs to the specified document
             if (!version.getDocumentId().equals(documentId)) {
@@ -1063,9 +1101,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     
     @Override
     public List<CaseActivityDTO> getCaseActivities(Long caseId) {
-        // Check if case exists
-        legalCaseRepository.findById(caseId)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + caseId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Check if case exists with tenant filtering
+        legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + caseId));
             
         log.info("Getting activities for case: {}", caseId);
         
@@ -1092,8 +1131,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
 
     @Override
     public LegalCaseDTO getCaseForUser(Long id, Long userId, Collection<String> roles) {
-        LegalCase legalCase = legalCaseRepository.findById(id)
-            .orElseThrow(() -> new LegalCaseException("Case not found with id: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + id));
         
         // Get user to check their specific role
         UserDTO user = userService.getUserById(userId);

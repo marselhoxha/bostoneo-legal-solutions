@@ -1,8 +1,13 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.model.UserNotificationPreference;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.UserNotificationPreferenceRepository;
+import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.service.UserNotificationPreferenceService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,10 +17,43 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@Slf4j
 public class UserNotificationPreferenceServiceImpl implements UserNotificationPreferenceService {
 
     @Autowired
     private UserNotificationPreferenceRepository repository;
+
+    @Autowired
+    private TenantService tenantService;
+
+    @Autowired
+    private UserRepository<User> userRepository;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
+    /**
+     * Verify user belongs to the current organization
+     */
+    private void verifyUserAccess(Long userId) {
+        Long currentOrgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (currentOrgId == null) {
+            return; // No org context, allow (backward compatibility)
+        }
+        try {
+            User user = userRepository.get(userId);
+            if (user == null || !currentOrgId.equals(user.getOrganizationId())) {
+                throw new ApiException("Access denied: User does not belong to current organization");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Could not verify user organization: {}", e.getMessage());
+            throw new ApiException("Access denied: Could not verify user organization");
+        }
+    }
 
     private static final List<String> DEFAULT_EVENT_TYPES = Arrays.asList(
         "CASE_STATUS_CHANGED", "CASE_PRIORITY_CHANGED", "CASE_ASSIGNMENT_ADDED",
@@ -28,13 +66,17 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
     @Override
     @Transactional(readOnly = true)
     public List<UserNotificationPreference> getUserPreferences(Long userId) {
-        return repository.findByUserIdOrderByEventType(userId);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        return repository.findByOrganizationIdAndUserIdOrderByEventType(orgId, userId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, UserNotificationPreference> getUserPreferencesMap(Long userId) {
-        List<UserNotificationPreference> preferences = repository.findByUserId(userId);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        List<UserNotificationPreference> preferences = repository.findByOrganizationIdAndUserId(orgId, userId);
         return preferences.stream()
                 .collect(Collectors.toMap(
                     UserNotificationPreference::getEventType,
@@ -46,7 +88,9 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
     @Override
     @Transactional(readOnly = true)
     public Optional<UserNotificationPreference> getUserPreference(Long userId, String eventType) {
-        return repository.findByUserIdAndEventType(userId, eventType);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        return repository.findByOrganizationIdAndUserIdAndEventType(orgId, userId, eventType);
     }
 
     @Override
@@ -61,13 +105,15 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
 
     @Override
     public List<UserNotificationPreference> updateUserPreferences(Long userId, Map<String, UserNotificationPreference> preferences) {
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
         List<UserNotificationPreference> updatedPreferences = new ArrayList<>();
-        
+
         for (Map.Entry<String, UserNotificationPreference> entry : preferences.entrySet()) {
             String eventType = entry.getKey();
             UserNotificationPreference newPreference = entry.getValue();
-            
-            Optional<UserNotificationPreference> existingOpt = repository.findByUserIdAndEventType(userId, eventType);
+
+            Optional<UserNotificationPreference> existingOpt = repository.findByOrganizationIdAndUserIdAndEventType(orgId, userId, eventType);
             
             if (existingOpt.isPresent()) {
                 UserNotificationPreference existing = existingOpt.get();
@@ -99,10 +145,12 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
     }
 
     @Override
-    public UserNotificationPreference updatePreference(Long userId, String eventType, Boolean enabled, 
-                                                     Boolean emailEnabled, Boolean pushEnabled, 
+    public UserNotificationPreference updatePreference(Long userId, String eventType, Boolean enabled,
+                                                     Boolean emailEnabled, Boolean pushEnabled,
                                                      Boolean inAppEnabled, UserNotificationPreference.NotificationPriority priority) {
-        Optional<UserNotificationPreference> existingOpt = repository.findByUserIdAndEventType(userId, eventType);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        Optional<UserNotificationPreference> existingOpt = repository.findByOrganizationIdAndUserIdAndEventType(orgId, userId, eventType);
         
         UserNotificationPreference preference;
         if (existingOpt.isPresent()) {
@@ -122,7 +170,9 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
 
     @Override
     public List<UserNotificationPreference> setAllNotificationsEnabled(Long userId, Boolean enabled) {
-        List<UserNotificationPreference> preferences = repository.findByUserId(userId);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        List<UserNotificationPreference> preferences = repository.findByOrganizationIdAndUserId(orgId, userId);
         
         for (UserNotificationPreference preference : preferences) {
             preference.setEnabled(enabled);
@@ -133,7 +183,9 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
 
     @Override
     public List<UserNotificationPreference> setAllEmailNotificationsEnabled(Long userId, Boolean emailEnabled) {
-        List<UserNotificationPreference> preferences = repository.findByUserId(userId);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        List<UserNotificationPreference> preferences = repository.findByOrganizationIdAndUserId(orgId, userId);
         
         for (UserNotificationPreference preference : preferences) {
             preference.setEmailEnabled(emailEnabled);
@@ -144,7 +196,9 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
 
     @Override
     public List<UserNotificationPreference> setAllPushNotificationsEnabled(Long userId, Boolean pushEnabled) {
-        List<UserNotificationPreference> preferences = repository.findByUserId(userId);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        List<UserNotificationPreference> preferences = repository.findByOrganizationIdAndUserId(orgId, userId);
         
         for (UserNotificationPreference preference : preferences) {
             preference.setPushEnabled(pushEnabled);
@@ -155,12 +209,14 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
 
     @Override
     public List<UserNotificationPreference> resetToRoleDefaults(Long userId, String roleName) {
+        verifyUserAccess(userId);
         repository.deleteByUserId(userId);
         return initializeUserPreferences(userId, roleName);
     }
 
     @Override
     public List<UserNotificationPreference> initializeUserPreferences(Long userId, String roleName) {
+        verifyUserAccess(userId);
         List<UserNotificationPreference> preferences = new ArrayList<>();
         
         for (String eventType : DEFAULT_EVENT_TYPES) {
@@ -173,58 +229,75 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
 
     @Override
     public void deleteUserPreferences(Long userId) {
+        verifyUserAccess(userId);
         repository.deleteByUserId(userId);
     }
 
     @Override
     public void deletePreference(Long userId, String eventType) {
+        verifyUserAccess(userId);
         repository.deleteByUserIdAndEventType(userId, eventType);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean shouldReceiveNotification(Long userId, String eventType) {
-        Optional<UserNotificationPreference> preference = repository.findByUserIdAndEventType(userId, eventType);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        Optional<UserNotificationPreference> preference = repository.findByOrganizationIdAndUserIdAndEventType(orgId, userId, eventType);
         return preference.map(UserNotificationPreference::shouldReceiveNotification).orElse(true);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean shouldReceiveEmailNotification(Long userId, String eventType) {
-        Optional<UserNotificationPreference> preference = repository.findByUserIdAndEventType(userId, eventType);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        Optional<UserNotificationPreference> preference = repository.findByOrganizationIdAndUserIdAndEventType(orgId, userId, eventType);
         return preference.map(UserNotificationPreference::shouldReceiveEmailNotification).orElse(false);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean shouldReceivePushNotification(Long userId, String eventType) {
-        Optional<UserNotificationPreference> preference = repository.findByUserIdAndEventType(userId, eventType);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        Optional<UserNotificationPreference> preference = repository.findByOrganizationIdAndUserIdAndEventType(orgId, userId, eventType);
         return preference.map(UserNotificationPreference::shouldReceivePushNotification).orElse(false);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean shouldReceiveInAppNotification(Long userId, String eventType) {
-        Optional<UserNotificationPreference> preference = repository.findByUserIdAndEventType(userId, eventType);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        Optional<UserNotificationPreference> preference = repository.findByOrganizationIdAndUserIdAndEventType(orgId, userId, eventType);
         return preference.map(UserNotificationPreference::shouldReceiveInAppNotification).orElse(true);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Long> getUsersForNotification(String eventType, String deliveryChannel) {
+        // SECURITY: Filter users by current organization to prevent cross-tenant notifications
+        Long currentOrgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (currentOrgId != null) {
+            return repository.findUserIdsByEventTypeAndDeliveryChannelAndOrganizationId(eventType, deliveryChannel, currentOrgId);
+        }
+        // Fallback for system notifications without org context
         return repository.findUserIdsByEventTypeAndDeliveryChannel(eventType, deliveryChannel);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getUserNotificationStats(Long userId) {
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
         Map<String, Object> stats = new HashMap<>();
-        
-        Long total = repository.countByUserId(userId);
-        Long enabled = repository.countEnabledByUserId(userId);
+
+        List<UserNotificationPreference> preferences = repository.findByOrganizationIdAndUserId(orgId, userId);
+        Long total = (long) preferences.size();
+        Long enabled = preferences.stream().filter(p -> Boolean.TRUE.equals(p.getEnabled())).count();
         Long disabled = total - enabled;
-        
-        List<UserNotificationPreference> preferences = repository.findByUserId(userId);
         long emailEnabled = preferences.stream().mapToLong(p -> p.shouldReceiveEmailNotification() ? 1 : 0).sum();
         long pushEnabled = preferences.stream().mapToLong(p -> p.shouldReceivePushNotification() ? 1 : 0).sum();
         long inAppEnabled = preferences.stream().mapToLong(p -> p.shouldReceiveInAppNotification() ? 1 : 0).sum();
@@ -249,7 +322,9 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
     @Override
     @Transactional(readOnly = true)
     public boolean hasUserPreferences(Long userId) {
-        return repository.existsByUserId(userId);
+        verifyUserAccess(userId);
+        Long orgId = getRequiredOrganizationId();
+        return repository.existsByOrganizationIdAndUserId(orgId, userId);
     }
 
     private UserNotificationPreference createRoleBasedPreference(Long userId, String eventType, String roleName) {

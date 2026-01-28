@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.model.AiConversationMessage;
 import com.bostoneo.bostoneosolutions.model.AiConversationSession;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AiConversationMessageRepository;
 import com.bostoneo.bostoneosolutions.repository.AiConversationSessionRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
@@ -32,26 +33,37 @@ public class LegalResearchConversationService {
     private final ClaudeSonnet4Service claudeService;
     private final GenerationCancellationService cancellationService;
     private final AILegalResearchService aiLegalResearchService;
+    private final TenantService tenantService;
 
     /**
-     * Get or create a conversation session for legal research
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
+    /**
+     * Get or create a conversation session for legal research - TENANT FILTERED
      */
     @Transactional
     public AiConversationSession getOrCreateSession(Long sessionId, Long userId, Long caseId, String title) {
-        log.info("🆕 getOrCreateSession called - sessionId: {}, userId: {}, caseId: {}, title: '{}'",
-                sessionId, userId, caseId, title);
+        Long orgId = getRequiredOrganizationId();
+        log.info("🆕 getOrCreateSession called - sessionId: {}, userId: {}, caseId: {}, orgId: {}, title: '{}'",
+                sessionId, userId, caseId, orgId, title);
 
         if (sessionId != null) {
-            Optional<AiConversationSession> existing = sessionRepository.findByIdAndUserId(sessionId, userId);
+            Optional<AiConversationSession> existing = sessionRepository.findByIdAndUserIdAndOrganizationId(sessionId, userId, orgId);
             if (existing.isPresent()) {
                 log.info("✅ Found existing session: {}", sessionId);
                 return existing.get();
             }
         }
 
-        // Create new session
+        // Create new session with organization ID
         AiConversationSession session = AiConversationSession.builder()
                 .userId(userId)
+                .organizationId(orgId)
                 .caseId(caseId)
                 .sessionName(title != null ? title : "Legal Research")
                 .sessionType("legal_research")
@@ -63,8 +75,8 @@ public class LegalResearchConversationService {
                 .build();
 
         AiConversationSession savedSession = sessionRepository.save(session);
-        log.info("✅ Created new session: id={}, userId={}, sessionName='{}'",
-                savedSession.getId(), savedSession.getUserId(), savedSession.getSessionName());
+        log.info("✅ Created new session: id={}, userId={}, orgId={}, sessionName='{}'",
+                savedSession.getId(), savedSession.getUserId(), savedSession.getOrganizationId(), savedSession.getSessionName());
 
         return savedSession;
     }
@@ -78,11 +90,13 @@ public class LegalResearchConversationService {
     }
 
     /**
-     * Add a message to a session
+     * Add a message to a session - TENANT FILTERED
      */
     @Transactional
     public AiConversationMessage addMessage(Long sessionId, Long userId, String role, String content, String metadata) {
-        AiConversationSession session = sessionRepository.findByIdAndUserId(sessionId, userId)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        AiConversationSession session = sessionRepository.findByIdAndUserIdAndOrganizationId(sessionId, userId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found or access denied"));
 
         // Parse metadata JSON if provided
@@ -119,12 +133,14 @@ public class LegalResearchConversationService {
     }
 
     /**
-     * Get all conversations for a case and user
+     * Get all conversations for a case and user - TENANT FILTERED
      */
     @Transactional(readOnly = true)
     public List<AiConversationSession> getConversationsForCase(Long caseId, Long userId) {
-        List<AiConversationSession> sessions = sessionRepository.findByCaseIdAndUserIdAndSessionType(caseId, userId);
-        log.info("📚 Loading conversations for caseId: {}, userId: {} - found {} sessions", caseId, userId, sessions.size());
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<AiConversationSession> sessions = sessionRepository.findByCaseIdAndUserIdAndOrganizationId(caseId, userId, orgId);
+        log.info("📚 Loading conversations for caseId: {}, userId: {}, orgId: {} - found {} sessions", caseId, userId, orgId, sessions.size());
         for (AiConversationSession session : sessions) {
             log.info("   📝 Session {}: sessionName='{}', userId={}, createdAt={}",
                     session.getId(), session.getSessionName(), session.getUserId(), session.getCreatedAt());
@@ -133,31 +149,37 @@ public class LegalResearchConversationService {
     }
 
     /**
-     * Get a specific conversation by ID
+     * Get a specific conversation by ID - TENANT FILTERED
      */
     @Transactional(readOnly = true)
     public Optional<AiConversationSession> getConversation(Long sessionId, Long userId) {
-        return sessionRepository.findByIdAndUserId(sessionId, userId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return sessionRepository.findByIdAndUserIdAndOrganizationId(sessionId, userId, orgId);
     }
 
     /**
-     * Get all messages for a session
+     * Get all messages for a session - TENANT FILTERED
      */
     @Transactional(readOnly = true)
     public List<AiConversationMessage> getMessages(Long sessionId, Long userId) {
-        // First verify user has access to this session
-        if (!sessionRepository.existsByIdAndUserId(sessionId, userId)) {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify user has access to this session with org check
+        if (!sessionRepository.existsByIdAndUserIdAndOrganizationId(sessionId, userId, orgId)) {
             throw new IllegalArgumentException("Session not found or access denied");
         }
-        return messageRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
+        // SECURITY: Use tenant-filtered query
+        return messageRepository.findBySessionIdAndOrganizationIdOrderByCreatedAtAsc(sessionId, orgId);
     }
 
     /**
-     * Delete a conversation
+     * Delete a conversation - TENANT FILTERED
      */
     @Transactional
     public boolean deleteConversation(Long sessionId, Long userId) {
-        Optional<AiConversationSession> session = sessionRepository.findByIdAndUserId(sessionId, userId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Optional<AiConversationSession> session = sessionRepository.findByIdAndUserIdAndOrganizationId(sessionId, userId, orgId);
         if (session.isPresent()) {
             sessionRepository.delete(session.get());
             return true;
@@ -166,11 +188,13 @@ public class LegalResearchConversationService {
     }
 
     /**
-     * Archive a conversation
+     * Archive a conversation - TENANT FILTERED
      */
     @Transactional
     public boolean archiveConversation(Long sessionId, Long userId) {
-        Optional<AiConversationSession> session = sessionRepository.findByIdAndUserId(sessionId, userId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Optional<AiConversationSession> session = sessionRepository.findByIdAndUserIdAndOrganizationId(sessionId, userId, orgId);
         if (session.isPresent()) {
             AiConversationSession s = session.get();
             s.archive();
@@ -181,15 +205,16 @@ public class LegalResearchConversationService {
     }
 
     /**
-     * Update session title
+     * Update session title - TENANT FILTERED
      * Now more lenient - will update if session exists and userId is close match (handles edge cases)
      */
     @Transactional
     public boolean updateSessionTitle(Long sessionId, Long userId, String title) {
         log.info("📝 Attempting to update session title - sessionId: {}, userId: {}, newTitle: '{}'", sessionId, userId, title);
+        Long orgId = getRequiredOrganizationId();
 
-        // First try with exact userId match
-        Optional<AiConversationSession> session = sessionRepository.findByIdAndUserId(sessionId, userId);
+        // SECURITY: First try with exact userId match and organization filter
+        Optional<AiConversationSession> session = sessionRepository.findByIdAndUserIdAndOrganizationId(sessionId, userId, orgId);
         if (session.isPresent()) {
             AiConversationSession s = session.get();
             String oldTitle = s.getSessionName();
@@ -201,10 +226,11 @@ public class LegalResearchConversationService {
             return true;
         }
 
-        // If exact match fails, check if session exists at all
-        Optional<AiConversationSession> sessionWithoutUserCheck = sessionRepository.findById(sessionId);
-        if (sessionWithoutUserCheck.isPresent()) {
-            AiConversationSession existingSession = sessionWithoutUserCheck.get();
+        // If exact match fails, check if session exists at all within the organization
+        // SECURITY: Fallback still requires org-level access
+        Optional<AiConversationSession> sessionWithOrgCheck = sessionRepository.findByIdAndOrganizationId(sessionId, orgId);
+        if (sessionWithOrgCheck.isPresent()) {
+            AiConversationSession existingSession = sessionWithOrgCheck.get();
             log.warn("⚠️ Session {} exists but userId mismatch! Request userId: {}, DB userId: {}. Attempting fallback update...",
                     sessionId, userId, existingSession.getUserId());
 
@@ -231,38 +257,41 @@ public class LegalResearchConversationService {
     }
 
     /**
-     * Get all conversations for a user with pagination
+     * Get all conversations for a user with pagination - TENANT FILTERED
      */
     @Transactional(readOnly = true)
     public Page<AiConversationSession> getAllUserConversations(Long userId, int page, int size) {
+        Long orgId = getRequiredOrganizationId();
         Pageable pageable = PageRequest.of(page, size);
-        return sessionRepository.findAllByUserId(userId, pageable);
+        return sessionRepository.findAllByUserIdAndOrganizationId(userId, orgId, pageable);
     }
 
     /**
-     * Get conversations filtered by task type with pagination
+     * Get conversations filtered by task type with pagination - TENANT FILTERED
      */
     @Transactional(readOnly = true)
     public Page<AiConversationSession> getConversationsByTaskType(String taskType, Long userId, int page, int size) {
+        Long orgId = getRequiredOrganizationId();
         Pageable pageable = PageRequest.of(page, size);
-        return sessionRepository.findByUserIdAndTaskType(userId, taskType, pageable);
+        return sessionRepository.findByUserIdAndOrganizationIdAndTaskType(userId, orgId, taskType, pageable);
     }
 
     /**
-     * Get ONLY general conversations (no caseId) filtered by task type with pagination
+     * Get ONLY general conversations (no caseId) filtered by task type with pagination - TENANT FILTERED
      * Used by AI Workspace to exclude case-specific research conversations
      * EXCEPTION: For GENERATE_DRAFT task, returns ALL drafts (both with and without caseId)
      */
     @Transactional(readOnly = true)
     public Page<AiConversationSession> getGeneralConversationsByTaskType(String taskType, Long userId, int page, int size) {
+        Long orgId = getRequiredOrganizationId();
         Pageable pageable = PageRequest.of(page, size);
 
         // For drafts, show ALL drafts regardless of caseId
         // For other tasks, only show general conversations
         if ("GENERATE_DRAFT".equals(taskType)) {
-            return sessionRepository.findByUserIdAndTaskType(userId, taskType, pageable);
+            return sessionRepository.findByUserIdAndOrganizationIdAndTaskType(userId, orgId, taskType, pageable);
         } else {
-            return sessionRepository.findGeneralConversationsByUserIdAndTaskType(userId, taskType, pageable);
+            return sessionRepository.findGeneralConversationsByUserIdAndOrganizationIdAndTaskType(userId, orgId, taskType, pageable);
         }
     }
 
@@ -275,12 +304,14 @@ public class LegalResearchConversationService {
     }
 
     /**
-     * Create a new general conversation with task type, research mode, and document type
+     * Create a new general conversation with task type, research mode, and document type - TENANT FILTERED
      */
     @Transactional
     public AiConversationSession createGeneralConversation(Long userId, String title, String researchMode, String taskType, String documentType, String jurisdiction) {
+        Long orgId = getRequiredOrganizationId();
         AiConversationSession session = AiConversationSession.builder()
                 .userId(userId)
+                .organizationId(orgId)
                 .sessionName(title != null ? title : "New Conversation")
                 .sessionType("general")
                 .taskType(taskType != null ? taskType : "LEGAL_QUESTION")
@@ -307,8 +338,9 @@ public class LegalResearchConversationService {
             String query,
             String researchMode
     ) {
-        // Get the session
-        AiConversationSession session = sessionRepository.findByIdAndUserId(sessionId, userId)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Get the session with tenant filter
+        AiConversationSession session = sessionRepository.findByIdAndUserIdAndOrganizationId(sessionId, userId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found or access denied"));
 
         // Save user message
@@ -324,8 +356,8 @@ public class LegalResearchConversationService {
         session.setMessageCount(session.getMessageCount() != null ? session.getMessageCount() + 1 : 1);
         sessionRepository.save(session);
 
-        // Build conversation history from database messages
-        List<AiConversationMessage> messages = messageRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
+        // SECURITY: Build conversation history with tenant filter
+        List<AiConversationMessage> messages = messageRepository.findBySessionIdAndOrganizationIdOrderByCreatedAtAsc(sessionId, orgId);
         StringBuilder conversationHistory = new StringBuilder();
 
         for (AiConversationMessage msg : messages) {

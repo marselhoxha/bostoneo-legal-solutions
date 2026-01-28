@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.model.DocumentChunk;
 import com.bostoneo.bostoneosolutions.repository.AIDocumentAnalysisRepository;
 import com.bostoneo.bostoneosolutions.repository.CollectionDocumentRepository;
 import com.bostoneo.bostoneosolutions.repository.DocumentChunkRepository;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +42,12 @@ public class TimelineExtractionService {
     private final AIDocumentAnalysisRepository analysisRepository;
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     // Thread pool for parallel document processing (max 4 concurrent)
     private static final ExecutorService parallelExecutor = Executors.newFixedThreadPool(
@@ -105,7 +112,7 @@ public class TimelineExtractionService {
      * @return TimelineExtractionResult with extracted events
      */
     @Cacheable(value = "timeline_results",
-            key = "#collectionId + '-' + (#eventTypes != null ? #eventTypes.hashCode() : 'all')",
+            key = "T(com.bostoneo.bostoneosolutions.multitenancy.TenantContext).getCurrentTenant() + '-' + #collectionId + '-' + (#eventTypes != null ? #eventTypes.hashCode() : 'all')",
             unless = "#result.events.isEmpty() && #result.summary.contains('Error')")
     public TimelineExtractionResult extractTimelineCached(Long collectionId, List<String> eventTypes) {
         log.info("Cache MISS for timeline extraction - running analysis for collection {}", collectionId);
@@ -130,10 +137,12 @@ public class TimelineExtractionService {
      */
     public CompletableFuture<TimelineExtractionResult> extractTimeline(Long collectionId, List<String> eventTypes) {
         long startTime = System.currentTimeMillis();
+        // SECURITY: Get org context BEFORE fetching data
+        Long orgId = getRequiredOrganizationId();
         log.info("Starting timeline extraction for collection {}, eventTypes: {}", collectionId, eventTypes);
 
-        // Get all analysis IDs in the collection
-        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionId(collectionId);
+        // Get all analysis IDs in the collection - SECURITY: Use tenant-filtered query
+        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionIdAndOrganizationId(orgId, collectionId);
         if (analysisIds.isEmpty()) {
             log.warn("Collection {} has no documents", collectionId);
             return CompletableFuture.completedFuture(TimelineExtractionResult.builder()
@@ -145,14 +154,14 @@ public class TimelineExtractionService {
                     .build());
         }
 
-        // Get all chunks for the collection
-        List<DocumentChunk> allChunks = chunkRepository.findByAnalysisIdIn(analysisIds);
+        // Get all chunks for the collection - SECURITY: Use tenant-filtered query
+        List<DocumentChunk> allChunks = chunkRepository.findByAnalysisIdInAndOrganizationId(analysisIds, orgId);
         log.info("Found {} chunks across {} documents", allChunks.size(), analysisIds.size());
 
         // Build document name map for citations
         Map<Long, String> documentNames = new HashMap<>();
         for (Long analysisId : analysisIds) {
-            analysisRepository.findById(analysisId).ifPresent(analysis ->
+            analysisRepository.findByIdAndOrganizationId(analysisId, orgId).ifPresent(analysis ->
                     documentNames.put(analysisId, analysis.getFileName()));
         }
 
@@ -235,10 +244,12 @@ public class TimelineExtractionService {
      */
     public CompletableFuture<TimelineExtractionResult> extractTimelineParallel(Long collectionId, List<String> eventTypes) {
         long startTime = System.currentTimeMillis();
+        // SECURITY: Get org context BEFORE fetching data
+        Long orgIdForNames = getRequiredOrganizationId();
         log.info("Starting PARALLEL timeline extraction for collection {}, eventTypes: {}", collectionId, eventTypes);
 
-        // Get all analysis IDs in the collection
-        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionId(collectionId);
+        // Get all analysis IDs in the collection - SECURITY: Use tenant-filtered query
+        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionIdAndOrganizationId(orgIdForNames, collectionId);
         if (analysisIds.isEmpty()) {
             log.warn("Collection {} has no documents", collectionId);
             return CompletableFuture.completedFuture(TimelineExtractionResult.builder()
@@ -249,30 +260,35 @@ public class TimelineExtractionService {
                     .summary("No documents in collection.")
                     .build());
         }
-
-        // Build document name map
         Map<Long, String> documentNames = new HashMap<>();
         for (Long analysisId : analysisIds) {
-            analysisRepository.findById(analysisId).ifPresent(analysis ->
+            analysisRepository.findByIdAndOrganizationId(analysisId, orgIdForNames).ifPresent(analysis ->
                     documentNames.put(analysisId, analysis.getFileName()));
         }
 
-        // Get all chunks for counting
-        List<DocumentChunk> allChunks = chunkRepository.findByAnalysisIdIn(analysisIds);
+        // SECURITY: Use tenant-filtered query for counting chunks
+        List<DocumentChunk> allChunks = chunkRepository.findByAnalysisIdInAndOrganizationId(analysisIds, orgIdForNames);
         int totalChunks = allChunks.size();
 
         log.info("Processing {} documents in parallel", analysisIds.size());
 
         // Process each document in parallel
+        // SECURITY: Capture org ID to pass to async tasks (ThreadLocal context is lost in executor)
+        final Long capturedOrgId = orgIdForNames;
         List<CompletableFuture<List<TimelineEvent>>> documentFutures = new ArrayList<>();
 
         for (Long analysisId : analysisIds) {
             CompletableFuture<List<TimelineEvent>> docFuture = CompletableFuture.supplyAsync(() -> {
                 try {
+                    // SECURITY: Set tenant context in async thread
+                    TenantContext.setCurrentTenant(capturedOrgId);
                     return extractTimelineFromDocument(analysisId, documentNames.get(analysisId), eventTypes);
                 } catch (Exception e) {
                     log.error("Failed to extract timeline from document {}", analysisId, e);
                     return new ArrayList<TimelineEvent>();
+                } finally {
+                    // SECURITY: Clear tenant context after async execution
+                    TenantContext.clear();
                 }
             }, parallelExecutor);
 
@@ -335,7 +351,9 @@ public class TimelineExtractionService {
      * Extract timeline events from a single document.
      */
     private List<TimelineEvent> extractTimelineFromDocument(Long analysisId, String documentName, List<String> eventTypes) {
-        List<DocumentChunk> chunks = chunkRepository.findByAnalysisIdOrderByChunkIndexAsc(analysisId);
+        // SECURITY: Get org context - this may be called from async thread, so get it here
+        Long orgId = getRequiredOrganizationId();
+        List<DocumentChunk> chunks = chunkRepository.findByAnalysisIdAndOrganizationIdOrderByChunkIndexAsc(analysisId, orgId);
         if (chunks.isEmpty()) {
             return new ArrayList<>();
         }

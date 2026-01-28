@@ -66,6 +66,12 @@ public class AiWorkspaceDocumentService {
     private final GenerationCancellationService cancellationService;
     private final AILegalResearchService legalResearchService;  // For citation verification
     private final CitationUrlInjector citationUrlInjector;       // For URL injection
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     // MOCK MODE DISABLED - Using real API
     private static final boolean USE_MOCK_MODE = false;
@@ -142,7 +148,7 @@ public class AiWorkspaceDocumentService {
             documentId, transformationType, customPrompt != null && !customPrompt.isEmpty());
 
         // Verify document ownership
-        AiWorkspaceDocument document = documentRepository.findByIdAndUserId(documentId, userId)
+        AiWorkspaceDocument document = documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
             .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
 
         // Build transformation prompt - use custom prompt for CUSTOM type
@@ -222,7 +228,7 @@ public class AiWorkspaceDocumentService {
             documentId, transformationType, selectionStartIndex, selectionEndIndex);
 
         // Verify document ownership
-        AiWorkspaceDocument document = documentRepository.findByIdAndUserId(documentId, userId)
+        AiWorkspaceDocument document = documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
             .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
 
         // Build transformation prompt for selection with full document context
@@ -316,7 +322,7 @@ public class AiWorkspaceDocumentService {
     ) {
         log.info("Saving manual edit for document id={} with note: {}", documentId, versionNote);
 
-        AiWorkspaceDocument document = documentRepository.findByIdAndUserId(documentId, userId)
+        AiWorkspaceDocument document = documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
             .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
 
         int newVersionNumber = document.getCurrentVersion() + 1;
@@ -347,7 +353,7 @@ public class AiWorkspaceDocumentService {
      */
     public List<AiWorkspaceDocumentVersion> getDocumentVersions(Long documentId, Long userId) {
         // Verify ownership
-        documentRepository.findByIdAndUserId(documentId, userId)
+        documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
             .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
 
         return versionRepository.findByDocumentIdOrderByVersionNumberDesc(documentId);
@@ -358,7 +364,7 @@ public class AiWorkspaceDocumentService {
      */
     public Optional<AiWorkspaceDocumentVersion> getVersion(Long documentId, Long userId, Integer versionNumber) {
         // Verify ownership
-        documentRepository.findByIdAndUserId(documentId, userId)
+        documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
             .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
 
         return versionRepository.findByDocumentIdAndVersionNumber(documentId, versionNumber);
@@ -371,7 +377,7 @@ public class AiWorkspaceDocumentService {
     public AiWorkspaceDocumentVersion restoreVersion(Long documentId, Long userId, Integer versionToRestore) {
         log.info("Restoring document id={} to version {}", documentId, versionToRestore);
 
-        AiWorkspaceDocument document = documentRepository.findByIdAndUserId(documentId, userId)
+        AiWorkspaceDocument document = documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
             .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
 
         AiWorkspaceDocumentVersion oldVersion = versionRepository
@@ -405,14 +411,16 @@ public class AiWorkspaceDocumentService {
      * Get user's documents
      */
     public List<AiWorkspaceDocument> getUserDocuments(Long userId) {
-        return documentRepository.findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId);
+        Long orgId = getRequiredOrganizationId();
+        return documentRepository.findByUserIdAndOrganizationIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId, orgId);
     }
 
     /**
      * Get case documents
      */
     public List<AiWorkspaceDocument> getCaseDocuments(Long caseId, Long userId) {
-        return documentRepository.findByCaseIdAndUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(caseId, userId);
+        Long orgId = getRequiredOrganizationId();
+        return documentRepository.findByCaseIdAndOrganizationIdAndDeletedAtIsNullOrderByCreatedAtDesc(caseId, orgId);
     }
 
     /**
@@ -420,7 +428,8 @@ public class AiWorkspaceDocumentService {
      */
     @Transactional
     public void deleteDocument(Long documentId, Long userId) {
-        AiWorkspaceDocument document = documentRepository.findByIdAndUserId(documentId, userId)
+        Long orgId = getRequiredOrganizationId();
+        AiWorkspaceDocument document = documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, orgId)
             .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
 
         document.setDeletedAt(LocalDateTime.now());
@@ -678,21 +687,22 @@ public class AiWorkspaceDocumentService {
         log.info("Generating draft with conversation: userId={}, caseId={}, type={}, conversationId={}, researchMode={}",
                  userId, caseId, documentType, conversationId, researchMode);
 
-        // 1. Fetch case context if caseId provided
+        // 1. Fetch case context if caseId provided - SECURITY: Use tenant-filtered query
+        Long orgId = getRequiredOrganizationId();
         String caseContext = "";
         LegalCase legalCase = null;
         if (caseId != null) {
-            legalCase = caseRepository.findById(caseId).orElse(null);
+            legalCase = caseRepository.findByIdAndOrganizationId(caseId, orgId).orElse(null);
             if (legalCase != null) {
                 caseContext = buildCaseContext(legalCase);
             }
         }
 
-        // 2. Use existing conversation or create new one
+        // 2. Use existing conversation or create new one - SECURITY: Use tenant-filtered query
         AiConversationSession conversation;
         if (conversationId != null) {
             // Use existing conversation
-            conversation = conversationRepository.findById(conversationId)
+            conversation = conversationRepository.findByIdAndOrganizationId(conversationId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Conversation not found: " + conversationId));
             log.info("✅ Using existing conversation {}", conversationId);
         } else {
@@ -865,7 +875,7 @@ public class AiWorkspaceDocumentService {
      * Get document with latest version content
      */
     public Optional<Map<String, Object>> getDocumentWithLatestVersion(Long documentId, Long userId) {
-        return documentRepository.findByIdAndUserId(documentId, userId)
+        return documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
             .map(doc -> {
                 // Get latest version
                 AiWorkspaceDocumentVersion latestVersion = versionRepository
@@ -2077,7 +2087,7 @@ public class AiWorkspaceDocumentService {
         log.info("🔄 Transforming document {} using DIFF MODE (type={})", documentId, transformationType);
 
         // Verify document ownership
-        AiWorkspaceDocument document = documentRepository.findByIdAndUserId(documentId, userId)
+        AiWorkspaceDocument document = documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
                 .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
 
         // Build diff-based prompt
@@ -2275,7 +2285,7 @@ public class AiWorkspaceDocumentService {
         log.info("📝 User prompt: {}", customPrompt.substring(0, Math.min(100, customPrompt.length())) + "...");
 
         // Verify document ownership
-        AiWorkspaceDocument document = documentRepository.findByIdAndUserId(documentId, userId)
+        AiWorkspaceDocument document = documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
                 .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
 
         // Build diff-based prompt for custom transformation

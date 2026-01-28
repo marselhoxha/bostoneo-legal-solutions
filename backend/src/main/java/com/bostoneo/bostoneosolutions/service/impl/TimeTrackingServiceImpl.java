@@ -42,6 +42,11 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     private final LegalCaseRepository legalCaseRepository;
     private final TenantService tenantService;
 
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
     @Override
     public TimeEntryDTO createTimeEntry(TimeEntryDTO timeEntryDTO) {
         log.info("Creating time entry for user: {} and case: {}", timeEntryDTO.getUserId(), timeEntryDTO.getLegalCaseId());
@@ -80,9 +85,11 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Override
     public TimeEntryDTO updateTimeEntry(Long id, TimeEntryDTO timeEntryDTO) {
         log.info("Updating time entry with id: {}", id);
-        
-        TimeEntry existingEntry = timeEntryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Time entry not found with id: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        TimeEntry existingEntry = timeEntryRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new RuntimeException("Time entry not found or access denied: " + id));
 
         // Validate business rules before updating
         ValidationResult validationResult = timeEntryValidationService.validateTimeEntry(timeEntryDTO);
@@ -162,10 +169,12 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Transactional(readOnly = true)
     public TimeEntryDTO getTimeEntry(Long id) {
         log.info("Retrieving time entry with id: {}", id);
-        
-        TimeEntry timeEntry = timeEntryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Time entry not found with id: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        TimeEntry timeEntry = timeEntryRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new RuntimeException("Time entry not found or access denied: " + id));
+
         return mapToDTO(timeEntry);
     }
 
@@ -176,10 +185,10 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
 
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         Page<TimeEntry> timeEntries = tenantService.getCurrentOrganizationId()
             .map(orgId -> timeEntryRepository.findByOrganizationId(orgId, pageable))
-            .orElseGet(() -> timeEntryRepository.findAll(pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
 
         return timeEntries.map(this::mapToDTO);
     }
@@ -188,21 +197,25 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Transactional(readOnly = true)
     public Page<TimeEntryDTO> getTimeEntriesByUser(Long userId, int page, int size) {
         log.info("Retrieving time entries for user: {}, page: {}, size: {}", userId, page, size);
-        
+
         try {
             Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
             log.debug("Created pageable: {}", pageable);
-            
-            Page<TimeEntry> timeEntries = timeEntryRepository.findByUserId(userId, pageable);
+
+            // SECURITY: Use tenant-filtered query
+            Page<TimeEntry> timeEntries = tenantService.getCurrentOrganizationId()
+                .map(orgId -> timeEntryRepository.findByOrganizationIdAndUserId(orgId, userId, pageable))
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+
             log.info("Found {} time entries for user {}", timeEntries.getTotalElements(), userId);
-            
+
             Page<TimeEntryDTO> result = timeEntries.map(this::mapToDTO);
             log.debug("Mapped to DTOs successfully");
-            
+
             return result;
         } catch (Exception e) {
             log.error("Error retrieving time entries for user {}: {}", userId, e.getMessage(), e);
-            
+
             // Return empty page as fallback to unblock frontend
             log.warn("Returning empty page as fallback for user {}", userId);
             Pageable pageable = PageRequest.of(page, size);
@@ -214,10 +227,13 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Transactional(readOnly = true)
     public Page<TimeEntryDTO> getTimeEntriesByMatter(Long legalCaseId, int page, int size) {
         log.info("Retrieving time entries for case: {}", legalCaseId);
-        
+
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "date"));
-        Page<TimeEntry> timeEntries = timeEntryRepository.findByLegalCaseId(legalCaseId, pageable);
-        
+        // SECURITY: Use tenant-filtered query
+        Page<TimeEntry> timeEntries = tenantService.getCurrentOrganizationId()
+            .map(orgId -> timeEntryRepository.findByOrganizationIdAndLegalCaseId(orgId, legalCaseId, pageable))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
         return timeEntries.map(this::mapToDTO);
     }
 
@@ -225,11 +241,14 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Transactional(readOnly = true)
     public Page<TimeEntryDTO> getTimeEntriesWithFilters(TimeEntryFilterRequest filterRequest) {
         log.info("Retrieving time entries with filters");
-        
+
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
         Pageable pageable = PageRequest.of(
-                filterRequest.getPage(), 
+                filterRequest.getPage(),
                 filterRequest.getSize(),
-                "asc".equalsIgnoreCase(filterRequest.getSortDirection()) ? 
+                "asc".equalsIgnoreCase(filterRequest.getSortDirection()) ?
                     Sort.by(Sort.Direction.ASC, filterRequest.getSortBy()) :
                     Sort.by(Sort.Direction.DESC, filterRequest.getSortBy())
         );
@@ -240,17 +259,18 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
             statusStr = filterRequest.getStatuses().get(0).name();
         }
 
-        Page<TimeEntry> timeEntries = timeEntryRepository.findWithFilters(
+        // SECURITY: Use tenant-filtered query
+        Page<TimeEntry> timeEntries = timeEntryRepository.findByOrganizationIdWithFilters(
+                orgId,
                 filterRequest.getUserId(),
                 filterRequest.getLegalCaseId(),
                 filterRequest.getStartDate(),
                 filterRequest.getEndDate(),
                 statusStr,
                 filterRequest.getBillable(),
-                filterRequest.getDescription(),
                 pageable
         );
-        
+
         return timeEntries.map(this::mapToDTO);
     }
 
@@ -258,10 +278,14 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Transactional(readOnly = true)
     public List<TimeEntryDTO> getTimeEntriesByDateRange(Long userId, LocalDate startDate, LocalDate endDate) {
         log.info("Retrieving time entries for user {} between {} and {}", userId, startDate, endDate);
-        
+
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
         Pageable pageable = PageRequest.of(0, 1000, Sort.by(Sort.Direction.ASC, "date"));
-        Page<TimeEntry> timeEntries = timeEntryRepository.findByUserIdAndDateBetween(userId, startDate, endDate, pageable);
-        
+        // SECURITY: Use tenant-filtered query
+        Page<TimeEntry> timeEntries = timeEntryRepository.findByOrganizationIdAndUserIdAndDateBetween(orgId, userId, startDate, endDate, pageable);
+
         return timeEntries.getContent().stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -271,9 +295,13 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Transactional(readOnly = true)
     public List<TimeEntryDTO> getTimeEntriesByStatus(Long userId, TimeEntryStatus status) {
         log.info("Retrieving time entries for user {} with status {}", userId, status);
-        
-        List<TimeEntry> timeEntries = timeEntryRepository.findByUserIdAndStatus(userId, status);
-        
+
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
+        // SECURITY: Use tenant-filtered query
+        List<TimeEntry> timeEntries = timeEntryRepository.findByOrganizationIdAndUserIdAndStatus(orgId, userId, status);
+
         return timeEntries.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -282,40 +310,53 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Override
     public void deleteTimeEntry(Long id) {
         log.info("Deleting time entry with id: {}", id);
-        
-        if (!timeEntryRepository.existsById(id)) {
-            throw new RuntimeException("Time entry not found with id: " + id);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify ownership before deletion
+        if (!timeEntryRepository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new RuntimeException("Time entry not found or access denied: " + id);
         }
-        
+
         timeEntryRepository.deleteById(id);
     }
 
     @Override
     public void deleteMultipleTimeEntries(List<Long> ids) {
         log.info("Deleting multiple time entries: {}", ids);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify ownership of all entries before bulk deletion
+        List<TimeEntry> entries = timeEntryRepository.findAllByIdInAndOrganizationId(ids, orgId);
+        if (entries.size() != ids.size()) {
+            throw new RuntimeException("Some time entries not found or access denied");
+        }
+
         timeEntryRepository.deleteAllById(ids);
     }
 
     @Override
     public TimeEntryDTO updateTimeEntryStatus(Long id, TimeEntryStatus status) {
         log.info("Updating time entry {} to status {}", id, status);
-        
-        TimeEntry timeEntry = timeEntryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Time entry not found with id: " + id));
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        TimeEntry timeEntry = timeEntryRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new RuntimeException("Time entry not found or access denied: " + id));
+
         timeEntry.setStatus(status);
         TimeEntry updated = timeEntryRepository.save(timeEntry);
-        
+
         return mapToDTO(updated);
     }
 
     @Override
     public TimeEntryDTO updateTimeEntryInvoice(Long id, Long invoiceId, TimeEntryStatus status) {
         log.info("Updating time entry {} with invoice {} and status {}", id, invoiceId, status);
-        
-        TimeEntry timeEntry = timeEntryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Time entry not found with id: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        TimeEntry timeEntry = timeEntryRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new RuntimeException("Time entry not found or access denied: " + id));
         
         // Validate invoice exists if invoiceId is provided
         if (invoiceId != null) {
@@ -359,10 +400,10 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
                 for (int attempt = 1; attempt <= 3; attempt++) {
                     try {
                         Thread.sleep(300 * attempt); // Increasing delay: 300ms, 600ms, 900ms
-                        
-                        // Refresh the time entry and try again
-                        TimeEntry refreshedEntry = timeEntryRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Time entry not found with id: " + id));
+
+                        // Refresh the time entry and try again - SECURITY: Use tenant-filtered query
+                        TimeEntry refreshedEntry = timeEntryRepository.findByIdAndOrganizationId(id, orgId)
+                                .orElseThrow(() -> new RuntimeException("Time entry not found or access denied: " + id));
                         
                         // Re-check invoice exists
                         if (invoiceId != null && !timeEntryRepository.existsInvoiceById(invoiceId)) {
@@ -431,7 +472,13 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Transactional(readOnly = true)
     public BigDecimal getTotalHoursByCase(Long legalCaseId) {
         log.info("Getting total hours for case: {}", legalCaseId);
-        
+
+        // SECURITY: Verify case belongs to current organization
+        Long orgId = getRequiredOrganizationId();
+        if (!legalCaseRepository.existsByIdAndOrganizationId(legalCaseId, orgId)) {
+            throw new RuntimeException("Case not found or access denied: " + legalCaseId);
+        }
+
         BigDecimal total = timeEntryRepository.getTotalHoursByCase(legalCaseId);
         return total != null ? total : BigDecimal.ZERO;
     }
@@ -440,7 +487,13 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Transactional(readOnly = true)
     public BigDecimal getTotalAmountByCase(Long legalCaseId) {
         log.info("Getting total amount for case: {}", legalCaseId);
-        
+
+        // SECURITY: Verify case belongs to current organization
+        Long orgId = getRequiredOrganizationId();
+        if (!legalCaseRepository.existsByIdAndOrganizationId(legalCaseId, orgId)) {
+            throw new RuntimeException("Case not found or access denied: " + legalCaseId);
+        }
+
         BigDecimal total = timeEntryRepository.getTotalAmountByCase(legalCaseId);
         return total != null ? total : BigDecimal.ZERO;
     }
@@ -467,9 +520,13 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Transactional(readOnly = true)
     public List<TimeEntryDTO> getUnbilledApprovedEntries(Long legalCaseId) {
         log.info("Getting unbilled approved entries for case: {}", legalCaseId);
-        
-        List<TimeEntry> entries = timeEntryRepository.findUnbilledApprovedEntriesByCase(legalCaseId);
-        
+
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
+        // SECURITY: Use tenant-filtered query
+        List<TimeEntry> entries = timeEntryRepository.findUnbilledApprovedEntriesByCaseAndOrganization(orgId, legalCaseId);
+
         return entries.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -477,27 +534,30 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
 
     @Override
     public boolean canEditTimeEntry(Long timeEntryId, Long userId) {
-        // Basic implementation - can edit if it's your entry and not billed
-        TimeEntry entry = timeEntryRepository.findById(timeEntryId).orElse(null);
-        return entry != null && 
-               entry.getUserId().equals(userId) && 
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        TimeEntry entry = timeEntryRepository.findByIdAndOrganizationId(timeEntryId, orgId).orElse(null);
+        return entry != null &&
+               entry.getUserId().equals(userId) &&
                entry.getStatus() != TimeEntryStatus.INVOICED;
     }
 
     @Override
     public boolean canDeleteTimeEntry(Long timeEntryId, Long userId) {
-        // Basic implementation - can delete if it's your entry and in draft status
-        TimeEntry entry = timeEntryRepository.findById(timeEntryId).orElse(null);
-        return entry != null && 
-               entry.getUserId().equals(userId) && 
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        TimeEntry entry = timeEntryRepository.findByIdAndOrganizationId(timeEntryId, orgId).orElse(null);
+        return entry != null &&
+               entry.getUserId().equals(userId) &&
                entry.getStatus() == TimeEntryStatus.DRAFT;
     }
 
     @Override
     public boolean canApproveTimeEntry(Long timeEntryId, Long userId) {
-        // Basic implementation - for now, anyone can approve (should be role-based)
-        TimeEntry entry = timeEntryRepository.findById(timeEntryId).orElse(null);
-        return entry != null && 
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        TimeEntry entry = timeEntryRepository.findByIdAndOrganizationId(timeEntryId, orgId).orElse(null);
+        return entry != null &&
                entry.getStatus() == TimeEntryStatus.SUBMITTED;
     }
 
@@ -549,6 +609,12 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
     @Transactional(readOnly = true)
     public Map<String, Object> getCaseTimeSummary(Long legalCaseId) {
         log.info("Getting comprehensive time summary for case: {}", legalCaseId);
+
+        // SECURITY: Verify case belongs to current organization
+        Long orgId = getRequiredOrganizationId();
+        if (!legalCaseRepository.existsByIdAndOrganizationId(legalCaseId, orgId)) {
+            throw new RuntimeException("Case not found or access denied: " + legalCaseId);
+        }
 
         Map<String, Object> summary = new HashMap<>();
 
@@ -609,7 +675,11 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
         String caseNumber = timeEntry.getCaseNumber();
         if ((caseName == null || caseNumber == null) && timeEntry.getLegalCaseId() != null) {
             try {
-                LegalCase legalCase = legalCaseRepository.findById(timeEntry.getLegalCaseId()).orElse(null);
+                // SECURITY: Use tenant-filtered query - time entry org matches case org
+                Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+                LegalCase legalCase = orgId != null
+                    ? legalCaseRepository.findByIdAndOrganizationId(timeEntry.getLegalCaseId(), orgId).orElse(null)
+                    : null;
                 if (legalCase != null) {
                     caseName = legalCase.getTitle();
                     caseNumber = legalCase.getCaseNumber();

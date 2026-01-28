@@ -64,6 +64,12 @@ public class AILegalResearchService {
     private final QuerySimilarityService similarityService;
     private final CitationUrlInjector citationUrlInjector;
     private final CourtRulesService courtRulesService;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     public Map<String, Object> performSearch(Map<String, Object> searchRequest) {
         log.info("Legal research search request: {}", searchRequest);
@@ -144,7 +150,10 @@ public class AILegalResearchService {
             // Check if we have a cached result
             // IMPORTANT: Include caseId in hash so different cases don't share cached responses
             String queryHash = generateQueryHash(query, searchType, jurisdiction, caseId, "FAST");
-            Optional<AIResearchCache> cachedResult = cacheRepository.findByQueryHash(queryHash);
+            // SECURITY: Require org context for cache lookup to prevent cross-tenant data leakage
+            Long currentOrgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required for research"));
+            Optional<AIResearchCache> cachedResult = cacheRepository.findByOrganizationIdAndQueryHash(currentOrgId, queryHash);
 
             if (cachedResult.isPresent() && cachedResult.get().getIsValid() &&
                 cachedResult.get().getExpiresAt().isAfter(LocalDateTime.now())) {
@@ -811,7 +820,12 @@ public class AILegalResearchService {
             try {
                 // Try parsing as Long ID first
                 Long caseIdLong = Long.parseLong(caseId);
-                legalCaseRepository.findById(caseIdLong).ifPresent(legalCase -> {
+                Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+                // SECURITY: Use tenant-filtered query
+                Optional<LegalCase> caseOpt = orgId != null
+                    ? legalCaseRepository.findByIdAndOrganizationId(caseIdLong, orgId)
+                    : Optional.empty();
+                caseOpt.ifPresent(legalCase -> {
                     // Smart context filtering: Skip basic case info for follow-ups (already in conversation history)
                     boolean isFollowUp = questionType == QuestionType.FOLLOW_UP_CLARIFICATION;
 
@@ -2345,10 +2359,12 @@ public class AILegalResearchService {
                                    Integer resultsCount, Long executionTime) {
         try {
             if (userId != null) {
+                Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
                 QueryType queryTypeEnum = QueryType.valueOf(searchType.toUpperCase());
 
                 SearchHistory history = SearchHistory.builder()
                     .userId(userId)
+                    .organizationId(orgId)
                     .sessionId(sessionId)
                     .searchQuery(query)
                     .queryType(queryTypeEnum)
@@ -2936,25 +2952,34 @@ public class AILegalResearchService {
     // Public methods for frontend
     @Transactional(readOnly = true)
     public List<SearchHistory> getUserSearchHistory(Long userId, int limit) {
+        Long orgId = getRequiredOrganizationId();
         Pageable pageable = PageRequest.of(0, limit);
-        Page<SearchHistory> page = searchHistoryRepository.findByUserIdOrderBySearchedAtDesc(userId, pageable);
+        // SECURITY: Use tenant-filtered query
+        Page<SearchHistory> page = searchHistoryRepository.findByUserIdAndOrganizationIdOrderBySearchedAtDesc(userId, orgId, pageable);
         return page.getContent();
     }
 
     @Transactional(readOnly = true)
     public List<SearchHistory> getSavedSearches(Long userId) {
-        return searchHistoryRepository.findByUserIdAndIsSavedTrueOrderBySearchedAtDesc(userId);
+        Long orgId = getRequiredOrganizationId();
+        return searchHistoryRepository.findByUserIdAndOrganizationIdAndIsSavedTrueOrderBySearchedAtDesc(userId, orgId);
     }
 
-    public void saveSearch(Long searchHistoryId) {
-        searchHistoryRepository.findById(searchHistoryId).ifPresent(search -> {
-            search.setIsSaved(true);
-            searchHistoryRepository.save(search);
+    public void saveSearch(Long searchHistoryId, Long userId) {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use org-filtered query to verify ownership and org membership
+        searchHistoryRepository.findByIdAndOrganizationId(searchHistoryId, orgId).ifPresent(search -> {
+            if (search.getUserId().equals(userId)) {
+                search.setIsSaved(true);
+                searchHistoryRepository.save(search);
+            }
         });
     }
 
     public void deleteSearchHistory(Long searchHistoryId, Long userId) {
-        searchHistoryRepository.findById(searchHistoryId).ifPresent(search -> {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use org-filtered query to verify ownership and org membership
+        searchHistoryRepository.findByIdAndOrganizationId(searchHistoryId, orgId).ifPresent(search -> {
             if (search.getUserId().equals(userId)) {
                 searchHistoryRepository.delete(search);
             }
@@ -3259,7 +3284,12 @@ public class AILegalResearchService {
         if (caseId != null && !caseId.isEmpty()) {
             try {
                 Long caseIdLong = Long.parseLong(caseId);
-                legalCaseRepository.findById(caseIdLong).ifPresent(legalCase -> {
+                Long orgIdForCase = tenantService.getCurrentOrganizationId().orElse(null);
+                // SECURITY: Use tenant-filtered query
+                Optional<LegalCase> caseOptForPrompt = orgIdForCase != null
+                    ? legalCaseRepository.findByIdAndOrganizationId(caseIdLong, orgIdForCase)
+                    : Optional.empty();
+                caseOptForPrompt.ifPresent(legalCase -> {
                     caseTypeHolder[0] = legalCase.getType(); // Capture for practice-area guidance
                     prompt.append("**CASE**: ").append(legalCase.getCaseNumber())
                         .append(" - ").append(legalCase.getTitle())
@@ -3479,7 +3509,10 @@ public class AILegalResearchService {
 
         // Check cache first (THOROUGH mode uses longer TTL: 24 hours for case-specific, 7 days for general)
         String queryHash = generateQueryHash(query, searchType, jurisdiction, caseId, "THOROUGH");
-        Optional<AIResearchCache> cachedResult = cacheRepository.findByQueryHash(queryHash);
+        // SECURITY: Require org context for cache lookup to prevent cross-tenant data leakage
+        Long currentOrgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required for research"));
+        Optional<AIResearchCache> cachedResult = cacheRepository.findByOrganizationIdAndQueryHash(currentOrgId, queryHash);
 
         // Phase 5: If no exact cache hit, try similarity-based cache lookup
         boolean similarityMatch = false;

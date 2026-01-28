@@ -28,28 +28,36 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class CaseActivityServiceImpl implements CaseActivityService {
-    
+
     private final CaseActivityRepository caseActivityRepository;
     private final UserService userService;
     private final ObjectMapper objectMapper;
     private final SystemAuditService systemAuditService;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
     
     @Override
     public List<CaseActivityDTO> getActivitiesByCaseId(Long caseId) {
         log.info("Getting activities for case ID: {}", caseId);
-        
-        List<CaseActivity> activities = caseActivityRepository.findByCaseIdOrderByCreatedAtDesc(caseId);
+
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<CaseActivity> activities = caseActivityRepository.findByOrganizationIdAndCaseIdOrderByCreatedAtDesc(orgId, caseId);
         log.info("Found {} activities for case ID: {}", activities.size(), caseId);
-        
+
         // Normalize any legacy single-character activity types before converting to DTOs
         for (CaseActivity activity : activities) {
             activity.setActivityType(normalizeActivityType(activity.getActivityType()));
         }
-        
+
         List<CaseActivityDTO> activityDTOs = activities.stream()
                 .map(CaseActivityDTOMapper::fromCaseActivity)
                 .collect(Collectors.toList());
-        
+
         // Attach user information to each activity
         for (CaseActivityDTO dto : activityDTOs) {
             if (dto.getUserId() != null) {
@@ -63,7 +71,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
                 }
             }
         }
-        
+
         return activityDTOs;
     }
 
@@ -86,8 +94,11 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     public CaseActivityDTO createActivity(CreateActivityRequest request) {
         log.info("Creating activity for case ID: {}", request.getCaseId());
         log.info("Activity type: {}, userId: {}", request.getActivityType(), request.getUserId());
-        
+
+        Long orgId = getRequiredOrganizationId();
         CaseActivity activity = new CaseActivity();
+        // SECURITY: Set organization ID when creating
+        activity.setOrganizationId(orgId);
         activity.setCaseId(request.getCaseId());
         activity.setActivityType(request.getActivityType());
         activity.setReferenceId(request.getReferenceId());
@@ -135,10 +146,12 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     @Override
     public void logNoteAdded(Long caseId, Long noteId, String noteTitle, Long userId) {
         log.info("Logging note added activity for case ID: {}, note ID: {}", caseId, noteId);
-        
+
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             // 1. Log to case_activities table (existing functionality)
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("NOTE_ADDED");
@@ -186,9 +199,11 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     @Override
     public void logNoteUpdated(Long caseId, Long noteId, String noteTitle, Long userId) {
         log.info("Logging note updated activity for case ID: {}, note ID: {}", caseId, noteId);
-        
+
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("NOTE_UPDATED");
@@ -218,9 +233,11 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     @Override
     public void logNoteDeleted(Long caseId, Long noteId, String noteTitle, Long userId) {
         log.info("Logging note deleted activity for case ID: {}, note ID: {}", caseId, noteId);
-        
+
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("NOTE_DELETED");
@@ -250,8 +267,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     @Override
     public void logReminderCreated(Long caseId, Long reminderId, String reminderTitle, Long userId) {
         log.info("Logging reminder created activity for case ID: {}, reminder ID: {}", caseId, reminderId);
-        
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
         CaseActivity activity = new CaseActivity();
+        activity.setOrganizationId(orgId); // SECURITY: Set organization ID
         activity.setCaseId(caseId);
         activity.setUserId(userId);
         activity.setActivityType("TASK_CREATED");
@@ -277,8 +295,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     @Override
     public void logReminderUpdated(Long caseId, Long reminderId, String reminderTitle, Long userId) {
         log.info("Logging reminder updated activity for case ID: {}, reminder ID: {}", caseId, reminderId);
-        
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
         CaseActivity activity = new CaseActivity();
+        activity.setOrganizationId(orgId); // SECURITY: Set organization ID
         activity.setCaseId(caseId);
         activity.setUserId(userId);
         activity.setActivityType("TASK_UPDATED");
@@ -304,8 +323,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     @Override
     public void logReminderCompleted(Long caseId, Long reminderId, String reminderTitle, Long userId) {
         log.info("Logging reminder completed activity for case ID: {}, reminder ID: {}", caseId, reminderId);
-        
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
         CaseActivity activity = new CaseActivity();
+        activity.setOrganizationId(orgId); // SECURITY: Set organization ID
         activity.setCaseId(caseId);
         activity.setUserId(userId);
         activity.setActivityType("TASK_COMPLETED");
@@ -331,8 +351,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     @Override
     public void logReminderDeleted(Long caseId, Long reminderId, String reminderTitle, Long userId) {
         log.info("Logging reminder deleted activity for case ID: {}, reminder ID: {}", caseId, reminderId);
-        
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
         CaseActivity activity = new CaseActivity();
+        activity.setOrganizationId(orgId); // SECURITY: Set organization ID
         activity.setCaseId(caseId);
         activity.setUserId(userId);
         activity.setActivityType("TASK_DELETED");
@@ -385,7 +406,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging status change for case ID: {} from {} to {}", caseId, oldStatus, newStatus);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("STATUS_CHANGED");
@@ -416,7 +439,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging priority change for case ID: {} from {} to {}", caseId, oldPriority, newPriority);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("PRIORITY_CHANGED");
@@ -446,7 +471,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging case creation for case ID: {}", caseId);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("CASE_CREATED");
@@ -480,7 +507,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging document upload for case ID: {}, document: {}", caseId, documentName);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("DOCUMENT_UPLOADED");
@@ -511,7 +540,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging document download for case ID: {}, document: {}", caseId, documentName);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("DOCUMENT_DOWNLOADED");
@@ -542,7 +573,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging document version for case ID: {}, document: {}, version: {}", caseId, documentName, versionNumber);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("DOCUMENT_VERSION_ADDED");
@@ -578,7 +611,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging hearing scheduled for case ID: {}, event: {}", caseId, eventTitle);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("HEARING_SCHEDULED");
@@ -610,7 +645,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging hearing update for case ID: {}, event: {}", caseId, eventTitle);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("HEARING_UPDATED");
@@ -641,7 +678,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging hearing cancellation for case ID: {}, event: {}", caseId, eventTitle);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("HEARING_CANCELLED");
@@ -676,7 +715,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging assignment for case ID: {}, assignee: {}", caseId, assigneeName);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("ASSIGNMENT_ADDED");
@@ -708,7 +749,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging unassignment for case ID: {}, assignee: {}", caseId, assigneeName);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("ASSIGNMENT_REMOVED");
@@ -743,7 +786,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging client contact for case ID: {}, method: {}", caseId, contactMethod);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("CLIENT_CONTACTED");
@@ -773,7 +818,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging email sent for case ID: {}, to: {}", caseId, recipient);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("EMAIL_SENT");
@@ -807,7 +854,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging payment received for case ID: {}, amount: ${}", caseId, amount);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("PAYMENT_RECEIVED");
@@ -838,7 +887,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging time entry for case ID: {}, hours: {}", caseId, hours);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("TIME_ENTRY_ADDED");
@@ -870,7 +921,9 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         log.info("Logging invoice created for case ID: {}, amount: ${}", caseId, amount);
 
         try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("INVOICE_CREATED");

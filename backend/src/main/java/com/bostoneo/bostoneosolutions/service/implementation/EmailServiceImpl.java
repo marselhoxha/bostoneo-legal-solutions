@@ -665,4 +665,108 @@ public class EmailServiceImpl implements EmailService {
                 throw new ApiException("Unable to send email. Email type unknown");
         }
     }
+
+    @Override
+    public void sendInvitationEmail(String email, String organizationName, String role, String inviteUrl, int expirationDays) {
+        try {
+            log.info("Sending invitation email to: {} for organization: {}", email, organizationName);
+
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            helper.setFrom("info@bostoneo.com", "Bostoneo Legal Solutions");
+            helper.setTo(email);
+            helper.setSubject("You've been invited to join " + organizationName);
+
+            String htmlContent = buildInvitationEmailHtml(email, organizationName, role, inviteUrl, expirationDays);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(mimeMessage);
+            log.info("Invitation email sent successfully to: {}", email);
+        } catch (MessagingException | java.io.UnsupportedEncodingException exception) {
+            log.error("Failed to send invitation email to {}: {}", email, exception.getMessage(), exception);
+        }
+    }
+
+    private String buildInvitationEmailHtml(String email, String organizationName, String role, String inviteUrl, int expirationDays) {
+        StringBuilder html = new StringBuilder();
+
+        html.append("<!DOCTYPE html>");
+        html.append("<html lang=\"en\">");
+        html.append("<head>");
+        html.append("<meta charset=\"UTF-8\">");
+        html.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
+        html.append("<title>Team Invitation</title>");
+        html.append("<style>");
+        html.append(getEmailCSS());
+        html.append("</style>");
+        html.append("</head>");
+        html.append("<body>");
+
+        // Main Container
+        html.append("<div class=\"email-container\">");
+
+        // Header
+        html.append("<div class=\"header\">");
+        html.append("<div class=\"logo\">");
+        html.append("<h2>Bostoneo Legal Solutions</h2>");
+        html.append("</div>");
+        html.append("</div>");
+
+        // Main Content
+        html.append("<div class=\"content\">");
+
+        // Greeting
+        html.append("<div class=\"greeting\">");
+        html.append("<h3>You've been invited!</h3>");
+        html.append("</div>");
+
+        // Invitation Badge
+        html.append("<div class=\"notification-badge case\">");
+        html.append("<div class=\"badge-icon\">🎉</div>");
+        html.append("<div class=\"badge-content\">");
+        html.append("<h4>Join ").append(organizationName).append("</h4>");
+        html.append("<p class=\"notification-type\">Team Invitation</p>");
+        html.append("</div>");
+        html.append("</div>");
+
+        // Message Content
+        html.append("<div class=\"message-content\">");
+        html.append("<p>You have been invited to join <strong>").append(organizationName).append("</strong> ");
+        html.append("as a <strong>").append(role).append("</strong>.</p>");
+        html.append("<p style=\"margin-top: 15px;\">Click the button below to accept this invitation and set up your account.</p>");
+        html.append("</div>");
+
+        // Additional Info
+        html.append("<div class=\"additional-info\">");
+        html.append("<p>⏱️ This invitation will expire in ").append(expirationDays).append(" days.</p>");
+        html.append("</div>");
+
+        // Call to Action
+        html.append("<div class=\"cta-section\">");
+        html.append("<a href=\"").append(inviteUrl).append("\" class=\"cta-button\">Accept Invitation</a>");
+        html.append("<p class=\"cta-text\">Or copy and paste this link in your browser:</p>");
+        html.append("<p style=\"font-size: 12px; color: #666; word-break: break-all;\">").append(inviteUrl).append("</p>");
+        html.append("</div>");
+
+        html.append("</div>"); // End content
+
+        // Footer
+        html.append("<div class=\"footer\">");
+        html.append("<p>Best regards,<br>");
+        html.append("<strong>").append(organizationName).append(" Team</strong></p>");
+        html.append("<div class=\"footer-links\">");
+        html.append("<p><small>");
+        html.append("If you didn't expect this invitation, you can safely ignore this email. ");
+        html.append("This invitation was sent to ").append(email).append(".");
+        html.append("</small></p>");
+        html.append("</div>");
+        html.append("</div>");
+
+        html.append("</div>"); // End container
+        html.append("</body>");
+        html.append("</html>");
+
+        return html.toString();
+    }
 }

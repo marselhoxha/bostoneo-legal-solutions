@@ -25,6 +25,12 @@ public class DocumentChunkingService {
 
     private final DocumentChunkRepository chunkRepository;
     private final AIDocumentAnalysisRepository analysisRepository;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     // Target chunk size in characters (roughly 500-750 tokens)
     private static final int TARGET_CHUNK_SIZE = 2000;
@@ -41,8 +47,10 @@ public class DocumentChunkingService {
     @Transactional
     public List<DocumentChunk> chunkDocument(Long analysisId) {
         log.info("Chunking document: analysisId={}", analysisId);
+        Long orgId = getRequiredOrganizationId();
 
-        AIDocumentAnalysis analysis = analysisRepository.findById(analysisId)
+        // SECURITY: Use tenant-filtered query
+        AIDocumentAnalysis analysis = analysisRepository.findByIdAndOrganizationId(analysisId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Analysis not found: " + analysisId));
 
         // Delete existing chunks
@@ -268,13 +276,17 @@ public class DocumentChunkingService {
      * Get chunks for a document.
      */
     public List<DocumentChunk> getChunksForDocument(Long analysisId) {
-        return chunkRepository.findByAnalysisIdOrderByChunkIndexAsc(analysisId);
+        // SECURITY: Use tenant-filtered query
+        Long orgId = getRequiredOrganizationId();
+        return chunkRepository.findByAnalysisIdAndOrganizationIdOrderByChunkIndexAsc(analysisId, orgId);
     }
 
     /**
      * Get chunks for a collection.
      */
     public List<DocumentChunk> getChunksForCollection(Long collectionId) {
-        return chunkRepository.findByCollectionIdOrderByAnalysisIdAscChunkIndexAsc(collectionId);
+        // SECURITY: Use tenant-filtered query
+        Long orgId = getRequiredOrganizationId();
+        return chunkRepository.findByCollectionIdAndOrganizationIdOrderByAnalysisIdAscChunkIndexAsc(collectionId, orgId);
     }
 }

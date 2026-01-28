@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.model.ActionItem;
 import com.bostoneo.bostoneosolutions.model.TimelineEvent;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.ActionItemRepository;
 import com.bostoneo.bostoneosolutions.repository.TimelineEventRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
@@ -27,6 +28,15 @@ public class ActionItemExtractionService {
     private final TimelineEventRepository timelineEventRepository;
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
+    private final TenantService tenantService;
+
+    /**
+     * SECURITY: Get required organization ID for tenant isolation
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required for action item extraction"));
+    }
 
     /**
      * Hybrid extraction: Try embedded JSON first, skip if not found to save tokens
@@ -153,11 +163,14 @@ public class ActionItemExtractionService {
 
     /**
      * Save action items from parsed JSON
+     * SECURITY: Sets organizationId for tenant isolation
      */
     private void saveActionItems(Long analysisId, List<Map<String, Object>> items) {
+        Long orgId = getRequiredOrganizationId();
         for (Map<String, Object> item : items) {
             ActionItem actionItem = new ActionItem();
             actionItem.setAnalysisId(analysisId);
+            actionItem.setOrganizationId(orgId); // SECURITY: Set tenant context
             actionItem.setDescription((String) item.get("description"));
             actionItem.setPriority((String) item.getOrDefault("priority", "MEDIUM"));
             actionItem.setStatus("PENDING");
@@ -175,16 +188,19 @@ public class ActionItemExtractionService {
 
             actionItemRepository.save(actionItem);
         }
-        log.info("Saved {} action items for analysis {}", items.size(), analysisId);
+        log.info("Saved {} action items for analysis {} in org {}", items.size(), analysisId, orgId);
     }
 
     /**
      * Save timeline events from parsed JSON
+     * SECURITY: Sets organizationId for tenant isolation
      */
     private void saveTimelineEvents(Long analysisId, List<Map<String, Object>> events) {
+        Long orgId = getRequiredOrganizationId();
         for (Map<String, Object> event : events) {
             TimelineEvent timelineEvent = new TimelineEvent();
             timelineEvent.setAnalysisId(analysisId);
+            timelineEvent.setOrganizationId(orgId); // SECURITY: Set tenant context
             timelineEvent.setTitle((String) event.get("title"));
             timelineEvent.setEventType((String) event.getOrDefault("eventType", "DEADLINE"));
             timelineEvent.setPriority((String) event.getOrDefault("priority", "MEDIUM"));
@@ -202,7 +218,7 @@ public class ActionItemExtractionService {
                 }
             }
         }
-        log.info("Saved {} timeline events for analysis {}", events.size(), analysisId);
+        log.info("Saved {} timeline events for analysis {} in org {}", events.size(), analysisId, orgId);
     }
 
     public void extractAndSaveActionItems(Long analysisId, String analysisText) {
@@ -236,11 +252,13 @@ public class ActionItemExtractionService {
             String jsonArray = extractJsonArray(response);
             if (jsonArray != null) {
                 List<Map<String, Object>> items = objectMapper.readValue(jsonArray, new TypeReference<>() {});
+                Long orgId = getRequiredOrganizationId(); // SECURITY: Get tenant context
 
                 // Save each action item
                 for (Map<String, Object> item : items) {
                     ActionItem actionItem = new ActionItem();
                     actionItem.setAnalysisId(analysisId);
+                    actionItem.setOrganizationId(orgId); // SECURITY: Set tenant context
                     actionItem.setDescription((String) item.get("description"));
                     actionItem.setPriority((String) item.getOrDefault("priority", "MEDIUM"));
                     actionItem.setStatus("PENDING");
@@ -259,7 +277,7 @@ public class ActionItemExtractionService {
                     actionItemRepository.save(actionItem);
                 }
 
-                log.info("Extracted and saved {} action items for analysis {}", items.size(), analysisId);
+                log.info("Extracted and saved {} action items for analysis {} in org {}", items.size(), analysisId, orgId);
             }
         } catch (Exception e) {
             log.error("Error extracting action items for analysis {}: {}", analysisId, e.getMessage(), e);
@@ -295,11 +313,13 @@ public class ActionItemExtractionService {
             String jsonArray = extractJsonArray(response);
             if (jsonArray != null) {
                 List<Map<String, Object>> events = objectMapper.readValue(jsonArray, new TypeReference<>() {});
+                Long orgId = getRequiredOrganizationId(); // SECURITY: Get tenant context
 
                 // Save each timeline event
                 for (Map<String, Object> event : events) {
                     TimelineEvent timelineEvent = new TimelineEvent();
                     timelineEvent.setAnalysisId(analysisId);
+                    timelineEvent.setOrganizationId(orgId); // SECURITY: Set tenant context
                     timelineEvent.setTitle((String) event.get("title"));
                     timelineEvent.setEventType((String) event.getOrDefault("eventType", "DEADLINE"));
                     timelineEvent.setPriority((String) event.getOrDefault("priority", "MEDIUM"));
@@ -318,7 +338,7 @@ public class ActionItemExtractionService {
                     }
                 }
 
-                log.info("Extracted and saved {} timeline events for analysis {}", events.size(), analysisId);
+                log.info("Extracted and saved {} timeline events for analysis {} in org {}", events.size(), analysisId, orgId);
             }
         } catch (Exception e) {
             log.error("Error extracting timeline events for analysis {}: {}", analysisId, e.getMessage(), e);

@@ -2,7 +2,10 @@ package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.enumeration.WorkflowExecutionStatus;
 import com.bostoneo.bostoneosolutions.enumeration.WorkflowStepType;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.model.*;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.*;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import lombok.extern.slf4j.Slf4j;
@@ -37,9 +40,15 @@ public class CaseWorkflowExecutionService {
     // Team notification dependencies
     private final NotificationService notificationService;
     private final CaseAssignmentRepository caseAssignmentRepository;
+    private final TenantService tenantService;
 
     // Self-injection for @Async to work (Spring AOP doesn't intercept internal calls)
     private CaseWorkflowExecutionService self;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new ApiException("Organization context required"));
+    }
 
     @Autowired
     public CaseWorkflowExecutionService(
@@ -54,7 +63,8 @@ public class CaseWorkflowExecutionService {
             AiConversationMessageRepository conversationMessageRepository,
             ResearchSessionRepository researchSessionRepository,
             NotificationService notificationService,
-            CaseAssignmentRepository caseAssignmentRepository
+            CaseAssignmentRepository caseAssignmentRepository,
+            TenantService tenantService
     ) {
         this.templateRepository = templateRepository;
         this.executionRepository = executionRepository;
@@ -68,6 +78,7 @@ public class CaseWorkflowExecutionService {
         this.researchSessionRepository = researchSessionRepository;
         this.notificationService = notificationService;
         this.caseAssignmentRepository = caseAssignmentRepository;
+        this.tenantService = tenantService;
     }
 
     @Autowired
@@ -91,9 +102,10 @@ public class CaseWorkflowExecutionService {
         log.info("Starting workflow - templateId: {}, collectionId: {}, caseId: {}, docs: {}, name: {}",
                 templateId, collectionId, caseId, documentIds.size(), name);
 
-        // Get template
-        CaseWorkflowTemplate template = templateRepository.findById(templateId)
-                .orElseThrow(() -> new RuntimeException("Workflow template not found: " + templateId));
+        // SECURITY: Use proper tenant-filtered query instead of post-filter pattern
+        Long orgId = getRequiredOrganizationId();
+        CaseWorkflowTemplate template = templateRepository.findByIdAndAccessibleByOrganization(templateId, orgId)
+                .orElseThrow(() -> new ApiException("Workflow template not found or access denied: " + templateId));
 
         // Extract steps from template config
         Map<String, Object> stepsConfig = template.getStepsConfig();
@@ -103,6 +115,7 @@ public class CaseWorkflowExecutionService {
         CaseWorkflowExecution execution = CaseWorkflowExecution.builder()
                 .name(name)
                 .collectionId(collectionId)
+                .organizationId(orgId)
                 .template(template)
                 .status(WorkflowExecutionStatus.PENDING)
                 .currentStep(0)
@@ -138,22 +151,32 @@ public class CaseWorkflowExecutionService {
         }
 
         // Start async execution via self-reference to trigger @Async proxy
-        self.executeWorkflowAsync(execution.getId());
+        // SECURITY: Pass organizationId explicitly to async method since ThreadLocal context is lost
+        self.executeWorkflowAsync(execution.getId(), orgId);
 
         return execution;
     }
 
     /**
      * Execute workflow asynchronously
+     * SECURITY: organizationId must be passed explicitly because ThreadLocal TenantContext
+     * is lost when executing in async thread pool
      */
     @Async
-    public void executeWorkflowAsync(Long executionId) {
+    public void executeWorkflowAsync(Long executionId, Long organizationId) {
         try {
+            // SECURITY: Restore tenant context in async thread
+            TenantContext.setCurrentTenant(organizationId);
+            log.debug("Set tenant context for async workflow execution: orgId={}", organizationId);
+
             Thread.sleep(500); // Small delay to ensure transaction commits
             executeWorkflow(executionId);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Workflow execution interrupted: {}", executionId);
+        } finally {
+            // SECURITY: Always clear context after async execution
+            TenantContext.clear();
         }
     }
 
@@ -162,8 +185,9 @@ public class CaseWorkflowExecutionService {
      */
     @Transactional(readOnly = true)
     public CaseWorkflowExecution loadExecutionWithRelationships(Long executionId) {
-        CaseWorkflowExecution execution = executionRepository.findById(executionId)
-                .orElseThrow(() -> new RuntimeException("Workflow execution not found: " + executionId));
+        Long orgId = getRequiredOrganizationId();
+        CaseWorkflowExecution execution = executionRepository.findByIdAndOrganizationId(executionId, orgId)
+                .orElseThrow(() -> new ApiException("Workflow execution not found or access denied: " + executionId));
 
         // Force initialize lazy-loaded relationships within transaction
         if (execution.getTemplate() != null) {
@@ -330,7 +354,9 @@ public class CaseWorkflowExecutionService {
         // Add action items if requested or for relevant step types
         if ("action_items".equals(displayType) || "timeline".equals(displayType) || "full".equals(displayType)) {
             try {
-                List<ActionItem> actionItems = actionItemRepository.findByAnalysisIdInOrderByDeadlineAsc(analysisIds);
+                // SECURITY: Use org-filtered query
+                Long orgId = getRequiredOrganizationId();
+                List<ActionItem> actionItems = actionItemRepository.findByOrganizationIdAndAnalysisIdInOrderByDeadlineAsc(orgId, analysisIds);
                 List<Map<String, Object>> actionItemsList = actionItems.stream()
                         .map(item -> {
                             Map<String, Object> itemMap = new HashMap<>();
@@ -937,7 +963,8 @@ public class CaseWorkflowExecutionService {
         }
 
         // Get all team members assigned to this case
-        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseId(caseId);
+        Long orgId = getRequiredOrganizationId();
+        List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(caseId, orgId);
 
         if (assignments.isEmpty()) {
             log.info("No team members assigned to case {} for notification", caseId);
@@ -991,8 +1018,15 @@ public class CaseWorkflowExecutionService {
     public void resumeWorkflow(Long executionId, Long stepId, Map<String, Object> userInput) {
         log.info("Resuming workflow {} from step {}", executionId, stepId);
 
-        CaseWorkflowStepExecution step = stepExecutionRepository.findById(stepId)
-                .orElseThrow(() -> new RuntimeException("Step not found: " + stepId));
+        // SECURITY: Verify execution belongs to current organization first
+        Long orgId = getRequiredOrganizationId();
+        executionRepository.findByIdAndOrganizationId(executionId, orgId)
+                .orElseThrow(() -> new ApiException("Workflow execution not found or access denied: " + executionId));
+
+        // SECURITY: Use tenant-filtered query for step
+        CaseWorkflowStepExecution step = stepExecutionRepository.findByIdAndOrganizationId(stepId, orgId)
+                .filter(s -> s.getWorkflowExecution().getId().equals(executionId))
+                .orElseThrow(() -> new ApiException("Step not found or does not belong to workflow: " + stepId));
 
         // Complete the action step
         step.setStatus(WorkflowExecutionStatus.COMPLETED);
@@ -1005,7 +1039,7 @@ public class CaseWorkflowExecutionService {
         stepExecutionRepository.save(step);
 
         // Continue workflow execution via self-reference to trigger @Async proxy
-        self.executeWorkflowAsync(executionId);
+        self.executeWorkflowAsync(executionId, orgId);
     }
 
     /**
@@ -1013,8 +1047,9 @@ public class CaseWorkflowExecutionService {
      */
     @Transactional(readOnly = true)
     public CaseWorkflowExecution getExecutionWithSteps(Long executionId) {
-        CaseWorkflowExecution execution = executionRepository.findById(executionId)
-                .orElseThrow(() -> new RuntimeException("Workflow execution not found: " + executionId));
+        Long orgId = getRequiredOrganizationId();
+        CaseWorkflowExecution execution = executionRepository.findByIdAndOrganizationId(executionId, orgId)
+                .orElseThrow(() -> new ApiException("Workflow execution not found or access denied: " + executionId));
 
         List<CaseWorkflowStepExecution> steps = stepExecutionRepository
                 .findByWorkflowExecutionIdOrderByStepNumber(executionId);

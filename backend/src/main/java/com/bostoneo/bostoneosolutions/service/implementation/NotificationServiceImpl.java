@@ -12,6 +12,7 @@ import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.EmailService;
 import com.bostoneo.bostoneosolutions.service.UserNotificationPreferenceService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -44,6 +45,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final EmailService emailService;
     private final UserNotificationPreferenceService userNotificationPreferenceService;
     private final UserRepository<User> userRepository;
+    private final TenantService tenantService;
     
     @Value("${firebase.config.path}")
     private String firebaseConfigPath;
@@ -70,22 +72,40 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public NotificationTokenDTO registerToken(NotificationTokenDTO tokenDTO) {
         log.info("Registering notification token for user: {}", tokenDTO.getUserId());
-        
-        // First check if the token already exists
-        Optional<NotificationToken> existingToken = tokenRepository.findByToken(tokenDTO.getToken());
-        
+
+        // SECURITY: Require organization context for token registration
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+
+        // SECURITY: Verify the user belongs to current organization
+        if (tokenDTO.getUserId() != null) {
+            User user = userRepository.get(tokenDTO.getUserId());
+            if (user == null || !orgId.equals(user.getOrganizationId())) {
+                throw new RuntimeException("Cannot register token for user outside your organization");
+            }
+        }
+
+        // SECURITY: First check if the token already exists within this organization
+        Optional<NotificationToken> existingToken = tokenRepository.findByTokenAndOrganizationId(tokenDTO.getToken(), orgId);
+
         if (existingToken.isPresent()) {
             // Update existing token record
             NotificationToken token = existingToken.get();
+            // SECURITY: Only allow updating if the token already belongs to this user
+            if (token.getUserId() != null && !token.getUserId().equals(tokenDTO.getUserId())) {
+                log.warn("Attempt to hijack notification token from user {} by user {}", token.getUserId(), tokenDTO.getUserId());
+                throw new RuntimeException("Cannot update token belonging to another user");
+            }
             token.setUserId(tokenDTO.getUserId());
             token.setPlatform(tokenDTO.getPlatform());
             token.setLastUsed(LocalDateTime.now());
-            
+
             NotificationToken savedToken = tokenRepository.save(token);
             return NotificationTokenDTOMapper.fromNotificationToken(savedToken);
         } else {
-            // Create new token record
+            // Create new token record with organization ID
             NotificationToken token = NotificationTokenDTOMapper.toNotificationToken(tokenDTO);
+            token.setOrganizationId(orgId);
             NotificationToken savedToken = tokenRepository.save(token);
             return NotificationTokenDTOMapper.fromNotificationToken(savedToken);
         }
@@ -94,10 +114,12 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void sendEventReminderNotification(CalendarEvent event, int minutesBefore, Long userId) {
         log.info("Sending reminder notification for event: {} to user: {}", event.getId(), userId);
-        
-        // Get tokens for the user
-        List<NotificationToken> tokens = tokenRepository.findByUserId(userId);
-        
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+
+        // Get tokens for the user - SECURITY: Use tenant-filtered query
+        List<NotificationToken> tokens = tokenRepository.findByOrganizationIdAndUserId(orgId, userId);
+
         if (tokens.isEmpty()) {
             log.info("No notification tokens found for user: {}", userId);
             return;
@@ -180,8 +202,11 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public List<NotificationTokenDTO> getTokensByUserId(Long userId) {
         log.info("Getting notification tokens for user: {}", userId);
-        
-        List<NotificationToken> tokens = tokenRepository.findByUserId(userId);
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+
+        // SECURITY: Use tenant-filtered query
+        List<NotificationToken> tokens = tokenRepository.findByOrganizationIdAndUserId(orgId, userId);
         return tokens.stream()
                 .map(NotificationTokenDTOMapper::fromNotificationToken)
                 .collect(Collectors.toList());
@@ -190,15 +215,21 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void deleteToken(String token) {
         log.info("Deleting notification token: {}", token);
-        
-        Optional<NotificationToken> existingToken = tokenRepository.findByToken(token);
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+
+        // SECURITY: Use tenant-filtered query
+        Optional<NotificationToken> existingToken = tokenRepository.findByTokenAndOrganizationId(token, orgId);
         existingToken.ifPresent(tokenRepository::delete);
     }
     
     @Override
     public void sendCrmNotification(String title, String body, Long userId, String type, Object data) {
         log.info("🔔 NOTIFICATION SERVICE: Sending CRM notification to user {}: '{}' - '{}' [type: {}]", userId, title, body, type);
-        
+
+        // Get organization ID for tenant-scoped queries
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+
         // Check user's notification preferences
         boolean shouldReceiveNotification = userNotificationPreferenceService.shouldReceiveNotification(userId, type);
         boolean shouldReceiveEmailNotification = userNotificationPreferenceService.shouldReceiveEmailNotification(userId, type);
@@ -239,9 +270,9 @@ public class NotificationServiceImpl implements NotificationService {
         log.info("🔔 Push notification preference for user {}: push={}", userId, shouldReceivePushNotification);
         
         if (shouldReceivePushNotification) {
-            // Get tokens for the user
-            List<NotificationToken> tokens = tokenRepository.findByUserId(userId);
-            
+            // Get tokens for the user - SECURITY: Use tenant-filtered query
+            List<NotificationToken> tokens = tokenRepository.findByOrganizationIdAndUserId(orgId, userId);
+
             if (tokens.isEmpty()) {
                 log.info("No notification tokens found for user: {}", userId);
             } else {
@@ -327,9 +358,18 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void sendBroadcastNotification(String title, String body, String type, Object data) {
         log.info("Sending broadcast notification: {} - {}", title, body);
-        
-        // Get all tokens
-        List<NotificationToken> allTokens = tokenRepository.findAll();
+
+        // Get tokens for users in the current organization only
+        Long organizationId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (organizationId == null) {
+            log.warn("No organization context for broadcast notification, skipping");
+            return;
+        }
+
+        // Get users for this organization and their tokens - SECURITY: Use tenant-filtered query
+        Collection<User> orgUsers = userRepository.list(0, 10000); // Get all users (already filtered by tenant)
+        List<Long> userIds = orgUsers.stream().map(User::getId).collect(Collectors.toList());
+        List<NotificationToken> allTokens = userIds.isEmpty() ? List.of() : tokenRepository.findByOrganizationIdAndUserIdIn(organizationId, userIds);
         
         if (allTokens.isEmpty()) {
             log.info("No notification tokens found for broadcast");
@@ -410,38 +450,57 @@ public class NotificationServiceImpl implements NotificationService {
     
     @Override
     public Page<UserNotification> getUserNotifications(Long userId, Pageable pageable) {
-        log.info("Getting notifications for user: {} with pagination: {}", userId, pageable);
-        return userNotificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+        log.info("Getting notifications for user: {} in org: {} with pagination: {}", userId, orgId, pageable);
+        Page<UserNotification> results = userNotificationRepository.findByUserIdAndOrganizationIdOrderByCreatedAtDesc(userId, orgId, pageable);
+        log.info("Found {} notifications for user {} in org {}", results.getTotalElements(), userId, orgId);
+        return results;
     }
-    
+
     @Override
     public List<UserNotification> getUnreadNotifications(Long userId) {
         log.info("Getting unread notifications for user: {}", userId);
-        return userNotificationRepository.findByUserIdAndReadFalseOrderByCreatedAtDesc(userId);
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+        return userNotificationRepository.findByUserIdAndOrganizationIdAndReadFalseOrderByCreatedAtDesc(userId, orgId);
     }
-    
+
     @Override
     public void markNotificationAsRead(Long notificationId) {
         log.info("Marking notification {} as read", notificationId);
-        userNotificationRepository.markAsReadById(notificationId, LocalDateTime.now());
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+        userNotificationRepository.markAsReadByIdAndOrganizationId(notificationId, orgId, LocalDateTime.now());
     }
-    
+
     @Override
     public void markAllNotificationsAsRead(Long userId) {
         log.info("Marking all notifications as read for user: {}", userId);
-        int updated = userNotificationRepository.markAllAsReadByUserId(userId, LocalDateTime.now());
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+        int updated = userNotificationRepository.markAllAsReadByUserIdAndOrganizationId(userId, orgId, LocalDateTime.now());
         log.info("Marked {} notifications as read for user: {}", updated, userId);
     }
     
     @Override
     public void deleteNotification(Long notificationId) {
         log.info("Deleting notification: {}", notificationId);
+
+        // SECURITY: Require org context and use tenant-filtered query
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+        UserNotification notification = userNotificationRepository.findByIdAndOrganizationId(notificationId, orgId)
+            .orElseThrow(() -> new RuntimeException("Notification not found or access denied: " + notificationId));
+
         userNotificationRepository.deleteById(notificationId);
     }
     
     @Override
     public long getUnreadNotificationCount(Long userId) {
-        long count = userNotificationRepository.countByUserIdAndReadFalse(userId);
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+        long count = userNotificationRepository.countByUserIdAndOrganizationIdAndReadFalse(userId, orgId);
         log.info("User {} has {} unread notifications", userId, count);
         return count;
     }

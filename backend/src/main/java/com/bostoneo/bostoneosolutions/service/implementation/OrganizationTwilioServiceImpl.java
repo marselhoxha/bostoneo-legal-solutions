@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.config.TwilioConfig;
 import com.bostoneo.bostoneosolutions.dto.SmsResponseDTO;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.model.Organization;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
 import com.bostoneo.bostoneosolutions.service.OrganizationTwilioService;
 import com.twilio.Twilio;
@@ -35,12 +36,24 @@ public class OrganizationTwilioServiceImpl implements OrganizationTwilioService 
 
     private final TwilioConfig twilioConfig;
     private final OrganizationRepository organizationRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Verify the requested organization matches the current tenant
+     */
+    private void verifyOrganizationAccess(Long organizationId) {
+        Long currentOrgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (currentOrgId != null && !currentOrgId.equals(organizationId)) {
+            throw new ApiException("Access denied: Cannot access another organization's Twilio settings");
+        }
+    }
 
     // E.164 phone number pattern
     private static final Pattern E164_PATTERN = Pattern.compile("^\\+[1-9]\\d{1,14}$");
 
     @Override
     public Organization provisionSubaccount(Long organizationId, String friendlyName) {
+        verifyOrganizationAccess(organizationId);
         log.info("Provisioning Twilio subaccount for organization ID: {}", organizationId);
 
         Organization org = organizationRepository.findById(organizationId)
@@ -81,6 +94,7 @@ public class OrganizationTwilioServiceImpl implements OrganizationTwilioService 
 
     @Override
     public String purchasePhoneNumber(Long organizationId, String areaCode) {
+        verifyOrganizationAccess(organizationId);
         log.info("Purchasing phone number for organization ID: {} with area code: {}", organizationId, areaCode);
 
         Organization org = organizationRepository.findById(organizationId)
@@ -132,6 +146,7 @@ public class OrganizationTwilioServiceImpl implements OrganizationTwilioService 
 
     @Override
     public void deprovisionSubaccount(Long organizationId) {
+        verifyOrganizationAccess(organizationId);
         log.info("Deprovisioning Twilio subaccount for organization ID: {}", organizationId);
 
         Organization org = organizationRepository.findById(organizationId)
@@ -171,6 +186,7 @@ public class OrganizationTwilioServiceImpl implements OrganizationTwilioService 
 
     @Override
     public SmsResponseDTO sendSms(Long organizationId, String to, String message) {
+        verifyOrganizationAccess(organizationId);
         Organization org = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new ApiException("Organization not found: " + organizationId));
         return sendSms(org, to, message);
@@ -219,6 +235,7 @@ public class OrganizationTwilioServiceImpl implements OrganizationTwilioService 
 
     @Override
     public SmsResponseDTO sendTemplatedSms(Long organizationId, String to, String templateCode, Map<String, String> params) {
+        verifyOrganizationAccess(organizationId);
         Organization org = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new ApiException("Organization not found: " + organizationId));
 
@@ -232,6 +249,7 @@ public class OrganizationTwilioServiceImpl implements OrganizationTwilioService 
 
     @Override
     public SmsResponseDTO sendWhatsApp(Long organizationId, String to, String message) {
+        verifyOrganizationAccess(organizationId);
         Organization org = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new ApiException("Organization not found: " + organizationId));
 
@@ -267,6 +285,7 @@ public class OrganizationTwilioServiceImpl implements OrganizationTwilioService 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getUsageStats(Long organizationId) {
+        verifyOrganizationAccess(organizationId);
         Organization org = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new ApiException("Organization not found: " + organizationId));
 
@@ -290,6 +309,7 @@ public class OrganizationTwilioServiceImpl implements OrganizationTwilioService 
     @Override
     @Transactional(readOnly = true)
     public boolean isTwilioConfigured(Long organizationId) {
+        verifyOrganizationAccess(organizationId);
         return organizationRepository.findById(organizationId)
                 .map(Organization::isTwilioConfigured)
                 .orElse(false);
@@ -297,6 +317,7 @@ public class OrganizationTwilioServiceImpl implements OrganizationTwilioService 
 
     @Override
     public SmsResponseDTO sendTestSms(Long organizationId, String testPhoneNumber) {
+        verifyOrganizationAccess(organizationId);
         String testMessage = "Test message from Bostoneo Legal Platform. If you received this, SMS is configured correctly!";
         return sendSms(organizationId, testPhoneNumber, testMessage);
     }
@@ -304,6 +325,7 @@ public class OrganizationTwilioServiceImpl implements OrganizationTwilioService 
     @Override
     public Organization updateTwilioSettings(Long organizationId, String subaccountSid, String authToken,
                                               String phoneNumber, String whatsappNumber) {
+        verifyOrganizationAccess(organizationId);
         log.info("Manually updating Twilio settings for organization ID: {}", organizationId);
 
         Organization org = organizationRepository.findById(organizationId)
@@ -321,6 +343,7 @@ public class OrganizationTwilioServiceImpl implements OrganizationTwilioService 
 
     @Override
     public Organization disableTwilio(Long organizationId) {
+        verifyOrganizationAccess(organizationId);
         log.info("Disabling Twilio for organization ID: {}", organizationId);
 
         Organization org = organizationRepository.findById(organizationId)

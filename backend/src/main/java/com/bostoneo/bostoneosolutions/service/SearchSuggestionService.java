@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.model.CollectionSearchHistory;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.CollectionSearchHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,12 @@ import java.util.stream.Collectors;
 public class SearchSuggestionService {
 
     private final CollectionSearchHistoryRepository historyRepository;
+    private final TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     /**
      * Common legal queries that work well for document collections.
@@ -119,7 +126,9 @@ public class SearchSuggestionService {
             return;
         }
 
+        Long orgId = getRequiredOrganizationId();
         CollectionSearchHistory history = CollectionSearchHistory.builder()
+                .organizationId(orgId)
                 .collectionId(collectionId)
                 .userId(userId)
                 .query(query.trim())
@@ -135,8 +144,9 @@ public class SearchSuggestionService {
      */
     private List<String> getHistoryBasedSuggestions(Long collectionId, Long userId, String partialQuery) {
         try {
-            List<String> results = historyRepository.findRecentSearchesByUser(
-                    collectionId, userId, partialQuery);
+            Long orgId = getRequiredOrganizationId();
+            List<String> results = historyRepository.findRecentSearchesByUserAndOrganizationId(
+                    orgId, collectionId, userId, partialQuery);
             return results.stream().limit(4).collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("Error fetching history-based suggestions: {}", e.getMessage());
@@ -149,7 +159,8 @@ public class SearchSuggestionService {
      */
     private List<String> getPopularSuggestions(Long collectionId, String partialQuery) {
         try {
-            List<Object[]> results = historyRepository.findPopularSearches(collectionId, partialQuery);
+            Long orgId = getRequiredOrganizationId();
+            List<Object[]> results = historyRepository.findPopularSearchesByOrganizationId(orgId, collectionId, partialQuery);
             return results.stream()
                     .map(row -> (String) row[0])
                     .limit(4)

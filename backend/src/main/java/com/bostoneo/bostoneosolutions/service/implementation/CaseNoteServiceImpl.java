@@ -10,6 +10,7 @@ import com.bostoneo.bostoneosolutions.repository.CaseNoteRepository;
 import com.bostoneo.bostoneosolutions.service.CaseNoteService;
 import com.bostoneo.bostoneosolutions.service.LegalCaseService;
 import com.bostoneo.bostoneosolutions.service.UserService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -29,9 +30,19 @@ public class CaseNoteServiceImpl implements CaseNoteService {
     private final LegalCaseService legalCaseService;
     private final UserService userService;
     private final CaseNoteRepository caseNoteRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Get the current organization ID from tenant context.
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public List<CaseNoteDTO> getNotesByCaseId(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
         log.info("Getting notes for case ID: {}", caseId);
         
         // Verify case exists
@@ -42,9 +53,9 @@ public class CaseNoteServiceImpl implements CaseNoteService {
             throw e;
         }
         
-        // Get notes from repository
+        // Get notes from repository with tenant filtering
         try {
-            List<CaseNote> notes = caseNoteRepository.findByCaseIdOrderByCreatedAtDesc(caseId);
+            List<CaseNote> notes = caseNoteRepository.findByCaseIdAndOrganizationIdOrderByCreatedAtDesc(caseId, orgId);
             log.info("Retrieved {} notes from database for case ID: {}", notes.size(), caseId);
             
             // Convert to DTOs
@@ -63,14 +74,15 @@ public class CaseNoteServiceImpl implements CaseNoteService {
     @Override
     public CaseNoteDTO getNoteById(Long caseId, Long noteId) {
         log.info("Getting note ID: {} for case ID: {}", noteId, caseId);
-        
+        Long orgId = getRequiredOrganizationId();
+
         // Verify case exists
         legalCaseService.getCase(caseId);
-        
-        // Get note from repository
-        CaseNote note = caseNoteRepository.findByCaseIdAndId(caseId, noteId)
+
+        // SECURITY: Get note from repository with tenant filtering
+        CaseNote note = caseNoteRepository.findByCaseIdAndIdAndOrganizationId(caseId, noteId, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Note not found with ID: " + noteId));
-        
+
         // Convert to DTO
         return mapToDTO(note);
     }
@@ -79,12 +91,14 @@ public class CaseNoteServiceImpl implements CaseNoteService {
     public CaseNoteDTO createNote(CreateCaseNoteRequest request) {
         log.info("Creating note for case ID: {}", request.getCaseId());
         log.info("Request details: {}", request);
-        
+        Long orgId = getRequiredOrganizationId();
+
         // Verify case exists
         legalCaseService.getCase(request.getCaseId());
-        
-        // Create new note entity
+
+        // Create new note entity with organization context
         CaseNote note = new CaseNote();
+        note.setOrganizationId(orgId);  // SECURITY: Set organization context
         note.setCaseId(request.getCaseId());
         note.setUserId(request.getUserId());
         note.setTitle(request.getTitle());
@@ -121,9 +135,10 @@ public class CaseNoteServiceImpl implements CaseNoteService {
     @Override
     public CaseNoteDTO updateNote(Long caseId, Long noteId, UpdateCaseNoteRequest request) {
         log.info("Updating note ID: {} for case ID: {}", noteId, caseId);
-        
-        // Get the existing note
-        CaseNote note = caseNoteRepository.findByCaseIdAndId(caseId, noteId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Get the existing note with tenant filtering
+        CaseNote note = caseNoteRepository.findByCaseIdAndIdAndOrganizationId(caseId, noteId, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Note not found with ID: " + noteId));
         
         // Update fields if provided
@@ -165,11 +180,12 @@ public class CaseNoteServiceImpl implements CaseNoteService {
     @Override
     public void deleteNote(Long caseId, Long noteId) {
         log.info("Deleting note ID: {} for case ID: {}", noteId, caseId);
-        
-        // Verify note exists
-        CaseNote note = caseNoteRepository.findByCaseIdAndId(caseId, noteId)
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify note exists with tenant filtering
+        CaseNote note = caseNoteRepository.findByCaseIdAndIdAndOrganizationId(caseId, noteId, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Note not found with ID: " + noteId));
-        
+
         // Delete from repository
         caseNoteRepository.delete(note);
         log.info("Note deleted successfully");

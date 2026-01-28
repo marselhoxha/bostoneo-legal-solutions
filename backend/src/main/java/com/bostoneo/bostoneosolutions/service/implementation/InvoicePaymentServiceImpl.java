@@ -6,6 +6,9 @@ import com.bostoneo.bostoneosolutions.model.InvoicePayment;
 import com.bostoneo.bostoneosolutions.repository.InvoicePaymentRepository;
 import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
 import com.bostoneo.bostoneosolutions.service.InvoicePaymentService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -24,19 +27,25 @@ public class InvoicePaymentServiceImpl implements InvoicePaymentService {
     
     private final InvoicePaymentRepository<InvoicePayment> paymentRepository;
     private final InvoiceRepository invoiceRepository;
+    private final TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public InvoicePaymentDTO createPayment(InvoicePaymentDTO paymentDTO) {
         log.info("Creating payment for invoice: {}", paymentDTO.getInvoiceId());
-        
-        // Validate invoice exists
-        invoiceRepository.findById(paymentDTO.getInvoiceId())
-            .orElseThrow(() -> new ApiException("Invoice not found"));
-        
-        // Get current user
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = getUserId(auth.getName());
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query to validate invoice exists
+        invoiceRepository.findByIdAndOrganizationId(paymentDTO.getInvoiceId(), orgId)
+            .orElseThrow(() -> new ApiException("Invoice not found or access denied"));
+
+        // Get current user from security context
+        Long userId = getCurrentUserId();
+
         InvoicePayment payment = InvoicePayment.builder()
                 .invoiceId(paymentDTO.getInvoiceId())
                 .paymentDate(paymentDTO.getPaymentDate())
@@ -46,48 +55,61 @@ public class InvoicePaymentServiceImpl implements InvoicePaymentService {
                 .notes(paymentDTO.getNotes())
                 .createdBy(userId)
                 .build();
-        
-        InvoicePayment savedPayment = paymentRepository.create(payment);
-        
+
+        // SECURITY: Use org-filtered create method
+        InvoicePayment savedPayment = paymentRepository.createWithOrganization(payment, orgId);
+
         // Update invoice payment status
         updateInvoicePaymentStatus(paymentDTO.getInvoiceId());
-        
+
         // Convert to DTO
         return convertToDTO(savedPayment);
     }
 
     @Override
     public InvoicePaymentDTO getPayment(Long id) {
-        return paymentRepository.get(id)
-                .map(this::convertToDTO)
-                .orElseThrow(() -> new ApiException("Payment not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        InvoicePayment payment = paymentRepository.getByIdAndOrganization(id, orgId)
+                .orElseThrow(() -> new ApiException("Payment not found or access denied"));
+
+        return convertToDTO(payment);
     }
 
     @Override
     public List<InvoicePaymentDTO> getPaymentsByInvoiceId(Long invoiceId) {
-        return paymentRepository.findByInvoiceId(invoiceId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query (validates invoice belongs to org)
+        return paymentRepository.findByInvoiceIdAndOrganization(invoiceId, orgId);
     }
 
     @Override
     public BigDecimal getTotalPaymentsByInvoiceId(Long invoiceId) {
-        return paymentRepository.getTotalPaymentsByInvoiceId(invoiceId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return paymentRepository.getTotalPaymentsByInvoiceIdAndOrganization(invoiceId, orgId);
     }
 
     @Override
     public void deletePayment(Long id) {
-        InvoicePayment payment = paymentRepository.get(id)
-                .orElseThrow(() -> new ApiException("Payment not found"));
-        
-        paymentRepository.delete(id);
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Get payment with org filter first to get invoiceId for status update
+        InvoicePayment payment = paymentRepository.getByIdAndOrganization(id, orgId)
+                .orElseThrow(() -> new ApiException("Payment not found or access denied"));
+
+        // SECURITY: Delete with org filter
+        paymentRepository.deleteByIdAndOrganization(id, orgId);
+
         // Update invoice payment status after deletion
         updateInvoicePaymentStatus(payment.getInvoiceId());
     }
 
     @Override
     public List<InvoicePaymentDTO> getRecentPayments(int limit) {
+        Long orgId = getRequiredOrganizationId();
         try {
-            return paymentRepository.findRecentPayments(limit);
+            // SECURITY: Use tenant-filtered query
+            return paymentRepository.findRecentPaymentsByOrganization(orgId, limit);
         } catch (Exception e) {
             log.warn("Error fetching recent payments: {}", e.getMessage());
             // Return empty list instead of failing
@@ -97,7 +119,9 @@ public class InvoicePaymentServiceImpl implements InvoicePaymentService {
 
     @Override
     public BigDecimal getTotalPaymentsByDateRange(String startDate, String endDate) {
-        return paymentRepository.getTotalPaymentsByDateRange(startDate, endDate);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return paymentRepository.getTotalPaymentsByDateRangeAndOrganization(orgId, startDate, endDate);
     }
 
     @Override
@@ -126,9 +150,17 @@ public class InvoicePaymentServiceImpl implements InvoicePaymentService {
                 .build();
     }
     
-    private Long getUserId(String username) {
-        // This would typically fetch from user repository
-        // For now, returning a placeholder
-        return 1L;
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof UserDTO) {
+                return ((UserDTO) principal).getId();
+            } else if (principal instanceof UserPrincipal) {
+                return ((UserPrincipal) principal).getUser().getId();
+            }
+        }
+        // SECURITY: Throw exception instead of returning hardcoded ID
+        throw new RuntimeException("Authentication required - could not determine current user");
     }
 }

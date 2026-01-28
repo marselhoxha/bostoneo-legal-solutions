@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.dto.CreateAuditLogRequest;
 import com.bostoneo.bostoneosolutions.dtomapper.AuditLogDTOMapper;
 import com.bostoneo.bostoneosolutions.model.AuditLog;
 import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AuditLogRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.service.SystemAuditService;
@@ -48,14 +49,32 @@ public class SystemAuditServiceImpl implements SystemAuditService {
     private final UserRepository<User> userRepository;
     private final ObjectMapper objectMapper;
     private final JdbcTemplate jdbcTemplate;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required for audit operations"));
+    }
+
+    /**
+     * Helper method to get the current organization ID (optional, for logging)
+     */
+    private Long getOptionalOrganizationId() {
+        return tenantService.getCurrentOrganizationId().orElse(null);
+    }
 
     @Override
     @Async
     public void logActivity(Long userId, AuditLog.AuditAction action, AuditLog.EntityType entityType,
                            Long entityId, String description, String metadata) {
         try {
+            Long orgId = getOptionalOrganizationId();
             AuditLog auditLog = AuditLog.builder()
                     .userId(userId)
+                    .organizationId(orgId) // SECURITY: Set organization ID for tenant isolation
                     .action(action)
                     .entityType(entityType)
                     .entityId(entityId)
@@ -68,7 +87,7 @@ public class SystemAuditServiceImpl implements SystemAuditService {
             enrichWithRequestContext(auditLog);
 
             auditLogRepository.save(auditLog);
-            log.debug("Audit log created: {} {} {} by user {}", action, entityType, entityId, userId);
+            log.debug("Audit log created: {} {} {} by user {} in org {}", action, entityType, entityId, userId, orgId);
         } catch (Exception e) {
             log.error("Failed to log audit activity: {} {} {} by user {}", action, entityType, entityId, userId, e);
         }
@@ -104,11 +123,13 @@ public class SystemAuditServiceImpl implements SystemAuditService {
 
             // Create a proper current timestamp with timezone handling
             LocalDateTime currentTime = createProperTimestamp();
-            
+            Long orgId = getOptionalOrganizationId();
+
             log.debug("🕐 Creating audit log at timestamp: {} (Year: {})", currentTime, currentTime.getYear());
 
             AuditLog auditLog = AuditLog.builder()
                     .userId(userId)
+                    .organizationId(orgId) // SECURITY: Set organization ID for tenant isolation
                     .action(action)
                     .entityType(entityType)
                     .entityId(entityId)
@@ -132,11 +153,13 @@ public class SystemAuditServiceImpl implements SystemAuditService {
         try {
             // Create a proper current timestamp with timezone handling
             LocalDateTime currentTime = createProperTimestamp();
+            Long orgId = getOptionalOrganizationId();
             log.info("🕐 Creating audit log at timestamp: {} (Year: {})", currentTime, currentTime.getYear());
-            
+
             AuditLog auditLog = AuditLogDTOMapper.fromCreateRequest(request);
             auditLog.setTimestamp(currentTime);
-            
+            auditLog.setOrganizationId(orgId); // SECURITY: Set organization ID for tenant isolation
+
             // Auto-populate IP and User Agent if not provided
             if (request.getIpAddress() == null || request.getUserAgent() == null) {
                 enrichWithRequestContext(auditLog);
@@ -166,19 +189,20 @@ public class SystemAuditServiceImpl implements SystemAuditService {
     @Transactional(readOnly = true)
     public AuditActivityResponseDTO getRecentActivities(int limit) {
         try {
-            log.info("Getting recent activities with limit: {}", limit);
-            
-            // Simplified query to avoid complex joins that might cause issues
+            Long orgId = getRequiredOrganizationId();
+            log.info("Getting recent activities with limit: {} for organization: {}", limit, orgId);
+
+            // SECURITY: Use tenant-filtered query
             Pageable pageable = PageRequest.of(0, limit, Sort.by("timestamp").descending());
-            Page<AuditLog> auditPage = auditLogRepository.findAllByOrderByTimestampDesc(pageable);
-            
+            Page<AuditLog> auditPage = auditLogRepository.findByOrganizationIdOrderByTimestampDesc(orgId, pageable);
+
             List<AuditLogDTO> activities = auditPage.getContent().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-            
-            // Get basic counts
+
+            // Get basic counts (also tenant-filtered)
             ActivityCounts counts = getActivityCounts();
-            
+
             // Create basic statistics (simplified to avoid complex queries)
             AuditActivityResponseDTO.ActivityStatistics statistics = new AuditActivityResponseDTO.ActivityStatistics(
                 0L, 0L, "N/A", "N/A", "N/A"
@@ -207,26 +231,32 @@ public class SystemAuditServiceImpl implements SystemAuditService {
     @Override
     @Transactional(readOnly = true)
     public Page<AuditLogDTO> getUserActivities(Long userId, int page, int size) {
+        Long orgId = getRequiredOrganizationId();
         Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp").descending());
-        Page<AuditLog> activities = auditLogRepository.findByUserIdOrderByTimestampDesc(userId, pageable);
-        
+        // SECURITY: Use tenant-filtered query
+        Page<AuditLog> activities = auditLogRepository.findByOrganizationIdAndUserIdOrderByTimestampDesc(orgId, userId, pageable);
+
         return activities.map(this::convertToDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<AuditLogDTO> getActivitiesByDateRange(LocalDateTime startDate, LocalDateTime endDate, int page, int size) {
+        Long orgId = getRequiredOrganizationId();
         Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp").descending());
-        Page<AuditLog> activities = auditLogRepository.findByTimestampBetweenOrderByTimestampDesc(startDate, endDate, pageable);
-        
+        // SECURITY: Use tenant-filtered query
+        Page<AuditLog> activities = auditLogRepository.findByOrganizationIdAndTimestampBetweenOrderByTimestampDesc(orgId, startDate, endDate, pageable);
+
         return activities.map(this::convertToDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<AuditLogDTO> getEntityActivities(AuditLog.EntityType entityType, Long entityId) {
-        List<AuditLog> activities = auditLogRepository.findByEntityTypeAndEntityIdOrderByTimestampDesc(entityType, entityId);
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<AuditLog> activities = auditLogRepository.findByOrganizationIdAndEntityTypeAndEntityIdOrderByTimestampDesc(orgId, entityType, entityId);
+
         return activities.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -236,15 +266,18 @@ public class SystemAuditServiceImpl implements SystemAuditService {
     @Transactional(readOnly = true)
     public AuditActivityResponseDTO.ActivityStatistics getActivityStatistics() {
         try {
-            // Simplified statistics to avoid complex queries that might fail
-            long totalUsers = auditLogRepository.count() > 0 ? 10L : 0L; // Approximate
-            long activeUsersToday = 0L;
+            Long orgId = getRequiredOrganizationId();
+            LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+            LocalDateTime endOfDay = startOfDay.plusDays(1);
+
+            // SECURITY: Use tenant-filtered queries
+            long activeUsersToday = auditLogRepository.countUniqueActiveUsersTodayByOrganization(orgId, startOfDay, endOfDay);
 
             return new AuditActivityResponseDTO.ActivityStatistics(
-                    totalUsers,
+                    0L, // totalUsers - simplified
                     activeUsersToday,
                     "N/A",
-                    "N/A", 
+                    "N/A",
                     "N/A"
             );
         } catch (Exception e) {
@@ -257,10 +290,17 @@ public class SystemAuditServiceImpl implements SystemAuditService {
     @Transactional(readOnly = true)
     public ActivityCounts getActivityCounts() {
         try {
-            long total = auditLogRepository.count();
-            // Simplified counts to avoid complex date queries that might fail
-            long today = 0;
-            long week = Math.min(total, 20); // Approximate week count
+            Long orgId = getRequiredOrganizationId();
+            LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+            LocalDateTime endOfDay = startOfDay.plusDays(1);
+            LocalDateTime weekStart = LocalDateTime.now().minusDays(7);
+
+            // SECURITY: Use tenant-filtered queries
+            long today = auditLogRepository.countTodayActivitiesByOrganization(orgId, startOfDay, endOfDay);
+            long week = auditLogRepository.countWeekActivitiesByOrganization(orgId, weekStart);
+            // For total, we need a count by organization - using the week query as approximation
+            Pageable all = PageRequest.of(0, 1);
+            long total = auditLogRepository.findByOrganizationIdOrderByTimestampDesc(orgId, all).getTotalElements();
 
             return new ActivityCounts(total, today, week);
         } catch (Exception e) {
@@ -538,16 +578,18 @@ public class SystemAuditServiceImpl implements SystemAuditService {
      */
     public void createTestAuditEntries() {
         log.info("🧪 Creating test audit entries for timestamp debugging");
-        
+
         LocalDateTime now = createProperTimestamp();
-        log.info("🧪 Base timestamp for test entries: {}", now);
-        
+        Long orgId = getOptionalOrganizationId();
+        log.info("🧪 Base timestamp for test entries: {}, orgId: {}", now, orgId);
+
         // Create test entries with different timestamps
         try {
             // Entry from 30 seconds ago
             LocalDateTime thirtySecondsAgo = now.minusSeconds(30);
             AuditLog test1 = AuditLog.builder()
                     .userId(1L)
+                    .organizationId(orgId) // SECURITY: Set organization ID
                     .action(AuditLog.AuditAction.UPDATE)
                     .entityType(AuditLog.EntityType.CUSTOMER)
                     .entityId(1L)
@@ -556,11 +598,12 @@ public class SystemAuditServiceImpl implements SystemAuditService {
                     .build();
             auditLogRepository.save(test1);
             log.info("🧪 Created test entry 1: {} seconds ago - {}", 30, thirtySecondsAgo);
-            
+
             // Entry from 5 minutes ago
             LocalDateTime fiveMinutesAgo = now.minusMinutes(5);
             AuditLog test2 = AuditLog.builder()
                     .userId(1L)
+                    .organizationId(orgId) // SECURITY: Set organization ID
                     .action(AuditLog.AuditAction.CREATE)
                     .entityType(AuditLog.EntityType.DOCUMENT)
                     .entityId(2L)
@@ -569,11 +612,12 @@ public class SystemAuditServiceImpl implements SystemAuditService {
                     .build();
             auditLogRepository.save(test2);
             log.info("🧪 Created test entry 2: {} minutes ago - {}", 5, fiveMinutesAgo);
-            
+
             // Entry from 1 hour ago
             LocalDateTime oneHourAgo = now.minusHours(1);
             AuditLog test3 = AuditLog.builder()
                     .userId(1L)
+                    .organizationId(orgId) // SECURITY: Set organization ID
                     .action(AuditLog.AuditAction.DELETE)
                     .entityType(AuditLog.EntityType.EXPENSE)
                     .entityId(3L)
@@ -582,11 +626,12 @@ public class SystemAuditServiceImpl implements SystemAuditService {
                     .build();
             auditLogRepository.save(test3);
             log.info("🧪 Created test entry 3: {} hour ago - {}", 1, oneHourAgo);
-            
+
             // Entry from 2 days ago
             LocalDateTime twoDaysAgo = now.minusDays(2);
             AuditLog test4 = AuditLog.builder()
                     .userId(1L)
+                    .organizationId(orgId) // SECURITY: Set organization ID
                     .action(AuditLog.AuditAction.CREATE)
                     .entityType(AuditLog.EntityType.CASE)
                     .entityId(4L)
@@ -595,9 +640,9 @@ public class SystemAuditServiceImpl implements SystemAuditService {
                     .build();
             auditLogRepository.save(test4);
             log.info("🧪 Created test entry 4: {} days ago - {}", 2, twoDaysAgo);
-            
+
             log.info("✅ Created 4 test audit entries with various timestamps");
-            
+
         } catch (Exception e) {
             log.error("❌ Failed to create test audit entries", e);
         }

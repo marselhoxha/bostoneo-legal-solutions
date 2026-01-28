@@ -8,6 +8,7 @@ import com.bostoneo.bostoneosolutions.model.InvoiceTemplateItem;
 import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.repository.InvoiceTemplateRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,20 +26,28 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional
 public class InvoiceTemplateService {
-    
+
     private final InvoiceTemplateRepository templateRepository;
     private final UserRepository userRepository;
-    
+    private final TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
     public InvoiceTemplateDTO createTemplate(InvoiceTemplateDTO dto, Long userId) {
         log.info("Creating new invoice template: {}", dto.getName());
-        
-        // Check if name already exists
-        if (templateRepository.findByName(dto.getName()).isPresent()) {
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Check if name already exists within this organization
+        if (templateRepository.findByOrganizationIdAndName(orgId, dto.getName()).isPresent()) {
             throw new RuntimeException("Template with name '" + dto.getName() + "' already exists");
         }
-        
+
         InvoiceTemplate template = mapToEntity(dto);
-        
+        template.setOrganizationId(orgId); // SECURITY: Set organization ID
+
         // Set creator
         if (userId != null) {
             try {
@@ -48,31 +57,33 @@ public class InvoiceTemplateService {
                 log.warn("Could not find user with id: {}", userId);
             }
         }
-        
-        // If this is set as default, unset other defaults
+
+        // If this is set as default, unset other defaults within this organization
         if (Boolean.TRUE.equals(dto.getIsDefault())) {
-            templateRepository.findByIsDefaultTrue().ifPresent(existing -> {
+            templateRepository.findByOrganizationIdAndIsDefaultTrue(orgId).ifPresent(existing -> {
                 existing.setIsDefault(false);
                 templateRepository.save(existing);
             });
         }
-        
+
         InvoiceTemplate saved = templateRepository.save(template);
         return mapToDTO(saved);
     }
     
     public InvoiceTemplateDTO updateTemplate(Long id, InvoiceTemplateDTO dto) {
         log.info("Updating invoice template: {}", id);
-        
-        InvoiceTemplate template = templateRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Template not found with id: " + id));
-        
-        // Check if name is being changed and already exists
-        if (!template.getName().equals(dto.getName()) && 
-            templateRepository.existsByNameAndIdNot(dto.getName(), id)) {
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        InvoiceTemplate template = templateRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Template not found or access denied: " + id));
+
+        // SECURITY: Check if name is being changed and already exists within this organization
+        if (!template.getName().equals(dto.getName()) &&
+            templateRepository.existsByOrganizationIdAndNameAndIdNot(orgId, dto.getName(), id)) {
             throw new RuntimeException("Template with name '" + dto.getName() + "' already exists");
         }
-        
+
         // Update fields
         template.setName(dto.getName());
         template.setDescription(dto.getDescription());
@@ -88,10 +99,10 @@ public class InvoiceTemplateService {
         template.setPrimaryColor(dto.getPrimaryColor());
         template.setSecondaryColor(dto.getSecondaryColor());
         template.setFontFamily(dto.getFontFamily());
-        
-        // Handle default flag
+
+        // Handle default flag - only within this organization
         if (Boolean.TRUE.equals(dto.getIsDefault()) && !template.getIsDefault()) {
-            templateRepository.findByIsDefaultTrue().ifPresent(existing -> {
+            templateRepository.findByOrganizationIdAndIsDefaultTrue(orgId).ifPresent(existing -> {
                 if (!existing.getId().equals(id)) {
                     existing.setIsDefault(false);
                     templateRepository.save(existing);
@@ -120,47 +131,61 @@ public class InvoiceTemplateService {
     }
     
     public Page<InvoiceTemplateDTO> getTemplates(int page, int size, String sortBy, String sortDirection) {
-        Sort sort = sortDirection.equalsIgnoreCase("ASC") ? 
+        Long orgId = getRequiredOrganizationId();
+        Sort sort = sortDirection.equalsIgnoreCase("ASC") ?
             Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        
-        return templateRepository.findAll(pageable).map(this::mapToDTO);
+
+        // SECURITY: Use tenant-filtered query
+        return templateRepository.findByOrganizationId(orgId, pageable).map(this::mapToDTO);
     }
-    
+
     public Page<InvoiceTemplateDTO> getActiveTemplates(int page, int size) {
+        Long orgId = getRequiredOrganizationId();
         Pageable pageable = PageRequest.of(page, size, Sort.by("name"));
-        return templateRepository.findByIsActiveTrue(pageable).map(this::mapToDTO);
+        // SECURITY: Use tenant-filtered query
+        return templateRepository.findByOrganizationIdAndIsActiveTrue(orgId, pageable).map(this::mapToDTO);
     }
-    
+
     public List<InvoiceTemplateDTO> getActiveTemplatesList() {
-        return templateRepository.findByIsActiveTrueOrderByName()
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return templateRepository.findByOrganizationIdAndIsActiveTrueOrderByName(orgId)
             .stream()
             .map(this::mapToDTO)
             .collect(Collectors.toList());
     }
-    
+
     public InvoiceTemplateDTO getTemplateById(Long id) {
-        return templateRepository.findById(id)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return templateRepository.findByIdAndOrganizationId(id, orgId)
             .map(this::mapToDTO)
-            .orElseThrow(() -> new RuntimeException("Template not found with id: " + id));
+            .orElseThrow(() -> new RuntimeException("Template not found or access denied: " + id));
     }
-    
+
     public InvoiceTemplateDTO getDefaultTemplate() {
-        return templateRepository.findByIsDefaultTrue()
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return templateRepository.findByOrganizationIdAndIsDefaultTrue(orgId)
             .map(this::mapToDTO)
             .orElse(null);
     }
-    
+
     public void deleteTemplate(Long id) {
-        if (!templateRepository.existsById(id)) {
-            throw new RuntimeException("Template not found with id: " + id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before deletion
+        if (!templateRepository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new RuntimeException("Template not found or access denied: " + id);
         }
         templateRepository.deleteById(id);
     }
-    
+
     public Invoice applyTemplateToInvoice(Invoice invoice, Long templateId) {
-        InvoiceTemplate template = templateRepository.findById(templateId)
-            .orElseThrow(() -> new RuntimeException("Template not found with id: " + templateId));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        InvoiceTemplate template = templateRepository.findByIdAndOrganizationId(templateId, orgId)
+            .orElseThrow(() -> new RuntimeException("Template not found or access denied: " + templateId));
         
         // Apply template settings
         invoice.setTaxRate(template.getTaxRate());

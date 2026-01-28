@@ -10,6 +10,7 @@ import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
 import com.bostoneo.bostoneosolutions.model.CaseAssignment;
 import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -38,23 +39,31 @@ public class DocumentVersionServiceImpl implements DocumentVersionService {
     private final LegalDocumentRepository documentRepository;
     private final NotificationService notificationService;
     private final CaseAssignmentRepository caseAssignmentRepository;
-    
+    private final TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
     // Base directory for document storage
     private final String BASE_UPLOAD_DIR = System.getProperty("user.home") + "/bostoneosolutions/documents/";
 
     @Override
     public CustomHttpResponse<DocumentVersion> getVersionById(Long id) {
         log.info("Retrieving document version with ID: {}", id);
-        
-        Optional<DocumentVersion> versionOpt = versionRepository.findById(id);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Optional<DocumentVersion> versionOpt = versionRepository.findByIdAndOrganizationId(id, orgId);
         if (versionOpt.isEmpty()) {
-            log.error("Document version with ID {} not found", id);
-            throw new DocumentNotFoundException("Document version not found");
+            log.error("Document version with ID {} not found or access denied", id);
+            throw new DocumentNotFoundException("Document version not found or access denied");
         }
-        
+
         return new CustomHttpResponse<>(
             HttpStatus.OK.value(),
-            "Document version retrieved successfully", 
+            "Document version retrieved successfully",
             versionOpt.get()
         );
     }
@@ -62,13 +71,14 @@ public class DocumentVersionServiceImpl implements DocumentVersionService {
     @Override
     public CustomHttpResponse<List<DocumentVersion>> getVersionsByDocumentId(Long documentId) {
         log.info("Retrieving versions for document ID: {}", documentId);
-        
-        // Check if document exists
-        if (!documentRepository.existsById(documentId)) {
-            log.error("Document with ID {} not found", documentId);
-            throw new DocumentNotFoundException("Document not found");
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Check if document exists AND belongs to current organization
+        if (!documentRepository.existsByIdAndOrganizationId(documentId, orgId)) {
+            log.error("Document with ID {} not found or access denied", documentId);
+            throw new DocumentNotFoundException("Document not found or access denied");
         }
-        
+
         List<DocumentVersion> versions = versionRepository.findByDocumentIdOrderByVersionNumberDesc(documentId);
         
         return new CustomHttpResponse<>(
@@ -81,15 +91,16 @@ public class DocumentVersionServiceImpl implements DocumentVersionService {
     @Override
     public CustomHttpResponse<DocumentVersion> uploadNewVersion(Long documentId, MultipartFile file, String comment, Long uploadedBy) {
         log.info("Uploading new version for document ID: {}", documentId);
-        
+        Long orgId = getRequiredOrganizationId();
+
         try {
-            // Find the document first
-            Optional<LegalDocument> documentOpt = documentRepository.findById(documentId);
+            // SECURITY: Use tenant-filtered query
+            Optional<LegalDocument> documentOpt = documentRepository.findByIdAndOrganizationId(documentId, orgId);
             if (documentOpt.isEmpty()) {
-                log.error("Document with ID {} not found", documentId);
-                throw new DocumentNotFoundException("Document not found");
+                log.error("Document with ID {} not found or access denied", documentId);
+                throw new DocumentNotFoundException("Document not found or access denied");
             }
-            
+
             LegalDocument document = documentOpt.get();
             
             // Determine the next version number
@@ -145,9 +156,9 @@ public class DocumentVersionServiceImpl implements DocumentVersionService {
                 
                 Set<Long> notificationUserIds = new HashSet<>();
                 
-                // Get users assigned to the case if this document is related to a case
-                if (document.getCaseId() != null) {
-                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseId(document.getCaseId());
+                // SECURITY: Get users assigned to the case if this document is related to a case (with org filter)
+                if (document.getCaseId() != null && document.getOrganizationId() != null) {
+                    List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(document.getCaseId(), document.getOrganizationId());
                     for (CaseAssignment assignment : caseAssignments) {
                         if (assignment.getAssignedTo() != null) {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
@@ -191,15 +202,16 @@ public class DocumentVersionServiceImpl implements DocumentVersionService {
     @Override
     public byte[] downloadVersion(Long documentId, Long versionId) {
         log.info("Downloading version {} for document {}", versionId, documentId);
-        
+        Long orgId = getRequiredOrganizationId();
+
         try {
-            // Find the version
-            Optional<DocumentVersion> versionOpt = versionRepository.findById(versionId);
+            // SECURITY: Use tenant-filtered query
+            Optional<DocumentVersion> versionOpt = versionRepository.findByIdAndOrganizationId(versionId, orgId);
             if (versionOpt.isEmpty()) {
-                log.error("Document version with ID {} not found", versionId);
-                throw new DocumentNotFoundException("Document version not found");
+                log.error("Document version with ID {} not found or access denied", versionId);
+                throw new DocumentNotFoundException("Document version not found or access denied");
             }
-            
+
             DocumentVersion version = versionOpt.get();
             
             // Verify that this version belongs to the specified document

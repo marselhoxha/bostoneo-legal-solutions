@@ -28,6 +28,12 @@ public class ConflictCheckServiceImpl implements ConflictCheckService {
 
     private final ConflictCheckRepository conflictCheckRepository;
     private final ObjectMapper objectMapper;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public ConflictCheck save(ConflictCheck conflictCheck) {
@@ -37,46 +43,68 @@ public class ConflictCheckServiceImpl implements ConflictCheckService {
     @Override
     @Transactional(readOnly = true)
     public Optional<ConflictCheck> findById(Long id) {
-        return conflictCheckRepository.findById(id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return conflictCheckRepository.findByIdAndOrganizationId(id, orgId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ConflictCheck> findAll(Pageable pageable) {
-        return conflictCheckRepository.findAll(pageable);
+        // Note: This method needs tenant filtering but Page return type requires custom query
+        // For now, fetching all and filtering - consider adding pagination to repository
+        Long orgId = getRequiredOrganizationId();
+        List<ConflictCheck> filtered = conflictCheckRepository.findByOrganizationIdOrderByCreatedAtDesc(orgId);
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), filtered.size());
+        return new org.springframework.data.domain.PageImpl<>(
+            filtered.subList(start, end), pageable, filtered.size());
     }
 
     @Override
     public void deleteById(Long id) {
-        conflictCheckRepository.deleteById(id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before deletion
+        ConflictCheck conflictCheck = conflictCheckRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("ConflictCheck not found or access denied: " + id));
+        conflictCheckRepository.delete(conflictCheck);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ConflictCheck> findByEntityTypeAndEntityId(String entityType, Long entityId) {
-        return conflictCheckRepository.findByEntityTypeAndEntityId(entityType, entityId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return conflictCheckRepository.findByOrganizationIdAndEntityTypeAndEntityId(orgId, entityType, entityId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ConflictCheck> findByStatus(String status) {
-        return conflictCheckRepository.findByStatus(status);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return conflictCheckRepository.findByOrganizationIdAndStatus(orgId, status);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ConflictCheck> findByCheckType(String checkType) {
-        return conflictCheckRepository.findByCheckType(checkType);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return conflictCheckRepository.findByOrganizationIdAndCheckType(orgId, checkType);
     }
 
     @Override
     public ConflictCheck performConflictCheck(String entityType, Long entityId, String checkType,
                                             List<String> searchTerms, Map<String, Object> searchParameters) {
-        log.info("Performing conflict check for entity: {} with ID: {}, type: {}", 
+        log.info("Performing conflict check for entity: {} with ID: {}, type: {}",
                 entityType, entityId, checkType);
+
+        Long orgId = getRequiredOrganizationId();
 
         try {
             ConflictCheck conflictCheck = ConflictCheck.builder()
+                    .organizationId(orgId) // SECURITY: Set organization ID when creating
                     .entityType(entityType)
                     .entityId(entityId)
                     .checkType(checkType)
@@ -213,15 +241,19 @@ public class ConflictCheckServiceImpl implements ConflictCheckService {
     @Override
     @Transactional(readOnly = true)
     public List<ConflictCheck> findUnresolvedConflicts() {
+        Long orgId = getRequiredOrganizationId();
         List<String> unresolvedStatuses = Arrays.asList("CONFLICT_FOUND", "POTENTIAL_CONFLICT", "WAIVER_REQUIRED");
-        return conflictCheckRepository.findByStatusIn(unresolvedStatuses);
+        // SECURITY: Use tenant-filtered query
+        return conflictCheckRepository.findByOrganizationIdAndStatusIn(orgId, unresolvedStatuses);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ConflictCheck> findExpiredConflictChecks() {
+        Long orgId = getRequiredOrganizationId();
         Timestamp now = new Timestamp(System.currentTimeMillis());
-        return conflictCheckRepository.findByExpiresAtBefore(now);
+        // SECURITY: Use tenant-filtered query
+        return conflictCheckRepository.findByOrganizationIdAndExpiresAtBefore(orgId, now);
     }
 
     @Override
@@ -252,34 +284,40 @@ public class ConflictCheckServiceImpl implements ConflictCheckService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> getConflictCheckStatsByStatus() {
+        Long orgId = getRequiredOrganizationId();
         Map<String, Long> stats = new HashMap<>();
-        List<Object[]> results = conflictCheckRepository.countByStatusGrouped();
-        
+        // SECURITY: Use tenant-filtered query
+        List<Object[]> results = conflictCheckRepository.countByOrganizationIdGroupedByStatus(orgId);
+
         for (Object[] result : results) {
             stats.put((String) result[0], (Long) result[1]);
         }
-        
+
         return stats;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> getConflictCheckStatsByType() {
+        Long orgId = getRequiredOrganizationId();
         Map<String, Long> stats = new HashMap<>();
-        List<Object[]> results = conflictCheckRepository.countByCheckTypeGrouped();
-        
+        // SECURITY: Use tenant-filtered query
+        List<Object[]> results = conflictCheckRepository.countByOrganizationIdGroupedByCheckType(orgId);
+
         for (Object[] result : results) {
             stats.put((String) result[0], (Long) result[1]);
         }
-        
+
         return stats;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ConflictCheck> getRecentConflictChecks(int limit) {
-        Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return conflictCheckRepository.findAll(pageable).getContent();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<ConflictCheck> all = conflictCheckRepository.findByOrganizationIdOrderByCreatedAtDesc(orgId);
+        return all.stream().limit(limit).collect(java.util.stream.Collectors.toList());
     }
 
     // Private helper methods

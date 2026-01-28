@@ -29,4 +29,14 @@ public interface EmailService {
     }
     
     void sendNotificationEmail(String to, String firstName, String title, String message, String notificationType);
+
+    /**
+     * Send organization invitation email
+     * @param email Recipient email address
+     * @param organizationName Name of the organization
+     * @param role Role being offered
+     * @param inviteUrl URL to accept the invitation
+     * @param expirationDays Number of days until invitation expires
+     */
+    void sendInvitationEmail(String email, String organizationName, String role, String inviteUrl, int expirationDays);
 }

@@ -14,6 +14,7 @@ import com.bostoneo.bostoneosolutions.repository.SignatureRequestRepository;
 import com.bostoneo.bostoneosolutions.service.EmailService;
 import com.bostoneo.bostoneosolutions.service.OrganizationTwilioService;
 import com.bostoneo.bostoneosolutions.service.SignatureReminderService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,8 +39,14 @@ public class SignatureReminderServiceImpl implements SignatureReminderService {
     private final OrganizationRepository organizationRepository;
     private final OrganizationTwilioService organizationTwilioService;
     private final EmailService emailService;
+    private final TenantService tenantService;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMMM d, yyyy");
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public void scheduleReminders(SignatureRequest signatureRequest) {
@@ -143,11 +150,14 @@ public class SignatureReminderServiceImpl implements SignatureReminderService {
 
     @Override
     public boolean sendReminder(SignatureReminderQueue reminder) {
-        SignatureRequest request = signatureRequestRepository.findById(reminder.getSignatureRequestId())
+        // SECURITY: Use org-filtered query to ensure request belongs to same org as reminder
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(
+                reminder.getSignatureRequestId(), reminder.getOrganizationId())
                 .orElse(null);
 
         if (request == null) {
-            log.warn("Signature request {} not found for reminder {}", reminder.getSignatureRequestId(), reminder.getId());
+            log.warn("Signature request {} not found for reminder {} (org: {})",
+                    reminder.getSignatureRequestId(), reminder.getId(), reminder.getOrganizationId());
             return false;
         }
 
@@ -257,8 +267,11 @@ public class SignatureReminderServiceImpl implements SignatureReminderService {
 
     @Override
     public void sendImmediateReminder(Long signatureRequestId, Long userId) {
-        SignatureRequest request = signatureRequestRepository.findById(signatureRequestId)
-                .orElseThrow(() -> new ApiException("Signature request not found"));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(signatureRequestId, orgId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
 
         if (!request.isPending()) {
             throw new ApiException("Cannot send reminder for non-pending request");
@@ -312,7 +325,9 @@ public class SignatureReminderServiceImpl implements SignatureReminderService {
     @Override
     @Transactional(readOnly = true)
     public List<SignatureReminderQueue> getPendingReminders(Long signatureRequestId) {
-        return reminderQueueRepository.findBySignatureRequestIdAndStatus(signatureRequestId, ReminderStatus.PENDING);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return reminderQueueRepository.findByOrganizationIdAndSignatureRequestIdAndStatus(orgId, signatureRequestId, ReminderStatus.PENDING);
     }
 
     @Override

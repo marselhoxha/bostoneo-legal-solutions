@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.model.AICriminalMotion;
 import com.bostoneo.bostoneosolutions.enumeration.CriminalCaseType;
 import com.bostoneo.bostoneosolutions.enumeration.CriminalCaseStatus;
 import com.bostoneo.bostoneosolutions.enumeration.MotionType;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AICriminalCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.AICriminalMotionRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
 
     private final AICriminalCaseRepository caseRepository;
     private final AICriminalMotionRepository motionRepository;
+    private final TenantService tenantService;
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMMM d, yyyy");
 
@@ -36,6 +38,8 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
     @Override
     public AICriminalCase createCriminalCase(AICriminalCase criminalCase) {
         log.info("Creating criminal case with docket number: {}", criminalCase.getDocketNumber());
+        // SECURITY: Set organization ID from current tenant context
+        criminalCase.setOrganizationId(tenantService.requireCurrentOrganizationId());
         criminalCase.setCreatedAt(LocalDateTime.now());
         criminalCase.setUpdatedAt(LocalDateTime.now());
         return caseRepository.save(criminalCase);
@@ -61,7 +65,9 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
 
     @Override
     public AICriminalCase getCriminalCaseById(Long id) {
-        return caseRepository.findById(id)
+        // SECURITY: Use tenant-filtered lookup to prevent cross-tenant access
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return caseRepository.findByIdAndOrganizationId(id, orgId)
             .orElseThrow(() -> new RuntimeException("Criminal case not found with ID: " + id));
     }
 
@@ -80,7 +86,11 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
     @Override
     public void deleteCriminalCase(Long id) {
         log.info("Deleting criminal case ID: {}", id);
-        caseRepository.deleteById(id);
+        // SECURITY: Verify case belongs to current tenant before deleting
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        AICriminalCase existing = caseRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Criminal case not found with ID: " + id));
+        caseRepository.delete(existing);
     }
 
     // Motion Practice

@@ -8,6 +8,7 @@ import com.bostoneo.bostoneosolutions.model.*;
 import com.bostoneo.bostoneosolutions.repository.*;
 import com.bostoneo.bostoneosolutions.service.CaseAssignmentService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 // import com.bostoneo.bostoneosolutions.service.UserService; // Temporarily commented
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,16 +43,23 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     private final LegalCaseRepository legalCaseRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final TenantService tenantService;
     // private final UserService userService; // Temporarily commented to avoid circular dependency
     private final SmartAssignmentAlgorithm smartAssignmentAlgorithm;
-    
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
     @Override
     public CaseAssignmentDTO assignCase(CaseAssignmentRequest request) {
         log.info("Assigning case {} to user {}", request.getCaseId(), request.getUserId());
-        
+        Long orgId = getRequiredOrganizationId();
+
         // Validate request
         validateAssignmentRequest(request);
-        
+
         // Check if user already assigned
         List<CaseAssignment> existing = assignmentRepository
             .findAllByCaseIdAndUserIdAndActive(request.getCaseId(), request.getUserId(), true);
@@ -59,10 +67,10 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         if (!existing.isEmpty()) {
             throw new ApiException("User already assigned to this case");
         }
-        
-        // Get entities
-        LegalCase legalCase = legalCaseRepository.findById(request.getCaseId())
-            .orElseThrow(() -> new ApiException(String.format("Legal case not found with ID: %d. Please verify the case exists.", request.getCaseId())));
+
+        // SECURITY: Use tenant-filtered query
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(request.getCaseId(), orgId)
+            .orElseThrow(() -> new ApiException(String.format("Legal case not found or access denied: %d", request.getCaseId())));
         User assignedTo = userRepository.get(request.getUserId());
         if (assignedTo == null) {
             throw new ApiException(String.format("User not found with ID: %d", request.getUserId()));
@@ -114,9 +122,11 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     @Override
     public CaseAssignmentDTO autoAssignCase(Long caseId) {
         log.info("Auto-assigning case {}", caseId);
-        
-        LegalCase legalCase = legalCaseRepository.findById(caseId)
-            .orElseThrow(() -> new ApiException("Case not found"));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+            .orElseThrow(() -> new ApiException("Case not found or access denied"));
         
         // Use smart assignment algorithm
         AssignmentRecommendation recommendation = smartAssignmentAlgorithm
@@ -172,12 +182,13 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     
     @Override
     public CaseAssignmentDTO transferCase(com.bostoneo.bostoneosolutions.dto.CaseTransferRequest request) {
-        log.info("Transferring case {} from user {} to user {}", 
+        log.info("Transferring case {} from user {} to user {}",
             request.getCaseId(), request.getFromUserId(), request.getToUserId());
-        
-        // Create transfer request
-        LegalCase legalCase = legalCaseRepository.findById(request.getCaseId())
-            .orElseThrow(() -> new ApiException("Case not found"));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(request.getCaseId(), orgId)
+            .orElseThrow(() -> new ApiException("Case not found or access denied"));
         User fromUser = userRepository.get(request.getFromUserId());
         if (fromUser == null) {
             throw new ApiException("From user not found");
@@ -217,24 +228,25 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     @Override
     public void unassignCase(Long caseId, Long userId, String reason) {
         log.info("Unassigning user {} from case {}", userId, caseId);
+        Long orgId = getRequiredOrganizationId();
 
-        // Debug: Check all assignments for this case
-        List<CaseAssignment> allCaseAssignments = assignmentRepository.findActiveByCaseId(caseId);
+        // Debug: Check all assignments for this case - SECURITY: use org-filtered query
+        List<CaseAssignment> allCaseAssignments = assignmentRepository.findActiveByCaseIdAndOrganizationId(caseId, orgId);
         log.info("All active assignments for case {}: {}", caseId, allCaseAssignments.size());
         for (CaseAssignment ca : allCaseAssignments) {
             log.info("  - Assignment ID: {}, User ID: {}, Active: {}", ca.getId(), ca.getAssignedTo().getId(), ca.isActive());
         }
 
-        // Find all active assignments for this user/case (handles duplicates)
+        // Find all active assignments for this user/case (handles duplicates) - SECURITY: use org-filtered query
         List<CaseAssignment> assignments = assignmentRepository
-            .findAllByCaseIdAndUserIdAndActive(caseId, userId, true);
+            .findAllByCaseIdAndUserIdAndActiveAndOrganizationId(caseId, userId, true, orgId);
 
         log.info("Found {} assignments for caseId={}, userId={}, active=true", assignments.size(), caseId, userId);
 
         if (assignments.isEmpty()) {
-            // Try to find any assignment (including inactive) for debugging
+            // Try to find any assignment (including inactive) for debugging - SECURITY: use org-filtered query
             List<CaseAssignment> anyAssignments = assignmentRepository
-                .findAllByCaseIdAndUserIdAndActive(caseId, userId, false);
+                .findAllByCaseIdAndUserIdAndActiveAndOrganizationId(caseId, userId, false, orgId);
             log.warn("No active assignments found. Inactive assignments for same user/case: {}", anyAssignments.size());
             throw new ApiException("Assignment not found");
         }
@@ -261,7 +273,10 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     public List<CaseAssignmentDTO> getAllAssignments() {
         try {
             log.debug("Getting all case assignments");
-            List<CaseAssignment> assignments = assignmentRepository.findAll();
+            // Use tenant-filtered query
+            List<CaseAssignment> assignments = tenantService.getCurrentOrganizationId()
+                .map(orgId -> assignmentRepository.findByOrganizationId(orgId))
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
             return assignments.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -275,7 +290,10 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     public Page<CaseAssignmentDTO> getAllAssignments(Pageable pageable) {
         try {
             log.debug("Getting all case assignments with pagination: {}", pageable);
-            Page<CaseAssignment> assignmentsPage = assignmentRepository.findByActiveTrue(pageable);
+            // Use tenant-filtered query
+            Page<CaseAssignment> assignmentsPage = tenantService.getCurrentOrganizationId()
+                .map(orgId -> assignmentRepository.findByOrganizationIdAndActiveTrue(orgId, pageable))
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
             return assignmentsPage.map(this::mapToDTO);
         } catch (Exception e) {
             log.error("Error fetching all assignments with pagination: {}", e.getMessage(), e);
@@ -287,7 +305,14 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     public List<CaseAssignmentDTO> getCaseAssignments(Long caseId) {
         try {
             log.debug("Getting case assignments for case {}", caseId);
-            List<CaseAssignment> assignments = assignmentRepository.findActiveByCaseId(caseId);
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Verify case belongs to current organization
+            if (!legalCaseRepository.existsByIdAndOrganizationId(caseId, orgId)) {
+                log.warn("Case {} not found or access denied for org {}", caseId, orgId);
+                return Collections.emptyList();
+            }
+            // SECURITY: Use tenant-filtered query
+            List<CaseAssignment> assignments = assignmentRepository.findActiveByCaseIdAndOrganizationId(caseId, orgId);
             return assignments.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -297,12 +322,20 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             return Collections.emptyList();
         }
     }
-    
+
     @Override
     public Page<CaseAssignmentDTO> getUserAssignments(Long userId, Pageable pageable) {
         try {
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Verify user belongs to current organization
+            User user = userRepository.get(userId);
+            if (user == null || !orgId.equals(user.getOrganizationId())) {
+                log.warn("User {} not found or access denied for org {}", userId, orgId);
+                return new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+            // SECURITY: Use tenant-filtered query
             Page<CaseAssignment> assignments = assignmentRepository
-                .findByUserIdWithPagination(userId, pageable);
+                .findByOrganizationIdAndUserId(orgId, userId, pageable);
             return assignments.map(this::mapToDTO);
         } catch (Exception e) {
             log.warn("Error fetching user assignments for user {}: {}", userId, e.getMessage());
@@ -313,16 +346,30 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     
     @Override
     public CaseAssignmentDTO getPrimaryAssignment(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify case belongs to current organization
+        if (!legalCaseRepository.existsByIdAndOrganizationId(caseId, orgId)) {
+            log.warn("Case {} not found or access denied for org {}", caseId, orgId);
+            return null;
+        }
+        // SECURITY: Use tenant-filtered query
         Optional<CaseAssignment> assignment = assignmentRepository
-            .findByCaseIdAndRoleType(caseId, CaseRoleType.LEAD_ATTORNEY);
+            .findByCaseIdAndRoleTypeAndOrganizationId(caseId, CaseRoleType.LEAD_ATTORNEY, orgId);
         return assignment.map(this::mapToDTO).orElse(null);
     }
-    
+
     @Override
     public List<CaseAssignmentDTO> getTeamMembers(Long caseId) {
         try {
             log.debug("Getting team members for case {}", caseId);
-            List<CaseAssignment> assignments = assignmentRepository.findActiveByCaseId(caseId);
+            Long orgId = getRequiredOrganizationId();
+            // SECURITY: Verify case belongs to current organization
+            if (!legalCaseRepository.existsByIdAndOrganizationId(caseId, orgId)) {
+                log.warn("Case {} not found or access denied for org {}", caseId, orgId);
+                return Collections.emptyList();
+            }
+            // SECURITY: Use tenant-filtered query
+            List<CaseAssignment> assignments = assignmentRepository.findActiveByCaseIdAndOrganizationId(caseId, orgId);
             return assignments.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -332,14 +379,15 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             return Collections.emptyList();
         }
     }
-    
+
     @Override
     public UserWorkloadDTO calculateUserWorkload(Long userId) {
         log.debug("Calculating workload for user {}", userId);
-        
+        Long orgId = getRequiredOrganizationId();
+
         User user = userRepository.get(userId);
-        if (user == null) {
-            log.warn("User with ID {} not found, returning empty workload", userId);
+        if (user == null || !orgId.equals(user.getOrganizationId())) {
+            log.warn("User with ID {} not found or access denied, returning empty workload", userId);
             // Return a minimal workload DTO instead of throwing exception
             return UserWorkloadDTO.builder()
                 .userId(userId)
@@ -359,10 +407,10 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
                 .caseBreakdown(Collections.emptyList())
                 .build();
         }
-        
-        // Get active assignments
+
+        // SECURITY: Get active assignments with org filter
         List<CaseAssignment> activeAssignments = assignmentRepository
-            .findActiveAssignmentsByUserId(userId);
+            .findActiveAssignmentsByUserIdAndOrganizationId(userId, orgId);
 
         // Filter out assignments with missing/deleted cases
         List<CaseAssignment> validAssignments = activeAssignments.stream()
@@ -389,11 +437,12 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             .map(this::calculateAssignmentPoints)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Get or create workload record
+        // Get or create workload record - SECURITY: Use tenant-filtered query
         // Default maxCapacity of 100 means: 10 cases at weight 1.0 = 100% capacity
         UserWorkload workload = workloadRepository
-            .findByUserIdAndCalculationDate(userId, LocalDate.now())
+            .findByOrganizationIdAndUserIdAndCalculationDate(orgId, userId, LocalDate.now())
             .orElse(UserWorkload.builder()
+                .organizationId(orgId)
                 .user(user)
                 .calculationDate(LocalDate.now())
                 .maxCapacityPoints(new BigDecimal("100.00")) // Default capacity: 10 cases = 100%
@@ -447,22 +496,24 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     
     @Override
     public List<UserWorkloadDTO> getTeamWorkload(Long managerId) {
-        // Find team members
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
         List<UserWorkload> teamWorkloads = workloadRepository
-            .findTeamWorkloadByManager(managerId, LocalDate.now());
-        
+            .findTeamWorkloadByManagerAndOrganization(orgId, managerId, LocalDate.now());
+
         return teamWorkloads.stream()
             .map(this::mapWorkloadToDTO)
             .collect(Collectors.toList());
     }
-    
+
     @Override
     public WorkloadAnalyticsDTO getWorkloadAnalytics() {
+        Long orgId = getRequiredOrganizationId();
         LocalDate today = LocalDate.now();
-        
-        // Get all active attorney workloads for today
+
+        // SECURITY: Use tenant-filtered query to get all workloads >= 0%
         List<UserWorkload> allWorkloads = workloadRepository
-            .findHighWorkloadUsers(today, BigDecimal.ZERO); // Get all workloads >= 0%
+            .findHighWorkloadUsersByOrganization(orgId, today, BigDecimal.ZERO);
         
         if (allWorkloads.isEmpty()) {
             // If no workloads for today, try to get latest workloads
@@ -491,15 +542,19 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     
     @Override
     public List<AssignmentRuleDTO> getActiveRules() {
-        List<AssignmentRule> rules = ruleRepository.findActiveRulesOrderByPriority();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<AssignmentRule> rules = ruleRepository.findActiveRulesOrderByPriorityByOrganization(orgId);
         return rules.stream()
             .map(this::mapRuleToDTO)
             .collect(Collectors.toList());
     }
-    
+
     @Override
     public AssignmentRuleDTO createRule(AssignmentRuleDTO ruleDTO) {
+        Long orgId = getRequiredOrganizationId();
         AssignmentRule rule = AssignmentRule.builder()
+            .organizationId(orgId) // SECURITY: Set organization ID
             .ruleName(ruleDTO.getRuleName())
             .ruleType(ruleDTO.getRuleType())
             .caseType(ruleDTO.getCaseType())
@@ -511,16 +566,18 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             .ruleConditions(ruleDTO.getRuleConditions())
             .ruleActions(ruleDTO.getRuleActions())
             .build();
-        
+
         rule = ruleRepository.save(rule);
         return mapRuleToDTO(rule);
     }
     
     @Override
     public void updateRule(Long ruleId, AssignmentRuleDTO ruleDTO) {
-        AssignmentRule rule = ruleRepository.findById(ruleId)
-            .orElseThrow(() -> new ApiException("Rule not found"));
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        AssignmentRule rule = ruleRepository.findByIdAndOrganizationId(ruleId, orgId)
+            .orElseThrow(() -> new ApiException("Rule not found or access denied"));
+
         rule.setRuleName(ruleDTO.getRuleName());
         rule.setRuleType(ruleDTO.getRuleType());
         rule.setCaseType(ruleDTO.getCaseType());
@@ -537,36 +594,48 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     
     @Override
     public Page<AssignmentHistoryDTO> getAssignmentHistory(Long caseId, Pageable pageable) {
-        Page<CaseAssignmentHistory> history = historyRepository.findByCaseId(caseId, pageable);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify case belongs to current organization
+        if (!legalCaseRepository.existsByIdAndOrganizationId(caseId, orgId)) {
+            throw new ApiException("Case not found or access denied: " + caseId);
+        }
+        // SECURITY: Use tenant-filtered query
+        Page<CaseAssignmentHistory> history = historyRepository.findByOrganizationIdAndCaseId(orgId, caseId, pageable);
         return history.map(this::mapHistoryToDTO);
     }
     
     @Override
     public Page<CaseTransferRequestDTO> getPendingTransferRequests(Pageable pageable) {
-        Page<com.bostoneo.bostoneosolutions.model.CaseTransferRequest> requests = transferRequestRepository
-            .findByStatus(TransferStatus.PENDING, pageable);
+        // SECURITY: Use tenant-filtered query
+        Page<com.bostoneo.bostoneosolutions.model.CaseTransferRequest> requests = tenantService.getCurrentOrganizationId()
+            .map(orgId -> transferRequestRepository.findByOrganizationIdAndStatus(orgId, TransferStatus.PENDING, pageable))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
         return requests.map(this::mapTransferToDTO);
     }
     
     @Override
     public CaseTransferRequestDTO approveTransfer(Long requestId, String notes) {
-        com.bostoneo.bostoneosolutions.model.CaseTransferRequest request = transferRequestRepository.findById(requestId)
-            .orElseThrow(() -> new ApiException("Transfer request not found"));
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        com.bostoneo.bostoneosolutions.model.CaseTransferRequest request = transferRequestRepository.findByIdAndOrganizationId(requestId, orgId)
+            .orElseThrow(() -> new ApiException("Transfer request not found or access denied"));
+
         if (request.getStatus() != TransferStatus.PENDING) {
             throw new ApiException("Transfer request is not pending");
         }
-        
+
         User currentUser = getSystemUser(); // Temporarily use system user for testing
         CaseAssignmentDTO result = processTransfer(request, currentUser, notes);
-        
+
         return mapTransferToDTO(request);
     }
-    
+
     @Override
     public CaseTransferRequestDTO rejectTransfer(Long requestId, String notes) {
-        com.bostoneo.bostoneosolutions.model.CaseTransferRequest request = transferRequestRepository.findById(requestId)
-            .orElseThrow(() -> new ApiException("Transfer request not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        com.bostoneo.bostoneosolutions.model.CaseTransferRequest request = transferRequestRepository.findByIdAndOrganizationId(requestId, orgId)
+            .orElseThrow(() -> new ApiException("Transfer request not found or access denied"));
         
         if (request.getStatus() != TransferStatus.PENDING) {
             throw new ApiException("Transfer request is not pending");
@@ -707,9 +776,11 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         calculateUserWorkload(userId);
     }
     
-    private void recordAssignmentHistory(CaseAssignment assignment, AssignmentAction action, 
+    private void recordAssignmentHistory(CaseAssignment assignment, AssignmentAction action,
                                         String reason, User performedBy) {
+        Long orgId = getRequiredOrganizationId();
         CaseAssignmentHistory history = CaseAssignmentHistory.builder()
+            .organizationId(orgId)
             .caseAssignment(assignment)
             .caseId(assignment.getLegalCase().getId())
             .userId(assignment.getAssignedTo().getId())
@@ -718,7 +789,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             .performedBy(performedBy)
             .performedAt(LocalDateTime.now())
             .build();
-        
+
         historyRepository.save(history);
     }
     

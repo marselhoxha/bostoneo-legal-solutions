@@ -30,6 +30,12 @@ public class SemanticSearchService {
     private final CollectionSearchCacheService cacheService;
     private final LegalSynonymService synonymService;
     private final SearchSuggestionService suggestionService;
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     /**
      * Response wrapper for collection search with caching metadata.
@@ -66,13 +72,15 @@ public class SemanticSearchService {
      */
     public List<SearchResult> searchDocument(Long analysisId, String query, int maxResults) {
         log.info("Searching document: analysisId={}, query={}", analysisId, query);
+        Long orgId = getRequiredOrganizationId();
 
         // Ensure document is chunked
         if (!chunkingService.isDocumentChunked(analysisId)) {
             chunkingService.chunkDocument(analysisId);
         }
 
-        List<DocumentChunk> chunks = chunkRepository.findByAnalysisIdOrderByChunkIndexAsc(analysisId);
+        // SECURITY: Use tenant-filtered query
+        List<DocumentChunk> chunks = chunkRepository.findByAnalysisIdAndOrganizationIdOrderByChunkIndexAsc(analysisId, orgId);
         return searchChunks(chunks, query, maxResults);
     }
 
@@ -81,9 +89,10 @@ public class SemanticSearchService {
      */
     public List<SearchResult> searchCollection(Long collectionId, String query, int maxResults) {
         log.info("Searching collection: collectionId={}, query={}", collectionId, query);
+        Long orgId = getRequiredOrganizationId();
 
-        // Get all analysis IDs in the collection
-        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionId(collectionId);
+        // Get all analysis IDs in the collection - SECURITY: Use tenant-filtered query
+        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionIdAndOrganizationId(orgId, collectionId);
         if (analysisIds.isEmpty()) {
             return new ArrayList<>();
         }
@@ -98,12 +107,12 @@ public class SemanticSearchService {
             }
         }
 
-        // Get all chunks for the collection
-        List<DocumentChunk> chunks = chunkRepository.findByCollectionIdAndEmbeddingIsNotNull(collectionId);
+        // SECURITY: Use tenant-filtered queries
+        List<DocumentChunk> chunks = chunkRepository.findByCollectionIdAndOrganizationIdAndEmbeddingIsNotNull(collectionId, orgId);
 
         // If no chunks with embeddings, get all chunks
         if (chunks.isEmpty()) {
-            chunks = chunkRepository.findByAnalysisIdIn(analysisIds);
+            chunks = chunkRepository.findByAnalysisIdInAndOrganizationId(analysisIds, orgId);
         }
 
         return searchChunks(chunks, query, maxResults);
@@ -418,10 +427,11 @@ public class SemanticSearchService {
                 .map(r -> r.analysisId)
                 .collect(Collectors.toSet());
 
-        // Fetch document info
+        // Fetch document info - SECURITY: Use tenant-filtered query
+        Long orgId = getRequiredOrganizationId();
         Map<Long, String[]> docInfo = new HashMap<>();
         for (Long analysisId : analysisIds) {
-            analysisRepository.findById(analysisId).ifPresent(analysis -> {
+            analysisRepository.findByIdAndOrganizationId(analysisId, orgId).ifPresent(analysis -> {
                 docInfo.put(analysisId, new String[]{
                         analysis.getFileName(),
                         analysis.getDetectedType()
@@ -444,9 +454,10 @@ public class SemanticSearchService {
      */
     public void indexDocument(Long analysisId) {
         log.info("Indexing document: analysisId={}", analysisId);
+        Long orgId = getRequiredOrganizationId();
 
-        // Check if document already has chunks with embeddings (cached)
-        List<DocumentChunk> existingChunks = chunkRepository.findByAnalysisIdOrderByChunkIndexAsc(analysisId);
+        // SECURITY: Use tenant-filtered query to check existing chunks
+        List<DocumentChunk> existingChunks = chunkRepository.findByAnalysisIdAndOrganizationIdOrderByChunkIndexAsc(analysisId, orgId);
         boolean hasEmbeddings = existingChunks.stream()
                 .anyMatch(chunk -> chunk.getEmbedding() != null && !chunk.getEmbedding().isEmpty());
 
@@ -489,8 +500,10 @@ public class SemanticSearchService {
      */
     public void indexCollection(Long collectionId) {
         log.info("Indexing collection: collectionId={}", collectionId);
+        Long orgId = getRequiredOrganizationId();
 
-        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionId(collectionId);
+        // SECURITY: Use tenant-filtered query
+        List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionIdAndOrganizationId(orgId, collectionId);
         for (Long analysisId : analysisIds) {
             indexDocument(analysisId);
 

@@ -37,6 +37,11 @@ public class LeadServiceImpl implements LeadService {
     private final NotificationService notificationService;
     private final TenantService tenantService;
 
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
     // Valid pipeline status transitions
     private static final Map<String, Set<String>> VALID_TRANSITIONS = Map.of(
         "NEW", Set.of("CONTACTED", "UNQUALIFIED", "LOST"),
@@ -58,36 +63,45 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public Optional<Lead> findById(Long id) {
-        return leadRepository.findById(id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return leadRepository.findByIdAndOrganizationId(id, orgId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findAll() {
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         return tenantService.getCurrentOrganizationId()
             .map(orgId -> leadRepository.findByOrganizationId(orgId))
-            .orElseGet(() -> leadRepository.findAll());
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<Lead> findAll(Pageable pageable) {
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         return tenantService.getCurrentOrganizationId()
             .map(orgId -> leadRepository.findByOrganizationId(orgId, pageable))
-            .orElseGet(() -> leadRepository.findAll(pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     public void deleteById(Long id) {
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify ownership before deletion
+        if (!leadRepository.existsByIdAndOrganizationId(id, orgId)) {
+            throw new RuntimeException("Lead not found or access denied: " + id);
+        }
         leadRepository.deleteById(id);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean existsById(Long id) {
-        return leadRepository.existsById(id);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return leadRepository.existsByIdAndOrganizationId(id, orgId);
     }
 
     @Override
@@ -116,9 +130,11 @@ public class LeadServiceImpl implements LeadService {
     @Override
     public Lead updateLead(Long id, Lead lead, Long userId) {
         log.info("Updating lead ID: {} by user: {}", id, userId);
-        
-        Lead existing = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Lead existing = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         // Update fields
         existing.setFirstName(lead.getFirstName());
@@ -143,9 +159,11 @@ public class LeadServiceImpl implements LeadService {
     @Override
     public Lead assignLead(Long id, Long assignedTo, Long assignedBy) {
         log.info("Assigning lead ID: {} to user: {} by user: {}", id, assignedTo, assignedBy);
-        
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         Long previousAssignee = lead.getAssignedTo();
         lead.setAssignedTo(assignedTo);
@@ -179,9 +197,11 @@ public class LeadServiceImpl implements LeadService {
     @Override
     public Lead updateStatus(Long id, String newStatus, Long userId, String notes) {
         log.info("Updating lead ID: {} status to: {} by user: {}", id, newStatus, userId);
-        
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         String oldStatus = lead.getStatus();
         
@@ -240,9 +260,11 @@ public class LeadServiceImpl implements LeadService {
     @Override
     public Lead scheduleConsultation(Long id, Timestamp consultationDate, Long userId, String notes) {
         log.info("Scheduling consultation for lead ID: {} on {} by user: {}", id, consultationDate, userId);
-        
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         lead.setConsultationDate(consultationDate);
         lead = updateStatus(id, "CONSULTATION_SCHEDULED", userId, notes);
@@ -296,9 +318,11 @@ public class LeadServiceImpl implements LeadService {
     @Override
     public Lead markAsLost(Long id, String lostReason, Long userId) {
         log.info("Marking lead ID: {} as lost by user: {} for reason: {}", id, userId, lostReason);
-        
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         lead.setLostReason(lostReason);
         lead = updateStatus(id, "LOST", userId, "Lead marked as lost: " + lostReason);
@@ -318,64 +342,81 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findByStatus(String status) {
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         return tenantService.getCurrentOrganizationId()
             .map(orgId -> leadRepository.findByOrganizationIdAndStatus(orgId, status))
-            .orElseGet(() -> leadRepository.findByStatus(status));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<Lead> findByStatus(String status, Pageable pageable) {
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         return tenantService.getCurrentOrganizationId()
             .map(orgId -> leadRepository.findByOrganizationIdAndStatus(orgId, status, pageable))
-            .orElseGet(() -> leadRepository.findByStatus(status, pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findByPracticeArea(String practiceArea) {
-        return leadRepository.findByPracticeArea(practiceArea);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationIdAndPracticeArea(orgId, practiceArea))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<Lead> findByPracticeArea(String practiceArea, Pageable pageable) {
-        return leadRepository.findByPracticeArea(practiceArea, pageable);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationIdAndPracticeArea(orgId, practiceArea, pageable))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findByAssignedTo(Long assignedTo) {
-        return leadRepository.findByAssignedTo(assignedTo);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationIdAndAssignedTo(orgId, assignedTo))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<Lead> findByAssignedTo(Long assignedTo, Pageable pageable) {
-        return leadRepository.findByAssignedTo(assignedTo, pageable);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationIdAndAssignedTo(orgId, assignedTo, pageable))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findActiveLead() {
-        return leadRepository.findActiveLeadsOrderByScoreAndCreatedAt();
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findActiveLeadsByOrganizationOrderByScoreAndCreatedAt(orgId))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<Lead> findActiveLeads(Pageable pageable) {
-        // Use tenant-filtered query if organization context is available
+        // Use tenant-filtered query - throw exception if no organization context
         return tenantService.getCurrentOrganizationId()
             .map(orgId -> leadRepository.findActiveLeadsByOrganization(orgId, pageable))
-            .orElseGet(() -> leadRepository.findActiveLeadsOrderByScoreAndCreatedAt(pageable));
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     public Lead updateLeadScore(Long id, Integer leadScore, Long userId) {
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         Integer oldScore = lead.getLeadScore();
         lead.setLeadScore(leadScore);
@@ -390,8 +431,10 @@ public class LeadServiceImpl implements LeadService {
 
     @Override
     public Lead updatePriority(Long id, String priority, Long userId) {
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         String oldPriority = lead.getPriority();
         lead.setPriority(priority);
@@ -407,19 +450,27 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findHighScoreLeads(Integer minScore) {
-        return leadRepository.findByLeadScoreGreaterThanEqualOrderByLeadScoreDesc(minScore);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationIdAndLeadScoreGreaterThanEqualOrderByLeadScoreDesc(orgId, minScore))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findByPriority(String priority) {
-        return leadRepository.findByPriority(priority);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationIdAndPriority(orgId, priority))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
     public Lead scheduleFollowUp(Long id, Timestamp followUpDate, Long userId, String notes) {
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         lead.setFollowUpDate(followUpDate);
         Lead savedLead = save(lead);
@@ -434,7 +485,10 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findLeadsRequiringFollowUp(Timestamp date) {
-        return leadRepository.findLeadsRequiringFollowUp(date);
+        // SECURITY: Use tenant-filtered query
+        return tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findLeadsRequiringFollowUpByOrganization(orgId, date))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     @Override
@@ -445,8 +499,10 @@ public class LeadServiceImpl implements LeadService {
 
     @Override
     public Lead updateEstimatedCaseValue(Long id, BigDecimal estimatedValue, Long userId) {
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         BigDecimal oldValue = lead.getEstimatedCaseValue();
         lead.setEstimatedCaseValue(estimatedValue);
@@ -461,7 +517,11 @@ public class LeadServiceImpl implements LeadService {
 
     @Override
     public LeadActivity addActivity(Long leadId, String activityType, String title, String description, Long userId) {
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
         LeadActivity activity = LeadActivity.builder()
+            .organizationId(orgId)  // SECURITY: Set organization context
             .leadId(leadId)
             .activityType(activityType)
             .title(title)
@@ -470,13 +530,17 @@ public class LeadServiceImpl implements LeadService {
             .createdBy(userId)
             .isBillable(false)
             .build();
-        
+
         return leadActivityRepository.save(activity);
     }
 
     @Override
     public LeadActivity addCallActivity(Long leadId, Integer durationMinutes, String outcome, Long userId) {
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
         LeadActivity activity = LeadActivity.builder()
+            .organizationId(orgId)  // SECURITY: Set organization context
             .leadId(leadId)
             .activityType("CALL")
             .title("Phone Call")
@@ -487,13 +551,17 @@ public class LeadServiceImpl implements LeadService {
             .createdBy(userId)
             .isBillable(false)
             .build();
-        
+
         return leadActivityRepository.save(activity);
     }
 
     @Override
     public LeadActivity addEmailActivity(Long leadId, String subject, String notes, Long userId) {
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
         LeadActivity activity = LeadActivity.builder()
+            .organizationId(orgId)  // SECURITY: Set organization context
             .leadId(leadId)
             .activityType("EMAIL")
             .title("Email: " + subject)
@@ -503,13 +571,17 @@ public class LeadServiceImpl implements LeadService {
             .createdBy(userId)
             .isBillable(false)
             .build();
-        
+
         return leadActivityRepository.save(activity);
     }
 
     @Override
     public LeadActivity addMeetingActivity(Long leadId, Timestamp meetingDate, Integer durationMinutes, String outcome, Long userId) {
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
         LeadActivity activity = LeadActivity.builder()
+            .organizationId(orgId)  // SECURITY: Set organization context
             .leadId(leadId)
             .activityType("MEETING")
             .title("Meeting with Lead")
@@ -520,63 +592,90 @@ public class LeadServiceImpl implements LeadService {
             .createdBy(userId)
             .isBillable(false)
             .build();
-        
+
         return leadActivityRepository.save(activity);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<LeadActivity> getLeadActivities(Long leadId) {
-        return leadActivityRepository.findByLeadIdOrderByActivityDateDesc(leadId);
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Use tenant-filtered query
+        return leadActivityRepository.findByLeadIdAndOrganizationIdOrderByActivityDateDesc(leadId, orgId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<LeadActivity> getLeadActivities(Long leadId, Pageable pageable) {
-        return leadActivityRepository.findByLeadIdOrderByActivityDateDesc(leadId, pageable);
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Use tenant-filtered query
+        return leadActivityRepository.findByLeadIdAndOrganizationIdOrderByActivityDateDesc(leadId, orgId, pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public long countByStatus(String status) {
-        return leadRepository.countByStatus(status);
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Use tenant-filtered query
+        return leadRepository.countByOrganizationIdAndStatus(orgId, status);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Object[]> getStatusStatistics() {
-        return leadRepository.countByStatusGrouped();
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Use tenant-filtered query
+        return leadRepository.countByOrganizationIdGroupedByStatus(orgId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Object[]> getPracticeAreaStatistics() {
-        return leadRepository.countByPracticeAreaGrouped();
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Use tenant-filtered query
+        return leadRepository.countByOrganizationIdGroupedByPracticeArea(orgId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findLeadsByDateRange(Timestamp startDate, Timestamp endDate) {
-        return leadRepository.findByCreatedAtBetween(startDate, endDate);
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Use tenant-filtered query
+        return leadRepository.findByOrganizationIdAndCreatedAtBetween(orgId, startDate, endDate);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findStaleLeads(String status, int daysStale) {
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
         Timestamp staleDate = new Timestamp(System.currentTimeMillis() - (daysStale * 24 * 60 * 60 * 1000L));
-        return leadRepository.findStaleLeads(status, staleDate);
+        // SECURITY: Use tenant-filtered query
+        return leadRepository.findStaleLeadsByOrganization(orgId, status, staleDate);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findLeadsByStatusIn(List<String> statuses) {
-        return leadRepository.findByStatusIn(statuses);
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Use tenant-filtered query
+        return leadRepository.findByOrganizationIdAndStatusInList(orgId, statuses);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<Lead> findLeadsByStatusIn(List<String> statuses, Pageable pageable) {
-        return leadRepository.findByStatusIn(statuses, pageable);
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Use tenant-filtered query
+        return leadRepository.findByOrganizationIdAndStatusIn(orgId, statuses, pageable);
     }
 
     @Override
@@ -593,8 +692,10 @@ public class LeadServiceImpl implements LeadService {
 
     @Override
     public Lead updateLeadQuality(Long id, String leadQuality, Long userId) {
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         String oldQuality = lead.getLeadQuality();
         lead.setLeadQuality(leadQuality);
@@ -609,8 +710,10 @@ public class LeadServiceImpl implements LeadService {
 
     @Override
     public Lead updateClientBudgetRange(Long id, String budgetRange, Long userId) {
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         lead.setClientBudgetRange(budgetRange);
         return save(lead);
@@ -618,8 +721,10 @@ public class LeadServiceImpl implements LeadService {
 
     @Override
     public Lead updateCaseComplexity(Long id, String complexity, Long userId) {
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         lead.setCaseComplexity(complexity);
         return save(lead);
@@ -627,8 +732,10 @@ public class LeadServiceImpl implements LeadService {
 
     @Override
     public Lead updateCommunicationPreference(Long id, String preference, Long userId) {
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         lead.setCommunicationPreference(preference);
         return save(lead);
@@ -637,13 +744,18 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public List<Lead> findUpcomingConsultations(Timestamp startDate, Timestamp endDate) {
-        return leadRepository.findByConsultationDateBetween(startDate, endDate);
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Use tenant-filtered query
+        return leadRepository.findByOrganizationIdAndConsultationDateBetween(orgId, startDate, endDate);
     }
 
     @Override
     public Lead rescheduleConsultation(Long id, Timestamp newDate, Long userId, String reason) {
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         Timestamp oldDate = lead.getConsultationDate();
         lead.setConsultationDate(newDate);
@@ -659,8 +771,10 @@ public class LeadServiceImpl implements LeadService {
 
     @Override
     public Lead cancelConsultation(Long id, Long userId, String reason) {
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         lead.setConsultationDate(null);
         if ("CONSULTATION_SCHEDULED".equals(lead.getStatus())) {
@@ -677,8 +791,10 @@ public class LeadServiceImpl implements LeadService {
 
     @Override
     public Lead completeConsultation(Long id, Long userId, String outcome, String nextSteps) {
-        Lead lead = leadRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + id));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
+            .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
         
         Lead savedLead = save(lead);
         
@@ -690,12 +806,14 @@ public class LeadServiceImpl implements LeadService {
     }
 
     private void recordPipelineTransition(Long leadId, String fromStatus, String toStatus, Long userId, String notes) {
+        Long orgId = getRequiredOrganizationId();
         // Map status to stage IDs - this is a temporary solution
         // In a production system, you'd have a proper mapping table
         Long fromStageId = mapStatusToStageId(fromStatus);
         Long toStageId = mapStatusToStageId(toStatus);
-        
+
         LeadPipelineHistory history = LeadPipelineHistory.builder()
+            .organizationId(orgId)
             .leadId(leadId)
             .fromStageId(fromStageId)
             .toStageId(toStageId)
@@ -703,7 +821,7 @@ public class LeadServiceImpl implements LeadService {
             .notes(notes)
             .automated(false)
             .build();
-        
+
         try {
             leadPipelineHistoryRepository.save(history);
         } catch (Exception e) {
@@ -736,7 +854,10 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public List<PipelineStage> getAllPipelineStages() {
-        return pipelineStageRepository.findAll();
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Return only system stages + org-specific stages
+        return pipelineStageRepository.findAllActiveStagesByOrganizationId(orgId);
     }
 
     @Override
@@ -746,14 +867,17 @@ public class LeadServiceImpl implements LeadService {
 
     @Override
     public Lead moveToStage(Long leadId, Long stageId, Long userId, String notes) {
-        // Verify lead exists
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
+        // Verify lead exists (findById is already tenant-filtered)
         findById(leadId)
             .orElseThrow(() -> new RuntimeException("Lead not found with ID: " + leadId));
-        
-        // Get the stage to determine the status
-        PipelineStage stage = pipelineStageRepository.findById(stageId)
-            .orElseThrow(() -> new RuntimeException("Pipeline stage not found with ID: " + stageId));
-        
+
+        // SECURITY: Get stage with tenant filter (allows system stages or org-specific stages)
+        PipelineStage stage = pipelineStageRepository.findByIdAndOrganizationIdOrSystem(stageId, orgId)
+            .orElseThrow(() -> new RuntimeException("Pipeline stage not found or access denied: " + stageId));
+
         // Update lead status based on stage name
         String newStatus = mapStageToStatus(stage.getName());
         return updateStatus(leadId, newStatus, userId, notes);
@@ -762,23 +886,30 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> getLeadCountsByStatus() {
-        List<Object[]> statusCounts = leadRepository.countByStatusGrouped();
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Use tenant-filtered query
+        List<Object[]> statusCounts = leadRepository.countByOrganizationIdGroupedByStatus(orgId);
         Map<String, Long> result = new HashMap<>();
-        
+
         for (Object[] row : statusCounts) {
             String status = (String) row[0];
             Long count = (Long) row[1];
             result.put(status, count);
         }
-        
+
         return result;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Lead> getRecentlyMovedLeads(int limit) {
-        // Get leads with recent pipeline history - simplified implementation
-        return leadRepository.findAll().stream()
+        // Get leads with recent pipeline history - tenant filtered
+        List<Lead> leads = tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationId(orgId))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
+        return leads.stream()
             .sorted((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()))
             .limit(limit)
             .toList();
@@ -787,9 +918,12 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public List<Lead> getStaleLeads() {
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
         // Find leads that haven't been updated in 7 days
         Timestamp staleDate = new Timestamp(System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L));
-        return leadRepository.findStaleLeads("NEW", staleDate);
+        // SECURITY: Use tenant-filtered query
+        return leadRepository.findStaleLeadsByOrganization(orgId, "NEW", staleDate);
     }
 
     @Override
@@ -847,9 +981,12 @@ public class LeadServiceImpl implements LeadService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> getLeadCountsByPracticeArea() {
-        List<Object[]> practiceAreaCounts = leadRepository.countByPracticeAreaGrouped();
+        Long orgId = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+        // SECURITY: Use tenant-filtered query
+        List<Object[]> practiceAreaCounts = leadRepository.countByOrganizationIdGroupedByPracticeArea(orgId);
         Map<String, Long> result = new HashMap<>();
-        
+
         for (Object[] row : practiceAreaCounts) {
             String practiceArea = (String) row[0];
             Long count = (Long) row[1];
@@ -857,14 +994,19 @@ public class LeadServiceImpl implements LeadService {
                 result.put(practiceArea, count);
             }
         }
-        
+
         return result;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Lead> getRecentLeads(int limit) {
-        return leadRepository.findAll().stream()
+        // Tenant-filtered recent leads
+        List<Lead> leads = tenantService.getCurrentOrganizationId()
+            .map(orgId -> leadRepository.findByOrganizationId(orgId))
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+
+        return leads.stream()
             .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
             .limit(limit)
             .toList();
@@ -904,13 +1046,13 @@ public class LeadServiceImpl implements LeadService {
                 "timestamp", System.currentTimeMillis()
             );
             
-            // Send via WebSocket for real-time updates
-            webSocketHandler.broadcastMessage(notificationData);
-            
+            // SECURITY: Send via WebSocket only to users in the same organization
+            webSocketHandler.broadcastToOrganization(lead.getOrganizationId(), notificationData);
+
             // ALSO send via FCM - specifically to the assigned user for offline notifications
             notificationService.sendCrmNotification(title, message, assignedTo, notificationType, notificationData);
-            
-            log.info("Sent lead assignment notification (WebSocket + FCM) for lead ID: {} to user: {}", lead.getId(), assignedTo);
+
+            log.info("Sent lead assignment notification (WebSocket + FCM) for lead ID: {} to user: {} in org: {}", lead.getId(), assignedTo, lead.getOrganizationId());
             
         } catch (Exception e) {
             log.error("Failed to send lead assignment notification for lead ID: {}", lead.getId(), e);
@@ -948,12 +1090,12 @@ public class LeadServiceImpl implements LeadService {
                 "timestamp", System.currentTimeMillis()
             );
             
-            // Send via WebSocket for real-time updates
-            webSocketHandler.broadcastMessage(notificationData);
-            
+            // SECURITY: Send via WebSocket only to users in the same organization
+            webSocketHandler.broadcastToOrganization(lead.getOrganizationId(), notificationData);
+
             // Collect users to notify (like case status change pattern)
             Set<Long> notificationUserIds = new HashSet<>();
-            
+
             // Add assigned user if exists
             if (lead.getAssignedTo() != null) {
                 notificationUserIds.add(lead.getAssignedTo());

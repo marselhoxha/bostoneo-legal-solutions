@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.model.CaseRoleAssignment;
 import com.bostoneo.bostoneosolutions.enums.PermissionCategory;
 import com.bostoneo.bostoneosolutions.enums.RoleCategory;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.RoleRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,25 @@ public class EnhancedRbacService {
     private final RoleRepository<Role> roleRepository;
     private final UserRepository<User> userRepository;
     private final RoleService roleService;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID
+     */
+    private Long getCurrentOrganizationId() {
+        return tenantService.getCurrentOrganizationId().orElse(null);
+    }
+
+    /**
+     * Verify user belongs to the current organization
+     */
+    private boolean isUserInCurrentOrganization(User user) {
+        Long currentOrgId = getCurrentOrganizationId();
+        if (currentOrgId == null) {
+            return true; // No org context, allow (backward compatibility)
+        }
+        return currentOrgId.equals(user.getOrganizationId());
+    }
 
     /**
      * Check if user has a specific permission
@@ -292,7 +312,12 @@ public class EnhancedRbacService {
 
     private User getUserWithRoles(Long userId) {
         try {
-            return userRepository.findByIdWithRoles(userId);
+            User user = userRepository.findByIdWithRoles(userId);
+            if (user != null && !isUserInCurrentOrganization(user)) {
+                log.warn("User {} does not belong to current organization", userId);
+                return null;
+            }
+            return user;
         } catch (Exception e) {
             log.error("Error fetching user with roles for userId: {}", userId, e);
             return null;

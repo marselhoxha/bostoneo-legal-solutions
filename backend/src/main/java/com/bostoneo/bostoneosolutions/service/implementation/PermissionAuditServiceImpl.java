@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.service.implementation;
 
 import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.model.PermissionAuditLog;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.PermissionAuditLogRepository;
 import com.bostoneo.bostoneosolutions.service.PermissionAuditService;
 import lombok.RequiredArgsConstructor;
@@ -25,13 +26,30 @@ import java.util.List;
 public class PermissionAuditServiceImpl implements PermissionAuditService {
 
     private final PermissionAuditLogRepository<PermissionAuditLog> auditLogRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID
+     */
+    private Long getCurrentOrganizationId() {
+        return tenantService.getCurrentOrganizationId().orElse(null);
+    }
+
+    /**
+     * Helper method to get the required organization ID (throws if not available)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new ApiException("Organization context required"));
+    }
 
     @Override
-    public PermissionAuditLog logPermissionChange(Long userId, String action, String targetType, 
+    public PermissionAuditLog logPermissionChange(Long userId, String action, String targetType,
                                                  Long targetId, String details) {
         log.info("Logging permission change: {} on {}", action, targetType);
         try {
             PermissionAuditLog auditLog = PermissionAuditLog.builder()
+                .organizationId(getCurrentOrganizationId())
                 .userId(userId)
                 .action(action)
                 .targetType(targetType)
@@ -43,9 +61,13 @@ public class PermissionAuditServiceImpl implements PermissionAuditService {
             // Get the current authenticated user if available
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null && authentication.isAuthenticated()) {
-                // In a real implementation, you'd get the user ID from the authentication
-                // For now, we'll use 1L as a placeholder for the system user
-                auditLog.setPerformedBy(1L);
+                if (authentication.getPrincipal() instanceof com.bostoneo.bostoneosolutions.dto.UserDTO) {
+                    com.bostoneo.bostoneosolutions.dto.UserDTO user =
+                        (com.bostoneo.bostoneosolutions.dto.UserDTO) authentication.getPrincipal();
+                    auditLog.setPerformedBy(user.getId());
+                } else {
+                    auditLog.setPerformedBy(1L); // System user
+                }
             }
 
             return auditLogRepository.save(auditLog);
@@ -59,7 +81,8 @@ public class PermissionAuditServiceImpl implements PermissionAuditService {
     public List<PermissionAuditLog> getAuditLogsByUserId(Long userId) {
         log.info("Getting audit logs for user id: {}", userId);
         try {
-            return auditLogRepository.findByUserId(userId);
+            Long orgId = getRequiredOrganizationId();
+            return auditLogRepository.findByUserIdAndOrganizationId(userId, orgId);
         } catch (Exception e) {
             log.error("Error getting audit logs: {}", e.getMessage());
             throw new ApiException("Error getting audit logs");
@@ -70,7 +93,8 @@ public class PermissionAuditServiceImpl implements PermissionAuditService {
     public List<PermissionAuditLog> getRecentAuditLogs(int limit) {
         log.info("Getting recent audit logs, limit: {}", limit);
         try {
-            return auditLogRepository.findRecentLogs(limit);
+            Long orgId = getRequiredOrganizationId();
+            return auditLogRepository.findRecentLogsByOrganizationId(orgId, limit);
         } catch (Exception e) {
             log.error("Error getting recent audit logs: {}", e.getMessage());
             throw new ApiException("Error getting recent audit logs");
@@ -78,22 +102,23 @@ public class PermissionAuditServiceImpl implements PermissionAuditService {
     }
 
     @Override
-    public List<PermissionAuditLog> searchAuditLogs(Long userId, String action, String targetType, 
+    public List<PermissionAuditLog> searchAuditLogs(Long userId, String action, String targetType,
                                                   String startDateStr, String endDateStr, int limit) {
         log.info("Searching audit logs");
         try {
+            Long orgId = getRequiredOrganizationId();
             LocalDateTime startDate = null;
             LocalDateTime endDate = null;
-            
+
             if (startDateStr != null && !startDateStr.isEmpty()) {
                 startDate = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
             }
-            
+
             if (endDateStr != null && !endDateStr.isEmpty()) {
                 endDate = LocalDateTime.parse(endDateStr, DateTimeFormatter.ISO_DATE_TIME);
             }
-            
-            return auditLogRepository.searchLogs(userId, action, targetType, startDate, endDate, limit);
+
+            return auditLogRepository.searchLogsByOrganizationId(orgId, userId, action, targetType, startDate, endDate, limit);
         } catch (Exception e) {
             log.error("Error searching audit logs: {}", e.getMessage());
             throw new ApiException("Error searching audit logs");

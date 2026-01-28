@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.dto.SmsResponseDTO;
 import com.bostoneo.bostoneosolutions.model.CommunicationLog;
 import com.bostoneo.bostoneosolutions.repository.CommunicationLogRepository;
 import com.bostoneo.bostoneosolutions.service.CommunicationLogService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,10 +30,18 @@ import java.util.stream.Collectors;
 public class CommunicationLogServiceImpl implements CommunicationLogService {
 
     private final CommunicationLogRepository communicationLogRepository;
+    private final TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @Override
     public CommunicationLog logSms(SmsRequestDTO request, SmsResponseDTO response, String fromNumber) {
+        Long orgId = getRequiredOrganizationId();
         CommunicationLog logEntry = CommunicationLog.builder()
+                .organizationId(orgId) // SECURITY: Set organization ID
                 .userId(request.getUserId())
                 .clientId(request.getClientId())
                 .caseId(request.getCaseId())
@@ -59,7 +68,9 @@ public class CommunicationLogServiceImpl implements CommunicationLogService {
 
     @Override
     public CommunicationLog logWhatsApp(SmsRequestDTO request, SmsResponseDTO response, String fromNumber) {
+        Long orgId = getRequiredOrganizationId();
         CommunicationLog logEntry = CommunicationLog.builder()
+                .organizationId(orgId) // SECURITY: Set organization ID
                 .userId(request.getUserId())
                 .clientId(request.getClientId())
                 .caseId(request.getCaseId())
@@ -87,7 +98,9 @@ public class CommunicationLogServiceImpl implements CommunicationLogService {
     @Override
     public CommunicationLog logEmail(Long userId, Long clientId, Long caseId, String to, String from,
                                       String subject, String content, String status) {
+        Long orgId = getRequiredOrganizationId();
         CommunicationLog logEntry = CommunicationLog.builder()
+                .organizationId(orgId) // SECURITY: Set organization ID
                 .userId(userId)
                 .clientId(clientId)
                 .caseId(caseId)
@@ -124,7 +137,8 @@ public class CommunicationLogServiceImpl implements CommunicationLogService {
     @Override
     @Transactional(readOnly = true)
     public CommunicationLogDTO getById(Long id) {
-        return communicationLogRepository.findById(id)
+        Long orgId = getRequiredOrganizationId();
+        return communicationLogRepository.findByIdAndOrganizationId(id, orgId)
                 .map(this::toDTO)
                 .orElse(null);
     }
@@ -132,43 +146,51 @@ public class CommunicationLogServiceImpl implements CommunicationLogService {
     @Override
     @Transactional(readOnly = true)
     public Page<CommunicationLogDTO> getByClientId(Long clientId, Pageable pageable) {
-        return communicationLogRepository.findByClientIdOrderByCreatedAtDesc(clientId, pageable)
+        Long orgId = getRequiredOrganizationId();
+        return communicationLogRepository.findByOrganizationIdAndClientIdOrderByCreatedAtDesc(orgId, clientId, pageable)
                 .map(this::toDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CommunicationLogDTO> getByCaseId(Long caseId, Pageable pageable) {
-        return communicationLogRepository.findByCaseIdOrderByCreatedAtDesc(caseId, pageable)
+        Long orgId = getRequiredOrganizationId();
+        return communicationLogRepository.findByOrganizationIdAndCaseIdOrderByCreatedAtDesc(orgId, caseId, pageable)
                 .map(this::toDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CommunicationLogDTO> getByUserId(Long userId, Pageable pageable) {
-        return communicationLogRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        return communicationLogRepository.findByOrganizationIdAndUserIdOrderByCreatedAtDesc(orgId, userId, pageable)
                 .map(this::toDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CommunicationLogDTO> getByChannel(String channel, Pageable pageable) {
-        return communicationLogRepository.findByChannelOrderByCreatedAtDesc(channel, pageable)
+        Long orgId = getRequiredOrganizationId();
+        return communicationLogRepository.findByOrganizationIdAndChannelOrderByCreatedAtDesc(orgId, channel, pageable)
                 .map(this::toDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CommunicationLogDTO> getByDateRange(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable) {
-        return communicationLogRepository.findByDateRange(startDate, endDate, pageable)
+        Long orgId = getRequiredOrganizationId();
+        return communicationLogRepository.findByOrganizationIdAndDateRange(orgId, startDate, endDate, pageable)
                 .map(this::toDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CommunicationLogDTO> getRecentByClientId(Long clientId) {
+        Long orgId = getRequiredOrganizationId();
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
-        return communicationLogRepository.findRecentByClientId(clientId, thirtyDaysAgo)
+        // SECURITY: Use tenant-filtered query
+        return communicationLogRepository.findRecentByOrganizationIdAndClientId(orgId, clientId, thirtyDaysAgo)
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -177,28 +199,31 @@ public class CommunicationLogServiceImpl implements CommunicationLogService {
     @Override
     @Transactional(readOnly = true)
     public Page<CommunicationLogDTO> search(String query, Pageable pageable) {
-        return communicationLogRepository.searchCommunications(query, pageable)
+        Long orgId = getRequiredOrganizationId();
+        return communicationLogRepository.searchByOrganization(orgId, query, pageable)
                 .map(this::toDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getStatistics(LocalDateTime since) {
+        Long orgId = getRequiredOrganizationId();
         Map<String, Object> stats = new HashMap<>();
 
-        // Channel statistics
-        List<Object[]> channelStats = communicationLogRepository.getChannelStatistics(since);
+        // SECURITY: Use tenant-filtered channel statistics
+        List<Object[]> channelStats = communicationLogRepository.getChannelStatisticsByOrganizationId(orgId, since);
         Map<String, Long> byChannel = new HashMap<>();
         for (Object[] row : channelStats) {
             byChannel.put((String) row[0], (Long) row[1]);
         }
         stats.put("byChannel", byChannel);
 
-        // Status counts
-        stats.put("totalSms", communicationLogRepository.countByChannel("SMS"));
-        stats.put("totalWhatsApp", communicationLogRepository.countByChannel("WHATSAPP"));
-        stats.put("totalEmail", communicationLogRepository.countByChannel("EMAIL"));
-        stats.put("totalFailed", communicationLogRepository.countFailedCommunications());
+        // Status counts - use tenant-filtered counts
+        stats.put("totalSms", communicationLogRepository.countByOrganizationIdAndChannel(orgId, "SMS"));
+        stats.put("totalWhatsApp", communicationLogRepository.countByOrganizationIdAndChannel(orgId, "WHATSAPP"));
+        stats.put("totalEmail", communicationLogRepository.countByOrganizationIdAndChannel(orgId, "EMAIL"));
+        // SECURITY: Use tenant-filtered failed count
+        stats.put("totalFailed", communicationLogRepository.countFailedByOrganizationId(orgId));
 
         return stats;
     }
@@ -206,7 +231,9 @@ public class CommunicationLogServiceImpl implements CommunicationLogService {
     @Override
     @Transactional(readOnly = true)
     public long getFailedCount() {
-        return communicationLogRepository.countFailedCommunications();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered failed count
+        return communicationLogRepository.countFailedByOrganizationId(orgId);
     }
 
     /**

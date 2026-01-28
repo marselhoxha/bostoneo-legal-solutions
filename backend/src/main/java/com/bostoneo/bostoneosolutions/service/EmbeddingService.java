@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.model.DocumentChunk;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.DocumentChunkRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -27,20 +28,27 @@ public class EmbeddingService {
     private final DocumentChunkRepository chunkRepository;
     private final ObjectMapper objectMapper;
     private final WebClient openAiClient;
+    private final TenantService tenantService;
 
     @Value("${openai.api.key:}")
     private String apiKey;
 
     private static final String EMBEDDING_MODEL = "text-embedding-3-small";
 
-    public EmbeddingService(DocumentChunkRepository chunkRepository, ObjectMapper objectMapper) {
+    public EmbeddingService(DocumentChunkRepository chunkRepository, ObjectMapper objectMapper, TenantService tenantService) {
         this.chunkRepository = chunkRepository;
         this.objectMapper = objectMapper;
+        this.tenantService = tenantService;
         this.openAiClient = WebClient.builder()
                 .baseUrl("https://api.openai.com/v1")
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
                 .build();
+    }
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     /**
@@ -59,7 +67,9 @@ public class EmbeddingService {
             return;
         }
 
-        List<DocumentChunk> chunks = chunkRepository.findByAnalysisIdOrderByChunkIndexAsc(analysisId);
+        // SECURITY: Use tenant-filtered query
+        Long orgId = getRequiredOrganizationId();
+        List<DocumentChunk> chunks = chunkRepository.findByAnalysisIdAndOrganizationIdOrderByChunkIndexAsc(analysisId, orgId);
         if (chunks.isEmpty()) {
             log.warn("No chunks found for analysisId: {}", analysisId);
             return;

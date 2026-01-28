@@ -13,6 +13,7 @@ import com.bostoneo.bostoneosolutions.repository.SignatureRequestRepository;
 import com.bostoneo.bostoneosolutions.repository.SignatureTemplateRepository;
 import com.bostoneo.bostoneosolutions.service.BoldSignService;
 import com.bostoneo.bostoneosolutions.service.SignatureReminderService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,9 +28,15 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 @Service
@@ -46,6 +53,12 @@ public class BoldSignServiceImpl implements BoldSignService {
     private final SignatureReminderService signatureReminderService;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     // ==================== Signature Requests ====================
 
@@ -93,9 +106,11 @@ public class BoldSignServiceImpl implements BoldSignService {
     @Override
     public SignatureRequestDTO sendSignatureRequest(Long requestId, Long userId) {
         validateBoldSignEnabled();
+        Long orgId = getRequiredOrganizationId();
 
-        SignatureRequest signatureRequest = signatureRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ApiException("Signature request not found"));
+        // SECURITY: Use tenant-filtered query
+        SignatureRequest signatureRequest = signatureRequestRepository.findByIdAndOrganizationId(requestId, orgId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
 
         if (signatureRequest.getStatus() != SignatureStatus.DRAFT) {
             throw new ApiException("Only draft requests can be sent");
@@ -120,18 +135,61 @@ public class BoldSignServiceImpl implements BoldSignService {
     }
 
     @Override
+    public SignatureRequestDTO sendSignatureRequest(Long requestId, Long organizationId, Long userId) {
+        validateBoldSignEnabled();
+
+        // SECURITY: Use explicit organization ID for tenant isolation
+        SignatureRequest signatureRequest = signatureRequestRepository.findByIdAndOrganizationId(requestId, organizationId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
+
+        if (signatureRequest.getStatus() != SignatureStatus.DRAFT) {
+            throw new ApiException("Only draft requests can be sent");
+        }
+
+        // Send to BoldSign
+        String boldsignDocumentId = sendToBoldSign(signatureRequest, null);
+        signatureRequest.setBoldsignDocumentId(boldsignDocumentId);
+        signatureRequest.setStatus(SignatureStatus.SENT);
+        signatureRequest.setSentAt(LocalDateTime.now());
+
+        signatureRequest = signatureRequestRepository.save(signatureRequest);
+
+        logAuditEvent(signatureRequest, SignatureAuditLog.EVENT_SENT, userId, null);
+
+        // Schedule reminders
+        signatureReminderService.scheduleReminders(signatureRequest);
+
+        log.info("Sent signature request {} to BoldSign for org {}", signatureRequest.getId(), organizationId);
+
+        return toDTO(signatureRequest);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public SignatureRequestDTO getSignatureRequest(Long id) {
-        SignatureRequest request = signatureRequestRepository.findById(id)
-                .orElseThrow(() -> new ApiException("Signature request not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
+        return toDTO(request);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SignatureRequestDTO getSignatureRequestByIdAndOrganization(Long id, Long organizationId) {
+        // SECURITY: Use explicit organization ID for tenant isolation
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(id, organizationId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
         return toDTO(request);
     }
 
     @Override
     @Transactional(readOnly = true)
     public SignatureRequestDTO getSignatureRequestByBoldsignId(String boldsignDocumentId) {
-        SignatureRequest request = signatureRequestRepository.findByBoldsignDocumentId(boldsignDocumentId)
-                .orElseThrow(() -> new ApiException("Signature request not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use proper tenant-filtered query instead of post-filter pattern
+        SignatureRequest request = signatureRequestRepository.findByBoldsignDocumentIdAndOrganizationId(boldsignDocumentId, orgId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
         return toDTO(request);
     }
 
@@ -165,8 +223,10 @@ public class BoldSignServiceImpl implements BoldSignService {
 
     @Override
     public SignatureRequestDTO voidSignatureRequest(Long requestId, String reason, Long userId) {
-        SignatureRequest request = signatureRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ApiException("Signature request not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(requestId, orgId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
 
         if (request.isCompleted() || request.isCancelled()) {
             throw new ApiException("Cannot void a completed or cancelled request");
@@ -192,9 +252,40 @@ public class BoldSignServiceImpl implements BoldSignService {
     }
 
     @Override
+    public SignatureRequestDTO voidSignatureRequest(Long requestId, Long organizationId, String reason, Long userId) {
+        // SECURITY: Use explicit organization ID for tenant isolation
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(requestId, organizationId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
+
+        if (request.isCompleted() || request.isCancelled()) {
+            throw new ApiException("Cannot void a completed or cancelled request");
+        }
+
+        // Void in BoldSign if sent
+        if (request.getBoldsignDocumentId() != null) {
+            voidInBoldSign(request.getBoldsignDocumentId(), reason);
+        }
+
+        request.setStatus(SignatureStatus.VOIDED);
+        request.setDeclineReason(reason);
+        request = signatureRequestRepository.save(request);
+
+        // Cancel any pending reminders
+        signatureReminderService.cancelReminders(requestId);
+
+        logAuditEvent(request, SignatureAuditLog.EVENT_VOIDED, userId, "{\"reason\":\"" + reason + "\"}");
+
+        log.info("Voided signature request {} for org {}", requestId, organizationId);
+
+        return toDTO(request);
+    }
+
+    @Override
     public SignatureRequestDTO sendReminder(Long requestId, Long userId) {
-        SignatureRequest request = signatureRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ApiException("Signature request not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(requestId, orgId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
 
         if (!request.canSendReminder()) {
             throw new ApiException("Cannot send reminder for this request");
@@ -217,9 +308,50 @@ public class BoldSignServiceImpl implements BoldSignService {
     }
 
     @Override
+    public SignatureRequestDTO sendReminder(Long requestId, Long organizationId, Long userId) {
+        // SECURITY: Use explicit organization ID for tenant isolation
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(requestId, organizationId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
+
+        if (!request.canSendReminder()) {
+            throw new ApiException("Cannot send reminder for this request");
+        }
+
+        // Send reminder via BoldSign
+        if (request.getBoldsignDocumentId() != null) {
+            sendReminderViaBoldSign(request.getBoldsignDocumentId());
+        }
+
+        request.setLastReminderSentAt(LocalDateTime.now());
+        request.setReminderCount(request.getReminderCount() + 1);
+        request = signatureRequestRepository.save(request);
+
+        logAuditEvent(request, SignatureAuditLog.EVENT_REMINDER_SENT, userId, null);
+
+        log.info("Sent reminder for signature request {} for org {}", requestId, organizationId);
+
+        return toDTO(request);
+    }
+
+    @Override
     public String getEmbeddedSigningUrl(Long requestId, String signerEmail) {
-        SignatureRequest request = signatureRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ApiException("Signature request not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(requestId, orgId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
+
+        if (!request.isPending()) {
+            throw new ApiException("Cannot get signing URL for non-pending request");
+        }
+
+        return getEmbeddedSigningUrlFromBoldSign(request.getBoldsignDocumentId(), signerEmail);
+    }
+
+    @Override
+    public String getEmbeddedSigningUrl(Long requestId, Long organizationId, String signerEmail) {
+        // SECURITY: Use explicit organization ID for tenant isolation
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(requestId, organizationId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
 
         if (!request.isPending()) {
             throw new ApiException("Cannot get signing URL for non-pending request");
@@ -230,8 +362,23 @@ public class BoldSignServiceImpl implements BoldSignService {
 
     @Override
     public byte[] downloadSignedDocument(Long requestId) {
-        SignatureRequest request = signatureRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ApiException("Signature request not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(requestId, orgId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
+
+        if (!request.isCompleted()) {
+            throw new ApiException("Document is not yet signed");
+        }
+
+        return downloadFromBoldSign(request.getBoldsignDocumentId());
+    }
+
+    @Override
+    public byte[] downloadSignedDocument(Long requestId, Long organizationId) {
+        // SECURITY: Use explicit organization ID for tenant isolation
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(requestId, organizationId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
 
         if (!request.isCompleted()) {
             throw new ApiException("Document is not yet signed");
@@ -269,8 +416,28 @@ public class BoldSignServiceImpl implements BoldSignService {
 
     @Override
     public SignatureRequestDTO refreshStatus(Long requestId) {
-        SignatureRequest request = signatureRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ApiException("Signature request not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(requestId, orgId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
+
+        if (request.getBoldsignDocumentId() == null) {
+            return toDTO(request);
+        }
+
+        // Get status from BoldSign
+        JsonNode status = getStatusFromBoldSign(request.getBoldsignDocumentId());
+        updateRequestFromBoldSignStatus(request, status);
+
+        request = signatureRequestRepository.save(request);
+        return toDTO(request);
+    }
+
+    @Override
+    public SignatureRequestDTO refreshStatus(Long requestId, Long organizationId) {
+        // SECURITY: Use explicit organization ID for tenant isolation
+        SignatureRequest request = signatureRequestRepository.findByIdAndOrganizationId(requestId, organizationId)
+                .orElseThrow(() -> new ApiException("Signature request not found or access denied"));
 
         if (request.getBoldsignDocumentId() == null) {
             return toDTO(request);
@@ -613,8 +780,18 @@ public class BoldSignServiceImpl implements BoldSignService {
     @Override
     @Transactional(readOnly = true)
     public SignatureTemplateDTO getTemplate(Long id) {
-        SignatureTemplate template = signatureTemplateRepository.findById(id)
-                .orElseThrow(() -> new ApiException("Template not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query (allows global templates too)
+        SignatureTemplate template = signatureTemplateRepository.findByIdAndOrganizationIdOrGlobal(id, orgId)
+                .orElseThrow(() -> new ApiException("Template not found or access denied"));
+        return toTemplateDTO(template);
+    }
+
+    @Override
+    public SignatureTemplateDTO getTemplateByIdAndOrganization(Long id, Long organizationId) {
+        // SECURITY: Use explicit organization ID for tenant isolation
+        SignatureTemplate template = signatureTemplateRepository.findByIdAndOrganizationIdOrGlobal(id, organizationId)
+                .orElseThrow(() -> new ApiException("Template not found or access denied"));
         return toTemplateDTO(template);
     }
 
@@ -644,8 +821,10 @@ public class BoldSignServiceImpl implements BoldSignService {
 
     @Override
     public SignatureTemplateDTO updateTemplate(Long id, SignatureTemplateDTO dto) {
-        SignatureTemplate template = signatureTemplateRepository.findById(id)
-                .orElseThrow(() -> new ApiException("Template not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query (allows global templates too)
+        SignatureTemplate template = signatureTemplateRepository.findByIdAndOrganizationIdOrGlobal(id, orgId)
+                .orElseThrow(() -> new ApiException("Template not found or access denied"));
 
         if (template.getIsGlobal()) {
             throw new ApiException("Cannot modify global templates");
@@ -666,9 +845,36 @@ public class BoldSignServiceImpl implements BoldSignService {
     }
 
     @Override
+    public SignatureTemplateDTO updateTemplate(Long id, Long organizationId, SignatureTemplateDTO dto) {
+        // SECURITY: Use explicit organization ID for tenant isolation
+        SignatureTemplate template = signatureTemplateRepository.findByIdAndOrganizationIdOrGlobal(id, organizationId)
+                .orElseThrow(() -> new ApiException("Template not found or access denied"));
+
+        if (template.getIsGlobal()) {
+            throw new ApiException("Cannot modify global templates");
+        }
+
+        if (dto.getName() != null) template.setName(dto.getName());
+        if (dto.getDescription() != null) template.setDescription(dto.getDescription());
+        if (dto.getCategory() != null) template.setCategory(dto.getCategory());
+        if (dto.getFileName() != null) template.setFileName(dto.getFileName());
+        if (dto.getFileUrl() != null) template.setFileUrl(dto.getFileUrl());
+        if (dto.getFieldConfig() != null) template.setFieldConfig(dto.getFieldConfig());
+        if (dto.getDefaultExpiryDays() != null) template.setDefaultExpiryDays(dto.getDefaultExpiryDays());
+        if (dto.getDefaultReminderEmail() != null) template.setDefaultReminderEmail(dto.getDefaultReminderEmail());
+        if (dto.getDefaultReminderSms() != null) template.setDefaultReminderSms(dto.getDefaultReminderSms());
+
+        template = signatureTemplateRepository.save(template);
+        log.info("Updated signature template {} for org {}", id, organizationId);
+        return toTemplateDTO(template);
+    }
+
+    @Override
     public void deleteTemplate(Long id) {
-        SignatureTemplate template = signatureTemplateRepository.findById(id)
-                .orElseThrow(() -> new ApiException("Template not found"));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query (allows global templates too)
+        SignatureTemplate template = signatureTemplateRepository.findByIdAndOrganizationIdOrGlobal(id, orgId)
+                .orElseThrow(() -> new ApiException("Template not found or access denied"));
 
         if (template.getIsGlobal()) {
             throw new ApiException("Cannot delete global templates");
@@ -677,6 +883,21 @@ public class BoldSignServiceImpl implements BoldSignService {
         template.setIsActive(false);
         signatureTemplateRepository.save(template);
         log.info("Deactivated signature template {}", id);
+    }
+
+    @Override
+    public void deleteTemplate(Long id, Long organizationId) {
+        // SECURITY: Use explicit organization ID for tenant isolation
+        SignatureTemplate template = signatureTemplateRepository.findByIdAndOrganizationIdOrGlobal(id, organizationId)
+                .orElseThrow(() -> new ApiException("Template not found or access denied"));
+
+        if (template.getIsGlobal()) {
+            throw new ApiException("Cannot delete global templates");
+        }
+
+        template.setIsActive(false);
+        signatureTemplateRepository.save(template);
+        log.info("Deactivated signature template {} for org {}", id, organizationId);
     }
 
     @Override
@@ -690,7 +911,18 @@ public class BoldSignServiceImpl implements BoldSignService {
     @Override
     @Transactional(readOnly = true)
     public List<SignatureAuditLogDTO> getAuditLogs(Long signatureRequestId) {
-        return signatureAuditLogRepository.findBySignatureRequestIdOrderByCreatedAtDesc(signatureRequestId)
+        Long orgId = getRequiredOrganizationId();
+        return signatureAuditLogRepository.findBySignatureRequestIdAndOrganizationIdOrderByCreatedAtDesc(signatureRequestId, orgId)
+                .stream()
+                .map(this::toAuditLogDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SignatureAuditLogDTO> getAuditLogs(Long signatureRequestId, Long organizationId) {
+        // SECURITY: Use explicit organization ID for tenant isolation
+        return signatureAuditLogRepository.findBySignatureRequestIdAndOrganizationIdOrderByCreatedAtDesc(signatureRequestId, organizationId)
                 .stream()
                 .map(this::toAuditLogDTO)
                 .toList();
@@ -707,9 +939,21 @@ public class BoldSignServiceImpl implements BoldSignService {
 
     @Override
     public void processWebhookEvent(String eventType, String payload, String signature) {
-        // Validate webhook signature
-        if (boldSignConfig.getWebhookSecret() != null && !boldSignConfig.getWebhookSecret().isEmpty()) {
-            // TODO: Implement signature validation
+        // SECURITY: Validate webhook signature using HMAC-SHA256
+        String webhookSecret = boldSignConfig.getWebhookSecret();
+        if (webhookSecret != null && !webhookSecret.isEmpty()) {
+            if (signature == null || signature.isEmpty()) {
+                log.error("SECURITY: BoldSign webhook received without signature");
+                throw new ApiException("Missing webhook signature");
+            }
+
+            if (!verifyBoldSignSignature(payload, signature, webhookSecret)) {
+                log.error("SECURITY: BoldSign webhook signature verification FAILED");
+                throw new ApiException("Invalid webhook signature");
+            }
+            log.debug("BoldSign webhook signature verified successfully");
+        } else {
+            log.warn("SECURITY: BoldSign webhook secret not configured - signature verification skipped");
         }
 
         try {
@@ -721,13 +965,18 @@ public class BoldSignServiceImpl implements BoldSignService {
                 return;
             }
 
+            // SECURITY: Find signature request and verify it exists in our system
             SignatureRequest request = signatureRequestRepository.findByBoldsignDocumentId(documentId)
                     .orElse(null);
 
             if (request == null) {
-                log.warn("Signature request not found for BoldSign document: {}", documentId);
+                log.warn("Signature request not found for BoldSign document: {} - may be from another system", documentId);
                 return;
             }
+
+            // Log the webhook event for audit trail
+            log.info("Processing BoldSign webhook: event={}, documentId={}, organizationId={}",
+                    eventType, documentId, request.getOrganizationId());
 
             handleWebhookEvent(request, eventType, eventData);
 
@@ -735,6 +984,44 @@ public class BoldSignServiceImpl implements BoldSignService {
             log.error("Failed to parse webhook payload: {}", e.getMessage());
             throw new ApiException("Invalid webhook payload");
         }
+    }
+
+    /**
+     * SECURITY: Verify BoldSign webhook signature using HMAC-SHA256.
+     * BoldSign signs the payload with the webhook secret.
+     */
+    private boolean verifyBoldSignSignature(String payload, String signature, String secret) {
+        try {
+            Mac hmac = Mac.getInstance("HmacSHA256");
+            SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            hmac.init(secretKey);
+
+            byte[] hash = hmac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+            String computedSignature = Base64.getEncoder().encodeToString(hash);
+
+            // Compare signatures (constant-time comparison to prevent timing attacks)
+            return constantTimeEquals(computedSignature, signature);
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            log.error("Error computing HMAC signature: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Constant-time string comparison to prevent timing attacks.
+     */
+    private boolean constantTimeEquals(String a, String b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        if (a.length() != b.length()) {
+            return false;
+        }
+        int result = 0;
+        for (int i = 0; i < a.length(); i++) {
+            result |= a.charAt(i) ^ b.charAt(i);
+        }
+        return result == 0;
     }
 
     // ==================== Dashboard ====================
