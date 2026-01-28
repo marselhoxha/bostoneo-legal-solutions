@@ -7,23 +7,41 @@ import java.util.Collection;
 
 public interface EventRepository {
 
+    // ==================== TENANT-FILTERED METHODS ====================
+    // SECURITY: Always use these methods for proper multi-tenant isolation.
+
     /**
-     * @deprecated WARNING: Entity UserEvent lacks organization_id - requires migration.
-     * Use getEventsByUserIdAndOrganizationId when available for tenant isolation.
+     * SECURITY: Get events for a user within their organization
+     */
+    Collection<UserEvent> getEventsByUserIdAndOrganizationId(Long userId, Long organizationId);
+
+    /**
+     * SECURITY: Add user event with organization context (by email)
+     */
+    void addUserEvent(String email, EventType eventType, String device, String ipAddress, Long organizationId);
+
+    /**
+     * SECURITY: Add user event with organization context (by userId)
+     */
+    void addUserEvent(Long userId, EventType eventType, String device, String ipAddress, Long organizationId);
+
+    // ==================== DEPRECATED METHODS ====================
+    // WARNING: These methods bypass multi-tenant isolation.
+
+    /**
+     * @deprecated Use getEventsByUserIdAndOrganizationId for tenant isolation
      */
     @Deprecated
     Collection<UserEvent> getEventsByUserId(Long userId);
 
     /**
-     * @deprecated WARNING: Entity UserEvent lacks organization_id - requires migration.
-     * Use addUserEvent with organizationId parameter when available for tenant isolation.
+     * @deprecated Use addUserEvent with organizationId parameter for tenant isolation
      */
     @Deprecated
     void addUserEvent(String email, EventType eventType, String device, String ipAddress);
 
     /**
-     * @deprecated WARNING: Entity UserEvent lacks organization_id - requires migration.
-     * Use addUserEvent with organizationId parameter when available for tenant isolation.
+     * @deprecated Use addUserEvent with organizationId parameter for tenant isolation
      */
     @Deprecated
     void addUserEvent(Long userId, EventType eventType, String device, String ipAddress);

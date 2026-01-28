@@ -14,6 +14,8 @@ import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
 import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.VendorRepository;
 import com.bostoneo.bostoneosolutions.repository.ReceiptRepository;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ import java.time.ZoneId;
 import java.util.Date;
 
 @Component
+@Slf4j
 public class ExpenseMapper {
     private final ExpenseCategoryRepository categoryRepository;
     private final ClientRepository clientRepository;
@@ -29,6 +32,7 @@ public class ExpenseMapper {
     private final InvoiceRepository invoiceRepository;
     private final LegalCaseRepository legalCaseRepository;
     private final ReceiptRepository receiptRepository;
+    private final TenantService tenantService;
 
     public ExpenseMapper(
             ExpenseCategoryRepository categoryRepository,
@@ -36,13 +40,24 @@ public class ExpenseMapper {
             VendorRepository vendorRepository,
             InvoiceRepository invoiceRepository,
             LegalCaseRepository legalCaseRepository,
-            ReceiptRepository receiptRepository) {
+            ReceiptRepository receiptRepository,
+            TenantService tenantService) {
         this.categoryRepository = categoryRepository;
         this.clientRepository = clientRepository;
         this.vendorRepository = vendorRepository;
         this.invoiceRepository = invoiceRepository;
         this.legalCaseRepository = legalCaseRepository;
         this.receiptRepository = receiptRepository;
+        this.tenantService = tenantService;
+    }
+
+    /**
+     * Get the current organization ID from tenant context.
+     * Throws RuntimeException if no organization context is available.
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required for expense mapping"));
     }
 
     @Transactional(readOnly = true)
@@ -53,6 +68,7 @@ public class ExpenseMapper {
 
         ExpenseDTO dto = new ExpenseDTO();
         dto.setId(expense.getId());
+        dto.setOrganizationId(expense.getOrganizationId());
         dto.setAmount(expense.getAmount());
         dto.setCurrency(expense.getCurrency());
         dto.setDate(convertToLocalDateTime(expense.getDate()));
@@ -106,44 +122,66 @@ public class ExpenseMapper {
             return null;
         }
 
+        // SECURITY: Get current organization ID for tenant isolation
+        Long orgId = getRequiredOrganizationId();
+
         Expense expense = new Expense();
         expense.setId(dto.getId());
+        expense.setOrganizationId(orgId);  // SECURITY: Always use current org context
         expense.setAmount(dto.getAmount());
         expense.setCurrency(dto.getCurrency());
         expense.setDate(convertToDate(dto.getDate()));
         expense.setDescription(dto.getDescription());
         expense.setTax(dto.getTax());
-        
-        // Set the relationships using actual entities from repositories
+
+        // SECURITY: Set relationships using tenant-filtered queries to prevent cross-tenant data access
         if (dto.getCategoryId() != null) {
-            categoryRepository.findById(dto.getCategoryId())
-                .ifPresent(expense::setCategory);
+            categoryRepository.findByIdAndOrganizationId(dto.getCategoryId(), orgId)
+                .ifPresentOrElse(
+                    expense::setCategory,
+                    () -> log.warn("SECURITY: Category {} not found in organization {}", dto.getCategoryId(), orgId)
+                );
         }
         if (dto.getVendorId() != null) {
-            vendorRepository.findById(dto.getVendorId())
-                .ifPresent(expense::setVendor);
+            vendorRepository.findByIdAndOrganizationId(dto.getVendorId(), orgId)
+                .ifPresentOrElse(
+                    expense::setVendor,
+                    () -> log.warn("SECURITY: Vendor {} not found in organization {}", dto.getVendorId(), orgId)
+                );
         }
         if (dto.getClientId() != null) {
-            clientRepository.findById(dto.getClientId())
-                .ifPresent(expense::setClient);
+            clientRepository.findByIdAndOrganizationId(dto.getClientId(), orgId)
+                .ifPresentOrElse(
+                    expense::setClient,
+                    () -> log.warn("SECURITY: Client {} not found in organization {}", dto.getClientId(), orgId)
+                );
         }
         if (dto.getInvoiceId() != null) {
-            invoiceRepository.findById(dto.getInvoiceId())
-                .ifPresent(expense::setInvoice);
+            invoiceRepository.findByIdAndOrganizationId(dto.getInvoiceId(), orgId)
+                .ifPresentOrElse(
+                    expense::setInvoice,
+                    () -> log.warn("SECURITY: Invoice {} not found in organization {}", dto.getInvoiceId(), orgId)
+                );
         }
         if (dto.getLegalCaseId() != null) {
-            legalCaseRepository.findById(dto.getLegalCaseId())
-                .ifPresent(expense::setLegalCase);
+            legalCaseRepository.findByIdAndOrganizationId(dto.getLegalCaseId(), orgId)
+                .ifPresentOrElse(
+                    expense::setLegalCase,
+                    () -> log.warn("SECURITY: LegalCase {} not found in organization {}", dto.getLegalCaseId(), orgId)
+                );
         }
-        // Set receipt relationship
+        // SECURITY: Set receipt relationship with tenant filtering
         if (dto.getReceiptId() != null) {
-            receiptRepository.findById(dto.getReceiptId())
-                .ifPresent(expense::setReceipt);
+            receiptRepository.findByIdAndOrganizationId(dto.getReceiptId(), orgId)
+                .ifPresentOrElse(
+                    expense::setReceipt,
+                    () -> log.warn("SECURITY: Receipt {} not found in organization {}", dto.getReceiptId(), orgId)
+                );
         }
-        
+
         expense.setCreatedAt(convertToDate(dto.getCreatedAt()));
         expense.setUpdatedAt(convertToDate(dto.getUpdatedAt()));
-        
+
         return expense;
     }
 

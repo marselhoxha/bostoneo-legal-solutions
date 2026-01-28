@@ -108,13 +108,14 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
         }
         
         ReminderQueueItem reminder = new ReminderQueueItem();
+        reminder.setOrganizationId(event.getOrganizationId());
         reminder.setEventId(event.getId());
         reminder.setUserId(userId);
         reminder.setScheduledTime(scheduledTime);
         reminder.setMinutesBefore(minutesBefore);
         reminder.setStatus("PENDING");
         reminder.setReminderType(reminderType);
-        
+
         return reminderQueueRepository.save(reminder);
     }
 
@@ -215,6 +216,23 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
 
     @Override
     public List<ReminderQueueItem> getPendingReminders() {
+        // SECURITY: Require organization context - no fallback to global query
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> {
+                    log.error("SECURITY: getPendingReminders called without organization context");
+                    return new RuntimeException("Organization context required for getPendingReminders");
+                });
+        return reminderQueueRepository.findPendingByOrganizationId(orgId);
+    }
+
+    /**
+     * SECURITY: Get all pending reminders for scheduled job processing.
+     * This method is only for use by scheduled tasks that iterate through all organizations.
+     * @return List of all pending reminders across all organizations
+     */
+    public List<ReminderQueueItem> getAllPendingRemindersForScheduler() {
+        // SECURITY: This is intentionally global for the scheduler - it processes all orgs in sequence
+        log.debug("Scheduler fetching all pending reminders for processing");
         return reminderQueueRepository.findByStatus("PENDING");
     }
 

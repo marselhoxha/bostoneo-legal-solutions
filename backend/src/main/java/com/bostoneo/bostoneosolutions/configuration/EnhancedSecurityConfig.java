@@ -26,8 +26,7 @@ import static org.springframework.security.config.http.SessionCreationPolicy.STA
 
 @Configuration
 @EnableWebSecurity
-// TODO: Re-enable after ensuring all endpoints have proper @PreAuthorize annotations
-// @EnableMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class EnhancedSecurityConfig {
     

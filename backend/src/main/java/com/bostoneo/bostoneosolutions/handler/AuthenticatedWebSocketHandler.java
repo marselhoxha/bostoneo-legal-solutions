@@ -129,20 +129,15 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
     /**
      * Broadcast message to all connected users
      * @deprecated Use broadcastToOrganization for tenant-isolated broadcasts
+     * @throws UnsupportedOperationException Always - this method is disabled for security
      */
     @Deprecated
     public void broadcastMessage(Object message) {
-        log.warn("SECURITY: broadcastMessage called without organization filter - use broadcastToOrganization instead");
-        String messageStr = createMessage("broadcast", message);
-        userSessions.values().parallelStream()
-                .filter(WebSocketSession::isOpen)
-                .forEach(session -> {
-                    try {
-                        sendMessage(session, messageStr);
-                    } catch (Exception e) {
-                        log.error("Failed to broadcast message to session {}: {}", session.getId(), e.getMessage());
-                    }
-                });
+        // SECURITY: This method is disabled to prevent cross-tenant data leakage
+        log.error("SECURITY: broadcastMessage called - this method is disabled. Use broadcastToOrganization instead.");
+        throw new UnsupportedOperationException(
+            "SECURITY: broadcastMessage is disabled. Use broadcastToOrganization(organizationId, message) for tenant-isolated broadcasts."
+        );
     }
 
     /**

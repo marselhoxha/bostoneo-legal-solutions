@@ -12,7 +12,9 @@ import com.bostoneo.bostoneosolutions.service.OrganizationService;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +22,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 @Transactional
 public class OrganizationInvitationServiceImpl implements OrganizationInvitationService {
@@ -32,9 +34,25 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
     private final EmailService emailService;
     private final OrganizationService organizationService;
     private final TenantService tenantService;
+    private final TaskExecutor taskExecutor;
 
     @Value("${app.frontend.url:http://localhost:4200}")
     private String frontendUrl;
+
+    public OrganizationInvitationServiceImpl(
+            OrganizationInvitationRepository invitationRepository,
+            UserRepository<User> userRepository,
+            EmailService emailService,
+            OrganizationService organizationService,
+            TenantService tenantService,
+            @Qualifier("taskExecutor") TaskExecutor taskExecutor) {
+        this.invitationRepository = invitationRepository;
+        this.userRepository = userRepository;
+        this.emailService = emailService;
+        this.organizationService = organizationService;
+        this.tenantService = tenantService;
+        this.taskExecutor = taskExecutor;
+    }
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -185,7 +203,9 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
     }
 
     /**
-     * Send invitation email asynchronously
+     * Send invitation email asynchronously using TenantAwareTaskDecorator.
+     * SECURITY: Uses the taskExecutor which has TenantAwareTaskDecorator configured,
+     * ensuring tenant context is properly propagated to async threads.
      */
     private void sendInvitationEmailAsync(OrganizationInvitation invitation, Long organizationId) {
         try {
@@ -197,18 +217,24 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
             // Build invitation URL
             String inviteUrl = frontendUrl + "/accept-invite/" + invitation.getToken();
 
-            // Send email asynchronously
-            java.util.concurrent.CompletableFuture.runAsync(() -> {
-                emailService.sendInvitationEmail(
-                        invitation.getEmail(),
-                        organizationName,
-                        invitation.getRole(),
-                        inviteUrl,
-                        7 // 7 days expiration
-                );
-            });
+            // SECURITY: Send email asynchronously using the tenant-aware task executor
+            // This ensures tenant context is properly propagated via TenantAwareTaskDecorator
+            CompletableFuture.runAsync(() -> {
+                try {
+                    emailService.sendInvitationEmail(
+                            invitation.getEmail(),
+                            organizationName,
+                            invitation.getRole(),
+                            inviteUrl,
+                            7 // 7 days expiration
+                    );
+                    log.info("Invitation email sent successfully to: {}", invitation.getEmail());
+                } catch (Exception e) {
+                    log.error("Failed to send invitation email to {}: {}", invitation.getEmail(), e.getMessage());
+                }
+            }, taskExecutor);
         } catch (Exception e) {
-            log.error("Failed to send invitation email: {}", e.getMessage());
+            log.error("Failed to schedule invitation email: {}", e.getMessage());
             // Don't throw - invitation was created successfully, email failure shouldn't rollback
         }
     }
