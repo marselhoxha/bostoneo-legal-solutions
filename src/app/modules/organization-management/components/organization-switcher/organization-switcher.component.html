@@ -1,0 +1,133 @@
+<div *ngIf="isAdmin" class="dropdown ms-1 header-item" ngbDropdown #orgDropdown="ngbDropdown" display="dynamic" placement="bottom-end" (openChange)="onDropdownToggle($event)">
+  <!-- Trigger Button -->
+  <button type="button"
+          class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative"
+          [class.btn-soft-warning]="isInSwitchedContext()"
+          ngbDropdownToggle
+          id="page-header-org-dropdown">
+    <i class="ri-building-line fs-22"></i>
+    <span *ngIf="isInSwitchedContext()"
+          class="position-absolute topbar-badge fs-10 translate-middle badge rounded-pill bg-warning">
+      <i class="ri-refresh-line" style="font-size: 8px;"></i>
+    </span>
+  </button>
+
+  <!-- Dropdown Menu -->
+  <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end p-0 org-switcher-dropdown"
+       ngbDropdownMenu
+       aria-labelledby="page-header-org-dropdown">
+
+    <!-- Header -->
+    <div class="p-3 border-top-0 border-start-0 border-end-0 border-dashed border bg-primary bg-pattern">
+      <div class="row align-items-center">
+        <div class="col">
+          <h6 class="m-0 fw-semibold fs-15 text-white">
+            <i class="ri-building-line me-2"></i>Organizations
+          </h6>
+          <small class="text-white-50 fs-11">{{ organizations.length }} available</small>
+        </div>
+        <div class="col-auto" *ngIf="isInSwitchedContext()">
+          <button type="button" class="btn btn-sm btn-light"
+                  (click)="clearSwitchedOrg(); orgDropdown.close()"
+                  title="Return to default organization">
+            <i class="ri-logout-box-r-line me-1"></i>Exit
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Organization -->
+    <div class="p-3 border-bottom bg-light" *ngIf="currentOrganization">
+      <div class="d-flex align-items-center">
+        <div class="flex-shrink-0 me-3">
+          <div class="avatar-sm rounded-circle bg-primary d-flex align-items-center justify-content-center">
+            <span class="text-white fw-semibold fs-14">{{ currentOrganization.name?.charAt(0) || 'O' }}</span>
+          </div>
+        </div>
+        <div class="flex-grow-1 overflow-hidden">
+          <h6 class="mb-0 fs-14 fw-semibold text-truncate">{{ currentOrganization.name }}</h6>
+          <div class="d-flex align-items-center gap-2 mt-1">
+            <code class="fs-11 text-muted">{{ currentOrganization.slug }}</code>
+            <span *ngIf="isInSwitchedContext()" class="badge bg-warning-subtle text-warning fs-10">
+              Switched
+            </span>
+          </div>
+        </div>
+        <i class="ri-checkbox-circle-fill text-success fs-20"></i>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="p-3 border-bottom">
+      <div class="position-relative">
+        <input type="text"
+               class="form-control form-control-sm"
+               style="padding-left: 32px;"
+               placeholder="Search organizations..."
+               (input)="onSearch($event)"
+               (click)="$event.stopPropagation()">
+        <i class="ri-search-line position-absolute" style="left: 10px; top: 50%; transform: translateY(-50%); color: #878a99;"></i>
+      </div>
+    </div>
+
+    <!-- Organizations List -->
+    <div class="org-list-scroll" style="max-height: 240px; overflow-y: auto;" data-simplebar>
+      <!-- Loading -->
+      <div *ngIf="isLoading" class="text-center p-4">
+        <div class="spinner-border spinner-border-sm text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted fs-12 mb-0 mt-2">Loading organizations...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!isLoading && filteredOrganizations.length === 0" class="text-center p-4">
+        <div class="avatar-sm mx-auto mb-2">
+          <div class="avatar-title bg-light-subtle text-muted rounded-circle fs-18">
+            <i class="ri-building-line"></i>
+          </div>
+        </div>
+        <p class="text-muted fs-12 mb-0">No organizations found</p>
+      </div>
+
+      <!-- Organization Items -->
+      <div *ngFor="let org of filteredOrganizations"
+           class="text-reset org-item d-block p-3 border-bottom cursor-pointer"
+           [class.bg-light-subtle]="org.id === currentOrganization?.id"
+           (click)="switchToOrganization(org); orgDropdown.close()">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0 me-3">
+            <div class="avatar-xs rounded-circle d-flex align-items-center justify-content-center"
+                 [ngClass]="org.id === currentOrganization?.id ? 'bg-primary' : 'bg-primary-subtle'">
+              <span class="fw-medium fs-12"
+                    [ngClass]="org.id === currentOrganization?.id ? 'text-white' : 'text-primary'">
+                {{ org.name?.charAt(0) || 'O' }}
+              </span>
+            </div>
+          </div>
+          <div class="flex-grow-1 overflow-hidden">
+            <h6 class="mb-0 fs-13 text-truncate" [class.fw-semibold]="org.id === currentOrganization?.id">
+              {{ org.name }}
+            </h6>
+            <span class="text-muted fs-11">{{ org.slug }}</span>
+          </div>
+          <div class="flex-shrink-0 ms-2 d-flex align-items-center gap-2">
+            <span class="badge rounded-pill fs-10" [ngClass]="getPlanBadgeClass(org.planType)">
+              {{ org.planType || 'FREE' }}
+            </span>
+            <i *ngIf="org.id === currentOrganization?.id" class="ri-check-line text-success fs-16"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="p-2 border-top text-center">
+      <a routerLink="/organizations/list"
+         class="btn btn-sm btn-soft-primary w-100"
+         (click)="orgDropdown.close()">
+        <i class="ri-settings-3-line me-1"></i>Manage Organizations
+      </a>
+    </div>
+  </div>
+</div>

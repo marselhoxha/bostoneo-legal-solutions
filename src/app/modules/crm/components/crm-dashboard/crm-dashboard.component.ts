@@ -71,22 +71,17 @@ export class CrmDashboardComponent implements OnInit, OnDestroy {
           // Handle wrapped response (data.xxx) or direct response
           const data = response?.data || response;
 
-          // Merge with mock data for any missing fields
-          const mockData = this.getMockData();
+          // Use actual data from backend - no mock fallback for tenant isolation
           this.dashboardData = {
-            submissionCounts: data?.submissionCounts && Object.keys(data.submissionCounts).length > 0
-              ? data.submissionCounts
-              : mockData.submissionCounts,
-            practiceAreaCounts: data?.practiceAreaCounts && Object.keys(data.practiceAreaCounts).length > 0
-              ? data.practiceAreaCounts
-              : mockData.practiceAreaCounts,
-            priorityRanges: data?.priorityRanges && Object.keys(data.priorityRanges).length > 0
-              ? data.priorityRanges
-              : mockData.priorityRanges,
+            submissionCounts: data?.submissionCounts || {},
+            practiceAreaCounts: data?.practiceAreaCounts || {},
+            priorityRanges: data?.priorityRanges || {},
             recentSubmissions: data?.recentSubmissions || [],
-            conversionStats: data?.conversionStats && data.conversionStats.totalSubmissions > 0
-              ? data.conversionStats
-              : mockData.conversionStats
+            conversionStats: data?.conversionStats || {
+              totalSubmissions: 0,
+              convertedToLeads: 0,
+              conversionRate: 0
+            }
           };
 
           this.isLoading = false;
@@ -94,10 +89,9 @@ export class CrmDashboardComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('❌ Error loading dashboard data:', error);
-          this.error = '';
+          this.error = 'Failed to load dashboard data. Please try again.';
           this.isLoading = false;
-          // Use fallback data for development/demo
-          this.dashboardData = this.getMockData();
+          // Don't use mock data - show empty state for tenant isolation
           this.cdr.detectChanges();
         }
       });

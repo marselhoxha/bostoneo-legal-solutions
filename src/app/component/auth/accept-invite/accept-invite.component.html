@@ -1,0 +1,237 @@
+<div class="auth-page-wrapper pt-5">
+  <!-- Background -->
+  <div class="auth-one-bg-position auth-one-bg" id="auth-particles">
+    <div class="bg-overlay"></div>
+    <div class="shape">
+      <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1440 120">
+        <path d="M 0,36 C 144,53.6 432,123.2 720,124 C 1008,124.8 1296,56.8 1440,googletag44L1440 140L0 140z"></path>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="auth-page-content">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="text-center mt-sm-5 mb-4 text-white-50">
+            <div>
+              <a routerLink="/" class="d-inline-block auth-logo">
+                <h2 class="text-white">Bostoneo Legal Solutions</h2>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6 col-xl-5">
+          <div class="card mt-4 shadow-lg">
+            <!-- Loading State -->
+            <div class="card-body p-4 text-center" *ngIf="state.loading">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <p class="mt-3 text-muted">Validating invitation...</p>
+            </div>
+
+            <!-- Error State -->
+            <div class="card-body p-4" *ngIf="!state.loading && state.error && !state.invitation?.valid">
+              <div class="text-center mb-4">
+                <div class="avatar-lg mx-auto">
+                  <div class="avatar-title bg-danger-subtle text-danger rounded-circle fs-1">
+                    <i class="ri-error-warning-line"></i>
+                  </div>
+                </div>
+                <h5 class="mt-4 text-danger">Invalid Invitation</h5>
+                <p class="text-muted">{{ state.error }}</p>
+              </div>
+              <div class="text-center">
+                <a routerLink="/login/login" class="btn btn-primary">Go to Login</a>
+              </div>
+            </div>
+
+            <!-- Success State -->
+            <div class="card-body p-4" *ngIf="state.success">
+              <div class="text-center mb-4">
+                <div class="avatar-lg mx-auto">
+                  <div class="avatar-title bg-success-subtle text-success rounded-circle fs-1">
+                    <i class="ri-checkbox-circle-line"></i>
+                  </div>
+                </div>
+                <h5 class="mt-4 text-success">Success!</h5>
+                <p class="text-muted">{{ state.successMessage }}</p>
+                <p class="text-muted small" *ngIf="state.willRedirect">Redirecting to dashboard...</p>
+                <div *ngIf="!state.willRedirect" class="mt-3">
+                  <a routerLink="/login/login" class="btn btn-primary">Go to Login</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Valid Invitation -->
+            <div class="card-body p-4" *ngIf="!state.loading && state.invitation?.valid && !state.success">
+              <!-- Invitation Header -->
+              <div class="text-center mb-4">
+                <div class="avatar-lg mx-auto mb-3">
+                  <div class="avatar-title bg-primary-subtle text-primary rounded-circle fs-1">
+                    <i class="ri-team-line"></i>
+                  </div>
+                </div>
+                <h5 class="text-primary">You've Been Invited!</h5>
+                <p class="text-muted mb-1">
+                  Join <strong>{{ state.invitation.organizationName || 'the organization' }}</strong>
+                </p>
+                <span class="badge bg-info-subtle text-info">{{ state.invitation.role }}</span>
+              </div>
+
+              <!-- Error Alert -->
+              <div class="alert alert-danger" *ngIf="state.error">
+                <i class="ri-error-warning-line me-2"></i>{{ state.error }}
+              </div>
+
+              <!-- Already Logged In - Just Accept -->
+              <div *ngIf="state.isLoggedIn">
+                <div class="alert alert-info mb-4">
+                  <i class="ri-information-line me-2"></i>
+                  You are already logged in. Click below to join the organization.
+                </div>
+                <div class="d-grid">
+                  <button class="btn btn-primary btn-lg" (click)="acceptInvitation()" [disabled]="state.submitting">
+                    <span *ngIf="state.submitting" class="spinner-border spinner-border-sm me-2"></span>
+                    <i class="ri-user-add-line me-2" *ngIf="!state.submitting"></i>
+                    Join Organization
+                  </button>
+                </div>
+              </div>
+
+              <!-- Not Logged In - Show Login/Register Tabs -->
+              <div *ngIf="!state.isLoggedIn">
+                <!-- Tabs -->
+                <ul class="nav nav-tabs nav-tabs-custom nav-justified mb-4" role="tablist">
+                  <li class="nav-item">
+                    <a class="nav-link" [class.active]="state.activeTab === 'login'"
+                       (click)="setActiveTab('login')" role="tab">
+                      <i class="ri-login-box-line me-1"></i> Sign In
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" [class.active]="state.activeTab === 'register'"
+                       (click)="setActiveTab('register')" role="tab">
+                      <i class="ri-user-add-line me-1"></i> Create Account
+                    </a>
+                  </li>
+                </ul>
+
+                <!-- Login Form -->
+                <div *ngIf="state.activeTab === 'login'">
+                  <form [formGroup]="loginForm" (ngSubmit)="login()">
+                    <div class="mb-3">
+                      <label for="email" class="form-label">Email</label>
+                      <input type="email" class="form-control" id="email" formControlName="email"
+                             placeholder="Enter email" [class.is-invalid]="f['email'].touched && f['email'].errors">
+                      <div class="invalid-feedback" *ngIf="f['email'].errors?.['required']">Email is required</div>
+                      <div class="invalid-feedback" *ngIf="f['email'].errors?.['email']">Invalid email format</div>
+                    </div>
+
+                    <div class="mb-3">
+                      <label for="password" class="form-label">Password</label>
+                      <div class="position-relative">
+                        <input [type]="showPassword ? 'text' : 'password'" class="form-control pe-5"
+                               id="password" formControlName="password" placeholder="Enter password"
+                               [class.is-invalid]="f['password'].touched && f['password'].errors">
+                        <button type="button" class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted"
+                                style="padding: 0.375rem 0.75rem;" (click)="togglePassword()">
+                          <i [class]="showPassword ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+                        </button>
+                      </div>
+                      <div class="invalid-feedback" *ngIf="f['password'].errors?.['required']">Password is required</div>
+                    </div>
+
+                    <div class="mt-4">
+                      <button class="btn btn-primary w-100" type="submit"
+                              [disabled]="loginForm.invalid || state.submitting">
+                        <span *ngIf="state.submitting" class="spinner-border spinner-border-sm me-2"></span>
+                        Sign In & Join
+                      </button>
+                    </div>
+                  </form>
+
+                  <div class="mt-3 text-center">
+                    <a routerLink="/login/resetpassword" class="text-primary">Forgot password?</a>
+                  </div>
+                </div>
+
+                <!-- Register Form -->
+                <div *ngIf="state.activeTab === 'register'">
+                  <form [formGroup]="registerForm" (ngSubmit)="register()">
+                    <div class="row">
+                      <div class="col-md-6 mb-3">
+                        <label for="firstName" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="firstName" formControlName="firstName"
+                               placeholder="Enter first name" [class.is-invalid]="rf['firstName'].touched && rf['firstName'].errors">
+                        <div class="invalid-feedback">First name is required</div>
+                      </div>
+                      <div class="col-md-6 mb-3">
+                        <label for="lastName" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="lastName" formControlName="lastName"
+                               placeholder="Enter last name" [class.is-invalid]="rf['lastName'].touched && rf['lastName'].errors">
+                        <div class="invalid-feedback">Last name is required</div>
+                      </div>
+                    </div>
+
+                    <div class="mb-3">
+                      <label for="regEmail" class="form-label">Email</label>
+                      <input type="email" class="form-control" id="regEmail" formControlName="email"
+                             placeholder="Enter email" [readonly]="state.invitation?.email"
+                             [class.is-invalid]="rf['email'].touched && rf['email'].errors">
+                      <div class="invalid-feedback" *ngIf="rf['email'].errors?.['required']">Email is required</div>
+                      <div class="invalid-feedback" *ngIf="rf['email'].errors?.['email']">Invalid email format</div>
+                    </div>
+
+                    <div class="mb-3">
+                      <label for="regPassword" class="form-label">Password</label>
+                      <input [type]="showPassword ? 'text' : 'password'" class="form-control"
+                             id="regPassword" formControlName="password" placeholder="Create password"
+                             [class.is-invalid]="rf['password'].touched && rf['password'].errors">
+                      <div class="invalid-feedback" *ngIf="rf['password'].errors?.['required']">Password is required</div>
+                      <div class="invalid-feedback" *ngIf="rf['password'].errors?.['minlength']">Password must be at least 6 characters</div>
+                    </div>
+
+                    <div class="mb-3">
+                      <label for="confirmPassword" class="form-label">Confirm Password</label>
+                      <input [type]="showPassword ? 'text' : 'password'" class="form-control"
+                             id="confirmPassword" formControlName="confirmPassword" placeholder="Confirm password"
+                             [class.is-invalid]="rf['confirmPassword'].touched && rf['confirmPassword'].errors">
+                      <div class="invalid-feedback">Please confirm your password</div>
+                    </div>
+
+                    <div class="mt-4">
+                      <button class="btn btn-success w-100" type="submit"
+                              [disabled]="registerForm.invalid || state.submitting">
+                        <span *ngIf="state.submitting" class="spinner-border spinner-border-sm me-2"></span>
+                        Create Account & Join
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="text-center">
+            <p class="mb-0 text-muted">&copy; {{ currentYear }} Bostoneo Legal Solutions. All rights reserved.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>

@@ -7,11 +7,15 @@ import { FaqsComponent } from './component/faqs/faqs.component';
 import { AuthGuard } from './guard/auth.guard';
 import { RbacGuard, RoutePermissions } from './guard/rbac.guard';
 import { BillingDashboardComponent } from './component/dashboards/billing/billing-dashboard.component';
+import { AcceptInviteComponent } from './component/auth/accept-invite/accept-invite.component';
 
 const routes: Routes = [
   // Auth routes (no layout)
   { path: 'login', loadChildren: () => import('./component/auth/auth.module').then(m => m.AuthModule) },
-  
+
+  // Accept invitation route (public, no auth required) - direct component load
+  { path: 'accept-invite/:token', component: AcceptInviteComponent },
+
   // Public routes (no auth required)
   { path: 'public', loadChildren: () => import('./modules/public/public.module').then(m => m.PublicModule) },
   
@@ -62,6 +66,13 @@ const routes: Routes = [
       {
         path: 'client',
         loadChildren: () => import('./modules/client-portal/client-portal.module').then(m => m.ClientPortalModule),
+        canActivate: [AuthenticationGuard]
+      },
+
+      // Organization Management module (Sysadmin only)
+      {
+        path: 'organizations',
+        loadChildren: () => import('./modules/organization-management/organization-management.module').then(m => m.OrganizationManagementModule),
         canActivate: [AuthenticationGuard]
       },
 

@@ -4,6 +4,7 @@ import { LoginComponent } from './login/login.component';
 import { RegisterComponent } from './register/register.component';
 import { ResetpasswordComponent } from './resetpassword/resetpassword.component';
 import { VerifyComponent } from './verify/verify.component';
+import { AcceptInviteComponent } from './accept-invite/accept-invite.component';
 
 const authRoutes: Routes = [
   { path: 'login', component: LoginComponent },

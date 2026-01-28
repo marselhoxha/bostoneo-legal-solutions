@@ -416,6 +416,18 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
               hierarchyLevel: 100,
               roles: ['ROLE_ADMIN']
             }
+          },
+          {
+            id: 84,
+            label: 'Organizations',
+            link: '/organizations/list',
+            parentId: 8,
+            permission: {
+              resource: 'ORGANIZATION',
+              action: 'VIEW',
+              hierarchyLevel: 100,
+              roles: ['ROLE_ADMIN']
+            }
           }
         ]
       }

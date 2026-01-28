@@ -1,0 +1,416 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-header-wrapper">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div>
+            <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Administration</div>
+            <h4 class="mb-0">Organization Settings</h4>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-soft-secondary" (click)="backToDetails()">
+              <i class="ri-arrow-left-line me-1"></i>Back to Details
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <h5 class="mt-4">Loading Settings</h5>
+    <p class="text-muted">Fetching organization settings...</p>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!isLoading && organization" style="margin-bottom: 60px;">
+    <div class="row">
+      <!-- Vertical Tabs (Left) -->
+      <div class="col-lg-3">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-0">
+            <div class="settings-nav">
+              <a class="settings-nav-item" [class.active]="activeSettingsTab === 'general'" (click)="setSettingsTab('general')">
+                <i class="ri-building-line"></i>
+                <span>General</span>
+              </a>
+              <a class="settings-nav-item" [class.active]="activeSettingsTab === 'notifications'" (click)="setSettingsTab('notifications')">
+                <i class="ri-notification-3-line"></i>
+                <span>Notifications</span>
+              </a>
+              <a class="settings-nav-item" [class.active]="activeSettingsTab === 'integrations'" (click)="setSettingsTab('integrations')">
+                <i class="ri-plug-line"></i>
+                <span>Integrations</span>
+              </a>
+              <a class="settings-nav-item" [class.active]="activeSettingsTab === 'reminders'" (click)="setSettingsTab('reminders')">
+                <i class="ri-time-line"></i>
+                <span>Signature Reminders</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Content (Right) -->
+      <div class="col-lg-9">
+        <!-- General Settings -->
+        <div *ngIf="activeSettingsTab === 'general'" class="card border-0 shadow-sm">
+          <div class="card-header bg-transparent border-bottom">
+            <h6 class="mb-0 fw-semibold">
+              <i class="ri-building-line me-2 text-primary"></i>General Information
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="row g-4">
+              <!-- Organization Name -->
+              <div class="col-12">
+                <div class="d-flex align-items-start gap-3 p-3 bg-light rounded">
+                  <div class="avatar-sm flex-shrink-0">
+                    <span class="avatar-title bg-primary-subtle text-primary rounded">
+                      <i class="ri-building-line"></i>
+                    </span>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1 fs-14">Organization Name</h6>
+                    <p class="text-muted mb-1">{{ organization.name }}</p>
+                    <small class="text-muted">
+                      <a routerLink="/organizations/edit/{{ organizationId }}" class="text-primary">
+                        <i class="ri-pencil-line me-1"></i>Edit in organization form
+                      </a>
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Slug -->
+              <div class="col-md-6">
+                <div class="d-flex align-items-start gap-3 p-3 bg-light rounded">
+                  <div class="avatar-sm flex-shrink-0">
+                    <span class="avatar-title bg-info-subtle text-info rounded">
+                      <i class="ri-link"></i>
+                    </span>
+                  </div>
+                  <div>
+                    <h6 class="mb-1 fs-14">Slug</h6>
+                    <code class="fs-13">{{ organization.slug }}</code>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Plan -->
+              <div class="col-md-6">
+                <div class="d-flex align-items-start gap-3 p-3 bg-light rounded">
+                  <div class="avatar-sm flex-shrink-0">
+                    <span class="avatar-title bg-warning-subtle text-warning rounded">
+                      <i class="ri-vip-crown-line"></i>
+                    </span>
+                  </div>
+                  <div>
+                    <h6 class="mb-1 fs-14">Subscription Plan</h6>
+                    <span class="badge" [ngClass]="getPlanBadgeClass(organization.planType)">
+                      {{ organization.planType || 'FREE' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contact Info -->
+              <div class="col-md-6" *ngIf="organization.email">
+                <div class="d-flex align-items-start gap-3 p-3 bg-light rounded">
+                  <div class="avatar-sm flex-shrink-0">
+                    <span class="avatar-title bg-success-subtle text-success rounded">
+                      <i class="ri-mail-line"></i>
+                    </span>
+                  </div>
+                  <div>
+                    <h6 class="mb-1 fs-14">Email</h6>
+                    <span class="text-muted">{{ organization.email }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6" *ngIf="organization.phone">
+                <div class="d-flex align-items-start gap-3 p-3 bg-light rounded">
+                  <div class="avatar-sm flex-shrink-0">
+                    <span class="avatar-title bg-primary-subtle text-primary rounded">
+                      <i class="ri-phone-line"></i>
+                    </span>
+                  </div>
+                  <div>
+                    <h6 class="mb-1 fs-14">Phone</h6>
+                    <span class="text-muted">{{ organization.phone }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12" *ngIf="organization.address">
+                <div class="d-flex align-items-start gap-3 p-3 bg-light rounded">
+                  <div class="avatar-sm flex-shrink-0">
+                    <span class="avatar-title bg-warning-subtle text-warning rounded">
+                      <i class="ri-map-pin-line"></i>
+                    </span>
+                  </div>
+                  <div>
+                    <h6 class="mb-1 fs-14">Address</h6>
+                    <span class="text-muted">{{ organization.address }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top">
+              <a routerLink="/organizations/edit/{{ organizationId }}" class="btn btn-primary">
+                <i class="ri-pencil-line me-1"></i>Edit Organization Details
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notifications Settings -->
+        <div *ngIf="activeSettingsTab === 'notifications'" class="card border-0 shadow-sm">
+          <div class="card-header bg-transparent border-bottom">
+            <h6 class="mb-0 fw-semibold">
+              <i class="ri-notification-3-line me-2 text-info"></i>Notification Preferences
+            </h6>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-4">Configure how your organization sends notifications to clients and team members.</p>
+
+            <div class="notification-settings">
+              <!-- Email -->
+              <div class="notification-item">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-success-subtle text-success rounded">
+                      <i class="ri-mail-line"></i>
+                    </span>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-0 fs-14">Email Notifications</h6>
+                    <small class="text-muted">Send notifications via email</small>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="emailEnabled" [(ngModel)]="notificationSettings.emailEnabled">
+                  </div>
+                </div>
+              </div>
+
+              <!-- SMS -->
+              <div class="notification-item">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-primary-subtle text-primary rounded">
+                      <i class="ri-message-2-line"></i>
+                    </span>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-0 fs-14">SMS Notifications</h6>
+                    <small class="text-muted">Send notifications via SMS (requires Twilio)</small>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="smsEnabled" [(ngModel)]="notificationSettings.smsEnabled"
+                           [disabled]="!organization.twilioConfigured">
+                  </div>
+                </div>
+                <div *ngIf="!organization.twilioConfigured" class="ms-5 mt-2">
+                  <small class="text-warning"><i class="ri-information-line me-1"></i>Twilio not configured</small>
+                </div>
+              </div>
+
+              <!-- WhatsApp -->
+              <div class="notification-item">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-success-subtle text-success rounded">
+                      <i class="ri-whatsapp-line"></i>
+                    </span>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-0 fs-14">WhatsApp Notifications</h6>
+                    <small class="text-muted">Send notifications via WhatsApp (requires Twilio)</small>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="whatsappEnabled" [(ngModel)]="notificationSettings.whatsappEnabled"
+                           [disabled]="!organization.twilioConfigured">
+                  </div>
+                </div>
+                <div *ngIf="!organization.twilioConfigured" class="ms-5 mt-2">
+                  <small class="text-warning"><i class="ri-information-line me-1"></i>Twilio not configured</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top">
+              <button class="btn btn-primary" (click)="saveNotificationSettings()" [disabled]="isSaving">
+                <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+                {{ isSaving ? 'Saving...' : 'Save Changes' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Integrations Settings -->
+        <div *ngIf="activeSettingsTab === 'integrations'" class="card border-0 shadow-sm">
+          <div class="card-header bg-transparent border-bottom">
+            <h6 class="mb-0 fw-semibold">
+              <i class="ri-plug-line me-2 text-warning"></i>Integrations
+            </h6>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-4">Manage third-party integrations for your organization.</p>
+
+            <div class="row g-4">
+              <!-- Twilio -->
+              <div class="col-md-6">
+                <div class="integration-card p-4 border rounded h-100" [ngClass]="organization.twilioConfigured ? 'border-success' : ''">
+                  <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div class="avatar-md">
+                      <span class="avatar-title rounded" [ngClass]="organization.twilioConfigured ? 'bg-success text-white' : 'bg-secondary-subtle text-secondary'">
+                        <i class="ri-phone-line fs-22"></i>
+                      </span>
+                    </div>
+                    <span class="badge rounded-pill" [ngClass]="organization.twilioConfigured ? 'bg-success' : 'bg-secondary'">
+                      {{ organization.twilioConfigured ? 'Connected' : 'Not Connected' }}
+                    </span>
+                  </div>
+                  <h5 class="mb-2">Twilio</h5>
+                  <p class="text-muted fs-13 mb-3">SMS & Voice communications platform for sending notifications and reminders.</p>
+                  <div *ngIf="organization.twilioConfigured && organization.twilioPhoneNumber" class="mb-3">
+                    <small class="text-muted d-block">Phone Number</small>
+                    <span class="fw-medium">{{ organization.twilioPhoneNumber }}</span>
+                  </div>
+                  <button class="btn btn-sm" [ngClass]="organization.twilioConfigured ? 'btn-soft-success' : 'btn-soft-primary'">
+                    <i class="ri-settings-3-line me-1"></i>{{ organization.twilioConfigured ? 'Manage' : 'Configure' }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- BoldSign -->
+              <div class="col-md-6">
+                <div class="integration-card p-4 border rounded h-100" [ngClass]="organization.boldsignConfigured ? 'border-info' : ''">
+                  <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div class="avatar-md">
+                      <span class="avatar-title rounded" [ngClass]="organization.boldsignConfigured ? 'bg-info text-white' : 'bg-secondary-subtle text-secondary'">
+                        <i class="ri-quill-pen-line fs-22"></i>
+                      </span>
+                    </div>
+                    <span class="badge rounded-pill" [ngClass]="organization.boldsignConfigured ? 'bg-info' : 'bg-secondary'">
+                      {{ organization.boldsignConfigured ? 'Connected' : 'Not Connected' }}
+                    </span>
+                  </div>
+                  <h5 class="mb-2">BoldSign</h5>
+                  <p class="text-muted fs-13 mb-3">Electronic signature solution for document signing and management.</p>
+                  <div *ngIf="organization.boldsignConfigured && organization.boldsignEnabled" class="mb-3">
+                    <small class="text-muted d-block">Status</small>
+                    <span class="fw-medium text-success"><i class="ri-checkbox-circle-line me-1"></i>Active</span>
+                  </div>
+                  <button class="btn btn-sm" [ngClass]="organization.boldsignConfigured ? 'btn-soft-info' : 'btn-soft-primary'">
+                    <i class="ri-settings-3-line me-1"></i>{{ organization.boldsignConfigured ? 'Manage' : 'Configure' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Signature Reminders Settings -->
+        <div *ngIf="activeSettingsTab === 'reminders'" class="card border-0 shadow-sm">
+          <div class="card-header bg-transparent border-bottom">
+            <h6 class="mb-0 fw-semibold">
+              <i class="ri-time-line me-2 text-primary"></i>Signature Reminders
+            </h6>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-4">Configure automatic reminders for pending document signatures.</p>
+
+            <h6 class="text-muted text-uppercase fs-11 mb-3">Reminder Channels</h6>
+            <div class="notification-settings mb-4">
+              <!-- Email Reminders -->
+              <div class="notification-item">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-success-subtle text-success rounded">
+                      <i class="ri-mail-line"></i>
+                    </span>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-0 fs-14">Email Reminders</h6>
+                    <small class="text-muted">Send signature reminders via email</small>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.signatureReminderEmail">
+                  </div>
+                </div>
+              </div>
+
+              <!-- SMS Reminders -->
+              <div class="notification-item">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-primary-subtle text-primary rounded">
+                      <i class="ri-message-2-line"></i>
+                    </span>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-0 fs-14">SMS Reminders</h6>
+                    <small class="text-muted">Send signature reminders via SMS</small>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.signatureReminderSms"
+                           [disabled]="!organization.twilioConfigured">
+                  </div>
+                </div>
+              </div>
+
+              <!-- WhatsApp Reminders -->
+              <div class="notification-item">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="avatar-sm">
+                    <span class="avatar-title bg-success-subtle text-success rounded">
+                      <i class="ri-whatsapp-line"></i>
+                    </span>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-0 fs-14">WhatsApp Reminders</h6>
+                    <small class="text-muted">Send signature reminders via WhatsApp</small>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.signatureReminderWhatsapp"
+                           [disabled]="!organization.twilioConfigured">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <h6 class="text-muted text-uppercase fs-11 mb-3">Reminder Schedule</h6>
+            <div class="p-3 bg-light rounded mb-3">
+              <label class="form-label fw-medium">Days before deadline</label>
+              <input type="text"
+                     class="form-control"
+                     placeholder="e.g., 7,3,1"
+                     [(ngModel)]="notificationSettings.signatureReminderDays">
+              <small class="text-muted d-block mt-2">
+                Enter comma-separated days (e.g., "7,3,1" sends reminders 7, 3, and 1 day before the deadline)
+              </small>
+            </div>
+
+            <div class="reminder-preview p-3 border rounded bg-primary-subtle">
+              <h6 class="mb-2 fs-14"><i class="ri-calendar-line me-2"></i>Reminder Preview</h6>
+              <p class="mb-0 text-muted fs-13">{{ formatReminderDays() }}</p>
+            </div>
+
+            <div class="mt-4 pt-3 border-top">
+              <button class="btn btn-primary" (click)="saveNotificationSettings()" [disabled]="isSaving">
+                <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+                {{ isSaving ? 'Saving...' : 'Save Changes' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

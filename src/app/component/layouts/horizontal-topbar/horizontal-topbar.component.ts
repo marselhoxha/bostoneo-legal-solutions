@@ -35,12 +35,25 @@ export class HorizontalTopbarComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Debug: Log current user data
+    const currentUserStr = localStorage.getItem('currentUser');
+    if (currentUserStr) {
+      const currentUser = JSON.parse(currentUserStr);
+      console.log('🔍 HorizontalTopbar - currentUser from localStorage:', currentUser);
+      console.log('🔍 HorizontalTopbar - roles:', currentUser.roles);
+      console.log('🔍 HorizontalTopbar - roleName:', currentUser.roleName);
+    } else {
+      console.log('🔍 HorizontalTopbar - No currentUser in localStorage');
+    }
+
     // Determine user's primary role and load appropriate menu
     this.loadMenuForUserRole();
     this.initActiveMenu();
 
     // Check comprehensive admin access
-    if (this.rbacService.isAdmin()) {
+    const isAdmin = this.rbacService.isAdmin();
+    console.log('🔍 HorizontalTopbar - isAdmin result:', isAdmin);
+    if (isAdmin) {
       this.showAdminNavigation = true;
     }
 
@@ -55,8 +68,14 @@ export class HorizontalTopbarComponent implements OnInit {
     const userRole = this.getUserPrimaryRole();
     this.currentUserRole = userRole;
 
-    // Get menu based on user's role
-    this.menuItems = getMenuForRole(userRole);
+    // If user is admin, always load ADMIN_MENU regardless of primary role
+    if (this.rbacService.isAdmin()) {
+      console.log('🔍 loadMenuForUserRole - User is admin, loading ADMIN_MENU');
+      this.menuItems = getMenuForRole('ROLE_ADMIN');
+    } else {
+      // Get menu based on user's role
+      this.menuItems = getMenuForRole(userRole);
+    }
     this.menu = this.menuItems;
   }
 

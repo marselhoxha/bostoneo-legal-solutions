@@ -1,0 +1,569 @@
+// Organization List - Velzon Theme (Matching Cases/Signatures Pages)
+
+// ==================== Page Header ====================
+.page-header-wrapper {
+  padding: 1.25rem 0 1.5rem;
+  margin-bottom: 0.5rem;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 1.25rem;
+    bottom: 1.5rem;
+    width: 3px;
+    background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.2) 100%);
+    border-radius: 2px;
+  }
+
+  padding-left: 1.25rem;
+
+  h4 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--vz-heading-color);
+    margin: 0;
+  }
+}
+
+// ==================== Search Box ====================
+.search-box {
+  position: relative;
+
+  .search-input {
+    width: 280px;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--vz-border-color);
+    background-color: var(--vz-light);
+    font-size: 0.875rem;
+    transition: all 0.25s ease;
+
+    &::placeholder {
+      color: var(--vz-secondary-color);
+    }
+
+    &:hover {
+      background-color: var(--vz-card-bg);
+      border-color: rgba(var(--vz-primary-rgb), 0.3);
+    }
+
+    &:focus {
+      width: 320px;
+      background-color: var(--vz-card-bg);
+      border-color: var(--vz-primary);
+      box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb), 0.1);
+    }
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--vz-secondary-color);
+    font-size: 1rem;
+  }
+}
+
+// ==================== Stats Row ====================
+.stats-row {
+  display: flex;
+  background: var(--vz-card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--vz-border-color);
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.stat-item {
+  flex: 1;
+  padding: 1.25rem 1.5rem;
+  border-right: 1px solid var(--vz-border-color);
+  transition: all 0.2s ease;
+
+  &:last-child {
+    border-right: none;
+  }
+
+  &:hover {
+    filter: brightness(0.97);
+  }
+
+  &.active {
+    filter: brightness(0.95);
+  }
+}
+
+.stat-item:nth-child(1) {
+  background: rgba(var(--vz-primary-rgb), 0.08);
+}
+
+.stat-item:nth-child(2) {
+  background: rgba(var(--vz-success-rgb), 0.08);
+}
+
+.stat-item:nth-child(3) {
+  background: rgba(var(--vz-warning-rgb), 0.08);
+}
+
+.stat-item:nth-child(4) {
+  background: rgba(var(--vz-info-rgb), 0.08);
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--vz-secondary-color);
+}
+
+.stat-indicator {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+
+  &.stat-indicator-primary {
+    background: rgba(var(--vz-primary-rgb), 0.1);
+    color: var(--vz-primary);
+  }
+
+  &.stat-indicator-success {
+    background: rgba(var(--vz-success-rgb), 0.1);
+    color: var(--vz-success);
+  }
+
+  &.stat-indicator-warning {
+    background: rgba(var(--vz-warning-rgb), 0.1);
+    color: var(--vz-warning);
+  }
+
+  &.stat-indicator-info {
+    background: rgba(var(--vz-info-rgb), 0.1);
+    color: var(--vz-info);
+  }
+}
+
+.stat-body {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+  opacity: 0.7;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--vz-heading-color);
+  line-height: 1;
+  font-feature-settings: "tnum";
+}
+
+// ==================== Card Styles ====================
+.card {
+  border-radius: 12px;
+
+  .card-header {
+    padding: 1.25rem 1.5rem;
+
+    h5 {
+      color: var(--vz-heading-color);
+    }
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+}
+
+// ==================== Table Styles ====================
+.table {
+  th {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--vz-secondary-color);
+    border-bottom: 1px solid var(--vz-border-color);
+    padding: 0.875rem 1rem;
+  }
+
+  td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--vz-border-color);
+  }
+
+  tbody tr {
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: rgba(var(--vz-primary-rgb), 0.03);
+    }
+  }
+
+  h6 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--vz-heading-color);
+  }
+}
+
+// ==================== Avatar Styles ====================
+.avatar-xs {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+}
+
+// ==================== Badge Styles ====================
+.badge {
+  font-weight: 500;
+  padding: 0.4em 0.65em;
+
+  &.rounded-pill {
+    padding: 0.4em 0.8em;
+  }
+}
+
+// ==================== Button Styles ====================
+.btn-soft-primary {
+  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  color: var(--vz-primary);
+  border: none;
+
+  &:hover {
+    background-color: var(--vz-primary);
+    color: #fff;
+  }
+}
+
+.btn-soft-secondary {
+  background-color: rgba(var(--vz-secondary-rgb), 0.1);
+  color: var(--vz-secondary);
+  border: none;
+
+  &:hover {
+    background-color: var(--vz-secondary);
+    color: #fff;
+  }
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+
+  i {
+    line-height: 1;
+  }
+}
+
+.fs-16 {
+  font-size: 1rem !important;
+}
+
+// ==================== Code Styling ====================
+code {
+  font-size: 0.85em;
+  padding: 2px 6px;
+  background-color: var(--vz-light);
+  border-radius: 4px;
+}
+
+// ==================== Empty State ====================
+.empty-state-container {
+  text-align: center;
+  padding: 2rem 1.5rem;
+}
+
+.empty-state-illustration {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 1.5rem;
+}
+
+.empty-state-icon-lg {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.15) 0%, rgba(var(--vz-primary-rgb), 0.05) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+
+  i {
+    font-size: 2rem;
+    color: var(--vz-primary);
+  }
+}
+
+.empty-state-circles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+
+  span {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px dashed rgba(var(--vz-primary-rgb), 0.15);
+    animation: pulse-ring 3s ease-out infinite;
+
+    &:nth-child(1) {
+      width: 110px;
+      height: 110px;
+      top: -55px;
+      left: -55px;
+      animation-delay: 0s;
+    }
+
+    &:nth-child(2) {
+      width: 140px;
+      height: 140px;
+      top: -70px;
+      left: -70px;
+      animation-delay: 0.5s;
+    }
+
+    &:nth-child(3) {
+      width: 170px;
+      height: 170px;
+      top: -85px;
+      left: -85px;
+      animation-delay: 1s;
+    }
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+// ==================== Floating Action Button ====================
+.fab-container {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 1050;
+}
+
+.fab-main {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 15px rgba(var(--vz-primary-rgb), 0.35);
+  transition: all 0.3s ease;
+  border: none;
+
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(var(--vz-primary-rgb), 0.45);
+  }
+}
+
+// ==================== Pagination ====================
+.pagination {
+  .page-item {
+    .page-link {
+      border: none;
+      color: var(--vz-secondary-color);
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      margin: 0 2px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+
+      &:hover {
+        background-color: rgba(var(--vz-primary-rgb), 0.1);
+        color: var(--vz-primary);
+      }
+    }
+
+    &.active .page-link {
+      background-color: var(--vz-primary);
+      color: #fff;
+    }
+
+    &.disabled .page-link {
+      color: var(--vz-secondary-color);
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// ==================== Utilities ====================
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.letter-spacing {
+  letter-spacing: 0.06em;
+}
+
+.fs-11 {
+  font-size: 0.6875rem;
+}
+
+.fs-12 {
+  font-size: 0.75rem;
+}
+
+.fs-13 {
+  font-size: 0.8125rem;
+}
+
+// Spin animation
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+// ==================== Responsive ====================
+@media (max-width: 991px) {
+  .stats-row {
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    flex: 1 1 50%;
+    border-bottom: 1px solid var(--vz-border-color);
+
+    &:nth-child(2) {
+      border-right: none;
+    }
+
+    &:nth-child(3),
+    &:nth-child(4) {
+      border-bottom: none;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header-wrapper {
+    padding-left: 1rem;
+
+    &::before {
+      width: 2px;
+    }
+
+    h4 {
+      font-size: 1.25rem;
+    }
+  }
+
+  .search-box {
+    display: none !important;
+  }
+
+  .fab-container {
+    bottom: 1rem;
+    right: 1rem;
+  }
+
+  .fab-main {
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .stat-item {
+    flex: 1 1 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--vz-border-color);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}
+
+// ==================== Dark Mode ====================
+[data-bs-theme="dark"] {
+  .page-header-wrapper {
+    &::before {
+      background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.3) 100%);
+    }
+  }
+
+  .stat-item {
+    &:hover {
+      filter: brightness(1.1);
+    }
+
+    &.active {
+      filter: brightness(1.15);
+    }
+  }
+
+  .table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+  }
+
+  .fab-main {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+
+    &:hover {
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+  }
+}

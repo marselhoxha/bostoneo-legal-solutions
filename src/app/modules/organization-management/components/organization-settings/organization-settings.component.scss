@@ -1,0 +1,207 @@
+// Organization Settings Component Styles
+
+// Page Header
+.page-header-wrapper {
+  padding: 1.25rem 0 1.5rem;
+  margin-bottom: 0.5rem;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 1.25rem;
+    bottom: 1.5rem;
+    width: 3px;
+    background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.2) 100%);
+    border-radius: 2px;
+  }
+
+  padding-left: 1.25rem;
+
+  h4 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--vz-heading-color);
+    margin: 0;
+  }
+}
+
+// Settings Navigation (Vertical Tabs)
+.settings-nav {
+  .settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    color: var(--vz-secondary-color);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(var(--vz-primary-rgb), 0.05);
+      color: var(--vz-primary);
+    }
+
+    &.active {
+      background: rgba(var(--vz-primary-rgb), 0.08);
+      color: var(--vz-primary);
+      border-left-color: var(--vz-primary);
+
+      i {
+        color: var(--vz-primary);
+      }
+    }
+
+    i {
+      font-size: 1.125rem;
+    }
+
+    span {
+      font-weight: 500;
+      font-size: 0.9375rem;
+    }
+  }
+}
+
+// Notification Settings
+.notification-settings {
+  .notification-item {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--vz-border-color);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+}
+
+// Integration Cards
+.integration-card {
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  &.border-success {
+    background: rgba(var(--vz-success-rgb), 0.03);
+  }
+
+  &.border-info {
+    background: rgba(var(--vz-info-rgb), 0.03);
+  }
+}
+
+// Reminder Preview
+.reminder-preview {
+  border-color: var(--vz-primary) !important;
+}
+
+// Avatar Styles
+.avatar-sm {
+  width: 36px;
+  height: 36px;
+}
+
+.avatar-md {
+  width: 48px;
+  height: 48px;
+}
+
+.avatar-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+// Form Switch
+.form-switch {
+  .form-check-input {
+    width: 2.5rem;
+    height: 1.25rem;
+    cursor: pointer;
+
+    &:checked {
+      background-color: var(--vz-primary);
+      border-color: var(--vz-primary);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// Utility Classes
+.fs-11 {
+  font-size: 0.6875rem;
+}
+
+.fs-13 {
+  font-size: 0.8125rem;
+}
+
+.fs-14 {
+  font-size: 0.875rem;
+}
+
+.fs-22 {
+  font-size: 1.375rem;
+}
+
+.letter-spacing {
+  letter-spacing: 0.06em;
+}
+
+// Card Styles
+.card {
+  border-radius: 12px;
+
+  .card-header {
+    padding: 1rem 1.5rem;
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+}
+
+// Responsive
+@media (max-width: 991px) {
+  .settings-nav {
+    display: flex;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+
+    .settings-nav-item {
+      flex: 0 0 auto;
+      white-space: nowrap;
+      border-left: none;
+      border-bottom: 3px solid transparent;
+
+      &.active {
+        border-left: none;
+        border-bottom-color: var(--vz-primary);
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header-wrapper {
+    padding-left: 1rem;
+
+    &::before {
+      width: 2px;
+    }
+
+    h4 {
+      font-size: 1.25rem;
+    }
+  }
+}

@@ -220,12 +220,18 @@ export class RbacService {
             
             // Client Management permissions
             'CLIENT:ADMIN', 'CLIENT:VIEW', 'CLIENT:CREATE', 'CLIENT:EDIT', 'CLIENT:DELETE',
-            
+
             // Report permissions
             'REPORT:ADMIN', 'REPORT:VIEW', 'REPORT:VIEW_OWN', 'REPORT:VIEW_TEAM', 'REPORT:VIEW_ALL',
-            
+
             // Activity permissions
-            'ACTIVITY:ADMIN', 'ACTIVITY:VIEW', 'ACTIVITY:CREATE', 'ACTIVITY:EDIT', 'ACTIVITY:DELETE'
+            'ACTIVITY:ADMIN', 'ACTIVITY:VIEW', 'ACTIVITY:CREATE', 'ACTIVITY:EDIT', 'ACTIVITY:DELETE',
+
+            // Organization Management permissions
+            'ORGANIZATION:ADMIN', 'ORGANIZATION:VIEW', 'ORGANIZATION:CREATE', 'ORGANIZATION:EDIT', 'ORGANIZATION:DELETE',
+
+            // Invitation permissions
+            'INVITATION:ADMIN', 'INVITATION:VIEW', 'INVITATION:CREATE', 'INVITATION:DELETE'
           );
         }
         
@@ -1094,14 +1100,38 @@ export class RbacService {
    */
   isAdmin(): boolean {
     const currentUser = this.getCurrentUserFromStorage();
-    if (!currentUser) return false;
-    
-    const userRoles = currentUser.roles || 
-                     currentUser.user?.roles || 
-                     [currentUser.roleName, currentUser.primaryRoleName].filter(Boolean) ||
-                     [];
-    
-    return RbacService.ADMIN_ROLES.some(role => userRoles.includes(role));
+    if (!currentUser) {
+      console.log('🔍 isAdmin: No current user in storage');
+      return false;
+    }
+
+    // Get roles from various possible sources
+    let userRoles = currentUser.roles ||
+                   currentUser.user?.roles ||
+                   [];
+
+    // If roles is empty, try roleName and primaryRoleName
+    if (!userRoles.length) {
+      userRoles = [currentUser.roleName, currentUser.primaryRoleName].filter(Boolean);
+    }
+
+    console.log('🔍 isAdmin check - userRoles:', userRoles, 'roleName:', currentUser.roleName);
+
+    // Handle both string arrays and object arrays
+    const normalizedRoles = userRoles.map((role: any) => {
+      if (typeof role === 'string') return role.toUpperCase();
+      if (role && role.name) return role.name.toUpperCase();
+      return '';
+    }).filter(Boolean);
+
+    console.log('🔍 isAdmin check - normalizedRoles:', normalizedRoles);
+
+    const isAdminUser = RbacService.ADMIN_ROLES.some(role =>
+      normalizedRoles.includes(role.toUpperCase())
+    );
+
+    console.log('🔍 isAdmin result:', isAdminUser);
+    return isAdminUser;
   }
   
   /**

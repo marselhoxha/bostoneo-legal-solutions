@@ -1,0 +1,178 @@
+<div class="invitations-container">
+  <!-- Header Row -->
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <button class="btn btn-primary" (click)="openInviteModal(inviteModal)">
+        <i class="ri-user-add-line me-1"></i>Invite Team Member
+      </button>
+      <div class="form-check form-switch ms-3">
+        <input class="form-check-input" type="checkbox" id="showAllInvites" [checked]="showAll" (change)="toggleShowAll()">
+        <label class="form-check-label text-muted fs-13" for="showAllInvites">Show all invitations</label>
+      </div>
+    </div>
+    <div class="text-muted fs-13" *ngIf="pendingCount > 0">
+      <span class="badge bg-warning-subtle text-warning me-2">{{ pendingCount }}</span>
+      pending invitation{{ pendingCount !== 1 ? 's' : '' }}
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="text-muted mt-2">Loading invitations...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && invitations.length === 0" class="text-center py-5">
+    <div class="avatar-lg mx-auto mb-3">
+      <span class="avatar-title bg-info-subtle text-info rounded-circle fs-24">
+        <i class="ri-mail-send-line"></i>
+      </span>
+    </div>
+    <h5 class="text-muted">No {{ showAll ? '' : 'Pending ' }}Invitations</h5>
+    <p class="text-muted mb-3">{{ showAll ? 'No invitations have been sent yet.' : 'All invitations have been accepted or expired.' }}</p>
+    <button class="btn btn-primary" (click)="openInviteModal(inviteModal)">
+      <i class="ri-user-add-line me-1"></i>Send First Invitation
+    </button>
+  </div>
+
+  <!-- Invitations Table -->
+  <div class="table-responsive" *ngIf="!isLoading && invitations.length > 0">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Sent</th>
+          <th>Expires</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let invitation of invitations">
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-sm flex-shrink-0">
+                <span class="avatar-title bg-primary-subtle text-primary rounded-circle">
+                  <i class="ri-mail-line"></i>
+                </span>
+              </div>
+              <span class="fw-medium">{{ invitation.email }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="badge rounded-pill fs-11" [ngClass]="getRoleBadgeClass(invitation.role)">
+              {{ invitation.role }}
+            </span>
+          </td>
+          <td>
+            <span class="badge rounded-pill fs-11" [ngClass]="getStatusBadgeClass(getInvitationStatus(invitation))">
+              <i [class]="getStatusIcon(getInvitationStatus(invitation))" class="me-1"></i>
+              {{ getInvitationStatus(invitation) }}
+            </span>
+          </td>
+          <td>
+            <span class="text-muted fs-13">{{ invitation.createdAt | date:'mediumDate' }}</span>
+          </td>
+          <td>
+            <ng-container *ngIf="getInvitationStatus(invitation) === 'PENDING'">
+              <span class="text-muted fs-13">
+                {{ invitation.expiresAt | date:'mediumDate' }}
+              </span>
+              <small class="d-block text-muted" *ngIf="getDaysUntilExpiry(invitation) <= 3">
+                ({{ getDaysUntilExpiry(invitation) }} day{{ getDaysUntilExpiry(invitation) !== 1 ? 's' : '' }} left)
+              </small>
+            </ng-container>
+            <ng-container *ngIf="getInvitationStatus(invitation) === 'ACCEPTED'">
+              <span class="text-success fs-13">
+                <i class="ri-checkbox-circle-line me-1"></i>
+                {{ invitation.acceptedAt | date:'mediumDate' }}
+              </span>
+            </ng-container>
+            <ng-container *ngIf="getInvitationStatus(invitation) === 'EXPIRED'">
+              <span class="text-danger fs-13">Expired</span>
+            </ng-container>
+          </td>
+          <td class="text-end">
+            <ng-container *ngIf="getInvitationStatus(invitation) === 'PENDING'">
+              <button class="btn btn-soft-info btn-sm me-1" (click)="resendInvitation(invitation)" title="Resend">
+                <i class="ri-refresh-line"></i>
+              </button>
+              <button class="btn btn-soft-danger btn-sm" (click)="cancelInvitation(invitation)" title="Cancel">
+                <i class="ri-close-line"></i>
+              </button>
+            </ng-container>
+            <ng-container *ngIf="getInvitationStatus(invitation) === 'EXPIRED'">
+              <button class="btn btn-soft-info btn-sm" (click)="resendInvitation(invitation)" title="Resend">
+                <i class="ri-refresh-line me-1"></i>Resend
+              </button>
+            </ng-container>
+            <ng-container *ngIf="getInvitationStatus(invitation) === 'ACCEPTED'">
+              <span class="text-muted fs-12">-</span>
+            </ng-container>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Invite Modal -->
+<ng-template #inviteModal let-modal>
+  <div class="modal-header border-0 pb-0">
+    <h5 class="modal-title">
+      <i class="ri-user-add-line me-2 text-primary"></i>Invite Team Member
+    </h5>
+    <button type="button" class="btn-close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <p class="text-muted mb-4">Send an invitation to join your organization. They'll receive an email with instructions to set up their account.</p>
+
+    <div class="mb-3">
+      <label class="form-label">Email Address <span class="text-danger">*</span></label>
+      <input type="email"
+             class="form-control"
+             placeholder="colleague@example.com"
+             [(ngModel)]="inviteEmail"
+             [disabled]="isSubmitting">
+      <small class="text-muted">An invitation link will be sent to this email address</small>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Role <span class="text-danger">*</span></label>
+      <div class="role-options">
+        <div *ngFor="let role of roleOptions"
+             class="role-option p-3 border rounded mb-2 cursor-pointer"
+             [class.border-primary]="inviteRole === role.value"
+             [class.bg-primary-subtle]="inviteRole === role.value"
+             (click)="inviteRole = role.value">
+          <div class="d-flex align-items-center">
+            <input type="radio"
+                   class="form-check-input me-3"
+                   [id]="'role-' + role.value"
+                   [value]="role.value"
+                   [(ngModel)]="inviteRole"
+                   [disabled]="isSubmitting">
+            <div>
+              <label class="form-check-label fw-medium mb-0" [for]="'role-' + role.value">{{ role.label }}</label>
+              <p class="text-muted mb-0 fs-12">{{ role.description }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer border-0 pt-0">
+    <button type="button" class="btn btn-light" (click)="modal.dismiss()" [disabled]="isSubmitting">Cancel</button>
+    <button type="button"
+            class="btn btn-primary"
+            (click)="sendInvitation(modal)"
+            [disabled]="!inviteEmail || !inviteRole || isSubmitting">
+      <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+      {{ isSubmitting ? 'Sending...' : 'Send Invitation' }}
+    </button>
+  </div>
+</ng-template>

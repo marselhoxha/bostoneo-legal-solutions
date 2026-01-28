@@ -1,0 +1,462 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-header-wrapper">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div>
+            <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Administration</div>
+            <h4 class="mb-0">Organization Details</h4>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-soft-secondary" (click)="backToList()">
+              <i class="ri-arrow-left-line me-1"></i>Back to List
+            </button>
+            <button type="button" class="btn btn-soft-info" (click)="navigateToSettings()" *ngIf="organization">
+              <i class="ri-settings-3-line me-1"></i>Settings
+            </button>
+            <button type="button" class="btn btn-soft-warning" (click)="navigateToPlan()" *ngIf="organization">
+              <i class="ri-vip-crown-line me-1"></i>Plan
+            </button>
+            <button type="button" class="btn btn-primary" (click)="editOrganization()" *ngIf="organization">
+              <i class="ri-pencil-line me-1"></i>Edit
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <h5 class="mt-4">Loading Organization</h5>
+    <p class="text-muted">Fetching organization details...</p>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!isLoading && organization" style="margin-bottom: 60px;">
+    <!-- Organization Header Card -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body org-header p-4">
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <div class="avatar-lg bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm">
+              <img *ngIf="organization.logoUrl" [src]="organization.logoUrl" alt="" class="rounded-circle" style="width: 72px; height: 72px; object-fit: cover;">
+              <span *ngIf="!organization.logoUrl" class="text-primary fw-bold fs-24">{{ organization.name?.charAt(0) || 'O' }}</span>
+            </div>
+          </div>
+          <div class="col">
+            <h3 class="mb-1 fw-bold">{{ organization.name }}</h3>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+              <code class="text-muted px-2 py-1 rounded">{{ organization.slug }}</code>
+              <span class="badge rounded-pill" [ngClass]="getPlanBadgeClass(organization.planType)">
+                <i class="ri-vip-crown-line me-1" *ngIf="organization.planType === 'ENTERPRISE'"></i>
+                {{ organization.planType || 'FREE' }} Plan
+              </span>
+              <span *ngIf="organization.isActive !== false" class="badge bg-success-subtle text-success rounded-pill">
+                <i class="ri-checkbox-circle-line me-1"></i>Active
+              </span>
+              <span *ngIf="organization.createdAt" class="text-muted fs-12">
+                <i class="ri-calendar-line me-1"></i>Created {{ organization.createdAt | date:'mediumDate' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs nav-tabs-custom mb-4">
+      <li class="nav-item">
+        <a class="nav-link" [class.active]="activeTab === 'overview'" (click)="setActiveTab('overview')">
+          <i class="ri-dashboard-line me-1"></i>Overview
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" [class.active]="activeTab === 'team'" (click)="setActiveTab('team')">
+          <i class="ri-team-line me-1"></i>Team Members
+          <span class="badge bg-primary-subtle text-primary ms-1" *ngIf="stats?.userCount">{{ stats?.userCount }}</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" [class.active]="activeTab === 'invitations'" (click)="setActiveTab('invitations')">
+          <i class="ri-mail-send-line me-1"></i>Invitations
+        </a>
+      </li>
+    </ul>
+
+    <!-- Tab Content: Overview -->
+    <div *ngIf="activeTab === 'overview'">
+
+    <!-- Stats Row -->
+    <div class="stats-row" *ngIf="stats">
+      <!-- Users -->
+      <div class="stat-item">
+        <div class="stat-header">
+          <span class="stat-label">USERS</span>
+          <span class="stat-indicator stat-indicator-primary">
+            <i class="ri-user-line"></i>
+          </span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-user-line stat-icon text-primary"></i>
+          <div class="stat-content">
+            <span class="stat-value">{{ stats.userCount || 0 }}</span>
+            <span class="stat-max text-muted">/ {{ getMaxUsersFormatted() }}</span>
+          </div>
+        </div>
+        <div class="progress progress-sm mt-2" style="height: 4px;">
+          <div class="progress-bar bg-primary" [style.width.%]="stats.userUsagePercent || 0"></div>
+        </div>
+      </div>
+
+      <!-- Cases -->
+      <div class="stat-item">
+        <div class="stat-header">
+          <span class="stat-label">CASES</span>
+          <span class="stat-indicator stat-indicator-info">
+            <i class="ri-briefcase-line"></i>
+          </span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-briefcase-line stat-icon text-info"></i>
+          <div class="stat-content">
+            <span class="stat-value">{{ stats.caseCount || 0 }}</span>
+            <span class="stat-max text-muted">/ {{ getMaxCasesFormatted() }}</span>
+          </div>
+        </div>
+        <div class="progress progress-sm mt-2" style="height: 4px;">
+          <div class="progress-bar bg-info" [style.width.%]="stats.caseUsagePercent || 0"></div>
+        </div>
+      </div>
+
+      <!-- Documents -->
+      <div class="stat-item">
+        <div class="stat-header">
+          <span class="stat-label">DOCUMENTS</span>
+          <span class="stat-indicator stat-indicator-success">
+            <i class="ri-file-text-line"></i>
+          </span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-file-text-line stat-icon text-success"></i>
+          <div class="stat-content">
+            <span class="stat-value">{{ stats.documentCount || 0 }}</span>
+            <span class="stat-max text-muted">{{ formatBytes(stats.storageUsedBytes || 0) }}</span>
+          </div>
+        </div>
+        <div class="progress progress-sm mt-2" style="height: 4px;">
+          <div class="progress-bar bg-success" [style.width.%]="stats.storageUsagePercent || 0"></div>
+        </div>
+      </div>
+
+      <!-- Clients -->
+      <div class="stat-item">
+        <div class="stat-header">
+          <span class="stat-label">CLIENTS</span>
+          <span class="stat-indicator stat-indicator-warning">
+            <i class="ri-user-heart-line"></i>
+          </span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-user-heart-line stat-icon text-warning"></i>
+          <div class="stat-content">
+            <span class="stat-value">{{ stats.clientCount || 0 }}</span>
+            <span class="stat-max text-muted">{{ stats.activeCaseCount || 0 }} active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Cards -->
+    <div class="row g-4">
+      <!-- Contact Information Card -->
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-transparent border-bottom">
+            <h6 class="mb-0 fw-semibold">
+              <i class="ri-contacts-line me-2 text-primary"></i>Contact Information
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-12" *ngIf="organization.email">
+                <div class="d-flex align-items-center p-3 bg-light rounded">
+                  <div class="avatar-sm flex-shrink-0 me-3">
+                    <span class="avatar-title bg-primary-subtle rounded text-primary">
+                      <i class="ri-mail-line"></i>
+                    </span>
+                  </div>
+                  <div>
+                    <h6 class="mb-0 fs-13">Email Address</h6>
+                    <a [href]="'mailto:' + organization.email" class="text-primary">{{ organization.email }}</a>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12" *ngIf="organization.phone">
+                <div class="d-flex align-items-center p-3 bg-light rounded">
+                  <div class="avatar-sm flex-shrink-0 me-3">
+                    <span class="avatar-title bg-success-subtle rounded text-success">
+                      <i class="ri-phone-line"></i>
+                    </span>
+                  </div>
+                  <div>
+                    <h6 class="mb-0 fs-13">Phone Number</h6>
+                    <span class="text-muted">{{ organization.phone }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12" *ngIf="organization.website">
+                <div class="d-flex align-items-center p-3 bg-light rounded">
+                  <div class="avatar-sm flex-shrink-0 me-3">
+                    <span class="avatar-title bg-info-subtle rounded text-info">
+                      <i class="ri-global-line"></i>
+                    </span>
+                  </div>
+                  <div>
+                    <h6 class="mb-0 fs-13">Website</h6>
+                    <a [href]="organization.website" target="_blank" class="text-info">{{ organization.website }}</a>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12" *ngIf="organization.address">
+                <div class="d-flex align-items-center p-3 bg-light rounded">
+                  <div class="avatar-sm flex-shrink-0 me-3">
+                    <span class="avatar-title bg-warning-subtle rounded text-warning">
+                      <i class="ri-map-pin-line"></i>
+                    </span>
+                  </div>
+                  <div>
+                    <h6 class="mb-0 fs-13">Address</h6>
+                    <span class="text-muted">{{ organization.address }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12" *ngIf="!organization.email && !organization.phone && !organization.website && !organization.address">
+                <div class="text-center py-4">
+                  <i class="ri-information-line text-muted fs-24 d-block mb-2"></i>
+                  <span class="text-muted">No contact information provided</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Integrations Card -->
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-transparent border-bottom">
+            <h6 class="mb-0 fw-semibold">
+              <i class="ri-plug-line me-2 text-info"></i>Integrations
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <!-- Twilio -->
+              <div class="col-12">
+                <div class="d-flex align-items-center justify-content-between p-3 border rounded"
+                     [ngClass]="organization.twilioConfigured ? 'border-success bg-success-subtle' : ''">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-sm flex-shrink-0 me-3">
+                      <span class="avatar-title rounded"
+                            [ngClass]="organization.twilioConfigured ? 'bg-success text-white' : 'bg-secondary-subtle text-secondary'">
+                        <i class="ri-phone-line"></i>
+                      </span>
+                    </div>
+                    <div>
+                      <h6 class="mb-0 fs-14">Twilio</h6>
+                      <span class="text-muted fs-12">SMS & Voice Communications</span>
+                    </div>
+                  </div>
+                  <span class="badge rounded-pill" [ngClass]="organization.twilioConfigured ? 'bg-success' : 'bg-secondary'">
+                    {{ organization.twilioConfigured ? 'Connected' : 'Not Connected' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- BoldSign -->
+              <div class="col-12">
+                <div class="d-flex align-items-center justify-content-between p-3 border rounded"
+                     [ngClass]="organization.boldsignConfigured ? 'border-info bg-info-subtle' : ''">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-sm flex-shrink-0 me-3">
+                      <span class="avatar-title rounded"
+                            [ngClass]="organization.boldsignConfigured ? 'bg-info text-white' : 'bg-secondary-subtle text-secondary'">
+                        <i class="ri-quill-pen-line"></i>
+                      </span>
+                    </div>
+                    <div>
+                      <h6 class="mb-0 fs-14">BoldSign</h6>
+                      <span class="text-muted fs-12">E-Signatures & Documents</span>
+                    </div>
+                  </div>
+                  <span class="badge rounded-pill" [ngClass]="organization.boldsignConfigured ? 'bg-info' : 'bg-secondary'">
+                    {{ organization.boldsignConfigured ? 'Connected' : 'Not Connected' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plan Features Card -->
+      <div class="col-lg-6" *ngIf="stats?.planQuota">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-transparent border-bottom">
+            <h6 class="mb-0 fw-semibold">
+              <i class="ri-vip-crown-line me-2 text-warning"></i>Plan Features
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-6">
+                <div class="d-flex align-items-center">
+                  <i class="fs-18 me-2" [ngClass]="stats.planQuota.hasApiAccess ? 'ri-checkbox-circle-fill text-success' : 'ri-close-circle-line text-muted'"></i>
+                  <span [ngClass]="!stats.planQuota.hasApiAccess ? 'text-muted' : ''">API Access</span>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-flex align-items-center">
+                  <i class="fs-18 me-2" [ngClass]="stats.planQuota.hasAdvancedReporting ? 'ri-checkbox-circle-fill text-success' : 'ri-close-circle-line text-muted'"></i>
+                  <span [ngClass]="!stats.planQuota.hasAdvancedReporting ? 'text-muted' : ''">Advanced Reports</span>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-flex align-items-center">
+                  <i class="fs-18 me-2" [ngClass]="stats.planQuota.hasCustomBranding ? 'ri-checkbox-circle-fill text-success' : 'ri-close-circle-line text-muted'"></i>
+                  <span [ngClass]="!stats.planQuota.hasCustomBranding ? 'text-muted' : ''">Custom Branding</span>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-flex align-items-center">
+                  <i class="fs-18 me-2" [ngClass]="stats.planQuota.hasPrioritySupport ? 'ri-checkbox-circle-fill text-success' : 'ri-close-circle-line text-muted'"></i>
+                  <span [ngClass]="!stats.planQuota.hasPrioritySupport ? 'text-muted' : ''">Priority Support</span>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-3">
+
+            <div class="row g-2">
+              <div class="col-4 text-center">
+                <div class="p-2 bg-light rounded">
+                  <h5 class="mb-1 fw-semibold">{{ stats.planQuota.maxUsers >= 2147483647 ? '∞' : stats.planQuota.maxUsers }}</h5>
+                  <span class="text-muted fs-12">Max Users</span>
+                </div>
+              </div>
+              <div class="col-4 text-center">
+                <div class="p-2 bg-light rounded">
+                  <h5 class="mb-1 fw-semibold">{{ stats.planQuota.maxCases >= 2147483647 ? '∞' : stats.planQuota.maxCases }}</h5>
+                  <span class="text-muted fs-12">Max Cases</span>
+                </div>
+              </div>
+              <div class="col-4 text-center">
+                <div class="p-2 bg-light rounded">
+                  <h5 class="mb-1 fw-semibold">{{ getMaxStorageFormatted() }}</h5>
+                  <span class="text-muted fs-12">Storage</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification Settings Card -->
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-transparent border-bottom">
+            <h6 class="mb-0 fw-semibold">
+              <i class="ri-notification-3-line me-2 text-info"></i>Notification Settings
+            </h6>
+          </div>
+          <div class="card-body">
+            <h6 class="text-muted text-uppercase fs-11 mb-3">Communication Channels</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-4">
+                <div class="text-center p-3 rounded" [ngClass]="organization.emailEnabled ? 'bg-success-subtle' : 'bg-light'">
+                  <i class="ri-mail-line fs-24 d-block mb-2" [ngClass]="organization.emailEnabled ? 'text-success' : 'text-muted'"></i>
+                  <span class="fs-12" [ngClass]="organization.emailEnabled ? '' : 'text-muted'">Email</span>
+                  <div class="mt-1">
+                    <span class="badge rounded-pill" [ngClass]="organization.emailEnabled ? 'bg-success' : 'bg-secondary'">
+                      {{ organization.emailEnabled ? 'ON' : 'OFF' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="text-center p-3 rounded" [ngClass]="organization.smsEnabled ? 'bg-primary-subtle' : 'bg-light'">
+                  <i class="ri-message-2-line fs-24 d-block mb-2" [ngClass]="organization.smsEnabled ? 'text-primary' : 'text-muted'"></i>
+                  <span class="fs-12" [ngClass]="organization.smsEnabled ? '' : 'text-muted'">SMS</span>
+                  <div class="mt-1">
+                    <span class="badge rounded-pill" [ngClass]="organization.smsEnabled ? 'bg-primary' : 'bg-secondary'">
+                      {{ organization.smsEnabled ? 'ON' : 'OFF' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="text-center p-3 rounded" [ngClass]="organization.whatsappEnabled ? 'bg-success-subtle' : 'bg-light'">
+                  <i class="ri-whatsapp-line fs-24 d-block mb-2" [ngClass]="organization.whatsappEnabled ? 'text-success' : 'text-muted'"></i>
+                  <span class="fs-12" [ngClass]="organization.whatsappEnabled ? '' : 'text-muted'">WhatsApp</span>
+                  <div class="mt-1">
+                    <span class="badge rounded-pill" [ngClass]="organization.whatsappEnabled ? 'bg-success' : 'bg-secondary'">
+                      {{ organization.whatsappEnabled ? 'ON' : 'OFF' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <h6 class="text-muted text-uppercase fs-11 mb-3">Signature Reminders</h6>
+            <div class="d-flex flex-wrap gap-2">
+              <span class="badge fs-11 rounded-pill" [ngClass]="organization.signatureReminderEmail ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
+                <i class="ri-mail-line me-1"></i>Email
+              </span>
+              <span class="badge fs-11 rounded-pill" [ngClass]="organization.signatureReminderSms ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-secondary'">
+                <i class="ri-message-2-line me-1"></i>SMS
+              </span>
+              <span class="badge fs-11 rounded-pill" [ngClass]="organization.signatureReminderWhatsapp ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
+                <i class="ri-whatsapp-line me-1"></i>WhatsApp
+              </span>
+              <span class="badge bg-light text-dark fs-11 rounded-pill" *ngIf="organization.signatureReminderDays">
+                <i class="ri-calendar-line me-1"></i>Days: {{ organization.signatureReminderDays }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Tab Content: Team Members -->
+    <div *ngIf="activeTab === 'team'">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-bottom">
+          <h6 class="mb-0 fw-semibold">
+            <i class="ri-team-line me-2 text-primary"></i>Team Members
+          </h6>
+        </div>
+        <div class="card-body">
+          <app-organization-team [organizationId]="organizationId!"></app-organization-team>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Content: Invitations -->
+    <div *ngIf="activeTab === 'invitations'">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-bottom">
+          <h6 class="mb-0 fw-semibold">
+            <i class="ri-mail-send-line me-2 text-info"></i>Team Invitations
+          </h6>
+        </div>
+        <div class="card-body">
+          <app-organization-invitations [organizationId]="organizationId!"></app-organization-invitations>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

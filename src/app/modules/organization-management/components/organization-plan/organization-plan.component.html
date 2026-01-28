@@ -1,0 +1,390 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-header-wrapper">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div>
+            <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Administration</div>
+            <h4 class="mb-0">Plan & Billing</h4>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-soft-secondary" (click)="backToDetails()">
+              <i class="ri-arrow-left-line me-1"></i>Back to Details
+            </button>
+            <button type="button" class="btn btn-primary" (click)="openPlanComparison(comparisonModal)">
+              <i class="ri-table-line me-1"></i>Compare Plans
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <h5 class="mt-4">Loading Plan Details</h5>
+    <p class="text-muted">Fetching subscription information...</p>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!isLoading && organization" style="margin-bottom: 60px;">
+    <!-- Current Plan Card -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body plan-header p-4" [ngClass]="getPlanCardClass(organization.planType || 'FREE')">
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <div class="avatar-lg rounded-circle d-flex align-items-center justify-content-center" [ngClass]="'bg-' + planColors[organization.planType || 'FREE'] + '-subtle'">
+              <i class="ri-vip-crown-2-line fs-28" [ngClass]="'text-' + planColors[organization.planType || 'FREE']"></i>
+            </div>
+          </div>
+          <div class="col">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <h3 class="mb-0 fw-bold">{{ planLabels[organization.planType || 'FREE'] }} Plan</h3>
+              <span class="badge rounded-pill" [ngClass]="getPlanBadgeClass(organization.planType)">Current</span>
+            </div>
+            <p class="text-muted mb-0">
+              <ng-container *ngIf="organization.planType === 'FREE'">Get started with essential features for small teams.</ng-container>
+              <ng-container *ngIf="organization.planType === 'STARTER'">Perfect for growing teams with expanded capabilities.</ng-container>
+              <ng-container *ngIf="organization.planType === 'PROFESSIONAL'">Full-featured plan for professional practices.</ng-container>
+              <ng-container *ngIf="organization.planType === 'ENTERPRISE'">Unlimited features with dedicated support.</ng-container>
+            </p>
+          </div>
+          <div class="col-auto" *ngIf="organization.planType !== 'ENTERPRISE'">
+            <button class="btn btn-warning" (click)="requestUpgrade('ENTERPRISE')">
+              <i class="ri-rocket-line me-1"></i>Upgrade Plan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usage Meters -->
+    <div class="row g-4 mb-4" *ngIf="stats">
+      <!-- Users -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h6 class="mb-0 text-muted">Team Members</h6>
+              <div class="avatar-sm">
+                <span class="avatar-title bg-primary-subtle text-primary rounded">
+                  <i class="ri-user-line"></i>
+                </span>
+              </div>
+            </div>
+            <div class="d-flex align-items-baseline gap-2 mb-2">
+              <h3 class="mb-0 fw-bold">{{ stats.userCount }}</h3>
+              <span class="text-muted">/ {{ getMaxUsersFormatted() }}</span>
+            </div>
+            <div class="progress progress-sm mb-2" style="height: 6px;">
+              <div class="progress-bar" [ngClass]="getUsageClass(stats.userUsagePercent)" [style.width.%]="stats.userUsagePercent"></div>
+            </div>
+            <small class="text-muted" *ngIf="stats.userUsagePercent >= 80">
+              <i class="ri-error-warning-line text-warning me-1"></i>Approaching limit
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cases -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h6 class="mb-0 text-muted">Active Cases</h6>
+              <div class="avatar-sm">
+                <span class="avatar-title bg-info-subtle text-info rounded">
+                  <i class="ri-briefcase-line"></i>
+                </span>
+              </div>
+            </div>
+            <div class="d-flex align-items-baseline gap-2 mb-2">
+              <h3 class="mb-0 fw-bold">{{ stats.caseCount }}</h3>
+              <span class="text-muted">/ {{ getMaxCasesFormatted() }}</span>
+            </div>
+            <div class="progress progress-sm mb-2" style="height: 6px;">
+              <div class="progress-bar bg-info" [ngClass]="getUsageClass(stats.caseUsagePercent)" [style.width.%]="stats.caseUsagePercent"></div>
+            </div>
+            <small class="text-muted" *ngIf="stats.caseUsagePercent >= 80">
+              <i class="ri-error-warning-line text-warning me-1"></i>Approaching limit
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Storage -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h6 class="mb-0 text-muted">Storage Used</h6>
+              <div class="avatar-sm">
+                <span class="avatar-title bg-success-subtle text-success rounded">
+                  <i class="ri-hard-drive-2-line"></i>
+                </span>
+              </div>
+            </div>
+            <div class="d-flex align-items-baseline gap-2 mb-2">
+              <h3 class="mb-0 fw-bold">{{ formatBytes(stats.storageUsedBytes) }}</h3>
+              <span class="text-muted">/ {{ getMaxStorageFormatted() }}</span>
+            </div>
+            <div class="progress progress-sm mb-2" style="height: 6px;">
+              <div class="progress-bar bg-success" [ngClass]="getUsageClass(stats.storageUsagePercent)" [style.width.%]="stats.storageUsagePercent"></div>
+            </div>
+            <small class="text-muted" *ngIf="stats.storageUsagePercent >= 80">
+              <i class="ri-error-warning-line text-warning me-1"></i>Approaching limit
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clients -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h6 class="mb-0 text-muted">Clients</h6>
+              <div class="avatar-sm">
+                <span class="avatar-title bg-warning-subtle text-warning rounded">
+                  <i class="ri-user-heart-line"></i>
+                </span>
+              </div>
+            </div>
+            <div class="d-flex align-items-baseline gap-2 mb-2">
+              <h3 class="mb-0 fw-bold">{{ stats.clientCount }}</h3>
+              <span class="text-muted">/ {{ getMaxClientsFormatted() }}</span>
+            </div>
+            <div class="progress progress-sm mb-2" style="height: 6px;">
+              <div class="progress-bar bg-warning" [style.width.%]="0"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan Features -->
+    <div class="row">
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-transparent border-bottom">
+            <h6 class="mb-0 fw-semibold">
+              <i class="ri-list-check-2 me-2 text-primary"></i>Plan Features
+            </h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <tbody>
+                  <tr *ngIf="stats?.planQuota?.hasApiAccess !== undefined">
+                    <td class="ps-4">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="fs-18" [ngClass]="stats?.planQuota?.hasApiAccess ? 'ri-checkbox-circle-fill text-success' : 'ri-close-circle-line text-muted'"></i>
+                        <span [ngClass]="!stats?.planQuota?.hasApiAccess ? 'text-muted' : ''">API Access</span>
+                      </div>
+                    </td>
+                    <td class="text-end pe-4">
+                      <span class="badge" [ngClass]="stats?.planQuota?.hasApiAccess ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
+                        {{ stats?.planQuota?.hasApiAccess ? 'Included' : 'Not Included' }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr *ngIf="stats?.planQuota?.hasAdvancedReporting !== undefined">
+                    <td class="ps-4">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="fs-18" [ngClass]="stats?.planQuota?.hasAdvancedReporting ? 'ri-checkbox-circle-fill text-success' : 'ri-close-circle-line text-muted'"></i>
+                        <span [ngClass]="!stats?.planQuota?.hasAdvancedReporting ? 'text-muted' : ''">Advanced Reporting</span>
+                      </div>
+                    </td>
+                    <td class="text-end pe-4">
+                      <span class="badge" [ngClass]="stats?.planQuota?.hasAdvancedReporting ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
+                        {{ stats?.planQuota?.hasAdvancedReporting ? 'Included' : 'Not Included' }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr *ngIf="stats?.planQuota?.hasCustomBranding !== undefined">
+                    <td class="ps-4">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="fs-18" [ngClass]="stats?.planQuota?.hasCustomBranding ? 'ri-checkbox-circle-fill text-success' : 'ri-close-circle-line text-muted'"></i>
+                        <span [ngClass]="!stats?.planQuota?.hasCustomBranding ? 'text-muted' : ''">Custom Branding</span>
+                      </div>
+                    </td>
+                    <td class="text-end pe-4">
+                      <span class="badge" [ngClass]="stats?.planQuota?.hasCustomBranding ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
+                        {{ stats?.planQuota?.hasCustomBranding ? 'Included' : 'Not Included' }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr *ngIf="stats?.planQuota?.hasPrioritySupport !== undefined">
+                    <td class="ps-4">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="fs-18" [ngClass]="stats?.planQuota?.hasPrioritySupport ? 'ri-checkbox-circle-fill text-success' : 'ri-close-circle-line text-muted'"></i>
+                        <span [ngClass]="!stats?.planQuota?.hasPrioritySupport ? 'text-muted' : ''">Priority Support</span>
+                      </div>
+                    </td>
+                    <td class="text-end pe-4">
+                      <span class="badge" [ngClass]="stats?.planQuota?.hasPrioritySupport ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
+                        {{ stats?.planQuota?.hasPrioritySupport ? 'Included' : 'Not Included' }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-transparent border-bottom">
+            <h6 class="mb-0 fw-semibold">
+              <i class="ri-flashlight-line me-2 text-warning"></i>Quick Actions
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <button class="btn btn-soft-primary text-start" (click)="openPlanComparison(comparisonModal)">
+                <i class="ri-table-line me-2"></i>Compare All Plans
+              </button>
+              <button class="btn btn-soft-info text-start" *ngIf="organization.planType !== 'ENTERPRISE'" (click)="requestUpgrade('ENTERPRISE')">
+                <i class="ri-rocket-line me-2"></i>Request Upgrade
+              </button>
+              <a class="btn btn-soft-secondary text-start" routerLink="/organizations/details/{{ organizationId }}">
+                <i class="ri-arrow-left-line me-2"></i>Back to Organization
+              </a>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="text-center">
+              <p class="text-muted fs-13 mb-2">Need help with your plan?</p>
+              <a href="mailto:support@legience.com" class="text-primary">
+                <i class="ri-customer-service-line me-1"></i>Contact Support
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Plan Comparison Modal -->
+<ng-template #comparisonModal let-modal>
+  <div class="modal-header border-0">
+    <h5 class="modal-title">
+      <i class="ri-table-line me-2 text-primary"></i>Plan Comparison
+    </h5>
+    <button type="button" class="btn-close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <div class="table-responsive">
+      <table class="table table-bordered comparison-table">
+        <thead>
+          <tr>
+            <th class="feature-col">Feature</th>
+            <th class="plan-col text-center" [class.current-plan]="isCurrentPlan('FREE')">
+              <div class="plan-header bg-secondary-subtle">
+                <span class="badge bg-secondary mb-2">Free</span>
+                <div class="fs-12 text-muted">Get Started</div>
+              </div>
+            </th>
+            <th class="plan-col text-center" [class.current-plan]="isCurrentPlan('STARTER')">
+              <div class="plan-header bg-info-subtle">
+                <span class="badge bg-info mb-2">Starter</span>
+                <div class="fs-12 text-muted">Growing Teams</div>
+              </div>
+            </th>
+            <th class="plan-col text-center" [class.current-plan]="isCurrentPlan('PROFESSIONAL')">
+              <div class="plan-header bg-primary-subtle">
+                <span class="badge bg-primary mb-2">Professional</span>
+                <div class="fs-12 text-muted">Full Featured</div>
+              </div>
+            </th>
+            <th class="plan-col text-center" [class.current-plan]="isCurrentPlan('ENTERPRISE')">
+              <div class="plan-header bg-warning-subtle">
+                <span class="badge bg-warning mb-2">Enterprise</span>
+                <div class="fs-12 text-muted">Unlimited</div>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let feature of planFeatures">
+            <td class="feature-col fw-medium">{{ feature.name }}</td>
+            <td class="text-center">
+              <ng-container *ngIf="feature.free === true">
+                <i class="ri-checkbox-circle-fill text-success fs-18"></i>
+              </ng-container>
+              <ng-container *ngIf="feature.free === false">
+                <i class="ri-close-circle-line text-muted fs-18"></i>
+              </ng-container>
+              <ng-container *ngIf="feature.free !== true && feature.free !== false">
+                <span class="fw-medium">{{ feature.free }}</span>
+              </ng-container>
+            </td>
+            <td class="text-center">
+              <ng-container *ngIf="feature.starter === true">
+                <i class="ri-checkbox-circle-fill text-success fs-18"></i>
+              </ng-container>
+              <ng-container *ngIf="feature.starter === false">
+                <i class="ri-close-circle-line text-muted fs-18"></i>
+              </ng-container>
+              <ng-container *ngIf="feature.starter !== true && feature.starter !== false">
+                <span class="fw-medium">{{ feature.starter }}</span>
+              </ng-container>
+            </td>
+            <td class="text-center">
+              <ng-container *ngIf="feature.professional === true">
+                <i class="ri-checkbox-circle-fill text-success fs-18"></i>
+              </ng-container>
+              <ng-container *ngIf="feature.professional === false">
+                <i class="ri-close-circle-line text-muted fs-18"></i>
+              </ng-container>
+              <ng-container *ngIf="feature.professional !== true && feature.professional !== false">
+                <span class="fw-medium">{{ feature.professional }}</span>
+              </ng-container>
+            </td>
+            <td class="text-center">
+              <ng-container *ngIf="feature.enterprise === true">
+                <i class="ri-checkbox-circle-fill text-success fs-18"></i>
+              </ng-container>
+              <ng-container *ngIf="feature.enterprise === false">
+                <i class="ri-close-circle-line text-muted fs-18"></i>
+              </ng-container>
+              <ng-container *ngIf="feature.enterprise !== true && feature.enterprise !== false">
+                <span class="fw-medium text-warning">{{ feature.enterprise }}</span>
+              </ng-container>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td></td>
+            <td class="text-center">
+              <button class="btn btn-sm" [ngClass]="isCurrentPlan('FREE') ? 'btn-secondary' : 'btn-outline-secondary'" disabled *ngIf="isCurrentPlan('FREE')">Current Plan</button>
+            </td>
+            <td class="text-center">
+              <button class="btn btn-sm" [ngClass]="isCurrentPlan('STARTER') ? 'btn-info' : 'btn-outline-info'" [disabled]="isCurrentPlan('STARTER') || !canUpgrade('STARTER')" (click)="requestUpgrade('STARTER'); modal.close()">
+                {{ isCurrentPlan('STARTER') ? 'Current Plan' : 'Upgrade' }}
+              </button>
+            </td>
+            <td class="text-center">
+              <button class="btn btn-sm" [ngClass]="isCurrentPlan('PROFESSIONAL') ? 'btn-primary' : 'btn-outline-primary'" [disabled]="isCurrentPlan('PROFESSIONAL') || !canUpgrade('PROFESSIONAL')" (click)="requestUpgrade('PROFESSIONAL'); modal.close()">
+                {{ isCurrentPlan('PROFESSIONAL') ? 'Current Plan' : 'Upgrade' }}
+              </button>
+            </td>
+            <td class="text-center">
+              <button class="btn btn-sm" [ngClass]="isCurrentPlan('ENTERPRISE') ? 'btn-warning' : 'btn-outline-warning'" [disabled]="isCurrentPlan('ENTERPRISE')" (click)="requestUpgrade('ENTERPRISE'); modal.close()">
+                {{ isCurrentPlan('ENTERPRISE') ? 'Current Plan' : 'Upgrade' }}
+              </button>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</ng-template>

@@ -17,6 +17,7 @@ import { SidebarMenuComponent } from './sidebar/sidebar-menu/sidebar-menu.compon
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { PermissionDebuggerComponent } from 'src/app/shared/components/permission-debugger/permission-debugger.component';
+import { OrganizationManagementModule } from 'src/app/modules/organization-management/organization-management.module';
 
 @NgModule({
   declarations: [
@@ -34,10 +35,11 @@ import { PermissionDebuggerComponent } from 'src/app/shared/components/permissio
     SharedModule,
     NgbDropdownModule,
     SimplebarAngularModule,
-    FormsModule, 
+    FormsModule,
     ReactiveFormsModule,
     TranslateModule,
-    PermissionDebuggerComponent
+    PermissionDebuggerComponent,
+    OrganizationManagementModule
   ],
   exports: [
     LayoutComponent

@@ -1,0 +1,217 @@
+// Organization Plan Component Styles
+
+// Page Header
+.page-header-wrapper {
+  padding: 1.25rem 0 1.5rem;
+  margin-bottom: 0.5rem;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 1.25rem;
+    bottom: 1.5rem;
+    width: 3px;
+    background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.2) 100%);
+    border-radius: 2px;
+  }
+
+  padding-left: 1.25rem;
+
+  h4 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--vz-heading-color);
+    margin: 0;
+  }
+}
+
+// Plan Header Card
+.plan-header {
+  background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.05) 0%, rgba(var(--vz-info-rgb), 0.05) 100%);
+  border-left: 4px solid var(--vz-primary);
+  border-radius: 12px;
+
+  &.border-secondary {
+    border-left-color: var(--vz-secondary);
+    background: linear-gradient(135deg, rgba(var(--vz-secondary-rgb), 0.05) 0%, rgba(var(--vz-secondary-rgb), 0.02) 100%);
+  }
+
+  &.border-info {
+    border-left-color: var(--vz-info);
+    background: linear-gradient(135deg, rgba(var(--vz-info-rgb), 0.05) 0%, rgba(var(--vz-info-rgb), 0.02) 100%);
+  }
+
+  &.border-primary {
+    border-left-color: var(--vz-primary);
+    background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.05) 0%, rgba(var(--vz-primary-rgb), 0.02) 100%);
+  }
+
+  &.border-warning {
+    border-left-color: var(--vz-warning);
+    background: linear-gradient(135deg, rgba(var(--vz-warning-rgb), 0.08) 0%, rgba(var(--vz-warning-rgb), 0.03) 100%);
+  }
+}
+
+// Avatar Styles
+.avatar-sm {
+  width: 36px;
+  height: 36px;
+}
+
+.avatar-lg {
+  width: 64px;
+  height: 64px;
+}
+
+.avatar-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+// Progress Bars
+.progress-sm {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+// Comparison Table
+.comparison-table {
+  th, td {
+    padding: 1rem;
+    vertical-align: middle;
+  }
+
+  .feature-col {
+    width: 30%;
+    background: var(--vz-light);
+  }
+
+  .plan-col {
+    width: 17.5%;
+  }
+
+  .plan-header {
+    padding: 1rem;
+    margin: -1rem;
+    border-radius: 0;
+  }
+
+  .current-plan {
+    background-color: rgba(var(--vz-primary-rgb), 0.05);
+
+    .plan-header {
+      border-bottom: 3px solid var(--vz-primary);
+    }
+  }
+
+  tfoot td {
+    background: var(--vz-light);
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+}
+
+// Card Styles
+.card {
+  border-radius: 12px;
+
+  .card-header {
+    padding: 1rem 1.5rem;
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+}
+
+// Utility Classes
+.fs-11 {
+  font-size: 0.6875rem;
+}
+
+.fs-12 {
+  font-size: 0.75rem;
+}
+
+.fs-13 {
+  font-size: 0.8125rem;
+}
+
+.fs-18 {
+  font-size: 1.125rem;
+}
+
+.fs-28 {
+  font-size: 1.75rem;
+}
+
+.letter-spacing {
+  letter-spacing: 0.06em;
+}
+
+// Button Styles
+.btn-soft-primary {
+  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  color: var(--vz-primary);
+  border: none;
+
+  &:hover {
+    background-color: var(--vz-primary);
+    color: #fff;
+  }
+}
+
+.btn-soft-info {
+  background-color: rgba(var(--vz-info-rgb), 0.1);
+  color: var(--vz-info);
+  border: none;
+
+  &:hover {
+    background-color: var(--vz-info);
+    color: #fff;
+  }
+}
+
+.btn-soft-secondary {
+  background-color: rgba(var(--vz-secondary-rgb), 0.1);
+  color: var(--vz-secondary);
+  border: none;
+
+  &:hover {
+    background-color: var(--vz-secondary);
+    color: #fff;
+  }
+}
+
+// Responsive
+@media (max-width: 991px) {
+  .comparison-table {
+    .feature-col {
+      width: auto;
+      min-width: 150px;
+    }
+
+    .plan-col {
+      min-width: 120px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header-wrapper {
+    padding-left: 1rem;
+
+    &::before {
+      width: 2px;
+    }
+
+    h4 {
+      font-size: 1.25rem;
+    }
+  }
+}

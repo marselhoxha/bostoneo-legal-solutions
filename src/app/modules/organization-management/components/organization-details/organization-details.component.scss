@@ -1,0 +1,384 @@
+// Organization Details - Velzon Theme (Matching Cases/Signatures Pages)
+
+// ==================== Page Header ====================
+.page-header-wrapper {
+  padding: 1.25rem 0 1.5rem;
+  margin-bottom: 0.5rem;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 1.25rem;
+    bottom: 1.5rem;
+    width: 3px;
+    background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.2) 100%);
+    border-radius: 2px;
+  }
+
+  padding-left: 1.25rem;
+
+  h4 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--vz-heading-color);
+    margin: 0;
+  }
+}
+
+// ==================== Organization Header Card ====================
+.org-header {
+  background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.05) 0%, rgba(var(--vz-info-rgb), 0.05) 100%);
+  border-left: 4px solid var(--vz-primary);
+}
+
+// ==================== Stats Row ====================
+.stats-row {
+  display: flex;
+  background: var(--vz-card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--vz-border-color);
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.stat-item {
+  flex: 1;
+  padding: 1.25rem 1.5rem;
+  border-right: 1px solid var(--vz-border-color);
+  transition: all 0.2s ease;
+
+  &:last-child {
+    border-right: none;
+  }
+
+  &:hover {
+    filter: brightness(0.97);
+  }
+}
+
+.stat-item:nth-child(1) {
+  background: rgba(var(--vz-primary-rgb), 0.08);
+}
+
+.stat-item:nth-child(2) {
+  background: rgba(var(--vz-info-rgb), 0.08);
+}
+
+.stat-item:nth-child(3) {
+  background: rgba(var(--vz-success-rgb), 0.08);
+}
+
+.stat-item:nth-child(4) {
+  background: rgba(var(--vz-warning-rgb), 0.08);
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--vz-secondary-color);
+}
+
+.stat-indicator {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+
+  &.stat-indicator-primary {
+    background: rgba(var(--vz-primary-rgb), 0.1);
+    color: var(--vz-primary);
+  }
+
+  &.stat-indicator-success {
+    background: rgba(var(--vz-success-rgb), 0.1);
+    color: var(--vz-success);
+  }
+
+  &.stat-indicator-warning {
+    background: rgba(var(--vz-warning-rgb), 0.1);
+    color: var(--vz-warning);
+  }
+
+  &.stat-indicator-info {
+    background: rgba(var(--vz-info-rgb), 0.1);
+    color: var(--vz-info);
+  }
+}
+
+.stat-body {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stat-content {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+  opacity: 0.7;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--vz-heading-color);
+  line-height: 1;
+  font-feature-settings: "tnum";
+}
+
+.stat-max {
+  font-size: 0.875rem;
+}
+
+// ==================== Progress Bar ====================
+.progress-sm {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+// ==================== Avatar Styles ====================
+.avatar-lg {
+  width: 80px;
+  height: 80px;
+}
+
+.avatar-sm {
+  width: 36px;
+  height: 36px;
+}
+
+.avatar-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+// ==================== Card Styles ====================
+.card {
+  border-radius: 12px;
+
+  .card-header {
+    padding: 1rem 1.5rem;
+
+    h6 {
+      color: var(--vz-heading-color);
+    }
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+}
+
+// ==================== Code Styling ====================
+code {
+  font-size: 0.85em;
+  padding: 2px 6px;
+  background-color: var(--vz-light);
+  border-radius: 4px;
+}
+
+// ==================== Badge Styles ====================
+.badge {
+  font-weight: 500;
+}
+
+// ==================== Tab Navigation ====================
+.nav-tabs-custom {
+  border-bottom: 2px solid var(--vz-border-color);
+
+  .nav-item {
+    margin-bottom: -2px;
+  }
+
+  .nav-link {
+    border: none;
+    padding: 0.75rem 1.25rem;
+    color: var(--vz-secondary-color);
+    font-weight: 500;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: var(--vz-primary);
+      background: transparent;
+    }
+
+    &.active {
+      color: var(--vz-primary);
+      background: transparent;
+
+      &::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--vz-primary);
+      }
+    }
+
+    i {
+      font-size: 1rem;
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      padding: 0.2em 0.5em;
+    }
+  }
+}
+
+// ==================== Button Styles ====================
+.btn-soft-secondary {
+  background-color: rgba(var(--vz-secondary-rgb), 0.1);
+  color: var(--vz-secondary);
+  border: none;
+
+  &:hover {
+    background-color: var(--vz-secondary);
+    color: #fff;
+  }
+}
+
+.btn-soft-info {
+  background-color: rgba(var(--vz-info-rgb), 0.1);
+  color: var(--vz-info);
+  border: none;
+
+  &:hover {
+    background-color: var(--vz-info);
+    color: #fff;
+  }
+}
+
+.btn-soft-warning {
+  background-color: rgba(var(--vz-warning-rgb), 0.1);
+  color: var(--vz-warning);
+  border: none;
+
+  &:hover {
+    background-color: var(--vz-warning);
+    color: #fff;
+  }
+}
+
+// ==================== Utilities ====================
+.letter-spacing {
+  letter-spacing: 0.06em;
+}
+
+.fs-11 {
+  font-size: 0.6875rem;
+}
+
+.fs-12 {
+  font-size: 0.75rem;
+}
+
+.fs-13 {
+  font-size: 0.8125rem;
+}
+
+.fs-14 {
+  font-size: 0.875rem;
+}
+
+.fs-18 {
+  font-size: 1.125rem;
+}
+
+.fs-24 {
+  font-size: 1.5rem;
+}
+
+// ==================== Responsive ====================
+@media (max-width: 991px) {
+  .stats-row {
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    flex: 1 1 50%;
+    border-bottom: 1px solid var(--vz-border-color);
+
+    &:nth-child(2) {
+      border-right: none;
+    }
+
+    &:nth-child(3),
+    &:nth-child(4) {
+      border-bottom: none;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header-wrapper {
+    padding-left: 1rem;
+
+    &::before {
+      width: 2px;
+    }
+
+    h4 {
+      font-size: 1.25rem;
+    }
+  }
+}
+
+@media (max-width: 575px) {
+  .stat-item {
+    flex: 1 1 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--vz-border-color);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}
+
+// ==================== Dark Mode ====================
+[data-bs-theme="dark"] {
+  .page-header-wrapper {
+    &::before {
+      background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.3) 100%);
+    }
+  }
+
+  .org-header {
+    background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.1) 0%, rgba(var(--vz-info-rgb), 0.1) 100%);
+  }
+
+  .stat-item {
+    &:hover {
+      filter: brightness(1.1);
+    }
+  }
+}

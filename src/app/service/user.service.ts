@@ -36,6 +36,8 @@ export class UserService {
     if (user) {
       this.currentUser = user;
       this.userDataSubject.next(user);
+      // Save to localStorage for RbacService to read roles
+      localStorage.setItem('currentUser', JSON.stringify(user));
     }
   }
 
@@ -47,6 +49,7 @@ export class UserService {
   clearUserCache(): void {
     this.currentUser = null;
     this.userDataSubject.next(null);
+    localStorage.removeItem('currentUser');
   }
 
   /**

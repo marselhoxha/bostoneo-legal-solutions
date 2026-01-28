@@ -154,35 +154,28 @@ export class ConflictChecksListComponent implements OnInit, OnDestroy {
       search: this.searchTerm
     };
 
-    // Mock data for development - replace with actual service call
-    setTimeout(() => {
-      this.conflictChecks = this.generateMockConflictChecks();
-      this.filteredChecks = [...this.conflictChecks];
-      this.applyFilters();
-      this.totalElements = this.filteredChecks.length;
-      this.totalPages = Math.ceil(this.totalElements / this.pageSize);
-      this.isLoading = false;
-      this.cdr.detectChanges();
-    }, 500);
-    
-    /*
-    // Actual service call - uncomment when backend is ready
+    // Use real API call for tenant isolation
     this.crmService.getConflictChecks(params).subscribe({
       next: (response) => {
-        this.conflictChecks = response.content;
+        this.conflictChecks = response?.content || response || [];
         this.filteredChecks = [...this.conflictChecks];
-        this.totalElements = response.totalElements;
-        this.totalPages = response.totalPages;
-        this.currentPage = response.number;
+        this.totalElements = response?.totalElements || this.conflictChecks.length;
+        this.totalPages = response?.totalPages || Math.ceil(this.totalElements / this.pageSize);
+        this.currentPage = response?.number || 0;
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error loading conflict checks:', error);
         this.error = 'Failed to load conflict checks. Please try again.';
+        this.conflictChecks = [];
+        this.filteredChecks = [];
+        this.totalElements = 0;
+        this.totalPages = 0;
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
-    */
   }
   
   private generateMockConflictChecks(): ConflictCheckListDTO[] {

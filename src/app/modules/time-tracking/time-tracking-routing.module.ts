@@ -6,9 +6,7 @@ import { TimeEntryFormComponent } from './components/time-entry-form/time-entry-
 import { TimesheetViewComponent } from './components/timesheet-view/timesheet-view.component';
 import { TimeApprovalComponent } from './components/time-approval/time-approval.component';
 import { BillingRatesComponent } from './components/billing-rates/billing-rates.component';
-import { TimeReportsComponent } from './components/time-reports/time-reports.component';
 import { InvoiceGenerationComponent } from './components/invoice-generation/invoice-generation.component';
-import { BillingCyclesComponent } from './components/billing-cycles/billing-cycles.component';
 import { RateManagementComponent } from './components/rate-management/rate-management.component';
 import { BillingAnalyticsComponent } from './components/billing-analytics/billing-analytics.component';
 import { TimeDashboardComponent } from './components/time-dashboard/time-dashboard.component';
@@ -82,35 +80,6 @@ const routes: Routes = [
         }
       },
 
-      // Time Reports
-      {
-        path: 'reports',
-        component: TimeReportsComponent,
-        data: { 
-          title: 'Time Reports'
-        }
-      },
-
-      // Team Reports
-      {
-        path: 'reports/team',
-        component: TimeReportsComponent,
-        data: { 
-          title: 'Team Reports',
-          reportScope: 'team'
-        }
-      },
-
-      // All Reports
-      {
-        path: 'reports/all',
-        component: TimeReportsComponent,
-        data: { 
-          title: 'All Reports',
-          reportScope: 'all'
-        }
-      },
-
       // Billing Analytics - Direct route for /analytics
       {
         path: 'analytics',
@@ -171,15 +140,6 @@ const routes: Routes = [
         component: InvoiceGenerationComponent,
         data: { 
           title: 'Generate Invoices'
-        }
-      },
-
-      // Billing Cycles
-      {
-        path: 'billing/cycles',
-        component: BillingCyclesComponent,
-        data: { 
-          title: 'Billing Cycles'
         }
       },
 

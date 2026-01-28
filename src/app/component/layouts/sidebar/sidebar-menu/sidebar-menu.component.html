@@ -50,9 +50,6 @@
       <li class="nav-item" *ngIf="hasPermission('BILLING', 'CREATE')">
         <a routerLink="/time-tracking/billing/invoice-generation" routerLinkActive="active" class="nav-link" data-key="t-invoice-gen">Invoice Generation</a>
       </li>
-      <li class="nav-item" *ngIf="hasPermission('TIME_TRACKING', 'VIEW_OWN')">
-        <a routerLink="/time-tracking/reports" routerLinkActive="active" class="nav-link" data-key="t-time-reports">Reports</a>
-      </li>
       <li class="nav-item" *ngIf="hasPermission('DOCUMENT', 'ADMIN')">
         <a routerLink="/time-tracking/billing/analytics" routerLinkActive="active" class="nav-link" data-key="t-billing-analytics">Analytics</a>
       </li>

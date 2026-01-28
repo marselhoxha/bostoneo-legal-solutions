@@ -1,0 +1,124 @@
+.auth-page-wrapper {
+  min-height: 100vh;
+  background-color: #405189;
+}
+
+.auth-one-bg {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+.bg-overlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #405189 0%, #6366f1 100%);
+  opacity: 0.9;
+}
+
+.shape {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  svg {
+    fill: #f3f3f9;
+    width: 100%;
+    height: 120px;
+  }
+}
+
+.card {
+  border: none;
+  border-radius: 0.5rem;
+}
+
+.nav-tabs-custom {
+  border-bottom: 2px solid #e9ebec;
+
+  .nav-link {
+    border: none;
+    color: #878a99;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: #405189;
+    }
+
+    &.active {
+      color: #405189;
+      background: transparent;
+      border-bottom: 2px solid #405189;
+      margin-bottom: -2px;
+    }
+  }
+}
+
+.avatar-lg {
+  width: 5rem;
+  height: 5rem;
+
+  .avatar-title {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.form-control:focus {
+  border-color: #405189;
+  box-shadow: 0 0 0 0.15rem rgba(64, 81, 137, 0.25);
+}
+
+.btn-primary {
+  background-color: #405189;
+  border-color: #405189;
+
+  &:hover {
+    background-color: #364574;
+    border-color: #364574;
+  }
+
+  &:disabled {
+    background-color: #405189;
+    border-color: #405189;
+    opacity: 0.65;
+  }
+}
+
+.btn-success {
+  background-color: #0ab39c;
+  border-color: #0ab39c;
+
+  &:hover {
+    background-color: #099885;
+    border-color: #099885;
+  }
+
+  &:disabled {
+    background-color: #0ab39c;
+    border-color: #0ab39c;
+    opacity: 0.65;
+  }
+}
+
+.footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem 0;
+}
+
+.badge {
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}
