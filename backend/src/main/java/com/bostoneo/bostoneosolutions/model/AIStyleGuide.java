@@ -24,6 +24,9 @@ public class AIStyleGuide {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "firm_id")
     private Long firmId;
 

@@ -70,6 +70,9 @@ public class AiConversationMessage {
     @Column(name = "was_helpful")
     private Boolean wasHelpful;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

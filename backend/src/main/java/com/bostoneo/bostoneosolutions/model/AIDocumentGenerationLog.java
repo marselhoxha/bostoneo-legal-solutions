@@ -24,6 +24,9 @@ public class AIDocumentGenerationLog {
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "template_id", nullable = false)
     private Long templateId;
 

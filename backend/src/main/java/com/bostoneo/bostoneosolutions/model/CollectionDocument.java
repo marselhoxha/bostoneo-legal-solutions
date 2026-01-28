@@ -24,6 +24,12 @@ public class CollectionDocument {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * SECURITY: Organization ID for multi-tenant isolation
+     */
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "collection_id", nullable = false)
     private DocumentCollection collection;

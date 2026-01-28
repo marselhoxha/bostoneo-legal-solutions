@@ -29,6 +29,9 @@ public class BillingRate {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "user_id", nullable = false)
     private Long userId;
 

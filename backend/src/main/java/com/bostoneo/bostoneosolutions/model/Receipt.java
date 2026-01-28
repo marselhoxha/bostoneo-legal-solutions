@@ -25,6 +25,9 @@ public class Receipt {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "file_name", nullable = false, length = 255)
     private String fileName;
 

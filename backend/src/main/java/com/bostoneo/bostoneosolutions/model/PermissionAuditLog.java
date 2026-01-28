@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PermissionAuditLog {
     private Long id;
+    private Long organizationId; // Tenant isolation
     private Long userId; // The user affected by the change (can be null)
     private String action; // ASSIGNED, REMOVED, etc.
     private String targetType; // ROLE, PERMISSION, CASE_ROLE

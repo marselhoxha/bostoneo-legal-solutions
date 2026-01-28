@@ -22,6 +22,9 @@ public class ActionItem {
     @Column(name = "analysis_id", nullable = false)
     private Long analysisId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 

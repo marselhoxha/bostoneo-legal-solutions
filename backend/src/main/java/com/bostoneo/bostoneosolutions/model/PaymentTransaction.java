@@ -22,7 +22,10 @@ public class PaymentTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "invoice_id", nullable = false)
     private Long invoiceId;
     

@@ -24,6 +24,9 @@ public class ResearchSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @Column(name = "session_id", nullable = false, unique = true)
     private String sessionId;
 

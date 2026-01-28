@@ -22,7 +22,11 @@ public class TrustAccountTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
+    // SECURITY: Tenant isolation - required for multi-tenant access control
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "trust_account_id", nullable = false)
     private Long trustAccountId;
     

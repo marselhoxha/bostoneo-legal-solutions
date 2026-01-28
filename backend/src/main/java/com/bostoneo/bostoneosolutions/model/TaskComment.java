@@ -22,7 +22,10 @@ public class TaskComment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "task_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "comments"})

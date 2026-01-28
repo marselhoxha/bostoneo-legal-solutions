@@ -63,6 +63,9 @@ public class TimeEntryAuditLog {
     
     @Column(name = "compliance_flag", nullable = false)
     private Boolean complianceFlag = false; // For flagging critical changes
+
+    @Column(name = "organization_id")
+    private Long organizationId;
     
     @PrePersist
     protected void onCreate() {

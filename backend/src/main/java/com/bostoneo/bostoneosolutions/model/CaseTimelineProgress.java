@@ -23,6 +23,9 @@ public class CaseTimelineProgress {
     @Column(name = "case_id", nullable = false)
     private Long caseId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "phase_name", nullable = false)
     private String phaseName;
 

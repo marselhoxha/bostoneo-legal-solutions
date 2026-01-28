@@ -29,6 +29,9 @@ public class AppointmentRequest {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "calendar_event_id")
     private Long calendarEventId;
 

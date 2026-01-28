@@ -27,7 +27,13 @@ public class CaseAssignmentHistory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
+    /**
+     * SECURITY: Organization ID for multi-tenant isolation
+     */
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "case_assignment_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

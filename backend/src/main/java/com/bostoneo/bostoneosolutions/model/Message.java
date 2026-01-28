@@ -24,6 +24,9 @@ public class Message {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @Column(name = "thread_id", nullable = false)
     private Long threadId;
 

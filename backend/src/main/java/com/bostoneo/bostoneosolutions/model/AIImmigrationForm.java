@@ -25,6 +25,9 @@ public class AIImmigrationForm {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "form_number", nullable = false, length = 20, unique = true)
     private String formNumber;
 

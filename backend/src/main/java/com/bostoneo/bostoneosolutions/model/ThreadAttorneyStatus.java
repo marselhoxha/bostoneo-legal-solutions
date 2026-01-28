@@ -30,6 +30,12 @@ public class ThreadAttorneyStatus {
     @Column(name = "id")
     private Long id;
 
+    /**
+     * SECURITY: Organization ID for multi-tenant isolation
+     */
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @Column(name = "thread_id", nullable = false)
     private Long threadId;
 

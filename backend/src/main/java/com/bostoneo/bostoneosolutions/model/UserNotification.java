@@ -13,11 +13,17 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserNotification {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
+    /**
+     * SECURITY: Organization ID for multi-tenant isolation
+     */
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @Column(name = "user_id", nullable = false)
     private Long userId;
     

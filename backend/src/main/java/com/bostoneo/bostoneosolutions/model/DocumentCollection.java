@@ -35,6 +35,9 @@ public class DocumentCollection {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "case_id")
     private Long caseId;  // Optional link to legal case
 

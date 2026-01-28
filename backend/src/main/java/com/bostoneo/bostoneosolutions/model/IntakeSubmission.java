@@ -26,6 +26,9 @@ public class IntakeSubmission {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "form_id", nullable = true)
     private Long formId;
 

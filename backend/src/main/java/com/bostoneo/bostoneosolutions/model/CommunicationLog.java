@@ -36,6 +36,9 @@ public class CommunicationLog {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     /**
      * User associated with this communication (staff member)
      */

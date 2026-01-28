@@ -44,6 +44,9 @@ public class CaseWorkflowTemplate {
     @Builder.Default
     private Boolean isSystem = false;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

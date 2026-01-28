@@ -26,6 +26,9 @@ public class IntakeForm {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 

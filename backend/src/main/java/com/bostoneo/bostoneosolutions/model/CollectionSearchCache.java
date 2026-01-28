@@ -25,6 +25,12 @@ public class CollectionSearchCache {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * SECURITY: Organization ID for multi-tenant isolation
+     */
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @Column(name = "collection_id", nullable = false)
     private Long collectionId;
 

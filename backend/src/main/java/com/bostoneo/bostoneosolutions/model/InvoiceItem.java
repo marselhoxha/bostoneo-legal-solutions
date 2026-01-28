@@ -27,4 +27,7 @@ public class InvoiceItem {
     private Integer quantity;
     private Double unitPrice;
     private Double total;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
 } 

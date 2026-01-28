@@ -38,7 +38,10 @@ public class EmailTemplate {
     
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
-    
+
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
     

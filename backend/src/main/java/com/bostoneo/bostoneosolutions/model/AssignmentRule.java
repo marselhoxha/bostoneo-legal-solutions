@@ -27,7 +27,10 @@ public class AssignmentRule {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "rule_name", nullable = false, length = 100)
     private String ruleName;
     

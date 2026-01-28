@@ -30,7 +30,13 @@ public class UserNotificationPreference {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", updatable = false)
     private Long id;
-    
+
+    /**
+     * SECURITY: Organization ID for multi-tenant isolation
+     */
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @NotNull(message = "User ID is required")
     @Column(name = "user_id", nullable = false)
     private Long userId;
@@ -96,7 +102,15 @@ public class UserNotificationPreference {
     public void setId(Long id) {
         this.id = id;
     }
-    
+
+    public Long getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(Long organizationId) {
+        this.organizationId = organizationId;
+    }
+
     public Long getUserId() {
         return userId;
     }

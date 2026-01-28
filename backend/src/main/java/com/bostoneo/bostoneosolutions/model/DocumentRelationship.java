@@ -18,6 +18,9 @@ public class DocumentRelationship {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "source_analysis_id", nullable = false)
     private Long sourceAnalysisId;
 

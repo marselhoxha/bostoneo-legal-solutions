@@ -64,6 +64,12 @@ public class PipelineStage {
     @Column(name = "updated_at")
     private Timestamp updatedAt;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
+    @Column(name = "is_system")
+    private Boolean isSystem = false;
+
     @PrePersist
     protected void onCreate() {
         Timestamp now = new Timestamp(System.currentTimeMillis());

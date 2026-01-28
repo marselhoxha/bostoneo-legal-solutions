@@ -35,6 +35,9 @@ public class AiConversationSession {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "session_name", length = 255)
     private String sessionName;
 

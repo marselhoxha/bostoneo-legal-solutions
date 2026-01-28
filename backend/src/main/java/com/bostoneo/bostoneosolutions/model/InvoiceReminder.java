@@ -63,6 +63,9 @@ public class InvoiceReminder {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_workflow")
     private InvoiceWorkflowRule createdByWorkflow;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
     
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

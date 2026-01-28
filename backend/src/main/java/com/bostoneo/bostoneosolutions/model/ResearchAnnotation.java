@@ -23,6 +23,9 @@ public class ResearchAnnotation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "user_id")
     private Long userId;
 

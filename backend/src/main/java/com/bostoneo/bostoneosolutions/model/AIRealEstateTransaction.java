@@ -28,6 +28,9 @@ public class AIRealEstateTransaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "case_id")
     private Long caseId;
 

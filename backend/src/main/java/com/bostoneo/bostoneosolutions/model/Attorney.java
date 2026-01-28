@@ -21,8 +21,11 @@ public class Attorney {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false, unique = true)
+    @Column(name = "user_id", nullable = false)
     private Long userId;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
 
     @Column(name = "bar_number")
     private String barNumber;

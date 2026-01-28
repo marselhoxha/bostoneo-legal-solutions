@@ -25,7 +25,13 @@ public class WorkloadCalculation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
+    /**
+     * SECURITY: Organization ID for multi-tenant isolation
+     */
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @Column(name = "user_id", nullable = false)
     private Long userId;
     

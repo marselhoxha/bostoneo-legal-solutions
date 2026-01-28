@@ -27,6 +27,9 @@ public class AIPatentApplication {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "client_id", nullable = false)
     private Long clientId;
 

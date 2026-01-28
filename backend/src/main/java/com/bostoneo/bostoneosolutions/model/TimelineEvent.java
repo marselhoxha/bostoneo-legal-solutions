@@ -22,6 +22,9 @@ public class TimelineEvent {
     @Column(name = "analysis_id", nullable = false)
     private Long analysisId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "event_date", nullable = false)
     private LocalDate eventDate;
 

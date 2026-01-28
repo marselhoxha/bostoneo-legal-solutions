@@ -21,6 +21,9 @@ public class InvoiceWorkflowRule {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
     
     @NotBlank(message = "Workflow name is required")
     @Column(nullable = false, length = 100)

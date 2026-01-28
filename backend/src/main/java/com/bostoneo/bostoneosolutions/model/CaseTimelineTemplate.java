@@ -41,6 +41,9 @@ public class CaseTimelineTemplate {
     @Column(name = "color")
     private String color;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

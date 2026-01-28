@@ -55,6 +55,9 @@ public class AttorneyExpertise {
     
     @Column(columnDefinition = "TEXT")
     private String certifications;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
     
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

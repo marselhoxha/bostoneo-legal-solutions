@@ -30,7 +30,10 @@ public class UserWorkload {
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User user;
-    
+
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "calculation_date", nullable = false)
     private LocalDate calculationDate;
     

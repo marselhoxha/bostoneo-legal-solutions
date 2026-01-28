@@ -26,6 +26,9 @@ public class SearchHistory {
     @Column(name = "user_id")
     private Long userId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "search_query", nullable = false, columnDefinition = "TEXT")
     private String searchQuery;
 

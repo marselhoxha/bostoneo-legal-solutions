@@ -27,6 +27,9 @@ public class LeadActivity {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @Column(name = "lead_id", nullable = false)
     private Long leadId;
 

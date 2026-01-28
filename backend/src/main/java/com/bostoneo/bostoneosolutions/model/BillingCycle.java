@@ -32,6 +32,9 @@ public class BillingCycle {
     @Column(name = "legal_case_id", nullable = false)
     private Long legalCaseId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "cycle_name", nullable = false, length = 100)
     private String cycleName;
 

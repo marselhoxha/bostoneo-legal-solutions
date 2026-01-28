@@ -25,6 +25,9 @@ public class AIEditingSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "file_id", nullable = false)
     private Long fileId;
 

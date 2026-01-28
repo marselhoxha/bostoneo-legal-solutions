@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 public class InvoicePayment {
     private Long id;
     private Long invoiceId;
+    private Long organizationId;
     private LocalDate paymentDate;
     private BigDecimal amount;
     private String paymentMethod;

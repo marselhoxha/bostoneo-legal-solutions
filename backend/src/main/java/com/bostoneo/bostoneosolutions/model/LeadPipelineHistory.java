@@ -26,6 +26,12 @@ public class LeadPipelineHistory {
     @Column(name = "id")
     private Long id;
 
+    /**
+     * SECURITY: Organization ID for multi-tenant isolation
+     */
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @Column(name = "lead_id", nullable = false)
     private Long leadId;
 

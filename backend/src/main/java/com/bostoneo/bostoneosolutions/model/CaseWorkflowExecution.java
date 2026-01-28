@@ -31,6 +31,9 @@ public class CaseWorkflowExecution {
     @Column(name = "collection_id")
     private Long collectionId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "case_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

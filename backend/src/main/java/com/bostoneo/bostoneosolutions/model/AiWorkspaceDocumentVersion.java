@@ -64,6 +64,9 @@ public class AiWorkspaceDocumentVersion {
     @Column(name = "cost_estimate", precision = 10, scale = 4)
     private BigDecimal costEstimate;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "created_at", updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

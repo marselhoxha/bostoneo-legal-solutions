@@ -62,6 +62,9 @@ public class AIDocumentAnalysis {
     @Column(name = "user_id")
     private Long userId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "case_id")
     private Long caseId;
 

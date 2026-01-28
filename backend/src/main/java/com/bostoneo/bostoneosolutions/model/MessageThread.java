@@ -24,6 +24,9 @@ public class MessageThread {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @Column(name = "case_id", nullable = false)
     private Long caseId;
 

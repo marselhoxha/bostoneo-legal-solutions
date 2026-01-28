@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -38,6 +40,9 @@ public class AuditLog {
     @Column(name = "user_id")
     private Long userId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "session_id", length = 255)
     private String sessionId;
 
@@ -55,7 +60,8 @@ public class AuditLog {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "metadata", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata", columnDefinition = "jsonb")
     private String metadata;
 
     @Column(name = "ip_address", length = 45)
@@ -83,8 +89,9 @@ public class AuditLog {
 
     // Enum for entity types
     public enum EntityType {
-        CUSTOMER, CASE, LEGAL_CASE, DOCUMENT, INVOICE, USER, 
-        APPOINTMENT, PAYMENT, EXPENSE, ROLE, 
-        PERMISSION, EMAIL, CALENDAR_EVENT
+        CUSTOMER, CASE, LEGAL_CASE, DOCUMENT, INVOICE, USER,
+        APPOINTMENT, PAYMENT, EXPENSE, ROLE,
+        PERMISSION, EMAIL, CALENDAR_EVENT,
+        ORGANIZATION, INVITATION, CLIENT, TASK, NOTE
     }
 }

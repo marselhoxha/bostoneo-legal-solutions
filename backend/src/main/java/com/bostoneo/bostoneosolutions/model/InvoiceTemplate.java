@@ -24,7 +24,10 @@ public class InvoiceTemplate {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @NotBlank(message = "Template name is required")
     @Size(max = 100)
     @Column(nullable = false, unique = true)

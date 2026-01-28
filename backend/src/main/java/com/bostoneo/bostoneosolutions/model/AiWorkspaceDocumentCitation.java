@@ -30,6 +30,9 @@ public class AiWorkspaceDocumentCitation {
     @Column(name = "case_id")
     private Long caseId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "position_start")
     private Integer positionStart;
 

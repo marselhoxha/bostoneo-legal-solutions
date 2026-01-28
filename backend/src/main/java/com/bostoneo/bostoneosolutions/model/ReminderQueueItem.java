@@ -23,7 +23,10 @@ public class ReminderQueueItem {
     
     @Column(name = "user_id", nullable = false)
     private Long userId;
-    
+
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "scheduled_time", nullable = false)
     private LocalDateTime scheduledTime;
     

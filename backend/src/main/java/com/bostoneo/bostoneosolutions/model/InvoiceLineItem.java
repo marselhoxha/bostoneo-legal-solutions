@@ -58,6 +58,9 @@ public class InvoiceLineItem {
     
     @Column(name = "service_date")
     private LocalDate serviceDate;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
     
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

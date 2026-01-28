@@ -30,6 +30,9 @@ public class AttorneyAvailability {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "attorney_id", nullable = false)
     private Long attorneyId;
 

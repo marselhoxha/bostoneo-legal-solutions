@@ -35,6 +35,9 @@ public class AIAnalysisMessage {
     @Column(name = "user_id")
     private Long userId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

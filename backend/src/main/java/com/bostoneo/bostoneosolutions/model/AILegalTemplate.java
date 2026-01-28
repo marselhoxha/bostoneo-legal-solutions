@@ -104,6 +104,9 @@ public class AILegalTemplate {
     @Column(name = "firm_id")
     private Long firmId;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "created_by")
     private Long createdBy;
 

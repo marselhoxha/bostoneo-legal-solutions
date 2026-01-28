@@ -19,6 +19,12 @@ public class ResearchActionItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * SECURITY: Organization ID for multi-tenant isolation
+     */
+    @Column(name = "organization_id", nullable = false)
+    private Long organizationId;
+
     @Column(name = "research_session_id", nullable = false)
     private Long researchSessionId;
 

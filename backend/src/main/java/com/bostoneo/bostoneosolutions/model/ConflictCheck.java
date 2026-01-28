@@ -27,6 +27,9 @@ public class ConflictCheck {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "entity_type", nullable = false, length = 50)
     private String entityType;
 

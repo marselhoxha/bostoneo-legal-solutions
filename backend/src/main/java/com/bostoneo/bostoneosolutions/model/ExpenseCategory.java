@@ -36,6 +36,9 @@ public class ExpenseCategory {
     @Column(name = "color", nullable = false, length = 20)
     private String color;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @ManyToOne(fetch = LAZY)
     @JoinColumn(name = "parent_id")
     @JsonBackReference

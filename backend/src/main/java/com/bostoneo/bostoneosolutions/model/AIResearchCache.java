@@ -24,6 +24,9 @@ public class AIResearchCache {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "query_hash", nullable = false, length = 64, unique = true)
     private String queryHash;
 
