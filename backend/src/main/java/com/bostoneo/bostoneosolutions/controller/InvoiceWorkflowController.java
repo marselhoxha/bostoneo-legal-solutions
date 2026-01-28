@@ -10,6 +10,7 @@ import com.bostoneo.bostoneosolutions.repository.InvoiceReminderRepository;
 import com.bostoneo.bostoneosolutions.repository.InvoiceRepository;
 import com.bostoneo.bostoneosolutions.repository.InvoiceWorkflowExecutionRepository;
 import com.bostoneo.bostoneosolutions.repository.InvoiceWorkflowRuleRepository;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -36,24 +37,35 @@ public class InvoiceWorkflowController {
     private final InvoiceReminderRepository reminderRepository;
     private final InvoiceRepository invoiceRepository;
     private final ClientRepository clientRepository;
+    private final TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
     
     @GetMapping("/rules")
+    @PreAuthorize("hasAuthority('BILLING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<List<InvoiceWorkflowRule>>> getWorkflowRules() {
+        // GLOBAL: Workflow rules are shared across all organizations
         List<InvoiceWorkflowRule> rules = workflowRuleRepository.findAll();
         CustomHttpResponse<List<InvoiceWorkflowRule>> response = new CustomHttpResponse<>();
         response.setMessage("Workflow rules fetched successfully");
         response.setData(rules);
         return ResponseEntity.ok(response);
     }
-    
+
     @GetMapping("/rules/{id}")
+    @PreAuthorize("hasAuthority('BILLING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<InvoiceWorkflowRule>> getWorkflowRule(@PathVariable Long id) {
+        // GLOBAL: Workflow rules are shared across all organizations
         return workflowRuleRepository.findById(id)
             .map(rule -> ResponseEntity.ok(new CustomHttpResponse<>("Workflow rule fetched successfully", rule)))
             .orElse(ResponseEntity.notFound().build());
     }
     
     @PutMapping("/rules/{id}/toggle")
+    @PreAuthorize("hasAuthority('BILLING:EDIT') or hasRole('ROLE_ADMIN')")
     @Transactional
     public ResponseEntity<CustomHttpResponse<InvoiceWorkflowRule>> toggleWorkflowRule(@PathVariable Long id) {
         // Check authentication
@@ -74,6 +86,7 @@ public class InvoiceWorkflowController {
         }
         
         try {
+            // GLOBAL: Workflow rules are shared across all organizations
             return workflowRuleRepository.findById(id)
                 .map(rule -> {
                     // Handle null isActive value
@@ -81,17 +94,17 @@ public class InvoiceWorkflowController {
                     if (currentStatus == null) {
                         currentStatus = false;
                     }
-                    
+
                     // Toggle the status
                     rule.setIsActive(!currentStatus);
-                    
+
                     // Save and return
                     InvoiceWorkflowRule saved = workflowRuleRepository.save(rule);
                     String message = saved.getIsActive() ? "Workflow activated" : "Workflow deactivated";
-                    
-                    log.info("User {} toggled workflow rule '{}' to {}", 
+
+                    log.info("User {} toggled workflow rule '{}' to {}",
                         auth.getName(), saved.getName(), saved.getIsActive() ? "active" : "inactive");
-                    
+
                     return ResponseEntity.ok(new CustomHttpResponse<>(message, saved));
                 })
                 .orElse(ResponseEntity.status(404).body(
@@ -110,12 +123,12 @@ public class InvoiceWorkflowController {
     public ResponseEntity<CustomHttpResponse<Page<InvoiceWorkflowExecution>>> getExecutions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Page<InvoiceWorkflowExecution> executions = executionRepository.findAll(
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "executedAt"))
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Page<InvoiceWorkflowExecution> executions = executionRepository.findByInvoiceOrganizationId(
+            orgId, PageRequest.of(page, size)
         );
-        
-        // Workflow rules are already loaded via the entity relationship
-        
+
         CustomHttpResponse<Page<InvoiceWorkflowExecution>> response = new CustomHttpResponse<>();
         response.setMessage("Workflow executions fetched successfully");
         response.setData(executions);
@@ -123,9 +136,12 @@ public class InvoiceWorkflowController {
     }
     
     @GetMapping("/executions/invoice/{invoiceId}")
+    @PreAuthorize("hasAuthority('BILLING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<List<InvoiceWorkflowExecution>>> getInvoiceExecutions(
             @PathVariable Long invoiceId) {
-        List<InvoiceWorkflowExecution> executions = executionRepository.findByInvoice_IdOrderByExecutedAtDesc(invoiceId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<InvoiceWorkflowExecution> executions = executionRepository.findByOrganizationIdAndInvoiceId(orgId, invoiceId);
         CustomHttpResponse<List<InvoiceWorkflowExecution>> response = new CustomHttpResponse<>();
         response.setMessage("Invoice workflow executions fetched successfully");
         response.setData(executions);
@@ -136,21 +152,24 @@ public class InvoiceWorkflowController {
     @PreAuthorize("hasAnyAuthority('BILLING:VIEW', 'BILLING:EDIT')")
     public ResponseEntity<CustomHttpResponse<List<InvoiceWorkflowExecution>>> getWorkflowExecutions(
             @PathVariable Long workflowId) {
-        List<InvoiceWorkflowExecution> executions = executionRepository.findByWorkflowRule_IdOrderByExecutedAtDesc(workflowId);
-        
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<InvoiceWorkflowExecution> executions = executionRepository.findByOrganizationIdAndWorkflowRuleId(orgId, workflowId);
+
         // Load invoice details with client information
         executions.forEach(execution -> {
             if (execution.getInvoiceId() != null) {
-                invoiceRepository.findById(execution.getInvoiceId()).ifPresent(invoice -> {
+                // SECURITY: Use tenant-filtered query
+                invoiceRepository.findByIdAndOrganizationId(execution.getInvoiceId(), orgId).ifPresent(invoice -> {
                     // Create a minimal invoice object with just the needed data
                     Invoice minimalInvoice = new Invoice();
                     minimalInvoice.setId(invoice.getId());
                     minimalInvoice.setInvoiceNumber(invoice.getInvoiceNumber());
                     minimalInvoice.setClientId(invoice.getClientId());
-                    
+
                     // Set client name if available
                     if (invoice.getClientId() != null) {
-                        clientRepository.findById(invoice.getClientId()).ifPresent(client -> {
+                        clientRepository.findByIdAndOrganizationId(invoice.getClientId(), orgId).ifPresent(client -> {
                             try {
                                 String clientName = (String) client.getClass().getMethod("getName").invoke(client);
                                 minimalInvoice.setClientName(clientName);
@@ -159,12 +178,12 @@ public class InvoiceWorkflowController {
                             }
                         });
                     }
-                    
+
                     execution.setInvoice(minimalInvoice);
                 });
             }
         });
-        
+
         CustomHttpResponse<List<InvoiceWorkflowExecution>> response = new CustomHttpResponse<>();
         response.setMessage("Workflow executions fetched successfully");
         response.setData(executions);
@@ -172,17 +191,26 @@ public class InvoiceWorkflowController {
     }
     
     @GetMapping("/reminders")
+    @PreAuthorize("hasAuthority('BILLING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<Page<InvoiceReminder>>> getReminders(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Page<InvoiceReminder> reminders = reminderRepository.findAll(PageRequest.of(page, size));
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        Page<InvoiceReminder> reminders = reminderRepository.findByOrganizationId(orgId, PageRequest.of(page, size));
         return ResponseEntity.ok(new CustomHttpResponse<>("Invoice reminders fetched successfully", reminders));
     }
-    
+
     @GetMapping("/reminders/invoice/{invoiceId}")
+    @PreAuthorize("hasAuthority('BILLING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<List<InvoiceReminder>>> getInvoiceReminders(
             @PathVariable Long invoiceId) {
-        List<InvoiceReminder> reminders = reminderRepository.findByInvoiceId(invoiceId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Verify invoice belongs to org, then get reminders using tenant-filtered query
+        if (!invoiceRepository.existsByIdAndOrganizationId(invoiceId, orgId)) {
+            return ResponseEntity.status(404).body(new CustomHttpResponse<>(404, "Invoice not found or access denied", null));
+        }
+        List<InvoiceReminder> reminders = reminderRepository.findByOrganizationIdAndInvoiceId(orgId, invoiceId);
         return ResponseEntity.ok(new CustomHttpResponse<>("Invoice reminders fetched successfully", reminders));
     }
     
@@ -203,6 +231,7 @@ public class InvoiceWorkflowController {
     public ResponseEntity<CustomHttpResponse<InvoiceWorkflowRule>> updateWorkflowConfig(
             @PathVariable Long id,
             @RequestBody Map<String, Object> configUpdate) {
+        // GLOBAL: Workflow rules are shared across all organizations
         return workflowRuleRepository.findById(id)
             .map(rule -> {
                 // Update action config

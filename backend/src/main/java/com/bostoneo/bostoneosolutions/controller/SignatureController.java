@@ -1,8 +1,12 @@
 package com.bostoneo.bostoneosolutions.controller;
 
 import com.bostoneo.bostoneosolutions.dto.*;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.model.SignatureRequest;
 import com.bostoneo.bostoneosolutions.model.SignatureTemplate;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import com.bostoneo.bostoneosolutions.repository.SignatureRequestRepository;
 import com.bostoneo.bostoneosolutions.repository.SignatureTemplateRepository;
 import com.bostoneo.bostoneosolutions.service.BoldSignService;
 import jakarta.validation.Valid;
@@ -31,6 +35,16 @@ public class SignatureController {
 
     private final BoldSignService boldSignService;
     private final SignatureTemplateRepository signatureTemplateRepository;
+    private final SignatureRequestRepository signatureRequestRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     // ==================== Signature Requests ====================
 
@@ -42,7 +56,11 @@ public class SignatureController {
             @Valid @RequestBody CreateSignatureRequestDTO request,
             @AuthenticationPrincipal UserDTO user) {
 
-        log.info("Creating signature request for organization {}", request.getOrganizationId());
+        Long orgId = getRequiredOrganizationId();
+        log.info("Creating signature request for organization {}", orgId);
+
+        // Override client-provided organizationId with authenticated org
+        request.setOrganizationId(orgId);
 
         SignatureRequestDTO result;
         if (Boolean.TRUE.equals(request.getSendImmediately())) {
@@ -63,15 +81,17 @@ public class SignatureController {
     }
 
     /**
-     * Send a draft signature request
+     * Send a draft signature request - TENANT FILTERED
      */
     @PostMapping("/requests/{id}/send")
     public ResponseEntity<HttpResponse> sendSignatureRequest(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDTO user) {
 
-        log.info("Sending signature request {}", id);
-        SignatureRequestDTO result = boldSignService.sendSignatureRequest(id, user.getId());
+        // SECURITY: Verify request belongs to current tenant
+        Long orgId = getRequiredOrganizationId();
+        log.info("Sending signature request {} for organization {}", id, orgId);
+        SignatureRequestDTO result = boldSignService.sendSignatureRequest(id, orgId, user.getId());
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -85,11 +105,13 @@ public class SignatureController {
     }
 
     /**
-     * Get signature request by ID
+     * Get signature request by ID - TENANT FILTERED
      */
     @GetMapping("/requests/{id}")
     public ResponseEntity<HttpResponse> getSignatureRequest(@PathVariable Long id) {
-        SignatureRequestDTO result = boldSignService.getSignatureRequest(id);
+        // SECURITY: Verify request belongs to current tenant
+        Long orgId = getRequiredOrganizationId();
+        SignatureRequestDTO result = boldSignService.getSignatureRequestByIdAndOrganization(id, orgId);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -103,19 +125,19 @@ public class SignatureController {
     }
 
     /**
-     * Get all signature requests for an organization
+     * Get all signature requests for an organization - TENANT FILTERED
      */
-    @GetMapping("/requests/organization/{organizationId}")
+    @GetMapping("/requests/organization")
     public ResponseEntity<HttpResponse> getSignatureRequestsByOrganization(
-            @PathVariable Long organizationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
 
+        Long orgId = getRequiredOrganizationId();
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Page<SignatureRequestDTO> result = boldSignService.getSignatureRequestsByOrganization(
-                organizationId, PageRequest.of(page, size, sort));
+                orgId, PageRequest.of(page, size, sort));
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -134,17 +156,17 @@ public class SignatureController {
     }
 
     /**
-     * Get signature requests for a case
+     * Get signature requests for a case - TENANT FILTERED
      */
     @GetMapping("/requests/case/{caseId}")
     public ResponseEntity<HttpResponse> getSignatureRequestsByCase(
             @PathVariable Long caseId,
-            @RequestParam Long organizationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
+        Long orgId = getRequiredOrganizationId();
         Page<SignatureRequestDTO> result = boldSignService.getSignatureRequestsByCase(
-                caseId, organizationId, PageRequest.of(page, size, Sort.by("createdAt").descending()));
+                caseId, orgId, PageRequest.of(page, size, Sort.by("createdAt").descending()));
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -163,17 +185,17 @@ public class SignatureController {
     }
 
     /**
-     * Get signature requests for a client
+     * Get signature requests for a client - TENANT FILTERED
      */
     @GetMapping("/requests/client/{clientId}")
     public ResponseEntity<HttpResponse> getSignatureRequestsByClient(
             @PathVariable Long clientId,
-            @RequestParam Long organizationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
+        Long orgId = getRequiredOrganizationId();
         Page<SignatureRequestDTO> result = boldSignService.getSignatureRequestsByClient(
-                clientId, organizationId, PageRequest.of(page, size, Sort.by("createdAt").descending()));
+                clientId, orgId, PageRequest.of(page, size, Sort.by("createdAt").descending()));
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -192,17 +214,17 @@ public class SignatureController {
     }
 
     /**
-     * Search signature requests
+     * Search signature requests - TENANT FILTERED
      */
     @GetMapping("/requests/search")
     public ResponseEntity<HttpResponse> searchSignatureRequests(
-            @RequestParam Long organizationId,
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
+        Long orgId = getRequiredOrganizationId();
         Page<SignatureRequestDTO> result = boldSignService.searchSignatureRequests(
-                organizationId, query, PageRequest.of(page, size, Sort.by("createdAt").descending()));
+                orgId, query, PageRequest.of(page, size, Sort.by("createdAt").descending()));
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -221,7 +243,7 @@ public class SignatureController {
     }
 
     /**
-     * Void/cancel a signature request
+     * Void/cancel a signature request - TENANT FILTERED
      */
     @PostMapping("/requests/{id}/void")
     public ResponseEntity<HttpResponse> voidSignatureRequest(
@@ -229,8 +251,10 @@ public class SignatureController {
             @RequestParam String reason,
             @AuthenticationPrincipal UserDTO user) {
 
-        log.info("Voiding signature request {}", id);
-        SignatureRequestDTO result = boldSignService.voidSignatureRequest(id, reason, user.getId());
+        // SECURITY: Verify request belongs to current tenant
+        Long orgId = getRequiredOrganizationId();
+        log.info("Voiding signature request {} for organization {}", id, orgId);
+        SignatureRequestDTO result = boldSignService.voidSignatureRequest(id, orgId, reason, user.getId());
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -244,15 +268,17 @@ public class SignatureController {
     }
 
     /**
-     * Send reminder for a signature request
+     * Send reminder for a signature request - TENANT FILTERED
      */
     @PostMapping("/requests/{id}/remind")
     public ResponseEntity<HttpResponse> sendReminder(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDTO user) {
 
-        log.info("Sending reminder for signature request {}", id);
-        SignatureRequestDTO result = boldSignService.sendReminder(id, user.getId());
+        // SECURITY: Verify request belongs to current tenant
+        Long orgId = getRequiredOrganizationId();
+        log.info("Sending reminder for signature request {} for organization {}", id, orgId);
+        SignatureRequestDTO result = boldSignService.sendReminder(id, orgId, user.getId());
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -266,14 +292,16 @@ public class SignatureController {
     }
 
     /**
-     * Get embedded signing URL
+     * Get embedded signing URL - TENANT FILTERED
      */
     @GetMapping("/requests/{id}/signing-url")
     public ResponseEntity<HttpResponse> getEmbeddedSigningUrl(
             @PathVariable Long id,
             @RequestParam String signerEmail) {
 
-        String url = boldSignService.getEmbeddedSigningUrl(id, signerEmail);
+        // SECURITY: Verify request belongs to current tenant
+        Long orgId = getRequiredOrganizationId();
+        String url = boldSignService.getEmbeddedSigningUrl(id, orgId, signerEmail);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -287,12 +315,14 @@ public class SignatureController {
     }
 
     /**
-     * Download signed document
+     * Download signed document - TENANT FILTERED
      */
     @GetMapping("/requests/{id}/download")
     public ResponseEntity<byte[]> downloadSignedDocument(@PathVariable Long id) {
-        byte[] document = boldSignService.downloadSignedDocument(id);
-        SignatureRequestDTO request = boldSignService.getSignatureRequest(id);
+        // SECURITY: Verify request belongs to current tenant
+        Long orgId = getRequiredOrganizationId();
+        byte[] document = boldSignService.downloadSignedDocument(id, orgId);
+        SignatureRequestDTO request = boldSignService.getSignatureRequestByIdAndOrganization(id, orgId);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
@@ -304,10 +334,18 @@ public class SignatureController {
 
     /**
      * Download audit trail PDF for a document
+     * SECURITY: Verifies document belongs to current organization
      */
     @GetMapping("/document/{boldsignDocumentId}/audit-trail")
     public ResponseEntity<byte[]> downloadAuditTrail(@PathVariable String boldsignDocumentId) {
-        log.info("Downloading audit trail for document {}", boldsignDocumentId);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify document belongs to current organization
+        SignatureRequest request = signatureRequestRepository
+                .findByBoldsignDocumentIdAndOrganizationId(boldsignDocumentId, orgId)
+                .orElseThrow(() -> new ApiException("Document not found or access denied"));
+
+        log.info("Downloading audit trail for document {} in org {}", boldsignDocumentId, orgId);
         byte[] auditTrail = boldSignService.downloadAuditTrail(boldsignDocumentId);
 
         HttpHeaders headers = new HttpHeaders();
@@ -319,25 +357,36 @@ public class SignatureController {
 
     /**
      * Download signed document by BoldSign document ID
+     * SECURITY: Verifies document belongs to current organization
      */
     @GetMapping("/document/{boldsignDocumentId}/download")
     public ResponseEntity<byte[]> downloadDocumentByBoldsignId(@PathVariable String boldsignDocumentId) {
-        log.info("Downloading document {}", boldsignDocumentId);
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Verify document belongs to current organization
+        SignatureRequest request = signatureRequestRepository
+                .findByBoldsignDocumentIdAndOrganizationId(boldsignDocumentId, orgId)
+                .orElseThrow(() -> new ApiException("Document not found or access denied"));
+
+        log.info("Downloading document {} in org {}", boldsignDocumentId, orgId);
         byte[] document = boldSignService.downloadDocumentFromBoldSign(boldsignDocumentId);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "document-" + boldsignDocumentId + ".pdf");
+        headers.setContentDispositionFormData("attachment",
+                request.getFileName() != null ? request.getFileName() : "document-" + boldsignDocumentId + ".pdf");
 
         return new ResponseEntity<>(document, headers, OK);
     }
 
     /**
-     * Refresh status from BoldSign
+     * Refresh status from BoldSign - TENANT FILTERED
      */
     @PostMapping("/requests/{id}/refresh")
     public ResponseEntity<HttpResponse> refreshStatus(@PathVariable Long id) {
-        SignatureRequestDTO result = boldSignService.refreshStatus(id);
+        // SECURITY: Verify request belongs to current tenant
+        Long orgId = getRequiredOrganizationId();
+        SignatureRequestDTO result = boldSignService.refreshStatus(id, orgId);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -353,11 +402,12 @@ public class SignatureController {
     // ==================== Templates ====================
 
     /**
-     * Get all templates for an organization
+     * Get all templates for an organization - TENANT FILTERED
      */
-    @GetMapping("/templates/organization/{organizationId}")
-    public ResponseEntity<HttpResponse> getTemplates(@PathVariable Long organizationId) {
-        List<SignatureTemplateDTO> templates = boldSignService.getTemplatesForOrganization(organizationId);
+    @GetMapping("/templates/organization")
+    public ResponseEntity<HttpResponse> getTemplates() {
+        Long orgId = getRequiredOrganizationId();
+        List<SignatureTemplateDTO> templates = boldSignService.getTemplatesForOrganization(orgId);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -371,14 +421,14 @@ public class SignatureController {
     }
 
     /**
-     * Get templates by category
+     * Get templates by category - TENANT FILTERED
      */
-    @GetMapping("/templates/organization/{organizationId}/category/{category}")
+    @GetMapping("/templates/category/{category}")
     public ResponseEntity<HttpResponse> getTemplatesByCategory(
-            @PathVariable Long organizationId,
             @PathVariable String category) {
 
-        List<SignatureTemplateDTO> templates = boldSignService.getTemplatesByCategory(organizationId, category);
+        Long orgId = getRequiredOrganizationId();
+        List<SignatureTemplateDTO> templates = boldSignService.getTemplatesByCategory(orgId, category);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -392,11 +442,13 @@ public class SignatureController {
     }
 
     /**
-     * Get template by ID
+     * Get template by ID - TENANT FILTERED
      */
     @GetMapping("/templates/{id}")
     public ResponseEntity<HttpResponse> getTemplate(@PathVariable Long id) {
-        SignatureTemplateDTO template = boldSignService.getTemplate(id);
+        // SECURITY: Verify template belongs to current tenant
+        Long orgId = getRequiredOrganizationId();
+        SignatureTemplateDTO template = boldSignService.getTemplateByIdAndOrganization(id, orgId);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -410,13 +462,16 @@ public class SignatureController {
     }
 
     /**
-     * Create a new template
+     * Create a new template - TENANT FILTERED
      */
     @PostMapping("/templates")
     public ResponseEntity<HttpResponse> createTemplate(
             @Valid @RequestBody SignatureTemplateDTO template,
             @AuthenticationPrincipal UserDTO user) {
 
+        // SECURITY: Override with current tenant's org ID
+        Long orgId = getRequiredOrganizationId();
+        template.setOrganizationId(orgId);
         SignatureTemplateDTO result = boldSignService.createTemplate(template, user.getId());
 
         return ResponseEntity.status(CREATED).body(
@@ -431,14 +486,16 @@ public class SignatureController {
     }
 
     /**
-     * Update a template
+     * Update a template - TENANT FILTERED
      */
     @PutMapping("/templates/{id}")
     public ResponseEntity<HttpResponse> updateTemplate(
             @PathVariable Long id,
             @RequestBody SignatureTemplateDTO template) {
 
-        SignatureTemplateDTO result = boldSignService.updateTemplate(id, template);
+        // SECURITY: Verify template belongs to current tenant
+        Long orgId = getRequiredOrganizationId();
+        SignatureTemplateDTO result = boldSignService.updateTemplate(id, orgId, template);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -452,11 +509,13 @@ public class SignatureController {
     }
 
     /**
-     * Delete a template
+     * Delete a template - TENANT FILTERED
      */
     @DeleteMapping("/templates/{id}")
     public ResponseEntity<HttpResponse> deleteTemplate(@PathVariable Long id) {
-        boldSignService.deleteTemplate(id);
+        // SECURITY: Verify template belongs to current tenant
+        Long orgId = getRequiredOrganizationId();
+        boldSignService.deleteTemplate(id, orgId);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -469,11 +528,12 @@ public class SignatureController {
     }
 
     /**
-     * Get template categories
+     * Get template categories - TENANT FILTERED
      */
-    @GetMapping("/templates/categories/{organizationId}")
-    public ResponseEntity<HttpResponse> getTemplateCategories(@PathVariable Long organizationId) {
-        List<String> categories = boldSignService.getTemplateCategories(organizationId);
+    @GetMapping("/templates/categories")
+    public ResponseEntity<HttpResponse> getTemplateCategories() {
+        Long orgId = getRequiredOrganizationId();
+        List<String> categories = boldSignService.getTemplateCategories(orgId);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -489,11 +549,13 @@ public class SignatureController {
     // ==================== Audit Logs ====================
 
     /**
-     * Get audit logs for a signature request
+     * Get audit logs for a signature request - TENANT FILTERED
      */
     @GetMapping("/requests/{id}/audit")
     public ResponseEntity<HttpResponse> getAuditLogs(@PathVariable Long id) {
-        List<SignatureAuditLogDTO> logs = boldSignService.getAuditLogs(id);
+        // SECURITY: Verify request belongs to current tenant
+        Long orgId = getRequiredOrganizationId();
+        List<SignatureAuditLogDTO> logs = boldSignService.getAuditLogs(id, orgId);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -507,16 +569,16 @@ public class SignatureController {
     }
 
     /**
-     * Get audit logs for an organization
+     * Get audit logs for an organization - TENANT FILTERED
      */
-    @GetMapping("/audit/organization/{organizationId}")
+    @GetMapping("/audit/organization")
     public ResponseEntity<HttpResponse> getAuditLogsByOrganization(
-            @PathVariable Long organizationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
 
+        Long orgId = getRequiredOrganizationId();
         Page<SignatureAuditLogDTO> result = boldSignService.getAuditLogsByOrganization(
-                organizationId, PageRequest.of(page, size, Sort.by("createdAt").descending()));
+                orgId, PageRequest.of(page, size, Sort.by("createdAt").descending()));
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -538,14 +600,15 @@ public class SignatureController {
 
     /**
      * Get embedded URL for document preparation (full BoldSign UI)
-     * This also creates a SignatureRequest record in SENT status
+     * This also creates a SignatureRequest record in SENT status - TENANT FILTERED
      */
     @PostMapping("/embedded/send-document")
     public ResponseEntity<HttpResponse> getEmbeddedSendDocumentUrl(
             @AuthenticationPrincipal UserDTO user,
             @RequestBody EmbeddedSendRequestDTO request) {
 
-        log.info("Creating embedded send document URL for organization {} by user {}", request.getOrganizationId(), user.getId());
+        Long orgId = getRequiredOrganizationId();
+        log.info("Creating embedded send document URL for organization {} by user {}", orgId, user.getId());
 
         // Parse caseId from String to Long if provided
         Long caseId = null;
@@ -558,7 +621,7 @@ public class SignatureController {
         }
 
         var options = new BoldSignService.EmbeddedRequestOptions(
-                request.getOrganizationId(),
+                orgId, // Use authenticated org, not client-provided
                 request.getTitle(),
                 request.getSignerName(),
                 request.getSignerEmail(),
@@ -593,11 +656,10 @@ public class SignatureController {
     }
 
     /**
-     * Get embedded URL for template creation (GET - uses placeholder PDF)
+     * Get embedded URL for template creation (GET - uses placeholder PDF) - TENANT FILTERED
      */
     @GetMapping("/embedded/create-template")
     public ResponseEntity<HttpResponse> getEmbeddedCreateTemplateUrl(
-            @RequestParam Long organizationId,
             @RequestParam(required = false, defaultValue = "New Template") String title,
             @RequestParam(required = false, defaultValue = "") String description,
             @RequestParam(required = false) String redirectUrl,
@@ -605,8 +667,9 @@ public class SignatureController {
             @RequestParam(defaultValue = "PreparePage") String viewOption,
             @RequestParam(defaultValue = "EN") String locale) {
 
+        Long orgId = getRequiredOrganizationId();
         var options = new BoldSignService.EmbeddedTemplateOptions(
-                organizationId,
+                orgId, // Use authenticated org
                 title,
                 description,
                 null, // fileBase64 - will use placeholder
@@ -636,17 +699,18 @@ public class SignatureController {
 
     /**
      * Get embedded URL for template creation (POST - with user's file)
-     * Creates a local template record and links it to BoldSign
+     * Creates a local template record and links it to BoldSign - TENANT FILTERED
      */
     @PostMapping("/embedded/create-template")
     public ResponseEntity<HttpResponse> createEmbeddedTemplateUrl(
             @RequestBody EmbeddedTemplateRequestDTO request,
             @AuthenticationPrincipal UserDTO user) {
 
-        log.info("Creating embedded template URL with user file for organization {}", request.getOrganizationId());
+        Long orgId = getRequiredOrganizationId();
+        log.info("Creating embedded template URL with user file for organization {}", orgId);
 
         var options = new BoldSignService.EmbeddedTemplateOptions(
-                request.getOrganizationId(),
+                orgId, // Use authenticated org
                 request.getTitle() != null ? request.getTitle() : "New Template",
                 request.getDescription() != null ? request.getDescription() : "",
                 request.getFileBase64(),
@@ -663,9 +727,9 @@ public class SignatureController {
 
         BoldSignService.EmbeddedUrlDTO result = boldSignService.getEmbeddedCreateTemplateUrl(options);
 
-        // Save the template to our database with the BoldSign template ID
+        // Save the template to our database with the BoldSign template ID - use authenticated org
         SignatureTemplate template = SignatureTemplate.builder()
-                .organizationId(request.getOrganizationId())
+                .organizationId(orgId)
                 .boldsignTemplateId(result.templateId())
                 .name(request.getTitle() != null ? request.getTitle() : "New Template")
                 .description(request.getDescription())
@@ -724,20 +788,20 @@ public class SignatureController {
     }
 
     /**
-     * Get embedded URL for sending document from a template
+     * Get embedded URL for sending document from a template - TENANT FILTERED
      */
     @PostMapping("/embedded/send-from-template/{boldsignTemplateId}")
     public ResponseEntity<HttpResponse> getEmbeddedSendFromTemplateUrl(
             @PathVariable String boldsignTemplateId,
-            @RequestParam Long organizationId,
             @RequestParam(required = false) String signerName,
             @RequestParam(required = false) String signerEmail,
             @RequestParam(required = false) String redirectUrl,
             @RequestParam(defaultValue = "true") boolean showToolbar,
             @RequestParam(defaultValue = "EN") String locale) {
 
+        Long orgId = getRequiredOrganizationId();
         var options = new BoldSignService.EmbeddedRequestFromTemplateOptions(
-                organizationId,
+                orgId, // Use authenticated org
                 signerName,
                 signerEmail,
                 redirectUrl,
@@ -780,11 +844,12 @@ public class SignatureController {
     // ==================== Statistics ====================
 
     /**
-     * Get signature statistics for an organization
+     * Get signature statistics for an organization - TENANT FILTERED
      */
-    @GetMapping("/stats/organization/{organizationId}")
-    public ResponseEntity<HttpResponse> getStatistics(@PathVariable Long organizationId) {
-        BoldSignService.SignatureStatsDTO stats = boldSignService.getStatistics(organizationId);
+    @GetMapping("/stats/organization")
+    public ResponseEntity<HttpResponse> getStatistics() {
+        Long orgId = getRequiredOrganizationId();
+        BoldSignService.SignatureStatsDTO stats = boldSignService.getStatistics(orgId);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -798,12 +863,13 @@ public class SignatureController {
     }
 
     /**
-     * Get dashboard data from BoldSign API
+     * Get dashboard data from BoldSign API - TENANT FILTERED
      */
-    @GetMapping("/dashboard/{organizationId}")
-    public ResponseEntity<HttpResponse> getDashboard(@PathVariable Long organizationId) {
-        log.info("Fetching dashboard for organization {}", organizationId);
-        BoldSignDashboardDTO dashboard = boldSignService.getDashboard(organizationId);
+    @GetMapping("/dashboard")
+    public ResponseEntity<HttpResponse> getDashboard() {
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching dashboard for organization {}", orgId);
+        BoldSignDashboardDTO dashboard = boldSignService.getDashboard(orgId);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -867,15 +933,15 @@ public class SignatureController {
     // ==================== Sync ====================
 
     /**
-     * Sync documents from BoldSign to local database
+     * Sync documents from BoldSign to local database - TENANT FILTERED
      */
-    @PostMapping("/sync/documents/{organizationId}")
+    @PostMapping("/sync/documents")
     public ResponseEntity<HttpResponse> syncDocuments(
-            @PathVariable Long organizationId,
             @AuthenticationPrincipal UserDTO user) {
 
-        log.info("Starting document sync from BoldSign for organization {}", organizationId);
-        BoldSignService.SyncResultDTO result = boldSignService.syncDocumentsFromBoldSign(organizationId, user.getId());
+        Long orgId = getRequiredOrganizationId();
+        log.info("Starting document sync from BoldSign for organization {}", orgId);
+        BoldSignService.SyncResultDTO result = boldSignService.syncDocumentsFromBoldSign(orgId, user.getId());
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -889,15 +955,15 @@ public class SignatureController {
     }
 
     /**
-     * Sync templates from BoldSign to local database
+     * Sync templates from BoldSign to local database - TENANT FILTERED
      */
-    @PostMapping("/sync/templates/{organizationId}")
+    @PostMapping("/sync/templates")
     public ResponseEntity<HttpResponse> syncTemplates(
-            @PathVariable Long organizationId,
             @AuthenticationPrincipal UserDTO user) {
 
-        log.info("Starting template sync from BoldSign for organization {}", organizationId);
-        BoldSignService.SyncResultDTO result = boldSignService.syncTemplatesFromBoldSign(organizationId, user.getId());
+        Long orgId = getRequiredOrganizationId();
+        log.info("Starting template sync from BoldSign for organization {}", orgId);
+        BoldSignService.SyncResultDTO result = boldSignService.syncTemplatesFromBoldSign(orgId, user.getId());
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -913,11 +979,12 @@ public class SignatureController {
     // ==================== Branding (Multi-Tenant) ====================
 
     /**
-     * Get brand settings for an organization
+     * Get brand settings for an organization - TENANT FILTERED
      */
-    @GetMapping("/brand/{organizationId}")
-    public ResponseEntity<HttpResponse> getBrand(@PathVariable Long organizationId) {
-        BoldSignService.BrandDTO brand = boldSignService.getBrand(organizationId);
+    @GetMapping("/brand")
+    public ResponseEntity<HttpResponse> getBrand() {
+        Long orgId = getRequiredOrganizationId();
+        BoldSignService.BrandDTO brand = boldSignService.getBrand(orgId);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -931,14 +998,14 @@ public class SignatureController {
     }
 
     /**
-     * Create or update brand for an organization
+     * Create or update brand for an organization - TENANT FILTERED
      */
-    @PostMapping("/brand/{organizationId}")
+    @PostMapping("/brand")
     public ResponseEntity<HttpResponse> createOrUpdateBrand(
-            @PathVariable Long organizationId,
             @RequestBody Map<String, String> brandData) {
 
-        log.info("Creating/updating brand for organization {}", organizationId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Creating/updating brand for organization {}", orgId);
 
         BoldSignService.BrandDTO brandDTO = new BoldSignService.BrandDTO(
                 brandData.get("brandId"),
@@ -958,9 +1025,9 @@ public class SignatureController {
         BoldSignService.BrandDTO result;
         // If brandId exists, update; otherwise create
         if (brandData.get("brandId") != null && !brandData.get("brandId").isEmpty()) {
-            result = boldSignService.updateBrand(organizationId, brandDTO);
+            result = boldSignService.updateBrand(orgId, brandDTO);
         } else {
-            result = boldSignService.createBrand(organizationId, brandDTO);
+            result = boldSignService.createBrand(orgId, brandDTO);
         }
 
         return ResponseEntity.ok(
@@ -975,12 +1042,13 @@ public class SignatureController {
     }
 
     /**
-     * Delete brand for an organization
+     * Delete brand for an organization - TENANT FILTERED
      */
-    @DeleteMapping("/brand/{organizationId}")
-    public ResponseEntity<HttpResponse> deleteBrand(@PathVariable Long organizationId) {
-        log.info("Deleting brand for organization {}", organizationId);
-        boldSignService.deleteBrand(organizationId);
+    @DeleteMapping("/brand")
+    public ResponseEntity<HttpResponse> deleteBrand() {
+        Long orgId = getRequiredOrganizationId();
+        log.info("Deleting brand for organization {}", orgId);
+        boldSignService.deleteBrand(orgId);
 
         return ResponseEntity.ok(
                 HttpResponse.builder()

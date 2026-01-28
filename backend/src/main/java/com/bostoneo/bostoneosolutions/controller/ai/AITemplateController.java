@@ -6,8 +6,10 @@ import com.bostoneo.bostoneosolutions.enumeration.DocumentContextType;
 import com.bostoneo.bostoneosolutions.enumeration.TemplateCategory;
 import com.bostoneo.bostoneosolutions.model.AILegalTemplate;
 import com.bostoneo.bostoneosolutions.model.AITemplateVariable;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AITemplateVariableRepository;
 import com.bostoneo.bostoneosolutions.service.AITemplateService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,15 +21,19 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/ai/templates")
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+@RequiredArgsConstructor
 public class AITemplateController {
 
     private final AITemplateService templateService;
     private final AITemplateVariableRepository variableRepository;
+    private final TenantService tenantService;
 
-    public AITemplateController(AITemplateService templateService, 
-                               AITemplateVariableRepository variableRepository) {
-        this.templateService = templateService;
-        this.variableRepository = variableRepository;
+    /**
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     /**

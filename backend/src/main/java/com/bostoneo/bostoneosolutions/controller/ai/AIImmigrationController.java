@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.service.AIImmigrationService;
 import com.bostoneo.bostoneosolutions.service.AIPDFFormService;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import com.bostoneo.bostoneosolutions.model.AILegalTemplate;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AILegalTemplateRepository;
 import com.bostoneo.bostoneosolutions.enumeration.TemplateCategory;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,15 @@ public class AIImmigrationController {
     private final ClaudeSonnet4Service claudeService;
     private final AIPDFFormService pdfFormService;
     private final AILegalTemplateRepository templateRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @PostMapping("/generate-uscis-form")
     public DeferredResult<ResponseEntity<Map<String, Object>>> generateUSCISForm(@RequestBody Map<String, Object> request) {
@@ -426,8 +436,9 @@ public class AIImmigrationController {
 
     private void ensurePDFTemplateExists(Long templateId, Map<String, Object> caseData) {
         try {
-            // Check if template exists and is PDF_FORM type
-            Optional<AILegalTemplate> existingTemplate = templateRepository.findById(templateId);
+            Long orgId = getRequiredOrganizationId();
+            // Check if template exists and is PDF_FORM type (tenant-filtered)
+            Optional<AILegalTemplate> existingTemplate = templateRepository.findByIdAndAccessibleByOrganization(templateId, orgId);
 
             if (existingTemplate.isEmpty() ||
                 (!"PDF_FORM".equals(existingTemplate.get().getTemplateType()) &&
@@ -443,12 +454,13 @@ public class AIImmigrationController {
     }
 
     private void createDefaultPDFTemplate(Long templateId, Map<String, Object> caseData) {
+        Long orgId = getRequiredOrganizationId();
         // Determine form type from case data
         String formType = (String) caseData.getOrDefault("formType", "I-130");
         String formName = "USCIS Form " + formType;
 
-        // Create or update template
-        AILegalTemplate template = templateRepository.findById(templateId)
+        // Create or update template (tenant-filtered)
+        AILegalTemplate template = templateRepository.findByIdAndAccessibleByOrganization(templateId, orgId)
             .orElse(AILegalTemplate.builder().id(templateId).build());
 
         template.setName(formName);
@@ -463,6 +475,7 @@ public class AIImmigrationController {
         template.setPdfFormUrl("uploads/pdf-forms/USCIS_" + formType + ".pdf");
         template.setIsPublic(true);
         template.setIsApproved(true);
+        template.setOrganizationId(orgId); // Set organization for tenant isolation
 
         AILegalTemplate savedTemplate = templateRepository.save(template);
         log.info("Created default PDF template for {}: {}", templateId, formName);

@@ -20,10 +20,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.HashMap;
+import org.springframework.security.access.prepost.PreAuthorize;
 
+/**
+ * Test/Debug controller - MUST BE RESTRICTED TO ADMIN ONLY
+ * SECURITY: This controller should be disabled or removed in production.
+ * All endpoints expose sensitive user management operations.
+ */
 @RestController
 @RequestMapping("/api/test")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('ADMIN')") // SECURITY: Restrict all endpoints to admin only
 public class TestUserController {
     
     private final UserRepository<User> userRepository;

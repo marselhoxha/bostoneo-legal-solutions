@@ -10,6 +10,7 @@ import com.bostoneo.bostoneosolutions.repository.CaseWorkflowTemplateRepository;
 import com.bostoneo.bostoneosolutions.repository.CaseWorkflowExecutionRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.service.CaseWorkflowExecutionService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -33,11 +34,22 @@ public class CaseWorkflowController {
     private final CaseWorkflowExecutionRepository executionRepository;
     private final CaseWorkflowExecutionService executionService;
     private final UserRepository<User> userRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @GetMapping("/templates")
     public ResponseEntity<HttpResponse> getWorkflowTemplates(Authentication authentication) {
-        log.info("Fetching workflow templates");
-        List<CaseWorkflowTemplate> templates = templateRepository.findByIsSystemTrue();
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching workflow templates for org {}", orgId);
+        // SECURITY: Return system templates + org-specific templates
+        List<CaseWorkflowTemplate> templates = templateRepository.findByIsSystemTrueOrOrganizationId(orgId);
 
         return ResponseEntity.ok(
             HttpResponse.builder()
@@ -52,9 +64,11 @@ public class CaseWorkflowController {
 
     @GetMapping("/templates/{id}")
     public ResponseEntity<HttpResponse> getWorkflowTemplate(@PathVariable Long id) {
-        log.info("Fetching workflow template: {}", id);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching workflow template: {} for org {}", id, orgId);
 
-        var templateOpt = templateRepository.findById(id);
+        // SECURITY: Use proper tenant-filtered query instead of post-filter pattern
+        var templateOpt = templateRepository.findByIdAndAccessibleByOrganization(id, orgId);
         if (templateOpt.isPresent()) {
             return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -78,16 +92,17 @@ public class CaseWorkflowController {
 
     @GetMapping("/executions")
     public ResponseEntity<HttpResponse> getUserExecutions(Authentication authentication) {
-        // Get user ID from authentication and filter by user
+        Long orgId = getRequiredOrganizationId();
         Long userId = extractUserId(authentication);
-        log.info("Fetching workflow executions for user: {}", userId);
+        log.info("Fetching workflow executions for user: {} in org {}", userId, orgId);
 
+        // SECURITY: Use tenant-filtered query
         List<CaseWorkflowExecution> executions;
         if (userId != null) {
-            executions = executionRepository.findByUserIdWithTemplateAndCase(userId);
+            executions = executionRepository.findByOrganizationIdAndUserIdWithTemplateAndCase(orgId, userId);
         } else {
-            log.warn("Could not determine user ID from authentication - returning empty list");
-            executions = List.of();
+            // If no user ID, return all executions for the org
+            executions = executionRepository.findByOrganizationIdWithTemplateAndCase(orgId);
         }
 
         return ResponseEntity.ok(
@@ -103,9 +118,11 @@ public class CaseWorkflowController {
 
     @GetMapping("/executions/{id}")
     public ResponseEntity<HttpResponse> getExecution(@PathVariable Long id) {
-        log.info("Fetching workflow execution: {}", id);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching workflow execution: {} for org {}", id, orgId);
 
-        var executionOpt = executionRepository.findById(id);
+        // SECURITY: Use tenant-filtered query
+        var executionOpt = executionRepository.findByIdAndOrganizationId(id, orgId);
         if (executionOpt.isPresent()) {
             return ResponseEntity.ok(
                 HttpResponse.builder()

@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -30,6 +31,7 @@ public class BillingRateController {
     private final BillingRateService billingRateService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<Page<BillingRateDTO>>> getAllBillingRates(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -46,6 +48,7 @@ public class BillingRateController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<BillingRateDTO>> getBillingRateById(@PathVariable Long id) {
         log.info("Retrieving billing rate with ID: {}", id);
         
@@ -64,6 +67,7 @@ public class BillingRateController {
     }
 
     @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<Page<BillingRateDTO>>> getBillingRatesByUser(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
@@ -81,6 +85,7 @@ public class BillingRateController {
     }
 
     @GetMapping("/user/{userId}/active")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<List<BillingRateDTO>>> getActiveBillingRatesForUser(@PathVariable Long userId) {
         log.info("Retrieving active billing rates for user: {}", userId);
         
@@ -95,6 +100,7 @@ public class BillingRateController {
     }
 
     @GetMapping("/user/{userId}/history")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<List<BillingRateDTO>>> getRateHistoryForUser(@PathVariable Long userId) {
         log.info("Retrieving rate history for user: {}", userId);
         
@@ -109,6 +115,7 @@ public class BillingRateController {
     }
 
     @GetMapping("/effective-rate")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<BigDecimal>> getEffectiveRate(
             @RequestParam Long userId,
             @RequestParam(required = false) Long legalCaseId,
@@ -130,6 +137,7 @@ public class BillingRateController {
     }
 
     @GetMapping("/type/{rateType}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<List<BillingRateDTO>>> getRatesByType(@PathVariable RateType rateType) {
         log.info("Retrieving billing rates by type: {}", rateType);
         
@@ -144,6 +152,7 @@ public class BillingRateController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('TIME_TRACKING:CREATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "BILLING_RATE", description = "Created new billing rate")
     public ResponseEntity<CustomHttpResponse<BillingRateDTO>> createBillingRate(@Valid @RequestBody BillingRateDTO billingRateDTO) {
         log.info("Creating billing rate for user: {}", billingRateDTO.getUserId());
@@ -182,6 +191,7 @@ public class BillingRateController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:UPDATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "UPDATE", entityType = "BILLING_RATE", description = "Updated billing rate")
     public ResponseEntity<CustomHttpResponse<BillingRateDTO>> updateBillingRate(
             @PathVariable Long id,
@@ -203,6 +213,7 @@ public class BillingRateController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:DELETE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "DELETE", entityType = "BILLING_RATE", description = "Deleted billing rate")
     public ResponseEntity<CustomHttpResponse<Void>> deleteBillingRate(@PathVariable Long id) {
         log.info("Deleting billing rate with ID: {}", id);
@@ -218,6 +229,7 @@ public class BillingRateController {
     }
 
     @PutMapping("/{id}/deactivate")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:UPDATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "UPDATE", entityType = "BILLING_RATE", description = "Deactivated billing rate")
     public ResponseEntity<CustomHttpResponse<Void>> deactivateBillingRate(
             @PathVariable Long id,
@@ -240,6 +252,7 @@ public class BillingRateController {
     }
 
     @GetMapping("/analytics/average-by-user/{userId}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<BigDecimal>> getAverageRateByUser(@PathVariable Long userId) {
         log.info("Getting average rate for user: {}", userId);
         
@@ -254,6 +267,7 @@ public class BillingRateController {
     }
 
     @GetMapping("/analytics/average-by-matter-type/{matterTypeId}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<BigDecimal>> getAverageRateByMatterType(@PathVariable Long matterTypeId) {
         log.info("Getting average rate for matter type: {}", matterTypeId);
         
@@ -268,6 +282,7 @@ public class BillingRateController {
     }
 
     @PostMapping("/set-user-rate")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:CREATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "BILLING_RATE", description = "Set user billing rate")
     public ResponseEntity<CustomHttpResponse<BillingRateDTO>> setUserRate(
             @RequestParam Long userId,
@@ -288,6 +303,7 @@ public class BillingRateController {
     }
 
     @GetMapping("/analytics/usage-by-user/{userId}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<Map<String, Object>>> getBillingRateUsageByUser(@PathVariable Long userId) {
         log.info("Getting billing rate usage analytics for user: {}", userId);
         
@@ -302,6 +318,7 @@ public class BillingRateController {
     }
 
     @GetMapping("/analytics/rate-performance/{rateId}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<Map<String, Object>>> getRatePerformanceAnalytics(@PathVariable Long rateId) {
         log.info("Getting performance analytics for billing rate: {}", rateId);
         
@@ -316,6 +333,7 @@ public class BillingRateController {
     }
 
     @GetMapping("/analytics/time-entries-by-rate/{userId}")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<Map<String, Object>>> getTimeEntriesByBillingRate(@PathVariable Long userId) {
         log.info("Getting time entries grouped by billing rate for user: {}", userId);
         

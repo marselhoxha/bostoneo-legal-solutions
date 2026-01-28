@@ -237,6 +237,7 @@ public class AuditController {
      * Test audit functionality - creates a test audit log entry
      */
     @PostMapping("/test")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @com.bostoneo.bostoneosolutions.annotation.AuditLog(action = "CREATE", entityType = "SYSTEM", description = "Test audit log entry created")
     public ResponseEntity<HttpResponse> testAuditLog(Authentication authentication) {
         try {

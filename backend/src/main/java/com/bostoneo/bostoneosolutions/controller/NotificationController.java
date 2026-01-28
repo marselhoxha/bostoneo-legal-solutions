@@ -34,6 +34,7 @@ public class NotificationController {
      * Register a device token for push notifications
      */
     @PostMapping("/token")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> registerToken(@RequestBody NotificationTokenDTO tokenDTO) {
         log.info("Registering notification token for user: {}", tokenDTO.getUserId());
         
@@ -56,6 +57,7 @@ public class NotificationController {
      * Get all tokens for a user
      */
     @GetMapping("/tokens/{userId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or principal.id == #userId")
     public ResponseEntity<HttpResponse> getTokensByUserId(@PathVariable Long userId) {
         log.info("Getting notification tokens for user: {}", userId);
         
@@ -78,6 +80,7 @@ public class NotificationController {
      * Delete a notification token
      */
     @DeleteMapping("/token/{token}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> deleteToken(@PathVariable String token) {
         log.info("Deleting notification token: {}", token);
         
@@ -99,6 +102,7 @@ public class NotificationController {
      * Send a test notification
      */
     @PostMapping("/test/{userId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> sendTestNotification(@PathVariable Long userId) {
         log.info("Sending test notification to user: {}", userId);
         

@@ -11,6 +11,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.model.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +30,22 @@ public class AILegalResearchController {
 
     private final AILegalResearchService legalResearchService;
     private final ResearchProgressPublisher progressPublisher;
+
+    /**
+     * SECURITY: Get current authenticated user's ID - never use hardcoded defaults
+     */
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof UserDTO) {
+                return ((UserDTO) principal).getId();
+            } else if (principal instanceof UserPrincipal) {
+                return ((UserPrincipal) principal).getUser().getId();
+            }
+        }
+        throw new RuntimeException("Authentication required - could not determine current user");
+    }
 
     /**
      * Server-Sent Events endpoint for real-time research progress
@@ -68,12 +90,11 @@ public class AILegalResearchController {
 
     @GetMapping("/search-history")
     public ResponseEntity<Map<String, Object>> getUserSearchHistory(
-            @RequestParam(value = "userId", required = false) Long userId,
             @RequestParam(value = "limit", defaultValue = "50") int limit) {
 
         try {
-            // Use default user ID if not provided (for testing)
-            Long effectiveUserId = userId != null ? userId : 1L;
+            // SECURITY: Always use authenticated user - never allow userId parameter override
+            Long effectiveUserId = getCurrentUserId();
 
             List<SearchHistory> history = legalResearchService.getUserSearchHistory(effectiveUserId, limit);
 
@@ -94,12 +115,11 @@ public class AILegalResearchController {
     }
 
     @GetMapping("/saved-searches")
-    public ResponseEntity<Map<String, Object>> getSavedSearches(
-            @RequestParam(value = "userId", required = false) Long userId) {
+    public ResponseEntity<Map<String, Object>> getSavedSearches() {
 
         try {
-            // Use default user ID if not provided (for testing)
-            Long effectiveUserId = userId != null ? userId : 1L;
+            // SECURITY: Always use authenticated user - never allow userId parameter override
+            Long effectiveUserId = getCurrentUserId();
 
             List<SearchHistory> savedSearches = legalResearchService.getSavedSearches(effectiveUserId);
 
@@ -120,9 +140,11 @@ public class AILegalResearchController {
     }
 
     @PostMapping("/save-search/{searchId}")
-    public ResponseEntity<Map<String, Object>> saveSearch(@PathVariable Long searchId) {
+    public ResponseEntity<Map<String, Object>> saveSearch(
+            @PathVariable Long searchId,
+            @AuthenticationPrincipal UserDTO user) {
         try {
-            legalResearchService.saveSearch(searchId);
+            legalResearchService.saveSearch(searchId, user.getId());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -141,12 +163,11 @@ public class AILegalResearchController {
 
     @DeleteMapping("/search-history/{searchId}")
     public ResponseEntity<Map<String, Object>> deleteSearchHistory(
-            @PathVariable Long searchId,
-            @RequestParam(value = "userId", required = false) Long userId) {
+            @PathVariable Long searchId) {
 
         try {
-            // Use default user ID if not provided (for testing)
-            Long effectiveUserId = userId != null ? userId : 1L;
+            // SECURITY: Always use authenticated user - never allow userId parameter override
+            Long effectiveUserId = getCurrentUserId();
 
             legalResearchService.deleteSearchHistory(searchId, effectiveUserId);
 
@@ -167,12 +188,11 @@ public class AILegalResearchController {
 
     @GetMapping("/search-suggestions")
     public ResponseEntity<Map<String, Object>> getSearchSuggestions(
-            @RequestParam("query") String query,
-            @RequestParam(value = "userId", required = false) Long userId) {
+            @RequestParam("query") String query) {
 
         try {
-            // Use default user ID if not provided (for testing)
-            Long effectiveUserId = userId != null ? userId : 1L;
+            // SECURITY: Always use authenticated user - never allow userId parameter override
+            Long effectiveUserId = getCurrentUserId();
 
             // Get recent searches for suggestions
             List<SearchHistory> recentSearches = legalResearchService.getUserSearchHistory(effectiveUserId, 10);

@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,6 +24,7 @@ public class ExpenseController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('EXPENSE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<CustomHttpResponse<Page<Expense>>> getAllExpenses(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -30,11 +32,13 @@ public class ExpenseController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('EXPENSE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<CustomHttpResponse<Expense>> getExpenseById(@PathVariable Long id) {
         return ResponseEntity.ok(expenseService.getExpenseById(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('EXPENSE:CREATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "EXPENSE", description = "Created new expense record")
     public ResponseEntity<CustomHttpResponse<Expense>> createExpense(@Valid @RequestBody ExpenseDTO expenseDTO) {
         try {
@@ -68,6 +72,7 @@ public class ExpenseController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('EXPENSE:UPDATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "UPDATE", entityType = "EXPENSE", description = "Updated expense information")
     public ResponseEntity<CustomHttpResponse<Expense>> updateExpense(
             @PathVariable Long id,
@@ -76,12 +81,14 @@ public class ExpenseController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('EXPENSE:DELETE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "DELETE", entityType = "EXPENSE", description = "Deleted expense record")
     public ResponseEntity<CustomHttpResponse<Void>> deleteExpense(@PathVariable Long id) {
         return ResponseEntity.ok(expenseService.deleteExpense(id));
     }
 
     @PostMapping("/{expenseId}/attachReceipt/{receiptId}")
+    @PreAuthorize("hasAuthority('EXPENSE:UPDATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "UPDATE", entityType = "EXPENSE", description = "Attached receipt to expense")
     public ResponseEntity<CustomHttpResponse<Expense>> attachReceiptToExpense(
             @PathVariable Long expenseId,

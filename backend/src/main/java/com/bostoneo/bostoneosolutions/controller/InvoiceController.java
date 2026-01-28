@@ -122,6 +122,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/number/{invoiceNumber}")
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Invoice>> getInvoiceByNumber(@PathVariable String invoiceNumber) {
         log.info("Fetching invoice with number: {}", invoiceNumber);
         Invoice invoice = invoiceService.getInvoiceByNumber(invoiceNumber);
@@ -129,39 +130,43 @@ public class InvoiceController {
     }
 
     @GetMapping("/client/{clientId}")
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Page<Invoice>>> getInvoicesByClient(
             @PathVariable Long clientId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        
+
         log.info("Fetching invoices for client ID: {}", clientId);
         Page<Invoice> invoices = invoiceService.getInvoicesByClient(clientId, page, size);
         return ResponseEntity.ok(new CustomHttpResponse<>("Invoices fetched successfully", invoices));
     }
 
     @GetMapping("/case/{legalCaseId}")
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Page<Invoice>>> getInvoicesByCase(
             @PathVariable Long legalCaseId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        
+
         log.info("Fetching invoices for case ID: {}", legalCaseId);
         Page<Invoice> invoices = invoiceService.getInvoicesByCase(legalCaseId, page, size);
         return ResponseEntity.ok(new CustomHttpResponse<>("Invoices fetched successfully", invoices));
     }
 
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Page<Invoice>>> getInvoicesByStatus(
             @PathVariable InvoiceStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        
+
         log.info("Fetching invoices with status: {}", status);
         Page<Invoice> invoices = invoiceService.getInvoicesByStatus(status, page, size);
         return ResponseEntity.ok(new CustomHttpResponse<>("Invoices fetched successfully", invoices));
     }
 
     @GetMapping("/filter")
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Page<Invoice>>> getInvoicesByFilters(
             @RequestParam Long clientId,
             @RequestParam(required = false) Long legalCaseId,
@@ -274,20 +279,23 @@ public class InvoiceController {
     }
 
     @GetMapping("/statistics")
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Map<String, Object>>> getInvoiceStatistics() {
         log.info("Generating invoice statistics");
         Map<String, Object> statistics = invoiceService.getInvoiceStatistics();
         return ResponseEntity.ok(new CustomHttpResponse<>("Invoice statistics generated successfully", statistics));
     }
-    
+
     @GetMapping("/aging-report")
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<CustomHttpResponse<AgingReportDTO>> getAgingReport() {
         log.info("Generating aging report");
         AgingReportDTO agingReport = invoiceAnalyticsService.generateAgingReport();
         return ResponseEntity.ok(new CustomHttpResponse<>("Aging report generated successfully", agingReport));
     }
-    
+
     @GetMapping("/collection-metrics")
+    @PreAuthorize("hasAuthority('READ:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Map<String, Object>>> getCollectionMetrics() {
         log.info("Generating collection efficiency metrics");
         Map<String, Object> metrics = invoiceAnalyticsService.getCollectionEfficiencyMetrics();

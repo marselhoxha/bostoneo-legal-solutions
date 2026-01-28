@@ -1,16 +1,19 @@
 package com.bostoneo.bostoneosolutions.controller;
 
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import com.bostoneo.bostoneosolutions.model.OrganizationInvitation;
 import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.service.OrganizationInvitationService;
+import com.bostoneo.bostoneosolutions.service.OrganizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +27,7 @@ import static org.springframework.http.HttpStatus.*;
 public class OrganizationInvitationController {
 
     private final OrganizationInvitationService invitationService;
+    private final OrganizationService organizationService;
     private final TenantService tenantService;
 
     /**
@@ -71,6 +75,7 @@ public class OrganizationInvitationController {
      */
     @PostMapping("/invitations")
     @PreAuthorize("hasAuthority('organization:update') or hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN')")
+    @AuditLog(action = "CREATE", entityType = "INVITATION", description = "Sent invitation to user")
     public ResponseEntity<HttpResponse> createInvitation(@RequestBody InvitationRequest request) {
         User currentUser = tenantService.requireCurrentUser();
         Long orgId = tenantService.requireCurrentOrganizationId();
@@ -119,6 +124,7 @@ public class OrganizationInvitationController {
      */
     @DeleteMapping("/invitations/{id}")
     @PreAuthorize("hasAuthority('organization:update') or hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN')")
+    @AuditLog(action = "DELETE", entityType = "INVITATION", description = "Cancelled invitation")
     public ResponseEntity<HttpResponse> cancelInvitation(@PathVariable Long id) {
         invitationService.cancelInvitation(id);
 
@@ -174,15 +180,22 @@ public class OrganizationInvitationController {
             );
         }
 
+        // Get organization name
+        String organizationName = organizationService.getOrganizationById(invitation.getOrganizationId())
+                .map(org -> org.getName())
+                .orElse("Organization");
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("valid", true);
+        data.put("email", invitation.getEmail());
+        data.put("role", invitation.getRole());
+        data.put("organizationId", invitation.getOrganizationId());
+        data.put("organizationName", organizationName);
+
         return ResponseEntity.ok(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .data(Map.of(
-                                "valid", true,
-                                "email", invitation.getEmail(),
-                                "role", invitation.getRole(),
-                                "organizationId", invitation.getOrganizationId()
-                        ))
+                        .data(data)
                         .message("Invitation is valid")
                         .status(OK)
                         .statusCode(OK.value())
@@ -194,6 +207,7 @@ public class OrganizationInvitationController {
      * Accept an invitation (called after user registration)
      */
     @PostMapping("/invitations/accept/{token}")
+    @AuditLog(action = "UPDATE", entityType = "INVITATION", description = "User accepted invitation and joined organization")
     public ResponseEntity<HttpResponse> acceptInvitation(@PathVariable String token) {
         User currentUser = tenantService.requireCurrentUser();
 

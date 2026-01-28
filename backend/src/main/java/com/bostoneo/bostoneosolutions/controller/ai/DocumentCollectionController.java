@@ -17,9 +17,14 @@ import com.bostoneo.bostoneosolutions.service.CollectionQAService;
 import com.bostoneo.bostoneosolutions.service.CollectionSearchCacheService;
 import com.bostoneo.bostoneosolutions.service.SearchSuggestionService;
 import com.bostoneo.bostoneosolutions.service.DocumentRelationshipService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -46,6 +51,31 @@ public class DocumentCollectionController {
     private final CollectionSearchCacheService searchCacheService;
     private final SearchSuggestionService searchSuggestionService;
     private final DocumentRelationshipService relationshipService;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
+    /**
+     * SECURITY: Get current authenticated user's ID - never use hardcoded defaults
+     */
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof UserDTO) {
+                return ((UserDTO) principal).getId();
+            } else if (principal instanceof UserPrincipal) {
+                return ((UserPrincipal) principal).getUser().getId();
+            }
+        }
+        throw new RuntimeException("Authentication required - could not determine current user");
+    }
 
     /**
      * Get all collections for a user
@@ -54,11 +84,12 @@ public class DocumentCollectionController {
     public ResponseEntity<Map<String, Object>> getCollections(
             @RequestParam(value = "userId", required = false) Long userId) {
 
-        Long effectiveUserId = userId != null ? userId : 1L;
-        log.info("Fetching collections for user {}", effectiveUserId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching collections for organization {}", orgId);
 
+        // SECURITY: Use tenant-filtered query
         List<DocumentCollection> collections = collectionRepository
-                .findByUserIdAndIsArchivedFalseOrderByUpdatedAtDesc(effectiveUserId);
+                .findByOrganizationIdAndIsArchivedFalseOrderByUpdatedAtDesc(orgId);
 
         // Map to response format with document counts
         List<Map<String, Object>> collectionList = collections.stream()
@@ -88,12 +119,14 @@ public class DocumentCollectionController {
             return ResponseEntity.badRequest().body(Map.of("error", "Collection name is required"));
         }
 
-        log.info("Creating collection '{}' for user {}", name, userId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Creating collection '{}' for user {} in org {}", name, userId, orgId);
 
         DocumentCollection collection = new DocumentCollection();
         collection.setName(name.trim());
         collection.setDescription(description);
         collection.setUserId(userId);
+        collection.setOrganizationId(orgId); // SECURITY: Set organization ID for tenant isolation
         collection.setCaseId(caseId);
         collection.setColor(color);
         collection.setIcon(icon);
@@ -110,9 +143,11 @@ public class DocumentCollectionController {
      */
     @GetMapping("/{collectionId}")
     public ResponseEntity<Map<String, Object>> getCollection(@PathVariable Long collectionId) {
-        log.info("Fetching collection {}", collectionId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching collection {} for org {}", collectionId, orgId);
 
-        return collectionRepository.findById(collectionId)
+        // SECURITY: Use tenant-filtered query
+        return collectionRepository.findByIdAndOrganizationId(collectionId, orgId)
                 .map(collection -> {
                     Map<String, Object> response = mapCollectionToResponse(collection);
 
@@ -128,8 +163,8 @@ public class DocumentCollectionController {
                                 docInfo.put("addedAt", cd.getAddedAt() != null ? cd.getAddedAt().toString() : null);
                                 docInfo.put("notes", cd.getNotes());
 
-                                // Fetch analysis details
-                                analysisRepository.findById(cd.getAnalysisId()).ifPresent(analysis -> {
+                                // SECURITY: Fetch analysis details with tenant filter
+                                analysisRepository.findByIdAndOrganizationId(cd.getAnalysisId(), orgId).ifPresent(analysis -> {
                                     docInfo.put("fileName", analysis.getFileName());
                                     docInfo.put("fileType", analysis.getFileType());
                                     docInfo.put("detectedType", analysis.getDetectedType());
@@ -155,9 +190,11 @@ public class DocumentCollectionController {
             @PathVariable Long collectionId,
             @RequestBody Map<String, Object> request) {
 
-        log.info("Updating collection {}", collectionId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Updating collection {} for org {}", collectionId, orgId);
 
-        return collectionRepository.findById(collectionId)
+        // SECURITY: Use tenant-filtered query
+        return collectionRepository.findByIdAndOrganizationId(collectionId, orgId)
                 .map(collection -> {
                     if (request.containsKey("name")) {
                         collection.setName((String) request.get("name"));
@@ -187,9 +224,11 @@ public class DocumentCollectionController {
      */
     @DeleteMapping("/{collectionId}")
     public ResponseEntity<Map<String, Object>> deleteCollection(@PathVariable Long collectionId) {
-        log.info("Archiving collection {}", collectionId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Archiving collection {} for org {}", collectionId, orgId);
 
-        return collectionRepository.findById(collectionId)
+        // SECURITY: Use tenant-filtered query
+        return collectionRepository.findByIdAndOrganizationId(collectionId, orgId)
                 .map(collection -> {
                     collection.setIsArchived(true);
                     collectionRepository.save(collection);
@@ -214,10 +253,11 @@ public class DocumentCollectionController {
         String notes = (String) request.get("notes");
         Long addedBy = request.get("userId") != null ? ((Number) request.get("userId")).longValue() : 1L;
 
-        log.info("Adding document {} to collection {}", analysisId, collectionId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Adding document {} to collection {} in org {}", analysisId, collectionId, orgId);
 
-        // Check if collection exists
-        DocumentCollection collection = collectionRepository.findById(collectionId).orElse(null);
+        // SECURITY: Check if collection exists and belongs to this organization
+        DocumentCollection collection = collectionRepository.findByIdAndOrganizationId(collectionId, orgId).orElse(null);
         if (collection == null) {
             return ResponseEntity.notFound().build();
         }
@@ -270,7 +310,13 @@ public class DocumentCollectionController {
             @PathVariable Long collectionId,
             @PathVariable Long analysisId) {
 
-        log.info("Removing document {} from collection {}", analysisId, collectionId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Removing document {} from collection {} in org {}", analysisId, collectionId, orgId);
+
+        // SECURITY: Verify collection belongs to this organization before deletion
+        if (!collectionRepository.findByIdAndOrganizationId(collectionId, orgId).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
 
         if (!collectionDocumentRepository.existsByCollectionIdAndAnalysisId(collectionId, analysisId)) {
             return ResponseEntity.notFound().build();
@@ -294,13 +340,19 @@ public class DocumentCollectionController {
      */
     @GetMapping("/by-document/{analysisId}")
     public ResponseEntity<Map<String, Object>> getCollectionsForDocument(@PathVariable Long analysisId) {
-        log.info("Finding collections containing document {}", analysisId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Finding collections containing document {} for org {}", analysisId, orgId);
 
         List<Long> collectionIds = collectionDocumentRepository.findCollectionIdsByAnalysisId(analysisId);
-        List<DocumentCollection> collections = collectionRepository.findAllById(collectionIds);
+
+        // SECURITY: Filter collections by organization to prevent cross-tenant data leakage
+        // Instead of findAllById (which ignores org), fetch each with org filter
+        List<DocumentCollection> collections = collectionIds.stream()
+                .map(id -> collectionRepository.findByIdAndOrganizationId(id, orgId).orElse(null))
+                .filter(c -> c != null && !c.getIsArchived())
+                .collect(Collectors.toList());
 
         List<Map<String, Object>> collectionList = collections.stream()
-                .filter(c -> !c.getIsArchived())
                 .map(this::mapCollectionToResponse)
                 .collect(Collectors.toList());
 
@@ -316,7 +368,13 @@ public class DocumentCollectionController {
      */
     @GetMapping("/{collectionId}/timeline")
     public ResponseEntity<Map<String, Object>> getAggregatedTimeline(@PathVariable Long collectionId) {
-        log.info("Fetching aggregated timeline for collection {}", collectionId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching aggregated timeline for collection {} in org {}", collectionId, orgId);
+
+        // SECURITY: Verify collection belongs to this organization
+        if (!collectionRepository.findByIdAndOrganizationId(collectionId, orgId).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
 
         // Get all document analysis IDs in this collection
         List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionId(collectionId);
@@ -325,6 +383,7 @@ public class DocumentCollectionController {
             return ResponseEntity.ok(Map.of("events", List.of(), "count", 0));
         }
 
+        // Note: Timeline events are already filtered by analysisId which belongs to verified collection
         List<TimelineEvent> events = timelineEventRepository.findByAnalysisIdInOrderByEventDateAsc(analysisIds);
 
         // Map to response format with document source info
@@ -340,8 +399,8 @@ public class DocumentCollectionController {
                     eventMap.put("priority", event.getPriority());
                     eventMap.put("relatedSection", event.getRelatedSection());
 
-                    // Add source document info
-                    analysisRepository.findById(event.getAnalysisId()).ifPresent(analysis -> {
+                    // SECURITY: Add source document info with tenant filter
+                    analysisRepository.findByIdAndOrganizationId(event.getAnalysisId(), orgId).ifPresent(analysis -> {
                         eventMap.put("sourceDocument", analysis.getFileName());
                         eventMap.put("sourceDocumentType", analysis.getDetectedType());
                     });
@@ -364,6 +423,7 @@ public class DocumentCollectionController {
     @GetMapping("/{collectionId}/action-items")
     public ResponseEntity<Map<String, Object>> getAggregatedActionItems(@PathVariable Long collectionId) {
         log.info("Fetching aggregated action items for collection {}", collectionId);
+        Long orgId = getRequiredOrganizationId();
 
         // Get all document analysis IDs in this collection
         List<Long> analysisIds = collectionDocumentRepository.findAnalysisIdsByCollectionId(collectionId);
@@ -372,7 +432,8 @@ public class DocumentCollectionController {
             return ResponseEntity.ok(Map.of("actionItems", List.of(), "count", 0));
         }
 
-        List<ActionItem> items = actionItemRepository.findByAnalysisIdInOrderByDeadlineAsc(analysisIds);
+        // SECURITY: Use org-filtered query
+        List<ActionItem> items = actionItemRepository.findByOrganizationIdAndAnalysisIdInOrderByDeadlineAsc(orgId, analysisIds);
 
         // Map to response format with document source info
         List<Map<String, Object>> itemList = items.stream()
@@ -386,8 +447,8 @@ public class DocumentCollectionController {
                     itemMap.put("deadline", item.getDeadline() != null ? item.getDeadline().toString() : null);
                     itemMap.put("relatedSection", item.getRelatedSection());
 
-                    // Add source document info
-                    analysisRepository.findById(item.getAnalysisId()).ifPresent(analysis -> {
+                    // SECURITY: Add source document info with tenant filter
+                    analysisRepository.findByIdAndOrganizationId(item.getAnalysisId(), orgId).ifPresent(analysis -> {
                         itemMap.put("sourceDocument", analysis.getFileName());
                         itemMap.put("sourceDocumentType", analysis.getDetectedType());
                     });
@@ -411,12 +472,18 @@ public class DocumentCollectionController {
     public ResponseEntity<Map<String, Object>> searchCollection(
             @PathVariable Long collectionId,
             @RequestParam String query,
-            @RequestParam(defaultValue = "10") int maxResults,
-            @RequestParam(value = "userId", required = false) Long userId) {
+            @RequestParam(defaultValue = "10") int maxResults) {
 
-        Long effectiveUserId = userId != null ? userId : 1L;
-        log.info("Searching collection {}: query='{}', maxResults={}, userId={}",
-                collectionId, query, maxResults, effectiveUserId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Always use authenticated user - never allow userId parameter override
+        Long effectiveUserId = getCurrentUserId();
+        log.info("Searching collection {} in org {}: query='{}', maxResults={}, userId={}",
+                collectionId, orgId, query, maxResults, effectiveUserId);
+
+        // SECURITY: Verify collection belongs to this organization before searching
+        if (!collectionRepository.findByIdAndOrganizationId(collectionId, orgId).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
 
         if (query == null || query.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Query is required"));
@@ -467,12 +534,18 @@ public class DocumentCollectionController {
     @GetMapping("/{collectionId}/search/suggestions")
     public ResponseEntity<List<Map<String, Object>>> getSearchSuggestions(
             @PathVariable Long collectionId,
-            @RequestParam(value = "query", required = false, defaultValue = "") String query,
-            @RequestParam(value = "userId", required = false) Long userId) {
+            @RequestParam(value = "query", required = false, defaultValue = "") String query) {
 
-        Long effectiveUserId = userId != null ? userId : 1L;
-        log.debug("Getting search suggestions for collection {}, query='{}', userId={}",
-                collectionId, query, effectiveUserId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Always use authenticated user - never allow userId parameter override
+        Long effectiveUserId = getCurrentUserId();
+        log.debug("Getting search suggestions for collection {} in org {}, query='{}', userId={}",
+                collectionId, orgId, query, effectiveUserId);
+
+        // SECURITY: Verify collection belongs to this organization
+        if (!collectionRepository.findByIdAndOrganizationId(collectionId, orgId).isPresent()) {
+            return ResponseEntity.ok(List.of()); // Return empty for not found
+        }
 
         List<Map<String, Object>> suggestions = searchSuggestionService.getSuggestions(
                 collectionId, effectiveUserId, query);
@@ -485,9 +558,11 @@ public class DocumentCollectionController {
      */
     @GetMapping("/documents/{analysisId}/content")
     public ResponseEntity<Map<String, Object>> getDocumentContent(@PathVariable Long analysisId) {
-        log.info("Fetching document content for preview: analysisId={}", analysisId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching document content for preview: analysisId={}, org={}", analysisId, orgId);
 
-        return analysisRepository.findById(analysisId)
+        // SECURITY: Use tenant-filtered query
+        return analysisRepository.findByIdAndOrganizationId(analysisId, orgId)
                 .map(analysis -> {
                     Map<String, Object> response = new HashMap<>();
                     response.put("analysisId", analysisId);
@@ -530,7 +605,13 @@ public class DocumentCollectionController {
      */
     @PostMapping("/{collectionId}/index")
     public ResponseEntity<Map<String, Object>> indexCollection(@PathVariable Long collectionId) {
-        log.info("Indexing collection {}", collectionId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Indexing collection {} for org {}", collectionId, orgId);
+
+        // SECURITY: Verify collection belongs to this organization before indexing
+        if (!collectionRepository.findByIdAndOrganizationId(collectionId, orgId).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
 
         try {
             semanticSearchService.indexCollection(collectionId);
@@ -569,8 +650,9 @@ public class DocumentCollectionController {
             );
         }
 
-        // Verify collection exists
-        if (!collectionRepository.existsById(collectionId)) {
+        // SECURITY: Verify collection exists and belongs to this organization
+        Long orgId = getRequiredOrganizationId();
+        if (!collectionRepository.findByIdAndOrganizationId(collectionId, orgId).isPresent()) {
             return CompletableFuture.completedFuture(
                 ResponseEntity.notFound().build()
             );
@@ -618,8 +700,14 @@ public class DocumentCollectionController {
         Long doc2Id = ((Number) request.get("document2Id")).longValue();
         String aspect = (String) request.get("aspect");
 
-        log.info("Document comparison: collectionId={}, doc1={}, doc2={}, aspect={}",
-                collectionId, doc1Id, doc2Id, aspect);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Document comparison: collectionId={}, doc1={}, doc2={}, aspect={}, org={}",
+                collectionId, doc1Id, doc2Id, aspect, orgId);
+
+        // SECURITY: Verify collection belongs to this organization
+        if (!collectionRepository.findByIdAndOrganizationId(collectionId, orgId).isPresent()) {
+            return CompletableFuture.completedFuture(ResponseEntity.notFound().build());
+        }
 
         return collectionQAService.compareDocuments(collectionId, doc1Id, doc2Id, aspect)
             .thenApply(qaResponse -> {
@@ -675,7 +763,13 @@ public class DocumentCollectionController {
     public ResponseEntity<Map<String, Object>> getDocumentRelationships(
             @PathVariable Long analysisId) {
 
-        log.info("Fetching relationships for document {}", analysisId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching relationships for document {} in org {}", analysisId, orgId);
+
+        // SECURITY: Verify document belongs to this organization
+        if (!analysisRepository.findByIdAndOrganizationId(analysisId, orgId).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
 
         try {
             List<Map<String, Object>> relationships = relationshipService.getRelationshipsWithDetails(analysisId);
@@ -706,7 +800,16 @@ public class DocumentCollectionController {
         String description = (String) request.get("description");
         Long userId = request.get("userId") != null ? ((Number) request.get("userId")).longValue() : 1L;
 
-        log.info("Creating relationship: {} {} -> {}", relationshipType, sourceId, targetId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Creating relationship: {} {} -> {} in org {}", relationshipType, sourceId, targetId, orgId);
+
+        // SECURITY: Verify both documents belong to this organization
+        if (!analysisRepository.findByIdAndOrganizationId(sourceId, orgId).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Source document not found or access denied"));
+        }
+        if (!analysisRepository.findByIdAndOrganizationId(targetId, orgId).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Target document not found or access denied"));
+        }
 
         try {
             var relationship = relationshipService.createRelationship(
@@ -742,7 +845,13 @@ public class DocumentCollectionController {
             @PathVariable Long analysisId,
             @PathVariable Long relationshipId) {
 
-        log.info("Deleting relationship {} for document {}", relationshipId, analysisId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Deleting relationship {} for document {} in org {}", relationshipId, analysisId, orgId);
+
+        // SECURITY: Verify document belongs to this organization before allowing relationship deletion
+        if (!analysisRepository.findByIdAndOrganizationId(analysisId, orgId).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
 
         try {
             relationshipService.deleteRelationship(relationshipId);

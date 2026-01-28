@@ -7,9 +7,14 @@ import com.bostoneo.bostoneosolutions.dto.SmsRequestDTO;
 import com.bostoneo.bostoneosolutions.dto.SmsResponseDTO;
 import com.bostoneo.bostoneosolutions.model.CommunicationLog;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.model.Organization;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
+import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
 import com.bostoneo.bostoneosolutions.service.CommunicationLogService;
 import com.bostoneo.bostoneosolutions.service.IncomingSmsService;
 import com.bostoneo.bostoneosolutions.service.TwilioService;
+import com.twilio.security.RequestValidator;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -23,7 +28,9 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.time.LocalDateTime.now;
 
@@ -40,6 +47,7 @@ public class CommunicationController {
     private final CommunicationLogService communicationLogService;
     private final IncomingSmsService incomingSmsService;
     private final TwilioConfig twilioConfig;
+    private final OrganizationRepository organizationRepository;
 
     /**
      * Send an SMS message
@@ -294,9 +302,13 @@ public class CommunicationController {
      * Twilio webhook for incoming SMS messages.
      * This endpoint receives SMS from clients when they reply to our messages.
      * Twilio sends form-urlencoded POST requests.
+     *
+     * SECURITY: This endpoint validates Twilio signature and sets tenant context from phone number.
      */
     @PostMapping(value = "/webhook/incoming", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<String> handleIncomingSms(
+            HttpServletRequest request,
+            @RequestHeader(value = "X-Twilio-Signature", required = false) String twilioSignature,
             @RequestParam("MessageSid") String messageSid,
             @RequestParam("AccountSid") String accountSid,
             @RequestParam("From") String from,
@@ -318,9 +330,68 @@ public class CommunicationController {
             @RequestParam(value = "MediaUrl0", required = false) String mediaUrl0,
             @RequestParam(value = "ApiVersion", required = false) String apiVersion) {
 
-        log.info("Incoming SMS webhook received. From: {}, MessageSid: {}", maskPhone(from), messageSid);
+        log.info("Incoming SMS webhook received. From: {}, To: {}, MessageSid: {}", maskPhone(from), maskPhone(to), messageSid);
 
         try {
+            // SECURITY: Verify Twilio signature if auth token is configured
+            String authToken = twilioConfig.getAuthToken();
+            if (authToken != null && !authToken.isEmpty()) {
+                if (twilioSignature == null || twilioSignature.isEmpty()) {
+                    log.error("SECURITY: Twilio webhook received without X-Twilio-Signature header");
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .contentType(MediaType.APPLICATION_XML)
+                            .body("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response><Message>Unauthorized</Message></Response>");
+                }
+
+                // Build params map for signature validation
+                Map<String, String> params = new HashMap<>();
+                params.put("MessageSid", messageSid);
+                params.put("AccountSid", accountSid);
+                params.put("From", from);
+                params.put("To", to);
+                params.put("Body", body);
+                if (smsSid != null) params.put("SmsSid", smsSid);
+                if (messagingServiceSid != null) params.put("MessagingServiceSid", messagingServiceSid);
+                if (fromCity != null) params.put("FromCity", fromCity);
+                if (fromState != null) params.put("FromState", fromState);
+                if (fromZip != null) params.put("FromZip", fromZip);
+                if (fromCountry != null) params.put("FromCountry", fromCountry);
+                if (toCity != null) params.put("ToCity", toCity);
+                if (toState != null) params.put("ToState", toState);
+                if (toZip != null) params.put("ToZip", toZip);
+                if (toCountry != null) params.put("ToCountry", toCountry);
+                if (numMedia != null) params.put("NumMedia", numMedia.toString());
+                if (numSegments != null) params.put("NumSegments", numSegments.toString());
+                if (mediaContentType0 != null) params.put("MediaContentType0", mediaContentType0);
+                if (mediaUrl0 != null) params.put("MediaUrl0", mediaUrl0);
+                if (apiVersion != null) params.put("ApiVersion", apiVersion);
+
+                String requestUrl = request.getRequestURL().toString();
+                RequestValidator validator = new RequestValidator(authToken);
+
+                if (!validator.validate(requestUrl, params, twilioSignature)) {
+                    log.error("SECURITY: Twilio webhook signature verification FAILED for URL: {}", requestUrl);
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .contentType(MediaType.APPLICATION_XML)
+                            .body("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response><Message>Invalid signature</Message></Response>");
+                }
+                log.debug("Twilio webhook signature verified successfully");
+            } else {
+                log.warn("SECURITY: Twilio auth token not configured - signature verification skipped");
+            }
+
+            // SECURITY: Set tenant context from the "To" phone number (organization's Twilio number)
+            String normalizedTo = to.replaceAll("[^+0-9]", "");
+            Optional<Organization> orgOpt = organizationRepository.findByTwilioPhoneNumber(to, normalizedTo);
+
+            if (orgOpt.isPresent()) {
+                TenantContext.setCurrentTenant(orgOpt.get().getId());
+                log.info("Set tenant context to organization {} for Twilio number {}", orgOpt.get().getId(), maskPhone(to));
+            } else {
+                log.warn("SECURITY: No organization found for Twilio phone number: {} - cannot set tenant context", maskPhone(to));
+                // Continue processing but log the issue - the service will handle missing context
+            }
+
             // Build the DTO from webhook parameters
             IncomingSmsDTO incomingSms = IncomingSmsDTO.builder()
                     .messageSid(messageSid)
@@ -356,30 +427,69 @@ public class CommunicationController {
                     .body(twimlResponse);
 
         } catch (Exception e) {
-            log.error("Error processing incoming SMS: {}", e.getMessage());
+            log.error("Error processing incoming SMS: {}", e.getMessage(), e);
             // Still return OK to Twilio to prevent retries
             String twimlResponse = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>";
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_XML)
                     .body(twimlResponse);
+        } finally {
+            // Clear tenant context after processing
+            TenantContext.clear();
         }
     }
 
     /**
-     * Twilio webhook for status updates
+     * Twilio webhook for status updates.
+     * SECURITY: Validates Twilio signature before processing.
      */
-    @PostMapping("/webhook/status")
+    @PostMapping(value = "/webhook/status", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<String> handleStatusWebhook(
+            HttpServletRequest request,
+            @RequestHeader(value = "X-Twilio-Signature", required = false) String twilioSignature,
             @RequestParam("MessageSid") String messageSid,
             @RequestParam("MessageStatus") String messageStatus,
             @RequestParam(value = "ErrorCode", required = false) String errorCode,
-            @RequestParam(value = "ErrorMessage", required = false) String errorMessage) {
+            @RequestParam(value = "ErrorMessage", required = false) String errorMessage,
+            @RequestParam(value = "To", required = false) String to,
+            @RequestParam(value = "From", required = false) String from) {
 
         log.info("Twilio status webhook received. SID: {}, Status: {}", messageSid, messageStatus);
 
-        communicationLogService.updateStatus(messageSid, messageStatus.toUpperCase(), errorCode, errorMessage);
+        try {
+            // SECURITY: Verify Twilio signature if auth token is configured
+            String authToken = twilioConfig.getAuthToken();
+            if (authToken != null && !authToken.isEmpty()) {
+                if (twilioSignature == null || twilioSignature.isEmpty()) {
+                    log.error("SECURITY: Twilio status webhook received without X-Twilio-Signature header");
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Unauthorized");
+                }
 
-        return ResponseEntity.ok("OK");
+                Map<String, String> params = new HashMap<>();
+                params.put("MessageSid", messageSid);
+                params.put("MessageStatus", messageStatus);
+                if (errorCode != null) params.put("ErrorCode", errorCode);
+                if (errorMessage != null) params.put("ErrorMessage", errorMessage);
+                if (to != null) params.put("To", to);
+                if (from != null) params.put("From", from);
+
+                String requestUrl = request.getRequestURL().toString();
+                RequestValidator validator = new RequestValidator(authToken);
+
+                if (!validator.validate(requestUrl, params, twilioSignature)) {
+                    log.error("SECURITY: Twilio status webhook signature verification FAILED");
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid signature");
+                }
+                log.debug("Twilio status webhook signature verified successfully");
+            }
+
+            communicationLogService.updateStatus(messageSid, messageStatus.toUpperCase(), errorCode, errorMessage);
+
+            return ResponseEntity.ok("OK");
+        } catch (Exception e) {
+            log.error("Error processing Twilio status webhook: {}", e.getMessage(), e);
+            return ResponseEntity.ok("OK"); // Still return OK to prevent retries
+        }
     }
 
     /**

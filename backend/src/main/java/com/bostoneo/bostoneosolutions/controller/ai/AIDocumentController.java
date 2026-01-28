@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.controller.ai;
 
 import com.bostoneo.bostoneosolutions.model.AILegalTemplate;
 import com.bostoneo.bostoneosolutions.model.AITemplateVariable;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AILegalTemplateRepository;
 import com.bostoneo.bostoneosolutions.repository.AITemplateVariableRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
@@ -26,6 +27,14 @@ public class AIDocumentController {
     private final ClaudeSonnet4Service claudeService;
     private final AILegalTemplateRepository templateRepository;
     private final AITemplateVariableRepository variableRepository;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID
+     */
+    private Long getOrganizationId() {
+        return tenantService.getCurrentOrganizationId().orElse(null);
+    }
 
     @PostMapping("/generate")
     public DeferredResult<ResponseEntity<Map<String, Object>>> generateDocument(@RequestBody Map<String, Object> request) {
@@ -49,13 +58,21 @@ public class AIDocumentController {
 
         Map<String, Object> variables = (Map<String, Object>) request.get("variables");
 
-        // Get template and its variables from database
+        // SECURITY: Get template and its variables from database with tenant filtering
         AILegalTemplate template = null;
         List<AITemplateVariable> templateVariables = null;
         if (templateId != null) {
-            template = templateRepository.findById(templateId).orElse(null);
-            if (template != null) {
-                templateVariables = variableRepository.findByTemplateIdOrderByDisplayOrder(templateId);
+            Long orgId = getOrganizationId();
+            // SECURITY: Require organization context - no fallback to unfiltered query
+            if (orgId == null) {
+                log.warn("SECURITY: Template access attempted without organization context");
+                // Continue without template - will use generic prompt
+            } else {
+                // Use tenant-filtered query - allows access to own org templates OR public approved templates
+                template = templateRepository.findByIdAndAccessibleByOrganization(templateId, orgId).orElse(null);
+                if (template != null) {
+                    templateVariables = variableRepository.findByTemplateIdOrderByDisplayOrder(templateId);
+                }
             }
         }
 

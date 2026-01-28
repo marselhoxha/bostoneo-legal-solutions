@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.model.ActionItem;
 import com.bostoneo.bostoneosolutions.model.AIAnalysisMessage;
 import com.bostoneo.bostoneosolutions.model.AIDocumentAnalysis;
 import com.bostoneo.bostoneosolutions.model.TimelineEvent;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.ActionItemRepository;
 import com.bostoneo.bostoneosolutions.repository.AIAnalysisMessageRepository;
 import com.bostoneo.bostoneosolutions.repository.TimelineEventRepository;
@@ -17,6 +18,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
@@ -29,6 +31,7 @@ import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/ai/document-analyzer")
@@ -42,6 +45,31 @@ public class AIDocumentAnalyzerController {
     private final TimelineEventRepository timelineEventRepository;
     private final AIAnalysisMessageRepository analysisMessageRepository;
     private final CloudStorageUrlConverter urlConverter;
+    private final TenantService tenantService;
+
+    /**
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
+    /**
+     * SECURITY: Get current authenticated user's ID - never use hardcoded defaults
+     */
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof UserDTO) {
+                return ((UserDTO) principal).getId();
+            } else if (principal instanceof UserPrincipal) {
+                return ((UserPrincipal) principal).getUser().getId();
+            }
+        }
+        throw new RuntimeException("Authentication required - could not determine current user");
+    }
 
     // RestTemplate with SSL support for fetching documents from various sources
     private final RestTemplate restTemplate = createRestTemplate();
@@ -106,8 +134,8 @@ public class AIDocumentAnalyzerController {
         // Set timeout to 600 seconds (10 minutes) for Claude Sonnet 4 extended thinking with complex documents
         DeferredResult<ResponseEntity<Map<String, Object>>> deferredResult = new DeferredResult<>(600000L);
 
-        // Use default user ID if not provided (for testing)
-        Long effectiveUserId = userId != null ? userId : 1L;
+        // SECURITY: Always use authenticated user - never allow userId parameter override
+        Long effectiveUserId = getCurrentUserId();
 
         documentAnalysisService.analyzeDocument(file, analysisType, effectiveUserId, caseId, sessionId, analysisContext)
                 .thenApply(analysis -> {
@@ -281,11 +309,10 @@ public class AIDocumentAnalyzerController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getAnalysisStats(
-            @RequestParam(value = "userId", required = false) Long userId) {
+    public ResponseEntity<Map<String, Object>> getAnalysisStats() {
 
-        // Use default user ID if not provided (for testing)
-        Long effectiveUserId = userId != null ? userId : 1L;
+        // SECURITY: Always use authenticated user - never allow userId parameter override
+        Long effectiveUserId = getCurrentUserId();
 
         return ResponseEntity.ok(documentAnalysisService.getAnalysisStats(effectiveUserId));
     }
@@ -433,8 +460,9 @@ public class AIDocumentAnalyzerController {
 
     @GetMapping("/analysis/{analysisId}/action-items")
     public ResponseEntity<List<ActionItem>> getActionItems(@PathVariable Long analysisId) {
-        log.info("Fetching action items for analysis ID: {}", analysisId);
-        List<ActionItem> items = actionItemRepository.findByAnalysisIdOrderByDeadlineAsc(analysisId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching action items for analysis ID: {} in org: {}", analysisId, orgId);
+        List<ActionItem> items = actionItemRepository.findByOrganizationIdAndAnalysisIdOrderByDeadlineAsc(orgId, analysisId);
         log.info("Found {} action items", items.size());
         return ResponseEntity.ok(items);
     }
@@ -443,8 +471,9 @@ public class AIDocumentAnalyzerController {
     public ResponseEntity<ActionItem> updateActionItem(
             @PathVariable Long id,
             @RequestBody ActionItem updates) {
-        log.info("Updating action item {}: {}", id, updates);
-        return actionItemRepository.findById(id)
+        Long orgId = getRequiredOrganizationId();
+        log.info("Updating action item {} in org {}: {}", id, orgId, updates);
+        return actionItemRepository.findByIdAndOrganizationId(id, orgId)
                 .map(item -> {
                     if (updates.getStatus() != null) {
                         item.setStatus(updates.getStatus());
@@ -461,8 +490,9 @@ public class AIDocumentAnalyzerController {
 
     @GetMapping("/analysis/{analysisId}/timeline-events")
     public ResponseEntity<List<TimelineEvent>> getTimelineEvents(@PathVariable Long analysisId) {
-        log.info("Fetching timeline events for analysis ID: {}", analysisId);
-        List<TimelineEvent> events = timelineEventRepository.findByAnalysisIdOrderByEventDateAsc(analysisId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching timeline events for analysis ID: {} in org: {}", analysisId, orgId);
+        List<TimelineEvent> events = timelineEventRepository.findByOrganizationIdAndAnalysisIdOrderByEventDateAsc(orgId, analysisId);
         log.info("Found {} timeline events", events.size());
         return ResponseEntity.ok(events);
     }
@@ -472,12 +502,13 @@ public class AIDocumentAnalyzerController {
     // ==========================================
 
     /**
-     * Get all messages for a specific document analysis (Ask AI tab history)
+     * Get all messages for a specific document analysis (Ask AI tab history) - TENANT FILTERED
      */
     @GetMapping("/analysis/{analysisId}/messages")
     public ResponseEntity<Map<String, Object>> getAnalysisMessages(@PathVariable Long analysisId) {
-        log.info("Fetching Ask AI messages for analysis ID: {}", analysisId);
-        List<AIAnalysisMessage> messages = analysisMessageRepository.findByAnalysisIdOrderByCreatedAtAsc(analysisId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching Ask AI messages for analysis ID: {} in org: {}", analysisId, orgId);
+        List<AIAnalysisMessage> messages = analysisMessageRepository.findByOrganizationIdAndAnalysisIdOrderByCreatedAtAsc(orgId, analysisId);
         log.info("Found {} messages", messages.size());
 
         Map<String, Object> response = new HashMap<>();
@@ -489,13 +520,14 @@ public class AIDocumentAnalyzerController {
     }
 
     /**
-     * Add a new message to a document analysis (Ask AI tab)
+     * Add a new message to a document analysis (Ask AI tab) - TENANT FILTERED
      */
     @PostMapping("/analysis/{analysisId}/messages")
     public ResponseEntity<AIAnalysisMessage> addAnalysisMessage(
             @PathVariable Long analysisId,
             @RequestBody Map<String, Object> request) {
 
+        Long orgId = getRequiredOrganizationId();
         String role = (String) request.get("role");
         String content = (String) request.get("content");
         Long userId = request.get("userId") != null ? ((Number) request.get("userId")).longValue() : 1L;
@@ -505,13 +537,14 @@ public class AIDocumentAnalyzerController {
             return ResponseEntity.badRequest().build();
         }
 
-        log.info("Adding {} message to analysis {}", role, analysisId);
+        log.info("Adding {} message to analysis {} in org {}", role, analysisId, orgId);
 
         AIAnalysisMessage message = new AIAnalysisMessage();
         message.setAnalysisId(analysisId);
         message.setRole(role);
         message.setContent(content);
         message.setUserId(userId);
+        message.setOrganizationId(orgId);
 
         AIAnalysisMessage saved = analysisMessageRepository.save(message);
         log.info("Saved message with ID: {}", saved.getId());
@@ -520,11 +553,12 @@ public class AIDocumentAnalyzerController {
     }
 
     /**
-     * Get message count for a specific analysis (for sidebar indicator)
+     * Get message count for a specific analysis (for sidebar indicator) - TENANT FILTERED
      */
     @GetMapping("/analysis/{analysisId}/messages/count")
     public ResponseEntity<Map<String, Object>> getMessageCount(@PathVariable Long analysisId) {
-        long count = analysisMessageRepository.countByAnalysisId(analysisId);
+        Long orgId = getRequiredOrganizationId();
+        long count = analysisMessageRepository.countByOrganizationIdAndAnalysisId(orgId, analysisId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("count", count);
@@ -534,12 +568,13 @@ public class AIDocumentAnalyzerController {
     }
 
     /**
-     * Delete all messages for a specific analysis
+     * Delete all messages for a specific analysis - TENANT FILTERED
      */
     @DeleteMapping("/analysis/{analysisId}/messages")
     public ResponseEntity<Map<String, Object>> deleteAnalysisMessages(@PathVariable Long analysisId) {
-        log.info("Deleting all messages for analysis ID: {}", analysisId);
-        analysisMessageRepository.deleteByAnalysisId(analysisId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Deleting all messages for analysis ID: {} in org: {}", analysisId, orgId);
+        analysisMessageRepository.deleteByOrganizationIdAndAnalysisId(orgId, analysisId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -556,10 +591,20 @@ public class AIDocumentAnalyzerController {
         log.info("🗑️ Deleting analysis ID: {}", analysisId);
 
         try {
-            // Delete related data first
-            analysisMessageRepository.deleteByAnalysisId(analysisId);
-            actionItemRepository.deleteByAnalysisId(analysisId);
-            timelineEventRepository.deleteByAnalysisId(analysisId);
+            Long orgId = getRequiredOrganizationId();
+
+            // SECURITY: First verify the analysis belongs to the current organization
+            Optional<AIDocumentAnalysis> analysisOpt = documentAnalysisService.getAnalysisById(String.valueOf(analysisId));
+            if (analysisOpt.isEmpty() || !orgId.equals(analysisOpt.get().getOrganizationId())) {
+                log.warn("Attempted to delete analysis {} that doesn't belong to org {}", analysisId, orgId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Analysis not found or access denied"));
+            }
+
+            // Delete related data first - SECURITY: Use org-filtered deletes
+            analysisMessageRepository.deleteByOrganizationIdAndAnalysisId(orgId, analysisId);
+            actionItemRepository.deleteByOrganizationIdAndAnalysisId(orgId, analysisId);
+            timelineEventRepository.deleteByOrganizationIdAndAnalysisId(orgId, analysisId);
 
             // Delete the analysis itself
             documentAnalysisService.deleteAnalysis(analysisId);
@@ -598,7 +643,7 @@ public class AIDocumentAnalyzerController {
     }
 
     /**
-     * Ask AI a question about a specific document analysis
+     * Ask AI a question about a specific document analysis - TENANT FILTERED
      * This endpoint calls Claude with the full document context
      */
     @PostMapping("/analysis/{analysisId}/ask")
@@ -606,6 +651,7 @@ public class AIDocumentAnalyzerController {
             @PathVariable Long analysisId,
             @RequestBody Map<String, Object> request) {
 
+        Long orgId = getRequiredOrganizationId();
         String question = (String) request.get("question");
         Long userId = request.get("userId") != null ? ((Number) request.get("userId")).longValue() : 1L;
 
@@ -614,26 +660,28 @@ public class AIDocumentAnalyzerController {
             return ResponseEntity.badRequest().body(Map.of("error", "Question is required"));
         }
 
-        log.info("🤖 Ask AI request for analysis {}: {}", analysisId, question.substring(0, Math.min(50, question.length())));
+        log.info("🤖 Ask AI request for analysis {} in org {}: {}", analysisId, orgId, question.substring(0, Math.min(50, question.length())));
 
         try {
             // Get the AI response from the service
             String aiResponse = documentAnalysisService.askAboutDocument(analysisId, question, userId);
 
-            // Save user message
+            // Save user message with organization ID
             AIAnalysisMessage userMessage = new AIAnalysisMessage();
             userMessage.setAnalysisId(analysisId);
             userMessage.setRole("user");
             userMessage.setContent(question);
             userMessage.setUserId(userId);
+            userMessage.setOrganizationId(orgId);
             analysisMessageRepository.save(userMessage);
 
-            // Save AI response
+            // Save AI response with organization ID
             AIAnalysisMessage assistantMessage = new AIAnalysisMessage();
             assistantMessage.setAnalysisId(analysisId);
             assistantMessage.setRole("assistant");
             assistantMessage.setContent(aiResponse);
             assistantMessage.setUserId(userId);
+            assistantMessage.setOrganizationId(orgId);
             AIAnalysisMessage savedResponse = analysisMessageRepository.save(assistantMessage);
 
             Map<String, Object> response = new HashMap<>();

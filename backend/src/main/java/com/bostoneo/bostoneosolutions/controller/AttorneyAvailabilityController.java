@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.dto.AttorneyAvailabilityDTO;
 import com.bostoneo.bostoneosolutions.dto.AvailableSlotDTO;
 import com.bostoneo.bostoneosolutions.model.Attorney;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AttorneyRepository;
 import com.bostoneo.bostoneosolutions.service.AttorneyAvailabilityService;
 import lombok.RequiredArgsConstructor;
@@ -29,17 +30,28 @@ public class AttorneyAvailabilityController {
 
     private final AttorneyAvailabilityService availabilityService;
     private final AttorneyRepository attorneyRepository;
+    private final TenantService tenantService;
 
     /**
-     * Convert user ID to attorney ID (creates attorney record if needed)
+     * Helper method to get the current organization ID (required for tenant isolation)
+     */
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
+    /**
+     * Convert user ID to attorney ID (creates attorney record if needed) - TENANT FILTERED
      */
     private Long getOrCreateAttorneyId(Long userId) {
-        return attorneyRepository.findByUserId(userId)
+        Long orgId = getRequiredOrganizationId();
+        return attorneyRepository.findByUserIdAndOrganizationId(userId, orgId)
                 .map(Attorney::getId)
                 .orElseGet(() -> {
-                    log.info("Creating attorney record for user: {}", userId);
+                    log.info("Creating attorney record for user: {} in org: {}", userId, orgId);
                     Attorney newAttorney = Attorney.builder()
                             .userId(userId)
+                            .organizationId(orgId)
                             .practiceAreas("[]")
                             .isActive(true)
                             .currentCaseLoad(0)
@@ -73,12 +85,18 @@ public class AttorneyAvailabilityController {
     }
 
     /**
-     * Get attorney's availability by ID (for clients booking)
+     * Get attorney's availability by ID (for clients booking) - TENANT FILTERED
      */
     @GetMapping("/attorney/{attorneyId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> getAttorneyAvailability(@PathVariable Long attorneyId) {
-        log.info("Getting availability for attorney: {}", attorneyId);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Getting availability for attorney: {} in org: {}", attorneyId, orgId);
+
+        // Verify attorney belongs to same organization
+        if (!attorneyRepository.findByIdAndOrganizationId(attorneyId, orgId).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
 
         List<AttorneyAvailabilityDTO> availability = availabilityService.getActiveAvailabilityByAttorneyId(attorneyId);
 
@@ -162,7 +180,7 @@ public class AttorneyAvailabilityController {
     }
 
     /**
-     * Get available time slots for a specific date
+     * Get available time slots for a specific date - TENANT FILTERED
      */
     @GetMapping("/slots/{attorneyId}")
     @PreAuthorize("isAuthenticated()")
@@ -170,7 +188,13 @@ public class AttorneyAvailabilityController {
             @PathVariable Long attorneyId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false, defaultValue = "30") Integer durationMinutes) {
+        Long orgId = getRequiredOrganizationId();
         log.info("Getting available slots for attorney {} on date {} with duration {}", attorneyId, date, durationMinutes);
+
+        // Verify attorney belongs to same organization
+        if (!attorneyRepository.findByIdAndOrganizationId(attorneyId, orgId).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
 
         List<AvailableSlotDTO> slots = availabilityService.getAvailableSlots(attorneyId, date, durationMinutes);
 
@@ -185,7 +209,7 @@ public class AttorneyAvailabilityController {
     }
 
     /**
-     * Get available time slots for a date range
+     * Get available time slots for a date range - TENANT FILTERED
      */
     @GetMapping("/slots/{attorneyId}/range")
     @PreAuthorize("isAuthenticated()")
@@ -194,7 +218,13 @@ public class AttorneyAvailabilityController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false, defaultValue = "30") Integer durationMinutes) {
+        Long orgId = getRequiredOrganizationId();
         log.info("Getting available slots for attorney {} from {} to {}", attorneyId, startDate, endDate);
+
+        // Verify attorney belongs to same organization
+        if (!attorneyRepository.findByIdAndOrganizationId(attorneyId, orgId).isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
 
         List<AvailableSlotDTO> slots = availabilityService.getAvailableSlotsForDateRange(attorneyId, startDate, endDate, durationMinutes);
 

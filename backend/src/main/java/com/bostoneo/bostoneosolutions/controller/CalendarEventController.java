@@ -368,9 +368,10 @@ public class CalendarEventController {
 
     /**
      * Test endpoint to manually trigger reminders for a specific event
-     * This endpoint is for development/testing only and should be secured or removed in production
+     * This endpoint is secured - only admin can trigger test reminders
      */
     @GetMapping("/test-reminder/{eventId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<?> testReminderForEvent(@PathVariable Long eventId) {
         log.info("Testing reminder for event ID: {}", eventId);
         
