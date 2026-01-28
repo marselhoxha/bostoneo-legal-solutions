@@ -22,25 +22,30 @@ public class UserDTOMapper {
     public static UserDTO fromUser(User user, Set<Role> roles, Set<Permission> permissions) {
         UserDTO userDTO = new UserDTO();
         BeanUtils.copyProperties(user, userDTO);
-        
+
+        log.info("UserDTOMapper - Converting user: {} with {} roles", user.getEmail(), roles.size());
+
         // Set primary role name (first role or empty)
         if (!roles.isEmpty()) {
             Role primaryRole = roles.iterator().next();
             userDTO.setRoleName(primaryRole.getName());
-            
+
             // Set all role names
-            userDTO.setRoles(roles.stream()
+            var roleNames = roles.stream()
                 .map(Role::getName)
-                .collect(Collectors.toList()));
-            
-            
+                .collect(Collectors.toList());
+            userDTO.setRoles(roleNames);
+
+            log.info("UserDTOMapper - User {} has roles: {}", user.getEmail(), roleNames);
+        } else {
+            log.warn("UserDTOMapper - User {} has NO roles!", user.getEmail());
         }
-        
+
         // Set permissions
         userDTO.setPermissions(permissions.stream()
             .map(Permission::getAuthority)
             .collect(Collectors.joining(",")));
-            
+
         return userDTO;
     }
     

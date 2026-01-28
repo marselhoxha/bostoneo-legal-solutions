@@ -3,6 +3,7 @@ package com.bostoneo.bostoneosolutions.resource;
 import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.enumeration.EventType;
 import com.bostoneo.bostoneosolutions.event.NewUserEvent;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
@@ -311,6 +312,12 @@ public class UserResource {
                                 .build());
             }
 
+            // Extract organizationId from token and set tenant context before getting user
+            Long organizationId = tokenProvider.getOrganizationId(token);
+            if (organizationId != null) {
+                TenantContext.setCurrentTenant(organizationId);
+            }
+
             UserDTO user = userService.getUserById(userId);
             log.info("Token refresh successful for user: {}", user != null ? user.getEmail() : "unknown");
 
@@ -345,6 +352,8 @@ public class UserResource {
                             .status(UNAUTHORIZED)
                             .statusCode(UNAUTHORIZED.value())
                             .build());
+        } finally {
+            TenantContext.clear();
         }
     }
 
@@ -408,34 +417,13 @@ public class UserResource {
     }
 
     @DeleteMapping("/delete/{userId}")
-    //@AuditLog(action = "DELETE", entityType = "USER", description = "User account deleted")
+    @AuditLog(action = "DELETE", entityType = "USER", description = "User account deleted")
     public ResponseEntity<HttpResponse> deleteUser(@PathVariable("userId") Long userId) {
-        log.info("🚀 DELETE REQUEST REACHED CONTROLLER! User ID: {}", userId);
-        // Debug logging and manual permission check
+        log.info("DELETE REQUEST REACHED CONTROLLER! User ID: {}", userId);
+
+        // Authentication check
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null) {
-            log.info("Delete user request - Principal: {}", auth.getPrincipal());
-            log.info("Delete user request - Authorities: {}", auth.getAuthorities());
-            auth.getAuthorities().forEach(authority -> 
-                log.info("Authority: {}", authority.getAuthority())
-            );
-            
-            // Manual permission check
-            boolean hasPermission = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("USER:DELETE") || 
-                              a.getAuthority().equals("USER:ADMIN"));
-            
-            if (!hasPermission) {
-                log.warn("User does not have USER:DELETE or USER:ADMIN permission");
-                return ResponseEntity.status(FORBIDDEN).body(
-                    HttpResponse.builder()
-                        .timeStamp(now().toString())
-                        .message("You don't have permission to delete users")
-                        .status(FORBIDDEN)
-                        .statusCode(FORBIDDEN.value())
-                        .build());
-            }
-        } else {
+        if (auth == null) {
             log.warn("No authentication found in SecurityContext for delete request");
             return ResponseEntity.status(UNAUTHORIZED).body(
                 HttpResponse.builder()
@@ -445,15 +433,46 @@ public class UserResource {
                     .statusCode(UNAUTHORIZED.value())
                     .build());
         }
-        
-        userService.deleteUser(userId);
-        return ResponseEntity.ok().body(
+
+        log.info("Delete user request - Principal: {}", auth.getPrincipal());
+        log.info("Delete user request - Authorities: {}", auth.getAuthorities());
+
+        // Permission check
+        boolean hasPermission = auth.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("USER:DELETE") ||
+                          a.getAuthority().equals("USER:ADMIN") ||
+                          a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!hasPermission) {
+            log.warn("User does not have permission to delete users");
+            return ResponseEntity.status(FORBIDDEN).body(
                 HttpResponse.builder()
-                        .timeStamp(now().toString())
-                        .message("User deleted successfully")
-                        .status(OK)
-                        .statusCode(OK.value())
-                        .build());
+                    .timeStamp(now().toString())
+                    .message("You don't have permission to delete users")
+                    .status(FORBIDDEN)
+                    .statusCode(FORBIDDEN.value())
+                    .build());
+        }
+
+        try {
+            userService.deleteUser(userId);
+            return ResponseEntity.ok().body(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("User deleted successfully")
+                            .status(OK)
+                            .statusCode(OK.value())
+                            .build());
+        } catch (Exception e) {
+            log.error("Error deleting user: {}", e.getMessage(), e);
+            return ResponseEntity.status(BAD_REQUEST).body(
+                HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .message("Failed to delete user: " + e.getMessage())
+                    .status(BAD_REQUEST)
+                    .statusCode(BAD_REQUEST.value())
+                    .build());
+        }
     }
 
     private UserDTO authenticate(String email, String password) {

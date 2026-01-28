@@ -3,6 +3,10 @@ package com.bostoneo.bostoneosolutions.validation;
 import com.bostoneo.bostoneosolutions.enumeration.InvoiceStatus;
 import com.bostoneo.bostoneosolutions.model.Invoice;
 import com.bostoneo.bostoneosolutions.exception.InvoiceValidationException;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import com.bostoneo.bostoneosolutions.repository.ClientRepository;
+import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -13,54 +17,80 @@ import java.util.List;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class InvoiceValidator {
+
+    private final ClientRepository clientRepository;
+    private final LegalCaseRepository legalCaseRepository;
+    private final TenantService tenantService;
     
     /**
      * Validate invoice for creation
      */
     public void validateForCreate(Invoice invoice) {
         List<String> errors = new ArrayList<>();
-        
+
         // Required fields
         if (invoice.getClientId() == null || invoice.getClientId() <= 0) {
             errors.add("Client ID is required");
         }
-        
+
         if (invoice.getIssueDate() == null) {
             errors.add("Issue date is required");
         }
-        
+
         if (invoice.getDueDate() == null) {
             errors.add("Due date is required");
         }
-        
+
+        // SECURITY: Validate client belongs to current organization
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (orgId != null && invoice.getClientId() != null) {
+            boolean clientExists = clientRepository.existsByIdAndOrganizationId(invoice.getClientId(), orgId);
+            if (!clientExists) {
+                log.error("SECURITY: Attempt to create invoice with client {} not belonging to org {}",
+                        invoice.getClientId(), orgId);
+                errors.add("Client not found or access denied");
+            }
+        }
+
+        // SECURITY: Validate legal case belongs to current organization (if provided)
+        if (orgId != null && invoice.getLegalCaseId() != null) {
+            boolean caseExists = legalCaseRepository.existsByIdAndOrganizationId(invoice.getLegalCaseId(), orgId);
+            if (!caseExists) {
+                log.error("SECURITY: Attempt to create invoice with case {} not belonging to org {}",
+                        invoice.getLegalCaseId(), orgId);
+                errors.add("Legal case not found or access denied");
+            }
+        }
+
         // Date validation
         if (invoice.getIssueDate() != null && invoice.getDueDate() != null) {
             if (invoice.getDueDate().isBefore(invoice.getIssueDate())) {
                 errors.add("Due date cannot be before issue date");
             }
         }
-        
+
         // Amount validation
         if (invoice.getSubtotal() == null || invoice.getSubtotal().compareTo(BigDecimal.ZERO) < 0) {
             errors.add("Subtotal must be greater than or equal to zero");
         }
-        
-        if (invoice.getTaxRate() != null && 
-            (invoice.getTaxRate().compareTo(BigDecimal.ZERO) < 0 || 
+
+        if (invoice.getTaxRate() != null &&
+            (invoice.getTaxRate().compareTo(BigDecimal.ZERO) < 0 ||
              invoice.getTaxRate().compareTo(new BigDecimal("100")) > 0)) {
             errors.add("Tax rate must be between 0 and 100");
         }
-        
+
         // Status validation
         if (invoice.getStatus() == null) {
             invoice.setStatus(InvoiceStatus.DRAFT);
         }
-        
+
         if (!errors.isEmpty()) {
             throw new InvoiceValidationException("Invoice validation failed", errors);
         }
-        
+
         // Calculate amounts if not provided
         calculateInvoiceAmounts(invoice);
     }
@@ -71,43 +101,64 @@ public class InvoiceValidator {
      */
     public void validateForCreateFromTimeEntries(Invoice invoice) {
         List<String> errors = new ArrayList<>();
-        
+
         // Required fields
         if (invoice.getClientId() == null || invoice.getClientId() <= 0) {
             errors.add("Client ID is required");
         }
-        
+
         if (invoice.getIssueDate() == null) {
             errors.add("Issue date is required");
         }
-        
+
         if (invoice.getDueDate() == null) {
             errors.add("Due date is required");
         }
-        
+
+        // SECURITY: Validate client belongs to current organization
+        Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+        if (orgId != null && invoice.getClientId() != null) {
+            boolean clientExists = clientRepository.existsByIdAndOrganizationId(invoice.getClientId(), orgId);
+            if (!clientExists) {
+                log.error("SECURITY: Attempt to create invoice with client {} not belonging to org {}",
+                        invoice.getClientId(), orgId);
+                errors.add("Client not found or access denied");
+            }
+        }
+
+        // SECURITY: Validate legal case belongs to current organization (if provided)
+        if (orgId != null && invoice.getLegalCaseId() != null) {
+            boolean caseExists = legalCaseRepository.existsByIdAndOrganizationId(invoice.getLegalCaseId(), orgId);
+            if (!caseExists) {
+                log.error("SECURITY: Attempt to create invoice with case {} not belonging to org {}",
+                        invoice.getLegalCaseId(), orgId);
+                errors.add("Legal case not found or access denied");
+            }
+        }
+
         // Date validation
         if (invoice.getIssueDate() != null && invoice.getDueDate() != null) {
             if (invoice.getDueDate().isBefore(invoice.getIssueDate())) {
                 errors.add("Due date cannot be before issue date");
             }
         }
-        
+
         // Tax rate validation (but skip subtotal validation)
-        if (invoice.getTaxRate() != null && 
-            (invoice.getTaxRate().compareTo(BigDecimal.ZERO) < 0 || 
+        if (invoice.getTaxRate() != null &&
+            (invoice.getTaxRate().compareTo(BigDecimal.ZERO) < 0 ||
              invoice.getTaxRate().compareTo(new BigDecimal("100")) > 0)) {
             errors.add("Tax rate must be between 0 and 100");
         }
-        
+
         // Status validation
         if (invoice.getStatus() == null) {
             invoice.setStatus(InvoiceStatus.DRAFT);
         }
-        
+
         if (!errors.isEmpty()) {
             throw new InvoiceValidationException("Invoice validation failed", errors);
         }
-        
+
         log.debug("Invoice validation passed for time entry creation - subtotal will be calculated from time entries");
     }
 

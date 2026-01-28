@@ -1,6 +1,8 @@
 package com.bostoneo.bostoneosolutions.multitenancy;
 
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.dtomapper.UserDTOMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,22 +40,32 @@ public class TenantService {
     }
 
     /**
-     * Get the currently authenticated user.
+     * Get the currently authenticated user as UserDTO.
      *
-     * @return Optional containing the User, or empty if not authenticated
+     * @return Optional containing the UserDTO, or empty if not authenticated
      */
-    public Optional<User> getCurrentUser() {
+    public Optional<UserDTO> getCurrentUserDTO() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             return Optional.empty();
         }
 
         Object principal = authentication.getPrincipal();
-        if (principal instanceof User user) {
-            return Optional.of(user);
+        if (principal instanceof UserDTO userDTO) {
+            return Optional.of(userDTO);
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Get the currently authenticated user as User entity.
+     * Note: This converts from UserDTO, so some entity-specific data may be missing.
+     *
+     * @return Optional containing the User, or empty if not authenticated
+     */
+    public Optional<User> getCurrentUser() {
+        return getCurrentUserDTO().map(UserDTOMapper::toUser);
     }
 
     /**
@@ -73,7 +85,7 @@ public class TenantService {
      * @return Optional containing the user ID, or empty if not authenticated
      */
     public Optional<Long> getCurrentUserId() {
-        return getCurrentUser().map(User::getId);
+        return getCurrentUserDTO().map(UserDTO::getId);
     }
 
     /**

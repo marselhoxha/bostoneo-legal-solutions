@@ -28,7 +28,25 @@ public class UserQuery {
     public static final String UPDATE_USER_PASSWORD_BY_USER_ID_QUERY = "UPDATE users SET password = :password WHERE id = :id";
     public static final String SELECT_ALL_USERS_QUERY = "SELECT * FROM users ORDER BY id LIMIT :pageSize OFFSET :offset";
     public static final String COUNT_ALL_USERS_QUERY = "SELECT COUNT(*) FROM users";
-    
+
+    // Multi-tenant queries (filter by organization_id)
+    public static final String SELECT_USERS_BY_ORGANIZATION_QUERY = "SELECT * FROM users WHERE organization_id = :organizationId ORDER BY id LIMIT :pageSize OFFSET :offset";
+    public static final String COUNT_USERS_BY_ORGANIZATION_QUERY = "SELECT COUNT(*) FROM users WHERE organization_id = :organizationId";
+    public static final String SELECT_USER_BY_ID_AND_ORG_QUERY = "SELECT * FROM users WHERE id = :id AND organization_id = :organizationId";
+    public static final String SELECT_ACTIVE_ATTORNEYS_BY_ORG_QUERY =
+        "SELECT DISTINCT u.* FROM users u " +
+        "INNER JOIN user_roles ur ON u.id = ur.user_id " +
+        "INNER JOIN roles r ON ur.role_id = r.id " +
+        "WHERE u.enabled = true AND u.not_locked = true " +
+        "AND u.organization_id = :organizationId " +
+        "AND r.name IN ('ROLE_ATTORNEY', 'ROLE_SENIOR_ATTORNEY', 'ROLE_PARTNER', " +
+        "'ROLE_SENIOR_PARTNER', 'ROLE_MANAGING_PARTNER') " +
+        "ORDER BY u.first_name, u.last_name";
+    public static final String SELECT_USERS_BY_ROLE_AND_ORG_QUERY =
+        "SELECT u.* FROM users u " +
+        "INNER JOIN user_roles ur ON u.id = ur.user_id " +
+        "WHERE ur.role_id = :roleId AND u.organization_id = :organizationId";
+
     // Delete user and related data
     public static final String DELETE_USER_ROLES_QUERY = "DELETE FROM user_roles WHERE user_id = :userId";
     public static final String DELETE_USER_EVENTS_QUERY = "DELETE FROM user_events WHERE user_id = :userId";

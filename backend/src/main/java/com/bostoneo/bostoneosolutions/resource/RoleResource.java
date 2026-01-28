@@ -47,6 +47,7 @@ public class RoleResource {
      * Get all roles with complete information
      */
     @GetMapping("/roles")
+    @PreAuthorize("hasAuthority('ROLE:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> getRoles() {
         Collection<Role> roles = roleService.getRoles();
         
@@ -80,6 +81,7 @@ public class RoleResource {
      * Get role by ID
      */
     @GetMapping("/roles/{id}")
+    @PreAuthorize("hasAuthority('ROLE:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> getRoleById(@PathVariable("id") Long id) {
         Role role = roleService.getRoleById(id);
         Set<Permission> permissions = roleService.getPermissionsByRoleId(id);
@@ -246,6 +248,7 @@ public class RoleResource {
      * Get all permissions
      */
     @GetMapping("/permissions")
+    @PreAuthorize("hasAuthority('ROLE:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> getPermissions() {
         List<Permission> permissions = roleService.getAllPermissions();
         
@@ -327,6 +330,7 @@ public class RoleResource {
      * Get all users
      */
     @GetMapping("/users")
+    @PreAuthorize("hasAuthority('USER:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> getAllUsers() {
         // Get users via the repository
         Collection<User> users = userService.getUsers(0, 1000);
@@ -346,6 +350,7 @@ public class RoleResource {
      * Get users assigned to role
      */
     @GetMapping("/roles/{roleId}/users")
+    @PreAuthorize("hasAuthority('ROLE:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> getUsersByRoleId(@PathVariable("roleId") Long roleId) {
         List<User> users = roleService.getUsersByRoleId(roleId);
         
@@ -364,6 +369,7 @@ public class RoleResource {
      * Get roles assigned to user
      */
     @GetMapping("/users/{userId}/roles")
+    @PreAuthorize("hasAuthority('ROLE:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> getRolesByUserId(@PathVariable("userId") Long userId) {
         Set<Role> roles = roleService.getRolesByUserId(userId);
         
@@ -548,6 +554,7 @@ public class RoleResource {
      * Get case roles assigned to user
      */
     @GetMapping("/users/{userId}/case-roles")
+    @PreAuthorize("hasAuthority('ROLE:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> getCaseRolesByUserId(@PathVariable("userId") Long userId) {
         Set<CaseRoleAssignment> caseRoles = roleService.getCaseRoleAssignments(userId);
         
@@ -567,8 +574,7 @@ public class RoleResource {
      */
     @PutMapping("/users/{userId}/roles/{roleId}/primary")
     @AuditLog(action = "UPDATE", entityType = "ROLE", description = "Set role as primary for user")
-    // Comment out for development
-    // @PreAuthorize("hasAuthority('ADMINISTRATIVE:EDIT')")
+    @PreAuthorize("hasAuthority('ROLE:ASSIGN') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> setPrimaryRole(
             @AuthenticationPrincipal UserDTO currentUser,
             @PathVariable("userId") Long userId,

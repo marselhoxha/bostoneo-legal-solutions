@@ -14,6 +14,7 @@ import java.util.List;
 public class UserDTO {
 
     private Long id;
+    private Long organizationId;  // For multi-tenant support
     private String firstName;
     private String lastName;
     private String email;

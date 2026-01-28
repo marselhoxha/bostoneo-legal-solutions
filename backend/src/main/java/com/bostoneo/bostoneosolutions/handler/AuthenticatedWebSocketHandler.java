@@ -31,6 +31,8 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
     // Store authenticated sessions with user ID as key
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
     private final Map<String, String> sessionUsers = new ConcurrentHashMap<>();
+    // SECURITY: Track organization ID per session for tenant-isolated broadcasts
+    private final Map<String, Long> sessionOrganizations = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -46,12 +48,18 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
                 
                 if (userId != null && tokenProvider.isTokenValid(userId, token)) {
                     String userIdStr = userId.toString();
-                    
+
                     // Store the session
                     userSessions.put(userIdStr, session);
                     sessionUsers.put(session.getId(), userIdStr);
-                    
-                    log.info("WebSocket authenticated for user: {}", userId);
+
+                    // SECURITY: Extract and store organization ID for tenant-isolated broadcasts
+                    Long organizationId = extractOrganizationIdFromToken(token);
+                    if (organizationId != null) {
+                        sessionOrganizations.put(session.getId(), organizationId);
+                    }
+
+                    log.info("WebSocket authenticated for user: {} (org: {})", userId, organizationId);
                     
                     // Send welcome message
                     sendMessage(session, createMessage("connected", "WebSocket connection authenticated successfully"));
@@ -72,6 +80,7 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String userId = sessionUsers.remove(session.getId());
+        sessionOrganizations.remove(session.getId());  // SECURITY: Clean up org tracking
         if (userId != null) {
             userSessions.remove(userId);
             log.info("WebSocket connection closed for user: {} - Status: {}", userId, status);
@@ -119,8 +128,11 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
 
     /**
      * Broadcast message to all connected users
+     * @deprecated Use broadcastToOrganization for tenant-isolated broadcasts
      */
+    @Deprecated
     public void broadcastMessage(Object message) {
+        log.warn("SECURITY: broadcastMessage called without organization filter - use broadcastToOrganization instead");
         String messageStr = createMessage("broadcast", message);
         userSessions.values().parallelStream()
                 .filter(WebSocketSession::isOpen)
@@ -129,6 +141,30 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
                         sendMessage(session, messageStr);
                     } catch (Exception e) {
                         log.error("Failed to broadcast message to session {}: {}", session.getId(), e.getMessage());
+                    }
+                });
+    }
+
+    /**
+     * SECURITY: Broadcast message only to users in the specified organization
+     */
+    public void broadcastToOrganization(Long organizationId, Object message) {
+        if (organizationId == null) {
+            log.warn("SECURITY: broadcastToOrganization called with null organizationId - message not sent");
+            return;
+        }
+        String messageStr = createMessage("broadcast", message);
+        userSessions.entrySet().parallelStream()
+                .filter(entry -> {
+                    WebSocketSession session = entry.getValue();
+                    Long sessionOrgId = sessionOrganizations.get(session.getId());
+                    return session.isOpen() && organizationId.equals(sessionOrgId);
+                })
+                .forEach(entry -> {
+                    try {
+                        sendMessage(entry.getValue(), messageStr);
+                    } catch (Exception e) {
+                        log.error("Failed to broadcast message to session {}: {}", entry.getValue().getId(), e.getMessage());
                     }
                 });
     }
@@ -200,6 +236,22 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
                     .getSubject());
         } catch (Exception e) {
             log.error("Failed to extract user ID from token: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private Long extractOrganizationIdFromToken(String token) {
+        try {
+            var decodedJWT = JWT.require(Algorithm.HMAC512(secret.getBytes()))
+                    .build()
+                    .verify(token);
+            var orgClaim = decodedJWT.getClaim("organizationId");
+            if (!orgClaim.isNull()) {
+                return orgClaim.asLong();
+            }
+            return null;
+        } catch (Exception e) {
+            log.error("Failed to extract organization ID from token: {}", e.getMessage());
             return null;
         }
     }

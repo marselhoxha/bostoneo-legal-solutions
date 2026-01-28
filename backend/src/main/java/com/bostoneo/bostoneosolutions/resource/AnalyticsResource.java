@@ -42,14 +42,20 @@ public class AnalyticsResource {
     private final LegalCaseService legalCaseService;
     private final ClientService clientService;
     private final UserService userService;
-    
+    private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
     // Direct repository access for analytics queries
     private final InvoiceRepository invoiceRepository;
     private final LegalCaseRepository legalCaseRepository;
     private final ClientRepository clientRepository;
-    
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     @GetMapping("/total-earnings")
     public double getTotalEarnings() {
@@ -143,9 +149,10 @@ public class AnalyticsResource {
 
     private Map<String, Integer> getActualClientLocationData(List<Client> clients) {
         Map<String, Integer> locationCounts = new HashMap<>();
-        
+        Long orgId = getRequiredOrganizationId();
+
         try {
-            // Query actual client location data from database
+            // Query actual client location data from database - TENANT FILTERED
             String sql = "SELECT " +
                         "CASE " +
                         "  WHEN LOWER(address) LIKE '%boston%' OR LOWER(city) LIKE '%boston%' THEN 'Boston Area' " +
@@ -156,12 +163,12 @@ public class AnalyticsResource {
                         "END as region, " +
                         "COUNT(*) as client_count " +
                         "FROM client " +
-                        "WHERE address IS NOT NULL OR city IS NOT NULL OR state IS NOT NULL " +
+                        "WHERE (address IS NOT NULL OR city IS NOT NULL OR state IS NOT NULL) AND organization_id = ? " +
                         "GROUP BY region " +
                         "HAVING region != 'Unknown' " +
                         "ORDER BY client_count DESC";
-            
-            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+
+            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, orgId);
             
             for (Map<String, Object> row : results) {
                 String region = (String) row.get("region");
@@ -242,15 +249,16 @@ public class AnalyticsResource {
     // Real database query methods using JdbcTemplate
     private Map<String, Double> getMonthlyRevenueFromDB() {
         Map<String, Double> monthlyRevenue = new HashMap<>();
+        Long orgId = getRequiredOrganizationId();
 
         try {
             String sql = "SELECT TO_CHAR(date, 'YYYY-MM') as month, SUM(total) as revenue " +
                         "FROM invoice " +
-                        "WHERE date IS NOT NULL " +
+                        "WHERE date IS NOT NULL AND organization_id = ? " +
                         "GROUP BY TO_CHAR(date, 'YYYY-MM') " +
                         "ORDER BY month";
 
-            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, orgId);
 
             for (Map<String, Object> row : results) {
                 String month = (String) row.get("month");
@@ -270,15 +278,16 @@ public class AnalyticsResource {
 
     private Map<String, Integer> getMonthlyCasesFromDB() {
         Map<String, Integer> monthlyCases = new HashMap<>();
+        Long orgId = getRequiredOrganizationId();
 
         try {
             String sql = "SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as cases " +
                         "FROM legal_cases " +
-                        "WHERE created_at IS NOT NULL " +
+                        "WHERE created_at IS NOT NULL AND organization_id = ? " +
                         "GROUP BY TO_CHAR(created_at, 'YYYY-MM') " +
                         "ORDER BY month";
 
-            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, orgId);
 
             for (Map<String, Object> row : results) {
                 String month = (String) row.get("month");
@@ -298,15 +307,16 @@ public class AnalyticsResource {
 
     private Map<String, Integer> getMonthlyUsersFromDB() {
         Map<String, Integer> monthlyUsers = new HashMap<>();
+        Long orgId = getRequiredOrganizationId();
 
         try {
             String sql = "SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as users " +
                         "FROM users " +
-                        "WHERE created_at IS NOT NULL " +
+                        "WHERE created_at IS NOT NULL AND organization_id = ? " +
                         "GROUP BY TO_CHAR(created_at, 'YYYY-MM') " +
                         "ORDER BY month";
 
-            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, orgId);
 
             for (Map<String, Object> row : results) {
                 String month = (String) row.get("month");
@@ -488,12 +498,13 @@ public class AnalyticsResource {
     }
 
     private double calculateAverageResolutionTimeFromDB() {
+        Long orgId = getRequiredOrganizationId();
         try {
             String sql = "SELECT AVG(EXTRACT(DAY FROM (updated_at - created_at))) as avg_days " +
                         "FROM legal_cases " +
-                        "WHERE status = 'CLOSED' AND created_at IS NOT NULL AND updated_at IS NOT NULL";
+                        "WHERE status = 'CLOSED' AND created_at IS NOT NULL AND updated_at IS NOT NULL AND organization_id = ?";
 
-            Double avgDays = jdbcTemplate.queryForObject(sql, Double.class);
+            Double avgDays = jdbcTemplate.queryForObject(sql, Double.class, orgId);
 
             if (avgDays != null && avgDays > 0) {
                 // Convert days to months
@@ -538,18 +549,19 @@ public class AnalyticsResource {
 
     private Map<String, Integer> getRealActivityDataFromDB() {
         Map<String, Integer> activityData = new HashMap<>();
+        Long orgId = getRequiredOrganizationId();
 
         try {
-            // Query case activity (created and updated)
+            // Query case activity (created and updated) - TENANT FILTERED
             // PostgreSQL EXTRACT(ISODOW FROM ...) returns 1=Monday, 7=Sunday
             String caseActivitySql = "SELECT EXTRACT(ISODOW FROM created_at)::int - 1 as day_of_week, " +
                                    "EXTRACT(HOUR FROM created_at)::int as hour, " +
                                    "COUNT(*) as activity_count " +
                                    "FROM legal_cases " +
-                                   "WHERE created_at >= NOW() - INTERVAL '30 days' " +
+                                   "WHERE created_at >= NOW() - INTERVAL '30 days' AND organization_id = ? " +
                                    "GROUP BY EXTRACT(ISODOW FROM created_at), EXTRACT(HOUR FROM created_at)";
 
-            List<Map<String, Object>> caseResults = jdbcTemplate.queryForList(caseActivitySql);
+            List<Map<String, Object>> caseResults = jdbcTemplate.queryForList(caseActivitySql, orgId);
 
             for (Map<String, Object> row : caseResults) {
                 Integer dayOfWeek = ((Number) row.get("day_of_week")).intValue();
@@ -560,15 +572,15 @@ public class AnalyticsResource {
                 activityData.put(key, activityData.getOrDefault(key, 0) + count);
             }
 
-            // Query invoice activity
+            // Query invoice activity - TENANT FILTERED
             String invoiceActivitySql = "SELECT EXTRACT(ISODOW FROM date)::int - 1 as day_of_week, " +
                                       "EXTRACT(HOUR FROM date)::int as hour, " +
                                       "COUNT(*) as activity_count " +
                                       "FROM invoice " +
-                                      "WHERE date >= NOW() - INTERVAL '30 days' " +
+                                      "WHERE date >= NOW() - INTERVAL '30 days' AND organization_id = ? " +
                                       "GROUP BY EXTRACT(ISODOW FROM date), EXTRACT(HOUR FROM date)";
 
-            List<Map<String, Object>> invoiceResults = jdbcTemplate.queryForList(invoiceActivitySql);
+            List<Map<String, Object>> invoiceResults = jdbcTemplate.queryForList(invoiceActivitySql, orgId);
 
             for (Map<String, Object> row : invoiceResults) {
                 Integer dayOfWeek = ((Number) row.get("day_of_week")).intValue();
@@ -579,16 +591,16 @@ public class AnalyticsResource {
                 activityData.put(key, activityData.getOrDefault(key, 0) + (count * 2)); // Weight invoices higher
             }
 
-            // Query case updates (for ongoing activity)
+            // Query case updates (for ongoing activity) - TENANT FILTERED
             String updateActivitySql = "SELECT EXTRACT(ISODOW FROM updated_at)::int - 1 as day_of_week, " +
                                      "EXTRACT(HOUR FROM updated_at)::int as hour, " +
                                      "COUNT(*) as activity_count " +
                                      "FROM legal_cases " +
                                      "WHERE updated_at >= NOW() - INTERVAL '7 days' " +
-                                     "AND updated_at != created_at " +
+                                     "AND updated_at != created_at AND organization_id = ? " +
                                      "GROUP BY EXTRACT(ISODOW FROM updated_at), EXTRACT(HOUR FROM updated_at)";
 
-            List<Map<String, Object>> updateResults = jdbcTemplate.queryForList(updateActivitySql);
+            List<Map<String, Object>> updateResults = jdbcTemplate.queryForList(updateActivitySql, orgId);
 
             for (Map<String, Object> row : updateResults) {
                 Integer dayOfWeek = ((Number) row.get("day_of_week")).intValue();
@@ -757,14 +769,15 @@ public class AnalyticsResource {
 
     // Helper methods for dashboard metrics
     private double calculateCurrentMonthRevenue() {
+        Long orgId = getRequiredOrganizationId();
         try {
             String currentMonth = YearMonth.now().toString();
             String sql = "SELECT COALESCE(SUM(total), 0) as revenue " +
                         "FROM invoice " +
                         "WHERE TO_CHAR(date, 'YYYY-MM') = ? " +
-                        "AND status = 'PAID'";
+                        "AND status = 'PAID' AND organization_id = ?";
 
-            Double revenue = jdbcTemplate.queryForObject(sql, Double.class, currentMonth);
+            Double revenue = jdbcTemplate.queryForObject(sql, Double.class, currentMonth, orgId);
             return revenue != null ? revenue : 0.0;
 
         } catch (Exception e) {
@@ -837,13 +850,15 @@ public class AnalyticsResource {
     @GetMapping("/invoice-status-distribution")
     public Map<String, Object> getInvoiceStatusDistribution() {
         Map<String, Object> distribution = new HashMap<>();
-        
+        Long orgId = getRequiredOrganizationId();
+
         try {
             String sql = "SELECT status, COUNT(*) as count, SUM(total) as revenue " +
                         "FROM invoice " +
+                        "WHERE organization_id = ? " +
                         "GROUP BY status";
-            
-            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+
+            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, orgId);
             
             Map<String, Integer> statusCounts = new HashMap<>();
             Map<String, Double> statusRevenue = new HashMap<>();
@@ -875,15 +890,16 @@ public class AnalyticsResource {
     @GetMapping("/case-priority-analysis")
     public Map<String, Object> getCasePriorityAnalysis() {
         Map<String, Object> analysis = new HashMap<>();
-        
+        Long orgId = getRequiredOrganizationId();
+
         try {
             String sql = "SELECT priority, status, COUNT(*) as count, AVG(total_amount) as avg_amount " +
                         "FROM legal_cases " +
-                        "WHERE priority IS NOT NULL " +
+                        "WHERE priority IS NOT NULL AND organization_id = ? " +
                         "GROUP BY priority, status " +
                         "ORDER BY priority, status";
-            
-            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+
+            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, orgId);
             
             Map<String, Map<String, Object>> priorityData = new HashMap<>();
             
@@ -911,30 +927,31 @@ public class AnalyticsResource {
     @GetMapping("/recent-activity")
     public Map<String, Object> getRecentActivity() {
         Map<String, Object> activity = new HashMap<>();
+        Long orgId = getRequiredOrganizationId();
 
         try {
-            // Recent cases (last 30 days)
+            // Recent cases (last 30 days) - TENANT FILTERED
             String recentCasesSql = "SELECT COUNT(*) as count " +
                                    "FROM legal_cases " +
-                                   "WHERE created_at >= NOW() - INTERVAL '30 days'";
+                                   "WHERE created_at >= NOW() - INTERVAL '30 days' AND organization_id = ?";
 
-            Integer recentCases = jdbcTemplate.queryForObject(recentCasesSql, Integer.class);
+            Integer recentCases = jdbcTemplate.queryForObject(recentCasesSql, Integer.class, orgId);
 
-            // Recent invoices (last 30 days)
+            // Recent invoices (last 30 days) - TENANT FILTERED
             String recentInvoicesSql = "SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total " +
                                       "FROM invoice " +
-                                      "WHERE date >= NOW() - INTERVAL '30 days'";
+                                      "WHERE date >= NOW() - INTERVAL '30 days' AND organization_id = ?";
 
-            Map<String, Object> invoiceData = jdbcTemplate.queryForMap(recentInvoicesSql);
+            Map<String, Object> invoiceData = jdbcTemplate.queryForMap(recentInvoicesSql, orgId);
             Integer recentInvoices = ((Number) invoiceData.get("count")).intValue();
             Double recentRevenue = ((Number) invoiceData.get("total")).doubleValue();
 
-            // Case status changes (approximated by recent updates)
+            // Case status changes (approximated by recent updates) - TENANT FILTERED
             String statusChangesSql = "SELECT COUNT(*) as count " +
                                      "FROM legal_cases " +
-                                     "WHERE updated_at >= NOW() - INTERVAL '7 days'";
+                                     "WHERE updated_at >= NOW() - INTERVAL '7 days' AND organization_id = ?";
 
-            Integer recentStatusChanges = jdbcTemplate.queryForObject(statusChangesSql, Integer.class);
+            Integer recentStatusChanges = jdbcTemplate.queryForObject(statusChangesSql, Integer.class, orgId);
 
             activity.put("recentCases", recentCases != null ? recentCases : 0);
             activity.put("recentInvoices", recentInvoices);
@@ -958,6 +975,7 @@ public class AnalyticsResource {
     @GetMapping("/payment-trends")
     public List<Map<String, Object>> getPaymentTrends() {
         List<Map<String, Object>> trends = new ArrayList<>();
+        Long orgId = getRequiredOrganizationId();
 
         try {
             String sql = "SELECT TO_CHAR(date, 'YYYY-MM') as month, " +
@@ -968,12 +986,12 @@ public class AnalyticsResource {
                         "COALESCE(SUM(CASE WHEN status = 'PENDING' THEN total ELSE 0 END), 0) as pending_amount, " +
                         "COALESCE(SUM(CASE WHEN status = 'OVERDUE' THEN total ELSE 0 END), 0) as overdue_amount " +
                         "FROM invoice " +
-                        "WHERE date IS NOT NULL " +
+                        "WHERE date IS NOT NULL AND organization_id = ? " +
                         "GROUP BY TO_CHAR(date, 'YYYY-MM') " +
                         "ORDER BY month DESC " +
                         "LIMIT 12";
 
-            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, orgId);
 
             for (Map<String, Object> row : results) {
                 Map<String, Object> trendData = new HashMap<>();
@@ -1002,23 +1020,24 @@ public class AnalyticsResource {
     @GetMapping("/top-case-types")
     public List<Map<String, Object>> getTopCaseTypes() {
         List<Map<String, Object>> caseTypes = new ArrayList<>();
-        
+        Long orgId = getRequiredOrganizationId();
+
         try {
             String sql = """
-                SELECT 
+                SELECT
                     type as case_type,
                     COUNT(*) as count,
                     AVG(total_amount) as avg_value,
                     SUM(total_amount) as total_value,
-                    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM legal_cases), 2) as percentage
-                FROM legal_cases 
-                WHERE type IS NOT NULL
-                GROUP BY type 
+                    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM legal_cases WHERE organization_id = ?), 2) as percentage
+                FROM legal_cases
+                WHERE type IS NOT NULL AND organization_id = ?
+                GROUP BY type
                 ORDER BY count DESC
                 LIMIT 10
                 """;
-                
-            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+
+            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, orgId, orgId);
             
             for (Map<String, Object> row : results) {
                 Map<String, Object> caseType = new HashMap<>();
@@ -1042,9 +1061,10 @@ public class AnalyticsResource {
     @GetMapping("/financial-summary")
     public Map<String, Object> getFinancialSummary() {
         Map<String, Object> summary = new HashMap<>();
+        Long orgId = getRequiredOrganizationId();
 
         try {
-            // Outstanding receivables analysis
+            // Outstanding receivables analysis - TENANT FILTERED
             String receivablesSQL = """
                 SELECT
                     COALESCE(SUM(CASE WHEN status = 'PENDING' THEN total ELSE 0 END), 0) as pending_amount,
@@ -1054,24 +1074,24 @@ public class AnalyticsResource {
                     COUNT(CASE WHEN status = 'OVERDUE' AND EXTRACT(DAY FROM (NOW() - date)) BETWEEN 60 AND 90 THEN 1 END) as overdue_60_90,
                     COUNT(CASE WHEN status = 'OVERDUE' AND EXTRACT(DAY FROM (NOW() - date)) BETWEEN 30 AND 60 THEN 1 END) as overdue_30_60,
                     COUNT(CASE WHEN status = 'OVERDUE' AND EXTRACT(DAY FROM (NOW() - date)) < 30 THEN 1 END) as overdue_under_30
-                FROM invoice
+                FROM invoice WHERE organization_id = ?
                 """;
 
-            Map<String, Object> receivables = jdbcTemplate.queryForMap(receivablesSQL);
+            Map<String, Object> receivables = jdbcTemplate.queryForMap(receivablesSQL, orgId);
             summary.put("receivables", receivables);
 
-            // Collection rate analysis
+            // Collection rate analysis - TENANT FILTERED
             String collectionSQL = """
                 SELECT
                     ROUND(COALESCE(SUM(CASE WHEN status = 'PAID' THEN total ELSE 0 END), 0) * 100.0 / NULLIF(SUM(total), 0), 2) as collection_rate,
                     ROUND(AVG(EXTRACT(DAY FROM (NOW() - date))), 0) as avg_days_outstanding
-                FROM invoice
+                FROM invoice WHERE organization_id = ?
                 """;
 
-            Map<String, Object> collection = jdbcTemplate.queryForMap(collectionSQL);
+            Map<String, Object> collection = jdbcTemplate.queryForMap(collectionSQL, orgId);
             summary.put("collection", collection);
 
-            // Revenue by month for trend analysis
+            // Revenue by month for trend analysis - TENANT FILTERED
             String monthlyRevenueSQL = """
                 SELECT
                     TO_CHAR(date, 'YYYY-MM') as month,
@@ -1079,12 +1099,12 @@ public class AnalyticsResource {
                     COUNT(CASE WHEN status = 'PAID' THEN 1 END) as paid_invoices,
                     COALESCE(SUM(total), 0) as total_billed
                 FROM invoice
-                WHERE date >= NOW() - INTERVAL '12 months'
+                WHERE date >= NOW() - INTERVAL '12 months' AND organization_id = ?
                 GROUP BY TO_CHAR(date, 'YYYY-MM')
                 ORDER BY month
                 """;
 
-            List<Map<String, Object>> monthlyRevenue = jdbcTemplate.queryForList(monthlyRevenueSQL);
+            List<Map<String, Object>> monthlyRevenue = jdbcTemplate.queryForList(monthlyRevenueSQL, orgId);
             summary.put("monthlyTrends", monthlyRevenue);
 
         } catch (Exception e) {
@@ -1100,9 +1120,10 @@ public class AnalyticsResource {
     @GetMapping("/case-performance-metrics")
     public Map<String, Object> getCasePerformanceMetrics() {
         Map<String, Object> metrics = new HashMap<>();
+        Long orgId = getRequiredOrganizationId();
 
         try {
-            // Case status distribution with values
+            // Case status distribution with values - TENANT FILTERED
             String statusSQL = """
                 SELECT
                     status,
@@ -1112,40 +1133,40 @@ public class AnalyticsResource {
                     AVG(EXTRACT(DAY FROM (
                         COALESCE(updated_at, NOW()) - created_at
                     ))) as avg_duration_days
-                FROM legal_cases
+                FROM legal_cases WHERE organization_id = ?
                 GROUP BY status
                 ORDER BY count DESC
                 """;
-                
-            List<Map<String, Object>> statusMetrics = jdbcTemplate.queryForList(statusSQL);
+
+            List<Map<String, Object>> statusMetrics = jdbcTemplate.queryForList(statusSQL, orgId);
             metrics.put("statusBreakdown", statusMetrics);
-            
-            // Case priority analysis
+
+            // Case priority analysis - TENANT FILTERED
             String prioritySQL = """
-                SELECT 
+                SELECT
                     priority,
                     COUNT(*) as count,
                     AVG(total_amount) as avg_value,
-                    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM legal_cases), 2) as percentage
-                FROM legal_cases 
-                WHERE priority IS NOT NULL
+                    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM legal_cases WHERE organization_id = ?), 2) as percentage
+                FROM legal_cases
+                WHERE priority IS NOT NULL AND organization_id = ?
                 GROUP BY priority
-                ORDER BY 
-                    CASE priority 
-                        WHEN 'URGENT' THEN 1 
-                        WHEN 'HIGH' THEN 2 
-                        WHEN 'MEDIUM' THEN 3 
-                        WHEN 'LOW' THEN 4 
+                ORDER BY
+                    CASE priority
+                        WHEN 'URGENT' THEN 1
+                        WHEN 'HIGH' THEN 2
+                        WHEN 'MEDIUM' THEN 3
+                        WHEN 'LOW' THEN 4
                     END
                 """;
-                
-            List<Map<String, Object>> priorityMetrics = jdbcTemplate.queryForList(prioritySQL);
+
+            List<Map<String, Object>> priorityMetrics = jdbcTemplate.queryForList(prioritySQL, orgId, orgId);
             metrics.put("priorityAnalysis", priorityMetrics);
-            
-            // Case value distribution
+
+            // Case value distribution - TENANT FILTERED
             String valueSQL = """
-                SELECT 
-                    CASE 
+                SELECT
+                    CASE
                         WHEN total_amount < 5000 THEN 'Under $5K'
                         WHEN total_amount < 15000 THEN '$5K - $15K'
                         WHEN total_amount < 50000 THEN '$15K - $50K'
@@ -1154,13 +1175,13 @@ public class AnalyticsResource {
                     END as value_range,
                     COUNT(*) as count,
                     SUM(total_amount) as total_value
-                FROM legal_cases 
-                WHERE total_amount IS NOT NULL
+                FROM legal_cases
+                WHERE total_amount IS NOT NULL AND organization_id = ?
                 GROUP BY value_range
                 ORDER BY MIN(total_amount)
                 """;
-                
-            List<Map<String, Object>> valueDistribution = jdbcTemplate.queryForList(valueSQL);
+
+            List<Map<String, Object>> valueDistribution = jdbcTemplate.queryForList(valueSQL, orgId);
             metrics.put("valueDistribution", valueDistribution);
             
         } catch (Exception e) {
@@ -1176,9 +1197,10 @@ public class AnalyticsResource {
     @GetMapping("/team-productivity")
     public Map<String, Object> getTeamProductivity() {
         Map<String, Object> productivity = new HashMap<>();
+        Long orgId = getRequiredOrganizationId();
 
         try {
-            // User activity analysis (based on available data)
+            // User activity analysis (based on available data) - TENANT FILTERED
             String userSQL = """
                 SELECT
                     u.id,
@@ -1188,16 +1210,16 @@ public class AnalyticsResource {
                     COALESCE(SUM(lc.total_amount), 0) as total_case_value,
                     COALESCE(AVG(lc.total_amount), 0) as avg_case_value
                 FROM users u
-                LEFT JOIN legal_cases lc ON u.id % 17 = lc.id % 7
-                WHERE u.enabled = true
+                LEFT JOIN legal_cases lc ON u.id % 17 = lc.id % 7 AND lc.organization_id = ?
+                WHERE u.enabled = true AND u.organization_id = ?
                 GROUP BY u.id, u.first_name, u.last_name, u.title
                 ORDER BY total_case_value DESC
                 """;
 
-            List<Map<String, Object>> teamMetrics = jdbcTemplate.queryForList(userSQL);
+            List<Map<String, Object>> teamMetrics = jdbcTemplate.queryForList(userSQL, orgId, orgId);
             productivity.put("teamPerformance", teamMetrics);
 
-            // Department productivity (simulated based on titles)
+            // Department productivity (simulated based on titles) - TENANT FILTERED
             String deptSQL = """
                 SELECT
                     COALESCE(u.title, 'General') as department,
@@ -1205,13 +1227,13 @@ public class AnalyticsResource {
                     COUNT(DISTINCT lc.id) as total_cases,
                     COALESCE(SUM(lc.total_amount), 0) as total_revenue
                 FROM users u
-                LEFT JOIN legal_cases lc ON u.id % 17 = lc.id % 7
-                WHERE u.enabled = true
+                LEFT JOIN legal_cases lc ON u.id % 17 = lc.id % 7 AND lc.organization_id = ?
+                WHERE u.enabled = true AND u.organization_id = ?
                 GROUP BY u.title
                 ORDER BY total_revenue DESC
                 """;
 
-            List<Map<String, Object>> deptMetrics = jdbcTemplate.queryForList(deptSQL);
+            List<Map<String, Object>> deptMetrics = jdbcTemplate.queryForList(deptSQL, orgId, orgId);
             productivity.put("departmentMetrics", deptMetrics);
 
         } catch (Exception e) {
@@ -1226,46 +1248,48 @@ public class AnalyticsResource {
     @GetMapping("/client-analytics")
     public Map<String, Object> getClientAnalytics() {
         Map<String, Object> analytics = new HashMap<>();
+        Long orgId = getRequiredOrganizationId();
 
         try {
-            // Client acquisition trends
+            // Client acquisition trends - TENANT FILTERED
             String acquisitionSQL = """
                 SELECT
                     TO_CHAR(created_at, 'YYYY-MM') as month,
                     COUNT(*) as new_clients,
                     AVG(
-                        (SELECT COUNT(*) FROM invoice i WHERE i.client_id = c.id)
+                        (SELECT COUNT(*) FROM invoice i WHERE i.client_id = c.id AND i.organization_id = ?)
                     ) as avg_invoices_per_client
                 FROM client c
-                WHERE created_at >= NOW() - INTERVAL '12 months'
+                WHERE created_at >= NOW() - INTERVAL '12 months' AND organization_id = ?
                 GROUP BY TO_CHAR(created_at, 'YYYY-MM')
                 ORDER BY month
                 """;
-                
-            List<Map<String, Object>> acquisition = jdbcTemplate.queryForList(acquisitionSQL);
+
+            List<Map<String, Object>> acquisition = jdbcTemplate.queryForList(acquisitionSQL, orgId, orgId);
             analytics.put("acquisitionTrends", acquisition);
-            
-            // Client value analysis
+
+            // Client value analysis - TENANT FILTERED
             String valueSQL = """
-                SELECT 
+                SELECT
                     c.type as client_type,
                     COUNT(c.id) as client_count,
                     COUNT(i.id) as total_invoices,
                     COALESCE(SUM(i.total), 0) as total_revenue,
                     COALESCE(AVG(i.total), 0) as avg_invoice_value
                 FROM client c
-                LEFT JOIN invoice i ON c.id = i.client_id
+                LEFT JOIN invoice i ON c.id = i.client_id AND i.organization_id = ?
+                WHERE c.organization_id = ?
                 GROUP BY c.type
                 ORDER BY total_revenue DESC
                 """;
-                
-            List<Map<String, Object>> clientValue = jdbcTemplate.queryForList(valueSQL);
+
+            List<Map<String, Object>> clientValue = jdbcTemplate.queryForList(valueSQL, orgId, orgId);
             analytics.put("clientValueAnalysis", clientValue);
-            
-            // Geographic distribution (enhanced)
+
+            // Geographic distribution (enhanced) - TENANT FILTERED
             String geoSQL = """
-                SELECT 
-                    CASE 
+                SELECT
+                    CASE
                         WHEN address LIKE '%Boston%' OR address LIKE '%Cambridge%' OR address LIKE '%Somerville%' THEN 'Boston Metro'
                         WHEN address LIKE '%MA%' OR address LIKE '%Massachusetts%' THEN 'Massachusetts'
                         WHEN address LIKE '%NH%' OR address LIKE '%ME%' OR address LIKE '%VT%' OR address LIKE '%RI%' OR address LIKE '%CT%' THEN 'New England'
@@ -1274,13 +1298,13 @@ public class AnalyticsResource {
                     COUNT(*) as client_count,
                     COALESCE(SUM(i.total), 0) as total_revenue
                 FROM client c
-                LEFT JOIN invoice i ON c.id = i.client_id AND i.status = 'PAID'
-                WHERE c.address IS NOT NULL
+                LEFT JOIN invoice i ON c.id = i.client_id AND i.status = 'PAID' AND i.organization_id = ?
+                WHERE c.address IS NOT NULL AND c.organization_id = ?
                 GROUP BY region
                 ORDER BY client_count DESC
                 """;
-                
-            List<Map<String, Object>> geographic = jdbcTemplate.queryForList(geoSQL);
+
+            List<Map<String, Object>> geographic = jdbcTemplate.queryForList(geoSQL, orgId, orgId);
             analytics.put("geographicDistribution", geographic);
             
         } catch (Exception e) {
@@ -1296,9 +1320,10 @@ public class AnalyticsResource {
     @GetMapping("/business-intelligence")
     public Map<String, Object> getBusinessIntelligence() {
         Map<String, Object> intelligence = new HashMap<>();
+        Long orgId = getRequiredOrganizationId();
 
         try {
-            // Revenue vs Cases correlation
+            // Revenue vs Cases correlation - TENANT FILTERED
             String correlationSQL = """
                 SELECT
                     TO_CHAR(COALESCE(i.date, lc.created_at), 'YYYY-MM') as month,
@@ -1307,19 +1332,19 @@ public class AnalyticsResource {
                     COALESCE(SUM(CASE WHEN i.status = 'PAID' THEN i.total END), 0) as revenue,
                     COALESCE(SUM(i.total), 0) as total_billed
                 FROM legal_cases lc
-                LEFT JOIN invoice i ON TO_CHAR(lc.created_at, 'YYYY-MM') = TO_CHAR(i.date, 'YYYY-MM')
-                WHERE COALESCE(i.date, lc.created_at) >= NOW() - INTERVAL '12 months'
+                LEFT JOIN invoice i ON TO_CHAR(lc.created_at, 'YYYY-MM') = TO_CHAR(i.date, 'YYYY-MM') AND i.organization_id = ?
+                WHERE COALESCE(i.date, lc.created_at) >= NOW() - INTERVAL '12 months' AND lc.organization_id = ?
                 GROUP BY TO_CHAR(COALESCE(i.date, lc.created_at), 'YYYY-MM')
                 ORDER BY month
                 """;
 
-            List<Map<String, Object>> correlation = jdbcTemplate.queryForList(correlationSQL);
+            List<Map<String, Object>> correlation = jdbcTemplate.queryForList(correlationSQL, orgId, orgId);
             intelligence.put("revenueVsCases", correlation);
 
             // Performance benchmarks
             Map<String, Object> benchmarks = new HashMap<>();
 
-            // Average case value by practice area
+            // Average case value by practice area - TENANT FILTERED
             String practiceValueSQL = """
                 SELECT
                     type as practice_area,
@@ -1330,15 +1355,15 @@ public class AnalyticsResource {
                         COALESCE(updated_at, NOW()) - created_at
                     ))) as avg_days_to_resolution
                 FROM legal_cases
-                WHERE type IS NOT NULL AND total_amount IS NOT NULL
+                WHERE type IS NOT NULL AND total_amount IS NOT NULL AND organization_id = ?
                 GROUP BY type
                 ORDER BY avg_case_value DESC
                 """;
 
-            List<Map<String, Object>> practiceMetrics = jdbcTemplate.queryForList(practiceValueSQL);
+            List<Map<String, Object>> practiceMetrics = jdbcTemplate.queryForList(practiceValueSQL, orgId);
             benchmarks.put("practiceAreaPerformance", practiceMetrics);
 
-            // Collection efficiency
+            // Collection efficiency - TENANT FILTERED
             String efficiencySQL = """
                 SELECT
                     ROUND(
@@ -1352,10 +1377,10 @@ public class AnalyticsResource {
                     ), 0) as avg_collection_days,
                     COUNT(CASE WHEN status = 'OVERDUE' THEN 1 END) as overdue_count,
                     COALESCE(SUM(CASE WHEN status = 'OVERDUE' THEN total ELSE 0 END), 0) as overdue_amount
-                FROM invoice
+                FROM invoice WHERE organization_id = ?
                 """;
 
-            Map<String, Object> efficiency = jdbcTemplate.queryForMap(efficiencySQL);
+            Map<String, Object> efficiency = jdbcTemplate.queryForMap(efficiencySQL, orgId);
             benchmarks.put("collectionEfficiency", efficiency);
 
             intelligence.put("benchmarks", benchmarks);
@@ -1373,26 +1398,27 @@ public class AnalyticsResource {
     @GetMapping("/billing-summary")
     public Map<String, Object> getBillingSummary() {
         Map<String, Object> summary = new HashMap<>();
-        
+        Long orgId = getRequiredOrganizationId();
+
         try {
-            // Total revenue from paid invoices
-            String revenueSQL = "SELECT COALESCE(SUM(total_amount), 0) as total_revenue FROM invoices WHERE status = 'PAID'";
-            Double totalRevenue = jdbcTemplate.queryForObject(revenueSQL, Double.class);
-            
-            // Pending and overdue invoices
-            String pendingSQL = "SELECT COUNT(*) as pending_count, COALESCE(SUM(total_amount), 0) as pending_amount FROM invoices WHERE status = 'PENDING'";
-            Map<String, Object> pendingData = jdbcTemplate.queryForMap(pendingSQL);
-            
-            String overdueSQL = "SELECT COUNT(*) as overdue_count, COALESCE(SUM(total_amount), 0) as overdue_amount FROM invoices WHERE status = 'OVERDUE'";
-            Map<String, Object> overdueData = jdbcTemplate.queryForMap(overdueSQL);
-            
-            // Total clients
-            String clientSQL = "SELECT COUNT(*) as total_clients FROM clients";
-            Long totalClients = jdbcTemplate.queryForObject(clientSQL, Long.class);
-            
-            // Average rate calculation
-            String avgRateSQL = "SELECT COALESCE(AVG(total_amount), 0) as avg_rate FROM invoices WHERE status IN ('PAID', 'PENDING')";
-            Double averageRate = jdbcTemplate.queryForObject(avgRateSQL, Double.class);
+            // Total revenue from paid invoices - TENANT FILTERED
+            String revenueSQL = "SELECT COALESCE(SUM(total_amount), 0) as total_revenue FROM invoices WHERE status = 'PAID' AND organization_id = ?";
+            Double totalRevenue = jdbcTemplate.queryForObject(revenueSQL, Double.class, orgId);
+
+            // Pending and overdue invoices - TENANT FILTERED
+            String pendingSQL = "SELECT COUNT(*) as pending_count, COALESCE(SUM(total_amount), 0) as pending_amount FROM invoices WHERE status = 'PENDING' AND organization_id = ?";
+            Map<String, Object> pendingData = jdbcTemplate.queryForMap(pendingSQL, orgId);
+
+            String overdueSQL = "SELECT COUNT(*) as overdue_count, COALESCE(SUM(total_amount), 0) as overdue_amount FROM invoices WHERE status = 'OVERDUE' AND organization_id = ?";
+            Map<String, Object> overdueData = jdbcTemplate.queryForMap(overdueSQL, orgId);
+
+            // Total clients - TENANT FILTERED
+            String clientSQL = "SELECT COUNT(*) as total_clients FROM clients WHERE organization_id = ?";
+            Long totalClients = jdbcTemplate.queryForObject(clientSQL, Long.class, orgId);
+
+            // Average rate calculation - TENANT FILTERED
+            String avgRateSQL = "SELECT COALESCE(AVG(total_amount), 0) as avg_rate FROM invoices WHERE status IN ('PAID', 'PENDING') AND organization_id = ?";
+            Double averageRate = jdbcTemplate.queryForObject(avgRateSQL, Double.class, orgId);
             
             summary.put("totalRevenue", totalRevenue != null ? totalRevenue : 0.0);
             summary.put("pendingInvoices", pendingData.get("pending_count"));
@@ -1419,10 +1445,11 @@ public class AnalyticsResource {
     @GetMapping("/top-clients")
     public List<Map<String, Object>> getTopClientsByRevenue() {
         List<Map<String, Object>> topClients = new ArrayList<>();
-        
+        Long orgId = getRequiredOrganizationId();
+
         try {
             String sql = """
-                SELECT 
+                SELECT
                     c.id,
                     c.name,
                     c.type,
@@ -1431,14 +1458,15 @@ public class AnalyticsResource {
                     COALESCE(AVG(i.total_amount), 0) as avg_invoice_value,
                     MAX(i.issue_date) as last_invoice_date
                 FROM clients c
-                LEFT JOIN invoices i ON c.id = i.client_id
+                LEFT JOIN invoices i ON c.id = i.client_id AND i.organization_id = ?
+                WHERE c.organization_id = ?
                 GROUP BY c.id, c.name, c.type
-                HAVING total_revenue > 0
+                HAVING COALESCE(SUM(CASE WHEN i.status = 'PAID' THEN i.total_amount END), 0) > 0
                 ORDER BY total_revenue DESC
                 LIMIT 10
                 """;
-                
-            topClients = jdbcTemplate.queryForList(sql);
+
+            topClients = jdbcTemplate.queryForList(sql, orgId, orgId);
             
         } catch (Exception e) {
             log.error("Error getting top clients: " + e.getMessage());
@@ -1450,10 +1478,11 @@ public class AnalyticsResource {
     @GetMapping("/case-profitability")
     public List<Map<String, Object>> getCaseProfitability() {
         List<Map<String, Object>> caseProfitability = new ArrayList<>();
-        
+        Long orgId = getRequiredOrganizationId();
+
         try {
             String sql = """
-                SELECT 
+                SELECT
                     lc.id as case_id,
                     lc.title as case_name,
                     lc.case_number,
@@ -1464,14 +1493,14 @@ public class AnalyticsResource {
                     COUNT(i.id) as invoice_count
                 FROM legal_cases lc
                 LEFT JOIN clients c ON lc.client_id = c.id
-                LEFT JOIN invoices i ON lc.client_id = i.client_id
-                WHERE lc.total_amount IS NOT NULL AND lc.total_amount > 0
+                LEFT JOIN invoices i ON lc.client_id = i.client_id AND i.organization_id = ?
+                WHERE lc.total_amount IS NOT NULL AND lc.total_amount > 0 AND lc.organization_id = ?
                 GROUP BY lc.id, lc.title, lc.case_number, c.name, lc.total_amount, lc.status
                 ORDER BY lc.total_amount DESC
                 LIMIT 20
                 """;
-                
-            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+
+            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, orgId, orgId);
             
             for (Map<String, Object> row : results) {
                 Map<String, Object> caseData = new HashMap<>();

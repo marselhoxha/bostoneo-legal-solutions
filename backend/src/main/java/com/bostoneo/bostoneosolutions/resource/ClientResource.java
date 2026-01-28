@@ -18,6 +18,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,6 +47,7 @@ public class ClientResource {
 
 
     @GetMapping
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getClients(
             @AuthenticationPrincipal UserDTO user,
             @RequestParam Optional<Integer> page,
@@ -96,6 +98,7 @@ public class ClientResource {
     }
 
     @PostMapping("/save")
+    @PreAuthorize("hasAuthority('CLIENT:CREATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "CLIENT", description = "Created new client")
     public ResponseEntity<HttpResponse> saveClient(@AuthenticationPrincipal UserDTO user, @RequestBody @Valid Client client) {
         return ResponseEntity.created(URI.create("")).body(
@@ -109,6 +112,7 @@ public class ClientResource {
     }
 
     @GetMapping("/get/{id}")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getClient(@AuthenticationPrincipal UserDTO user, @PathVariable("id") Long id) {
         Client client = clientService.getClient(id);
         return ResponseEntity.ok(
@@ -122,6 +126,7 @@ public class ClientResource {
     }
 
     @GetMapping("/search")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> searchClients(@AuthenticationPrincipal UserDTO user,
                                                        @RequestParam Optional<String> name, 
                                                        @RequestParam Optional<Integer> page, 
@@ -138,6 +143,7 @@ public class ClientResource {
     }
 
     @GetMapping("/with-unbilled-time-entries")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> getClientsWithUnbilledTimeEntries(@AuthenticationPrincipal UserDTO user) {
         
         // Add null checking for authentication principal
@@ -185,6 +191,7 @@ public class ClientResource {
     }
 
     @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasAuthority('CLIENT:DELETE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "DELETE", entityType = "CUSTOMER", description = "Deleted client and associated data")
     public ResponseEntity<HttpResponse> deleteClient(@PathVariable("id") Long id) {
         clientService.deleteClient(id);
@@ -198,6 +205,7 @@ public class ClientResource {
     }
 
     @PutMapping("/update")
+    @PreAuthorize("hasAuthority('CLIENT:UPDATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "UPDATE", entityType = "CUSTOMER", description = "Updated client information")
     public ResponseEntity<HttpResponse> updateClient(@AuthenticationPrincipal UserDTO user, @RequestBody @Valid Client client) {
         return ResponseEntity.ok(
@@ -211,6 +219,7 @@ public class ClientResource {
     }
 
     @PostMapping("/invoice/create")
+    @PreAuthorize("hasAuthority('CREATE:INVOICE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "INVOICE", description = "Created new invoice")
     public ResponseEntity<HttpResponse> createInvoice(@AuthenticationPrincipal UserDTO user, @RequestBody Invoice invoice) {
 
@@ -227,6 +236,7 @@ public class ClientResource {
     }
 
     @GetMapping("/invoice/new")
+    @PreAuthorize("hasAuthority('CREATE:INVOICE') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> newInvoice(@AuthenticationPrincipal UserDTO user) {
 
         return ResponseEntity.ok(
@@ -242,6 +252,7 @@ public class ClientResource {
     }
 
     @GetMapping("/invoice/list")
+    @PreAuthorize("hasAuthority('READ:INVOICE') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getInvoices(@AuthenticationPrincipal UserDTO user, @RequestParam Optional<Integer> page, @RequestParam Optional<Integer> size) {
         // Role-based invoice filtering
         boolean isAdmin = user.getRoles() != null && 
@@ -284,6 +295,7 @@ public class ClientResource {
     }
 
     @GetMapping("/invoice/get/{id}")
+    @PreAuthorize("hasAuthority('READ:INVOICE') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getInvoice(@AuthenticationPrincipal UserDTO user, @PathVariable("id") Long id) {
         Invoice invoice = clientService.getInvoice(id);
         return ResponseEntity.ok(
@@ -297,6 +309,7 @@ public class ClientResource {
     }
 
     @PostMapping("/invoice/addtoclient/{id}")
+    @PreAuthorize("hasAuthority('CREATE:INVOICE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "INVOICE", description = "Added invoice to client account")
     public ResponseEntity<HttpResponse> addInvoiceToClient(@AuthenticationPrincipal UserDTO user, @PathVariable("id") Long id, @RequestBody Invoice invoice) {
         clientService.addInvoiceToClient(id, invoice);
@@ -313,6 +326,7 @@ public class ClientResource {
     }
 
     @DeleteMapping("/invoice/get/{id}")
+    @PreAuthorize("hasAuthority('DELETE:INVOICE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "DELETE", entityType = "INVOICE", description = "Deleted invoice")
     public ResponseEntity<Void> deleteInvoice(@PathVariable Long id) {
         clientService.deleteInvoice(id);
@@ -320,6 +334,7 @@ public class ClientResource {
     }
 
     @GetMapping("/download/report")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "EXPORT", entityType = "CLIENT", description = "Exported client report")
     public ResponseEntity<Resource> downloadReport() {
         List<Client> clients = new ArrayList<>();
@@ -333,6 +348,7 @@ public class ClientResource {
     }
 
     @GetMapping("/invoice/download/invoice-report")
+    @PreAuthorize("hasAuthority('READ:INVOICE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "EXPORT", entityType = "INVOICE", description = "Exported invoice report")
     public ResponseEntity<Resource> downloadInvoiceReport(@RequestParam Optional<Integer> page, @RequestParam Optional<Integer> size) {
         List<Invoice> invoices = new ArrayList<>();
@@ -346,6 +362,7 @@ public class ClientResource {
     }
 
     @PutMapping("/invoice/update/{id}")
+    @PreAuthorize("hasAuthority('UPDATE:INVOICE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "UPDATE", entityType = "INVOICE", description = "Updated invoice details")
     public ResponseEntity<HttpResponse> updateInvoice(@AuthenticationPrincipal UserDTO user, @PathVariable("id") Long id, @RequestBody Invoice invoice) {
         invoice.setId(id);

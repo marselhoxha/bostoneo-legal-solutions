@@ -1,6 +1,8 @@
 package com.bostoneo.bostoneosolutions.scheduler;
 
 import com.bostoneo.bostoneosolutions.enumeration.SignatureStatus;
+import com.bostoneo.bostoneosolutions.model.Organization;
+import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
 import com.bostoneo.bostoneosolutions.repository.SignatureRequestRepository;
 import com.bostoneo.bostoneosolutions.service.SignatureReminderService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Scheduler for processing signature reminders and updating expired requests.
@@ -18,6 +21,8 @@ import java.time.LocalDateTime;
  * 2. Mark expired signature requests as EXPIRED
  * 3. Retry failed reminders
  * 4. Clean up old reminder records
+ *
+ * TENANT ISOLATED: Processes each organization separately
  */
 @Component
 @RequiredArgsConstructor
@@ -26,6 +31,7 @@ public class SignatureReminderScheduler {
 
     private final SignatureReminderService signatureReminderService;
     private final SignatureRequestRepository signatureRequestRepository;
+    private final OrganizationRepository organizationRepository;
 
     /**
      * Process pending reminders every 15 minutes.
@@ -45,27 +51,33 @@ public class SignatureReminderScheduler {
     /**
      * Check for expired signature requests every hour.
      * Updates status from SENT/VIEWED/PARTIALLY_SIGNED to EXPIRED.
+     * TENANT ISOLATED: Processes each organization separately
      */
     @Scheduled(cron = "0 0 * * * *") // Every hour at minute 0
     @Transactional
     public void processExpiredRequests() {
         log.info("Checking for expired signature requests...");
         try {
-            var expiredRequests = signatureRequestRepository.findExpired(LocalDateTime.now());
+            List<Organization> organizations = organizationRepository.findAll();
+            LocalDateTime now = LocalDateTime.now();
+            int totalCount = 0;
 
-            int count = 0;
-            for (var request : expiredRequests) {
-                request.setStatus(SignatureStatus.EXPIRED);
-                signatureRequestRepository.save(request);
+            for (Organization org : organizations) {
+                var expiredRequests = signatureRequestRepository.findExpiredByOrganizationId(org.getId(), now);
 
-                // Cancel any pending reminders
-                signatureReminderService.cancelReminders(request.getId());
+                for (var request : expiredRequests) {
+                    request.setStatus(SignatureStatus.EXPIRED);
+                    signatureRequestRepository.save(request);
 
-                count++;
+                    // Cancel any pending reminders
+                    signatureReminderService.cancelReminders(request.getId());
+
+                    totalCount++;
+                }
             }
 
-            if (count > 0) {
-                log.info("Marked {} signature requests as expired", count);
+            if (totalCount > 0) {
+                log.info("Marked {} signature requests as expired", totalCount);
             }
         } catch (Exception e) {
             log.error("Error processing expired requests: {}", e.getMessage(), e);
@@ -105,27 +117,31 @@ public class SignatureReminderScheduler {
     /**
      * Send expiry warnings for requests expiring soon.
      * Runs daily to catch any requests that might not have reminders scheduled.
+     * TENANT ISOLATED: Processes each organization separately
      */
     @Scheduled(cron = "0 0 9 * * *") // Every day at 9 AM
     public void sendExpiryWarnings() {
         log.info("Checking for signature requests expiring soon...");
         try {
+            List<Organization> organizations = organizationRepository.findAll();
             LocalDateTime now = LocalDateTime.now();
             LocalDateTime tomorrow = now.plusDays(1);
 
-            var expiringSoon = signatureRequestRepository.findExpiringSoon(now, tomorrow);
+            for (Organization org : organizations) {
+                var expiringSoon = signatureRequestRepository.findExpiringSoonByOrganizationId(org.getId(), now, tomorrow);
 
-            for (var request : expiringSoon) {
-                // Only send if no reminder was sent in the last 12 hours
-                if (request.getLastReminderSentAt() == null ||
-                        request.getLastReminderSentAt().isBefore(now.minusHours(12))) {
-                    try {
-                        signatureReminderService.sendImmediateReminder(request.getId(), null);
-                        log.info("Sent expiry warning for request {} expiring at {}",
-                                request.getId(), request.getExpiresAt());
-                    } catch (Exception e) {
-                        log.error("Failed to send expiry warning for request {}: {}",
-                                request.getId(), e.getMessage());
+                for (var request : expiringSoon) {
+                    // Only send if no reminder was sent in the last 12 hours
+                    if (request.getLastReminderSentAt() == null ||
+                            request.getLastReminderSentAt().isBefore(now.minusHours(12))) {
+                        try {
+                            signatureReminderService.sendImmediateReminder(request.getId(), null);
+                            log.info("Sent expiry warning for request {} expiring at {}",
+                                    request.getId(), request.getExpiresAt());
+                        } catch (Exception e) {
+                            log.error("Failed to send expiry warning for request {}: {}",
+                                    request.getId(), e.getMessage());
+                        }
                     }
                 }
             }

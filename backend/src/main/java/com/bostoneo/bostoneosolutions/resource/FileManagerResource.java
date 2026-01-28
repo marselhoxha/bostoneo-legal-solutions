@@ -43,7 +43,7 @@ public class FileManagerResource {
     
     @GetMapping("/files")
     @Operation(summary = "Get files with pagination and filtering")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<Page<FileItemDTO>> getFiles(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
@@ -71,7 +71,7 @@ public class FileManagerResource {
     
     @GetMapping("/files/{fileId}")
     @Operation(summary = "Get file details")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<FileItemDTO> getFile(@PathVariable Long fileId) {
         try {
             FileItemDTO file = fileManagerService.getFile(fileId);
@@ -84,7 +84,7 @@ public class FileManagerResource {
     
     @PostMapping(value = "/files/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload a file")
-    // @PreAuthorize("hasAuthority('DOCUMENT:CREATE') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:CREATE') or hasRole('ROLE_USER')")
     public ResponseEntity<FileUploadResponseDTO> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam(required = false) Long folderId,
@@ -135,7 +135,7 @@ public class FileManagerResource {
     
     @PutMapping("/files/{fileId}")
     @Operation(summary = "Update file metadata")
-    // @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
     public ResponseEntity<FileItemDTO> updateFile(
             @PathVariable Long fileId,
             @Valid @RequestBody UpdateFileRequestDTO request) {
@@ -146,7 +146,7 @@ public class FileManagerResource {
     
     @PutMapping("/files/{fileId}/content")
     @Operation(summary = "Replace file content (creates new version)")
-    // @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
     public ResponseEntity<FileVersionDTO> replaceFileContent(
             @PathVariable Long fileId,
             @RequestParam("file") MultipartFile file,
@@ -158,7 +158,7 @@ public class FileManagerResource {
     
     @DeleteMapping("/files/{fileId}")
     @Operation(summary = "Soft delete a file")
-    // @PreAuthorize("hasAuthority('DOCUMENT:DELETE') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:DELETE') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, String>> deleteFile(@PathVariable Long fileId) {
         fileManagerService.deleteFile(fileId);
         return ResponseEntity.ok(Map.of("message", "File deleted successfully"));
@@ -166,7 +166,7 @@ public class FileManagerResource {
 
     @PostMapping("/files/{fileId}/restore")
     @Operation(summary = "Restore a deleted file")
-    // @PreAuthorize("hasAuthority('DOCUMENT:RESTORE') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:RESTORE') or hasRole('ROLE_USER')")
     public ResponseEntity<FileItemDTO> restoreFile(@PathVariable Long fileId) {
         try {
             FileItemDTO restoredFile = fileManagerService.restoreFile(fileId);
@@ -179,7 +179,7 @@ public class FileManagerResource {
 
     @DeleteMapping("/files/{fileId}/permanent")
     @Operation(summary = "Permanently delete a file")
-    // @PreAuthorize("hasAuthority('DOCUMENT:PERMANENT_DELETE') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('DOCUMENT:PERMANENT_DELETE') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<Map<String, String>> permanentlyDeleteFile(@PathVariable Long fileId) {
         log.info("Permanent delete endpoint called for file ID: {}", fileId);
         try {
@@ -194,7 +194,7 @@ public class FileManagerResource {
 
     @GetMapping("/files/deleted")
     @Operation(summary = "Get deleted files")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<Page<FileItemDTO>> getDeletedFiles(
             @PageableDefault(size = 20, sort = "deletedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<FileItemDTO> deletedFiles = fileManagerService.getDeletedFiles(pageable);
@@ -203,6 +203,7 @@ public class FileManagerResource {
     
     @GetMapping("/files/{fileId}/test-path")
     @Operation(summary = "Test file path resolution")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> testFilePath(@PathVariable Long fileId) {
         try {
             FileItemDTO fileItem = fileManagerService.getFile(fileId);
@@ -239,7 +240,7 @@ public class FileManagerResource {
     
     @GetMapping("/files/{fileId}/download")
     @Operation(summary = "Download a file")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<byte[]> downloadFile(@PathVariable Long fileId) {
         try {
             log.info("Downloading file with ID: {}", fileId);
@@ -301,7 +302,7 @@ public class FileManagerResource {
     
     @PostMapping("/bulk/delete")
     @Operation(summary = "Delete multiple files and folders")
-    // @PreAuthorize("hasAuthority('DOCUMENT:DELETE') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:DELETE') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, Object>> bulkDelete(@RequestBody Map<String, List<Long>> request) {
         List<Long> fileIds = request.get("fileIds");
         List<Long> folderIds = request.get("folderIds");
@@ -345,7 +346,7 @@ public class FileManagerResource {
     
     @PostMapping("/bulk/move")
     @Operation(summary = "Move multiple files and folders")
-    // @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, Object>> bulkMove(@RequestBody Map<String, Object> request) {
         List<Long> fileIds = (List<Long>) request.get("fileIds");
         List<Long> folderIds = (List<Long>) request.get("folderIds");
@@ -390,7 +391,7 @@ public class FileManagerResource {
     
     @PostMapping("/bulk/copy")
     @Operation(summary = "Copy multiple files")
-    // @PreAuthorize("hasAuthority('DOCUMENT:CREATE') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:CREATE') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, Object>> bulkCopy(@RequestBody Map<String, Object> request) {
         List<Long> fileIds = (List<Long>) request.get("fileIds");
         Long targetFolderId = request.get("targetFolderId") != null ? 
@@ -420,7 +421,7 @@ public class FileManagerResource {
     
     @PostMapping("/files/bulk/restore")
     @Operation(summary = "Restore multiple deleted files")
-    // @PreAuthorize("hasAuthority('DOCUMENT:RESTORE') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:RESTORE') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, Object>> bulkRestoreFiles(@RequestBody Map<String, List<Long>> request) {
         List<Long> fileIds = request.get("fileIds");
         
@@ -448,7 +449,7 @@ public class FileManagerResource {
     
     @PostMapping("/files/bulk/permanent-delete")
     @Operation(summary = "Permanently delete multiple files")
-    // @PreAuthorize("hasAuthority('DOCUMENT:PERMANENT_DELETE') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('DOCUMENT:PERMANENT_DELETE') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> bulkPermanentlyDeleteFiles(@RequestBody Map<String, List<Long>> request) {
         log.info("Bulk permanent delete request received: {}", request);
         List<Long> fileIds = request.get("fileIds");
@@ -487,7 +488,7 @@ public class FileManagerResource {
     
     @GetMapping("/folders/root")
     @Operation(summary = "Get root folders")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<List<FolderDTO>> getRootFolders() {
         List<FolderDTO> rootFolders = fileManagerService.getRootFolders();
         return ResponseEntity.ok(rootFolders);
@@ -495,7 +496,7 @@ public class FileManagerResource {
     
     @GetMapping("/folders/{folderId}")
     @Operation(summary = "Get folder details and contents")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<FolderDTO> getFolder(@PathVariable Long folderId) {
         FolderDTO folder = fileManagerService.getFolder(folderId);
         return ResponseEntity.ok(folder);
@@ -503,7 +504,7 @@ public class FileManagerResource {
     
     @GetMapping("/folders/{folderId}/contents")
     @Operation(summary = "Get folder contents including subfolders and files")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, Object>> getFolderContents(
             @PathVariable Long folderId,
             @RequestParam(required = false) String context) {
@@ -530,7 +531,7 @@ public class FileManagerResource {
     
     @PostMapping("/folders")
     @Operation(summary = "Create a new folder")
-    // @PreAuthorize("hasAuthority('DOCUMENT:CREATE') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:CREATE') or hasRole('ROLE_USER')")
     public ResponseEntity<FolderDTO> createFolder(@Valid @RequestBody CreateFolderRequestDTO request) {
         FolderDTO folder = fileManagerService.createFolder(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(folder);
@@ -538,7 +539,7 @@ public class FileManagerResource {
     
     @PutMapping("/folders/{folderId}")
     @Operation(summary = "Update folder")
-    // @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
     public ResponseEntity<FolderDTO> updateFolder(
             @PathVariable Long folderId,
             @Valid @RequestBody UpdateFolderRequestDTO request) {
@@ -549,7 +550,7 @@ public class FileManagerResource {
     
     @DeleteMapping("/folders/{folderId}")
     @Operation(summary = "Delete a folder")
-    // @PreAuthorize("hasAuthority('DOCUMENT:DELETE') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:DELETE') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, String>> deleteFolder(@PathVariable Long folderId) {
         fileManagerService.deleteFolder(folderId);
         return ResponseEntity.ok(Map.of("message", "Folder deleted successfully"));
@@ -559,7 +560,7 @@ public class FileManagerResource {
     
     @GetMapping("/cases/active")
     @Operation(summary = "Get active cases for file organization")
-    // @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<Page<CaseDTO>> getActiveCases(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -571,7 +572,7 @@ public class FileManagerResource {
     
     @GetMapping("/cases")
     @Operation(summary = "Get cases with optional status and search filters")
-    // @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<Page<CaseDTO>> getCases(
             @RequestParam(required = false) List<String> statuses,
             @RequestParam(required = false) String search,
@@ -588,7 +589,7 @@ public class FileManagerResource {
     
     @GetMapping("/cases/{caseId}/files")
     @Operation(summary = "Get files for a specific case")
-    // @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<List<FileItemDTO>> getCaseFiles(@PathVariable Long caseId) {
         List<FileItemDTO> files = fileManagerService.getCaseFiles(caseId);
         return ResponseEntity.ok(files);
@@ -596,7 +597,7 @@ public class FileManagerResource {
     
     @GetMapping("/cases/{caseId}/folders")
     @Operation(summary = "Get folders for a specific case")
-    // @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<List<FolderDTO>> getCaseFolders(@PathVariable Long caseId) {
         List<FolderDTO> folders = fileManagerService.getCaseFolders(caseId);
         return ResponseEntity.ok(folders);
@@ -604,7 +605,7 @@ public class FileManagerResource {
     
     @GetMapping("/folders/personal")
     @Operation(summary = "Get personal folders only (not case-related)")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<List<FolderDTO>> getPersonalFolders() {
         List<FolderDTO> folders = fileManagerService.getRootFolders();
         return ResponseEntity.ok(folders);
@@ -614,7 +615,7 @@ public class FileManagerResource {
     
     @GetMapping("/files/{fileId}/versions")
     @Operation(summary = "Get file version history")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<List<FileVersionDTO>> getFileVersions(@PathVariable Long fileId) {
         List<FileVersionDTO> versions = fileManagerService.getFileVersions(fileId);
         return ResponseEntity.ok(versions);
@@ -622,7 +623,7 @@ public class FileManagerResource {
     
     @PostMapping("/files/{fileId}/versions")
     @Operation(summary = "Upload a new version of a file")
-    // @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
     public ResponseEntity<FileVersionDTO> uploadFileVersion(
             @PathVariable Long fileId,
             @RequestParam("file") MultipartFile file,
@@ -634,7 +635,7 @@ public class FileManagerResource {
     
     @GetMapping("/files/{fileId}/versions/{versionId}/download")
     @Operation(summary = "Download a specific version of a file")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<byte[]> downloadFileVersion(
             @PathVariable Long fileId,
             @PathVariable Long versionId) {
@@ -666,7 +667,7 @@ public class FileManagerResource {
     
     @PutMapping("/files/{fileId}/versions/{versionId}/restore")
     @Operation(summary = "Restore a version as the current version")
-    // @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, String>> restoreFileVersion(
             @PathVariable Long fileId,
             @PathVariable Long versionId) {
@@ -683,7 +684,7 @@ public class FileManagerResource {
     
     @DeleteMapping("/files/{fileId}/versions/{versionId}")
     @Operation(summary = "Delete a specific version of a file")
-    // @PreAuthorize("hasAuthority('DOCUMENT:DELETE') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:DELETE') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, String>> deleteFileVersion(
             @PathVariable Long fileId,
             @PathVariable Long versionId) {
@@ -702,7 +703,7 @@ public class FileManagerResource {
     
     @GetMapping("/files/{fileId}/permissions")
     @Operation(summary = "Get file permissions")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<List<FilePermissionDTO>> getFilePermissions(@PathVariable Long fileId) {
         List<FilePermissionDTO> permissions = fileManagerService.getFilePermissions(fileId);
         return ResponseEntity.ok(permissions);
@@ -710,7 +711,7 @@ public class FileManagerResource {
     
     @PostMapping("/files/{fileId}/share")
     @Operation(summary = "Share file with users")
-    // @PreAuthorize("hasAuthority('DOCUMENT:SHARE') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:SHARE') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, String>> shareFile(
             @PathVariable Long fileId,
             @Valid @RequestBody ShareFileRequestDTO request) {
@@ -723,7 +724,7 @@ public class FileManagerResource {
     
     @GetMapping("/search")
     @Operation(summary = "Search files and folders")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<Page<FileItemDTO>> searchFiles(
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
@@ -753,7 +754,7 @@ public class FileManagerResource {
     
     @GetMapping("/stats")
     @Operation(summary = "Get file manager statistics")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<FileManagerStatsDTO> getStats() {
         FileManagerStatsDTO stats = fileManagerService.getStats();
         return ResponseEntity.ok(stats);
@@ -763,7 +764,7 @@ public class FileManagerResource {
     
     @GetMapping("/recent")
     @Operation(summary = "Get recent files")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<List<FileItemDTO>> getRecentFiles(
             @RequestParam(defaultValue = "10") int limit) {
         
@@ -773,7 +774,7 @@ public class FileManagerResource {
     
     @GetMapping("/starred")
     @Operation(summary = "Get starred files")
-    // @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
     public ResponseEntity<List<FileItemDTO>> getStarredFiles() {
         List<FileItemDTO> starredFiles = fileManagerService.getStarredFiles();
         return ResponseEntity.ok(starredFiles);
@@ -781,7 +782,7 @@ public class FileManagerResource {
     
     @PostMapping("/files/{fileId}/star")
     @Operation(summary = "Toggle star status of a file")
-    // @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
     public ResponseEntity<FileItemDTO> toggleFileStar(@PathVariable Long fileId) {
         try {
             FileItemDTO updatedFile = fileManagerService.toggleFileStar(fileId);
@@ -794,7 +795,7 @@ public class FileManagerResource {
 
     @PostMapping("/files/{fileId}/share-with-client")
     @Operation(summary = "Toggle share with client status of a file")
-    // @PreAuthorize("hasAuthority('DOCUMENT:SHARE') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('DOCUMENT:SHARE') or hasRole('ROLE_USER')")
     public ResponseEntity<FileItemDTO> toggleShareWithClient(@PathVariable Long fileId) {
         try {
             FileItemDTO updatedFile = fileManagerService.toggleShareWithClient(fileId);

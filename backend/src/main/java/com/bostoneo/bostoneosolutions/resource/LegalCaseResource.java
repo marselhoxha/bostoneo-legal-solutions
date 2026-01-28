@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,11 +42,12 @@ public class LegalCaseResource {
     private final UserService userService;
 
     @GetMapping("/list")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getCases(
             @RequestParam Optional<Integer> page,
             @RequestParam Optional<Integer> size) {
-        
-        log.info("Getting all cases (public access for testing)");
+
+        log.info("Getting all cases for authenticated user");
         
         // Return all cases for testing purposes
         Page<LegalCaseDTO> casePage = legalCaseService.getAllCases(page.orElse(0), size.orElse(10));
@@ -62,6 +64,7 @@ public class LegalCaseResource {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('CASE:CREATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "LEGAL_CASE", description = "Created new legal case")
     public ResponseEntity<HttpResponse> createCase(
             @AuthenticationPrincipal UserDTO user,
@@ -78,6 +81,7 @@ public class LegalCaseResource {
     }
 
     @GetMapping("/get/{id}")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getCase(
             @AuthenticationPrincipal UserDTO user,
             @PathVariable("id") Long id) {
@@ -97,6 +101,7 @@ public class LegalCaseResource {
     }
 
     @GetMapping("/get/number/{caseNumber}")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getCaseByNumber(
             @AuthenticationPrincipal UserDTO user,
             @PathVariable("caseNumber") String caseNumber) {
@@ -112,6 +117,7 @@ public class LegalCaseResource {
     }
 
     @GetMapping("/search")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> searchCases(
             @AuthenticationPrincipal UserDTO user,
             @RequestParam String q,
@@ -129,6 +135,7 @@ public class LegalCaseResource {
     }
 
     @GetMapping("/search/title")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> searchCasesByTitle(
             @AuthenticationPrincipal UserDTO user,
             @RequestParam String title,
@@ -146,6 +153,7 @@ public class LegalCaseResource {
     }
 
     @GetMapping("/search/client")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> searchCasesByClientName(
             @AuthenticationPrincipal UserDTO user,
             @RequestParam String clientName,
@@ -163,6 +171,7 @@ public class LegalCaseResource {
     }
 
     @GetMapping("/client/{clientId}")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> getCasesByClientId(
             @AuthenticationPrincipal UserDTO user,
             @PathVariable("clientId") Long clientId,
@@ -205,6 +214,7 @@ public class LegalCaseResource {
     }
 
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getCasesByStatus(
             @AuthenticationPrincipal UserDTO user,
             @PathVariable("status") CaseStatus status,
@@ -222,6 +232,7 @@ public class LegalCaseResource {
     }
 
     @GetMapping("/type/{type}")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getCasesByType(
             @AuthenticationPrincipal UserDTO user,
             @PathVariable("type") String type,
@@ -239,6 +250,7 @@ public class LegalCaseResource {
     }
 
     @PutMapping("/update/{id}")
+    @PreAuthorize("hasAuthority('CASE:UPDATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "UPDATE", entityType = "LEGAL_CASE", description = "Updated legal case information")
     public ResponseEntity<HttpResponse> updateCase(
             @AuthenticationPrincipal UserDTO user,
@@ -256,6 +268,7 @@ public class LegalCaseResource {
     }
 
     @PutMapping("/status/{id}/{status}")
+    @PreAuthorize("hasAuthority('CASE:UPDATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "UPDATE", entityType = "LEGAL_CASE", description = "Updated legal case status")
     public ResponseEntity<HttpResponse> updateCaseStatus(
             @AuthenticationPrincipal UserDTO user,
@@ -273,6 +286,7 @@ public class LegalCaseResource {
     }
 
     @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasAuthority('CASE:DELETE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "DELETE", entityType = "LEGAL_CASE", description = "Deleted legal case")
     public ResponseEntity<Void> deleteCase(@PathVariable Long id) {
         legalCaseService.deleteCase(id);
@@ -282,6 +296,7 @@ public class LegalCaseResource {
     // Document Management Endpoints
     
     @GetMapping("/{id}/documents")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getCaseDocuments(
             @AuthenticationPrincipal UserDTO user,
             @PathVariable("id") Long id) {
@@ -300,6 +315,7 @@ public class LegalCaseResource {
     }
     
     @PostMapping("/{id}/documents")
+    @PreAuthorize("hasAuthority('DOCUMENT:CREATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "DOCUMENT", description = "Uploaded new case document")
     public ResponseEntity<HttpResponse> uploadDocument(
             @AuthenticationPrincipal UserDTO user,
@@ -323,6 +339,7 @@ public class LegalCaseResource {
     }
     
     @GetMapping("/{caseId}/documents/{documentId}")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getDocument(
             @AuthenticationPrincipal UserDTO user,
             @PathVariable("caseId") Long caseId,
@@ -340,6 +357,7 @@ public class LegalCaseResource {
     }
     
     @DeleteMapping("/{caseId}/documents/{documentId}")
+    @PreAuthorize("hasAuthority('DOCUMENT:DELETE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "DELETE", entityType = "DOCUMENT", description = "Deleted case document")
     public ResponseEntity<HttpResponse> deleteDocument(
             @AuthenticationPrincipal UserDTO user,
@@ -359,6 +377,7 @@ public class LegalCaseResource {
     }
     
     @GetMapping("/{caseId}/documents/{documentId}/download")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     @AuditLog(action = "DOWNLOAD", entityType = "DOCUMENT", description = "Downloaded case document")
     public ResponseEntity<Resource> downloadDocument(
             @PathVariable("caseId") Long caseId,
@@ -407,6 +426,7 @@ public class LegalCaseResource {
     }
     
     @PostMapping("/{caseId}/documents/{documentId}/versions")
+    @PreAuthorize("hasAuthority('DOCUMENT:CREATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "DOCUMENT", description = "Created new document version")
     public ResponseEntity<HttpResponse> uploadNewVersion(
             @AuthenticationPrincipal UserDTO user,
@@ -428,6 +448,7 @@ public class LegalCaseResource {
     }
     
     @GetMapping("/{caseId}/documents/{documentId}/versions")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getDocumentVersions(
             @AuthenticationPrincipal UserDTO user,
             @PathVariable("caseId") Long caseId,
@@ -445,6 +466,7 @@ public class LegalCaseResource {
     }
     
     @GetMapping("/{caseId}/documents/{documentId}/versions/{versionId}/download")
+    @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     @AuditLog(action = "DOWNLOAD", entityType = "DOCUMENT", description = "Downloaded document version")
     public ResponseEntity<Resource> downloadDocumentVersion(
             @PathVariable("caseId") Long caseId,
@@ -489,6 +511,7 @@ public class LegalCaseResource {
     // Case Activities Endpoints
     
     @GetMapping("/{id}/activities")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
     public ResponseEntity<HttpResponse> getCaseActivities(
             @AuthenticationPrincipal UserDTO user,
             @PathVariable("id") Long id) {
@@ -508,6 +531,7 @@ public class LegalCaseResource {
     }
     
     @PostMapping("/{id}/activities")
+    @PreAuthorize("hasAuthority('CASE:UPDATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "LEGAL_CASE", description = "Added case activity entry")
     public ResponseEntity<HttpResponse> logCaseActivity(
             @AuthenticationPrincipal UserDTO user,

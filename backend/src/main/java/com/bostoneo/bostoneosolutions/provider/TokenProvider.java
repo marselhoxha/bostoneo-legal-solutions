@@ -11,6 +11,7 @@ import com.bostoneo.bostoneosolutions.service.UserService;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -35,6 +36,7 @@ import static java.util.stream.Collectors.toList;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class TokenProvider {
 
     private final UserService userService;
@@ -47,13 +49,13 @@ public class TokenProvider {
         List<String> allAuthorities = userPrincipal.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .collect(Collectors.toList());
-            
+
         // Extract just the roles (for backwards compatibility)
         List<String> roles = userPrincipal.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .filter(auth -> auth.startsWith("ROLE_"))
             .collect(Collectors.toList());
-            
+
         // Add case-specific roles
         Map<String, Object> caseRoles = new HashMap<>();
         userPrincipal.getCaseRoleAssignments().forEach(assignment -> {
@@ -67,10 +69,14 @@ public class TokenProvider {
                 caseRoles.put(caseId.toString(), caseRolesList);
             }
         });
-            
+
+        // Get organization ID from user
+        Long organizationId = userPrincipal.getUser().getOrganizationId();
+
         return JWT.create().withIssuer(BOSTONEO_SOLUTIONS_LLC).withAudience(CLIENT_MANAGEMENT_SERVICE)
                 .withIssuedAt(new Date())
                 .withSubject(String.valueOf(userPrincipal.getUser().getId()))
+                .withClaim("organizationId", organizationId)
                 .withArrayClaim(AUTHORITIES, getClaimsFromUser(userPrincipal))
                 .withArrayClaim("permissions", allAuthorities.toArray(new String[0]))
                 .withArrayClaim("roles", roles.toArray(new String[0]))
@@ -115,6 +121,28 @@ public class TokenProvider {
     public boolean isTokenValid(Long userId, String token){
         JWTVerifier verifier = getJWTVerifier();
         return !Objects.isNull(userId) && !isTokenExpired(verifier, token);
+    }
+
+    /**
+     * Extract organization ID from JWT token
+     * This allows setting tenant context without a database lookup
+     */
+    public Long getOrganizationId(String token) {
+        try {
+            JWTVerifier verifier = getJWTVerifier();
+            var decodedToken = verifier.verify(token);
+            var claim = decodedToken.getClaim("organizationId");
+            if (claim.isNull()) {
+                log.warn("Token does not contain organizationId claim");
+                return null;
+            }
+            Long orgId = claim.asLong();
+            log.debug("Extracted organizationId {} from token", orgId);
+            return orgId;
+        } catch (Exception e) {
+            log.error("Failed to extract organizationId from token: {}", e.getMessage());
+            return null;
+        }
     }
    private boolean isTokenExpired(JWTVerifier verifier, String token) {
         Date expiration = verifier.verify(token).getExpiresAt();

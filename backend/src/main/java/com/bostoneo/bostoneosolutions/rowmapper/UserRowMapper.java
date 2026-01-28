@@ -10,8 +10,16 @@ public class UserRowMapper implements RowMapper<User> {
     @Override
     public User mapRow(ResultSet resultSet, int rowNum) throws SQLException {
         java.sql.Timestamp createdAtTimestamp = resultSet.getTimestamp("created_at");
+
+        // Get organization_id, handling potential null value
+        Long organizationId = resultSet.getLong("organization_id");
+        if (resultSet.wasNull()) {
+            organizationId = null;
+        }
+
         return User.builder()
                 .id(resultSet.getLong("id"))
+                .organizationId(organizationId)
                 .firstName(resultSet.getString("first_name"))
                 .lastName(resultSet.getString("last_name"))
                 .email(resultSet.getString("email"))

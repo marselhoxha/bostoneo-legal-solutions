@@ -1,0 +1,296 @@
+# =============================================================================
+# Legience - CI/CD Pipeline
+# =============================================================================
+# Owner: Bostoneo Solutions LLC
+# Product: Legience (Legal Practice SaaS)
+# =============================================================================
+
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop, staging]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  security-events: write
+  id-token: write  # For OIDC
+
+env:
+  JAVA_VERSION: '17'
+  NODE_VERSION: '20'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Backend Tests
+  # -------------------------------------------------------------------------
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_DATABASE: legience_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run Tests
+        working-directory: ./backend
+        run: |
+          mvn test -Dspring.profiles.active=test
+        env:
+          DB_URL: jdbc:mysql://localhost:3306/legience_test
+          DB_USERNAME: root
+          DB_PASSWORD: test
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: backend/target/surefire-reports/
+
+  # -------------------------------------------------------------------------
+  # Frontend Tests
+  # -------------------------------------------------------------------------
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build -- --configuration=production
+
+  # -------------------------------------------------------------------------
+  # Security Scanning
+  # -------------------------------------------------------------------------
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java, javascript
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build for CodeQL
+        working-directory: ./backend
+        run: mvn compile -DskipTests
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  # -------------------------------------------------------------------------
+  # Build and Push Docker Image
+  # -------------------------------------------------------------------------
+  build-push:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    needs: [security-scan]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build JAR
+        working-directory: ./backend
+        run: mvn package -DskipTests
+
+      - name: Docker Meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.login-ecr.outputs.registry }}/legience-api
+          tags: |
+            type=sha,prefix={{branch}}-
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # -------------------------------------------------------------------------
+  # Deploy Frontend to S3
+  # -------------------------------------------------------------------------
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: [security-scan]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install and Build
+        run: |
+          npm ci
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            npm run build -- --configuration=production
+          else
+            npm run build -- --configuration=staging
+          fi
+
+      - name: Deploy to S3
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            BUCKET="legience-production-frontend-${{ secrets.AWS_ACCOUNT_ID }}"
+          else
+            BUCKET="legience-staging-frontend-${{ secrets.AWS_ACCOUNT_ID }}"
+          fi
+          aws s3 sync dist/bostoneo-solutions s3://$BUCKET --delete
+
+  # -------------------------------------------------------------------------
+  # Trigger ECS Deployment
+  # -------------------------------------------------------------------------
+  deploy:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: [build-push, deploy-frontend]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to ECS
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            CLUSTER="legience-production"
+            SERVICE="legience-production-api"
+          else
+            CLUSTER="legience-staging"
+            SERVICE="legience-staging-api"
+          fi
+          aws ecs update-service --cluster $CLUSTER --service $SERVICE --force-new-deployment
+
+      - name: Wait for deployment
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            CLUSTER="legience-production"
+            SERVICE="legience-production-api"
+          else
+            CLUSTER="legience-staging"
+            SERVICE="legience-staging-api"
+          fi
+          aws ecs wait services-stable --cluster $CLUSTER --services $SERVICE
+
+      - name: Notify Slack
+        if: always()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "Legience Deployment: ${{ job.status }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Legience Deployment* ${{ job.status == 'success' && ':white_check_mark:' || ':x:' }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}\n*Actor:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

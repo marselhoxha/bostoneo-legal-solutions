@@ -2,7 +2,7 @@ package com.bostoneo.bostoneosolutions.filter;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.exceptions.TokenExpiredException;
-import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.provider.TokenProvider;
 import jakarta.servlet.FilterChain;
@@ -54,16 +54,22 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
             boolean isTokenValid = tokenProvider.isTokenValid(userId, token);
 
             if (isTokenValid){
-                List<GrantedAuthority> authorities = tokenProvider.getAuthorities(token);
+                // IMPORTANT: Set tenant context BEFORE calling getAuthentication()
+                // because getAuthentication() calls userService.getUserById() which requires org context
+                Long organizationId = tokenProvider.getOrganizationId(token);
+                log.debug("Extracted organizationId from token: {} for user: {}", organizationId, userId);
 
+                if (organizationId == null) {
+                    log.error("Token missing organizationId for user {}. User needs to re-login.", userId);
+                    throw new ApiException("Session invalid. Please login again.");
+                }
+
+                TenantContext.setCurrentTenant(organizationId);
+                log.debug("Set tenant context to org: {} for user: {}", organizationId, userId);
+
+                List<GrantedAuthority> authorities = tokenProvider.getAuthorities(token);
                 Authentication authentication = tokenProvider.getAuthentication(userId, authorities, request);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                // Set tenant context from authenticated user
-                Object principal = authentication.getPrincipal();
-                if (principal instanceof User user && user.getOrganizationId() != null) {
-                    TenantContext.setCurrentTenant(user.getOrganizationId());
-                }
             } else {
                 log.warn("Token invalid for user {}, clearing SecurityContext", userId);
                 SecurityContextHolder.clearContext();
