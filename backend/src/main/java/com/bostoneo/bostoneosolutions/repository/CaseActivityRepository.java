@@ -37,4 +37,14 @@ public interface CaseActivityRepository extends JpaRepository<CaseActivity, Long
     List<CaseActivity> findByOrganizationIdAndCaseIdOrderByCreatedAtDesc(Long orgId, Long caseId);
 
     long countByOrganizationId(Long organizationId);
+
+    /**
+     * SECURITY: Find by ID with tenant isolation
+     */
+    java.util.Optional<CaseActivity> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Check existence with tenant isolation
+     */
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 } 

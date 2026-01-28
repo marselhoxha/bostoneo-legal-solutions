@@ -85,4 +85,49 @@ public interface CommunicationLogRepository extends JpaRepository<CommunicationL
            "(c.toAddress LIKE %:query% OR c.content LIKE %:query% OR c.subject LIKE %:query%) " +
            "ORDER BY c.createdAt DESC")
     Page<CommunicationLog> searchCommunications(@Param("query") String query, Pageable pageable);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    java.util.Optional<CommunicationLog> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    Page<CommunicationLog> findByOrganizationIdOrderByCreatedAtDesc(Long organizationId, Pageable pageable);
+
+    Page<CommunicationLog> findByOrganizationIdAndClientIdOrderByCreatedAtDesc(Long organizationId, Long clientId, Pageable pageable);
+
+    List<CommunicationLog> findByOrganizationIdAndClientIdOrderByCreatedAtDesc(Long organizationId, Long clientId);
+
+    Page<CommunicationLog> findByOrganizationIdAndCaseIdOrderByCreatedAtDesc(Long organizationId, Long caseId, Pageable pageable);
+
+    Page<CommunicationLog> findByOrganizationIdAndChannelOrderByCreatedAtDesc(Long organizationId, String channel, Pageable pageable);
+
+    Page<CommunicationLog> findByOrganizationIdAndUserIdOrderByCreatedAtDesc(Long organizationId, Long userId, Pageable pageable);
+
+    @Query("SELECT c FROM CommunicationLog c WHERE c.organizationId = :orgId AND c.createdAt BETWEEN :startDate AND :endDate ORDER BY c.createdAt DESC")
+    Page<CommunicationLog> findByOrganizationIdAndDateRange(@Param("orgId") Long organizationId,
+                                                            @Param("startDate") LocalDateTime startDate,
+                                                            @Param("endDate") LocalDateTime endDate,
+                                                            Pageable pageable);
+
+    long countByOrganizationId(Long organizationId);
+
+    long countByOrganizationIdAndChannel(Long organizationId, String channel);
+
+    @Query("SELECT c FROM CommunicationLog c WHERE c.organizationId = :orgId AND " +
+           "(c.toAddress LIKE %:query% OR c.content LIKE %:query% OR c.subject LIKE %:query%) " +
+           "ORDER BY c.createdAt DESC")
+    Page<CommunicationLog> searchByOrganization(@Param("orgId") Long organizationId, @Param("query") String query, Pageable pageable);
+
+    // SECURITY: Tenant-filtered recent by client
+    @Query("SELECT c FROM CommunicationLog c WHERE c.organizationId = :orgId AND c.clientId = :clientId AND c.createdAt >= :since ORDER BY c.createdAt DESC")
+    List<CommunicationLog> findRecentByOrganizationIdAndClientId(@Param("orgId") Long organizationId, @Param("clientId") Long clientId, @Param("since") LocalDateTime since);
+
+    // SECURITY: Tenant-filtered channel statistics
+    @Query("SELECT c.channel, COUNT(c) FROM CommunicationLog c WHERE c.organizationId = :orgId AND c.createdAt >= :since GROUP BY c.channel")
+    List<Object[]> getChannelStatisticsByOrganizationId(@Param("orgId") Long organizationId, @Param("since") LocalDateTime since);
+
+    // SECURITY: Tenant-filtered failed count
+    @Query("SELECT COUNT(c) FROM CommunicationLog c WHERE c.organizationId = :orgId AND c.status IN ('FAILED', 'UNDELIVERED')")
+    long countFailedByOrganizationId(@Param("orgId") Long organizationId);
 }

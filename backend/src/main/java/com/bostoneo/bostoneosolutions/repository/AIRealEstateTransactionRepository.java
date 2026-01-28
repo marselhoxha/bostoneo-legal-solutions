@@ -27,4 +27,32 @@ public interface AIRealEstateTransactionRepository extends JpaRepository<AIRealE
     List<AIRealEstateTransaction> findByBuyerNameContainingIgnoreCase(String buyerName);
     
     List<AIRealEstateTransaction> findBySellerNameContainingIgnoreCase(String sellerName);
+
+    // ==================== TENANT-FILTERED METHODS (SECURITY CRITICAL) ====================
+
+    /**
+     * SECURITY: Find all transactions for an organization (tenant isolation)
+     */
+    List<AIRealEstateTransaction> findByOrganizationId(Long organizationId);
+
+    /**
+     * SECURITY: Find transaction by ID within organization (tenant isolation)
+     */
+    java.util.Optional<AIRealEstateTransaction> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Find by transaction type within organization
+     */
+    Page<AIRealEstateTransaction> findByTransactionTypeAndOrganizationId(
+        com.bostoneo.bostoneosolutions.enumeration.TransactionType transactionType, Long organizationId, Pageable pageable);
+
+    /**
+     * SECURITY: Find by property type within organization
+     */
+    Page<AIRealEstateTransaction> findByPropertyTypeAndOrganizationId(PropertyType propertyType, Long organizationId, Pageable pageable);
+
+    /**
+     * SECURITY: Find by case ID within organization
+     */
+    List<AIRealEstateTransaction> findByCaseIdAndOrganizationIdOrderByCreatedAtDesc(Long caseId, Long organizationId);
 }

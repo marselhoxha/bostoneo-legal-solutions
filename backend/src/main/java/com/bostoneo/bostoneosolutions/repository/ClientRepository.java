@@ -13,26 +13,44 @@ import java.util.List;
 
 public interface ClientRepository extends PagingAndSortingRepository<Client, Long>, ListCrudRepository<Client, Long> {
     
-    // Use custom query with proper parameter binding to fix the SQL parameter issue
+    /**
+     * @deprecated Use findByOrganizationIdAndNameContaining instead for tenant isolation
+     */
+    @Deprecated
     @Query("SELECT c FROM Client c WHERE c.name LIKE CONCAT('%', :name, '%')")
     Page<Client> findByNameContaining(@Param("name") String name, Pageable pageable);
-    
-    // Find client by email
+
+    /**
+     * @deprecated Use findByOrganizationIdAndEmail instead for tenant isolation
+     */
+    @Deprecated
     @Query("SELECT c FROM Client c WHERE c.email = :email")
     List<Client> findByEmail(@Param("email") String email);
 
-    // Find client by user ID (for client portal)
+    /**
+     * @deprecated Use findByOrganizationIdAndUserId instead for tenant isolation
+     */
+    @Deprecated
     @Query("SELECT c FROM Client c WHERE c.userId = :userId")
     Client findByUserId(@Param("userId") Long userId);
 
-    // Check if client exists by user ID
+    /**
+     * @deprecated Use existsByUserIdAndOrganizationId instead for tenant isolation
+     */
+    @Deprecated
     boolean existsByUserId(Long userId);
-    
-    // Find client by exact name (case insensitive)
+
+    /**
+     * @deprecated Use findByOrganizationIdAndNameIgnoreCase instead for tenant isolation
+     */
+    @Deprecated
     @Query("SELECT c FROM Client c WHERE LOWER(c.name) = LOWER(:name)")
     List<Client> findByNameIgnoreCase(@Param("name") String name);
-    
-    // Get clients who have time entries
+
+    /**
+     * @deprecated Use findClientsWithUnbilledTimeEntriesByOrganization instead for tenant isolation
+     */
+    @Deprecated
     @Query("SELECT DISTINCT c FROM Client c " +
            "JOIN LegalCase lc ON c.name = lc.clientName " +
            "JOIN TimeEntry te ON lc.id = te.legalCaseId " +
@@ -67,4 +85,19 @@ public interface ClientRepository extends PagingAndSortingRepository<Client, Lon
            "WHERE c.organizationId = :orgId AND te.billable = true AND te.invoiceId IS NULL " +
            "ORDER BY c.name")
     List<Client> findClientsWithUnbilledTimeEntriesByOrganization(@Param("orgId") Long organizationId);
+
+    java.util.Optional<Client> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Check if client exists by user ID within organization
+     */
+    boolean existsByUserIdAndOrganizationId(Long userId, Long organizationId);
+
+    /**
+     * SECURITY: Find client by name (case insensitive) within organization
+     */
+    @Query("SELECT c FROM Client c WHERE c.organizationId = :orgId AND LOWER(c.name) = LOWER(:name)")
+    List<Client> findByOrganizationIdAndNameIgnoreCase(@Param("orgId") Long organizationId, @Param("name") String name);
 }

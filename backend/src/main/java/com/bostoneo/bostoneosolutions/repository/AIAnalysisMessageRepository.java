@@ -38,4 +38,33 @@ public interface AIAnalysisMessageRepository extends JpaRepository<AIAnalysisMes
      */
     @Query("SELECT m FROM AIAnalysisMessage m WHERE m.analysisId = :analysisId ORDER BY m.createdAt DESC LIMIT :limit")
     List<AIAnalysisMessage> findRecentMessages(@Param("analysisId") Long analysisId, @Param("limit") int limit);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    /**
+     * Find all messages for a specific analysis within an organization
+     */
+    List<AIAnalysisMessage> findByOrganizationIdAndAnalysisIdOrderByCreatedAtAsc(Long organizationId, Long analysisId);
+
+    /**
+     * Count messages for a specific analysis within an organization
+     */
+    long countByOrganizationIdAndAnalysisId(Long organizationId, Long analysisId);
+
+    /**
+     * Delete all messages for a specific analysis within an organization
+     */
+    @Modifying
+    @Transactional
+    void deleteByOrganizationIdAndAnalysisId(Long organizationId, Long analysisId);
+
+    /**
+     * SECURITY: Find by ID with tenant isolation
+     */
+    java.util.Optional<AIAnalysisMessage> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Check existence with tenant isolation
+     */
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 }

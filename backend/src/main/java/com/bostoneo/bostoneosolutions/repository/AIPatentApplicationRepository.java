@@ -25,4 +25,31 @@ public interface AIPatentApplicationRepository extends JpaRepository<AIPatentApp
     List<AIPatentApplication> findByTitleContainingIgnoreCase(String title);
     
     List<AIPatentApplication> findByApplicationNumberContaining(String applicationNumber);
+
+    // ==================== TENANT-FILTERED METHODS (SECURITY CRITICAL) ====================
+
+    /**
+     * SECURITY: Find all patent applications for an organization (tenant isolation)
+     */
+    List<AIPatentApplication> findByOrganizationId(Long organizationId);
+
+    /**
+     * SECURITY: Find patent application by ID within organization (tenant isolation)
+     */
+    java.util.Optional<AIPatentApplication> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Find by patent type within organization
+     */
+    Page<AIPatentApplication> findByPatentTypeAndOrganizationId(PatentType patentType, Long organizationId, Pageable pageable);
+
+    /**
+     * SECURITY: Find by status within organization
+     */
+    Page<AIPatentApplication> findByStatusAndOrganizationId(PatentStatus status, Long organizationId, Pageable pageable);
+
+    /**
+     * SECURITY: Find by client ID within organization
+     */
+    List<AIPatentApplication> findByClientIdAndOrganizationIdOrderByCreatedAtDesc(Long clientId, Long organizationId);
 }

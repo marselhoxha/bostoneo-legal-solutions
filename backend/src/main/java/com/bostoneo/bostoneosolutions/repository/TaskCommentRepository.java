@@ -52,4 +52,18 @@ public interface TaskCommentRepository extends JpaRepository<TaskComment, Long> 
     @Query("SELECT tc FROM TaskComment tc WHERE tc.attachmentUrl IS NOT NULL " +
            "AND tc.task.id = :taskId")
     List<TaskComment> findCommentsWithAttachments(@Param("taskId") Long taskId);
+
+    // ========== TENANT-FILTERED METHODS (SECURE) ==========
+
+    @Query("SELECT tc FROM TaskComment tc WHERE tc.id = :id AND tc.organizationId = :organizationId")
+    java.util.Optional<TaskComment> findByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT tc FROM TaskComment tc WHERE tc.task.id = :taskId AND tc.organizationId = :organizationId ORDER BY tc.createdAt DESC")
+    List<TaskComment> findByTaskIdAndOrganizationId(@Param("taskId") Long taskId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT tc FROM TaskComment tc WHERE tc.task.id = :taskId AND tc.organizationId = :organizationId AND tc.internal = false ORDER BY tc.createdAt DESC")
+    List<TaskComment> findPublicCommentsByTaskIdAndOrganizationId(@Param("taskId") Long taskId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT COUNT(tc) FROM TaskComment tc WHERE tc.task.id = :taskId AND tc.organizationId = :organizationId")
+    long countByTaskIdAndOrganizationId(@Param("taskId") Long taskId, @Param("organizationId") Long organizationId);
 }

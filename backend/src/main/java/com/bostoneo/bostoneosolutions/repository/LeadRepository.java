@@ -102,4 +102,42 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
 
     @Query("SELECT l.status, COUNT(l) FROM Lead l WHERE l.organizationId = :orgId GROUP BY l.status")
     List<Object[]> countByOrganizationIdGroupedByStatus(@Param("orgId") Long organizationId);
+
+    // Additional tenant-filtered methods
+    List<Lead> findByOrganizationIdAndPracticeArea(Long organizationId, String practiceArea);
+
+    Page<Lead> findByOrganizationIdAndPracticeArea(Long organizationId, String practiceArea, Pageable pageable);
+
+    List<Lead> findByOrganizationIdAndAssignedTo(Long organizationId, Long assignedTo);
+
+    List<Lead> findByOrganizationIdAndPriority(Long organizationId, String priority);
+
+    @Query("SELECT l FROM Lead l WHERE l.organizationId = :orgId AND l.leadScore >= :minScore ORDER BY l.leadScore DESC")
+    List<Lead> findByOrganizationIdAndLeadScoreGreaterThanEqualOrderByLeadScoreDesc(@Param("orgId") Long organizationId, @Param("minScore") Integer minScore);
+
+    @Query("SELECT l FROM Lead l WHERE l.organizationId = :orgId AND l.status IN ('NEW', 'CONTACTED', 'QUALIFIED') ORDER BY l.leadScore DESC, l.createdAt ASC")
+    List<Lead> findActiveLeadsByOrganizationOrderByScoreAndCreatedAt(@Param("orgId") Long organizationId);
+
+    @Query("SELECT l FROM Lead l WHERE l.organizationId = :orgId AND l.followUpDate <= :date AND l.status NOT IN ('CONVERTED', 'LOST', 'UNQUALIFIED')")
+    List<Lead> findLeadsRequiringFollowUpByOrganization(@Param("orgId") Long organizationId, @Param("date") Timestamp date);
+
+    @Query("SELECT l FROM Lead l WHERE l.organizationId = :orgId AND l.createdAt BETWEEN :startDate AND :endDate")
+    List<Lead> findByOrganizationIdAndCreatedAtBetween(@Param("orgId") Long organizationId, @Param("startDate") Timestamp startDate, @Param("endDate") Timestamp endDate);
+
+    @Query("SELECT l.practiceArea, COUNT(l) FROM Lead l WHERE l.organizationId = :orgId GROUP BY l.practiceArea")
+    List<Object[]> countByOrganizationIdGroupedByPracticeArea(@Param("orgId") Long organizationId);
+
+    @Query("SELECT l FROM Lead l WHERE l.organizationId = :orgId AND l.status = :status AND l.updatedAt < :staleDate")
+    List<Lead> findStaleLeadsByOrganization(@Param("orgId") Long organizationId, @Param("status") String status, @Param("staleDate") Timestamp staleDate);
+
+    @Query("SELECT l FROM Lead l WHERE l.organizationId = :orgId AND l.status IN :statuses")
+    List<Lead> findByOrganizationIdAndStatusInList(@Param("orgId") Long organizationId, @Param("statuses") List<String> statuses);
+
+    @Query("SELECT l FROM Lead l WHERE l.organizationId = :orgId AND l.consultationDate BETWEEN :startDate AND :endDate")
+    List<Lead> findByOrganizationIdAndConsultationDateBetween(@Param("orgId") Long organizationId, @Param("startDate") Timestamp startDate, @Param("endDate") Timestamp endDate);
+
+    // Secure findById with org verification
+    java.util.Optional<Lead> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 }

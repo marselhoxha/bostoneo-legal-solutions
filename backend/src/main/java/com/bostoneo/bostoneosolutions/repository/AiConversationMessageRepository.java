@@ -27,4 +27,20 @@ public interface AiConversationMessageRepository extends JpaRepository<AiConvers
      * Delete all messages for a session
      */
     void deleteBySessionId(Long sessionId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    /**
+     * SECURITY: Find all messages for a session within organization
+     */
+    @Query("SELECT m FROM AiConversationMessage m WHERE m.session.id = :sessionId AND m.session.organizationId = :orgId ORDER BY m.createdAt ASC")
+    List<AiConversationMessage> findBySessionIdAndOrganizationIdOrderByCreatedAtAsc(
+        @Param("sessionId") Long sessionId,
+        @Param("orgId") Long organizationId);
+
+    /**
+     * SECURITY: Count messages in a session within organization
+     */
+    @Query("SELECT COUNT(m) FROM AiConversationMessage m WHERE m.session.id = :sessionId AND m.session.organizationId = :orgId")
+    Long countBySessionIdAndOrganizationId(@Param("sessionId") Long sessionId, @Param("orgId") Long organizationId);
 }

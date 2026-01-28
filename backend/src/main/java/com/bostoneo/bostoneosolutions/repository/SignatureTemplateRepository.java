@@ -63,4 +63,11 @@ public interface SignatureTemplateRepository extends JpaRepository<SignatureTemp
     @Query("SELECT DISTINCT st.category FROM SignatureTemplate st WHERE st.isActive = true " +
             "AND (st.organizationId = :orgId OR st.isGlobal = true) AND st.category IS NOT NULL")
     List<String> findDistinctCategoriesForOrganization(@Param("orgId") Long organizationId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    @Query("SELECT st FROM SignatureTemplate st WHERE st.id = :id AND (st.organizationId = :orgId OR st.isGlobal = true)")
+    Optional<SignatureTemplate> findByIdAndOrganizationIdOrGlobal(@Param("id") Long id, @Param("orgId") Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 }

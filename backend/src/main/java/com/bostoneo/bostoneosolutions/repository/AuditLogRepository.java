@@ -12,6 +12,72 @@ import java.util.List;
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
+    // ==================== TENANT-FILTERED METHODS (PRIMARY) ====================
+
+    /**
+     * SECURITY: Find all audit logs for an organization (tenant isolation)
+     */
+    List<AuditLog> findByOrganizationId(Long organizationId);
+
+    /**
+     * SECURITY: Find audit log by ID and organization (tenant isolation)
+     */
+    java.util.Optional<AuditLog> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    // Find activities by organization
+    Page<AuditLog> findByOrganizationIdOrderByTimestampDesc(Long organizationId, Pageable pageable);
+
+    // Find activities by organization and user
+    Page<AuditLog> findByOrganizationIdAndUserIdOrderByTimestampDesc(Long organizationId, Long userId, Pageable pageable);
+
+    // Find activities by organization and entity type
+    Page<AuditLog> findByOrganizationIdAndEntityTypeOrderByTimestampDesc(Long organizationId, AuditLog.EntityType entityType, Pageable pageable);
+
+    // Find activities by organization and action
+    Page<AuditLog> findByOrganizationIdAndActionOrderByTimestampDesc(Long organizationId, AuditLog.AuditAction action, Pageable pageable);
+
+    // Find activities by organization and date range
+    Page<AuditLog> findByOrganizationIdAndTimestampBetweenOrderByTimestampDesc(Long organizationId, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+
+    // Find activities by organization, user and date range
+    Page<AuditLog> findByOrganizationIdAndUserIdAndTimestampBetweenOrderByTimestampDesc(Long organizationId, Long userId, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+
+    // Find activities by organization, entity and entity ID
+    List<AuditLog> findByOrganizationIdAndEntityTypeAndEntityIdOrderByTimestampDesc(Long organizationId, AuditLog.EntityType entityType, Long entityId);
+
+    // Count activities by organization and date range
+    long countByOrganizationIdAndTimestampBetween(Long organizationId, LocalDateTime startDate, LocalDateTime endDate);
+
+    // Count today's activities for organization
+    @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.organizationId = :organizationId AND a.timestamp >= :startOfDay AND a.timestamp < :endOfDay")
+    long countTodayActivitiesByOrganization(@Param("organizationId") Long organizationId, @Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay);
+
+    // Count this week's activities for organization
+    @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.organizationId = :organizationId AND a.timestamp >= :weekStart")
+    long countWeekActivitiesByOrganization(@Param("organizationId") Long organizationId, @Param("weekStart") LocalDateTime weekStart);
+
+    // Get most active users for organization
+    @Query("SELECT a.userId, COUNT(a) as activityCount FROM AuditLog a WHERE a.organizationId = :organizationId AND a.timestamp >= :startDate GROUP BY a.userId ORDER BY activityCount DESC")
+    List<Object[]> findMostActiveUsersByOrganization(@Param("organizationId") Long organizationId, @Param("startDate") LocalDateTime startDate, Pageable pageable);
+
+    // Get most common actions for organization
+    @Query("SELECT a.action, COUNT(a) as actionCount FROM AuditLog a WHERE a.organizationId = :organizationId AND a.timestamp >= :startDate GROUP BY a.action ORDER BY actionCount DESC")
+    List<Object[]> findMostCommonActionsByOrganization(@Param("organizationId") Long organizationId, @Param("startDate") LocalDateTime startDate, Pageable pageable);
+
+    // Get most accessed entities for organization
+    @Query("SELECT a.entityType, COUNT(a) as accessCount FROM AuditLog a WHERE a.organizationId = :organizationId AND a.timestamp >= :startDate GROUP BY a.entityType ORDER BY accessCount DESC")
+    List<Object[]> findMostAccessedEntitiesByOrganization(@Param("organizationId") Long organizationId, @Param("startDate") LocalDateTime startDate, Pageable pageable);
+
+    // Count unique active users today for organization
+    @Query("SELECT COUNT(DISTINCT a.userId) FROM AuditLog a WHERE a.organizationId = :organizationId AND a.timestamp >= :startOfDay AND a.timestamp < :endOfDay AND a.userId IS NOT NULL")
+    long countUniqueActiveUsersTodayByOrganization(@Param("organizationId") Long organizationId, @Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay);
+
+    // Find recent activities for dashboard by organization
+    @Query("SELECT a FROM AuditLog a WHERE a.organizationId = :organizationId AND a.timestamp >= :since ORDER BY a.timestamp DESC")
+    List<AuditLog> findRecentActivitiesForDashboardByOrganization(@Param("organizationId") Long organizationId, @Param("since") LocalDateTime since, Pageable pageable);
+
+    // ==================== LEGACY METHODS (KEPT FOR BACKWARD COMPATIBILITY) ====================
+
     // Find activities by user
     Page<AuditLog> findByUserIdOrderByTimestampDesc(Long userId, Pageable pageable);
 

@@ -14,4 +14,15 @@ public interface InvoiceWorkflowRuleRepository extends JpaRepository<InvoiceWork
     List<InvoiceWorkflowRule> findByTriggerEventAndIsActiveTrue(InvoiceWorkflowRule.TriggerEvent triggerEvent);
     
     List<InvoiceWorkflowRule> findByActionTypeAndIsActiveTrue(InvoiceWorkflowRule.ActionType actionType);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    List<InvoiceWorkflowRule> findByOrganizationId(Long organizationId);
+
+    java.util.Optional<InvoiceWorkflowRule> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    List<InvoiceWorkflowRule> findByOrganizationIdAndIsActiveTrue(Long organizationId);
+
+    /** SECURITY: Find active rules by trigger event and organization */
+    List<InvoiceWorkflowRule> findByOrganizationIdAndTriggerEventAndIsActiveTrue(Long organizationId, InvoiceWorkflowRule.TriggerEvent triggerEvent);
 }

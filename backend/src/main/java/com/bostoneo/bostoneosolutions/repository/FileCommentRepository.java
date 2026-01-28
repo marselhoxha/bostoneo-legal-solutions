@@ -116,4 +116,25 @@ public interface FileCommentRepository extends JpaRepository<FileComment, Long> 
     
     @Modifying
     void deleteByFileId(Long fileId);
+
+    // ========== TENANT-FILTERED METHODS (SECURE) ==========
+
+    @Query("SELECT c FROM FileComment c WHERE c.id = :id AND c.organizationId = :organizationId")
+    java.util.Optional<FileComment> findByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT c FROM FileComment c WHERE c.fileId = :fileId AND c.organizationId = :organizationId AND c.isDeleted = false ORDER BY c.createdAt ASC")
+    List<FileComment> findByFileIdAndOrganizationIdAndIsDeletedFalseOrderByCreatedAtAsc(@Param("fileId") Long fileId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT c FROM FileComment c WHERE c.fileId = :fileId AND c.organizationId = :organizationId AND c.isDeleted = false")
+    Page<FileComment> findByFileIdAndOrganizationIdAndIsDeletedFalse(@Param("fileId") Long fileId, @Param("organizationId") Long organizationId, Pageable pageable);
+
+    @Query("SELECT c FROM FileComment c WHERE c.fileId = :fileId AND c.organizationId = :organizationId AND c.parentCommentId IS NULL AND c.isDeleted = false ORDER BY c.createdAt ASC")
+    List<FileComment> findTopLevelCommentsByOrganization(@Param("fileId") Long fileId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT COUNT(c) FROM FileComment c WHERE c.fileId = :fileId AND c.organizationId = :organizationId AND c.isDeleted = false")
+    Long countCommentsForFileByOrganization(@Param("fileId") Long fileId, @Param("organizationId") Long organizationId);
+
+    @Modifying
+    @Query("DELETE FROM FileComment c WHERE c.fileId = :fileId AND c.organizationId = :organizationId")
+    void deleteByFileIdAndOrganizationId(@Param("fileId") Long fileId, @Param("organizationId") Long organizationId);
 }

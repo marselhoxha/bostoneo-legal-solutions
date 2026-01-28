@@ -61,4 +61,10 @@ public interface OrganizationInvitationRepository extends JpaRepository<Organiza
      * Delete expired invitations (cleanup job)
      */
     void deleteByExpiresAtBefore(LocalDateTime dateTime);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    Optional<OrganizationInvitation> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 }

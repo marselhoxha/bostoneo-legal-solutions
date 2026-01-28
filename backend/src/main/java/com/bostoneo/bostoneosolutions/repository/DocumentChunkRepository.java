@@ -72,4 +72,38 @@ public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, Lo
     @Transactional
     @Query("UPDATE DocumentChunk dc SET dc.collectionId = :collectionId WHERE dc.analysisId = :analysisId")
     void updateCollectionIdByAnalysisId(@Param("collectionId") Long collectionId, @Param("analysisId") Long analysisId);
+
+    // ========== TENANT-FILTERED METHODS (SECURE) ==========
+
+    @Query("SELECT dc FROM DocumentChunk dc WHERE dc.id = :id AND dc.organizationId = :organizationId")
+    java.util.Optional<DocumentChunk> findByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT dc FROM DocumentChunk dc WHERE dc.analysisId = :analysisId AND dc.organizationId = :organizationId ORDER BY dc.chunkIndex ASC")
+    List<DocumentChunk> findByAnalysisIdAndOrganizationIdOrderByChunkIndexAsc(@Param("analysisId") Long analysisId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT dc FROM DocumentChunk dc WHERE dc.collectionId = :collectionId AND dc.organizationId = :organizationId ORDER BY dc.analysisId ASC, dc.chunkIndex ASC")
+    List<DocumentChunk> findByCollectionIdAndOrganizationIdOrderByAnalysisIdAscChunkIndexAsc(@Param("collectionId") Long collectionId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT dc FROM DocumentChunk dc WHERE dc.analysisId = :analysisId AND dc.organizationId = :organizationId AND dc.embedding IS NOT NULL")
+    List<DocumentChunk> findByAnalysisIdAndOrganizationIdAndEmbeddingIsNotNull(@Param("analysisId") Long analysisId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT dc FROM DocumentChunk dc WHERE dc.collectionId = :collectionId AND dc.organizationId = :organizationId AND dc.embedding IS NOT NULL")
+    List<DocumentChunk> findByCollectionIdAndOrganizationIdAndEmbeddingIsNotNull(@Param("collectionId") Long collectionId, @Param("organizationId") Long organizationId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM DocumentChunk dc WHERE dc.analysisId = :analysisId AND dc.organizationId = :organizationId")
+    void deleteByAnalysisIdAndOrganizationId(@Param("analysisId") Long analysisId, @Param("organizationId") Long organizationId);
+
+    /**
+     * SECURITY: Find chunks for multiple analyses with organization filter
+     */
+    @Query("SELECT dc FROM DocumentChunk dc WHERE dc.analysisId IN :analysisIds AND dc.organizationId = :organizationId")
+    List<DocumentChunk> findByAnalysisIdInAndOrganizationId(@Param("analysisIds") List<Long> analysisIds, @Param("organizationId") Long organizationId);
+
+    /**
+     * SECURITY: Find all document chunks for an organization (tenant isolation)
+     */
+    @Query("SELECT dc FROM DocumentChunk dc WHERE dc.organizationId = :organizationId")
+    List<DocumentChunk> findByOrganizationId(@Param("organizationId") Long organizationId);
 }

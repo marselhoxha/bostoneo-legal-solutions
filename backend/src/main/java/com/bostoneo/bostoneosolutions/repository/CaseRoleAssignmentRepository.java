@@ -6,43 +6,65 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * WARNING: Entity CaseRoleAssignment lacks organization_id - requires migration.
+ * All methods bypass multi-tenant isolation. Verify case ownership before calling.
+ */
 public interface CaseRoleAssignmentRepository<T extends CaseRoleAssignment> {
+
+    // ==================== DEPRECATED METHODS ====================
+    // WARNING: Entity lacks organization_id - requires migration for tenant isolation.
+    // Verify case ownership through LegalCase.organizationId before calling.
+
+    /** @deprecated Verify entity ownership before calling */
+    @Deprecated
     T save(T assignment);
+
+    /** @deprecated Verify entity ownership before calling */
+    @Deprecated
     Optional<T> findById(Long id);
+
+    /** @deprecated Entity lacks organization_id - verify user organization before calling */
+    @Deprecated
     Set<T> findByUserId(Long userId);
+
+    /** @deprecated Verify case ownership through LegalCase.organizationId before calling */
+    @Deprecated
     Set<T> findByCaseId(Long caseId);
+
+    /** @deprecated Verify entity ownership before calling */
+    @Deprecated
     void deleteById(Long id);
+
+    /** @deprecated Verify case ownership through LegalCase.organizationId before calling */
+    @Deprecated
     void deleteByCaseIdAndUserId(Long caseId, Long userId);
-    
+
     /**
-     * Get all case role assignments for a user
-     * @param userId User ID
-     * @return Set of case role assignments
+     * @deprecated Entity lacks organization_id - verify user organization before calling
      */
+    @Deprecated
     Set<T> getCaseRoleAssignments(Long userId);
-    
+
     /**
-     * Create a new case role assignment
-     * @param caseId Case ID
-     * @param userId User ID
-     * @param roleId Role ID
-     * @param expiresAt Optional expiration date
-     * @return The created case role assignment
+     * @deprecated Verify case ownership through LegalCase.organizationId before calling
      */
+    @Deprecated
     T assignCaseRole(Long caseId, Long userId, Long roleId, LocalDateTime expiresAt);
-    
+
     /**
-     * Remove a case role assignment
-     * @param assignmentId Case role assignment ID
+     * @deprecated Verify assignment ownership before calling
      */
+    @Deprecated
     void removeCaseRole(Long assignmentId);
-    
+
     /**
-     * Get all case role assignments for a case
-     * @param caseId Case ID
-     * @return Set of case role assignments
+     * @deprecated Verify case ownership through LegalCase.organizationId before calling
      */
+    @Deprecated
     Set<T> getCaseRoleAssignmentsByCase(Long caseId);
-    
+
+    /** @deprecated Verify case and user organization before calling */
+    @Deprecated
     boolean userHasCaseAccess(Long userId, Long caseId);
 } 

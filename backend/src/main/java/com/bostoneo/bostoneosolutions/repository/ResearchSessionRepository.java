@@ -53,4 +53,24 @@ public interface ResearchSessionRepository extends JpaRepository<ResearchSession
 
     // Count active sessions for a user
     long countByUserIdAndIsActiveTrue(Long userId);
+
+    // ========== TENANT-FILTERED METHODS (SECURE) ==========
+
+    @Query("SELECT r FROM ResearchSession r WHERE r.id = :id AND r.organizationId = :organizationId")
+    Optional<ResearchSession> findByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT r FROM ResearchSession r WHERE r.sessionId = :sessionId AND r.organizationId = :organizationId")
+    Optional<ResearchSession> findBySessionIdAndOrganizationId(@Param("sessionId") String sessionId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT r FROM ResearchSession r WHERE r.userId = :userId AND r.organizationId = :organizationId ORDER BY r.lastAccessed DESC")
+    List<ResearchSession> findByUserIdAndOrganizationIdOrderByLastAccessedDesc(@Param("userId") Long userId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT r FROM ResearchSession r WHERE r.userId = :userId AND r.organizationId = :organizationId AND r.isActive = true ORDER BY r.lastAccessed DESC")
+    List<ResearchSession> findByUserIdAndOrganizationIdAndIsActiveTrueOrderByLastAccessedDesc(@Param("userId") Long userId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT r FROM ResearchSession r WHERE r.organizationId = :organizationId ORDER BY r.lastAccessed DESC")
+    List<ResearchSession> findByOrganizationIdOrderByLastAccessedDesc(@Param("organizationId") Long organizationId);
+
+    @Query("SELECT COUNT(r) FROM ResearchSession r WHERE r.userId = :userId AND r.organizationId = :organizationId AND r.isActive = true")
+    long countByUserIdAndOrganizationIdAndIsActiveTrue(@Param("userId") Long userId, @Param("organizationId") Long organizationId);
 }

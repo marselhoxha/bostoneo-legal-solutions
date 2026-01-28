@@ -12,42 +12,62 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
- * Repository for managing collection search cache entries.
+ * Repository for managing collection search cache entries with multi-tenant support.
+ * All new methods require organizationId for tenant isolation.
  */
 @Repository
 public interface CollectionSearchCacheRepository extends JpaRepository<CollectionSearchCache, Long> {
 
-    /**
-     * Find cached search result by collection, query hash, and user.
-     */
+    // ==================== TENANT-FILTERED METHODS ====================
+    // SECURITY: Always use these methods for proper multi-tenant isolation.
+
+    Optional<CollectionSearchCache> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    Optional<CollectionSearchCache> findByOrganizationIdAndCollectionIdAndQueryHashAndUserId(
+            Long organizationId, Long collectionId, String queryHash, Long userId);
+
+    Optional<CollectionSearchCache> findByOrganizationIdAndCollectionIdAndQueryHash(
+            Long organizationId, Long collectionId, String queryHash);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM CollectionSearchCache c WHERE c.organizationId = :orgId AND c.collectionId = :collectionId")
+    void deleteByOrganizationIdAndCollectionId(@Param("orgId") Long organizationId, @Param("collectionId") Long collectionId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM CollectionSearchCache c WHERE c.organizationId = :orgId AND c.expiresAt < :now")
+    int deleteExpiredCacheByOrganizationId(@Param("orgId") Long organizationId, @Param("now") LocalDateTime now);
+
+    long countByOrganizationIdAndCollectionId(Long organizationId, Long collectionId);
+
+    // ==================== DEPRECATED METHODS ====================
+    // WARNING: These methods bypass multi-tenant isolation.
+    // Use tenant-filtered versions that verify collection ownership.
+
+    /** @deprecated Verify collection ownership through DocumentCollection.organizationId before calling */
+    @Deprecated
     Optional<CollectionSearchCache> findByCollectionIdAndQueryHashAndUserId(
             Long collectionId, String queryHash, Long userId);
 
-    /**
-     * Find cached search result by collection and query hash (any user).
-     * Useful for shared cache across users in same collection.
-     */
+    /** @deprecated Verify collection ownership through DocumentCollection.organizationId before calling */
+    @Deprecated
     Optional<CollectionSearchCache> findByCollectionIdAndQueryHash(Long collectionId, String queryHash);
 
-    /**
-     * Delete all cache entries for a specific collection.
-     * Called when documents are added/removed from the collection.
-     */
+    /** @deprecated Verify collection ownership through DocumentCollection.organizationId before calling */
+    @Deprecated
     @Modifying
     @Transactional
     void deleteByCollectionId(Long collectionId);
 
-    /**
-     * Delete all expired cache entries.
-     * Should be called by a scheduled task.
-     */
+    /** @deprecated Should filter by organization when cleaning up cache */
+    @Deprecated
     @Modifying
     @Transactional
     @Query("DELETE FROM CollectionSearchCache c WHERE c.expiresAt < :now")
     int deleteExpiredCache(@Param("now") LocalDateTime now);
 
-    /**
-     * Count cache entries for a collection (for monitoring).
-     */
+    /** @deprecated Verify collection ownership through DocumentCollection.organizationId before calling */
+    @Deprecated
     long countByCollectionId(Long collectionId);
 }

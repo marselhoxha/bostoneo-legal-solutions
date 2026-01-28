@@ -27,4 +27,35 @@ public interface MessageRepository extends ListCrudRepository<Message, Long> {
     @Modifying
     @Query("DELETE FROM Message m WHERE m.threadId = :threadId")
     void deleteByThreadId(@Param("threadId") Long threadId);
+
+    // ========== TENANT-FILTERED METHODS (SECURE) ==========
+
+    @Query("SELECT m FROM Message m WHERE m.threadId = :threadId AND m.organizationId = :organizationId ORDER BY m.createdAt ASC")
+    List<Message> findByThreadIdAndOrganizationIdOrderByCreatedAtAsc(@Param("threadId") Long threadId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT m FROM Message m WHERE m.threadId = :threadId AND m.organizationId = :organizationId ORDER BY m.createdAt DESC")
+    List<Message> findByThreadIdAndOrganizationIdOrderByCreatedAtDesc(@Param("threadId") Long threadId, @Param("organizationId") Long organizationId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Message m SET m.isRead = true, m.readAt = :readAt WHERE m.threadId = :threadId AND m.organizationId = :organizationId AND m.senderType = :senderType AND m.isRead = false")
+    int markAsReadByOrganization(@Param("threadId") Long threadId, @Param("organizationId") Long organizationId, @Param("senderType") Message.SenderType senderType, @Param("readAt") LocalDateTime readAt);
+
+    @Query("SELECT COUNT(m) FROM Message m WHERE m.threadId = :threadId AND m.organizationId = :organizationId AND m.senderType = :senderType AND m.isRead = false")
+    int countUnreadByOrganization(@Param("threadId") Long threadId, @Param("organizationId") Long organizationId, @Param("senderType") Message.SenderType senderType);
+
+    @Modifying
+    @Query("DELETE FROM Message m WHERE m.threadId = :threadId AND m.organizationId = :organizationId")
+    void deleteByThreadIdAndOrganizationId(@Param("threadId") Long threadId, @Param("organizationId") Long organizationId);
+
+    /**
+     * SECURITY: Find message by ID and organization (tenant isolation)
+     */
+    @Query("SELECT m FROM Message m WHERE m.id = :id AND m.organizationId = :organizationId")
+    java.util.Optional<Message> findByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
+
+    /**
+     * SECURITY: Find all messages for an organization (tenant isolation)
+     */
+    @Query("SELECT m FROM Message m WHERE m.organizationId = :organizationId")
+    List<Message> findByOrganizationId(@Param("organizationId") Long organizationId);
 }

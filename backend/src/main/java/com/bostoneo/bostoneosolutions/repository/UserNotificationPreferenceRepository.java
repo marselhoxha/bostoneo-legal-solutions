@@ -17,34 +17,47 @@ import java.util.Optional;
  */
 @Repository
 public interface UserNotificationPreferenceRepository extends JpaRepository<UserNotificationPreference, Long> {
-    
+
+    // ==================== TENANT-FILTERED METHODS ====================
+    // SECURITY: Always use these methods for proper multi-tenant isolation.
+
+    Optional<UserNotificationPreference> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    List<UserNotificationPreference> findByOrganizationIdAndUserId(Long organizationId, Long userId);
+
+    List<UserNotificationPreference> findByOrganizationIdAndUserIdOrderByEventType(Long organizationId, Long userId);
+
+    Optional<UserNotificationPreference> findByOrganizationIdAndUserIdAndEventType(Long organizationId, Long userId, String eventType);
+
+    List<UserNotificationPreference> findByOrganizationIdAndUserIdAndEnabledTrue(Long organizationId, Long userId);
+
+    boolean existsByOrganizationIdAndUserId(Long organizationId, Long userId);
+
+    // ==================== DEPRECATED METHODS ====================
+    // WARNING: These methods bypass multi-tenant isolation.
+
     /**
-     * Find all notification preferences for a specific user
-     * @param userId The user ID
-     * @return List of notification preferences for the user
+     * @deprecated Use findByOrganizationIdAndUserId for tenant isolation
      */
+    @Deprecated
     List<UserNotificationPreference> findByUserId(Long userId);
     
     /**
-     * Find all notification preferences for a specific user, ordered by event type
-     * @param userId The user ID
-     * @return List of notification preferences ordered by event type
+     * @deprecated Use findByOrganizationIdAndUserIdOrderByEventType for tenant isolation
      */
+    @Deprecated
     List<UserNotificationPreference> findByUserIdOrderByEventType(Long userId);
-    
+
     /**
-     * Find a specific notification preference for a user and event type
-     * @param userId The user ID
-     * @param eventType The event type
-     * @return Optional containing the preference if found
+     * @deprecated Use findByOrganizationIdAndUserIdAndEventType for tenant isolation
      */
+    @Deprecated
     Optional<UserNotificationPreference> findByUserIdAndEventType(Long userId, String eventType);
-    
+
     /**
-     * Find all enabled notification preferences for a user
-     * @param userId The user ID
-     * @return List of enabled notification preferences
+     * @deprecated Use findByOrganizationIdAndUserIdAndEnabledTrue for tenant isolation
      */
+    @Deprecated
     List<UserNotificationPreference> findByUserIdAndEnabledTrue(Long userId);
     
     /**
@@ -181,6 +194,26 @@ public interface UserNotificationPreferenceRepository extends JpaRepository<User
            "  WHEN :deliveryChannel = 'IN_APP' THEN unp.inAppEnabled = true " +
            "  ELSE true " +
            "END")
-    List<Long> findUserIdsByEventTypeAndDeliveryChannel(@Param("eventType") String eventType, 
+    List<Long> findUserIdsByEventTypeAndDeliveryChannel(@Param("eventType") String eventType,
                                                         @Param("deliveryChannel") String deliveryChannel);
+
+    /**
+     * Find users who should receive a specific type of notification within an organization
+     * SECURITY: Filters users by organization to prevent cross-tenant notification leakage
+     */
+    @Query("SELECT unp.userId FROM UserNotificationPreference unp " +
+           "JOIN User u ON unp.userId = u.id " +
+           "WHERE unp.eventType = :eventType " +
+           "AND unp.enabled = true " +
+           "AND u.organizationId = :organizationId " +
+           "AND CASE " +
+           "  WHEN :deliveryChannel = 'EMAIL' THEN unp.emailEnabled = true " +
+           "  WHEN :deliveryChannel = 'PUSH' THEN unp.pushEnabled = true " +
+           "  WHEN :deliveryChannel = 'IN_APP' THEN unp.inAppEnabled = true " +
+           "  ELSE true " +
+           "END")
+    List<Long> findUserIdsByEventTypeAndDeliveryChannelAndOrganizationId(
+           @Param("eventType") String eventType,
+           @Param("deliveryChannel") String deliveryChannel,
+           @Param("organizationId") Long organizationId);
 }

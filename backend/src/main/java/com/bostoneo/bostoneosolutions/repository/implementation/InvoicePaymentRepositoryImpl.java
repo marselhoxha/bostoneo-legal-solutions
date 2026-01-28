@@ -25,10 +25,166 @@ import static com.bostoneo.bostoneosolutions.query.InvoicePaymentQuery.*;
 @RequiredArgsConstructor
 @Slf4j
 public class InvoicePaymentRepositoryImpl implements InvoicePaymentRepository<InvoicePayment> {
-    
+
     private final NamedParameterJdbcTemplate jdbc;
 
+    // ==================== TENANT-FILTERED METHODS (SECURE) ====================
+
     @Override
+    public InvoicePayment createWithOrganization(InvoicePayment payment, Long organizationId) {
+        try {
+            KeyHolder holder = new GeneratedKeyHolder();
+            SqlParameterSource parameters = new MapSqlParameterSource()
+                    .addValue("invoiceId", payment.getInvoiceId())
+                    .addValue("organizationId", organizationId)
+                    .addValue("paymentDate", payment.getPaymentDate())
+                    .addValue("amount", payment.getAmount())
+                    .addValue("paymentMethod", payment.getPaymentMethod())
+                    .addValue("referenceNumber", payment.getReferenceNumber())
+                    .addValue("notes", payment.getNotes())
+                    .addValue("createdBy", payment.getCreatedBy());
+
+            jdbc.update(INSERT_PAYMENT_WITH_ORG_QUERY, parameters, holder);
+            payment.setId(holder.getKey().longValue());
+            payment.setOrganizationId(organizationId);
+            log.info("Created payment for invoice ID: {} in org: {}", payment.getInvoiceId(), organizationId);
+            return payment;
+        } catch (DataAccessException exception) {
+            log.error("Error creating payment: {}", exception.getMessage());
+            throw new ApiException("Error creating payment");
+        }
+    }
+
+    @Override
+    public Optional<InvoicePayment> getByIdAndOrganization(Long id, Long organizationId) {
+        try {
+            SqlParameterSource parameters = new MapSqlParameterSource()
+                    .addValue("id", id)
+                    .addValue("organizationId", organizationId);
+            InvoicePayment payment = jdbc.queryForObject(SELECT_PAYMENT_BY_ID_AND_ORG_QUERY, parameters,
+                (rs, rowNum) -> InvoicePayment.builder()
+                    .id(rs.getLong("id"))
+                    .invoiceId(rs.getLong("invoice_id"))
+                    .organizationId(rs.getLong("organization_id"))
+                    .paymentDate(rs.getDate("payment_date").toLocalDate())
+                    .amount(rs.getBigDecimal("amount"))
+                    .paymentMethod(rs.getString("payment_method"))
+                    .referenceNumber(rs.getString("reference_number"))
+                    .notes(rs.getString("notes"))
+                    .createdBy(rs.getLong("created_by"))
+                    .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
+                    .updatedAt(rs.getTimestamp("updated_at").toLocalDateTime())
+                    .build()
+            );
+            return Optional.of(payment);
+        } catch (Exception exception) {
+            log.debug("Payment not found: id={}, orgId={}", id, organizationId);
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public List<InvoicePaymentDTO> findByInvoiceIdAndOrganization(Long invoiceId, Long organizationId) {
+        try {
+            SqlParameterSource parameters = new MapSqlParameterSource()
+                    .addValue("invoiceId", invoiceId)
+                    .addValue("organizationId", organizationId);
+            return jdbc.query(SELECT_PAYMENTS_BY_INVOICE_AND_ORG_QUERY, parameters,
+                (rs, rowNum) -> InvoicePaymentDTO.builder()
+                    .id(rs.getLong("id"))
+                    .invoiceId(rs.getLong("invoice_id"))
+                    .paymentDate(rs.getDate("payment_date").toLocalDate())
+                    .amount(rs.getBigDecimal("amount"))
+                    .paymentMethod(rs.getString("payment_method"))
+                    .referenceNumber(rs.getString("reference_number"))
+                    .notes(rs.getString("notes"))
+                    .createdBy(rs.getLong("created_by"))
+                    .createdByName(rs.getString("created_by_name"))
+                    .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
+                    .build()
+            );
+        } catch (Exception exception) {
+            log.error("Error retrieving payments for invoice: {} in org: {}", invoiceId, organizationId);
+            throw new ApiException("Error retrieving payments");
+        }
+    }
+
+    @Override
+    public BigDecimal getTotalPaymentsByInvoiceIdAndOrganization(Long invoiceId, Long organizationId) {
+        try {
+            SqlParameterSource parameters = new MapSqlParameterSource()
+                    .addValue("invoiceId", invoiceId)
+                    .addValue("organizationId", organizationId);
+            BigDecimal total = jdbc.queryForObject(GET_TOTAL_PAYMENTS_BY_INVOICE_AND_ORG_QUERY, parameters, BigDecimal.class);
+            return total != null ? total : BigDecimal.ZERO;
+        } catch (Exception exception) {
+            log.error("Error calculating total payments for invoice: {} in org: {}", invoiceId, organizationId);
+            return BigDecimal.ZERO;
+        }
+    }
+
+    @Override
+    public void deleteByIdAndOrganization(Long id, Long organizationId) {
+        try {
+            SqlParameterSource parameters = new MapSqlParameterSource()
+                    .addValue("id", id)
+                    .addValue("organizationId", organizationId);
+            int deleted = jdbc.update(DELETE_PAYMENT_BY_ID_AND_ORG_QUERY, parameters);
+            if (deleted > 0) {
+                log.info("Deleted payment id: {} in org: {}", id, organizationId);
+            } else {
+                log.warn("Payment not found or access denied: id={}, orgId={}", id, organizationId);
+            }
+        } catch (Exception exception) {
+            log.error("Error deleting payment: {} in org: {}", id, organizationId);
+            throw new ApiException("Error deleting payment");
+        }
+    }
+
+    @Override
+    public List<InvoicePaymentDTO> findRecentPaymentsByOrganization(Long organizationId, int limit) {
+        try {
+            SqlParameterSource parameters = new MapSqlParameterSource()
+                    .addValue("organizationId", organizationId)
+                    .addValue("limit", limit);
+            return jdbc.query(SELECT_RECENT_PAYMENTS_BY_ORG_QUERY, parameters,
+                (rs, rowNum) -> InvoicePaymentDTO.builder()
+                    .id(rs.getLong("id"))
+                    .invoiceId(rs.getLong("invoice_id"))
+                    .invoiceNumber(rs.getString("invoice_number"))
+                    .clientName(rs.getString("client_name"))
+                    .paymentDate(rs.getDate("payment_date").toLocalDate())
+                    .amount(rs.getBigDecimal("amount"))
+                    .paymentMethod(rs.getString("payment_method"))
+                    .referenceNumber(rs.getString("reference_number"))
+                    .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
+                    .build()
+            );
+        } catch (Exception exception) {
+            log.error("Error retrieving recent payments for org: {}", organizationId);
+            throw new ApiException("Error retrieving recent payments");
+        }
+    }
+
+    @Override
+    public BigDecimal getTotalPaymentsByDateRangeAndOrganization(Long organizationId, String startDate, String endDate) {
+        try {
+            SqlParameterSource parameters = new MapSqlParameterSource()
+                    .addValue("organizationId", organizationId)
+                    .addValue("startDate", startDate)
+                    .addValue("endDate", endDate);
+            BigDecimal total = jdbc.queryForObject(GET_TOTAL_PAYMENTS_BY_DATE_RANGE_AND_ORG_QUERY, parameters, BigDecimal.class);
+            return total != null ? total : BigDecimal.ZERO;
+        } catch (Exception exception) {
+            log.error("Error calculating total payments for date range in org: {}", organizationId);
+            return BigDecimal.ZERO;
+        }
+    }
+
+    // ==================== LEGACY METHODS (DEPRECATED) ====================
+
+    @Override
+    @Deprecated
     public InvoicePayment create(InvoicePayment payment) {
         try {
             KeyHolder holder = new GeneratedKeyHolder();
@@ -40,7 +196,7 @@ public class InvoicePaymentRepositoryImpl implements InvoicePaymentRepository<In
                     .addValue("referenceNumber", payment.getReferenceNumber())
                     .addValue("notes", payment.getNotes())
                     .addValue("createdBy", payment.getCreatedBy());
-            
+
             jdbc.update(INSERT_PAYMENT_QUERY, parameters, holder);
             payment.setId(holder.getKey().longValue());
             log.info("Created payment for invoice ID: {}", payment.getInvoiceId());
@@ -52,10 +208,11 @@ public class InvoicePaymentRepositoryImpl implements InvoicePaymentRepository<In
     }
 
     @Override
+    @Deprecated
     public Optional<InvoicePayment> get(Long id) {
         try {
             SqlParameterSource parameters = new MapSqlParameterSource("id", id);
-            InvoicePayment payment = jdbc.queryForObject(SELECT_PAYMENT_BY_ID_QUERY, parameters, 
+            InvoicePayment payment = jdbc.queryForObject(SELECT_PAYMENT_BY_ID_QUERY, parameters,
                 (rs, rowNum) -> InvoicePayment.builder()
                     .id(rs.getLong("id"))
                     .invoiceId(rs.getLong("invoice_id"))
@@ -77,10 +234,11 @@ public class InvoicePaymentRepositoryImpl implements InvoicePaymentRepository<In
     }
 
     @Override
+    @Deprecated
     public List<InvoicePaymentDTO> findByInvoiceId(Long invoiceId) {
         try {
             SqlParameterSource parameters = new MapSqlParameterSource("invoiceId", invoiceId);
-            return jdbc.query(SELECT_PAYMENTS_BY_INVOICE_ID_QUERY, parameters, 
+            return jdbc.query(SELECT_PAYMENTS_BY_INVOICE_ID_QUERY, parameters,
                 (rs, rowNum) -> InvoicePaymentDTO.builder()
                     .id(rs.getLong("id"))
                     .invoiceId(rs.getLong("invoice_id"))
@@ -101,6 +259,7 @@ public class InvoicePaymentRepositoryImpl implements InvoicePaymentRepository<In
     }
 
     @Override
+    @Deprecated
     public BigDecimal getTotalPaymentsByInvoiceId(Long invoiceId) {
         try {
             SqlParameterSource parameters = new MapSqlParameterSource("invoiceId", invoiceId);
@@ -113,6 +272,7 @@ public class InvoicePaymentRepositoryImpl implements InvoicePaymentRepository<In
     }
 
     @Override
+    @Deprecated
     public void delete(Long id) {
         try {
             SqlParameterSource parameters = new MapSqlParameterSource("id", id);
@@ -125,6 +285,7 @@ public class InvoicePaymentRepositoryImpl implements InvoicePaymentRepository<In
     }
 
     @Override
+    @Deprecated
     public List<InvoicePaymentDTO> findRecentPayments(int limit) {
         try {
             SqlParameterSource parameters = new MapSqlParameterSource("limit", limit);
@@ -148,6 +309,7 @@ public class InvoicePaymentRepositoryImpl implements InvoicePaymentRepository<In
     }
 
     @Override
+    @Deprecated
     public BigDecimal getTotalPaymentsByDateRange(String startDate, String endDate) {
         try {
             SqlParameterSource parameters = new MapSqlParameterSource()

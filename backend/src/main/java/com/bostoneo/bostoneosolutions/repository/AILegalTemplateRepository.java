@@ -59,4 +59,33 @@ public interface AILegalTemplateRepository extends JpaRepository<AILegalTemplate
     List<AILegalTemplate> findByNameContaining(@Param("name") String name);
 
     List<AILegalTemplate> findByTemplateTypeIn(List<String> templateTypes);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    List<AILegalTemplate> findByOrganizationId(Long organizationId);
+
+    Page<AILegalTemplate> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    List<AILegalTemplate> findByOrganizationIdAndCategory(Long organizationId, TemplateCategory category);
+
+    List<AILegalTemplate> findByOrganizationIdAndPracticeArea(Long organizationId, String practiceArea);
+
+    @Query("SELECT t FROM AILegalTemplate t WHERE t.organizationId = :organizationId OR (t.isPublic = true AND t.isApproved = true) ORDER BY t.createdAt DESC")
+    List<AILegalTemplate> findAccessibleByOrganization(@Param("organizationId") Long organizationId);
+
+    @Query("SELECT t FROM AILegalTemplate t WHERE t.organizationId = :organizationId OR (t.isPublic = true AND t.isApproved = true) ORDER BY t.createdAt DESC")
+    Page<AILegalTemplate> findAccessibleByOrganization(@Param("organizationId") Long organizationId, Pageable pageable);
+
+    // Secure findById with org verification (includes public approved templates)
+    @Query("SELECT t FROM AILegalTemplate t WHERE t.id = :id AND (t.organizationId = :organizationId OR (t.isPublic = true AND t.isApproved = true))")
+    java.util.Optional<AILegalTemplate> findByIdAndAccessibleByOrganization(@Param("id") Long id, @Param("organizationId") Long organizationId);
+
+    // Strict org-only access (for update/delete)
+    java.util.Optional<AILegalTemplate> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    // Search within accessible templates
+    @Query("SELECT t FROM AILegalTemplate t WHERE (t.organizationId = :organizationId OR (t.isPublic = true AND t.isApproved = true)) AND (LOWER(t.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(t.category) LIKE LOWER(CONCAT('%', :query, '%')))")
+    List<AILegalTemplate> searchAccessibleByOrganization(@Param("organizationId") Long organizationId, @Param("query") String query);
 }

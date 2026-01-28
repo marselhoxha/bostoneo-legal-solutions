@@ -69,4 +69,60 @@ public interface AiConversationSessionRepository extends JpaRepository<AiConvers
             @Param("taskType") String taskType,
             Pageable pageable
     );
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    /**
+     * Find session by ID, user, and organization (for security)
+     */
+    Optional<AiConversationSession> findByIdAndUserIdAndOrganizationId(Long id, Long userId, Long organizationId);
+
+    /**
+     * Find all sessions for a case, user, and organization
+     */
+    @Query("SELECT s FROM AiConversationSession s WHERE s.caseId = :caseId AND s.userId = :userId AND s.organizationId = :orgId AND s.sessionType = 'legal_research' ORDER BY s.lastInteractionAt DESC")
+    List<AiConversationSession> findByCaseIdAndUserIdAndOrganizationId(
+            @Param("caseId") Long caseId,
+            @Param("userId") Long userId,
+            @Param("orgId") Long organizationId
+    );
+
+    /**
+     * Check if session exists for user and organization
+     */
+    boolean existsByIdAndUserIdAndOrganizationId(Long id, Long userId, Long organizationId);
+
+    /**
+     * Find all sessions for a user and organization with pagination
+     */
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.organizationId = :orgId ORDER BY s.lastInteractionAt DESC")
+    Page<AiConversationSession> findAllByUserIdAndOrganizationId(@Param("userId") Long userId, @Param("orgId") Long organizationId, Pageable pageable);
+
+    /**
+     * Find sessions by task type for a user and organization with pagination
+     */
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.organizationId = :orgId AND s.taskType = :taskType ORDER BY s.lastInteractionAt DESC")
+    Page<AiConversationSession> findByUserIdAndOrganizationIdAndTaskType(
+            @Param("userId") Long userId,
+            @Param("orgId") Long organizationId,
+            @Param("taskType") String taskType,
+            Pageable pageable
+    );
+
+    /**
+     * Find session by ID and organization (for security - tenant isolation)
+     */
+    Optional<AiConversationSession> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * Find ONLY general conversations (no caseId) by task type for a user and org with pagination
+     * SECURITY: Tenant-isolated version of findGeneralConversationsByUserIdAndTaskType
+     */
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.organizationId = :orgId AND s.taskType = :taskType AND s.caseId IS NULL ORDER BY s.lastInteractionAt DESC")
+    Page<AiConversationSession> findGeneralConversationsByUserIdAndOrganizationIdAndTaskType(
+            @Param("userId") Long userId,
+            @Param("orgId") Long organizationId,
+            @Param("taskType") String taskType,
+            Pageable pageable
+    );
 }

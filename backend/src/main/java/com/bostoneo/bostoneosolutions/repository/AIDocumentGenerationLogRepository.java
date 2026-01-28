@@ -26,4 +26,20 @@ public interface AIDocumentGenerationLogRepository extends JpaRepository<AIDocum
     List<AIDocumentGenerationLog> findByGenerationType(GenerationType generationType);
     
     List<AIDocumentGenerationLog> findBySuccess(Boolean success);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    Page<AIDocumentGenerationLog> findByOrganizationIdAndUserIdOrderByCreatedAtDesc(Long organizationId, Long userId, Pageable pageable);
+
+    Page<AIDocumentGenerationLog> findByOrganizationIdAndTemplateIdOrderByCreatedAtDesc(Long organizationId, Long templateId, Pageable pageable);
+
+    /**
+     * SECURITY: Find by ID with tenant isolation
+     */
+    java.util.Optional<AIDocumentGenerationLog> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Check existence with tenant isolation
+     */
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 }

@@ -53,4 +53,25 @@ public interface AssignmentRuleRepository extends JpaRepository<AssignmentRule, 
     @Query("SELECT ar FROM AssignmentRule ar WHERE ar.active = true " +
            "AND ar.maxWorkloadPercentage <= :threshold")
     List<AssignmentRule> findByMaxWorkloadThreshold(@Param("threshold") Double threshold);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    java.util.Optional<AssignmentRule> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    @Query("SELECT ar FROM AssignmentRule ar WHERE ar.organizationId = :orgId AND ar.active = true " +
+           "ORDER BY ar.priorityOrder ASC")
+    List<AssignmentRule> findActiveRulesOrderByPriorityByOrganization(@Param("orgId") Long organizationId);
+
+    List<AssignmentRule> findByOrganizationIdAndRuleTypeAndActiveTrue(Long organizationId, RuleType ruleType);
+
+    @Query("SELECT ar FROM AssignmentRule ar WHERE ar.organizationId = :orgId AND ar.active = true " +
+           "AND (ar.caseType IS NULL OR ar.caseType = :caseType) " +
+           "ORDER BY ar.priorityOrder ASC")
+    List<AssignmentRule> findApplicableRulesByOrganization(@Param("orgId") Long organizationId, @Param("caseType") String caseType);
+
+    List<AssignmentRule> findByOrganizationIdAndActive(Long organizationId, boolean active);
+
+    long countByOrganizationIdAndActiveTrue(Long organizationId);
 }

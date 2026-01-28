@@ -89,4 +89,36 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, Lo
                                                                    @Param("endDate") LocalDateTime endDate);
 
     long countByOrganizationId(Long organizationId);
+
+    // Secure findById with org verification
+    java.util.Optional<CalendarEvent> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    List<CalendarEvent> findByOrganizationIdAndCaseId(Long organizationId, Long caseId);
+
+    List<CalendarEvent> findByOrganizationIdAndEventType(Long organizationId, String eventType);
+
+    List<CalendarEvent> findByOrganizationIdAndStatus(Long organizationId, String status);
+
+    @Query("SELECT e FROM CalendarEvent e WHERE e.organizationId = :orgId AND e.caseId = :caseId AND " +
+           "(e.startTime BETWEEN :startDate AND :endDate)")
+    List<CalendarEvent> findByOrganizationIdAndCaseIdAndDateRange(@Param("orgId") Long organizationId,
+                                                                   @Param("caseId") Long caseId,
+                                                                   @Param("startDate") LocalDateTime startDate,
+                                                                   @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT e FROM CalendarEvent e WHERE e.organizationId = :orgId AND e.caseId IN :caseIds")
+    Page<CalendarEvent> findByOrganizationIdAndCaseIdIn(@Param("orgId") Long organizationId,
+                                                         @Param("caseIds") List<Long> caseIds,
+                                                         Pageable pageable);
+
+    // Find events requiring reminders by organization (for scheduled tasks)
+    @Query("SELECT e FROM CalendarEvent e WHERE e.organizationId = :organizationId AND " +
+           "e.reminderMinutes IS NOT NULL AND " +
+           "e.reminderSent = false AND " +
+           "e.startTime <= :reminderTime")
+    List<CalendarEvent> findEventsRequiringRemindersByOrganizationId(
+            @Param("organizationId") Long organizationId,
+            @Param("reminderTime") LocalDateTime reminderTime);
 } 

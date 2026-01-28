@@ -41,7 +41,11 @@ public interface TimeEntryRepository extends PagingAndSortingRepository<TimeEntr
     
     List<TimeEntry> findByStatusIn(List<TimeEntryStatus> statuses);
     
-    // Complex filtering - using native query for PostgreSQL ILIKE support
+    /**
+     * Complex filtering - using native query for PostgreSQL ILIKE support
+     * @deprecated Use findByOrganizationIdWithFilters instead for tenant isolation
+     */
+    @Deprecated
     @Query(value = "SELECT * FROM time_entries te WHERE " +
            "(:userId IS NULL OR te.user_id = :userId) AND " +
            "(:legalCaseId IS NULL OR te.legal_case_id = :legalCaseId) AND " +
@@ -165,6 +169,39 @@ public interface TimeEntryRepository extends PagingAndSortingRepository<TimeEntr
 
     @Query("SELECT SUM(te.hours * te.rate) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.billable = true AND te.status = 'APPROVED'")
     BigDecimal getTotalBillableAmountByOrganization(@Param("orgId") Long organizationId);
+
+    @Query("SELECT te FROM TimeEntry te WHERE te.organizationId = :orgId AND te.userId = :userId AND te.date BETWEEN :startDate AND :endDate")
+    Page<TimeEntry> findByOrganizationIdAndUserIdAndDateBetween(@Param("orgId") Long organizationId, @Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, Pageable pageable);
+
+    @Query("SELECT te FROM TimeEntry te WHERE te.organizationId = :orgId AND te.userId = :userId AND te.status = :status")
+    List<TimeEntry> findByOrganizationIdAndUserIdAndStatus(@Param("orgId") Long organizationId, @Param("userId") Long userId, @Param("status") TimeEntryStatus status);
+
+    @Query("SELECT te FROM TimeEntry te WHERE te.organizationId = :orgId AND te.legalCaseId = :legalCaseId AND te.status = 'BILLING_APPROVED' AND te.invoiceId IS NULL")
+    List<TimeEntry> findUnbilledApprovedEntriesByCaseAndOrganization(@Param("orgId") Long organizationId, @Param("legalCaseId") Long legalCaseId);
+
+    // Secure findById with org verification
+    java.util.Optional<TimeEntry> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    // For bulk operations with org verification
+    @Query("SELECT te FROM TimeEntry te WHERE te.id IN :ids AND te.organizationId = :orgId")
+    List<TimeEntry> findAllByIdInAndOrganizationId(@Param("ids") List<Long> ids, @Param("orgId") Long organizationId);
+
+    // Unbilled entries by case and org
+    @Query("SELECT te FROM TimeEntry te WHERE te.organizationId = :orgId AND te.legalCaseId = :legalCaseId AND te.status = :status AND te.invoiceId IS NULL")
+    List<TimeEntry> findByOrganizationIdAndLegalCaseIdAndStatusAndInvoiceIdIsNull(
+        @Param("orgId") Long organizationId,
+        @Param("legalCaseId") Long legalCaseId,
+        @Param("status") TimeEntryStatus status);
+
+    // Unbilled entries by client and org (join through legal case)
+    @Query("SELECT te FROM TimeEntry te JOIN LegalCase lc ON te.legalCaseId = lc.id " +
+           "WHERE te.organizationId = :orgId AND lc.clientId = :clientId AND te.status = :status AND te.invoiceId IS NULL")
+    List<TimeEntry> findUnbilledByOrganizationIdAndClientId(
+        @Param("orgId") Long organizationId,
+        @Param("clientId") Long clientId,
+        @Param("status") TimeEntryStatus status);
 } 
  
  

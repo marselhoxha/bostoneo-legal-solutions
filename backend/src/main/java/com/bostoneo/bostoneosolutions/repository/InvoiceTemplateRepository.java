@@ -25,4 +25,24 @@ public interface InvoiceTemplateRepository extends JpaRepository<InvoiceTemplate
     Page<InvoiceTemplate> searchActiveTemplates(String searchTerm, Pageable pageable);
     
     boolean existsByNameAndIdNot(String name, Long id);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    Page<InvoiceTemplate> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    List<InvoiceTemplate> findByOrganizationId(Long organizationId);
+
+    Optional<InvoiceTemplate> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    Optional<InvoiceTemplate> findByOrganizationIdAndName(Long organizationId, String name);
+
+    Optional<InvoiceTemplate> findByOrganizationIdAndIsDefaultTrue(Long organizationId);
+
+    Page<InvoiceTemplate> findByOrganizationIdAndIsActiveTrue(Long organizationId, Pageable pageable);
+
+    List<InvoiceTemplate> findByOrganizationIdAndIsActiveTrueOrderByName(Long organizationId);
+
+    boolean existsByOrganizationIdAndNameAndIdNot(Long organizationId, String name, Long id);
 }

@@ -52,4 +52,52 @@ public interface AIDocumentAnalysisRepository extends JpaRepository<AIDocumentAn
     Double getAverageProcessingTime(@Param("type") String analysisType);
 
     List<AIDocumentAnalysis> findTop10ByUserIdAndIsArchivedFalseOrderByCreatedAtDesc(Long userId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    /**
+     * Find analysis by ID and organization (SECURITY: tenant isolation)
+     */
+    Optional<AIDocumentAnalysis> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * Find analysis by analysisId and organization (SECURITY: tenant isolation)
+     */
+    Optional<AIDocumentAnalysis> findByAnalysisIdAndOrganizationId(String analysisId, Long organizationId);
+
+    /**
+     * Find all analyses for an organization (SECURITY: tenant isolation)
+     */
+    List<AIDocumentAnalysis> findByOrganizationIdOrderByCreatedAtDesc(Long organizationId);
+
+    /**
+     * SECURITY: Find all analyses for an organization (simple list)
+     */
+    List<AIDocumentAnalysis> findByOrganizationId(Long organizationId);
+
+    /**
+     * Find analyses by user within an organization (SECURITY: tenant isolation)
+     */
+    List<AIDocumentAnalysis> findByOrganizationIdAndUserIdOrderByCreatedAtDesc(Long organizationId, Long userId);
+
+    /**
+     * Find analyses by case within an organization (SECURITY: tenant isolation)
+     */
+    List<AIDocumentAnalysis> findByOrganizationIdAndCaseIdOrderByCreatedAtDesc(Long organizationId, Long caseId);
+
+    /**
+     * Find recent analyses within an organization (SECURITY: tenant isolation)
+     */
+    List<AIDocumentAnalysis> findTop10ByOrganizationIdAndIsArchivedFalseOrderByCreatedAtDesc(Long organizationId);
+
+    /**
+     * Count analyses by organization
+     */
+    @Query("SELECT COUNT(a) FROM AIDocumentAnalysis a WHERE a.organizationId = :orgId AND a.createdAt >= :since")
+    Long countRecentAnalysesByOrganization(@Param("orgId") Long organizationId, @Param("since") LocalDateTime since);
+
+    /**
+     * Check if analysis exists and belongs to organization (SECURITY: tenant isolation)
+     */
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 }

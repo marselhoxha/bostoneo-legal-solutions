@@ -24,6 +24,9 @@ public interface SignatureRequestRepository extends JpaRepository<SignatureReque
     // Find by BoldSign document ID
     Optional<SignatureRequest> findByBoldsignDocumentId(String boldsignDocumentId);
 
+    // SECURITY: Tenant-filtered find by BoldSign document ID
+    Optional<SignatureRequest> findByBoldsignDocumentIdAndOrganizationId(String boldsignDocumentId, Long organizationId);
+
     // Find by case
     List<SignatureRequest> findByCaseId(Long caseId);
 
@@ -84,4 +87,35 @@ public interface SignatureRequestRepository extends JpaRepository<SignatureReque
             "AND (sr.lastReminderSentAt IS NULL OR sr.lastReminderSentAt < :reminderThreshold)")
     List<SignatureRequest> findNeedingReminders(@Param("now") LocalDateTime now,
                                                  @Param("reminderThreshold") LocalDateTime reminderThreshold);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    Optional<SignatureRequest> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    // Find expired requests by organization (for scheduled tasks)
+    @Query("SELECT sr FROM SignatureRequest sr WHERE sr.organizationId = :organizationId " +
+            "AND sr.status IN ('SENT', 'VIEWED', 'PARTIALLY_SIGNED') " +
+            "AND sr.expiresAt < :now")
+    List<SignatureRequest> findExpiredByOrganizationId(@Param("organizationId") Long organizationId,
+                                                        @Param("now") LocalDateTime now);
+
+    // Find expiring soon by organization (for scheduled tasks)
+    @Query("SELECT sr FROM SignatureRequest sr WHERE sr.organizationId = :organizationId " +
+            "AND sr.status IN ('SENT', 'VIEWED', 'PARTIALLY_SIGNED') " +
+            "AND sr.expiresAt BETWEEN :now AND :expiryThreshold")
+    List<SignatureRequest> findExpiringSoonByOrganizationId(@Param("organizationId") Long organizationId,
+                                                             @Param("now") LocalDateTime now,
+                                                             @Param("expiryThreshold") LocalDateTime expiryThreshold);
+
+    // Find requests needing reminders by organization (for scheduled tasks)
+    @Query("SELECT sr FROM SignatureRequest sr WHERE sr.organizationId = :organizationId " +
+            "AND sr.status IN ('SENT', 'VIEWED', 'PARTIALLY_SIGNED') " +
+            "AND sr.expiresAt > :now " +
+            "AND (sr.reminderEmail = true OR sr.reminderSms = true OR sr.reminderWhatsapp = true) " +
+            "AND (sr.lastReminderSentAt IS NULL OR sr.lastReminderSentAt < :reminderThreshold)")
+    List<SignatureRequest> findNeedingRemindersByOrganizationId(@Param("organizationId") Long organizationId,
+                                                                 @Param("now") LocalDateTime now,
+                                                                 @Param("reminderThreshold") LocalDateTime reminderThreshold);
 }

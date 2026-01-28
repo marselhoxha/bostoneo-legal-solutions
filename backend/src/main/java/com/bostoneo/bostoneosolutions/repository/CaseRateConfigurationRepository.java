@@ -122,4 +122,23 @@ public interface CaseRateConfigurationRepository extends PagingAndSortingReposit
     @Query("SELECT crc FROM CaseRateConfiguration crc WHERE " +
            "crc.updatedAt >= :since AND crc.isActive = true ORDER BY crc.updatedAt DESC")
     List<CaseRateConfiguration> findRecentlyUpdated(@Param("since") java.util.Date since);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    List<CaseRateConfiguration> findByOrganizationId(Long organizationId);
+
+    List<CaseRateConfiguration> findByOrganizationIdAndIsActive(Long organizationId, Boolean isActive);
+
+    @Query("SELECT AVG(crc.defaultRate) FROM CaseRateConfiguration crc WHERE crc.organizationId = :orgId AND crc.isActive = true")
+    BigDecimal getAverageDefaultRateByOrganization(@Param("orgId") Long organizationId);
+
+    @Query("SELECT COUNT(crc) FROM CaseRateConfiguration crc WHERE crc.organizationId = :orgId AND crc.allowMultipliers = true AND crc.isActive = true")
+    Long countWithMultipliersEnabledByOrganization(@Param("orgId") Long organizationId);
+
+    @Query("SELECT crc FROM CaseRateConfiguration crc WHERE crc.organizationId = :orgId AND crc.defaultRate BETWEEN :minRate AND :maxRate AND crc.isActive = true")
+    List<CaseRateConfiguration> findByOrganizationIdAndDefaultRateBetweenAndIsActive(@Param("orgId") Long organizationId, @Param("minRate") BigDecimal minRate, @Param("maxRate") BigDecimal maxRate);
+
+    Optional<CaseRateConfiguration> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 } 

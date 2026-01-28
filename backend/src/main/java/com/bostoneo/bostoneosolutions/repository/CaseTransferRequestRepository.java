@@ -85,4 +85,27 @@ public interface CaseTransferRequestRepository extends JpaRepository<CaseTransfe
         @Param("caseId") Long caseId,
         @Param("fromUserId") Long fromUserId
     );
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    @Query("SELECT ctr FROM CaseTransferRequest ctr WHERE ctr.organizationId = :orgId ORDER BY ctr.requestedAt DESC")
+    List<CaseTransferRequest> findByOrganizationId(@Param("orgId") Long organizationId);
+
+    @Query("SELECT ctr FROM CaseTransferRequest ctr WHERE ctr.organizationId = :orgId ORDER BY ctr.requestedAt DESC")
+    Page<CaseTransferRequest> findByOrganizationId(@Param("orgId") Long organizationId, Pageable pageable);
+
+    @Query("SELECT ctr FROM CaseTransferRequest ctr WHERE ctr.organizationId = :orgId AND ctr.status = :status ORDER BY ctr.urgency DESC, ctr.requestedAt ASC")
+    Page<CaseTransferRequest> findByOrganizationIdAndStatus(@Param("orgId") Long organizationId, @Param("status") TransferStatus status, Pageable pageable);
+
+    @Query("SELECT ctr FROM CaseTransferRequest ctr WHERE ctr.organizationId = :orgId AND ctr.legalCase.id = :caseId ORDER BY ctr.requestedAt DESC")
+    List<CaseTransferRequest> findByOrganizationIdAndCaseId(@Param("orgId") Long organizationId, @Param("caseId") Long caseId);
+
+    long countByOrganizationId(Long organizationId);
+
+    @Query("SELECT COUNT(ctr) FROM CaseTransferRequest ctr WHERE ctr.organizationId = :orgId AND ctr.status = 'PENDING'")
+    long countPendingByOrganizationId(@Param("orgId") Long organizationId);
+
+    java.util.Optional<CaseTransferRequest> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 }

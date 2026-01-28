@@ -15,7 +15,26 @@ import java.util.List;
 
 @Repository
 public interface AIPatentSearchRepository extends JpaRepository<AIPatentSearch, Long> {
-    
+
+    // ==================== TENANT ISOLATION METHODS ====================
+
+    /**
+     * SECURITY: Get all patent searches for an organization
+     */
+    List<AIPatentSearch> findByOrganizationId(Long organizationId);
+
+    /**
+     * SECURITY: Get patent search by ID with tenant verification
+     */
+    java.util.Optional<AIPatentSearch> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Get searches by case with tenant filter
+     */
+    List<AIPatentSearch> findByCaseIdAndOrganizationIdOrderByCreatedAtDesc(Long caseId, Long organizationId);
+
+    // ==================== EXISTING METHODS (Use with caution) ====================
+
     List<AIPatentSearch> findByCaseIdOrderByCreatedAtDesc(Long caseId);
     
     List<AIPatentSearch> findBySearchType(SearchType searchType);

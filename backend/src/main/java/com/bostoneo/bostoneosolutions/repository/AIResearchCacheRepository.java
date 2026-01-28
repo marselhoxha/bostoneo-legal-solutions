@@ -43,4 +43,25 @@ public interface AIResearchCacheRepository extends JpaRepository<AIResearchCache
 
     @Query("SELECT c.queryType, COUNT(c) FROM AIResearchCache c WHERE c.isValid = true GROUP BY c.queryType")
     List<Object[]> getCacheCountByQueryType();
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    List<AIResearchCache> findByOrganizationId(Long organizationId);
+
+    Optional<AIResearchCache> findByOrganizationIdAndQueryHash(Long organizationId, String queryHash);
+
+    List<AIResearchCache> findByOrganizationIdAndQueryTypeAndIsValidTrue(Long organizationId, QueryType queryType);
+
+    @Query("SELECT c FROM AIResearchCache c WHERE c.organizationId = :organizationId AND c.usageCount > :minUsage ORDER BY c.usageCount DESC")
+    List<AIResearchCache> findMostUsedCachesByOrganization(@Param("organizationId") Long organizationId, @Param("minUsage") Integer minUsage);
+
+    /**
+     * SECURITY: Find by ID with tenant isolation
+     */
+    Optional<AIResearchCache> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Check existence with tenant isolation
+     */
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 }

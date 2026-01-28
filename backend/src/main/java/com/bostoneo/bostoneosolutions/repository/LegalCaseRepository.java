@@ -87,4 +87,48 @@ public interface LegalCaseRepository extends PagingAndSortingRepository<LegalCas
     long countByOrganizationId(Long organizationId);
 
     long countByOrganizationIdAndStatus(Long organizationId, CaseStatus status);
+
+    // Secure findById with org verification
+    Optional<LegalCase> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    // For queries filtering by case IDs within an org
+    Page<LegalCase> findByOrganizationIdAndIdIn(Long organizationId, List<Long> ids, Pageable pageable);
+
+    @Query("SELECT c FROM LegalCase c WHERE c.organizationId = :orgId AND c.id IN :ids")
+    List<LegalCase> findAllByOrganizationIdAndIdIn(@Param("orgId") Long organizationId, @Param("ids") List<Long> ids);
+
+    // ==================== CLIENT PORTAL TENANT-FILTERED METHODS ====================
+
+    /**
+     * Find cases by client name within an organization (SECURITY: tenant isolation for client portal)
+     */
+    @Query("SELECT c FROM LegalCase c WHERE c.organizationId = :orgId AND LOWER(c.clientName) = LOWER(:clientName) ORDER BY c.createdAt DESC")
+    Page<LegalCase> findByOrganizationIdAndClientNameIgnoreCase(@Param("orgId") Long organizationId, @Param("clientName") String clientName, Pageable pageable);
+
+    /**
+     * Find all cases by client name within an organization (SECURITY: tenant isolation for client portal)
+     */
+    @Query("SELECT c FROM LegalCase c WHERE c.organizationId = :orgId AND LOWER(c.clientName) = LOWER(:clientName) ORDER BY c.createdAt DESC")
+    List<LegalCase> findAllByOrganizationIdAndClientNameIgnoreCase(@Param("orgId") Long organizationId, @Param("clientName") String clientName);
+
+    // ==================== ADDITIONAL TENANT-FILTERED SEARCH METHODS ====================
+
+    /**
+     * SECURITY: Search cases by title within organization (tenant isolation)
+     */
+    @Query("SELECT c FROM LegalCase c WHERE c.organizationId = :orgId AND LOWER(c.title) LIKE LOWER(CONCAT('%', :title, '%'))")
+    Page<LegalCase> findByOrganizationIdAndTitleContainingIgnoreCase(@Param("orgId") Long organizationId, @Param("title") String title, Pageable pageable);
+
+    /**
+     * SECURITY: Search cases by client name within organization (tenant isolation)
+     */
+    @Query("SELECT c FROM LegalCase c WHERE c.organizationId = :orgId AND LOWER(c.clientName) LIKE LOWER(CONCAT('%', :clientName, '%'))")
+    Page<LegalCase> findByOrganizationIdAndClientNameContainingIgnoreCase(@Param("orgId") Long organizationId, @Param("clientName") String clientName, Pageable pageable);
+
+    /**
+     * SECURITY: Find cases by type within organization (tenant isolation)
+     */
+    Page<LegalCase> findByOrganizationIdAndType(Long organizationId, String type, Pageable pageable);
 } 

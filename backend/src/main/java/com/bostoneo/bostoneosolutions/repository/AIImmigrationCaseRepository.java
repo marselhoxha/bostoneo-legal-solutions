@@ -54,4 +54,41 @@ public interface AIImmigrationCaseRepository extends JpaRepository<AIImmigration
     
     @Query("SELECT ic FROM AIImmigrationCase ic WHERE ic.priorityDate IS NOT NULL ORDER BY ic.priorityDate ASC")
     List<AIImmigrationCase> findCasesWithPriorityDate();
+
+    // ==================== TENANT-FILTERED METHODS (SECURITY CRITICAL) ====================
+
+    /**
+     * SECURITY: Find all immigration cases for an organization (tenant isolation)
+     */
+    List<AIImmigrationCase> findByOrganizationId(Long organizationId);
+
+    /**
+     * SECURITY: Find immigration case by ID within organization (tenant isolation)
+     */
+    java.util.Optional<AIImmigrationCase> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Find by case ID within organization
+     */
+    List<AIImmigrationCase> findByCaseIdAndOrganizationIdOrderByCreatedAtDesc(Long caseId, Long organizationId);
+
+    /**
+     * SECURITY: Find by form type within organization
+     */
+    Page<AIImmigrationCase> findByFormTypeAndOrganizationId(String formType, Long organizationId, Pageable pageable);
+
+    /**
+     * SECURITY: Find by status within organization
+     */
+    Page<AIImmigrationCase> findByStatusAndOrganizationId(ImmigrationStatus status, Long organizationId, Pageable pageable);
+
+    /**
+     * SECURITY: Find deadlines within organization
+     */
+    @Query("SELECT ic FROM AIImmigrationCase ic WHERE ic.organizationId = :orgId " +
+           "AND ic.nextActionDate BETWEEN :startDate AND :endDate ORDER BY ic.nextActionDate ASC")
+    List<AIImmigrationCase> findCasesWithDeadlinesBetweenAndOrganizationId(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate,
+        @Param("orgId") Long organizationId);
 }

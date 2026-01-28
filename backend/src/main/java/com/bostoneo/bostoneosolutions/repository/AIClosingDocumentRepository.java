@@ -14,7 +14,26 @@ import java.util.List;
 
 @Repository
 public interface AIClosingDocumentRepository extends JpaRepository<AIClosingDocument, Long> {
-    
+
+    // ==================== TENANT ISOLATION METHODS ====================
+
+    /**
+     * SECURITY: Get all closing documents for an organization
+     */
+    List<AIClosingDocument> findByOrganizationId(Long organizationId);
+
+    /**
+     * SECURITY: Get closing document by ID with tenant verification
+     */
+    java.util.Optional<AIClosingDocument> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Get closing documents by transaction with tenant filter
+     */
+    List<AIClosingDocument> findByTransactionIdAndOrganizationIdOrderByCreatedAtDesc(Long transactionId, Long organizationId);
+
+    // ==================== EXISTING METHODS (Use with caution) ====================
+
     List<AIClosingDocument> findByTransactionIdOrderByCreatedAtDesc(Long transactionId);
     
     List<AIClosingDocument> findByDocumentType(DocumentType documentType);

@@ -29,4 +29,36 @@ public interface MessageThreadRepository extends ListCrudRepository<MessageThrea
 
     @Query("SELECT t FROM MessageThread t WHERE t.caseId IN :caseIds ORDER BY t.lastMessageAt DESC NULLS LAST, t.createdAt DESC")
     List<MessageThread> findByCaseIdInOrderByLastMessageAtDesc(@Param("caseIds") List<Long> caseIds);
+
+    // ========== TENANT-FILTERED METHODS (SECURE) ==========
+
+    @Query("SELECT t FROM MessageThread t WHERE t.clientId = :clientId AND t.organizationId = :organizationId ORDER BY t.lastMessageAt DESC NULLS LAST, t.createdAt DESC")
+    List<MessageThread> findByClientIdAndOrganizationIdOrderByLastMessageAtDesc(@Param("clientId") Long clientId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT t FROM MessageThread t WHERE t.attorneyId = :attorneyId AND t.organizationId = :organizationId ORDER BY t.lastMessageAt DESC NULLS LAST, t.createdAt DESC")
+    List<MessageThread> findByAttorneyIdAndOrganizationIdOrderByLastMessageAtDesc(@Param("attorneyId") Long attorneyId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT t FROM MessageThread t WHERE t.caseId = :caseId AND t.organizationId = :organizationId ORDER BY t.lastMessageAt DESC NULLS LAST, t.createdAt DESC")
+    List<MessageThread> findByCaseIdAndOrganizationIdOrderByLastMessageAtDesc(@Param("caseId") Long caseId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT t FROM MessageThread t WHERE t.attorneyId = :attorneyId AND t.organizationId = :organizationId AND t.unreadByAttorney > 0")
+    List<MessageThread> findUnreadByAttorneyAndOrganizationId(@Param("attorneyId") Long attorneyId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT SUM(t.unreadByAttorney) FROM MessageThread t WHERE t.attorneyId = :attorneyId AND t.organizationId = :organizationId")
+    Integer countUnreadByAttorneyAndOrganizationId(@Param("attorneyId") Long attorneyId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT SUM(t.unreadByClient) FROM MessageThread t WHERE t.clientId = :clientId AND t.organizationId = :organizationId")
+    Integer countUnreadByClientAndOrganizationId(@Param("clientId") Long clientId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT t FROM MessageThread t WHERE t.caseId IN :caseIds AND t.organizationId = :organizationId ORDER BY t.lastMessageAt DESC NULLS LAST, t.createdAt DESC")
+    List<MessageThread> findByCaseIdInAndOrganizationIdOrderByLastMessageAtDesc(@Param("caseIds") List<Long> caseIds, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT t FROM MessageThread t WHERE t.id = :id AND t.organizationId = :organizationId")
+    java.util.Optional<MessageThread> findByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
+
+    /**
+     * SECURITY: Find all message threads for an organization (tenant isolation)
+     */
+    @Query("SELECT t FROM MessageThread t WHERE t.organizationId = :organizationId")
+    List<MessageThread> findByOrganizationId(@Param("organizationId") Long organizationId);
 }

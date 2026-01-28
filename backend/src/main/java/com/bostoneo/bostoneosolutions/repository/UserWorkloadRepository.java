@@ -15,10 +15,16 @@ import java.util.Optional;
 public interface UserWorkloadRepository extends JpaRepository<UserWorkload, Long> {
     
     /**
-     * Find workload for a user on a specific date
+     * @deprecated Use findByOrganizationIdAndUserIdAndCalculationDate for tenant isolation
      */
+    @Deprecated
     Optional<UserWorkload> findByUserIdAndCalculationDate(Long userId, LocalDate calculationDate);
-    
+
+    /**
+     * Find workload for a user on a specific date - TENANT FILTERED
+     */
+    Optional<UserWorkload> findByOrganizationIdAndUserIdAndCalculationDate(Long organizationId, Long userId, LocalDate calculationDate);
+
     /**
      * Find latest workload for a user
      */
@@ -34,21 +40,47 @@ public interface UserWorkloadRepository extends JpaRepository<UserWorkload, Long
     List<UserWorkload> findByUserIdOrderByCalculationDateDesc(@Param("userId") Long userId);
     
     /**
-     * Find users with high workload
+     * @deprecated Use findHighWorkloadUsersByOrganization for tenant isolation
      */
+    @Deprecated
     @Query("SELECT uw FROM UserWorkload uw WHERE uw.calculationDate = :date " +
            "AND uw.capacityPercentage >= :threshold ORDER BY uw.capacityPercentage DESC")
     List<UserWorkload> findHighWorkloadUsers(
         @Param("date") LocalDate date,
         @Param("threshold") BigDecimal threshold
     );
-    
+
     /**
-     * Find users with available capacity
+     * Find users with high workload - TENANT FILTERED
      */
+    @Query("SELECT uw FROM UserWorkload uw WHERE uw.organizationId = :orgId " +
+           "AND uw.calculationDate = :date AND uw.capacityPercentage >= :threshold " +
+           "ORDER BY uw.capacityPercentage DESC")
+    List<UserWorkload> findHighWorkloadUsersByOrganization(
+        @Param("orgId") Long organizationId,
+        @Param("date") LocalDate date,
+        @Param("threshold") BigDecimal threshold
+    );
+
+    /**
+     * @deprecated Use findAvailableCapacityUsersByOrganization for tenant isolation
+     */
+    @Deprecated
     @Query("SELECT uw FROM UserWorkload uw WHERE uw.calculationDate = :date " +
            "AND uw.capacityPercentage < :threshold ORDER BY uw.capacityPercentage ASC")
     List<UserWorkload> findAvailableCapacityUsers(
+        @Param("date") LocalDate date,
+        @Param("threshold") BigDecimal threshold
+    );
+
+    /**
+     * Find users with available capacity - TENANT FILTERED
+     */
+    @Query("SELECT uw FROM UserWorkload uw WHERE uw.organizationId = :orgId " +
+           "AND uw.calculationDate = :date AND uw.capacityPercentage < :threshold " +
+           "ORDER BY uw.capacityPercentage ASC")
+    List<UserWorkload> findAvailableCapacityUsersByOrganization(
+        @Param("orgId") Long organizationId,
         @Param("date") LocalDate date,
         @Param("threshold") BigDecimal threshold
     );
@@ -97,8 +129,9 @@ public interface UserWorkloadRepository extends JpaRepository<UserWorkload, Long
     );
     
     /**
-     * Find team members by manager
+     * @deprecated Use findTeamWorkloadByManagerAndOrganization for tenant isolation
      */
+    @Deprecated
     @Query(value = "SELECT DISTINCT uw.* FROM user_workload uw " +
            "JOIN users u ON uw.user_id = u.id " +
            "WHERE uw.calculation_date = :date " +
@@ -111,4 +144,33 @@ public interface UserWorkloadRepository extends JpaRepository<UserWorkload, Long
         @Param("managerId") Long managerId,
         @Param("date") LocalDate date
     );
+
+    /**
+     * Find team members by manager - TENANT FILTERED
+     */
+    @Query(value = "SELECT DISTINCT uw.* FROM user_workload uw " +
+           "JOIN users u ON uw.user_id = u.id " +
+           "WHERE uw.organization_id = :orgId " +
+           "AND uw.calculation_date = :date " +
+           "AND u.id IN (SELECT user_id FROM case_assignments ca " +
+           "JOIN legal_cases lc ON ca.case_id = lc.id " +
+           "WHERE lc.organization_id = :orgId " +
+           "AND lc.id IN (SELECT case_id FROM case_assignments " +
+           "WHERE user_id = :managerId AND role_type = 'LEAD_ATTORNEY'))",
+           nativeQuery = true)
+    List<UserWorkload> findTeamWorkloadByManagerAndOrganization(
+        @Param("orgId") Long organizationId,
+        @Param("managerId") Long managerId,
+        @Param("date") LocalDate date
+    );
+
+    /**
+     * SECURITY: Find by ID with tenant isolation
+     */
+    Optional<UserWorkload> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Check existence with tenant isolation
+     */
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 }

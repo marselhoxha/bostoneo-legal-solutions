@@ -30,18 +30,29 @@ public class PermissionAuditLogRepositoryImpl implements PermissionAuditLogRepos
     private final NamedParameterJdbcTemplate jdbc;
 
     // SQL queries
-    private static final String INSERT_AUDIT_LOG = 
-        "INSERT INTO permission_audit_logs (user_id, action, target_type, target_id, details, performed_by, timestamp) VALUES (:userId, :action, :targetType, :targetId, :details, :performedBy, :timestamp)";
-    private static final String FIND_BY_USER_ID = 
+    private static final String INSERT_AUDIT_LOG =
+        "INSERT INTO permission_audit_logs (organization_id, user_id, action, target_type, target_id, details, performed_by, timestamp) VALUES (:organizationId, :userId, :action, :targetType, :targetId, :details, :performedBy, :timestamp)";
+    private static final String FIND_BY_USER_ID =
         "SELECT * FROM permission_audit_logs WHERE user_id = :userId ORDER BY timestamp DESC";
-    private static final String FIND_RECENT_LOGS = 
+    private static final String FIND_RECENT_LOGS =
         "SELECT * FROM permission_audit_logs ORDER BY timestamp DESC LIMIT :limit";
+
+    // Tenant-filtered queries
+    private static final String FIND_BY_USER_ID_AND_ORG =
+        "SELECT * FROM permission_audit_logs WHERE user_id = :userId AND organization_id = :organizationId ORDER BY timestamp DESC";
+    private static final String FIND_RECENT_LOGS_BY_ORG =
+        "SELECT * FROM permission_audit_logs WHERE organization_id = :organizationId ORDER BY timestamp DESC LIMIT :limit";
+    private static final String FIND_BY_ORG =
+        "SELECT * FROM permission_audit_logs WHERE organization_id = :organizationId ORDER BY timestamp DESC";
+    private static final String FIND_BY_ID_AND_ORG =
+        "SELECT * FROM permission_audit_logs WHERE id = :id AND organization_id = :organizationId";
     
     @Override
     public PermissionAuditLog save(PermissionAuditLog auditLog) {
         try {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("organizationId", auditLog.getOrganizationId())
                 .addValue("userId", auditLog.getUserId())
                 .addValue("action", auditLog.getAction())
                 .addValue("targetType", auditLog.getTargetType())
@@ -80,55 +91,150 @@ public class PermissionAuditLogRepositoryImpl implements PermissionAuditLogRepos
     }
 
     @Override
-    public List<PermissionAuditLog> searchLogs(Long userId, String action, String targetType, 
+    public List<PermissionAuditLog> searchLogs(Long userId, String action, String targetType,
                                             LocalDateTime startDate, LocalDateTime endDate, int limit) {
         try {
             StringBuilder sql = new StringBuilder("SELECT * FROM permission_audit_logs WHERE 1=1");
             Map<String, Object> params = new HashMap<>();
-            
+
             if (userId != null) {
                 sql.append(" AND user_id = :userId");
                 params.put("userId", userId);
             }
-            
+
             if (action != null && !action.isEmpty()) {
                 sql.append(" AND action = :action");
                 params.put("action", action);
             }
-            
+
             if (targetType != null && !targetType.isEmpty()) {
                 sql.append(" AND target_type = :targetType");
                 params.put("targetType", targetType);
             }
-            
+
             if (startDate != null) {
                 sql.append(" AND timestamp >= :startDate");
                 params.put("startDate", startDate);
             }
-            
+
             if (endDate != null) {
                 sql.append(" AND timestamp <= :endDate");
                 params.put("endDate", endDate);
             }
-            
+
             sql.append(" ORDER BY timestamp DESC LIMIT :limit");
             params.put("limit", limit);
-            
+
             return jdbc.query(sql.toString(), params, new AuditLogRowMapper());
         } catch (Exception e) {
             log.error("Error searching logs: {}", e.getMessage());
             throw new ApiException("Error searching logs");
         }
     }
-    
+
+    // ========== TENANT-FILTERED METHODS ==========
+
+    @Override
+    public List<PermissionAuditLog> findByUserIdAndOrganizationId(Long userId, Long organizationId) {
+        try {
+            return jdbc.query(FIND_BY_USER_ID_AND_ORG,
+                of("userId", userId, "organizationId", organizationId), new AuditLogRowMapper());
+        } catch (Exception e) {
+            log.error("Error finding audit logs by user and org: {}", e.getMessage());
+            throw new ApiException("Error finding audit logs");
+        }
+    }
+
+    @Override
+    public List<PermissionAuditLog> findRecentLogsByOrganizationId(Long organizationId, int limit) {
+        try {
+            return jdbc.query(FIND_RECENT_LOGS_BY_ORG,
+                of("organizationId", organizationId, "limit", limit), new AuditLogRowMapper());
+        } catch (Exception e) {
+            log.error("Error finding recent logs by org: {}", e.getMessage());
+            throw new ApiException("Error finding recent logs");
+        }
+    }
+
+    @Override
+    public List<PermissionAuditLog> searchLogsByOrganizationId(Long organizationId, Long userId, String action,
+                                                               String targetType, LocalDateTime startDate,
+                                                               LocalDateTime endDate, int limit) {
+        try {
+            StringBuilder sql = new StringBuilder("SELECT * FROM permission_audit_logs WHERE organization_id = :organizationId");
+            Map<String, Object> params = new HashMap<>();
+            params.put("organizationId", organizationId);
+
+            if (userId != null) {
+                sql.append(" AND user_id = :userId");
+                params.put("userId", userId);
+            }
+
+            if (action != null && !action.isEmpty()) {
+                sql.append(" AND action = :action");
+                params.put("action", action);
+            }
+
+            if (targetType != null && !targetType.isEmpty()) {
+                sql.append(" AND target_type = :targetType");
+                params.put("targetType", targetType);
+            }
+
+            if (startDate != null) {
+                sql.append(" AND timestamp >= :startDate");
+                params.put("startDate", startDate);
+            }
+
+            if (endDate != null) {
+                sql.append(" AND timestamp <= :endDate");
+                params.put("endDate", endDate);
+            }
+
+            sql.append(" ORDER BY timestamp DESC LIMIT :limit");
+            params.put("limit", limit);
+
+            return jdbc.query(sql.toString(), params, new AuditLogRowMapper());
+        } catch (Exception e) {
+            log.error("Error searching logs by org: {}", e.getMessage());
+            throw new ApiException("Error searching logs");
+        }
+    }
+
+    @Override
+    public List<PermissionAuditLog> findByOrganizationId(Long organizationId) {
+        try {
+            return jdbc.query(FIND_BY_ORG,
+                of("organizationId", organizationId), new AuditLogRowMapper());
+        } catch (Exception e) {
+            log.error("Error finding audit logs by org: {}", e.getMessage());
+            throw new ApiException("Error finding audit logs");
+        }
+    }
+
+    @Override
+    public java.util.Optional<PermissionAuditLog> findByIdAndOrganizationId(Long id, Long organizationId) {
+        try {
+            List<PermissionAuditLog> results = jdbc.query(FIND_BY_ID_AND_ORG,
+                of("id", id, "organizationId", organizationId), new AuditLogRowMapper());
+            return results.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(results.get(0));
+        } catch (Exception e) {
+            log.error("Error finding audit log by id and org: {}", e.getMessage());
+            throw new ApiException("Error finding audit log");
+        }
+    }
+
     /**
      * Row mapper for permission audit logs
      */
     private static class AuditLogRowMapper implements RowMapper<PermissionAuditLog> {
         @Override
         public PermissionAuditLog mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Long orgId = rs.getLong("organization_id");
+            if (rs.wasNull()) orgId = null;
+
             return PermissionAuditLog.builder()
                 .id(rs.getLong("id"))
+                .organizationId(orgId)
                 .userId(rs.getLong("user_id"))
                 .action(rs.getString("action"))
                 .targetType(rs.getString("target_type"))

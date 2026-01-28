@@ -12,4 +12,16 @@ public interface AttorneyRepository extends JpaRepository<Attorney, Long> {
     Optional<Attorney> findByUserId(Long userId);
 
     boolean existsByUserId(Long userId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    Optional<Attorney> findByUserIdAndOrganizationId(Long userId, Long organizationId);
+
+    boolean existsByUserIdAndOrganizationId(Long userId, Long organizationId);
+
+    Optional<Attorney> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    java.util.List<Attorney> findByOrganizationId(Long organizationId);
+
+    java.util.List<Attorney> findByOrganizationIdAndIsActiveTrue(Long organizationId);
 }

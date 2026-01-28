@@ -9,6 +9,7 @@ import com.bostoneo.bostoneosolutions.model.Permission;
 import com.bostoneo.bostoneosolutions.model.Role;
 import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.model.UserPrincipal;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.query.RoleQuery;
 import com.bostoneo.bostoneosolutions.repository.RoleRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
@@ -90,17 +91,26 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     public Collection<User> list(int page, int pageSize) {
         try {
             log.info("Fetching users with pagination: page={}, pageSize={}", page, pageSize);
-            
+
             if (pageSize <= 0) pageSize = 20; // Default page size
             if (page < 0) page = 0; // Default page
-            
+
             int offset = page * pageSize;
-            
+
+            // Get current tenant context for multi-tenant filtering
+            Long organizationId = TenantContext.getCurrentTenant();
+
             MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("pageSize", pageSize)
                 .addValue("offset", offset);
-            
-            return jdbc.query(SELECT_ALL_USERS_QUERY, params, new UserRowMapper());
+
+            // Require organization context for tenant isolation
+            if (organizationId == null) {
+                throw new ApiException("Organization context required");
+            }
+
+            params.addValue("organizationId", organizationId);
+            return jdbc.query(SELECT_USERS_BY_ORGANIZATION_QUERY, params, new UserRowMapper());
         } catch (Exception exception) {
             log.error("Error fetching users: {}", exception.getMessage(), exception);
             throw new ApiException("An error occurred while fetching users: " + exception.getMessage());
@@ -110,7 +120,12 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     @Override
     public User get(Long id) {
         try {
-            return jdbc.queryForObject(SELECT_USER_BY_ID_QUERY, of("id", id), new UserRowMapper());
+            Long organizationId = TenantContext.getCurrentTenant();
+            if (organizationId == null) {
+                throw new ApiException("Organization context required");
+            }
+            return jdbc.queryForObject(SELECT_USER_BY_ID_AND_ORG_QUERY,
+                of("id", id, "organizationId", organizationId), new UserRowMapper());
         } catch (EmptyResultDataAccessException exception) {
             throw new ApiException("No User found by id: " + id);
         } catch (Exception exception) {
@@ -134,14 +149,14 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             }
             
             // DELETE ALL FOREIGN KEY REFERENCES - BASED ON ACTUAL DATABASE SCHEMA
-            
-            // Delete verifications
-            jdbc.update("DELETE FROM TwoFactorVerifications WHERE user_id = :userId", of("userId", id));
-            jdbc.update("DELETE FROM ResetPasswordVerifications WHERE user_id = :userId", of("userId", id));
-            jdbc.update("DELETE FROM AccountVerifications WHERE user_id = :userId", of("userId", id));
-            
+
+            // Delete verifications (PostgreSQL uses lowercase table names)
+            jdbc.update("DELETE FROM two_factor_verifications WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM reset_password_verifications WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM account_verifications WHERE user_id = :userId", of("userId", id));
+
             // Delete user events and activities
-            jdbc.update("DELETE FROM UserEvents WHERE user_id = :userId", of("userId", id));
+            jdbc.update("DELETE FROM user_events WHERE user_id = :userId", of("userId", id));
             jdbc.update("DELETE FROM activity_summary WHERE user_id = :userId", of("userId", id));
             jdbc.update("DELETE FROM audit_log WHERE user_id = :userId", of("userId", id));
             
@@ -181,8 +196,8 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             // Delete case assignments
             jdbc.update("DELETE FROM case_assignments WHERE user_id = :userId OR assigned_by = :userId", of("userId", id));
             
-            // Handle case_tasks self-referencing parent_task_id
-            jdbc.update("UPDATE case_tasks ct1 INNER JOIN case_tasks ct2 ON ct1.parent_task_id = ct2.id SET ct1.parent_task_id = NULL WHERE ct2.assigned_to = :userId OR ct2.assigned_by = :userId", of("userId", id));
+            // Handle case_tasks self-referencing parent_task_id (PostgreSQL compatible)
+            jdbc.update("UPDATE case_tasks SET parent_task_id = NULL WHERE parent_task_id IN (SELECT id FROM case_tasks WHERE assigned_to = :userId OR assigned_by = :userId)", of("userId", id));
             
             // Delete task comments BEFORE case_tasks
             jdbc.update("DELETE FROM task_comments WHERE user_id = :userId", of("userId", id));
@@ -452,7 +467,12 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     @Override
     public List<User> getUsersByRoleId(Long roleId) {
         try {
-            return jdbc.query(RoleQuery.SELECT_USERS_BY_ROLE_ID_QUERY, of("roleId", roleId), new UserRowMapper());
+            Long organizationId = TenantContext.getCurrentTenant();
+            if (organizationId == null) {
+                throw new ApiException("Organization context required");
+            }
+            return jdbc.query(SELECT_USERS_BY_ROLE_AND_ORG_QUERY,
+                of("roleId", roleId, "organizationId", organizationId), new UserRowMapper());
         } catch (Exception exception) {
             log.error("Error fetching users by role id: {}", exception.getMessage());
             throw new ApiException("An error occurred while fetching users by role");
@@ -462,7 +482,12 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     @Override
     public User findByIdWithRoles(Long id) {
         try {
-            User user = jdbc.queryForObject(SELECT_USER_BY_ID_QUERY, of("id", id), new UserRowMapper());
+            Long organizationId = TenantContext.getCurrentTenant();
+            if (organizationId == null) {
+                throw new ApiException("Organization context required");
+            }
+            User user = jdbc.queryForObject(SELECT_USER_BY_ID_AND_ORG_QUERY,
+                of("id", id, "organizationId", organizationId), new UserRowMapper());
             if (user != null) {
                 // Load roles for the user
                 Set<Role> roles = roleRepository.getRolesByUserId(user.getId());
@@ -480,22 +505,20 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     @Override
     public List<User> findActiveAttorneys() {
         try {
-            String query = "SELECT * FROM users u " +
-                          "INNER JOIN user_roles ur ON u.id = ur.user_id " +
-                          "INNER JOIN roles r ON ur.role_id = r.id " +
-                          "WHERE u.enabled = true AND u.not_locked = true " +
-                          "AND r.name IN ('ROLE_ATTORNEY', 'ROLE_SENIOR_ATTORNEY', 'ROLE_PARTNER', " +
-                          "'ROLE_SENIOR_PARTNER', 'ROLE_MANAGING_PARTNER') " +
-                          "ORDER BY u.first_name, u.last_name";
-            
-            List<User> attorneys = jdbc.query(query, new UserRowMapper());
-            
+            Long organizationId = TenantContext.getCurrentTenant();
+            if (organizationId == null) {
+                throw new ApiException("Organization context required");
+            }
+
+            List<User> attorneys = jdbc.query(SELECT_ACTIVE_ATTORNEYS_BY_ORG_QUERY,
+                of("organizationId", organizationId), new UserRowMapper());
+
             // Load roles for each attorney
             attorneys.forEach(attorney -> {
                 Set<Role> roles = roleRepository.getRolesByUserId(attorney.getId());
                 attorney.setRoles(roles);
             });
-            
+
             return attorneys;
         } catch (Exception exception) {
             log.error("Error fetching active attorneys: {}", exception.getMessage());
@@ -505,7 +528,14 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     
     @Override
     public User findByEmail(String email) {
-        return getUserByEmail(email);
+        try {
+            return jdbc.queryForObject(SELECT_USER_BY_EMAIL_QUERY, of("email", email), new UserRowMapper());
+        } catch (EmptyResultDataAccessException exception) {
+            return null; // Return null for invitation checks - user doesn't exist yet
+        } catch (Exception exception) {
+            log.error("Error finding user by email: {}", exception.getMessage());
+            return null;
+        }
     }
 
     private void sendEmail(String firstName, String email, String verificationUrl, VerificationType verificationType) {

@@ -44,6 +44,39 @@ public interface ActiveTimerRepository extends PagingAndSortingRepository<Active
     // Stop all active timers for a user (for cleanup)
     @Query("UPDATE ActiveTimer at SET at.isActive = false WHERE at.userId = :userId AND at.isActive = true")
     void deactivateAllUserTimers(@Param("userId") Long userId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    List<ActiveTimer> findByOrganizationIdAndIsActive(Long organizationId, Boolean isActive);
+
+    @Query("SELECT at FROM ActiveTimer at WHERE at.organizationId = :orgId AND at.userId = :userId ORDER BY at.isActive DESC, at.startTime DESC")
+    List<ActiveTimer> findByOrganizationIdAndUserId(@Param("orgId") Long organizationId, @Param("userId") Long userId);
+
+    @Query("SELECT at FROM ActiveTimer at WHERE at.organizationId = :orgId AND at.legalCaseId = :legalCaseId AND at.isActive = true ORDER BY at.startTime DESC")
+    List<ActiveTimer> findActiveTimersByCaseAndOrganization(@Param("orgId") Long organizationId, @Param("legalCaseId") Long legalCaseId);
+
+    // Additional tenant-filtered methods
+    @Query("SELECT at FROM ActiveTimer at WHERE at.organizationId = :orgId AND at.userId = :userId AND at.isActive = :isActive ORDER BY at.startTime DESC")
+    List<ActiveTimer> findByOrganizationIdAndUserIdAndIsActive(@Param("orgId") Long organizationId, @Param("userId") Long userId, @Param("isActive") Boolean isActive);
+
+    @Query("SELECT at FROM ActiveTimer at WHERE at.organizationId = :orgId ORDER BY at.isActive DESC, at.startTime DESC")
+    List<ActiveTimer> findAllByOrganizationId(@Param("orgId") Long organizationId);
+
+    @Query("SELECT COUNT(at) FROM ActiveTimer at WHERE at.organizationId = :orgId AND at.isActive = true")
+    long countActiveByOrganizationId(@Param("orgId") Long organizationId);
+
+    // Secure findById with org verification
+    Optional<ActiveTimer> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    @Query("SELECT at FROM ActiveTimer at WHERE at.organizationId = :orgId AND at.userId = :userId AND at.legalCaseId = :caseId AND at.isActive = :isActive")
+    Optional<ActiveTimer> findByOrganizationIdAndUserIdAndLegalCaseIdAndIsActive(
+            @Param("orgId") Long organizationId, @Param("userId") Long userId,
+            @Param("caseId") Long legalCaseId, @Param("isActive") Boolean isActive);
+
+    @Query("SELECT CASE WHEN COUNT(at) > 0 THEN true ELSE false END FROM ActiveTimer at WHERE at.organizationId = :orgId AND at.userId = :userId AND at.isActive = true")
+    boolean hasActiveTimerByOrganization(@Param("orgId") Long organizationId, @Param("userId") Long userId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 } 
  
  

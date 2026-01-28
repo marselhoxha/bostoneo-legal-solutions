@@ -156,16 +156,70 @@ public interface FileAccessLogRepository extends JpaRepository<FileAccessLog, Lo
     List<FileAccessLog> findOrphanedLogs();
     
     // Bulk statistics
+    /**
+     * @deprecated Use getDailyAccessStatisticsByOrganization for tenant isolation
+     */
+    @Deprecated
     @Query(value = "SELECT CAST(l.accessed_at AS DATE) as access_date, COUNT(*) as daily_count FROM file_access_logs l " +
            "WHERE l.accessed_at >= :since GROUP BY CAST(l.accessed_at AS DATE) ORDER BY access_date DESC",
            nativeQuery = true)
     List<Object[]> getDailyAccessStatistics(@Param("since") LocalDateTime since);
 
+    /**
+     * @deprecated Use getHourlyAccessStatisticsByOrganization for tenant isolation
+     */
+    @Deprecated
     @Query(value = "SELECT EXTRACT(HOUR FROM l.accessed_at) as access_hour, COUNT(*) as hourly_count FROM file_access_logs l " +
            "WHERE l.accessed_at >= :since GROUP BY EXTRACT(HOUR FROM l.accessed_at) ORDER BY access_hour ASC",
            nativeQuery = true)
     List<Object[]> getHourlyAccessStatistics(@Param("since") LocalDateTime since);
-    
+
+    /**
+     * @deprecated Use deleteByFileIdAndOrganizationId for tenant isolation
+     */
+    @Deprecated
     @Modifying
     void deleteByFileId(Long fileId);
+
+    // ========== TENANT-FILTERED METHODS (SECURE) ==========
+
+    @Query("SELECT l FROM FileAccessLog l WHERE l.fileId = :fileId AND l.organizationId = :organizationId ORDER BY l.accessedAt DESC")
+    List<FileAccessLog> findByFileIdAndOrganizationIdOrderByAccessedAtDesc(@Param("fileId") Long fileId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT l FROM FileAccessLog l WHERE l.fileId = :fileId AND l.organizationId = :organizationId ORDER BY l.accessedAt DESC")
+    Page<FileAccessLog> findByFileIdAndOrganizationIdOrderByAccessedAtDesc(@Param("fileId") Long fileId, @Param("organizationId") Long organizationId, Pageable pageable);
+
+    @Query("SELECT COUNT(l) FROM FileAccessLog l WHERE l.organizationId = :organizationId AND l.accessedAt >= :since")
+    Long countAccessesSinceByOrganization(@Param("organizationId") Long organizationId, @Param("since") LocalDateTime since);
+
+    @Query("SELECT l.fileId, COUNT(l) as accessCount FROM FileAccessLog l " +
+           "WHERE l.organizationId = :organizationId AND l.accessedAt >= :since GROUP BY l.fileId ORDER BY accessCount DESC")
+    List<Object[]> findMostAccessedFilesByOrganization(@Param("organizationId") Long organizationId, @Param("since") LocalDateTime since);
+
+    @Modifying
+    @Query("DELETE FROM FileAccessLog l WHERE l.fileId = :fileId AND l.organizationId = :organizationId")
+    void deleteByFileIdAndOrganizationId(@Param("fileId") Long fileId, @Param("organizationId") Long organizationId);
+
+    // Tenant-filtered analytics methods
+    @Query(value = "SELECT CAST(l.accessed_at AS DATE) as access_date, COUNT(*) as daily_count FROM file_access_logs l " +
+           "WHERE l.organization_id = :orgId AND l.accessed_at >= :since GROUP BY CAST(l.accessed_at AS DATE) ORDER BY access_date DESC",
+           nativeQuery = true)
+    List<Object[]> getDailyAccessStatisticsByOrganization(@Param("orgId") Long organizationId, @Param("since") LocalDateTime since);
+
+    @Query(value = "SELECT EXTRACT(HOUR FROM l.accessed_at) as access_hour, COUNT(*) as hourly_count FROM file_access_logs l " +
+           "WHERE l.organization_id = :orgId AND l.accessed_at >= :since GROUP BY EXTRACT(HOUR FROM l.accessed_at) ORDER BY access_hour ASC",
+           nativeQuery = true)
+    List<Object[]> getHourlyAccessStatisticsByOrganization(@Param("orgId") Long organizationId, @Param("since") LocalDateTime since);
+
+    /**
+     * SECURITY: Find all access logs for an organization (tenant isolation)
+     */
+    @Query("SELECT l FROM FileAccessLog l WHERE l.organizationId = :organizationId")
+    List<FileAccessLog> findByOrganizationId(@Param("organizationId") Long organizationId);
+
+    /**
+     * SECURITY: Find access log by ID and organization (tenant isolation)
+     */
+    @Query("SELECT l FROM FileAccessLog l WHERE l.id = :id AND l.organizationId = :organizationId")
+    java.util.Optional<FileAccessLog> findByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
 }

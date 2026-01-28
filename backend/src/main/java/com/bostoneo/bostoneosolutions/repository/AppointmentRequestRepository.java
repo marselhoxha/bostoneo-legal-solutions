@@ -82,13 +82,28 @@ public interface AppointmentRequestRepository extends JpaRepository<AppointmentR
     // =====================================================
 
     /**
-     * Find appointments for an attorney in a time range (for conflict detection)
+     * @deprecated Use findConflictingAppointmentsByOrganization instead for tenant isolation
      */
+    @Deprecated
     @Query("SELECT a FROM AppointmentRequest a WHERE a.attorneyId = :attorneyId " +
            "AND a.status IN ('CONFIRMED', 'PENDING') " +
            "AND ((a.confirmedDatetime BETWEEN :start AND :end) " +
            "OR (a.preferredDatetime BETWEEN :start AND :end))")
     List<AppointmentRequest> findConflictingAppointments(
+            @Param("attorneyId") Long attorneyId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+
+    /**
+     * TENANT-FILTERED: Find appointments for an attorney in a time range (for conflict detection)
+     */
+    @Query("SELECT a FROM AppointmentRequest a WHERE a.organizationId = :organizationId " +
+           "AND a.attorneyId = :attorneyId " +
+           "AND a.status IN ('CONFIRMED', 'PENDING') " +
+           "AND ((a.confirmedDatetime BETWEEN :start AND :end) " +
+           "OR (a.preferredDatetime BETWEEN :start AND :end))")
+    List<AppointmentRequest> findConflictingAppointmentsByOrganization(
+            @Param("organizationId") Long organizationId,
             @Param("attorneyId") Long attorneyId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
@@ -132,4 +147,53 @@ public interface AppointmentRequestRepository extends JpaRepository<AppointmentR
      */
     @Query("SELECT a.appointmentType, COUNT(a) FROM AppointmentRequest a WHERE a.attorneyId = :attorneyId GROUP BY a.appointmentType")
     List<Object[]> countByTypeForAttorney(@Param("attorneyId") Long attorneyId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    java.util.Optional<AppointmentRequest> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    Page<AppointmentRequest> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    Page<AppointmentRequest> findByOrganizationIdAndClientIdOrderByPreferredDatetimeDesc(Long organizationId, Long clientId, Pageable pageable);
+
+    Page<AppointmentRequest> findByOrganizationIdAndAttorneyIdOrderByPreferredDatetimeDesc(Long organizationId, Long attorneyId, Pageable pageable);
+
+    @Query("SELECT a FROM AppointmentRequest a WHERE a.organizationId = :orgId AND a.clientId = :clientId " +
+           "AND a.status = 'CONFIRMED' AND a.confirmedDatetime >= :now ORDER BY a.confirmedDatetime ASC")
+    List<AppointmentRequest> findUpcomingByOrganizationAndClientId(@Param("orgId") Long organizationId,
+                                                                    @Param("clientId") Long clientId,
+                                                                    @Param("now") LocalDateTime now);
+
+    List<AppointmentRequest> findByOrganizationIdAndClientIdAndStatusOrderByPreferredDatetimeAsc(Long organizationId, Long clientId, String status);
+
+    List<AppointmentRequest> findByOrganizationIdAndAttorneyIdAndStatusOrderByCreatedAtAsc(Long organizationId, Long attorneyId, String status);
+
+    @Query("SELECT a FROM AppointmentRequest a WHERE a.organizationId = :orgId AND a.attorneyId = :attorneyId " +
+           "AND a.status = 'CONFIRMED' AND a.confirmedDatetime >= :now ORDER BY a.confirmedDatetime ASC")
+    List<AppointmentRequest> findUpcomingByOrganizationAndAttorneyId(@Param("orgId") Long organizationId,
+                                                                      @Param("attorneyId") Long attorneyId,
+                                                                      @Param("now") LocalDateTime now);
+
+    long countByOrganizationIdAndAttorneyIdAndStatus(Long organizationId, Long attorneyId, String status);
+
+    List<AppointmentRequest> findByOrganizationIdAndCaseIdOrderByPreferredDatetimeDesc(Long organizationId, Long caseId);
+
+    // Reminder queries by organization (for scheduled tasks)
+    @Query("SELECT a FROM AppointmentRequest a WHERE a.organizationId = :organizationId " +
+           "AND a.status = 'CONFIRMED' AND a.reminder24hSent = false " +
+           "AND a.confirmedDatetime BETWEEN :start AND :end")
+    List<AppointmentRequest> findNeedingReminder24hByOrganizationId(
+            @Param("organizationId") Long organizationId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+
+    @Query("SELECT a FROM AppointmentRequest a WHERE a.organizationId = :organizationId " +
+           "AND a.status = 'CONFIRMED' AND a.reminder1hSent = false " +
+           "AND a.confirmedDatetime BETWEEN :start AND :end")
+    List<AppointmentRequest> findNeedingReminder1hByOrganizationId(
+            @Param("organizationId") Long organizationId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }

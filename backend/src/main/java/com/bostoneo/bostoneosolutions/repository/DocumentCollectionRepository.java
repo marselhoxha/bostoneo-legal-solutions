@@ -45,4 +45,37 @@ public interface DocumentCollectionRepository extends JpaRepository<DocumentColl
      * Count collections for a user
      */
     long countByUserIdAndIsArchivedFalse(Long userId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    /**
+     * Find all collections for a user within an organization (SECURITY: tenant isolation)
+     */
+    List<DocumentCollection> findByOrganizationIdAndUserIdAndIsArchivedFalseOrderByUpdatedAtDesc(Long organizationId, Long userId);
+
+    /**
+     * Find all collections for an organization (SECURITY: tenant isolation)
+     */
+    List<DocumentCollection> findByOrganizationIdAndIsArchivedFalseOrderByUpdatedAtDesc(Long organizationId);
+
+    /**
+     * Find collection by ID and organization (SECURITY: tenant isolation)
+     */
+    Optional<DocumentCollection> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * Find collections linked to a specific case within an organization (SECURITY: tenant isolation)
+     */
+    List<DocumentCollection> findByOrganizationIdAndCaseIdAndIsArchivedFalse(Long organizationId, Long caseId);
+
+    /**
+     * Search collections by name within an organization (SECURITY: tenant isolation)
+     */
+    @Query("SELECT c FROM DocumentCollection c WHERE c.organizationId = :orgId AND c.isArchived = false AND LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<DocumentCollection> searchByNameAndOrganization(@Param("orgId") Long organizationId, @Param("query") String query);
+
+    /**
+     * Count collections for an organization
+     */
+    long countByOrganizationIdAndIsArchivedFalse(Long organizationId);
 }

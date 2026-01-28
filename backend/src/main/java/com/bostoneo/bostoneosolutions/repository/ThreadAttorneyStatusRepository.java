@@ -12,36 +12,76 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Repository for per-attorney thread status tracking.
+ * Repository for per-attorney thread status tracking with multi-tenant support.
  * Supports multi-attorney scenarios where each attorney has their own unread count.
+ * All new methods require organizationId for tenant isolation.
  */
 @Repository
 public interface ThreadAttorneyStatusRepository extends JpaRepository<ThreadAttorneyStatus, Long> {
 
-    /**
-     * Find status for a specific attorney and thread
-     */
+    // ==================== TENANT-FILTERED METHODS ====================
+    // SECURITY: Always use these methods for proper multi-tenant isolation.
+
+    Optional<ThreadAttorneyStatus> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    Optional<ThreadAttorneyStatus> findByOrganizationIdAndThreadIdAndAttorneyUserId(Long organizationId, Long threadId, Long attorneyUserId);
+
+    List<ThreadAttorneyStatus> findByOrganizationIdAndThreadId(Long organizationId, Long threadId);
+
+    List<ThreadAttorneyStatus> findByOrganizationIdAndAttorneyUserId(Long organizationId, Long attorneyUserId);
+
+    @Query("SELECT COALESCE(SUM(s.unreadCount), 0) FROM ThreadAttorneyStatus s " +
+           "WHERE s.organizationId = :orgId AND s.attorneyUserId = :attorneyUserId")
+    Integer getTotalUnreadCountForAttorneyByOrganizationId(@Param("orgId") Long organizationId, @Param("attorneyUserId") Long attorneyUserId);
+
+    @Modifying
+    @Query("UPDATE ThreadAttorneyStatus s SET s.unreadCount = 0, s.lastReadAt = :readAt, s.updatedAt = :readAt " +
+           "WHERE s.organizationId = :orgId AND s.threadId = :threadId AND s.attorneyUserId = :attorneyUserId")
+    int markAsReadForAttorneyByOrganizationId(@Param("orgId") Long organizationId,
+                                               @Param("threadId") Long threadId,
+                                               @Param("attorneyUserId") Long attorneyUserId,
+                                               @Param("readAt") LocalDateTime readAt);
+
+    @Modifying
+    @Query("UPDATE ThreadAttorneyStatus s SET s.unreadCount = s.unreadCount + 1, s.updatedAt = CURRENT_TIMESTAMP " +
+           "WHERE s.organizationId = :orgId AND s.threadId = :threadId AND s.attorneyUserId != :excludeAttorneyUserId")
+    int incrementUnreadForOtherAttorneysByOrganizationId(@Param("orgId") Long organizationId,
+                                                          @Param("threadId") Long threadId,
+                                                          @Param("excludeAttorneyUserId") Long excludeAttorneyUserId);
+
+    @Modifying
+    @Query("UPDATE ThreadAttorneyStatus s SET s.unreadCount = s.unreadCount + 1, s.updatedAt = CURRENT_TIMESTAMP " +
+           "WHERE s.organizationId = :orgId AND s.threadId = :threadId")
+    int incrementUnreadForAllAttorneysByOrganizationId(@Param("orgId") Long organizationId, @Param("threadId") Long threadId);
+
+    @Modifying
+    @Query("DELETE FROM ThreadAttorneyStatus s WHERE s.organizationId = :orgId AND s.threadId = :threadId")
+    void deleteByOrganizationIdAndThreadId(@Param("orgId") Long organizationId, @Param("threadId") Long threadId);
+
+    boolean existsByOrganizationIdAndThreadIdAndAttorneyUserId(Long organizationId, Long threadId, Long attorneyUserId);
+
+    // ==================== DEPRECATED METHODS ====================
+    // WARNING: Verify thread ownership through MessageThread.organizationId before calling.
+
+    /** @deprecated Verify thread ownership through MessageThread.organizationId before calling */
+    @Deprecated
     Optional<ThreadAttorneyStatus> findByThreadIdAndAttorneyUserId(Long threadId, Long attorneyUserId);
 
-    /**
-     * Find all statuses for a specific thread (all attorneys)
-     */
+    /** @deprecated Verify thread ownership through MessageThread.organizationId before calling */
+    @Deprecated
     List<ThreadAttorneyStatus> findByThreadId(Long threadId);
 
-    /**
-     * Find all statuses for a specific attorney (all their threads)
-     */
+    /** @deprecated Verify user organization before calling */
+    @Deprecated
     List<ThreadAttorneyStatus> findByAttorneyUserId(Long attorneyUserId);
 
-    /**
-     * Get total unread count for an attorney across all threads
-     */
+    /** @deprecated Verify user organization before calling */
+    @Deprecated
     @Query("SELECT COALESCE(SUM(s.unreadCount), 0) FROM ThreadAttorneyStatus s WHERE s.attorneyUserId = :attorneyUserId")
     Integer getTotalUnreadCountForAttorney(@Param("attorneyUserId") Long attorneyUserId);
 
-    /**
-     * Mark thread as read for a specific attorney
-     */
+    /** @deprecated Verify thread ownership through MessageThread.organizationId before calling */
+    @Deprecated
     @Modifying
     @Query("UPDATE ThreadAttorneyStatus s SET s.unreadCount = 0, s.lastReadAt = :readAt, s.updatedAt = :readAt " +
            "WHERE s.threadId = :threadId AND s.attorneyUserId = :attorneyUserId")
@@ -49,30 +89,26 @@ public interface ThreadAttorneyStatusRepository extends JpaRepository<ThreadAtto
                                @Param("attorneyUserId") Long attorneyUserId,
                                @Param("readAt") LocalDateTime readAt);
 
-    /**
-     * Increment unread count for all attorneys on a thread EXCEPT the sender
-     */
+    /** @deprecated Verify thread ownership through MessageThread.organizationId before calling */
+    @Deprecated
     @Modifying
     @Query("UPDATE ThreadAttorneyStatus s SET s.unreadCount = s.unreadCount + 1, s.updatedAt = CURRENT_TIMESTAMP " +
            "WHERE s.threadId = :threadId AND s.attorneyUserId != :excludeAttorneyUserId")
     int incrementUnreadForOtherAttorneys(@Param("threadId") Long threadId,
                                           @Param("excludeAttorneyUserId") Long excludeAttorneyUserId);
 
-    /**
-     * Increment unread count for ALL attorneys on a thread (when client sends message)
-     */
+    /** @deprecated Verify thread ownership through MessageThread.organizationId before calling */
+    @Deprecated
     @Modifying
     @Query("UPDATE ThreadAttorneyStatus s SET s.unreadCount = s.unreadCount + 1, s.updatedAt = CURRENT_TIMESTAMP " +
            "WHERE s.threadId = :threadId")
     int incrementUnreadForAllAttorneys(@Param("threadId") Long threadId);
 
-    /**
-     * Delete all statuses for a thread (when thread is deleted)
-     */
+    /** @deprecated Verify thread ownership through MessageThread.organizationId before calling */
+    @Deprecated
     void deleteByThreadId(Long threadId);
 
-    /**
-     * Check if status exists for attorney and thread
-     */
+    /** @deprecated Verify thread ownership through MessageThread.organizationId before calling */
+    @Deprecated
     boolean existsByThreadIdAndAttorneyUserId(Long threadId, Long attorneyUserId);
 }

@@ -48,4 +48,30 @@ public interface LeadActivityRepository extends JpaRepository<LeadActivity, Long
     
     @Query("SELECT la FROM LeadActivity la WHERE la.createdBy = :userId ORDER BY la.createdAt DESC")
     List<LeadActivity> findRecentActivitiesByUser(@Param("userId") Long userId, Pageable pageable);
+
+    // ========== TENANT-FILTERED METHODS (SECURE) ==========
+
+    @Query("SELECT la FROM LeadActivity la WHERE la.id = :id AND la.organizationId = :organizationId")
+    java.util.Optional<LeadActivity> findByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT la FROM LeadActivity la WHERE la.leadId = :leadId AND la.organizationId = :organizationId ORDER BY la.activityDate DESC")
+    List<LeadActivity> findByLeadIdAndOrganizationIdOrderByActivityDateDesc(@Param("leadId") Long leadId, @Param("organizationId") Long organizationId);
+
+    @Query("SELECT la FROM LeadActivity la WHERE la.leadId = :leadId AND la.organizationId = :organizationId ORDER BY la.activityDate DESC")
+    Page<LeadActivity> findByLeadIdAndOrganizationIdOrderByActivityDateDesc(@Param("leadId") Long leadId, @Param("organizationId") Long organizationId, Pageable pageable);
+
+    @Query("SELECT la FROM LeadActivity la WHERE la.organizationId = :organizationId ORDER BY la.activityDate DESC")
+    List<LeadActivity> findByOrganizationIdOrderByActivityDateDesc(@Param("organizationId") Long organizationId);
+
+    @Query("SELECT la FROM LeadActivity la WHERE la.organizationId = :organizationId ORDER BY la.activityDate DESC")
+    Page<LeadActivity> findByOrganizationIdOrderByActivityDateDesc(@Param("organizationId") Long organizationId, Pageable pageable);
+
+    @Query("SELECT COUNT(la) FROM LeadActivity la WHERE la.leadId = :leadId AND la.organizationId = :organizationId")
+    long countByLeadIdAndOrganizationId(@Param("leadId") Long leadId, @Param("organizationId") Long organizationId);
+
+    /**
+     * SECURITY: Find all lead activities for an organization (tenant isolation)
+     */
+    @Query("SELECT la FROM LeadActivity la WHERE la.organizationId = :organizationId")
+    List<LeadActivity> findByOrganizationId(@Param("organizationId") Long organizationId);
 }

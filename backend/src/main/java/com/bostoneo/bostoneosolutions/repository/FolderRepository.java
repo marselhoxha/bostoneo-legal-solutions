@@ -120,4 +120,31 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 
     @Query("SELECT COUNT(f) FROM Folder f WHERE f.organizationId = :orgId AND f.deleted = false")
     Long countByOrganization(@Param("orgId") Long organizationId);
+
+    @Query("SELECT f FROM Folder f WHERE f.organizationId = :orgId AND f.caseId = :caseId AND f.parentFolderId IS NULL AND f.deleted = false")
+    List<Folder> findRootFoldersByCaseIdAndOrganization(@Param("orgId") Long organizationId, @Param("caseId") Long caseId);
+
+    Optional<Folder> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    /** SECURITY: Find subfolders by parent with org filter */
+    @Query("SELECT f FROM Folder f WHERE f.parentFolderId = :parentId AND f.deleted = false AND f.organizationId = :orgId")
+    List<Folder> findByParentFolderIdAndDeletedFalseAndOrganizationId(
+        @Param("parentId") Long parentFolderId,
+        @Param("orgId") Long organizationId);
+
+    /** SECURITY: Find folder by name and parent with org filter */
+    @Query("SELECT f FROM Folder f WHERE f.deleted = false AND f.name = :name AND f.organizationId = :orgId AND " +
+           "(:parentId IS NULL AND f.parentFolderId IS NULL OR f.parentFolderId = :parentId)")
+    Optional<Folder> findByNameAndParentAndOrganizationId(
+        @Param("name") String name,
+        @Param("parentId") Long parentId,
+        @Param("orgId") Long organizationId);
+
+    /** SECURITY: Find subfolders in folder with org filter */
+    @Query("SELECT f FROM Folder f WHERE f.parentFolderId = :parentFolderId AND f.deleted = false AND f.organizationId = :orgId")
+    List<Folder> findByParentFolderIdAndDeletedFalseAndOrgId(
+        @Param("parentFolderId") Long parentFolderId,
+        @Param("orgId") Long organizationId);
 }

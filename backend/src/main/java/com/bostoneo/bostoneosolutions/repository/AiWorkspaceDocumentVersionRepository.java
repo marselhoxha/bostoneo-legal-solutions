@@ -9,43 +9,44 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * WARNING: Entity AiWorkspaceDocumentVersion lacks organization_id.
+ * Tenant isolation is enforced through parent AiWorkspaceDocument which has organization_id.
+ * Verify document ownership before calling these methods.
+ */
 @Repository
 public interface AiWorkspaceDocumentVersionRepository extends JpaRepository<AiWorkspaceDocumentVersion, Long> {
 
-    /**
-     * Find all versions for a document, ordered by version number
-     */
+    // ==================== DEPRECATED METHODS ====================
+    // WARNING: Verify parent document ownership through AiWorkspaceDocument.organizationId
+
+    /** @deprecated Verify document ownership through AiWorkspaceDocument.organizationId before calling */
+    @Deprecated
     List<AiWorkspaceDocumentVersion> findByDocumentIdOrderByVersionNumberDesc(Long documentId);
 
-    /**
-     * Find specific version by document ID and version number
-     */
+    /** @deprecated Verify document ownership through AiWorkspaceDocument.organizationId before calling */
+    @Deprecated
     Optional<AiWorkspaceDocumentVersion> findByDocumentIdAndVersionNumber(Long documentId, Integer versionNumber);
 
-    /**
-     * Find latest version for a document
-     */
+    /** @deprecated Verify document ownership through AiWorkspaceDocument.organizationId before calling */
+    @Deprecated
     @Query("SELECT v FROM AiWorkspaceDocumentVersion v WHERE v.document.id = :documentId " +
            "ORDER BY v.versionNumber DESC LIMIT 1")
     Optional<AiWorkspaceDocumentVersion> findLatestVersion(@Param("documentId") Long documentId);
 
-    /**
-     * Get version count for a document
-     */
+    /** @deprecated Verify document ownership through AiWorkspaceDocument.organizationId before calling */
+    @Deprecated
     long countByDocumentId(Long documentId);
 
-    /**
-     * Find versions by transformation type
-     */
+    /** @deprecated Verify document ownership through AiWorkspaceDocument.organizationId before calling */
+    @Deprecated
     List<AiWorkspaceDocumentVersion> findByDocumentIdAndTransformationType(Long documentId, String transformationType);
 
-    /**
-     * Get AI-generated versions only (not manual edits)
-     */
+    /** @deprecated Verify document ownership through AiWorkspaceDocument.organizationId before calling */
+    @Deprecated
     List<AiWorkspaceDocumentVersion> findByDocumentIdAndCreatedByUserFalseOrderByVersionNumberDesc(Long documentId);
 
-    /**
-     * Get manual edit versions only
-     */
+    /** @deprecated Verify document ownership through AiWorkspaceDocument.organizationId before calling */
+    @Deprecated
     List<AiWorkspaceDocumentVersion> findByDocumentIdAndCreatedByUserTrueOrderByVersionNumberDesc(Long documentId);
 }

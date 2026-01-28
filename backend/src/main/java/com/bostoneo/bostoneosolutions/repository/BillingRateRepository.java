@@ -82,6 +82,69 @@ public interface BillingRateRepository extends PagingAndSortingRepository<Billin
     // Get rate history for a user
     @Query("SELECT br FROM BillingRate br WHERE br.userId = :userId ORDER BY br.effectiveDate DESC, br.createdAt DESC")
     List<BillingRate> getRateHistoryForUser(@Param("userId") Long userId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    List<BillingRate> findByOrganizationId(Long organizationId);
+
+    Page<BillingRate> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    @Query("SELECT br FROM BillingRate br WHERE br.organizationId = :orgId AND br.userId = :userId")
+    Page<BillingRate> findByOrganizationIdAndUserId(@Param("orgId") Long organizationId, @Param("userId") Long userId, Pageable pageable);
+
+    @Query("SELECT br FROM BillingRate br WHERE br.organizationId = :orgId AND br.userId = :userId AND br.isActive = :isActive")
+    List<BillingRate> findByOrganizationIdAndUserIdAndIsActive(@Param("orgId") Long organizationId, @Param("userId") Long userId, @Param("isActive") Boolean isActive);
+
+    @Query("SELECT br FROM BillingRate br WHERE br.organizationId = :orgId AND br.isActive = true " +
+           "AND (br.effectiveDate IS NULL OR br.effectiveDate <= CURRENT_DATE) " +
+           "AND (br.endDate IS NULL OR br.endDate >= CURRENT_DATE)")
+    List<BillingRate> findCurrentActiveRatesByOrganization(@Param("orgId") Long organizationId);
+
+    long countByOrganizationId(Long organizationId);
+
+    // Additional tenant-filtered methods
+    @Query("SELECT br FROM BillingRate br WHERE br.organizationId = :orgId AND br.matterTypeId = :matterTypeId")
+    List<BillingRate> findByOrganizationIdAndMatterTypeId(@Param("orgId") Long organizationId, @Param("matterTypeId") Long matterTypeId);
+
+    @Query("SELECT br FROM BillingRate br WHERE br.organizationId = :orgId AND br.clientId = :clientId")
+    List<BillingRate> findByOrganizationIdAndClientId(@Param("orgId") Long organizationId, @Param("clientId") Long clientId);
+
+    @Query("SELECT br FROM BillingRate br WHERE br.organizationId = :orgId AND br.legalCaseId = :legalCaseId")
+    List<BillingRate> findByOrganizationIdAndLegalCaseId(@Param("orgId") Long organizationId, @Param("legalCaseId") Long legalCaseId);
+
+    @Query("SELECT br FROM BillingRate br WHERE br.organizationId = :orgId AND br.rateType = :rateType")
+    List<BillingRate> findByOrganizationIdAndRateType(@Param("orgId") Long organizationId, @Param("rateType") RateType rateType);
+
+    @Query("SELECT br FROM BillingRate br WHERE br.organizationId = :orgId AND br.userId = :userId ORDER BY br.effectiveDate DESC, br.createdAt DESC")
+    List<BillingRate> getRateHistoryForUserByOrganization(@Param("orgId") Long organizationId, @Param("userId") Long userId);
+
+    @Query("SELECT br FROM BillingRate br WHERE br.organizationId = :orgId AND br.userId = :userId AND br.isActive = true " +
+           "AND (br.effectiveDate IS NULL OR br.effectiveDate <= :date) " +
+           "AND (br.endDate IS NULL OR br.endDate >= :date) " +
+           "ORDER BY br.legalCaseId DESC, br.clientId DESC, br.matterTypeId DESC, br.effectiveDate DESC")
+    List<BillingRate> findEffectiveRatesForUserByOrganization(@Param("orgId") Long organizationId, @Param("userId") Long userId, @Param("date") LocalDate date);
+
+    @Query("SELECT br FROM BillingRate br WHERE br.organizationId = :orgId AND br.userId = :userId AND br.isActive = true " +
+           "AND (br.effectiveDate IS NULL OR br.effectiveDate <= :date) " +
+           "AND (br.endDate IS NULL OR br.endDate >= :date) " +
+           "AND (:legalCaseId IS NULL OR br.legalCaseId = :legalCaseId OR br.legalCaseId IS NULL) " +
+           "AND (:clientId IS NULL OR br.clientId = :clientId OR br.clientId IS NULL) " +
+           "AND (:matterTypeId IS NULL OR br.matterTypeId = :matterTypeId OR br.matterTypeId IS NULL) " +
+           "ORDER BY " +
+           "CASE WHEN br.legalCaseId = :legalCaseId THEN 1 ELSE 2 END, " +
+           "CASE WHEN br.clientId = :clientId THEN 1 ELSE 2 END, " +
+           "CASE WHEN br.matterTypeId = :matterTypeId THEN 1 ELSE 2 END, " +
+           "br.effectiveDate DESC")
+    List<BillingRate> findMostSpecificRateByOrganization(@Param("orgId") Long organizationId,
+                                                         @Param("userId") Long userId,
+                                                         @Param("legalCaseId") Long legalCaseId,
+                                                         @Param("clientId") Long clientId,
+                                                         @Param("matterTypeId") Long matterTypeId,
+                                                         @Param("date") LocalDate date);
+
+    Optional<BillingRate> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 } 
  
  

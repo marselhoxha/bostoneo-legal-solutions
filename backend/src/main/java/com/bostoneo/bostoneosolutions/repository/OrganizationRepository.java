@@ -30,4 +30,23 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
 
     @Query("SELECT o FROM Organization o WHERE o.name LIKE %:query% OR o.slug LIKE %:query% OR o.email LIKE %:query%")
     List<Organization> searchOrganizations(@Param("query") String query);
+
+    @Query("SELECT COUNT(u) FROM User u WHERE u.organizationId = :organizationId")
+    Integer countUsersByOrganizationId(@Param("organizationId") Long organizationId);
+
+    @Query("SELECT COUNT(c) FROM LegalCase c WHERE c.organizationId = :organizationId")
+    Integer countCasesByOrganizationId(@Param("organizationId") Long organizationId);
+
+    @Query("SELECT COUNT(f) FROM Folder f WHERE f.organizationId = :organizationId")
+    Integer countDocumentsByOrganizationId(@Param("organizationId") Long organizationId);
+
+    @Query("SELECT COUNT(c) FROM Client c WHERE c.organizationId = :organizationId")
+    Integer countClientsByOrganizationId(@Param("organizationId") Long organizationId);
+
+    /**
+     * SECURITY: Find organization by Twilio phone number for webhook tenant isolation.
+     * Used to determine which organization owns the incoming SMS.
+     */
+    @Query("SELECT o FROM Organization o WHERE o.twilioPhoneNumber = :phoneNumber OR o.twilioPhoneNumber = :normalizedPhone")
+    Optional<Organization> findByTwilioPhoneNumber(@Param("phoneNumber") String phoneNumber, @Param("normalizedPhone") String normalizedPhone);
 }

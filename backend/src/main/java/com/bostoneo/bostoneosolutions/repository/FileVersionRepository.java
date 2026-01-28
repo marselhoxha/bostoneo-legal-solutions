@@ -95,4 +95,25 @@ public interface FileVersionRepository extends JpaRepository<FileVersion, Long> 
     
     @Modifying
     void deleteByFileId(Long fileId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    Optional<FileVersion> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    List<FileVersion> findByOrganizationIdAndFileIdAndIsDeletedFalseOrderByVersionNumberDesc(Long organizationId, Long fileId);
+
+    Optional<FileVersion> findByOrganizationIdAndFileIdAndIsCurrentTrueAndIsDeletedFalse(Long organizationId, Long fileId);
+
+    Optional<FileVersion> findByOrganizationIdAndFileIdAndVersionNumberAndIsDeletedFalse(Long organizationId, Long fileId, Integer versionNumber);
+
+    @Query("SELECT MAX(v.versionNumber) FROM FileVersion v WHERE v.organizationId = :orgId AND v.fileId = :fileId AND v.isDeleted = false")
+    Integer findLatestVersionNumberByOrganization(@Param("orgId") Long organizationId, @Param("fileId") Long fileId);
+
+    List<FileVersion> findByOrganizationIdAndFileIdOrderByVersionNumberDesc(Long organizationId, Long fileId);
+
+    @Modifying
+    @Query("DELETE FROM FileVersion v WHERE v.fileId = :fileId AND v.organizationId = :orgId")
+    void deleteByFileIdAndOrganizationId(@Param("fileId") Long fileId, @Param("orgId") Long organizationId);
 }

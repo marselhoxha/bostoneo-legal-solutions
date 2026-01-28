@@ -14,7 +14,31 @@ import java.util.Optional;
 
 @Repository
 public interface AIImmigrationFormRepository extends JpaRepository<AIImmigrationForm, Long> {
-    
+
+    // ==================== TENANT ISOLATION METHODS ====================
+
+    /**
+     * SECURITY: Get all immigration forms for an organization
+     */
+    List<AIImmigrationForm> findByOrganizationId(Long organizationId);
+
+    /**
+     * SECURITY: Get form by ID with tenant verification
+     */
+    Optional<AIImmigrationForm> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Get form by number with tenant filter
+     */
+    Optional<AIImmigrationForm> findByFormNumberAndOrganizationId(String formNumber, Long organizationId);
+
+    /**
+     * SECURITY: Get active forms for organization
+     */
+    List<AIImmigrationForm> findByOrganizationIdAndIsActiveTrueOrderByFormNumber(Long organizationId);
+
+    // ==================== EXISTING METHODS (Use with caution) ====================
+
     Optional<AIImmigrationForm> findByFormNumber(String formNumber);
     
     List<AIImmigrationForm> findByFormCategory(FormCategory formCategory);

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ResearchAnnotationRepository extends JpaRepository<ResearchAnnotation, Long> {
@@ -73,4 +74,45 @@ public interface ResearchAnnotationRepository extends JpaRepository<ResearchAnno
     // Delete old annotations (for cleanup)
     @Query("DELETE FROM ResearchAnnotation a WHERE a.createdAt < :cutoffDate AND a.isPrivate = true")
     void deleteOldPrivateAnnotations(@Param("cutoffDate") LocalDateTime cutoffDate);
+
+    // ==================== TENANT-FILTERED METHODS (SECURE) ====================
+
+    // SECURITY: Find by user with org filter
+    @Query("SELECT a FROM ResearchAnnotation a WHERE a.userId = :userId AND a.organizationId = :orgId ORDER BY a.createdAt DESC")
+    List<ResearchAnnotation> findByUserIdAndOrganizationIdOrderByCreatedAtDesc(
+            @Param("userId") Long userId, @Param("orgId") Long organizationId);
+
+    // SECURITY: Find by session with org filter
+    @Query("SELECT a FROM ResearchAnnotation a WHERE a.sessionId = :sessionId AND a.organizationId = :orgId ORDER BY a.createdAt DESC")
+    List<ResearchAnnotation> findBySessionIdAndOrganizationIdOrderByCreatedAtDesc(
+            @Param("sessionId") String sessionId, @Param("orgId") Long organizationId);
+
+    // SECURITY: Find by document with org filter
+    @Query("SELECT a FROM ResearchAnnotation a WHERE a.documentId = :documentId AND a.documentType = :documentType AND a.organizationId = :orgId ORDER BY a.createdAt DESC")
+    List<ResearchAnnotation> findByDocumentAndOrganizationIdOrderByCreatedAtDesc(
+            @Param("documentId") Long documentId, @Param("documentType") String documentType, @Param("orgId") Long organizationId);
+
+    // SECURITY: Find public annotations with org filter (CRITICAL - fixes cross-org exposure)
+    @Query("SELECT a FROM ResearchAnnotation a WHERE a.isPrivate = false AND a.organizationId = :orgId ORDER BY a.createdAt DESC")
+    List<ResearchAnnotation> findByIsPrivateFalseAndOrganizationIdOrderByCreatedAtDesc(@Param("orgId") Long organizationId);
+
+    // SECURITY: Text search with org filter
+    @Query("SELECT a FROM ResearchAnnotation a WHERE a.userId = :userId AND a.organizationId = :orgId " +
+           "AND (LOWER(a.annotationText) LIKE LOWER(CONCAT('%', :searchText, '%')) " +
+           "OR LOWER(a.highlightedText) LIKE LOWER(CONCAT('%', :searchText, '%'))) " +
+           "ORDER BY a.createdAt DESC")
+    List<ResearchAnnotation> findByUserIdAndOrganizationIdAndTextContaining(
+            @Param("userId") Long userId, @Param("orgId") Long organizationId, @Param("searchText") String searchText);
+
+    // SECURITY: Count with org filter
+    @Query("SELECT COUNT(a) FROM ResearchAnnotation a WHERE a.userId = :userId AND a.organizationId = :orgId")
+    long countByUserIdAndOrganizationId(@Param("userId") Long userId, @Param("orgId") Long organizationId);
+
+    // SECURITY: Delete old annotations with org filter
+    @Query("DELETE FROM ResearchAnnotation a WHERE a.createdAt < :cutoffDate AND a.isPrivate = true AND a.organizationId = :orgId")
+    void deleteOldPrivateAnnotationsByOrganization(@Param("cutoffDate") LocalDateTime cutoffDate, @Param("orgId") Long organizationId);
+
+    // SECURITY: Find by ID with org filter
+    @Query("SELECT a FROM ResearchAnnotation a WHERE a.id = :id AND a.organizationId = :orgId")
+    Optional<ResearchAnnotation> findByIdAndOrganizationId(@Param("id") Long id, @Param("orgId") Long organizationId);
 }

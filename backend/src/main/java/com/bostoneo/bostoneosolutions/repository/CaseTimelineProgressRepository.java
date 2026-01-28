@@ -28,4 +28,25 @@ public interface CaseTimelineProgressRepository extends JpaRepository<CaseTimeli
     void deleteByCaseId(Long caseId);
 
     boolean existsByCaseId(Long caseId);
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    List<CaseTimelineProgress> findByOrganizationIdAndCaseIdOrderByPhaseOrderAsc(Long organizationId, Long caseId);
+
+    Optional<CaseTimelineProgress> findByOrganizationIdAndCaseIdAndPhaseOrder(Long organizationId, Long caseId, Integer phaseOrder);
+
+    @Query("SELECT p FROM CaseTimelineProgress p WHERE p.organizationId = :orgId AND p.caseId = :caseId AND p.status = 'IN_PROGRESS'")
+    Optional<CaseTimelineProgress> findCurrentPhaseByOrganization(@Param("orgId") Long organizationId, @Param("caseId") Long caseId);
+
+    void deleteByOrganizationIdAndCaseId(Long organizationId, Long caseId);
+
+    /**
+     * SECURITY: Find by ID with tenant isolation
+     */
+    Optional<CaseTimelineProgress> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Check existence with tenant isolation
+     */
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 }

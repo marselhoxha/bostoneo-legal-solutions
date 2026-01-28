@@ -41,4 +41,41 @@ public interface AIFamilyLawCaseRepository extends JpaRepository<AIFamilyLawCase
     
     @Query("SELECT flc FROM AIFamilyLawCase flc WHERE flc.nextHearingDate <= :date ORDER BY flc.nextHearingDate ASC")
     List<AIFamilyLawCase> findCasesWithUpcomingHearings(@Param("date") LocalDate date);
+
+    // ==================== TENANT-FILTERED METHODS (SECURITY CRITICAL) ====================
+
+    /**
+     * SECURITY: Find all family law cases for an organization (tenant isolation)
+     */
+    List<AIFamilyLawCase> findByOrganizationId(Long organizationId);
+
+    /**
+     * SECURITY: Find family law case by ID within organization (tenant isolation)
+     */
+    java.util.Optional<AIFamilyLawCase> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Find by client ID within organization
+     */
+    List<AIFamilyLawCase> findByClientIdAndOrganizationIdOrderByCreatedAtDesc(Long clientId, Long organizationId);
+
+    /**
+     * SECURITY: Find by case type within organization
+     */
+    Page<AIFamilyLawCase> findByCaseTypeAndOrganizationId(FamilyLawCaseType caseType, Long organizationId, Pageable pageable);
+
+    /**
+     * SECURITY: Find by status within organization
+     */
+    Page<AIFamilyLawCase> findByStatusAndOrganizationId(FamilyLawStatus status, Long organizationId, Pageable pageable);
+
+    /**
+     * SECURITY: Find hearings within organization
+     */
+    @Query("SELECT flc FROM AIFamilyLawCase flc WHERE flc.organizationId = :orgId " +
+           "AND flc.nextHearingDate BETWEEN :startDate AND :endDate ORDER BY flc.nextHearingDate ASC")
+    List<AIFamilyLawCase> findCasesWithHearingsBetweenAndOrganizationId(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate,
+        @Param("orgId") Long organizationId);
 }

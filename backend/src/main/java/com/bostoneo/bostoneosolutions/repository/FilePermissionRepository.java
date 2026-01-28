@@ -125,4 +125,63 @@ public interface FilePermissionRepository extends JpaRepository<FilePermission, 
     
     @Query("SELECT p FROM FilePermission p WHERE p.fileId IN :fileIds AND p.isRevoked = false")
     List<FilePermission> findActivePermissionsForFiles(@Param("fileIds") List<Long> fileIds);
+
+    // ==================== TENANT-FILTERED METHODS (SECURE) ====================
+
+    // SECURITY: Find by file with org filter
+    @Query("SELECT p FROM FilePermission p WHERE p.fileId = :fileId AND p.organizationId = :orgId AND p.isRevoked = false")
+    List<FilePermission> findByFileIdAndOrganizationIdAndIsRevokedFalse(
+            @Param("fileId") Long fileId, @Param("orgId") Long organizationId);
+
+    // SECURITY: Find by user with org filter
+    @Query("SELECT p FROM FilePermission p WHERE p.userId = :userId AND p.organizationId = :orgId AND p.isRevoked = false")
+    List<FilePermission> findByUserIdAndOrganizationIdAndIsRevokedFalse(
+            @Param("userId") Long userId, @Param("orgId") Long organizationId);
+
+    // SECURITY: Check permission with org filter
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM FilePermission p " +
+           "WHERE p.fileId = :fileId AND p.userId = :userId AND p.permissionType = :permissionType " +
+           "AND p.organizationId = :orgId AND p.isRevoked = false AND (p.expiresAt IS NULL OR p.expiresAt > CURRENT_TIMESTAMP)")
+    boolean hasActivePermissionWithOrg(@Param("fileId") Long fileId, @Param("userId") Long userId,
+            @Param("permissionType") FilePermission.PermissionType permissionType, @Param("orgId") Long organizationId);
+
+    // SECURITY: Get accessible file IDs with org filter (CRITICAL)
+    @Query("SELECT DISTINCT p.fileId FROM FilePermission p " +
+           "WHERE p.userId = :userId AND p.organizationId = :orgId AND p.isRevoked = false " +
+           "AND (p.expiresAt IS NULL OR p.expiresAt > CURRENT_TIMESTAMP)")
+    List<Long> getAccessibleFileIdsByOrganization(@Param("userId") Long userId, @Param("orgId") Long organizationId);
+
+    // SECURITY: Get users with access with org filter (CRITICAL)
+    @Query("SELECT DISTINCT p.userId FROM FilePermission p " +
+           "WHERE p.fileId = :fileId AND p.organizationId = :orgId AND p.isRevoked = false " +
+           "AND (p.expiresAt IS NULL OR p.expiresAt > CURRENT_TIMESTAMP)")
+    List<Long> getUsersWithAccessToFileByOrganization(@Param("fileId") Long fileId, @Param("orgId") Long organizationId);
+
+    // SECURITY: Get user permissions for file with org filter
+    @Query("SELECT p.permissionType FROM FilePermission p " +
+           "WHERE p.fileId = :fileId AND p.userId = :userId AND p.organizationId = :orgId AND p.isRevoked = false " +
+           "AND (p.expiresAt IS NULL OR p.expiresAt > CURRENT_TIMESTAMP)")
+    List<FilePermission.PermissionType> getUserPermissionsForFileByOrganization(
+            @Param("fileId") Long fileId, @Param("userId") Long userId, @Param("orgId") Long organizationId);
+
+    // SECURITY: Find active permissions for files with org filter
+    @Query("SELECT p FROM FilePermission p WHERE p.fileId IN :fileIds AND p.organizationId = :orgId AND p.isRevoked = false")
+    List<FilePermission> findActivePermissionsForFilesByOrganization(
+            @Param("fileIds") List<Long> fileIds, @Param("orgId") Long organizationId);
+
+    // SECURITY: Count active permissions with org filter
+    @Query("SELECT COUNT(p) FROM FilePermission p WHERE p.organizationId = :orgId AND p.isRevoked = false")
+    Long countActivePermissionsByOrganization(@Param("orgId") Long organizationId);
+
+    /**
+     * SECURITY: Find all permissions for an organization (tenant isolation)
+     */
+    @Query("SELECT p FROM FilePermission p WHERE p.organizationId = :organizationId")
+    List<FilePermission> findByOrganizationId(@Param("organizationId") Long organizationId);
+
+    /**
+     * SECURITY: Find permission by ID and organization (tenant isolation)
+     */
+    @Query("SELECT p FROM FilePermission p WHERE p.id = :id AND p.organizationId = :organizationId")
+    Optional<FilePermission> findByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
 }

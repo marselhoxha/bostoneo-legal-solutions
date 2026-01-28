@@ -37,4 +37,36 @@ public interface AICriminalCaseRepository extends JpaRepository<AICriminalCase, 
     
     @Query("SELECT cc FROM AICriminalCase cc WHERE cc.discoveryDeadline <= :deadline ORDER BY cc.discoveryDeadline ASC")
     List<AICriminalCase> findByDiscoveryDeadlineBefore(@Param("deadline") LocalDate deadline);
+
+    // ==================== TENANT-FILTERED METHODS (SECURITY CRITICAL) ====================
+
+    /**
+     * SECURITY: Find all criminal cases for an organization (tenant isolation)
+     */
+    List<AICriminalCase> findByOrganizationId(Long organizationId);
+
+    /**
+     * SECURITY: Find criminal case by ID within organization (tenant isolation)
+     */
+    java.util.Optional<AICriminalCase> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * SECURITY: Find by case ID within organization
+     */
+    List<AICriminalCase> findByCaseIdAndOrganizationIdOrderByCreatedAtDesc(Long caseId, Long organizationId);
+
+    /**
+     * SECURITY: Find by offense level within organization
+     */
+    Page<AICriminalCase> findByOffenseLevelAndOrganizationId(OffenseLevel offenseLevel, Long organizationId, Pageable pageable);
+
+    /**
+     * SECURITY: Find court dates within organization
+     */
+    @Query("SELECT cc FROM AICriminalCase cc WHERE cc.organizationId = :orgId " +
+           "AND cc.trialDate BETWEEN :startDate AND :endDate ORDER BY cc.trialDate ASC")
+    List<AICriminalCase> findCasesWithCourtDatesBetweenAndOrganizationId(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate,
+        @Param("orgId") Long organizationId);
 }

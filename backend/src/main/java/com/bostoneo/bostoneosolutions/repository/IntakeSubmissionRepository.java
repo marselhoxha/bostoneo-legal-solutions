@@ -68,4 +68,57 @@ public interface IntakeSubmissionRepository extends JpaRepository<IntakeSubmissi
     
     @Query("SELECT i.status, COUNT(i) FROM IntakeSubmission i GROUP BY i.status")
     List<Object[]> getStatusStatistics();
+
+    // ==================== TENANT-FILTERED METHODS ====================
+
+    List<IntakeSubmission> findByOrganizationId(Long organizationId);
+
+    Page<IntakeSubmission> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    List<IntakeSubmission> findByOrganizationIdAndStatus(Long organizationId, String status);
+
+    Page<IntakeSubmission> findByOrganizationIdAndStatus(Long organizationId, String status, Pageable pageable);
+
+    @Query("SELECT i FROM IntakeSubmission i WHERE i.organizationId = :organizationId AND i.status = 'PENDING' ORDER BY i.priorityScore DESC, i.createdAt ASC")
+    List<IntakeSubmission> findPendingByOrganization(@Param("organizationId") Long organizationId);
+
+    @Query("SELECT i FROM IntakeSubmission i WHERE i.organizationId = :organizationId AND i.status = 'PENDING' ORDER BY i.priorityScore DESC, i.createdAt ASC")
+    Page<IntakeSubmission> findPendingByOrganization(@Param("organizationId") Long organizationId, Pageable pageable);
+
+    @Query("SELECT COUNT(i) FROM IntakeSubmission i WHERE i.organizationId = :organizationId AND i.status = :status")
+    long countByOrganizationIdAndStatus(@Param("organizationId") Long organizationId, @Param("status") String status);
+
+    // Additional tenant-filtered methods
+    List<IntakeSubmission> findByOrganizationIdAndFormId(Long organizationId, Long formId);
+
+    List<IntakeSubmission> findByOrganizationIdAndReviewedBy(Long organizationId, Long reviewedBy);
+
+    @Query("SELECT i FROM IntakeSubmission i WHERE i.organizationId = :orgId AND i.priorityScore >= :minScore ORDER BY i.priorityScore DESC")
+    List<IntakeSubmission> findByOrganizationIdAndPriorityScoreGreaterThanEqualOrderByPriorityScoreDesc(@Param("orgId") Long organizationId, @Param("minScore") Integer minScore);
+
+    @Query("SELECT i FROM IntakeSubmission i WHERE i.organizationId = :orgId AND i.status = 'PENDING' ORDER BY i.priorityScore DESC, i.createdAt ASC")
+    List<IntakeSubmission> findPendingByOrganizationOrderByPriorityAndCreatedAt(@Param("orgId") Long organizationId);
+
+    @Query("SELECT i FROM IntakeSubmission i WHERE i.organizationId = :orgId AND i.status = 'PENDING' ORDER BY i.priorityScore DESC, i.createdAt ASC")
+    Page<IntakeSubmission> findPendingByOrganizationOrderByPriorityAndCreatedAt(@Param("orgId") Long organizationId, Pageable pageable);
+
+    @Query("SELECT i.status, COUNT(i) FROM IntakeSubmission i WHERE i.organizationId = :orgId GROUP BY i.status")
+    List<Object[]> countByOrganizationIdGroupedByStatus(@Param("orgId") Long organizationId);
+
+    @Query("SELECT i FROM IntakeSubmission i WHERE i.organizationId = :orgId AND i.createdAt BETWEEN :startDate AND :endDate")
+    List<IntakeSubmission> findByOrganizationIdAndCreatedAtBetween(@Param("orgId") Long organizationId, @Param("startDate") Timestamp startDate, @Param("endDate") Timestamp endDate);
+
+    // Secure findById with org verification
+    java.util.Optional<IntakeSubmission> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    @Query("SELECT i FROM IntakeSubmission i WHERE i.id IN :ids AND i.organizationId = :orgId")
+    List<IntakeSubmission> findAllByIdInAndOrganizationId(@Param("ids") List<Long> ids, @Param("orgId") Long organizationId);
+
+    @Query("SELECT i FROM IntakeSubmission i JOIN i.intakeForm f WHERE f.practiceArea = :practiceArea AND i.organizationId = :orgId")
+    List<IntakeSubmission> findByOrganizationIdAndPracticeArea(@Param("orgId") Long organizationId, @Param("practiceArea") String practiceArea);
+
+    @Query("SELECT i FROM IntakeSubmission i WHERE i.status = :status AND i.createdAt >= :since AND i.organizationId = :orgId")
+    List<IntakeSubmission> findByOrganizationIdAndStatusAndCreatedAtAfter(@Param("orgId") Long organizationId, @Param("status") String status, @Param("since") Timestamp since);
 }

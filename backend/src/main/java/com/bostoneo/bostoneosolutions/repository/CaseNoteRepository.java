@@ -29,4 +29,26 @@ public interface CaseNoteRepository extends JpaRepository<CaseNote, Long> {
      * @param caseId The case ID
      */
     void deleteByCaseId(Long caseId);
+
+    // ========== TENANT-FILTERED METHODS (SECURE) ==========
+
+    /**
+     * Find all notes for a specific case with organization filtering
+     */
+    List<CaseNote> findByCaseIdAndOrganizationIdOrderByCreatedAtDesc(Long caseId, Long organizationId);
+
+    /**
+     * Find a specific note by case ID, note ID and organization ID
+     */
+    Optional<CaseNote> findByCaseIdAndIdAndOrganizationId(Long caseId, Long id, Long organizationId);
+
+    /**
+     * Find a specific note by ID and organization ID
+     */
+    Optional<CaseNote> findByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * Delete all notes for a specific case within organization
+     */
+    void deleteByCaseIdAndOrganizationId(Long caseId, Long organizationId);
 } 
