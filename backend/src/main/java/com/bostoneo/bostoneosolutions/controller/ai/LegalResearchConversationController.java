@@ -80,7 +80,8 @@ public class LegalResearchConversationController {
                     request.userId(),
                     request.role(),
                     request.content(),
-                    request.metadata()
+                    request.metadata(),
+                    request.researchMode()
             );
 
             return ResponseEntity.ok(
@@ -502,7 +503,7 @@ public class LegalResearchConversationController {
 
     // Request DTOs
     record SessionRequest(Long sessionId, Long userId, Long caseId, String title) {}
-    record MessageRequest(Long userId, String role, String content, String metadata) {}
+    record MessageRequest(Long userId, String role, String content, String metadata, String researchMode) {}
     record UpdateTitleRequest(Long userId, String title) {}
     record CreateConversationRequest(Long userId, String title, String researchMode, String taskType, String documentType, String jurisdiction) {}
     record QueryRequest(Long userId, String query, String researchMode) {}

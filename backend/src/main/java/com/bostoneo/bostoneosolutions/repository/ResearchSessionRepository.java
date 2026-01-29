@@ -25,14 +25,14 @@ public interface ResearchSessionRepository extends JpaRepository<ResearchSession
     // Find sessions by name pattern
     @Query("SELECT r FROM ResearchSession r WHERE r.userId = :userId " +
            "AND LOWER(r.sessionName) LIKE LOWER(CONCAT('%', :name, '%')) " +
-           "ORDER BY r.lastAccessed DESC")
+           "ORDER BY COALESCE(r.lastAccessed, r.createdAt) DESC")
     List<ResearchSession> findByUserIdAndSessionNameContaining(@Param("userId") Long userId,
                                                                 @Param("name") String name);
 
     // Find sessions within a date range
     @Query("SELECT r FROM ResearchSession r WHERE r.userId = :userId " +
            "AND r.createdAt BETWEEN :startDate AND :endDate " +
-           "ORDER BY r.lastAccessed DESC")
+           "ORDER BY COALESCE(r.lastAccessed, r.createdAt) DESC")
     List<ResearchSession> findByUserIdAndDateRange(@Param("userId") Long userId,
                                                     @Param("startDate") LocalDateTime startDate,
                                                     @Param("endDate") LocalDateTime endDate);
@@ -44,7 +44,7 @@ public interface ResearchSessionRepository extends JpaRepository<ResearchSession
 
     // Find most active sessions (by total searches)
     @Query("SELECT r FROM ResearchSession r WHERE r.userId = :userId " +
-           "ORDER BY r.totalSearches DESC, r.lastAccessed DESC")
+           "ORDER BY r.totalSearches DESC, COALESCE(r.lastAccessed, r.createdAt) DESC")
     List<ResearchSession> findMostActiveSessions(@Param("userId") Long userId);
 
     // Delete inactive sessions older than specified days
@@ -62,13 +62,13 @@ public interface ResearchSessionRepository extends JpaRepository<ResearchSession
     @Query("SELECT r FROM ResearchSession r WHERE r.sessionId = :sessionId AND r.organizationId = :organizationId")
     Optional<ResearchSession> findBySessionIdAndOrganizationId(@Param("sessionId") String sessionId, @Param("organizationId") Long organizationId);
 
-    @Query("SELECT r FROM ResearchSession r WHERE r.userId = :userId AND r.organizationId = :organizationId ORDER BY r.lastAccessed DESC")
+    @Query("SELECT r FROM ResearchSession r WHERE r.userId = :userId AND r.organizationId = :organizationId ORDER BY COALESCE(r.lastAccessed, r.createdAt) DESC")
     List<ResearchSession> findByUserIdAndOrganizationIdOrderByLastAccessedDesc(@Param("userId") Long userId, @Param("organizationId") Long organizationId);
 
-    @Query("SELECT r FROM ResearchSession r WHERE r.userId = :userId AND r.organizationId = :organizationId AND r.isActive = true ORDER BY r.lastAccessed DESC")
+    @Query("SELECT r FROM ResearchSession r WHERE r.userId = :userId AND r.organizationId = :organizationId AND r.isActive = true ORDER BY COALESCE(r.lastAccessed, r.createdAt) DESC")
     List<ResearchSession> findByUserIdAndOrganizationIdAndIsActiveTrueOrderByLastAccessedDesc(@Param("userId") Long userId, @Param("organizationId") Long organizationId);
 
-    @Query("SELECT r FROM ResearchSession r WHERE r.organizationId = :organizationId ORDER BY r.lastAccessed DESC")
+    @Query("SELECT r FROM ResearchSession r WHERE r.organizationId = :organizationId ORDER BY COALESCE(r.lastAccessed, r.createdAt) DESC")
     List<ResearchSession> findByOrganizationIdOrderByLastAccessedDesc(@Param("organizationId") Long organizationId);
 
     @Query("SELECT COUNT(r) FROM ResearchSession r WHERE r.userId = :userId AND r.organizationId = :organizationId AND r.isActive = true")

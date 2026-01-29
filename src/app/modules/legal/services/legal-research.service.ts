@@ -58,6 +58,7 @@ export interface AiConversationMessage {
   createdAt?: Date;
   isTyping?: boolean;
   collapsed?: boolean;
+  researchMode?: 'FAST' | 'THOROUGH'; // Research mode used for this message
 }
 
 export interface LegalSearchRequest {
@@ -506,11 +507,15 @@ export class LegalResearchService {
     userId: number,
     role: 'user' | 'assistant',
     content: string,
-    metadata?: any
+    metadata?: any,
+    researchMode?: 'FAST' | 'THOROUGH'
   ): Observable<AiConversationMessage> {
     const body: any = { userId, role, content };
     if (metadata) {
       body.metadata = JSON.stringify(metadata);
+    }
+    if (researchMode) {
+      body.researchMode = researchMode;
     }
 
     return this.http.post<any>(

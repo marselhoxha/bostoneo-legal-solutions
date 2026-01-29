@@ -260,10 +260,17 @@
 
                         <!-- AI Response -->
                         <div *ngIf="!message.isTyping">
-                          <div class="d-flex align-items-center mb-3">
+                          <div class="d-flex align-items-center gap-2 mb-3">
                             <div class="ai-badge">
                               <span class="badge bg-soft-success text-success fs-11">
                                 <i class="ri-sparkling-line me-1"></i>Legience
+                              </span>
+                            </div>
+                            <!-- Research Mode Badge -->
+                            <div class="research-mode-badge" *ngIf="message.researchMode">
+                              <span class="badge fs-11" [ngClass]="message.researchMode === 'THOROUGH' ? 'badge-thorough' : 'badge-fast'">
+                                <i [class]="message.researchMode === 'THOROUGH' ? 'ri-search-eye-line me-1' : 'ri-flashlight-line me-1'"></i>
+                                {{ message.researchMode === 'THOROUGH' ? 'Thorough' : 'Fast' }}
                               </span>
                             </div>
                           </div>

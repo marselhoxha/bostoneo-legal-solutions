@@ -90,10 +90,18 @@ public class LegalResearchConversationService {
     }
 
     /**
-     * Add a message to a session - TENANT FILTERED
+     * Add a message to a session - TENANT FILTERED (backward compatible overload)
      */
     @Transactional
     public AiConversationMessage addMessage(Long sessionId, Long userId, String role, String content, String metadata) {
+        return addMessage(sessionId, userId, role, content, metadata, null);
+    }
+
+    /**
+     * Add a message to a session with research mode - TENANT FILTERED
+     */
+    @Transactional
+    public AiConversationMessage addMessage(Long sessionId, Long userId, String role, String content, String metadata, String researchMode) {
         Long orgId = getRequiredOrganizationId();
         // SECURITY: Use tenant-filtered query
         AiConversationSession session = sessionRepository.findByIdAndUserIdAndOrganizationId(sessionId, userId, orgId)
@@ -116,6 +124,7 @@ public class LegalResearchConversationService {
                 .content(content)
                 .metadata(metadataMap)
                 .ragContextUsed(false)
+                .researchMode(researchMode) // Store research mode per message for badge display
                 .build();
 
         log.info("💾 About to save message with metadata: {} (Map: {})", metadata, metadataMap);
@@ -354,8 +363,12 @@ public class LegalResearchConversationService {
                 .build();
         messageRepository.save(userMessage);
 
-        // Update session message count
+        // Update session message count and persist research mode
         session.setMessageCount(session.getMessageCount() != null ? session.getMessageCount() + 1 : 1);
+        // Persist the research mode - ensures UI shows correct mode after page refresh
+        if (researchMode != null && !researchMode.equals(session.getResearchMode())) {
+            session.setResearchMode(researchMode);
+        }
         sessionRepository.save(session);
 
         // SECURITY: Build conversation history with tenant filter
@@ -457,7 +470,7 @@ public class LegalResearchConversationService {
         // Transform the String response to AiConversationMessage
         return claudeFuture
                 .thenApply(aiResponse -> {
-                    // Save AI response message
+                    // Save AI response message with research mode
                     AiConversationMessage assistantMessage = AiConversationMessage.builder()
                             .session(session)
                             .organizationId(session.getOrganizationId())
@@ -465,6 +478,7 @@ public class LegalResearchConversationService {
                             .content(aiResponse)
                             .ragContextUsed(false)
                             .modelUsed("claude-sonnet-4")
+                            .researchMode("FAST") // Store research mode per message for badge display
                             .build();
 
                     AiConversationMessage savedMessage = messageRepository.save(assistantMessage);
@@ -528,7 +542,7 @@ public class LegalResearchConversationService {
                 throw new RuntimeException("No AI response received from research service");
             }
 
-            // Save AI response to conversation
+            // Save AI response to conversation with research mode
             AiConversationMessage assistantMessage = AiConversationMessage.builder()
                     .session(session)
                     .organizationId(session.getOrganizationId())
@@ -536,6 +550,7 @@ public class LegalResearchConversationService {
                     .content(aiResponse)
                     .ragContextUsed(true) // THOROUGH mode uses tools/research
                     .modelUsed("claude-sonnet-4-thorough")
+                    .researchMode("THOROUGH") // Store research mode per message for badge display
                     .build();
 
             AiConversationMessage savedMessage = messageRepository.save(assistantMessage);

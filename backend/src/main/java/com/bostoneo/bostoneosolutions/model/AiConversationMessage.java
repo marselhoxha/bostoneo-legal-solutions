@@ -58,6 +58,9 @@ public class AiConversationMessage {
     @Builder.Default
     private Boolean ragContextUsed = false;
 
+    @Column(name = "research_mode", length = 20)
+    private String researchMode; // FAST or THOROUGH - stored per message
+
     @Column(name = "temperature", precision = 3, scale = 2)
     private BigDecimal temperature;
 

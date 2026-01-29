@@ -23,9 +23,10 @@ interface Conversation {
   sessionId: number; // Backend session ID
   createdAt: Date;
   lastUpdated: Date;
-  messages: { role: 'user' | 'assistant'; content: string; timestamp: Date; isTyping?: boolean; collapsed?: boolean }[];
+  messages: { role: 'user' | 'assistant'; content: string; timestamp: Date; isTyping?: boolean; collapsed?: boolean; researchMode?: 'FAST' | 'THOROUGH' }[];
   followUpQuestions: string[];
   messageCount: number; // Message count from backend
+  researchMode?: 'FAST' | 'THOROUGH'; // Research mode used for this conversation
 }
 import Swal from 'sweetalert2';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
@@ -69,7 +70,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   isLoadingConversations: boolean = false; // Prevent duplicate loadConversations calls
 
   // Chat-based AI Display (linked to active conversation)
-  chatMessages: { role: 'user' | 'assistant'; content: string; timestamp: Date; isTyping?: boolean; collapsed?: boolean }[] = [];
+  chatMessages: { role: 'user' | 'assistant'; content: string; timestamp: Date; isTyping?: boolean; collapsed?: boolean; researchMode?: 'FAST' | 'THOROUGH' }[] = [];
   showChat: boolean = false;
   aiThinking: boolean = false;
   currentTypingMessage: string = '';
@@ -324,7 +325,8 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
             lastUpdated: session.lastInteractionAt ? new Date(session.lastInteractionAt) : new Date(),
             messages: [], // Messages will be loaded when conversation is activated
             followUpQuestions: [],
-            messageCount: session.messageCount || 0 // Use message count from backend
+            messageCount: session.messageCount || 0, // Use message count from backend
+            researchMode: (session.researchMode as 'FAST' | 'THOROUGH') || 'FAST' // Preserve research mode
           }));
 
           // If no conversations exist after loading, create the first one
@@ -368,7 +370,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
               content: msg.content,
               timestamp: msg.createdAt ? new Date(msg.createdAt) : new Date(),
               isTyping: msg.isTyping,
-              collapsed: msg.collapsed
+              collapsed: msg.collapsed,
+              // Add research mode to assistant messages (use message's own mode from backend)
+              researchMode: msg.role === 'assistant' ? (msg.researchMode || activeConv.researchMode || 'FAST') : undefined
             }));
 
             // Update message count on the conversation object
@@ -377,6 +381,11 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
             this.followUpQuestions = activeConv.followUpQuestions;
             this.currentSessionId = activeConv.sessionId;
             this.showChat = this.chatMessages.length > 0;
+
+            // Restore research mode from conversation's saved mode
+            if (activeConv.researchMode) {
+              this.researchMode = activeConv.researchMode === 'THOROUGH' ? 'thorough' : 'fast';
+            }
 
             // Load action suggestions from backend
             this.loadActionSuggestionsFromBackend();
@@ -522,7 +531,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
    * Save a single message to the backend
    * Also triggers title update for first user message
    */
-  saveMessageToBackend(role: 'user' | 'assistant', content: string): void {
+  saveMessageToBackend(role: 'user' | 'assistant', content: string, researchMode?: 'FAST' | 'THOROUGH'): void {
     if (!this.activeConversationId) return;
 
     const activeConv = this.conversations.find(c => c.id === this.activeConversationId);
@@ -537,7 +546,8 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    this.legalResearchService.addMessageToSession(sessionId, currentUserId, role, content)
+    // Pass researchMode for assistant messages so it gets stored per-message
+    this.legalResearchService.addMessageToSession(sessionId, currentUserId, role, content, undefined, researchMode)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (message) => {
@@ -866,7 +876,8 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       content: cleanedMessage,
       timestamp: new Date(),
       isTyping: false,
-      collapsed: false
+      collapsed: false,
+      researchMode: this.researchMode.toUpperCase() as 'FAST' | 'THOROUGH'
     };
 
     // Add message to UI immediately if we're viewing the conversation that initiated the search
@@ -886,8 +897,8 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isSearching = false;
     this.cdr.detectChanges();
 
-    // Save AI message to backend
-    this.saveMessageToBackend('assistant', cleanedMessage);
+    // Save AI message to backend with research mode
+    this.saveMessageToBackend('assistant', cleanedMessage, this.researchMode.toUpperCase() as 'FAST' | 'THOROUGH');
   }
 
   extractAndRemoveFollowUpQuestions(aiResponse: string): string {

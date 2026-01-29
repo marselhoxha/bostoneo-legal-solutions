@@ -11,6 +11,7 @@ export interface Message {
   hasStrategicAnalysis?: boolean;
   parsedSections?: any;
   analysisId?: number; // For document analysis
+  researchMode?: 'FAST' | 'THOROUGH'; // Research mode used for this response
 }
 
 /**

@@ -185,6 +185,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   groupedConversations$ = this.stateService.groupedConversations$;
   conversationMessages$ = this.stateService.conversationMessages$;
 
+  // Reactive filtered conversations arrays (updated via subscription)
+  questionConversations: Conversation[] = [];
+  draftConversations: Conversation[] = [];
+
   // Search query for filtering conversations
   conversationSearchQuery = '';
 
@@ -245,11 +249,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     return conversations;
   }
 
-  // Filtered question conversations
+  // Filtered question conversations (uses reactive questionConversations array)
   get filteredQuestionConversations() {
-    let conversations = this.stateService.getConversations().filter(conv =>
-      conv.type === ConversationType.Question
-    );
+    let conversations = this.questionConversations;
 
     if (this.conversationSearchQuery.trim()) {
       const query = this.conversationSearchQuery.toLowerCase();
@@ -261,11 +263,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     return conversations;
   }
 
-  // Filtered draft conversations
+  // Filtered draft conversations (uses reactive draftConversations array)
   get filteredDraftConversations() {
-    let conversations = this.stateService.getConversations().filter(conv =>
-      conv.type === ConversationType.Draft
-    );
+    let conversations = this.draftConversations;
 
     // Apply draft type filter
     if (this.draftFilter !== 'all') {
@@ -963,6 +963,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
 
   ngOnInit(): void {
+    // ===== REACTIVE CONVERSATIONS SUBSCRIPTION =====
+    // Subscribe to conversations changes to update filtered arrays reactively
+    this.conversations$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(conversations => {
+        this.questionConversations = conversations.filter(c => c.type === ConversationType.Question);
+        this.draftConversations = conversations.filter(c => c.type === ConversationType.Draft);
+        this.cdr.detectChanges();
+      });
+
     // ===== BACKGROUND TASK SERVICE SETUP =====
     // Mark that user is on AI Workspace (suppresses notifications while on this page)
     this.backgroundTaskService.setIsOnAiWorkspace(true);
@@ -2569,6 +2579,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               timestamp: new Date(msg.createdAt || new Date())
             };
 
+            // Add research mode for assistant messages (use message's own research mode from backend)
+            if (msg.role === 'assistant') {
+              // Prefer message-level researchMode, fall back to conversation's mode for legacy data
+              baseMessage.researchMode = msg.researchMode || conv.researchMode || 'FAST';
+            }
+
             // Detect DOCUMENT ANALYSIS messages (upload/analyze) - NOT legal research
             // Only show strategic tabs when there's an analysisId from document analysis
             // Do NOT use content keywords - they falsely trigger on thorough legal research responses
@@ -2729,6 +2745,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             this.stateService.setShowChat(true);
             this.stateService.setShowBottomSearchBar(true);
             this.stateService.setDraftingMode(false);
+
+            // CRITICAL: Restore research mode from conversation's saved mode
+            // This ensures the mode badge shows correctly after page refresh
+            if (conv.researchMode) {
+              this.selectedResearchMode = conv.researchMode === 'THOROUGH' ? ResearchMode.Thorough : ResearchMode.Fast;
+            }
 
             // Use setTimeout to ensure change detection runs after observable emits
             setTimeout(() => {
@@ -3938,11 +3960,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.stateService.setActiveConversationId(conv.id);
     this.stateService.clearFollowUpQuestions();
 
-    const messages = response.messages.map((msg: any) => ({
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content,
-      timestamp: new Date(msg.createdAt || new Date())
-    }));
+    const messages = response.messages.map((msg: any) => {
+      const baseMessage: any = {
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        timestamp: new Date(msg.createdAt || new Date())
+      };
+      // Add research mode for assistant messages (use message's own research mode from backend)
+      if (msg.role === 'assistant') {
+        baseMessage.researchMode = msg.researchMode || conv.researchMode || 'FAST';
+      }
+      return baseMessage;
+    });
 
     this.stateService.setConversationMessages(messages);
     this.stateService.setShowChat(true);
@@ -5793,7 +5822,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.stateService.addConversation(newConv);
           this.stateService.setActiveConversationId(newConv.id);
 
-          // Re-group conversations
+          // CRITICAL: Trigger change detection so sidebar updates with new conversation
+          this.cdr.detectChanges();
 
           // Send message to get AI response
           if (session.id) {
@@ -5806,7 +5836,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               'question',
               title,
               `Legal research: ${userPrompt.substring(0, 50)}...`,
-              { conversationId: requestConversationId, backendConversationId: requestBackendId }
+              { conversationId: requestConversationId, backendConversationId: requestBackendId, researchMode: researchMode as 'FAST' | 'THOROUGH' }
             );
             this.backgroundTaskService.startTask(taskId);
 
@@ -5827,11 +5857,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     // Extract follow-up questions and remove section from content
                     const cleanedContent = this.extractAndRemoveFollowUpQuestions(message.content);
 
-                    // Add assistant message to chat view (with cleaned content)
+                    // Add assistant message to chat view (with cleaned content and research mode)
                     const assistantMessage = {
                       role: 'assistant' as 'assistant',
                       content: cleanedContent,
-                      timestamp: new Date(message.createdAt || new Date())
+                      timestamp: new Date(message.createdAt || new Date()),
+                      researchMode: researchMode as 'FAST' | 'THOROUGH'
                     };
                     this.stateService.addConversationMessage(assistantMessage);
 
@@ -5839,7 +5870,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     const conv = this.stateService.getConversations().find(c => c.id === requestConversationId);
                     if (conv) {
                       conv.messages.push(assistantMessage);
-                      conv.messageCount = (conv.messageCount || 0) + 1; // Increment message count
+                      conv.messageCount = (conv.messageCount || 0) + 1;
                       // Force change detection to update badge
                       this.cdr.detectChanges();
                     }
@@ -6828,7 +6859,7 @@ You can:
       'question',
       activeConv.title || 'Follow-up Question',
       `Follow-up: ${userMessage.substring(0, 50)}...`,
-      { conversationId: requestConversationId!, backendConversationId: requestBackendId }
+      { conversationId: requestConversationId!, backendConversationId: requestBackendId, researchMode: researchMode as 'FAST' | 'THOROUGH' }
     );
     this.backgroundTaskService.startTask(taskId);
 
@@ -6852,11 +6883,12 @@ You can:
             // Extract follow-up questions and remove section from content
             const cleanedContent = this.extractAndRemoveFollowUpQuestions(message.content);
 
-            // Add assistant message to chat view (with cleaned content)
+            // Add assistant message to chat view (with cleaned content and research mode)
             const assistantMessage = {
               role: 'assistant' as 'assistant',
               content: cleanedContent,
-              timestamp: new Date(message.createdAt || new Date())
+              timestamp: new Date(message.createdAt || new Date()),
+              researchMode: researchMode as 'FAST' | 'THOROUGH'
             };
             this.stateService.addConversationMessage(assistantMessage);
 
@@ -6864,7 +6896,7 @@ You can:
             const conv = this.stateService.getConversations().find(c => c.id === requestConversationId);
             if (conv) {
               conv.messages.push(assistantMessage);
-              conv.messageCount = (conv.messageCount || 0) + 1; // Increment message count
+              conv.messageCount = (conv.messageCount || 0) + 1;
               // Force change detection to update badge
               this.cdr.detectChanges();
             }
@@ -7784,39 +7816,17 @@ You can:
    */
   private handleCompletedQuestionTask(task: BackgroundTask): void {
     if (task.result && task.conversationId) {
-      // If the conversation is currently active, add the message
-      if (this.stateService.getActiveConversationId() === task.conversationId) {
-        // Complete workflow steps
-        this.completeAllWorkflowSteps();
-
-        // Extract follow-up questions and remove from content
-        const cleanedContent = this.extractAndRemoveFollowUpQuestions(task.result.content);
-
-        // Add assistant message
-        const assistantMessage = {
-          role: 'assistant' as 'assistant',
-          content: cleanedContent,
-          timestamp: new Date(task.result.createdAt || new Date())
-        };
-        this.stateService.addConversationMessage(assistantMessage);
-
-        // Update conversation message count
-        const conv = this.stateService.getConversations().find(c => c.id === task.conversationId);
-        if (conv) {
-          conv.messages.push(assistantMessage);
-          conv.messageCount = (conv.messageCount || 0) + 1;
-        }
-
+      // Check if the conversation is currently active
+      // If active, the inline HTTP callback will handle the UI update
+      // We only need to handle the case where user navigated away
+      if (this.stateService.getActiveConversationId() !== task.conversationId) {
+        // Conversation is not active - store result for later
         this.stateService.setIsGenerating(false);
-        this.stateService.setShowBottomSearchBar(true);
-        this.cdr.detectChanges();
-
-        this.notificationService.success('Response Ready', 'AI response has been added to the conversation');
-      } else {
-        // Store for later and notify user
         this.stateService.storeBackgroundResult(task.conversationId, task.result);
         this.notificationService.info('Response Available', `Click on the conversation "${task.title}" to view the response`);
       }
+      // Note: If conversation IS active, the inline callback handles everything
+      // to ensure proper synchronous UI updates with change detection
     }
   }
 

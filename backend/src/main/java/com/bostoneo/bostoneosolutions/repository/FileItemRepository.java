@@ -56,7 +56,7 @@ public interface FileItemRepository extends JpaRepository<FileItem, Long> {
     int updateFileStarStatus(@Param("fileId") Long fileId, @Param("starred") Boolean starred);
     
     // Get starred files
-    @Query("SELECT f FROM FileItem f LEFT JOIN FETCH f.legalCase WHERE f.deleted = false AND f.starred = true ORDER BY f.updatedAt DESC")
+    @Query("SELECT f FROM FileItem f LEFT JOIN FETCH f.legalCase WHERE f.deleted = false AND f.starred = true ORDER BY COALESCE(f.updatedAt, f.createdAt) DESC")
     List<FileItem> findStarredFiles();
     
     List<FileItem> findByDepartmentIdAndDeletedFalse(Long departmentId);
@@ -205,7 +205,7 @@ public interface FileItemRepository extends JpaRepository<FileItem, Long> {
     @Query("UPDATE FileItem f SET f.starred = :starred WHERE f.id = :fileId AND f.organizationId = :organizationId AND f.deleted = false")
     int updateFileStarStatusByOrganization(@Param("fileId") Long fileId, @Param("starred") Boolean starred, @Param("organizationId") Long organizationId);
 
-    @Query("SELECT f FROM FileItem f LEFT JOIN FETCH f.legalCase WHERE f.deleted = false AND f.starred = true AND f.organizationId = :organizationId ORDER BY f.updatedAt DESC")
+    @Query("SELECT f FROM FileItem f LEFT JOIN FETCH f.legalCase WHERE f.deleted = false AND f.starred = true AND f.organizationId = :organizationId ORDER BY COALESCE(f.updatedAt, f.createdAt) DESC")
     List<FileItem> findStarredFilesByOrganization(@Param("organizationId") Long organizationId);
 
     @Query("SELECT f FROM FileItem f WHERE f.deleted = false AND f.organizationId = :organizationId AND " +

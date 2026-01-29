@@ -70,7 +70,7 @@ public interface AttorneyExpertiseRepository extends JpaRepository<AttorneyExper
      */
     @Query("SELECT ae FROM AttorneyExpertise ae WHERE ae.expertiseArea = :area " +
            "AND ae.lastCaseDate >= :sinceDate " +
-           "ORDER BY ae.lastCaseDate DESC")
+           "ORDER BY COALESCE(ae.lastCaseDate, ae.createdAt) DESC")
     List<AttorneyExpertise> findRecentlyActiveInArea(
         @Param("area") ExpertiseArea area,
         @Param("sinceDate") LocalDate sinceDate

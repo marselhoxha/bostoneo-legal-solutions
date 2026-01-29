@@ -17,7 +17,7 @@ public interface AiConversationSessionRepository extends JpaRepository<AiConvers
     /**
      * Find all sessions for a specific case and user
      */
-    @Query("SELECT s FROM AiConversationSession s WHERE s.caseId = :caseId AND s.userId = :userId AND s.sessionType = 'legal_research' ORDER BY s.lastInteractionAt DESC")
+    @Query("SELECT s FROM AiConversationSession s WHERE s.caseId = :caseId AND s.userId = :userId AND s.sessionType = 'legal_research' ORDER BY COALESCE(s.lastInteractionAt, s.createdAt) DESC")
     List<AiConversationSession> findByCaseIdAndUserIdAndSessionType(
             @Param("caseId") Long caseId,
             @Param("userId") Long userId
@@ -46,13 +46,13 @@ public interface AiConversationSessionRepository extends JpaRepository<AiConvers
     /**
      * Find all sessions for a user with pagination, ordered by last interaction
      */
-    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId ORDER BY s.lastInteractionAt DESC")
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId ORDER BY COALESCE(s.lastInteractionAt, s.createdAt) DESC")
     Page<AiConversationSession> findAllByUserId(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * Find sessions by task type for a user with pagination
      */
-    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.taskType = :taskType ORDER BY s.lastInteractionAt DESC")
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.taskType = :taskType ORDER BY COALESCE(s.lastInteractionAt, s.createdAt) DESC")
     Page<AiConversationSession> findByUserIdAndTaskType(
             @Param("userId") Long userId,
             @Param("taskType") String taskType,
@@ -63,7 +63,7 @@ public interface AiConversationSessionRepository extends JpaRepository<AiConvers
      * Find ONLY general conversations (no caseId) by task type for a user with pagination
      * Used by AI Workspace to exclude case-specific research
      */
-    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.taskType = :taskType AND s.caseId IS NULL ORDER BY s.lastInteractionAt DESC")
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.taskType = :taskType AND s.caseId IS NULL ORDER BY COALESCE(s.lastInteractionAt, s.createdAt) DESC")
     Page<AiConversationSession> findGeneralConversationsByUserIdAndTaskType(
             @Param("userId") Long userId,
             @Param("taskType") String taskType,
@@ -80,7 +80,7 @@ public interface AiConversationSessionRepository extends JpaRepository<AiConvers
     /**
      * Find all sessions for a case, user, and organization
      */
-    @Query("SELECT s FROM AiConversationSession s WHERE s.caseId = :caseId AND s.userId = :userId AND s.organizationId = :orgId AND s.sessionType = 'legal_research' ORDER BY s.lastInteractionAt DESC")
+    @Query("SELECT s FROM AiConversationSession s WHERE s.caseId = :caseId AND s.userId = :userId AND s.organizationId = :orgId AND s.sessionType = 'legal_research' ORDER BY COALESCE(s.lastInteractionAt, s.createdAt) DESC")
     List<AiConversationSession> findByCaseIdAndUserIdAndOrganizationId(
             @Param("caseId") Long caseId,
             @Param("userId") Long userId,
@@ -95,13 +95,14 @@ public interface AiConversationSessionRepository extends JpaRepository<AiConvers
     /**
      * Find all sessions for a user and organization with pagination
      */
-    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.organizationId = :orgId ORDER BY s.lastInteractionAt DESC")
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.organizationId = :orgId ORDER BY COALESCE(s.lastInteractionAt, s.createdAt) DESC")
     Page<AiConversationSession> findAllByUserIdAndOrganizationId(@Param("userId") Long userId, @Param("orgId") Long organizationId, Pageable pageable);
 
     /**
      * Find sessions by task type for a user and organization with pagination
+     * NOTE: Uses COALESCE to handle NULL lastInteractionAt - falls back to createdAt for proper ordering
      */
-    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.organizationId = :orgId AND s.taskType = :taskType ORDER BY s.lastInteractionAt DESC")
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.organizationId = :orgId AND s.taskType = :taskType ORDER BY COALESCE(s.lastInteractionAt, s.createdAt) DESC")
     Page<AiConversationSession> findByUserIdAndOrganizationIdAndTaskType(
             @Param("userId") Long userId,
             @Param("orgId") Long organizationId,
@@ -124,8 +125,9 @@ public interface AiConversationSessionRepository extends JpaRepository<AiConvers
     /**
      * Find ONLY general conversations (no caseId) by task type for a user and org with pagination
      * SECURITY: Tenant-isolated version of findGeneralConversationsByUserIdAndTaskType
+     * NOTE: Uses COALESCE to handle NULL lastInteractionAt - falls back to createdAt for proper ordering
      */
-    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.organizationId = :orgId AND s.taskType = :taskType AND s.caseId IS NULL ORDER BY s.lastInteractionAt DESC")
+    @Query("SELECT s FROM AiConversationSession s WHERE s.userId = :userId AND s.organizationId = :orgId AND s.taskType = :taskType AND s.caseId IS NULL ORDER BY COALESCE(s.lastInteractionAt, s.createdAt) DESC")
     Page<AiConversationSession> findGeneralConversationsByUserIdAndOrganizationIdAndTaskType(
             @Param("userId") Long userId,
             @Param("orgId") Long organizationId,

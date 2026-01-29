@@ -172,7 +172,7 @@ public interface FileShareRepository extends JpaRepository<FileShare, Long> {
     /** @deprecated Returns data from all organizations */
     @Deprecated
     @Query("SELECT s FROM FileShare s WHERE s.isActive = true AND s.lastAccessedAt >= :since " +
-           "ORDER BY s.lastAccessedAt DESC")
+           "ORDER BY COALESCE(s.lastAccessedAt, s.createdAt) DESC")
     List<FileShare> findRecentlyAccessedShares(@Param("since") LocalDateTime since);
 
     /** @deprecated Returns data from all organizations */

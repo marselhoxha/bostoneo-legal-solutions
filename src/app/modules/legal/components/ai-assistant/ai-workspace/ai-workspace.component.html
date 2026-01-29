@@ -1507,6 +1507,14 @@
                       <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
                     </div>
                     <div class="message-bubble ai-message flex-grow-1">
+                      <!-- Research Mode Badge -->
+                      <div class="research-mode-badge" *ngIf="message.researchMode">
+                        <span class="badge" [ngClass]="message.researchMode === 'THOROUGH' ? 'badge-thorough' : 'badge-fast'">
+                          <i [class]="message.researchMode === 'THOROUGH' ? 'ri-search-eye-line' : 'ri-flashlight-line'"></i>
+                          {{ message.researchMode === 'THOROUGH' ? 'Thorough' : 'Fast' }}
+                        </span>
+                      </div>
+
                       <!-- Strategic Analysis Tabs (if present) -->
                       <div class="strategic-analysis-tabs" *ngIf="message.hasStrategicAnalysis">
                         <ul class="nav nav-tabs nav-tabs-custom mb-3" role="tablist">
@@ -1695,6 +1703,14 @@
                   </div>
 
                   <div class="message-bubble ai-message flex-grow-1">
+                    <!-- Research Mode Badge -->
+                    <div class="research-mode-badge" *ngIf="message.researchMode">
+                      <span class="badge" [ngClass]="message.researchMode === 'THOROUGH' ? 'badge-thorough' : 'badge-fast'">
+                        <i [class]="message.researchMode === 'THOROUGH' ? 'ri-search-eye-line' : 'ri-flashlight-line'"></i>
+                        {{ message.researchMode === 'THOROUGH' ? 'Thorough Research' : 'Fast Mode' }}
+                      </span>
+                    </div>
+
                     <!-- Strategic Analysis Tabs (if present) -->
                     <div class="strategic-analysis-tabs" *ngIf="message.hasStrategicAnalysis">
                       <ul class="nav nav-tabs nav-tabs-custom mb-3" role="tablist">

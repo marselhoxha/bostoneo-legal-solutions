@@ -33,6 +33,7 @@ export interface BackgroundTask {
   documentId?: number;
   workflowId?: number;
   analysisIds?: number[];
+  researchMode?: 'FAST' | 'THOROUGH'; // Research mode used for question tasks
 }
 
 /**
@@ -89,6 +90,7 @@ export class BackgroundTaskService {
       backendConversationId?: number;
       documentId?: number;
       workflowId?: number;
+      researchMode?: 'FAST' | 'THOROUGH';
     }
   ): string {
     const id = this.generateTaskId();
