@@ -3660,6 +3660,7 @@ button.filter-chip,
   .ai-message-container {
     width: 100%;
     max-width: 100%;
+    min-width: 0; // Allow flex shrinking
   }
 
   // Message Bubbles - Compact Design
@@ -3667,7 +3668,7 @@ button.filter-chip,
     border-radius: 0.5rem;
     padding: 1rem 1.25rem;
     max-width: 100%;
-    overflow-x: hidden;
+    min-width: 0; // Allow flex shrinking
     overflow-wrap: break-word;
     word-wrap: break-word;
 
@@ -3684,7 +3685,7 @@ button.filter-chip,
         font-size: 0.9375rem;
         letter-spacing: 0.01em;
         max-width: 100%;
-        overflow-x: hidden;
+        min-width: 0; // Allow flex shrinking
         overflow-wrap: break-word;
         word-wrap: break-word;
         word-break: break-word;
@@ -5031,6 +5032,9 @@ button.filter-chip,
   display: flex;
   height: calc(100vh - 60px); // Adjust based on top action bar height
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 
   // When chat is closed, expand document panel to full width
   &:not(:has(.chat-panel-side)) {
@@ -5044,6 +5048,8 @@ button.filter-chip,
 // Document Preview Panel (65%) - ENHANCED PROFESSIONAL STYLING
 .document-preview-panel {
   flex: 0 0 65%;
+  max-width: 65%; // Prevent overflow beyond allocated space
+  min-width: 0; // Allow shrinking if needed
   display: flex;
   flex-direction: column;
   border-right: 2px solid var(--vz-border-color);
@@ -5051,6 +5057,7 @@ button.filter-chip,
   height: 100%;
   overflow: hidden;
   transition: flex 0.3s ease;
+  box-sizing: border-box; // Include padding/border in width calculation
 
   .document-preview-header {
     display: flex;
@@ -5947,9 +5954,12 @@ button.filter-chip,
 // Chat Panel (35%)
 .chat-panel-side {
   flex: 0 0 35%;
+  max-width: 35%; // Prevent overflow beyond allocated space
+  min-width: 0; // Allow shrinking if needed
   display: flex;
   flex-direction: column;
   background: var(--vz-body-bg);
+  box-sizing: border-box; // Include padding/border in width calculation
 
   .chat-panel-header {
     display: flex;
@@ -6065,18 +6075,24 @@ button.filter-chip,
       align-items: flex-start;
       width: 100%;
       max-width: 100%;
-      overflow-x: hidden;
+      min-width: 0; // Allow flex item to shrink below content size
     }
 
     // Ensure message bubbles display properly
     .message-bubble {
       border-radius: 0.5rem;
       max-width: 100%;
-      overflow-x: hidden;
+      min-width: 0; // Allow flex item to shrink
       overflow-wrap: break-word;
       word-wrap: break-word;
       font-size: 0.8125rem;
       line-height: 1.5;
+
+      // Allow horizontal scrolling for code blocks and tables
+      pre, .table-wrapper, .code-block {
+        overflow-x: auto;
+        max-width: 100%;
+      }
 
       // User message - compact padding
       &.bg-soft-info {
@@ -6093,14 +6109,38 @@ button.filter-chip,
         border-radius: 0.5rem 0.5rem 0.5rem 0.25rem;
         padding: 0.75rem 1rem;
         color: var(--vz-body-color);
+
+        // Allow horizontal scroll for wide content in AI messages
+        pre, code, .table-wrapper, table {
+          max-width: 100%;
+          overflow-x: auto;
+          display: block;
+        }
       }
 
       .message-content {
         font-size: 0.8125rem;
+        min-width: 0; // Allow content to shrink
+        max-width: 100%;
 
         p {
           margin-bottom: 0.5rem;
           font-size: 0.8125rem;
+        }
+
+        // Ensure scrollable elements work properly
+        pre, .table-wrapper {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+
+          &::-webkit-scrollbar {
+            height: 6px;
+          }
+
+          &::-webkit-scrollbar-thumb {
+            background: var(--vz-border-color);
+            border-radius: 3px;
+          }
         }
       }
 
