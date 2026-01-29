@@ -327,7 +327,7 @@ public class NotificationServiceImpl implements NotificationService {
                 notificationData.put("message", body);
                 notificationData.put("type", type);
                 notificationData.put("priority", "NORMAL");
-                
+
                 // Add additional data if provided
                 if (data instanceof Map) {
                     @SuppressWarnings("unchecked")
@@ -343,10 +343,21 @@ public class NotificationServiceImpl implements NotificationService {
                     if (dataMap.containsKey("url")) {
                         notificationData.put("url", dataMap.get("url"));
                     }
+                    // Include triggeredBy to skip self-notifications
+                    if (dataMap.containsKey("triggeredBy")) {
+                        notificationData.put("triggeredBy", dataMap.get("triggeredBy"));
+                    }
+                    if (dataMap.containsKey("triggeredByName")) {
+                        notificationData.put("triggeredByName", dataMap.get("triggeredByName"));
+                    }
                 }
-                
+
                 UserNotification inAppNotification = createUserNotification(notificationData);
-                log.info("✅ In-app notification created successfully for user {}: ID {}", userId, inAppNotification.getId());
+                if (inAppNotification != null) {
+                    log.info("✅ In-app notification created successfully for user {}: ID {}", userId, inAppNotification.getId());
+                } else {
+                    log.info("ℹ️ In-app notification skipped for user {} (self-triggered action)", userId);
+                }
             } catch (Exception e) {
                 log.error("❌ Failed to create in-app notification for user {}: {}", userId, e.getMessage(), e);
             }
@@ -421,18 +432,27 @@ public class NotificationServiceImpl implements NotificationService {
         Long orgId = tenantService.getCurrentOrganizationId()
                 .orElseThrow(() -> new RuntimeException("Organization context required for creating notifications"));
 
+        Long userId = getLongValue(notificationData, "userId");
+        Long triggeredByUserId = getLongValue(notificationData, "triggeredBy");
+
+        // Skip notification if user is notifying themselves (don't notify for own actions)
+        if (userId != null && triggeredByUserId != null && userId.equals(triggeredByUserId)) {
+            log.info("Skipping notification - user {} triggered their own action", userId);
+            return null;
+        }
+
         UserNotification notification = new UserNotification();
         notification.setOrganizationId(orgId); // SECURITY: Set organization ID for tenant isolation
-        notification.setUserId(getLongValue(notificationData, "userId"));
+        notification.setUserId(userId);
         notification.setTitle((String) notificationData.get("title"));
         notification.setMessage((String) notificationData.get("message"));
         notification.setType((String) notificationData.getOrDefault("type", "SYSTEM"));
         notification.setPriority((String) notificationData.getOrDefault("priority", "MEDIUM"));
         notification.setRead(false);
-        
+
         // Optional fields
-        if (notificationData.containsKey("triggeredBy")) {
-            notification.setTriggeredByUserId(getLongValue(notificationData, "triggeredBy"));
+        if (triggeredByUserId != null) {
+            notification.setTriggeredByUserId(triggeredByUserId);
         }
         if (notificationData.containsKey("triggeredByName")) {
             notification.setTriggeredByName((String) notificationData.get("triggeredByName"));
@@ -446,10 +466,10 @@ public class NotificationServiceImpl implements NotificationService {
         if (notificationData.containsKey("url")) {
             notification.setUrl((String) notificationData.get("url"));
         }
-        
+
         UserNotification savedNotification = userNotificationRepository.save(notification);
         log.info("User notification created with ID: {}", savedNotification.getId());
-        
+
         return savedNotification;
     }
     

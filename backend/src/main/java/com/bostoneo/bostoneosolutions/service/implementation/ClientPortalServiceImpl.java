@@ -288,7 +288,9 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                     null, // folderId
                     caseId,
                     description,
-                    null // tags
+                    null, // tags
+                    "CLIENT_UPLOAD", // documentCategory
+                    "OTHER" // documentType
             );
 
             // Update the file item with additional info

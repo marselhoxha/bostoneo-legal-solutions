@@ -204,6 +204,13 @@ export class PushNotificationService {
   }
 
   /**
+   * Clear the notification subject (call on logout to prevent replay on next login)
+   */
+  public clearNotifications(): void {
+    this.notificationSubject.next(null);
+  }
+
+  /**
    * Cleanup resources
    */
   public destroy(): void {

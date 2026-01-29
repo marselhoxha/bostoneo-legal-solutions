@@ -46,13 +46,15 @@ export class SafePipe implements PipeTransform {
     <div class="card">
       <div class="card-header border-bottom-dashed">
         <div class="d-flex align-items-center">
-          <h5 class="card-title mb-0 flex-grow-1">Case Documents</h5>
+          <h5 class="card-title mb-0 flex-grow-1">
+            <i class="ri-folder-3-line me-2 text-primary"></i>Case Documents
+          </h5>
           <div class="flex-shrink-0">
             <button
-              class="btn btn-primary btn-sm"
+              class="btn btn-primary rounded-pill"
               (click)="toggleUploadForm()"
             >
-              <i class="ri-upload-cloud-line align-bottom me-1"></i>
+              <i class="ri-upload-cloud-2-line align-bottom me-1"></i>
               Upload Document
             </button>
           </div>
@@ -227,6 +229,23 @@ export class SafePipe implements PipeTransform {
           </div>
         </div>
 
+        <!-- Empty State with Drag & Drop -->
+        @if(filteredDocuments.length === 0) {
+          <div class="dropzone-wrapper"
+               [class.dropzone-dragging]="isDragging"
+               (dragover)="onDragOver($event)"
+               (dragleave)="onDragLeave($event)"
+               (drop)="onDrop($event)"
+               (click)="toggleUploadForm()">
+            <div class="dropzone-content">
+              <div class="dropzone-icon">
+                <i class="ri-upload-cloud-2-line"></i>
+              </div>
+              <h5 class="dropzone-title">Drop files here or click to upload</h5>
+              <p class="dropzone-subtitle">PDF, DOC, DOCX, XLS, XLSX, JPG, PNG up to 50MB</p>
+            </div>
+          </div>
+        } @else {
         <!-- Documents List -->
         <div class="table-responsive">
           <table class="table table-nowrap table-hover mb-0">
@@ -266,8 +285,20 @@ export class SafePipe implements PipeTransform {
                       </div>
                     </div>
                   </td>
-                  <td>{{document.type}}</td>
-                  <td>{{document.category}}</td>
+                  <td>
+                    @if(document.type) {
+                      <span class="badge bg-primary-subtle text-primary">{{document.type | titlecase}}</span>
+                    } @else {
+                      <span class="text-muted">-</span>
+                    }
+                  </td>
+                  <td>
+                    @if(document.category) {
+                      <span class="badge bg-info-subtle text-info">{{document.category | titlecase}}</span>
+                    } @else {
+                      <span class="text-muted">-</span>
+                    }
+                  </td>
                   <td>v{{document.currentVersion}}</td>
                   <td>
                     @if(document.uploadedBy) {
@@ -298,6 +329,7 @@ export class SafePipe implements PipeTransform {
             </tbody>
           </table>
         </div>
+        }
       </div>
     </div>
 
@@ -457,9 +489,9 @@ export class SafePipe implements PipeTransform {
                   <div class="mb-3">
                     <label class="form-label">Document Type <span class="text-danger">*</span></label>
                     <select class="form-select" [(ngModel)]="newDocument.type">
-                      <option [ngValue]="null" disabled hidden>Select document type</option>
+                      <option [ngValue]="null" disabled>-- Select Type --</option>
                       @for(type of documentTypes; track type) {
-                        <option [value]="type">{{type}}</option>
+                        <option [ngValue]="type">{{type | titlecase}}</option>
                       }
                     </select>
                   </div>
@@ -468,11 +500,10 @@ export class SafePipe implements PipeTransform {
                   <div class="mb-3">
                     <label class="form-label">Category <span class="text-danger">*</span></label>
                     <select class="form-select" [(ngModel)]="newDocument.category">
-                      <option [ngValue]="null" disabled hidden>Select category</option>
-                      <option *ngFor="let category of categories; trackBy: trackByCategory"
-                              [value]="category">
-                        {{ category }}
-                      </option>
+                      <option [ngValue]="null" disabled>-- Select Category --</option>
+                      @for(category of categories; track category) {
+                        <option [ngValue]="category">{{category | titlecase}}</option>
+                      }
                     </select>
                   </div>
                 </div>
@@ -497,15 +528,30 @@ export class SafePipe implements PipeTransform {
               </div>
               <div class="mb-3">
                 <label class="form-label">File <span class="text-danger">*</span></label>
-                <input
-                  type="file"
-                  class="form-control"
-                  (change)="onFileSelected($event)"
-                >
                 @if(selectedFile) {
-                  <small class="text-muted mt-1 d-block">
-                    Selected: {{selectedFile.name}} ({{formatFileSize(selectedFile.size)}})
-                  </small>
+                  <div class="selected-file-display">
+                    <div class="d-flex align-items-center">
+                      <i class="ri-file-text-line fs-20 text-primary me-2"></i>
+                      <div class="flex-grow-1">
+                        <div class="fw-medium">{{selectedFile.name}}</div>
+                        <small class="text-muted">{{formatFileSize(selectedFile.size)}}</small>
+                      </div>
+                      <button type="button" class="btn btn-sm btn-ghost-danger" (click)="clearSelectedFile($event)">
+                        <i class="ri-close-line"></i>
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="file-upload-box" (click)="fileInput.click()">
+                    <input
+                      type="file"
+                      class="d-none"
+                      #fileInput
+                      (change)="onFileSelected($event)"
+                    >
+                    <i class="ri-upload-2-line fs-24 text-muted"></i>
+                    <span class="text-muted">Click to select a file</span>
+                  </div>
                 }
               </div>
             </div>
@@ -737,6 +783,125 @@ export class SafePipe implements PipeTransform {
       border-color: #405189;
       color: #405189;
     }
+
+    /* Dropzone Styles - Light Mode */
+    .dropzone-wrapper {
+      border: 2px dashed var(--vz-border-color, #e9ebec);
+      border-radius: 8px;
+      padding: 60px 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--vz-card-bg, #fff);
+    }
+
+    .dropzone-wrapper:hover {
+      border-color: var(--vz-primary, #405189);
+      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.06));
+    }
+
+    .dropzone-wrapper.dropzone-dragging {
+      border-color: var(--vz-primary, #405189);
+      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.1));
+      border-style: solid;
+    }
+
+    .dropzone-icon {
+      font-size: 48px;
+      color: var(--vz-secondary-color, #878a99);
+      margin-bottom: 16px;
+      line-height: 1;
+    }
+
+    .dropzone-wrapper:hover .dropzone-icon,
+    .dropzone-wrapper.dropzone-dragging .dropzone-icon {
+      color: var(--vz-primary, #405189);
+    }
+
+    .dropzone-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--vz-heading-color, #495057);
+      margin-bottom: 8px;
+    }
+
+    .dropzone-subtitle {
+      font-size: 13px;
+      color: var(--vz-secondary-color, #878a99);
+      margin: 0;
+    }
+
+    /* Dark Mode Support */
+    [data-layout-mode="dark"] .dropzone-wrapper {
+      border-color: var(--vz-border-color, #32383e);
+      background: var(--vz-card-bg, #212529);
+    }
+
+    [data-layout-mode="dark"] .dropzone-wrapper:hover {
+      border-color: var(--vz-primary, #405189);
+      background: rgba(64, 81, 137, 0.15);
+    }
+
+    [data-layout-mode="dark"] .dropzone-wrapper.dropzone-dragging {
+      background: rgba(64, 81, 137, 0.2);
+    }
+
+    [data-layout-mode="dark"] .dropzone-icon {
+      color: var(--vz-secondary-color, #ced4da);
+    }
+
+    [data-layout-mode="dark"] .dropzone-title {
+      color: var(--vz-heading-color, #ced4da);
+    }
+
+    [data-layout-mode="dark"] .dropzone-subtitle {
+      color: var(--vz-secondary-color, #878a99);
+    }
+
+    /* File Upload Box in Modal */
+    .file-upload-box {
+      border: 2px dashed var(--vz-border-color, #e9ebec);
+      border-radius: 6px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .file-upload-box:hover {
+      border-color: var(--vz-primary, #405189);
+      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.06));
+    }
+
+    .selected-file-display {
+      border: 1px solid var(--vz-border-color, #e9ebec);
+      border-radius: 6px;
+      padding: 12px;
+      background: var(--vz-light, #f3f6f9);
+    }
+
+    [data-layout-mode="dark"] .file-upload-box {
+      border-color: var(--vz-border-color, #32383e);
+    }
+
+    [data-layout-mode="dark"] .selected-file-display {
+      background: var(--vz-light, #2a2f34);
+      border-color: var(--vz-border-color, #32383e);
+    }
+
+    .btn-ghost-danger {
+      color: #f06548;
+      background: transparent;
+      border: none;
+    }
+
+    .btn-ghost-danger:hover {
+      background: rgba(240, 101, 72, 0.1);
+    }
   `]
 })
 export class CaseDocumentsComponent implements OnInit, OnDestroy {
@@ -766,6 +931,7 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   previewError: string | null = null;
   isPreviewLoading: boolean = false;
   showAllActivity: boolean = false;
+  isDragging: boolean = false;
   currentView: 'activity' | 'timeline' | 'categories' | 'team' | 'deadlines' = 'activity';
   deadlineFilter: 'upcoming' | 'overdue' | 'all' = 'upcoming';
 
@@ -897,30 +1063,32 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
         isFileManagerFile: false
       })),
       // Convert file manager files to unified format
-      ...this.fileManagerFiles.map(file => ({
-        id: file.id,
-        title: file.name,
-        type: this.mapMimeTypeToDocumentType(file.mimeType),
-        category: file.documentCategory || 'PUBLIC',
-        status: file.documentStatus || 'FINAL',
-        description: file.description || '',
-        fileName: file.originalName,
-        fileUrl: file.downloadUrl,
-        uploadedAt: file.createdAt,
-        uploadedBy: { 
-          firstName: file.createdByName?.split(' ')[0] || 'Unknown',
-          lastName: file.createdByName?.split(' ').slice(1).join(' ') || ''
-        },
-        tags: file.tags || [],
-        currentVersion: file.version || 1,
-        versions: [],
-        source: 'filemanager',
-        isFileManagerFile: true,
-        size: file.size,
-        mimeType: file.mimeType,
-        icon: file.icon,
-        iconColor: file.iconColor
-      }))
+      ...this.fileManagerFiles.map(file => {
+        return {
+          id: file.id,
+          title: file.name,
+          type: file.documentStatus || this.mapMimeTypeToDocumentType(file.mimeType), // documentStatus stores the type
+          category: file.documentCategory || 'OTHER',
+          status: 'FINAL',
+          description: file.description || '',
+          fileName: file.originalName,
+          fileUrl: file.downloadUrl,
+          uploadedAt: file.createdAt,
+          uploadedBy: file.createdByName ? {
+            firstName: file.createdByName.split(' ')[0],
+            lastName: file.createdByName.split(' ').slice(1).join(' ') || ''
+          } : null,
+          tags: file.tags || [],
+          currentVersion: file.version || 1,
+          versions: [],
+          source: 'filemanager',
+          isFileManagerFile: true,
+          size: file.size,
+          mimeType: file.mimeType,
+          icon: file.icon,
+          iconColor: file.iconColor
+        };
+      })
     ];
     
     this.filteredDocuments = [...this.combinedDocuments];
@@ -928,12 +1096,13 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   }
 
   private mapMimeTypeToDocumentType(mimeType: string): DocumentType {
-    if (mimeType?.includes('pdf')) return DocumentType.PLEADING;
+    if (mimeType?.includes('pdf')) return DocumentType.COURT_FILING;
     if (mimeType?.includes('word')) return DocumentType.CONTRACT;
     if (mimeType?.includes('image')) return DocumentType.EVIDENCE;
-    if (mimeType?.includes('excel')) return DocumentType.OTHER;
+    if (mimeType?.includes('excel')) return DocumentType.FINANCIAL;
     return DocumentType.OTHER;
   }
+
 
   loadDocuments(): void {
     this.isLoading = true;
@@ -1252,6 +1421,46 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     if (input.files?.length) {
       this.selectedFile = input.files[0];
+      // Auto-fill title with filename (without extension)
+      if (!this.newDocument.title) {
+        this.newDocument.title = this.getFileNameWithoutExtension(this.selectedFile.name);
+      }
+    }
+  }
+
+  clearSelectedFile(event: Event): void {
+    event.stopPropagation();
+    this.selectedFile = null;
+  }
+
+  getFileNameWithoutExtension(fileName: string): string {
+    const lastDotIndex = fileName.lastIndexOf('.');
+    return lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
+  }
+
+  // Drag and drop handlers
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+
+    if (event.dataTransfer?.files?.length) {
+      this.selectedFile = event.dataTransfer.files[0];
+      // Auto-fill title with filename (without extension)
+      this.newDocument.title = this.getFileNameWithoutExtension(this.selectedFile.name);
+      this.toggleUploadForm();
     }
   }
 
@@ -1278,17 +1487,21 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
 
     this.isUploading = true;
 
-    // Convert category to string for File Manager API
-    const categoryValue = typeof this.newDocument.category === 'string' ?
-      this.newDocument.category : String(this.newDocument.category);
+    // Get document type and category
+    const documentType = this.newDocument.type ? String(this.newDocument.type) : undefined;
+    const documentCategory = this.newDocument.category ? String(this.newDocument.category) : undefined;
+    const description = this.newDocument.description || '';
+    const tags = this.tagsInput || '';
 
     // Use File Manager service for upload - documents will appear in both places
     this.fileManagerService.uploadFile(
       this.selectedFile,
       undefined, // folderId - no folder
       Number(this.caseId), // caseId - link to this case
-      categoryValue || 'OTHER', // documentCategory
-      'DRAFT' // documentStatus
+      description,
+      tags,
+      documentCategory,
+      documentType
     ).subscribe({
       next: (response) => {
         this.loadFileManagerFiles();
@@ -1367,8 +1580,33 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  showVersionHistory(document: CaseDocument): void {
+  showVersionHistory(document: any): void {
     this.documentForVersionHistory = document;
+
+    // Load versions from backend if it's a file manager file
+    if (document.isFileManagerFile && document.id) {
+      this.fileManagerService.getFileVersions(document.id).subscribe({
+        next: (versions) => {
+          this.documentForVersionHistory = {
+            ...document,
+            versions: versions.map((v: any) => ({
+              id: v.id,
+              versionNumber: v.versionNumber || v.version,
+              changes: v.comment || v.changes || 'No notes',
+              uploadedAt: v.uploadedAt || v.createdAt,
+              uploadedBy: v.uploadedByName ? {
+                firstName: v.uploadedByName.split(' ')[0],
+                lastName: v.uploadedByName.split(' ').slice(1).join(' ')
+              } : null
+            }))
+          };
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error loading versions:', error);
+        }
+      });
+    }
   }
 
   closeVersionHistory(): void {
@@ -1491,10 +1729,12 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
             // Delete file manager file
             this.fileManagerService.deleteFile(document.id).subscribe({
               next: () => {
-                // Update UI
+                // Update UI - remove from both arrays
                 this.fileManagerFiles = this.fileManagerFiles.filter(f => f.id !== document.id);
-                this.combineCaseDocuments();
-                
+                this.combinedDocuments = this.combinedDocuments.filter(d => d.id !== document.id);
+                this.filteredDocuments = this.filteredDocuments.filter(d => d.id !== document.id);
+                this.cdr.detectChanges();
+
                 Swal.fire({
                   title: 'Deleted!',
                   text: 'File has been deleted.',
@@ -1519,10 +1759,12 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
             this.documentsService.deleteDocument(String(this.caseId), document.id)
               .subscribe({
                 next: () => {
-                  // Update UI
+                  // Update UI - remove from all arrays
                   this.documents = this.documents.filter(d => d.id !== document.id);
-                  this.combineCaseDocuments();
-                
+                  this.combinedDocuments = this.combinedDocuments.filter(d => d.id !== document.id);
+                  this.filteredDocuments = this.filteredDocuments.filter(d => d.id !== document.id);
+                  this.cdr.detectChanges();
+
                   Swal.fire({
                     title: 'Deleted!',
                     text: 'Document has been deleted.',

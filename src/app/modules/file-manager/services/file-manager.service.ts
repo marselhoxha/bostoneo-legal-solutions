@@ -224,14 +224,16 @@ export class FileManagerService {
   /**
    * Upload single file
    */
-  uploadFile(file: File, folderId?: number, caseId?: number, documentCategory?: string, documentStatus?: string): Observable<FileUploadResponse> {
+  uploadFile(file: File, folderId?: number, caseId?: number, description?: string, tags?: string, documentCategory?: string, documentType?: string): Observable<FileUploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     if (folderId) formData.append('folderId', folderId.toString());
     if (caseId) formData.append('caseId', caseId.toString());
+    if (description) formData.append('description', description);
+    if (tags) formData.append('tags', tags);
     if (documentCategory) formData.append('documentCategory', documentCategory);
-    if (documentStatus) formData.append('documentStatus', documentStatus);
+    if (documentType) formData.append('documentType', documentType);
 
     return this.http.post<any>(`${this.FILE_MANAGER_API}/files/upload`, formData, {
       reportProgress: true,
@@ -265,13 +267,13 @@ export class FileManagerService {
   /**
    * Upload multiple files
    */
-  uploadMultipleFiles(files: File[], folderId?: number, caseId?: number, documentCategory?: string, documentStatus?: string): Observable<FileUploadResponse> {
+  uploadMultipleFiles(files: File[], folderId?: number, caseId?: number, description?: string, tags?: string, documentCategory?: string, documentType?: string): Observable<FileUploadResponse> {
     // For now, upload files one by one since backend doesn't have bulk upload
     // TODO: Implement proper bulk upload if backend supports it
-    const uploads = files.map(file => 
-      this.uploadFile(file, folderId, caseId, documentCategory, documentStatus)
+    const uploads = files.map(file =>
+      this.uploadFile(file, folderId, caseId, description, tags, documentCategory, documentType)
     );
-    
+
     // Return the first upload for now
     return uploads[0] || new Observable(observer => {
       observer.next({ success: false, message: 'No files to upload' } as any);
@@ -1044,6 +1046,8 @@ export class FileManagerService {
       fileType: this.getFileTypeCategory(file.mimeType || ''),
       createdAt: file.createdAt ? new Date(file.createdAt) : new Date(),
       updatedAt: file.updatedAt ? new Date(file.updatedAt) : new Date(),
+      createdById: file.createdById || file.uploadedById,
+      createdByName: file.createdByName || file.uploadedByName,
       downloadUrl: `${this.FILE_MANAGER_API}/files/${file.id}/download`,
       previewUrl: `${this.FILE_MANAGER_API}/files/${file.id}/download`,
       starred: file.starred === true,  // Ensure boolean value

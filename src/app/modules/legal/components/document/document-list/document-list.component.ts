@@ -326,16 +326,24 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
     switch(docType) {
       case DocumentType.CONTRACT:
         return 'ri-draft-line';
-      case DocumentType.PLEADING:
+      case DocumentType.COURT_FILING:
         return 'ri-file-list-3-line';
       case DocumentType.EVIDENCE:
         return 'ri-file-search-line';
       case DocumentType.CORRESPONDENCE:
         return 'ri-file-paper-line';
-      case DocumentType.MOTION:
+      case DocumentType.DISCOVERY:
         return 'ri-file-paper-2-line';
-      case DocumentType.ORDER:
-        return 'ri-hammer-line';
+      case DocumentType.FINANCIAL:
+        return 'ri-money-dollar-circle-line';
+      case DocumentType.MEDICAL:
+        return 'ri-heart-pulse-line';
+      case DocumentType.REPORT:
+        return 'ri-file-chart-line';
+      case DocumentType.CLIENT_DOCUMENT:
+        return 'ri-user-line';
+      case DocumentType.INTERNAL:
+        return 'ri-lock-line';
       default:
         return 'ri-file-text-line';
     }
@@ -348,16 +356,24 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
     switch(docType) {
       case DocumentType.CONTRACT:
         return 'bg-info-subtle text-info';
-      case DocumentType.PLEADING:
+      case DocumentType.COURT_FILING:
         return 'bg-primary-subtle text-primary';
       case DocumentType.EVIDENCE:
         return 'bg-warning-subtle text-warning';
       case DocumentType.CORRESPONDENCE:
         return 'bg-success-subtle text-success';
-      case DocumentType.MOTION:
+      case DocumentType.DISCOVERY:
         return 'bg-danger-subtle text-danger';
-      case DocumentType.ORDER:
+      case DocumentType.FINANCIAL:
+        return 'bg-info-subtle text-info';
+      case DocumentType.MEDICAL:
+        return 'bg-danger-subtle text-danger';
+      case DocumentType.REPORT:
         return 'bg-warning-subtle text-warning';
+      case DocumentType.CLIENT_DOCUMENT:
+        return 'bg-primary-subtle text-primary';
+      case DocumentType.INTERNAL:
+        return 'bg-secondary-subtle text-secondary';
       default:
         return 'bg-secondary-subtle text-secondary';
     }
@@ -409,7 +425,7 @@ export class DocumentListComponent implements OnInit, OnDestroy, AfterViewInit {
           id: '5678efgh',
           title: 'Court Filing Document',
           description: 'Court filing document for case #123456',
-          type: DocumentType.PLEADING,
+          type: DocumentType.COURT_FILING,
           status: DocumentStatus.DRAFT,
           uploadedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
           fileSize: 780000,

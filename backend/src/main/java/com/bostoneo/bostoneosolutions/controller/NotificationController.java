@@ -352,16 +352,31 @@ public class NotificationController {
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY') or principal.id == #userId")
     public ResponseEntity<HttpResponse> markAllAsRead(@PathVariable Long userId) {
         log.info("Marking all notifications as read for user: {}", userId);
-        
-        return ResponseEntity.ok(
-            HttpResponse.builder()
-                .timeStamp(LocalDateTime.now().toString())
-                .statusCode(HttpStatus.OK.value())
-                .status(HttpStatus.OK)
-                .reason("All notifications marked as read")
-                .message("All notifications status updated")
-                .build()
-        );
+
+        try {
+            notificationService.markAllNotificationsAsRead(userId);
+
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .statusCode(HttpStatus.OK.value())
+                    .status(HttpStatus.OK)
+                    .reason("All notifications marked as read")
+                    .message("All notifications status updated")
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Error marking all notifications as read for user {}", userId, e);
+            return ResponseEntity.badRequest().body(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .statusCode(HttpStatus.BAD_REQUEST.value())
+                    .status(HttpStatus.BAD_REQUEST)
+                    .reason("Failed to mark all notifications as read")
+                    .message("Error: " + e.getMessage())
+                    .build()
+            );
+        }
     }
     
     /**
@@ -369,18 +384,33 @@ public class NotificationController {
      */
     @DeleteMapping("/{notificationId}")
     @PreAuthorize("hasRole('ROLE_USER')")
-    public ResponseEntity<HttpResponse> deleteNotification(@PathVariable String notificationId) {
+    public ResponseEntity<HttpResponse> deleteNotification(@PathVariable Long notificationId) {
         log.info("Deleting notification: {}", notificationId);
-        
-        return ResponseEntity.ok(
-            HttpResponse.builder()
-                .timeStamp(LocalDateTime.now().toString())
-                .statusCode(HttpStatus.OK.value())
-                .status(HttpStatus.OK)
-                .reason("Notification deleted successfully")
-                .message("Notification has been removed")
-                .build()
-        );
+
+        try {
+            notificationService.deleteNotification(notificationId);
+
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .statusCode(HttpStatus.OK.value())
+                    .status(HttpStatus.OK)
+                    .reason("Notification deleted successfully")
+                    .message("Notification has been removed")
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Error deleting notification {}", notificationId, e);
+            return ResponseEntity.badRequest().body(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .statusCode(HttpStatus.BAD_REQUEST.value())
+                    .status(HttpStatus.BAD_REQUEST)
+                    .reason("Failed to delete notification")
+                    .message("Error: " + e.getMessage())
+                    .build()
+            );
+        }
     }
 } 
  

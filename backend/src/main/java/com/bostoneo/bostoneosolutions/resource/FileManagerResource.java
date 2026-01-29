@@ -90,7 +90,9 @@ public class FileManagerResource {
             @RequestParam(required = false) Long folderId,
             @RequestParam(required = false) Long caseId,
             @RequestParam(required = false) String description,
-            @RequestParam(required = false) String tags) {
+            @RequestParam(required = false) String tags,
+            @RequestParam(required = false) String documentCategory,
+            @RequestParam(required = false) String documentType) {
         
         // Validate file
         if (file.isEmpty()) {
@@ -121,7 +123,7 @@ public class FileManagerResource {
         }
         
         try {
-            FileUploadResponseDTO response = fileManagerService.uploadFile(file, folderId, caseId, description, tags);
+            FileUploadResponseDTO response = fileManagerService.uploadFile(file, folderId, caseId, description, tags, documentCategory, documentType);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             log.error("Error uploading file: {}", e.getMessage(), e);

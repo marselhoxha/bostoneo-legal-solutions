@@ -8,18 +8,34 @@ import { UserNotification, NotificationAction, NotificationPreferences, Notifica
 import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
 
+// Interface for push notifications displayed in topbar
+export interface PushNotification {
+    id: string;
+    title: string;
+    body: string;
+    timestamp: Date;
+    read: boolean;
+    data: any;
+    type: string;
+    isFromBackend: boolean;
+}
+
 @Injectable({
     providedIn: 'root'
 })
 export class NotificationService {
     private readonly apiUrl = `${environment.apiUrl}/api/v1`;
     private readonly notifier: ToastrService;
-    
+
     // In-memory notification store for current user
     private userNotifications$ = new BehaviorSubject<UserNotification[]>([]);
     private unreadCount$ = new BehaviorSubject<number>(0);
     private preferences$ = new BehaviorSubject<NotificationPreferences | null>(null);
-    
+
+    // Push notifications for topbar display (persisted in service)
+    private pushNotifications$ = new BehaviorSubject<PushNotification[]>([]);
+    private pushNotificationsLoaded = false;
+
     // Current user ID
     private currentUserId: number | null = null;
 
@@ -142,6 +158,103 @@ export class NotificationService {
      */
     getUnreadCount(): Observable<number> {
         return this.unreadCount$.asObservable();
+    }
+
+    // ==================== Push Notifications (Topbar Display) ====================
+
+    /**
+     * Get push notifications for topbar display
+     */
+    getPushNotifications(): Observable<PushNotification[]> {
+        return this.pushNotifications$.asObservable();
+    }
+
+    /**
+     * Get current push notifications value
+     */
+    getPushNotificationsValue(): PushNotification[] {
+        return this.pushNotifications$.value;
+    }
+
+    /**
+     * Get push notifications unread count
+     */
+    getPushUnreadCount(): number {
+        return this.pushNotifications$.value.filter(n => !n.read).length;
+    }
+
+    /**
+     * Check if push notifications have been loaded
+     */
+    isPushNotificationsLoaded(): boolean {
+        return this.pushNotificationsLoaded;
+    }
+
+    /**
+     * Set push notifications loaded flag
+     */
+    setPushNotificationsLoaded(loaded: boolean): void {
+        this.pushNotificationsLoaded = loaded;
+    }
+
+    /**
+     * Add a push notification to the list
+     * Returns true if notification was added, false if skipped (duplicate, read, etc.)
+     */
+    addPushNotification(notification: PushNotification): boolean {
+        // Filter out message-related notifications
+        const messageTypes = ['NEW_MESSAGE', 'CLIENT_MESSAGE', 'ATTORNEY_MESSAGE', 'MESSAGE'];
+        if (messageTypes.includes(notification.type?.toUpperCase())) {
+            return false;
+        }
+
+        // Skip if already read
+        if (notification.read) {
+            return false;
+        }
+
+        // Check for duplicates
+        const existing = this.pushNotifications$.value.find(n => n.id === notification.id);
+        if (existing) {
+            return false;
+        }
+
+        // Add to beginning of list
+        const notifications = [notification, ...this.pushNotifications$.value];
+        // Sort by timestamp and keep only latest 50
+        notifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        this.pushNotifications$.next(notifications.slice(0, 50));
+        return true;
+    }
+
+    /**
+     * Mark a push notification as read and remove from list
+     */
+    markPushNotificationAsRead(notificationId: string): void {
+        const notifications = this.pushNotifications$.value.filter(n => n.id !== notificationId);
+        this.pushNotifications$.next(notifications);
+    }
+
+    /**
+     * Mark all push notifications as read (clear the list)
+     */
+    markAllPushNotificationsAsRead(): void {
+        this.pushNotifications$.next([]);
+    }
+
+    /**
+     * Clear all push notifications
+     */
+    clearAllPushNotifications(): void {
+        this.pushNotifications$.next([]);
+    }
+
+    /**
+     * Reset push notifications (on logout)
+     */
+    resetPushNotifications(): void {
+        this.pushNotifications$.next([]);
+        this.pushNotificationsLoaded = false;
     }
 
     /**

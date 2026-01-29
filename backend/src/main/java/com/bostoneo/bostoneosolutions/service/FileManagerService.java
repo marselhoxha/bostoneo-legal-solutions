@@ -14,7 +14,7 @@ public interface FileManagerService {
     Page<FileItemDTO> getDeletedFiles(Pageable pageable);
     FileItemDTO getFile(Long fileId);
     String getFilePath(Long fileId);
-    FileUploadResponseDTO uploadFile(MultipartFile file, Long folderId, Long caseId, String description, String tags);
+    FileUploadResponseDTO uploadFile(MultipartFile file, Long folderId, Long caseId, String description, String tags, String documentCategory, String documentType);
     FileItemDTO updateFile(Long fileId, UpdateFileRequestDTO request);
     FileVersionDTO replaceFileContent(Long fileId, MultipartFile file, String comment);
     void deleteFile(Long fileId);

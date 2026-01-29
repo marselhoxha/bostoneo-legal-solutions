@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { PushNotificationService } from './push-notification.service';
 import { UserService } from '../../service/user.service';
+import { NotificationService } from '../../service/notification.service';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { User } from '../../interface/user';
@@ -56,19 +57,30 @@ export class NotificationManagerService {
   constructor(
     private pushNotificationService: PushNotificationService,
     private userService: UserService,
+    private notificationService: NotificationService,
     private http: HttpClient
   ) {
     // Subscribe to user data changes and check for missed notifications on login
     this.userService.userData$.subscribe(user => {
       const previousUser = this.currentUser;
       this.currentUser = user;
-      
+
       // If user just logged in (previously null, now has user), check for missed notifications
+      // Check service flag to avoid duplicate loading with topbar component
       if (!previousUser && user?.id) {
-        // Use setTimeout to avoid blocking the login flow
-        setTimeout(() => {
-          this.checkMissedNotifications(user.id);
-        }, 2000); // Wait 2 seconds after login to check notifications
+        if (!this.notificationService.isPushNotificationsLoaded()) {
+          // Use setTimeout to avoid blocking the login flow
+          setTimeout(() => {
+            this.checkMissedNotifications(user.id);
+            // Mark as loaded in service to coordinate with topbar
+            this.notificationService.setPushNotificationsLoaded(true);
+          }, 2000); // Wait 2 seconds after login to check notifications
+        }
+      }
+
+      // Reset service state on logout
+      if (previousUser?.id && !user) {
+        this.notificationService.resetPushNotifications();
       }
     });
   }

@@ -206,22 +206,22 @@ public class FileManagerServiceImpl implements FileManagerService {
     }
 
     @Override
-    public FileUploadResponseDTO uploadFile(MultipartFile file, Long folderId, Long caseId, String description, String tags) {
-        log.info("Uploading file: {} to folder: {}, case: {}", file.getOriginalFilename(), folderId, caseId);
-        
+    public FileUploadResponseDTO uploadFile(MultipartFile file, Long folderId, Long caseId, String description, String tags, String documentCategory, String documentType) {
+        log.info("Uploading file: {} to folder: {}, case: {}, category: {}, type: {}", file.getOriginalFilename(), folderId, caseId, documentCategory, documentType);
+
         try {
             // Build the folder path
             String folderPath = buildFolderPath(folderId);
             log.info("Built folder path: '{}'", folderPath);
-            
+
             // Use original filename
             String fileName = file.getOriginalFilename();
             log.info("Original filename: '{}'", fileName);
-            
+
             // Build the subdirectory path based on folder hierarchy
             String subdirectory = folderPath.isEmpty() ? "documents" : folderPath;
             log.info("Subdirectory for storage: '{}'", subdirectory);
-            
+
             // Check if file already exists and generate unique name if needed
             String finalFileName = fileName;
             int counter = 1;
@@ -232,16 +232,16 @@ public class FileManagerServiceImpl implements FileManagerService {
                 counter++;
             }
             log.info("Final filename to store: '{}'", finalFileName);
-            
+
             // Store the physical file
             log.info("About to call fileStorageService.storeFile with subdirectory='{}', fileName='{}'", subdirectory, finalFileName);
             String storedFilePath = fileStorageService.storeFile(file, subdirectory, finalFileName);
             log.info("File storage returned path: '{}'", storedFilePath);
-            
+
             // Create database records in a separate transaction
             FileItem fileItem;
             try {
-                fileItem = createFileRecord(finalFileName, file, storedFilePath, folderId, caseId, tags);
+                fileItem = createFileRecord(finalFileName, file, storedFilePath, folderId, caseId, tags, documentCategory, documentType);
             } catch (Exception dbException) {
                 // Clean up the uploaded file if database operations fail
                 try {
@@ -276,7 +276,7 @@ public class FileManagerServiceImpl implements FileManagerService {
     }
     
     private FileItem createFileRecord(String fileName, MultipartFile file, String storedFilePath,
-                                     Long folderId, Long caseId, String tags) {
+                                     Long folderId, Long caseId, String tags, String documentCategory, String documentType) {
         try {
             log.info("Creating file record for: {}", fileName);
             Long currentUserId = getCurrentUserId();
@@ -295,6 +295,8 @@ public class FileManagerServiceImpl implements FileManagerService {
                     .caseId(caseId)
                     .createdBy(currentUserId)
                     .starred(false)  // Explicitly set starred to false for new files
+                    .documentCategory(documentCategory)
+                    .documentStatus(documentType) // Store document type in documentStatus field
                     .build();
             
             log.info("Saving file item to database");
@@ -1341,7 +1343,13 @@ public class FileManagerServiceImpl implements FileManagerService {
         if (fileItem.getCaseId() != null && fileItem.getLegalCase() != null) {
             caseName = fileItem.getLegalCase().getTitle();
         }
-        
+
+        // Get creator name
+        String createdByName = null;
+        if (fileItem.getCreatedBy() != null && fileItem.getCreatedByUser() != null) {
+            createdByName = fileItem.getCreatedByUser().getFirstName() + " " + fileItem.getCreatedByUser().getLastName();
+        }
+
         return FileItemDTO.builder()
                 .id(fileItem.getId())
                 .name(fileItem.getOriginalName()) // Use original name for display
@@ -1356,6 +1364,8 @@ public class FileManagerServiceImpl implements FileManagerService {
                 .folderId(fileItem.getFolderId())
                 .caseId(fileItem.getCaseId())
                 .caseName(caseName)
+                .createdById(fileItem.getCreatedBy())
+                .createdByName(createdByName)
                 .createdAt(fileItem.getCreatedAt())
                 .updatedAt(fileItem.getUpdatedAt())
                 .version(fileItem.getVersion())
@@ -1363,6 +1373,8 @@ public class FileManagerServiceImpl implements FileManagerService {
                 .sharedWithClient(fileItem.getSharedWithClient() != null ? fileItem.getSharedWithClient() : false)
                 .deleted(fileItem.getDeleted() != null ? fileItem.getDeleted() : false)
                 .deletedAt(fileItem.getDeletedAt())
+                .documentCategory(fileItem.getDocumentCategory())
+                .documentStatus(fileItem.getDocumentStatus())
                 .canEdit(true)
                 .canDelete(true)
                 .downloadUrl(fileItem.getDownloadUrl())
