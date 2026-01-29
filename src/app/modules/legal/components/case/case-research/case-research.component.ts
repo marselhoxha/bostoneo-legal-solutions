@@ -25,6 +25,7 @@ interface Conversation {
   lastUpdated: Date;
   messages: { role: 'user' | 'assistant'; content: string; timestamp: Date; isTyping?: boolean; collapsed?: boolean }[];
   followUpQuestions: string[];
+  messageCount: number; // Message count from backend
 }
 import Swal from 'sweetalert2';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
@@ -65,6 +66,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   conversations: Conversation[] = [];
   activeConversationId: string | null = null;
   showConversationList: boolean = false;
+  isLoadingConversations: boolean = false; // Prevent duplicate loadConversations calls
 
   // Chat-based AI Display (linked to active conversation)
   chatMessages: { role: 'user' | 'assistant'; content: string; timestamp: Date; isTyping?: boolean; collapsed?: boolean }[] = [];
@@ -301,10 +303,18 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    // Prevent duplicate concurrent calls
+    if (this.isLoadingConversations) {
+      return;
+    }
+    this.isLoadingConversations = true;
+
     this.legalResearchService.getConversationsForCase(parseInt(this.caseId), this.userId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (sessions) => {
+          this.isLoadingConversations = false;
+
           // Map backend sessions to frontend conversation format
           this.conversations = sessions.map(session => ({
             id: session.id!.toString(), // Use backend ID as string for frontend
@@ -313,7 +323,8 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
             createdAt: session.createdAt ? new Date(session.createdAt) : new Date(),
             lastUpdated: session.lastInteractionAt ? new Date(session.lastInteractionAt) : new Date(),
             messages: [], // Messages will be loaded when conversation is activated
-            followUpQuestions: []
+            followUpQuestions: [],
+            messageCount: session.messageCount || 0 // Use message count from backend
           }));
 
           // If no conversations exist after loading, create the first one
@@ -332,6 +343,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
           this.cdr.detectChanges();
         },
         error: (error) => {
+          this.isLoadingConversations = false;
           console.error('Error loading conversations from backend:', error);
           this.conversations = [];
           this.activeConversationId = null;
@@ -358,6 +370,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
               isTyping: msg.isTyping,
               collapsed: msg.collapsed
             }));
+
+            // Update message count on the conversation object
+            activeConv.messageCount = this.chatMessages.length;
 
             this.followUpQuestions = activeConv.followUpQuestions;
             this.currentSessionId = activeConv.sessionId;
@@ -526,6 +541,9 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (message) => {
+          // Increment message count for the conversation
+          activeConv.messageCount = (activeConv.messageCount || 0) + 1;
+
           // CRITICAL FIX: Update title immediately after first user message is saved
           // This ensures the title update happens AFTER the session is fully persisted
           if (role === 'user' && activeConv &&
@@ -584,7 +602,8 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
             createdAt: session.createdAt ? new Date(session.createdAt) : new Date(),
             lastUpdated: session.lastInteractionAt ? new Date(session.lastInteractionAt) : new Date(),
             messages: [],
-            followUpQuestions: []
+            followUpQuestions: [],
+            messageCount: 0
           };
 
           this.conversations.unshift(newConv); // Add to beginning

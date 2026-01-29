@@ -756,12 +756,10 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           } else {
             this.error = 'Case data not found or in unexpected format';
             console.warn('Unexpected response format:', response);
-            this.showNotification('Error: Case data format is unexpected', 'error');
           }
         } catch (e) {
           this.error = 'Error processing case data';
           console.error('Error processing case data:', e);
-          this.showNotification('Error processing case data', 'error');
         }
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -777,13 +775,10 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         console.error('Error loading case:', err);
         if (err.status === 401) {
           this.error = 'Authentication required. Please log in to view case details.';
-          this.showNotification('Authentication required. Please log in again.', 'error');
         } else if (err.status === 404) {
           this.error = 'Case not found.';
-          this.showNotification('Case not found. It may have been deleted.', 'error');
         } else {
           this.error = 'Failed to load case. ' + (err.error?.reason || err.error?.message || 'Please try again later.');
-          this.showNotification(this.error, 'error');
         }
         this.isLoading = false;
         this.cdr.detectChanges();
