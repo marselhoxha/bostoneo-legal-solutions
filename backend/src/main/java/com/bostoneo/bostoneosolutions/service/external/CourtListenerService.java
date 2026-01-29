@@ -348,17 +348,17 @@ public class CourtListenerService {
                         .build();
             }
 
-            // Use /search/ endpoint with citation-specific query
-            // Try multiple query formats since v4 API might have different syntax
+            // Use /search/ endpoint with plain text query
+            // Note: citation: prefix is only valid for range queries, not direct lookups
             String encodedQuery = URLEncoder.encode(citationNumber, StandardCharsets.UTF_8);
 
-            // Format 1: Try with citation: prefix (field-specific search)
-            String url = "https://www.courtlistener.com/api/rest/v4/search/?type=o&q=citation:" + encodedQuery + "&format=json";
+            // Plain text search (citation: prefix is invalid for direct lookups)
+            String url = "https://www.courtlistener.com/api/rest/v4/search/?type=o&q=" + encodedQuery + "&format=json";
 
             HttpHeaders headers = createHeaders();
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            log.info("🔍 SEARCH API - Searching for: '{}' via /search/ endpoint (citation: prefix)", citationNumber);
+            log.info("🔍 SEARCH API - Searching for: '{}' via /search/ endpoint (plain text)", citationNumber);
             log.info("🔍 Search URL: {}", url);
 
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
