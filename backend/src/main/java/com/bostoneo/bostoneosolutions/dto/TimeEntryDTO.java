@@ -22,6 +22,9 @@ import java.util.Date;
 public class TimeEntryDTO {
     private Long id;
 
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
+
     @NotNull(message = "Legal case ID is required")
     private Long legalCaseId;
 

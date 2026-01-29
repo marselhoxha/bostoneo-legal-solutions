@@ -484,8 +484,9 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         Client client = clientRepository.findByIdAndOrganizationId(clientId, orgId)
             .orElseThrow(() -> new RuntimeException("Client not found or access denied: " + clientId));
 
-        // Search cases by client name since LegalCase uses clientName field
-        Page<LegalCase> cases = legalCaseRepository.findByClientNameContainingIgnoreCase(
+        // SECURITY: Search cases by client name with tenant filter
+        Page<LegalCase> cases = legalCaseRepository.findByOrganizationIdAndClientNameContainingIgnoreCase(
+            orgId,
             client.getName(),
             PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
         );

@@ -115,6 +115,7 @@ public class AuditAspect {
             }
             
             com.bostoneo.bostoneosolutions.model.AuditLog auditLogEntry = com.bostoneo.bostoneosolutions.model.AuditLog.builder()
+                    .organizationId(user.getOrganizationId())
                     .userId(user.getId())
                     .action(auditAction)
                     .entityType(auditEntityType)

@@ -25,6 +25,9 @@ import java.util.Map;
 public class LegalCaseDTO {
     private Long id;
 
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
+
     @NotBlank(message = "Case number is required")
     private String caseNumber;
 

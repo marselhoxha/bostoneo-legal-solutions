@@ -8,6 +8,7 @@ import com.bostoneo.bostoneosolutions.dto.CreateTaskRequest;
 import com.bostoneo.bostoneosolutions.model.ResearchActionItem;
 import com.bostoneo.bostoneosolutions.model.ResearchActionItem.*;
 import com.bostoneo.bostoneosolutions.model.ResearchSession;
+import com.bostoneo.bostoneosolutions.repository.AiConversationSessionRepository;
 import com.bostoneo.bostoneosolutions.repository.ResearchActionItemRepository;
 import com.bostoneo.bostoneosolutions.repository.ResearchSessionRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
@@ -32,6 +33,7 @@ public class ResearchActionService {
 
     private final ResearchActionItemRepository actionRepository;
     private final ResearchSessionRepository sessionRepository;
+    private final AiConversationSessionRepository aiSessionRepository;
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
     private final TaskManagementService taskManagementService;
@@ -93,8 +95,10 @@ public class ResearchActionService {
             List<Map<String, Object>> parsedSuggestions = parseSuggestions(response);
             log.info("📊 Parsed {} suggestions from Claude response", parsedSuggestions.size());
 
+            Long orgId = getRequiredOrganizationId();
             for (Map<String, Object> suggestion : parsedSuggestions) {
                 ResearchActionItem item = new ResearchActionItem();
+                item.setOrganizationId(orgId);  // SECURITY: Set organization ID for tenant isolation
                 item.setResearchSessionId(sessionId);
                 item.setUserId(userId);
                 item.setCaseId(caseId);
@@ -191,11 +195,25 @@ public class ResearchActionService {
      */
     public List<ResearchActionItem> getSessionActions(Long sessionId) {
         Long orgId = getRequiredOrganizationId();
+        log.info("getSessionActions: sessionId={}, orgId={}", sessionId, orgId);
+
         // SECURITY: Verify session belongs to current organization
-        if (!sessionRepository.findByIdAndOrganizationId(sessionId, orgId).isPresent()) {
-            throw new RuntimeException("Session not found or access denied: " + sessionId);
+        // Try AI conversation sessions first (large IDs like 1761195217006)
+        var aiSessionOpt = aiSessionRepository.findByIdAndOrganizationId(sessionId, orgId);
+        if (aiSessionOpt.isPresent()) {
+            log.info("getSessionActions: AI conversation session found for id={}", sessionId);
+            return actionRepository.findByOrganizationIdAndResearchSessionIdOrderByCreatedAtDesc(orgId, sessionId);
         }
-        return actionRepository.findByOrganizationIdAndResearchSessionIdOrderByCreatedAtDesc(orgId, sessionId);
+
+        // Try research sessions (small IDs like 1-4)
+        var sessionOpt = sessionRepository.findByIdAndOrganizationId(sessionId, orgId);
+        if (sessionOpt.isPresent()) {
+            log.info("getSessionActions: Research session found for id={}", sessionId);
+            return actionRepository.findByOrganizationIdAndResearchSessionIdOrderByCreatedAtDesc(orgId, sessionId);
+        }
+
+        log.warn("getSessionActions: Session {} not found in either table for org {}", sessionId, orgId);
+        throw new RuntimeException("Session not found or access denied: " + sessionId);
     }
 
     /**

@@ -215,7 +215,6 @@ export class UserService {
       // Token is "about to expire" if it expires within the threshold
       return expirationTime - now < thresholdMs;
     } catch (error) {
-      console.warn('Error checking token expiration:', error);
       return true; // Assume expired on error
     }
   }
@@ -227,7 +226,7 @@ export class UserService {
   proactiveTokenRefresh(): void {
     if (this.isAuthenticated() && this.isTokenAboutToExpire(5)) {
       this.refreshToken$().subscribe({
-        error: (err) => console.warn('Proactive token refresh failed:', err)
+        error: () => { /* Silently handle refresh failure */ }
       });
     }
   }
@@ -382,25 +381,22 @@ export class UserService {
     try {
       const token = localStorage.getItem(Key.TOKEN);
       if (!token) return false;
-      
+
       // Check if token has valid JWT format (should have 3 parts separated by dots)
       const tokenParts = token.split('.');
       if (tokenParts.length !== 3) {
-        console.warn('Invalid JWT token format - expected 3 parts, got:', tokenParts.length);
         this.clearInvalidToken();
         return false;
       }
-      
+
       // Check if token is expired using jwt-helper
       if (this.jwtHelper.isTokenExpired(token)) {
-        console.warn('JWT token is expired');
         this.clearInvalidToken();
         return false;
       }
-      
+
       return true;
     } catch (error) {
-      console.error('Error validating JWT token:', error);
       this.clearInvalidToken();
       return false;
     }
@@ -436,9 +432,8 @@ export class UserService {
       // This prevents the topbar from flickering/showing no user during navigation
       // Fetch fresh data - setUserData is called in profile$() on success
       this.profile$().subscribe({
-        error: (err) => {
-          // Only log error, don't clear user data on temporary failures
-          console.warn('Failed to refresh user profile:', err);
+        error: () => {
+          // Silently handle - don't clear user data on temporary failures
         }
       });
     }

@@ -164,7 +164,8 @@ public class StripePaymentGatewayService implements PaymentGatewayService {
                 payment.setPaymentDate(LocalDate.now());
                 payment.setNotes("Stripe payment: " + intent.getId());
 
-                return paymentRepository.create(payment);
+                // SECURITY: Use createWithOrganization to ensure proper tenant isolation
+                return paymentRepository.createWithOrganization(payment, invoice.getOrganizationId());
             }
 
             return null;

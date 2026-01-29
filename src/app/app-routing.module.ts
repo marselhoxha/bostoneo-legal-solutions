@@ -76,6 +76,13 @@ const routes: Routes = [
         canActivate: [AuthenticationGuard]
       },
 
+      // SUPERADMIN module (Platform administration)
+      {
+        path: 'superadmin',
+        loadChildren: () => import('./modules/superadmin/superadmin.module').then(m => m.SuperadminModule),
+        canActivate: [AuthenticationGuard]
+      },
+
       // Activities module (lazy loaded)
       { 
         path: 'activities', 

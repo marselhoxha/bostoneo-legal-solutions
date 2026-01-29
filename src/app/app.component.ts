@@ -22,6 +22,7 @@ import { PushNotificationService } from './core/services/push-notification.servi
 import { WebSocketService } from './core/services/websocket.service';
 import { DeadlineAlertService } from './core/services/deadline-alert.service';
 import { EnhancedNotificationManagerService } from './core/services/enhanced-notification-manager.service';
+import { OrganizationService } from './core/services/organization.service';
 
 @Component({
   selector: 'app-root',
@@ -44,7 +45,8 @@ export class AppComponent implements OnInit, OnDestroy {
     private pushNotificationService: PushNotificationService,
     private webSocketService: WebSocketService,
     private deadlineAlertService: DeadlineAlertService,
-    private enhancedNotificationManager: EnhancedNotificationManagerService
+    private enhancedNotificationManager: EnhancedNotificationManagerService,
+    private organizationService: OrganizationService
   ) {
     this.preloaderService.showPreloader$.subscribe((show) => {
       this.showPreloader = show;
@@ -124,6 +126,9 @@ export class AppComponent implements OnInit, OnDestroy {
   private initializeAuthenticatedServices(): void {
     this.userService.preloadUserData();
 
+    // Load organization context from JWT token
+    this.organizationService.loadCurrentOrganization();
+
     // Start deadline reminder service for authenticated users
     this.reminderService.startReminders();
 
@@ -182,9 +187,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.webSocketService.getConnectionStatus()
       .pipe(takeUntil(this.destroy$))
       .subscribe(status => {
-        if (status.error) {
-          console.error('WebSocket connection error:', status.error);
-        }
+        // Connection status tracked silently
       });
 
     // Subscribe to all notification messages

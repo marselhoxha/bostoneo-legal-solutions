@@ -1,0 +1,424 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-header-wrapper">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-soft-secondary btn-icon" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Organization Details</div>
+              <h4 class="mb-0" *ngIf="organization">{{ organization.name }}</h4>
+              <h4 class="mb-0" *ngIf="!organization && !isLoading">Organization</h4>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2" *ngIf="organization">
+            <span class="badge rounded-pill fs-12" [ngClass]="getStatusClass(organization.status)">
+              <i class="ri-circle-fill fs-8 me-1"></i>
+              {{ organization.status }}
+            </span>
+            <span class="badge fs-12" [ngClass]="getPlanBadgeClass(organization.planType)">
+              {{ organization.planType || 'STARTER' }}
+            </span>
+            <button *ngIf="organization.status === 'ACTIVE'"
+                    class="btn btn-soft-danger btn-sm"
+                    (click)="suspendOrganization()">
+              <i class="ri-forbid-line me-1"></i> Suspend
+            </button>
+            <button *ngIf="organization.status === 'SUSPENDED'"
+                    class="btn btn-soft-success btn-sm"
+                    (click)="activateOrganization()">
+              <i class="ri-checkbox-circle-line me-1"></i> Activate
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="text-center py-5" *ngIf="isLoading">
+    <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <h5 class="mt-4">Loading Organization</h5>
+    <p class="text-muted">Fetching organization details...</p>
+  </div>
+
+  <!-- Error State -->
+  <div class="alert alert-danger d-flex align-items-center" *ngIf="error && !isLoading" role="alert">
+    <i class="ri-error-warning-line fs-4 me-3"></i>
+    <div>{{ error }}</div>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!isLoading && organization" style="margin-bottom: 60px;">
+    <!-- Stats Cards -->
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-header">
+          <span class="stat-label">USERS</span>
+          <span class="stat-indicator stat-indicator-primary">
+            <i class="ri-user-line"></i>
+          </span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-group-line stat-icon text-primary"></i>
+          <span class="stat-value">{{ organization.stats.userCount }}</span>
+        </div>
+        <div class="stat-footer" *ngIf="organization.stats.maxUsers">
+          <div class="progress" style="height: 4px;">
+            <div class="progress-bar" [ngClass]="getQuotaClass(organization.stats.userQuotaPercent)"
+                 [style.width.%]="organization.stats.userQuotaPercent"></div>
+          </div>
+          <small class="text-muted">{{ organization.stats.userCount }} / {{ organization.stats.maxUsers }}</small>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <div class="stat-header">
+          <span class="stat-label">CASES</span>
+          <span class="stat-indicator stat-indicator-success">
+            <i class="ri-briefcase-line"></i>
+          </span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-briefcase-4-line stat-icon text-success"></i>
+          <span class="stat-value">{{ organization.stats.caseCount }}</span>
+        </div>
+        <div class="stat-footer" *ngIf="organization.stats.maxCases">
+          <div class="progress" style="height: 4px;">
+            <div class="progress-bar" [ngClass]="getQuotaClass(organization.stats.caseQuotaPercent)"
+                 [style.width.%]="organization.stats.caseQuotaPercent"></div>
+          </div>
+          <small class="text-muted">{{ organization.stats.caseCount }} / {{ organization.stats.maxCases }}</small>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <div class="stat-header">
+          <span class="stat-label">CLIENTS</span>
+          <span class="stat-indicator stat-indicator-info">
+            <i class="ri-contacts-line"></i>
+          </span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-contacts-book-line stat-icon text-info"></i>
+          <span class="stat-value">{{ organization.stats.clientCount }}</span>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <div class="stat-header">
+          <span class="stat-label">REVENUE</span>
+          <span class="stat-indicator stat-indicator-warning">
+            <i class="ri-money-dollar-circle-line"></i>
+          </span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-funds-line stat-icon text-warning"></i>
+          <span class="stat-value fs-5">{{ formatCurrency(organization.stats.totalRevenue) }}</span>
+        </div>
+        <div class="stat-footer">
+          <small class="text-muted">{{ organization.stats.invoiceCount }} invoices</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-bottom">
+        <ul ngbNav #nav="ngbNav" [(activeId)]="activeTab" (activeIdChange)="onTabChange($event)"
+            class="nav nav-pills nav-custom-pills gap-2">
+          <li [ngbNavItem]="'overview'">
+            <a ngbNavLink class="d-flex align-items-center gap-2">
+              <i class="ri-information-line fs-16"></i>
+              <span>Overview</span>
+            </a>
+          </li>
+          <li [ngbNavItem]="'users'">
+            <a ngbNavLink class="d-flex align-items-center gap-2">
+              <i class="ri-group-line fs-16"></i>
+              <span>Users</span>
+              <span class="badge bg-primary-subtle text-primary ms-1">{{ organization.stats.userCount }}</span>
+            </a>
+          </li>
+          <li [ngbNavItem]="'activity'">
+            <a ngbNavLink class="d-flex align-items-center gap-2">
+              <i class="ri-history-line fs-16"></i>
+              <span>Activity</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card-body">
+        <!-- Overview Tab -->
+        <div *ngIf="activeTab === 'overview'">
+          <div class="row g-4">
+            <!-- Organization Info -->
+            <div class="col-lg-6">
+              <div class="info-card">
+                <h6 class="info-card-title">
+                  <i class="ri-building-2-line me-2 text-primary"></i>Organization Information
+                </h6>
+                <div class="info-list">
+                  <div class="info-item">
+                    <span class="info-label">Name</span>
+                    <span class="info-value">{{ organization.name }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Slug</span>
+                    <span class="info-value text-muted">{{ organization.slug }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Email</span>
+                    <span class="info-value">{{ organization.email || '-' }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Phone</span>
+                    <span class="info-value">{{ organization.phone || '-' }}</span>
+                  </div>
+                  <div class="info-item" *ngIf="organization.website">
+                    <span class="info-label">Website</span>
+                    <a [href]="organization.website" target="_blank" class="info-value text-primary">
+                      {{ organization.website }} <i class="ri-external-link-line"></i>
+                    </a>
+                  </div>
+                  <div class="info-item" *ngIf="organization.address">
+                    <span class="info-label">Address</span>
+                    <span class="info-value">{{ organization.address }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Plan & Settings -->
+            <div class="col-lg-6">
+              <div class="info-card">
+                <h6 class="info-card-title">
+                  <i class="ri-settings-3-line me-2 text-primary"></i>Plan & Settings
+                </h6>
+                <div class="info-list">
+                  <div class="info-item">
+                    <span class="info-label">Plan Type</span>
+                    <span class="badge" [ngClass]="getPlanBadgeClass(organization.planType)">
+                      {{ organization.planType || 'STARTER' }}
+                    </span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Status</span>
+                    <span class="badge rounded-pill" [ngClass]="getStatusClass(organization.status)">
+                      {{ organization.status }}
+                    </span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Created</span>
+                    <span class="info-value">{{ formatDate(organization.createdAt) }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Last Updated</span>
+                    <span class="info-value">{{ formatDate(organization.updatedAt) }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Features</span>
+                    <div class="d-flex flex-wrap gap-1">
+                      <span class="badge bg-light text-dark" *ngIf="organization.emailEnabled">
+                        <i class="ri-mail-line me-1"></i>Email
+                      </span>
+                      <span class="badge bg-light text-dark" *ngIf="organization.smsEnabled">
+                        <i class="ri-message-2-line me-1"></i>SMS
+                      </span>
+                      <span class="badge bg-light text-dark" *ngIf="organization.whatsappEnabled">
+                        <i class="ri-whatsapp-line me-1"></i>WhatsApp
+                      </span>
+                      <span class="badge bg-light text-dark" *ngIf="organization.twilioEnabled">
+                        <i class="ri-phone-line me-1"></i>Twilio
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Users Preview -->
+            <div class="col-12" *ngIf="organization.recentUsers && organization.recentUsers.length > 0">
+              <div class="info-card">
+                <h6 class="info-card-title">
+                  <i class="ri-group-line me-2 text-primary"></i>Recent Users
+                </h6>
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let user of organization.recentUsers">
+                        <td>
+                          <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-xs">
+                              <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-10">
+                                {{ user.firstName?.charAt(0) }}{{ user.lastName?.charAt(0) }}
+                              </span>
+                            </div>
+                            <div>
+                              <h6 class="mb-0 fs-13">{{ user.firstName }} {{ user.lastName }}</h6>
+                              <small class="text-muted">{{ user.email }}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="badge" [ngClass]="getRoleBadgeClass(user.roleName)">
+                            {{ user.roleName?.replace('ROLE_', '') }}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="badge rounded-pill" [ngClass]="user.enabled ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+                            {{ user.enabled ? 'Active' : 'Disabled' }}
+                          </span>
+                        </td>
+                        <td>
+                          <small class="text-muted">{{ formatDate(user.createdAt) }}</small>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div *ngIf="activeTab === 'users'">
+          <!-- Loading -->
+          <div class="text-center py-5" *ngIf="isLoadingUsers">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-3 text-muted">Loading users...</p>
+          </div>
+
+          <!-- Users Table -->
+          <div class="table-responsive" *ngIf="!isLoadingUsers">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>MFA</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of users">
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="avatar-sm">
+                        <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-12"
+                              *ngIf="!user.imageUrl">
+                          {{ user.firstName?.charAt(0) }}{{ user.lastName?.charAt(0) }}
+                        </span>
+                        <img [src]="user.imageUrl" class="rounded-circle" *ngIf="user.imageUrl"
+                             style="width: 100%; height: 100%; object-fit: cover;">
+                      </div>
+                      <div>
+                        <h6 class="mb-0 fw-medium">{{ user.firstName }} {{ user.lastName }}</h6>
+                        <small class="text-muted">{{ user.email }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="getRoleBadgeClass(user.roleName)">
+                      {{ user.roleName?.replace('ROLE_', '') }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge rounded-pill" [ngClass]="{
+                      'bg-success-subtle text-success': user.enabled && user.notLocked,
+                      'bg-danger-subtle text-danger': !user.enabled,
+                      'bg-warning-subtle text-warning': user.enabled && !user.notLocked
+                    }">
+                      <ng-container *ngIf="user.enabled && user.notLocked">Active</ng-container>
+                      <ng-container *ngIf="!user.enabled">Disabled</ng-container>
+                      <ng-container *ngIf="user.enabled && !user.notLocked">Locked</ng-container>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="user.usingMFA ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
+                      <i [class]="user.usingMFA ? 'ri-shield-check-line' : 'ri-shield-line'" class="me-1"></i>
+                      {{ user.usingMFA ? 'Enabled' : 'Disabled' }}
+                    </span>
+                  </td>
+                  <td>
+                    <small class="text-muted">{{ formatDate(user.createdAt) }}</small>
+                  </td>
+                </tr>
+                <tr *ngIf="users.length === 0">
+                  <td colspan="5" class="text-center py-4 text-muted">
+                    <i class="ri-user-line fs-2 d-block mb-2"></i>
+                    No users found
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Users Pagination -->
+          <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top"
+               *ngIf="users.length > 0 && !isLoadingUsers">
+            <div class="text-muted fs-13">
+              Showing {{ users.length }} of {{ usersTotalElements }} users
+            </div>
+            <nav aria-label="Page navigation">
+              <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" [class.disabled]="usersPage === 0">
+                  <a class="page-link" (click)="goToUsersPage(usersPage - 1)">
+                    <i class="ri-arrow-left-s-line"></i>
+                  </a>
+                </li>
+                <li *ngFor="let page of userPageNumbers" class="page-item" [class.active]="page === usersPage">
+                  <a class="page-link" (click)="goToUsersPage(page)">{{ page + 1 }}</a>
+                </li>
+                <li class="page-item" [class.disabled]="usersPage === usersTotalPages - 1">
+                  <a class="page-link" (click)="goToUsersPage(usersPage + 1)">
+                    <i class="ri-arrow-right-s-line"></i>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Activity Tab -->
+        <div *ngIf="activeTab === 'activity'">
+          <div class="activity-timeline" *ngIf="organization.recentActivity && organization.recentActivity.length > 0">
+            <div class="activity-item d-flex gap-3 pb-3 mb-3 border-bottom"
+                 *ngFor="let activity of organization.recentActivity; let last = last"
+                 [class.border-bottom]="!last">
+              <div class="activity-icon">
+                <i [class]="getActivityIcon(activity.action)"></i>
+              </div>
+              <div class="flex-grow-1">
+                <p class="mb-1">
+                  <span class="fw-medium">{{ activity.userName || 'System' }}</span>
+                  <span class="text-muted"> {{ activity.action?.toLowerCase() }} </span>
+                  <span class="text-primary">{{ activity.entityType }}</span>
+                </p>
+                <small class="text-muted">{{ formatDate(activity.timestamp) }}</small>
+              </div>
+            </div>
+          </div>
+          <div class="text-center py-5 text-muted" *ngIf="!organization.recentActivity || organization.recentActivity.length === 0">
+            <i class="ri-history-line fs-1 d-block mb-3"></i>
+            <p class="mb-0">No recent activity</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

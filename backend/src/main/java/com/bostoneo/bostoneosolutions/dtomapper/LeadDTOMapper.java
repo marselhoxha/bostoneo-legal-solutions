@@ -19,6 +19,7 @@ public class LeadDTOMapper {
 
         LeadDTO dto = LeadDTO.builder()
             .id(lead.getId())
+            .organizationId(lead.getOrganizationId())
             .firstName(lead.getFirstName())
             .lastName(lead.getLastName())
             .fullName(lead.getFullName())
@@ -61,6 +62,7 @@ public class LeadDTOMapper {
 
         return Lead.builder()
             .id(dto.getId())
+            .organizationId(dto.getOrganizationId())
             .firstName(dto.getFirstName())
             .lastName(dto.getLastName())
             .email(dto.getEmail())

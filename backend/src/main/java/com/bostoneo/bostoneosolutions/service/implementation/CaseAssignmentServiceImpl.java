@@ -80,15 +80,16 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         // Create new assignment
         CaseAssignment assignment = CaseAssignment.builder()
             .legalCase(legalCase)
+            .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
             .assignedTo(assignedTo)
             .roleType(request.getRoleType())
             .assignmentType(AssignmentType.MANUAL)
             .assignedBy(currentUser)
             .assignedAt(LocalDateTime.now())
-            .effectiveFrom(request.getEffectiveFrom() != null ? 
+            .effectiveFrom(request.getEffectiveFrom() != null ?
                 request.getEffectiveFrom() : LocalDate.now())
             .effectiveTo(request.getEffectiveTo())
-            .workloadWeight(request.getWorkloadWeight() != null ? 
+            .workloadWeight(request.getWorkloadWeight() != null ?
                 request.getWorkloadWeight() : BigDecimal.ONE)
             .notes(request.getNotes())
             .active(true)
@@ -142,6 +143,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         
         CaseAssignment assignment = CaseAssignment.builder()
             .legalCase(legalCase)
+            .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
             .assignedTo(recommendedUser)
             .roleType(CaseRoleType.LEAD_ATTORNEY)
             .assignmentType(AssignmentType.AUTO_ASSIGNED)
@@ -206,6 +208,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         
         com.bostoneo.bostoneosolutions.model.CaseTransferRequest transferReq = com.bostoneo.bostoneosolutions.model.CaseTransferRequest.builder()
             .legalCase(legalCase)
+            .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
             .fromUser(fromUser)
             .toUser(toUser)
             .requestedBy(currentUser)
@@ -304,10 +307,13 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     @Override
     public List<CaseAssignmentDTO> getCaseAssignments(Long caseId) {
         try {
-            log.debug("Getting case assignments for case {}", caseId);
+            log.info("Getting case assignments for case {}", caseId);
             Long orgId = getRequiredOrganizationId();
+            log.info("Checking case {} exists for org {}", caseId, orgId);
+            boolean exists = legalCaseRepository.existsByIdAndOrganizationId(caseId, orgId);
+            log.info("Case {} exists for org {}: {}", caseId, orgId, exists);
             // SECURITY: Verify case belongs to current organization
-            if (!legalCaseRepository.existsByIdAndOrganizationId(caseId, orgId)) {
+            if (!exists) {
                 log.warn("Case {} not found or access denied for org {}", caseId, orgId);
                 return Collections.emptyList();
             }
@@ -734,8 +740,10 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         }
 
         // Create new assignment for toUser
+        Long orgId = getRequiredOrganizationId();
         CaseAssignment newAssignment = CaseAssignment.builder()
             .legalCase(request.getLegalCase())
+            .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
             .assignedTo(request.getToUser())
             .roleType(roleType)
             .assignmentType(AssignmentType.TRANSFERRED)

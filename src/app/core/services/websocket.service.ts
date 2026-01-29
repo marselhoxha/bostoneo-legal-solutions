@@ -123,7 +123,6 @@ export class WebSocketService implements OnDestroy {
     // Get authentication token
     const token = localStorage.getItem(Key.TOKEN);
     if (!token) {
-      console.warn('🔌 WebSocketService - No authentication token found, cannot connect');
       this.updateConnectionStatus({
         connected: false,
         reconnecting: false,
@@ -173,7 +172,6 @@ export class WebSocketService implements OnDestroy {
           try {
             return JSON.parse(data);
           } catch (e) {
-            console.error('❌ WebSocket - Failed to parse message:', data);
             return { type: 'error', data: 'Invalid JSON' };
           }
         }
@@ -184,7 +182,6 @@ export class WebSocketService implements OnDestroy {
         .pipe(
           takeUntil(this.destroy$),
           catchError(error => {
-            console.error('❌ WebSocket - Message error:', error);
             this.updateConnectionStatus({
               connected: false,
               error
@@ -202,10 +199,9 @@ export class WebSocketService implements OnDestroy {
           retryWhen(errors =>
             errors.pipe(
               tap(error => {
-                console.error('❌ WebSocket - Connection error:', error);
-                this.updateConnectionStatus({ 
-                  connected: false, 
-                  error 
+                this.updateConnectionStatus({
+                  connected: false,
+                  error
                 });
               }),
               delay(this.reconnectInterval),
@@ -217,11 +213,10 @@ export class WebSocketService implements OnDestroy {
         .subscribe();
 
     } catch (error) {
-      console.error('❌ WebSocket - Connection failed:', error);
-      this.updateConnectionStatus({ 
-        connected: false, 
-        reconnecting: false, 
-        error 
+      this.updateConnectionStatus({
+        connected: false,
+        reconnecting: false,
+        error
       });
       this.scheduleReconnection();
     }
@@ -318,14 +313,13 @@ export class WebSocketService implements OnDestroy {
    */
   sendMessage(message: WebSocketMessage): void {
     if (!this.socket$ || this.socket$.closed) {
-      console.warn('⚠️ WebSocket - Cannot send message, not connected');
       return;
     }
 
     try {
       this.socket$.next(message);
     } catch (error) {
-      console.error('❌ WebSocket - Failed to send message:', error);
+      // Silently handle send errors
     }
   }
 
@@ -464,7 +458,6 @@ export class WebSocketService implements OnDestroy {
     const currentStatus = this.connectionStatus$.value;
 
     if (currentStatus.retryCount >= this.maxReconnectAttempts) {
-      console.error('❌ WebSocket - Max reconnection attempts reached');
       this.updateConnectionStatus({
         reconnecting: false,
         error: { message: 'Max reconnection attempts reached' }

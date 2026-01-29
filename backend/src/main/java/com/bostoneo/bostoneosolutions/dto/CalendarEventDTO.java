@@ -15,6 +15,8 @@ import java.util.List;
 @AllArgsConstructor
 public class CalendarEventDTO {
     private Long id;
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
     private String title;
     private String description;
     

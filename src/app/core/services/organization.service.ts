@@ -82,16 +82,70 @@ export interface OrganizationPage {
 export class OrganizationService {
   private readonly apiUrl = `${environment.apiUrl}/api/organizations`;
 
-  // Default organization ID - can be configured via environment or fetched from user profile
-  private readonly DEFAULT_ORGANIZATION_ID = 1;
   private readonly SWITCHED_ORG_KEY = 'switched_organization_id';
 
   private currentOrganizationSubject = new BehaviorSubject<Organization | null>(null);
   public currentOrganization$ = this.currentOrganizationSubject.asObservable();
 
   constructor(private http: HttpClient) {
-    // Load organization on startup
-    this.loadCurrentOrganization();
+    // Don't auto-load on startup - let the app component trigger this after auth is ready
+  }
+
+  /**
+   * Decode base64url (JWT uses this, not standard base64)
+   */
+  private base64UrlDecode(str: string): string {
+    // Replace base64url characters with base64 characters
+    let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    // Pad with '=' to make length a multiple of 4
+    while (base64.length % 4) {
+      base64 += '=';
+    }
+    return atob(base64);
+  }
+
+  /**
+   * Get the user's organization ID from JWT token or stored profile
+   */
+  private getUserOrganizationId(): number | null {
+    try {
+      // First check for switched organization (sysadmin feature)
+      const switchedOrgId = localStorage.getItem(this.SWITCHED_ORG_KEY);
+      if (switchedOrgId) {
+        return parseInt(switchedOrgId, 10);
+      }
+
+      // Get organization from JWT token (most reliable source)
+      const token = localStorage.getItem('[KEY] TOKEN');
+      if (token) {
+        const tokenParts = token.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(this.base64UrlDecode(tokenParts[1]));
+          // JWT claims can be organizationId or organization_id
+          if (payload.organizationId) {
+            return payload.organizationId;
+          }
+          if (payload.organization_id) {
+            return payload.organization_id;
+          }
+        }
+      }
+
+      // Fallback: Get from user's stored data
+      const currentUserStr = localStorage.getItem('currentUser');
+      if (currentUserStr) {
+        const currentUser = JSON.parse(currentUserStr);
+        if (currentUser.organizationId) {
+          return currentUser.organizationId;
+        }
+        if (currentUser.organization?.id) {
+          return currentUser.organization.id;
+        }
+      }
+    } catch (error) {
+      // Silently handle parse errors
+    }
+    return null;
   }
 
   /**
@@ -103,8 +157,21 @@ export class OrganizationService {
     if (switchedOrgId) {
       return parseInt(switchedOrgId, 10);
     }
+
+    // First try from loaded organization
     const org = this.currentOrganizationSubject.value;
-    return org?.id || this.DEFAULT_ORGANIZATION_ID;
+    if (org?.id) {
+      return org.id;
+    }
+
+    // Then try from user's stored data
+    const userOrgId = this.getUserOrganizationId();
+    if (userOrgId) {
+      return userOrgId;
+    }
+
+    // No organization found - user might not be authenticated
+    return 0;
   }
 
   /**
@@ -115,31 +182,24 @@ export class OrganizationService {
   }
 
   /**
-   * Load the current organization from the backend
+   * Load the current organization context from JWT
+   * Note: We only set the org ID from JWT, we don't need to fetch full details from API
    */
   loadCurrentOrganization(): void {
-    const orgId = this.getCurrentOrganizationId();
-    this.http.get<any>(`${this.apiUrl}/${orgId}`)
-      .pipe(
-        map(response => response.data?.organization),
-        tap(org => {
-          if (org) {
-            this.currentOrganizationSubject.next(org);
-          }
-        }),
-        catchError(err => {
-          console.warn('Could not load organization, using default:', err);
-          // Set a minimal default organization
-          this.currentOrganizationSubject.next({
-            id: this.DEFAULT_ORGANIZATION_ID,
-            name: 'Default Organization',
-            slug: 'default',
-            isActive: true
-          });
-          return of(null);
-        })
-      )
-      .subscribe();
+    const orgId = this.getUserOrganizationId();
+
+    // Don't load if no organization ID available (user not authenticated)
+    if (!orgId) {
+      return;
+    }
+
+    // Set organization from JWT - no API call needed for basic tenant isolation
+    this.currentOrganizationSubject.next({
+      id: orgId,
+      name: 'My Organization',
+      slug: 'org-' + orgId,
+      isActive: true
+    });
   }
 
   /**
@@ -234,9 +294,7 @@ export class OrganizationService {
    * Create new organization
    */
   createOrganization(organization: Partial<Organization>): Observable<Organization> {
-    console.log('Creating organization with data:', organization);
     return this.http.post<any>(this.apiUrl, organization).pipe(
-      tap(response => console.log('Create organization response:', response)),
       map(response => response.data?.organization)
     );
   }
@@ -277,11 +335,9 @@ export class OrganizationService {
       map(response => {
         // Backend returns { data: { available: true/false, slug: "..." } }
         const available = response?.data?.available;
-        console.log('Slug check response:', slug, available);
         return available === true;
       }),
-      catchError(err => {
-        console.error('Slug check error:', err);
+      catchError(() => {
         // On error, assume slug is available to not block the user
         return of(true);
       })

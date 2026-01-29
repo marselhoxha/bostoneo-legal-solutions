@@ -45,8 +45,9 @@ public class AIDocumentAnalysisService {
     private final Tika tika = new Tika();
 
     /**
-     * Helper method to get the current organization ID (optional, for setting on new entities)
+     * @deprecated Use getRequiredOrganizationId() instead to ensure tenant isolation
      */
+    @Deprecated
     private Long getOptionalOrganizationId() {
         return tenantService.getCurrentOrganizationId().orElse(null);
     }
@@ -98,7 +99,7 @@ public class AIDocumentAnalysisService {
         analysis.setAnalysisType(analysisType);
         analysis.setAnalysisContext(effectiveContext);  // Store user's analysis goal
         analysis.setUserId(userId);
-        analysis.setOrganizationId(getOptionalOrganizationId()); // SECURITY: Set organization ID for tenant isolation
+        analysis.setOrganizationId(getRequiredOrganizationId()); // SECURITY: Require organization ID for tenant isolation
         analysis.setCaseId(caseId);
         analysis.setStatus("processing");
         analysis.setIsArchived(false);

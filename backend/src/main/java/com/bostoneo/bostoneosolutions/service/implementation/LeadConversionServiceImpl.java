@@ -171,6 +171,7 @@ public class LeadConversionServiceImpl implements LeadConversionService {
         
         // Create conflict check record
         ConflictCheck conflictCheck = ConflictCheck.builder()
+            .organizationId(orgId)
             .entityType("LEAD")
             .entityId(leadId)
             .checkType("CONVERSION_" + conversionType)
@@ -231,15 +232,19 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     @Override
     @Transactional(readOnly = true)
     public boolean hasUnresolvedConflicts(Long leadId) {
-        List<ConflictCheck> unresolvedConflicts = conflictCheckRepository.findUnresolvedByLeadId(leadId);
+        // SECURITY: Use tenant-filtered query to prevent cross-org data access
+        Long orgId = getRequiredOrganizationId();
+        List<ConflictCheck> unresolvedConflicts = conflictCheckRepository.findUnresolvedByOrganizationIdAndLeadId(orgId, leadId);
         return !unresolvedConflicts.isEmpty();
     }
 
     @Override
     public List<Map<String, Object>> getConflictDetails(Long leadId) {
         log.info("Getting conflict details for lead ID: {}", leadId);
-        
-        List<ConflictCheck> conflicts = conflictCheckRepository.findUnresolvedByLeadId(leadId);
+
+        // SECURITY: Use tenant-filtered query to prevent cross-org data access
+        Long orgId = getRequiredOrganizationId();
+        List<ConflictCheck> conflicts = conflictCheckRepository.findUnresolvedByOrganizationIdAndLeadId(orgId, leadId);
         log.info("getConflictDetails found {} conflicts for lead ID: {}", conflicts.size(), leadId);
         
         List<Map<String, Object>> conflictDetails = new ArrayList<>();
@@ -451,6 +456,7 @@ public class LeadConversionServiceImpl implements LeadConversionService {
 
     private Client createClientFromLead(Lead lead, Map<String, Object> additionalData) {
         Client client = Client.builder()
+            .organizationId(lead.getOrganizationId())
             .name(lead.getFullName())
             .email(lead.getEmail())
             .phone(lead.getPhone())
@@ -458,15 +464,16 @@ public class LeadConversionServiceImpl implements LeadConversionService {
             .status(getStringValue(additionalData, "status", "ACTIVE"))
             .address(getStringValue(additionalData, "address"))
             .build();
-        
+
         return client;
     }
 
     private LegalCase createCaseFromLead(Lead lead, Map<String, Object> caseData) {
         // Generate unique case number
         String caseNumber = generateCaseNumber();
-        
+
         LegalCase legalCase = LegalCase.builder()
+            .organizationId(lead.getOrganizationId())
             .caseNumber(caseNumber)
             .title(getStringValue(caseData, "title"))
             .clientName(lead.getFullName())
@@ -480,7 +487,7 @@ public class LeadConversionServiceImpl implements LeadConversionService {
             .hourlyRate(getDoubleValue(caseData, "hourlyRate", 0.0))
             .paymentStatus(com.bostoneo.bostoneosolutions.enumeration.PaymentStatus.PENDING)
             .build();
-        
+
         return legalCase;
     }
 

@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class VendorDTO {
     private Long id;
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
     private String name;
     private String contact;
     private String taxId;

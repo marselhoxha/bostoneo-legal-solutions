@@ -297,33 +297,38 @@ public class LegalDocumentServiceImpl implements LegalDocumentService {
     }
     
     /**
-     * Creates a structured path for document storage based on case ID.
-     * Format: BASE_DIR/cases/{caseId}/documents/{year}/{month}/
-     * 
+     * Creates a structured path for document storage based on organization and case ID.
+     * SECURITY: Includes organization ID in path for complete tenant isolation.
+     * Format: BASE_DIR/org/{orgId}/cases/{caseId}/documents/{year}/{month}/
+     *
      * @param caseId The ID of the legal case
      * @return The path string where the document should be stored
      */
     private String createDocumentStoragePath(Long caseId) throws IOException {
+        Long orgId = getRequiredOrganizationId();
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter yearFormatter = DateTimeFormatter.ofPattern("yyyy");
         DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MM");
-        
+
         String year = now.format(yearFormatter);
         String month = now.format(monthFormatter);
-        
-        // Create a structured path: BASE_DIR/cases/{caseId}/documents/{year}/{month}/
+
+        // SECURITY: Include organization ID in path for complete tenant isolation
+        // Format: BASE_DIR/org/{orgId}/cases/{caseId}/documents/{year}/{month}/
         Path path = Paths.get(
             BASE_UPLOAD_DIR,
-            "cases", 
-            caseId.toString(), 
+            "org",
+            orgId.toString(),
+            "cases",
+            caseId.toString(),
             "documents",
             year,
             month
         );
-        
+
         // Create directories if they don't exist
         Files.createDirectories(path);
-        
+
         return path.toString();
     }
 }

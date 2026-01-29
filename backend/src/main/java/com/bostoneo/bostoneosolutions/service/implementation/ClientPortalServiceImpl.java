@@ -444,18 +444,20 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public List<ClientPortalAppointmentDTO> getClientAppointments(Long userId) {
         Client client = getClientByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
 
+        // SECURITY: Use tenant-filtered queries to prevent cross-org data access
         // Get all appointments for this client
         List<AppointmentRequest> confirmed = appointmentRequestRepository
-                .findByClientIdAndStatusOrderByPreferredDatetimeAsc(client.getId(), "CONFIRMED");
+                .findByOrganizationIdAndClientIdAndStatusOrderByPreferredDatetimeAsc(orgId, client.getId(), "CONFIRMED");
 
         // Also get pending appointments (awaiting attorney approval)
         List<AppointmentRequest> pending = appointmentRequestRepository
-                .findByClientIdAndStatusOrderByPreferredDatetimeAsc(client.getId(), "PENDING");
+                .findByOrganizationIdAndClientIdAndStatusOrderByPreferredDatetimeAsc(orgId, client.getId(), "PENDING");
 
         // Also get appointments with pending reschedule requests
         List<AppointmentRequest> pendingReschedule = appointmentRequestRepository
-                .findByClientIdAndStatusOrderByPreferredDatetimeAsc(client.getId(), "PENDING_RESCHEDULE");
+                .findByOrganizationIdAndClientIdAndStatusOrderByPreferredDatetimeAsc(orgId, client.getId(), "PENDING_RESCHEDULE");
 
         List<AppointmentRequest> allAppointments = new ArrayList<>();
         allAppointments.addAll(confirmed);
@@ -498,6 +500,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
 
         // Create appointment request
         AppointmentRequest appointmentRequest = AppointmentRequest.builder()
+                .organizationId(orgId)
                 .clientId(client.getId())
                 .attorneyId(attorneyId)
                 .caseId(request.getCaseId())
@@ -803,7 +806,9 @@ public class ClientPortalServiceImpl implements ClientPortalService {
     @Override
     public List<ClientPortalMessageThreadDTO> getMessageThreads(Long userId) {
         Client client = getClientByUserId(userId);
-        List<MessageThread> threads = messageThreadRepository.findByClientIdOrderByLastMessageAtDesc(client.getId());
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query to prevent cross-org data access
+        List<MessageThread> threads = messageThreadRepository.findByClientIdAndOrganizationIdOrderByLastMessageAtDesc(client.getId(), orgId);
 
         return threads.stream().map(thread -> mapToThreadDTO(thread, client.getName())).collect(Collectors.toList());
     }
@@ -821,9 +826,9 @@ public class ClientPortalServiceImpl implements ClientPortalService {
             throw new ApiException("You do not have access to this thread");
         }
 
-        // Mark messages from attorney as read
+        // SECURITY: Mark messages from attorney as read with tenant filter
         LocalDateTime readAt = LocalDateTime.now();
-        int markedCount = messageRepository.markAsRead(threadId, Message.SenderType.ATTORNEY, readAt);
+        int markedCount = messageRepository.markAsReadByOrganization(threadId, orgId, Message.SenderType.ATTORNEY, readAt);
         thread.setUnreadByClient(0);
         messageThreadRepository.save(thread);
 
@@ -876,6 +881,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
         }
 
         Message message = Message.builder()
+                .organizationId(orgId)
                 .threadId(threadId)
                 .senderId(userId)
                 .senderType(Message.SenderType.CLIENT)
@@ -963,6 +969,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
 
         // Create thread
         MessageThread thread = MessageThread.builder()
+                .organizationId(orgId)
                 .caseId(caseId)
                 .clientId(client.getId())
                 .attorneyId(attorneyId)
@@ -976,6 +983,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
 
         // Create initial message
         Message message = Message.builder()
+                .organizationId(orgId)
                 .threadId(thread.getId())
                 .senderId(userId)
                 .senderType(Message.SenderType.CLIENT)
@@ -1263,9 +1271,9 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                     .count();
         }
 
-        // Count upcoming appointments
+        // SECURITY: Count upcoming appointments with tenant filter
         List<AppointmentRequest> upcomingAppts = appointmentRequestRepository
-                .findUpcomingByClientId(client.getId(), LocalDateTime.now());
+                .findUpcomingByOrganizationAndClientId(orgId, client.getId(), LocalDateTime.now());
         int upcomingAppointmentsCount = upcomingAppts.size();
 
         // Get next appointment

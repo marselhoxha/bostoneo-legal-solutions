@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @Builder
 public class TrustAccountDTO {
     private Long id;
+    private Long organizationId;  // SECURITY: Include organization ID for tenant isolation
     private String accountName;
     private String accountNumber;
     private String bankName;

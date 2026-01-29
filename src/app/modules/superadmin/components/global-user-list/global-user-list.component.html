@@ -1,0 +1,187 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">All Users</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/superadmin/dashboard">SUPERADMIN</a></li>
+            <li class="breadcrumb-item active">Users</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-primary-subtle text-primary rounded-2 fs-2">
+                <i class="ri-user-line"></i>
+              </span>
+            </div>
+            <div class="flex-grow-1 ms-3">
+              <p class="text-uppercase fw-medium text-muted mb-1">Total Users</p>
+              <h4 class="fs-4 mb-0">{{ totalElements }}</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users Table Card -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <div class="row align-items-center">
+            <div class="col-md-6">
+              <h5 class="card-title mb-0">
+                <i class="ri-user-line me-2"></i>Global User Management
+              </h5>
+            </div>
+            <div class="col-md-6">
+              <div class="search-box">
+                <input type="text" class="form-control" placeholder="Search by name or email..."
+                       [(ngModel)]="searchTerm" (ngModelChange)="onSearch()">
+                <i class="ri-search-line search-icon"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Loading -->
+          <div *ngIf="isLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading users...</p>
+          </div>
+
+          <!-- Error -->
+          <div *ngIf="error && !isLoading" class="alert alert-danger">
+            {{ error }}
+            <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadUsers()">Retry</button>
+          </div>
+
+          <!-- Table -->
+          <div *ngIf="!isLoading && !error" class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Organization</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of users" class="cursor-pointer" (click)="viewUser(user.id)">
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-sm me-2">
+                        <img *ngIf="user.imageUrl" [src]="user.imageUrl" class="avatar-sm rounded-circle" alt="">
+                        <span *ngIf="!user.imageUrl" class="avatar-title bg-soft-primary text-primary rounded-circle">
+                          {{ user.firstName?.charAt(0) }}{{ user.lastName?.charAt(0) }}
+                        </span>
+                      </div>
+                      <div>
+                        <h6 class="mb-0">{{ user.firstName }} {{ user.lastName }}</h6>
+                        <small class="text-muted">{{ user.title || 'No title' }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ user.email }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="getRoleBadgeClass(user.roleName)">
+                      {{ user.roleName?.replace('ROLE_', '') }}
+                    </span>
+                  </td>
+                  <td>
+                    <span *ngIf="user.organizationId" class="text-primary">
+                      Org #{{ user.organizationId }}
+                    </span>
+                    <span *ngIf="!user.organizationId" class="text-muted">-</span>
+                  </td>
+                  <td>
+                    <span *ngIf="user.enabled" class="badge bg-success-subtle text-success">Active</span>
+                    <span *ngIf="!user.enabled" class="badge bg-danger-subtle text-danger">Disabled</span>
+                    <span *ngIf="!user.notLocked" class="badge bg-warning-subtle text-warning ms-1">Locked</span>
+                  </td>
+                  <td>{{ formatDate(user.createdAt) }}</td>
+                  <td class="text-center">
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown"
+                              (click)="$event.stopPropagation()">
+                        <i class="ri-more-2-fill"></i>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                          <a class="dropdown-item" (click)="viewUser(user.id); $event.stopPropagation()">
+                            <i class="ri-eye-line me-2"></i>View Details
+                          </a>
+                        </li>
+                        <li>
+                          <a class="dropdown-item" (click)="resetPassword(user, $event)">
+                            <i class="ri-lock-password-line me-2"></i>Reset Password
+                          </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                          <a class="dropdown-item" [class.text-danger]="user.enabled" [class.text-success]="!user.enabled"
+                             (click)="toggleUserStatus(user, $event)">
+                            <i [class]="user.enabled ? 'ri-user-unfollow-line me-2' : 'ri-user-follow-line me-2'"></i>
+                            {{ user.enabled ? 'Disable' : 'Enable' }} User
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="users.length === 0">
+                  <td colspan="7" class="text-center py-4 text-muted">
+                    <i class="ri-user-line fs-1 d-block mb-2"></i>
+                    No users found
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div *ngIf="!isLoading && totalPages > 1" class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted">
+              Showing {{ currentPage * pageSize + 1 }} to {{ showingTo }} of {{ totalElements }} users
+            </div>
+            <nav>
+              <ul class="pagination mb-0">
+                <li class="page-item" [class.disabled]="currentPage === 0">
+                  <a class="page-link" (click)="goToPage(currentPage - 1)">
+                    <i class="ri-arrow-left-s-line"></i>
+                  </a>
+                </li>
+                <li *ngFor="let page of pageNumbers" class="page-item" [class.active]="page === currentPage">
+                  <a class="page-link" (click)="goToPage(page)">{{ page + 1 }}</a>
+                </li>
+                <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
+                  <a class="page-link" (click)="goToPage(currentPage + 1)">
+                    <i class="ri-arrow-right-s-line"></i>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

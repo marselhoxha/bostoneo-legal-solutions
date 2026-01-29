@@ -1,0 +1,169 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Audit Logs</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/superadmin/dashboard">SUPERADMIN</a></li>
+            <li class="breadcrumb-item active">Audit Logs</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Card -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0"><i class="ri-filter-3-line me-2"></i>Filters</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">Organization</label>
+              <select class="form-select" [(ngModel)]="filters.organizationId">
+                <option [ngValue]="null">All Organizations</option>
+                <option *ngFor="let org of organizations" [ngValue]="org.id">{{ org.name }}</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Action</label>
+              <select class="form-select" [(ngModel)]="filters.action">
+                <option value="">All Actions</option>
+                <option *ngFor="let action of actionTypes" [value]="action">{{ action }}</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Entity Type</label>
+              <select class="form-select" [(ngModel)]="filters.entityType">
+                <option value="">All Types</option>
+                <option *ngFor="let type of entityTypes" [value]="type">{{ type }}</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Start Date</label>
+              <input type="date" class="form-control" [(ngModel)]="filters.startDate">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">End Date</label>
+              <input type="date" class="form-control" [(ngModel)]="filters.endDate">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+              <div class="btn-group w-100">
+                <button class="btn btn-primary" (click)="applyFilters()">
+                  <i class="ri-search-line"></i>
+                </button>
+                <button class="btn btn-outline-secondary" (click)="clearFilters()">
+                  <i class="ri-refresh-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logs Table -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="ri-file-list-3-line me-2"></i>
+            Audit Trail ({{ totalElements }} entries)
+          </h5>
+        </div>
+        <div class="card-body">
+          <!-- Loading -->
+          <div *ngIf="isLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Loading audit logs...</p>
+          </div>
+
+          <!-- Error -->
+          <div *ngIf="error && !isLoading" class="alert alert-danger">
+            {{ error }}
+            <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadLogs()">Retry</button>
+          </div>
+
+          <!-- Table -->
+          <div *ngIf="!isLoading && !error" class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Action</th>
+                  <th>Entity</th>
+                  <th>User</th>
+                  <th>Organization</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let log of logs">
+                  <td class="text-nowrap">
+                    <small>{{ formatDate(log.createdAt) }}</small>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="getActionBadgeClass(log.action)">
+                      {{ log.action }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-dark">{{ log.entityType }}</span>
+                    <small *ngIf="log.entityId" class="text-muted ms-1">#{{ log.entityId }}</small>
+                  </td>
+                  <td>
+                    <span *ngIf="log.userName">{{ log.userName }}</span>
+                    <small *ngIf="log.userEmail" class="text-muted d-block">{{ log.userEmail }}</small>
+                    <span *ngIf="!log.userName && !log.userEmail" class="text-muted">System</span>
+                  </td>
+                  <td>
+                    <span *ngIf="log.organizationName">{{ log.organizationName }}</span>
+                    <span *ngIf="!log.organizationName" class="text-muted">-</span>
+                  </td>
+                  <td>
+                    <small class="text-truncate d-block" style="max-width: 300px;" [title]="log.description">
+                      {{ log.description || '-' }}
+                    </small>
+                  </td>
+                </tr>
+                <tr *ngIf="logs.length === 0">
+                  <td colspan="6" class="text-center py-4 text-muted">
+                    <i class="ri-file-list-3-line fs-1 d-block mb-2"></i>
+                    No audit logs found
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div *ngIf="!isLoading && totalPages > 1" class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted small">
+              Page {{ currentPage + 1 }} of {{ totalPages }} ({{ totalElements }} total)
+            </div>
+            <nav>
+              <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" [class.disabled]="currentPage === 0">
+                  <a class="page-link" (click)="goToPage(currentPage - 1)">Prev</a>
+                </li>
+                <li *ngFor="let page of pageNumbers" class="page-item" [class.active]="page === currentPage">
+                  <a class="page-link" (click)="goToPage(page)">{{ page + 1 }}</a>
+                </li>
+                <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
+                  <a class="page-link" (click)="goToPage(currentPage + 1)">Next</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

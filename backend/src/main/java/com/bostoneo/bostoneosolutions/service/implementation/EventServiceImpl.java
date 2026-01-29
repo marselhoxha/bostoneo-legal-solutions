@@ -59,11 +59,21 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public void addUserEvent(String email, EventType eventType, String device, String ipAddress) {
-        eventRepository.addUserEvent(email, eventType, device, ipAddress);
+        Long orgId = getCurrentOrganizationId();
+        if (orgId != null) {
+            eventRepository.addUserEvent(email, eventType, device, ipAddress, orgId);
+        } else {
+            log.warn("SECURITY: No organization context for addUserEvent - event not recorded for {}", email);
+        }
     }
 
     @Override
     public void addUserEvent(Long userId, EventType eventType, String device, String ipAddress) {
-        // Implementation for adding events by userId
+        Long orgId = getCurrentOrganizationId();
+        if (orgId != null) {
+            eventRepository.addUserEvent(userId, eventType, device, ipAddress, orgId);
+        } else {
+            log.warn("SECURITY: No organization context for addUserEvent - event not recorded for userId {}", userId);
+        }
     }
 }

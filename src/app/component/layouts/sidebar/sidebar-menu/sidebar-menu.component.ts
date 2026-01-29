@@ -47,6 +47,8 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
   
   ngOnInit(): void {
     this.initializeMenu();
+    // Set initial visibility based on localStorage before permissions load
+    this.updateMenuVisibility();
     this.subscribeToPermissions();
   }
   
@@ -430,32 +432,105 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
             }
           }
         ]
+      },
+
+      // SUPERADMIN Panel - Only visible for SUPERADMIN role
+      {
+        id: 9,
+        label: 'SUPERADMIN',
+        icon: 'ri-shield-star-line',
+        isParent: true,
+        permission: { resource: 'SUPERADMIN', action: 'VIEW', roles: ['ROLE_SUPERADMIN'] },
+        subItems: [
+          {
+            id: 91,
+            label: 'Dashboard',
+            link: '/superadmin/dashboard',
+            parentId: 9,
+            permission: { resource: 'SUPERADMIN', action: 'VIEW', roles: ['ROLE_SUPERADMIN'] }
+          },
+          {
+            id: 92,
+            label: 'Organizations',
+            link: '/superadmin/organizations',
+            parentId: 9,
+            permission: { resource: 'SUPERADMIN', action: 'VIEW', roles: ['ROLE_SUPERADMIN'] }
+          },
+          {
+            id: 93,
+            label: 'All Users',
+            link: '/superadmin/users',
+            parentId: 9,
+            permission: { resource: 'SUPERADMIN', action: 'VIEW', roles: ['ROLE_SUPERADMIN'] }
+          },
+          {
+            id: 94,
+            label: 'Analytics',
+            link: '/superadmin/analytics',
+            parentId: 9,
+            permission: { resource: 'SUPERADMIN', action: 'VIEW', roles: ['ROLE_SUPERADMIN'] }
+          },
+          {
+            id: 95,
+            label: 'System Health',
+            link: '/superadmin/system-health',
+            parentId: 9,
+            permission: { resource: 'SUPERADMIN', action: 'VIEW', roles: ['ROLE_SUPERADMIN'] }
+          },
+          {
+            id: 96,
+            label: 'Audit Logs',
+            link: '/superadmin/audit-logs',
+            parentId: 9,
+            permission: { resource: 'SUPERADMIN', action: 'VIEW', roles: ['ROLE_SUPERADMIN'] }
+          }
+        ]
       }
     ];
   }
   
   private updateMenuVisibility(): void {
+    // Check for SUPERADMIN from localStorage even before permissions load
+    const isSuperAdminFromStorage = this.checkIsSuperAdminFromStorage();
+
     if (!this.userPermissions) {
-      // Hide all permission-based menu items if no permissions loaded
-      this.menuItems.forEach(item => {
-        item.isVisible = !item.permission;
-        if (item.subItems) {
-          item.subItems.forEach(subItem => {
-            subItem.isVisible = !subItem.permission;
-          });
-        }
-      });
+      // Permissions not loaded yet - use localStorage check
+      if (isSuperAdminFromStorage) {
+        // SUPERADMIN: Show only SUPERADMIN menu items
+        this.menuItems.forEach(item => {
+          const isSuperAdminItem = item.permission?.resource === 'SUPERADMIN';
+          item.isVisible = isSuperAdminItem;
+          if (item.subItems) {
+            item.subItems.forEach(subItem => {
+              subItem.isVisible = subItem.permission?.resource === 'SUPERADMIN';
+            });
+          }
+        });
+      } else {
+        // Non-SUPERADMIN: Hide permission-based items until permissions load
+        this.menuItems.forEach(item => {
+          // Hide SUPERADMIN items, show items without permission
+          const isSuperAdminItem = item.permission?.resource === 'SUPERADMIN';
+          item.isVisible = !isSuperAdminItem && !item.permission;
+          if (item.subItems) {
+            item.subItems.forEach(subItem => {
+              const isSubSuperAdmin = subItem.permission?.resource === 'SUPERADMIN';
+              subItem.isVisible = !isSubSuperAdmin && !subItem.permission;
+            });
+          }
+        });
+      }
       return;
     }
 
     this.menuItems.forEach(item => {
       item.isVisible = this.checkMenuPermission(item);
-      
+
       if (item.subItems) {
         item.subItems.forEach(subItem => {
           subItem.isVisible = this.checkMenuPermission(subItem);
         });
-        
+
         // Hide parent if no child items are visible
         const hasVisibleChildren = item.subItems.some(subItem => subItem.isVisible);
         if (item.isParent && !hasVisibleChildren) {
@@ -464,17 +539,50 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
       }
     });
   }
-  
+
+  /**
+   * Check if user is SUPERADMIN from localStorage (for initial load before permissions)
+   */
+  private checkIsSuperAdminFromStorage(): boolean {
+    try {
+      const currentUserStr = localStorage.getItem('currentUser');
+      if (currentUserStr) {
+        const currentUser = JSON.parse(currentUserStr);
+        return currentUser.roleName === 'ROLE_SUPERADMIN' ||
+               currentUser.primaryRoleName === 'ROLE_SUPERADMIN' ||
+               (currentUser.roles && currentUser.roles.includes('ROLE_SUPERADMIN'));
+      }
+    } catch (error) {
+      console.error('Error checking SUPERADMIN from localStorage:', error);
+    }
+    return false;
+  }
+
   private checkMenuPermission(item: MenuItem): boolean {
+    // Check for SUPERADMIN from multiple sources
+    const isSuperAdmin = this.userPermissions?.roles.some(r => r.name === 'ROLE_SUPERADMIN') ||
+                         this.checkIsSuperAdminFromStorage();
+
     if (!item.permission) {
-      return true; // No permission required
+      // SUPERADMIN users should ONLY see SUPERADMIN menu items
+      // Regular menu items without explicit permissions should be hidden for SUPERADMIN
+      if (isSuperAdmin) {
+        return false; // Hide items without explicit permission from SUPERADMIN
+      }
+      return true; // No permission required for non-SUPERADMIN
     }
 
     const { resource, action, hierarchyLevel, roles } = item.permission;
 
-    // Special handling for role-only permissions (like CLIENT_PORTAL)
-    // If roles are specified and resource is CLIENT_PORTAL, only check roles
-    if (roles && roles.length > 0 && resource === 'CLIENT_PORTAL') {
+    // SUPERADMIN users should ONLY see SUPERADMIN menu items
+    // Hide regular organization-specific items from SUPERADMIN
+    if (isSuperAdmin && resource !== 'SUPERADMIN') {
+      return false; // SUPERADMIN only sees SUPERADMIN menu items
+    }
+
+    // Special handling for role-only permissions (like CLIENT_PORTAL, SUPERADMIN)
+    // If roles are specified and resource is a role-only resource, only check roles
+    if (roles && roles.length > 0 && (resource === 'CLIENT_PORTAL' || resource === 'SUPERADMIN')) {
       const hasRequiredRole = roles.some(role =>
         this.userPermissions!.roles.some(userRole => userRole.name === role)
       );

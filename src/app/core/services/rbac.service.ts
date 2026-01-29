@@ -1101,7 +1101,6 @@ export class RbacService {
   isAdmin(): boolean {
     const currentUser = this.getCurrentUserFromStorage();
     if (!currentUser) {
-      console.log('🔍 isAdmin: No current user in storage');
       return false;
     }
 
@@ -1115,8 +1114,6 @@ export class RbacService {
       userRoles = [currentUser.roleName, currentUser.primaryRoleName].filter(Boolean);
     }
 
-    console.log('🔍 isAdmin check - userRoles:', userRoles, 'roleName:', currentUser.roleName);
-
     // Handle both string arrays and object arrays
     const normalizedRoles = userRoles.map((role: any) => {
       if (typeof role === 'string') return role.toUpperCase();
@@ -1124,13 +1121,10 @@ export class RbacService {
       return '';
     }).filter(Boolean);
 
-    console.log('🔍 isAdmin check - normalizedRoles:', normalizedRoles);
-
     const isAdminUser = RbacService.ADMIN_ROLES.some(role =>
       normalizedRoles.includes(role.toUpperCase())
     );
 
-    console.log('🔍 isAdmin result:', isAdminUser);
     return isAdminUser;
   }
   

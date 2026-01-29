@@ -96,7 +96,7 @@ public class OrganizationController {
      * - ADMIN/other: can only access their own organization
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('organization:read') or hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN') or hasRole('ROLE_SUPERADMIN')")
+    @PreAuthorize("hasAuthority('organization:read') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY') or hasRole('ROLE_SYSADMIN') or hasRole('ROLE_SUPERADMIN')")
     public ResponseEntity<HttpResponse> getOrganizationById(@PathVariable Long id) {
         // Check access: SUPERADMIN can access any, others only their own
         if (!isSuperAdmin()) {

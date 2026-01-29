@@ -52,6 +52,7 @@ public class DocumentRelationshipService {
         }
 
         DocumentRelationship relationship = new DocumentRelationship();
+        relationship.setOrganizationId(orgId); // SECURITY: Set organization ID for tenant isolation
         relationship.setSourceAnalysisId(sourceAnalysisId);
         relationship.setTargetAnalysisId(targetAnalysisId);
         relationship.setRelationshipType(relationshipType);

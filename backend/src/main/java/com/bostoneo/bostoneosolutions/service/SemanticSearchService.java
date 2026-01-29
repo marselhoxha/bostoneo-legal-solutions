@@ -483,9 +483,11 @@ public class SemanticSearchService {
      */
     public void reindexDocument(Long analysisId) {
         log.info("Force re-indexing document: analysisId={}", analysisId);
+        Long orgId = getRequiredOrganizationId();
 
         // Delete existing chunks
-        chunkRepository.deleteByAnalysisId(analysisId);
+        // SECURITY: Use tenant-filtered delete to prevent cross-org deletion
+        chunkRepository.deleteByAnalysisIdAndOrganizationId(analysisId, orgId);
 
         // Chunk and generate fresh embeddings
         chunkingService.chunkDocument(analysisId);

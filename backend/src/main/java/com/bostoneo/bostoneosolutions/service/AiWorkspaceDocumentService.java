@@ -100,8 +100,10 @@ public class AiWorkspaceDocumentService {
         log.info("Creating new document for user={}, case={}, type={}", userId, caseId, documentType);
 
         // Create document
+        Long orgId = getRequiredOrganizationId();
         AiWorkspaceDocument document = AiWorkspaceDocument.builder()
             .userId(userId)
+            .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
             .caseId(caseId)
             .sessionId(sessionId)
             .title(title)
@@ -116,6 +118,7 @@ public class AiWorkspaceDocumentService {
         // Create initial version
         AiWorkspaceDocumentVersion initialVersion = AiWorkspaceDocumentVersion.builder()
             .document(document)
+            .organizationId(document.getOrganizationId())
             .versionNumber(1)
             .content(initialContent)
             .wordCount(countWords(initialContent))
@@ -190,6 +193,7 @@ public class AiWorkspaceDocumentService {
         int newVersionNumber = document.getCurrentVersion() + 1;
         AiWorkspaceDocumentVersion newVersion = AiWorkspaceDocumentVersion.builder()
             .document(document)
+            .organizationId(document.getOrganizationId())
             .versionNumber(newVersionNumber)
             .content(transformedContent)
             .wordCount(countWords(transformedContent))
@@ -273,6 +277,7 @@ public class AiWorkspaceDocumentService {
         int newVersionNumber = document.getCurrentVersion() + 1;
         AiWorkspaceDocumentVersion newVersion = AiWorkspaceDocumentVersion.builder()
             .document(document)
+            .organizationId(document.getOrganizationId())
             .versionNumber(newVersionNumber)
             .content(newContent)
             .wordCount(countWords(newContent))
@@ -328,6 +333,7 @@ public class AiWorkspaceDocumentService {
         int newVersionNumber = document.getCurrentVersion() + 1;
         AiWorkspaceDocumentVersion newVersion = AiWorkspaceDocumentVersion.builder()
             .document(document)
+            .organizationId(document.getOrganizationId())
             .versionNumber(newVersionNumber)
             .content(newContent)
             .wordCount(countWords(newContent))
@@ -387,6 +393,7 @@ public class AiWorkspaceDocumentService {
         int newVersionNumber = document.getCurrentVersion() + 1;
         AiWorkspaceDocumentVersion restoredVersion = AiWorkspaceDocumentVersion.builder()
             .document(document)
+            .organizationId(document.getOrganizationId())
             .versionNumber(newVersionNumber)
             .content(oldVersion.getContent())
             .wordCount(oldVersion.getWordCount())
@@ -645,11 +652,13 @@ public class AiWorkspaceDocumentService {
         String researchMode,
         String documentType
     ) {
-        log.info("Creating draft conversation session: userId={}, caseId={}, researchMode={}, documentType={}", userId, caseId, researchMode, documentType);
+        Long orgId = getRequiredOrganizationId();
+        log.info("Creating draft conversation session: userId={}, caseId={}, orgId={}, researchMode={}, documentType={}", userId, caseId, orgId, researchMode, documentType);
 
-        // Create conversation session
+        // Create conversation session with organization ID for tenant isolation
         AiConversationSession conversation = AiConversationSession.builder()
             .userId(userId)
+            .organizationId(orgId)
             .caseId(caseId)
             .sessionName(sessionName)
             .sessionType(caseId != null ? "case-specific" : "general")
@@ -706,9 +715,10 @@ public class AiWorkspaceDocumentService {
                 .orElseThrow(() -> new IllegalArgumentException("Conversation not found: " + conversationId));
             log.info("✅ Using existing conversation {}", conversationId);
         } else {
-            // Create new conversation session
+            // Create new conversation session with organization ID for tenant isolation
             conversation = AiConversationSession.builder()
                 .userId(userId)
+                .organizationId(orgId)
                 .caseId(caseId)
                 .sessionName(sessionName)
                 .sessionType(caseId != null ? "case-specific" : "general")
@@ -807,8 +817,10 @@ public class AiWorkspaceDocumentService {
         int wordCount = countWords(content);
 
         // 8. Create document
+        Long docOrgId = getRequiredOrganizationId();
         AiWorkspaceDocument document = AiWorkspaceDocument.builder()
             .userId(userId)
+            .organizationId(docOrgId)  // SECURITY: Set organization ID for tenant isolation
             .caseId(caseId)
             .sessionId(conversation.getId())
             .title(sessionName)
@@ -823,6 +835,7 @@ public class AiWorkspaceDocumentService {
         // 9. Create initial version
         AiWorkspaceDocumentVersion initialVersion = AiWorkspaceDocumentVersion.builder()
             .document(document)
+            .organizationId(document.getOrganizationId())
             .versionNumber(1)
             .content(content)
             .wordCount(wordCount)
@@ -2129,6 +2142,7 @@ public class AiWorkspaceDocumentService {
         int newVersionNumber = document.getCurrentVersion() + 1;
         AiWorkspaceDocumentVersion newVersion = AiWorkspaceDocumentVersion.builder()
                 .document(document)
+                .organizationId(document.getOrganizationId())
                 .versionNumber(newVersionNumber)
                 .content(transformedContent)
                 .wordCount(wordCount)
@@ -2337,6 +2351,7 @@ public class AiWorkspaceDocumentService {
         int newVersionNumber = document.getCurrentVersion() + 1;
         AiWorkspaceDocumentVersion newVersion = AiWorkspaceDocumentVersion.builder()
                 .document(document)
+                .organizationId(document.getOrganizationId())
                 .versionNumber(newVersionNumber)
                 .content(transformedContent)
                 .wordCount(wordCount)

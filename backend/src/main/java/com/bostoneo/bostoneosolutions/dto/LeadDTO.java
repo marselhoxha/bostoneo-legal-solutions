@@ -17,6 +17,9 @@ public class LeadDTO {
 
     private Long id;
 
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
+
     private String firstName;
 
     private String lastName;

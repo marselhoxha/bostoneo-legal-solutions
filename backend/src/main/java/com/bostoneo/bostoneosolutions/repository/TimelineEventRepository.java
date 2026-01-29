@@ -39,4 +39,9 @@ public interface TimelineEventRepository extends JpaRepository<TimelineEvent, Lo
      * Find all timeline events for an organization (SECURITY: tenant isolation)
      */
     List<TimelineEvent> findByOrganizationIdOrderByEventDateAsc(Long organizationId);
+
+    /**
+     * Find timeline events by multiple analysis IDs within an organization (SECURITY: tenant isolation)
+     */
+    List<TimelineEvent> findByOrganizationIdAndAnalysisIdInOrderByEventDateAsc(Long organizationId, List<Long> analysisIds);
 }

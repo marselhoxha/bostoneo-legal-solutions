@@ -72,6 +72,8 @@ public class TimelineExtractionService {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class TimelineEvent {
+        // SECURITY: Required for multi-tenant data isolation
+        private Long organizationId;
         private String date;              // ISO format date or "approximate" date
         private LocalDate parsedDate;     // Parsed date for sorting
         private String eventType;         // CONTRACT_SIGNED, DEADLINE, HEARING, FILING, etc.
@@ -544,6 +546,9 @@ public class TimelineExtractionService {
             // Extract JSON from response
             String jsonStr = extractJsonFromResponse(response);
 
+            // SECURITY: Get organization ID for tenant isolation
+            Long orgId = getRequiredOrganizationId();
+
             List<Map<String, Object>> parsed = objectMapper.readValue(
                     jsonStr, new TypeReference<List<Map<String, Object>>>() {});
 
@@ -559,6 +564,7 @@ public class TimelineExtractionService {
                             (dateStr != null && dateStr.toLowerCase().contains("approx"));
 
                     TimelineEvent event = TimelineEvent.builder()
+                            .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
                             .date(dateStr)
                             .parsedDate(parsedDate)
                             .eventType((String) item.get("eventType"))

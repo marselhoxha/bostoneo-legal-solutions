@@ -1558,7 +1558,9 @@ public class FileManagerServiceImpl implements FileManagerService {
     
     private void logFileAccess(Long fileId, FileAccessLog.ActionType actionType, boolean success, String errorMessage) {
         try {
-            FileAccessLog log = FileAccessLog.builder()
+            Long orgId = getRequiredOrganizationId();
+            FileAccessLog accessLog = FileAccessLog.builder()
+                    .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
                     .fileId(fileId)
                     .userId(getCurrentUserId())
                     .actionType(actionType)
@@ -1566,8 +1568,8 @@ public class FileManagerServiceImpl implements FileManagerService {
                     .errorMessage(errorMessage)
                     .accessMethod("web")
                     .build();
-            
-            fileAccessLogRepository.save(log);
+
+            fileAccessLogRepository.save(accessLog);
         } catch (Exception e) {
             log.warn("Failed to log file access: {}", e.getMessage());
         }

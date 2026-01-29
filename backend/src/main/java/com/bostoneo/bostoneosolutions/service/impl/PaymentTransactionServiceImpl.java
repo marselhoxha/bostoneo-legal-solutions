@@ -116,18 +116,20 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
         
         // Create corresponding invoice payment
         InvoicePayment payment = InvoicePayment.builder()
+                .organizationId(orgId)
                 .invoiceId(transaction.getInvoiceId())
                 .amount(transaction.getAmount())
                 .paymentMethod(transaction.getTransactionType())
                 .referenceNumber(transaction.getReferenceNumber())
                 .paymentDate(LocalDate.now())
-                .notes("Payment via " + transaction.getTransactionType() + 
+                .notes("Payment via " + transaction.getTransactionType() +
                        (transaction.getWireReference() != null ? " - Wire Ref: " + transaction.getWireReference() : "") +
                        (transaction.getAccountNumberLast4() != null ? " - Account ending: " + transaction.getAccountNumberLast4() : ""))
                 .createdBy(transaction.getCreatedBy())
                 .build();
-        
-        paymentRepository.create(payment);
+
+        // SECURITY: Use createWithOrganization to ensure proper tenant isolation
+        paymentRepository.createWithOrganization(payment, orgId);
         
         PaymentTransaction savedTransaction = transactionRepository.save(transaction);
         

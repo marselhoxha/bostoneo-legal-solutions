@@ -17,7 +17,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class InvoicePaymentDTO {
     private Long id;
-    
+
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
+
     @NotNull(message = "Invoice ID is required")
     private Long invoiceId;
     

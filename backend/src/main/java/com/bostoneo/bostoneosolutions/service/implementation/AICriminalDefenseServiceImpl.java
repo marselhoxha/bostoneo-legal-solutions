@@ -73,14 +73,18 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
 
     @Override
     public Page<AICriminalCase> getCriminalCasesByType(CriminalCaseType caseType, Pageable pageable) {
-        // For now, return all cases - implement filtering when repository method is available
-        return caseRepository.findAll(pageable);
+        // SECURITY: Use tenant-filtered query to prevent cross-tenant data leakage
+        // Note: CaseType filtering not yet implemented on model - returns all org cases for now
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return caseRepository.findByOrganizationId(orgId, pageable);
     }
 
     @Override
     public Page<AICriminalCase> getCriminalCasesByStatus(CriminalCaseStatus status, Pageable pageable) {
-        // For now, return all cases - implement filtering when repository method is available
-        return caseRepository.findAll(pageable);
+        // SECURITY: Use tenant-filtered query to prevent cross-tenant data leakage
+        // Note: Status filtering not yet implemented on model - returns all org cases for now
+        Long orgId = tenantService.requireCurrentOrganizationId();
+        return caseRepository.findByOrganizationId(orgId, pageable);
     }
 
     @Override

@@ -46,6 +46,11 @@ public interface AICriminalCaseRepository extends JpaRepository<AICriminalCase, 
     List<AICriminalCase> findByOrganizationId(Long organizationId);
 
     /**
+     * SECURITY: Find all criminal cases for an organization with pagination (tenant isolation)
+     */
+    Page<AICriminalCase> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    /**
      * SECURITY: Find criminal case by ID within organization (tenant isolation)
      */
     java.util.Optional<AICriminalCase> findByIdAndOrganizationId(Long id, Long organizationId);

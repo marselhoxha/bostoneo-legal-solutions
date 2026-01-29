@@ -121,4 +121,10 @@ public interface IntakeSubmissionRepository extends JpaRepository<IntakeSubmissi
 
     @Query("SELECT i FROM IntakeSubmission i WHERE i.status = :status AND i.createdAt >= :since AND i.organizationId = :orgId")
     List<IntakeSubmission> findByOrganizationIdAndStatusAndCreatedAtAfter(@Param("orgId") Long organizationId, @Param("status") String status, @Param("since") Timestamp since);
+
+    @Query("SELECT COALESCE(f.practiceArea, 'General') as practiceArea, COUNT(i) as count " +
+           "FROM IntakeSubmission i LEFT JOIN i.intakeForm f " +
+           "WHERE i.organizationId = :orgId " +
+           "GROUP BY COALESCE(f.practiceArea, 'General')")
+    List<Object[]> countByOrganizationIdGroupedByPracticeArea(@Param("orgId") Long organizationId);
 }

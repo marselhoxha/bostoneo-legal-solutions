@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CaseActivityDTO {
     private Long id;
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
     private Long caseId;
     private Long userId;
     private UserDTO user;

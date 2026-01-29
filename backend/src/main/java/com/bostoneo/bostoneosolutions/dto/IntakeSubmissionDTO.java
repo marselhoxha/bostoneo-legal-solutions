@@ -18,6 +18,9 @@ public class IntakeSubmissionDTO {
 
     private Long id;
 
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
+
     private Long intakeFormId;
 
     private String formTitle;

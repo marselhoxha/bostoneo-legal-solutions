@@ -268,6 +268,7 @@ public class DocumentCollectionController {
         }
 
         CollectionDocument collectionDoc = new CollectionDocument();
+        collectionDoc.setOrganizationId(orgId);
         collectionDoc.setCollection(collection);
         collectionDoc.setAnalysisId(analysisId);
         collectionDoc.setNotes(notes);

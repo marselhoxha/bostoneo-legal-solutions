@@ -1,10 +1,13 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
+import com.bostoneo.bostoneosolutions.model.IntakeForm;
 import com.bostoneo.bostoneosolutions.model.IntakeSubmission;
 import com.bostoneo.bostoneosolutions.model.Lead;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import com.bostoneo.bostoneosolutions.repository.IntakeFormRepository;
 import com.bostoneo.bostoneosolutions.repository.IntakeSubmissionRepository;
 import com.bostoneo.bostoneosolutions.repository.LeadRepository;
+import com.bostoneo.bostoneosolutions.repository.UserNotificationPreferenceRepository;
 import com.bostoneo.bostoneosolutions.service.IntakeSubmissionService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
@@ -27,11 +30,13 @@ import java.util.*;
 public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
 
     private final IntakeSubmissionRepository intakeSubmissionRepository;
+    private final IntakeFormRepository intakeFormRepository;
     private final LeadRepository leadRepository;
     private final TenantService tenantService;
     private final ObjectMapper objectMapper;
     private final AuthenticatedWebSocketHandler webSocketHandler;
     private final NotificationService notificationService;
+    private final UserNotificationPreferenceRepository userNotificationPreferenceRepository;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -95,8 +100,25 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     public IntakeSubmission createSubmission(Long formId, String submissionData, String ipAddress, String userAgent, String referrer) {
         log.info("Creating new intake submission for form ID: {}", formId);
-        
+
+        // SECURITY: Get organization ID from the form for public submissions
+        // (public form submissions don't have tenant context)
+        Long organizationId = null;
+        if (formId != null) {
+            IntakeForm form = intakeFormRepository.findById(formId)
+                .orElseThrow(() -> new RuntimeException("Form not found: " + formId));
+            organizationId = form.getOrganizationId();
+        } else {
+            // Fallback to tenant context if available (for authenticated submissions)
+            organizationId = tenantService.getCurrentOrganizationId().orElse(null);
+        }
+
+        if (organizationId == null) {
+            throw new RuntimeException("Cannot create submission: no organization context available");
+        }
+
         IntakeSubmission submission = IntakeSubmission.builder()
+            .organizationId(organizationId)  // SECURITY: Set organization from form
             .formId(formId)
             .submissionData(submissionData)
             .ipAddress(ipAddress)
@@ -105,8 +127,8 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
             .status("PENDING")
             .priorityScore(calculatePriorityScore(submissionData, null))
             .build();
-        
-        IntakeSubmission savedSubmission = save(submission);
+
+        IntakeSubmission savedSubmission = intakeSubmissionRepository.save(submission);
         
         // Send notifications about new submission
         sendNewSubmissionNotification(savedSubmission);
@@ -117,8 +139,14 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     public IntakeSubmission createGeneralSubmission(String submissionData, String ipAddress, String userAgent, String referrer) {
         log.info("Creating new general intake submission");
-        
+
+        // SECURITY: General submissions require tenant context (authenticated user)
+        // Unlike form submissions which get org from the form, general submissions
+        // must have authenticated context to determine the organization
+        Long organizationId = getRequiredOrganizationId();
+
         IntakeSubmission submission = IntakeSubmission.builder()
+            .organizationId(organizationId)  // SECURITY: Set organization explicitly
             .formId(null) // No specific form ID for general submissions
             .submissionData(submissionData)
             .ipAddress(ipAddress)
@@ -127,12 +155,12 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
             .status("PENDING")
             .priorityScore(calculatePriorityScore(submissionData, null))
             .build();
-        
-        IntakeSubmission savedSubmission = save(submission);
-        
+
+        IntakeSubmission savedSubmission = intakeSubmissionRepository.save(submission);
+
         // Send notifications about new submission
         sendNewSubmissionNotification(savedSubmission);
-        
+
         return savedSubmission;
     }
 
@@ -642,8 +670,9 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     private Lead createLeadFromSubmission(IntakeSubmission submission) {
         try {
             JsonNode data = objectMapper.readTree(submission.getSubmissionData());
-            
+
             return Lead.builder()
+                .organizationId(submission.getOrganizationId())
                 .firstName(getStringValue(data, "first_name", "firstName"))
                 .lastName(getStringValue(data, "last_name", "lastName"))
                 .email(getStringValue(data, "email"))
@@ -655,7 +684,7 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
                 .initialInquiry(getStringValue(data, "incident_description", "matter_description", "description"))
                 .urgencyLevel(getStringValue(data, "urgency") != null ? getStringValue(data, "urgency") : "MEDIUM")
                 .build();
-                
+
         } catch (Exception e) {
             log.error("Error creating lead from submission", e);
             throw new RuntimeException("Failed to create lead from submission data");
@@ -694,12 +723,21 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
             // SECURITY: Send via WebSocket only to users in the same organization
             webSocketHandler.broadcastToOrganization(submission.getOrganizationId(), notificationData);
 
-            // ALSO send via FCM for offline/background notifications
+            // SECURITY: Send FCM notifications to users in the organization who have NEW_SUBMISSION enabled
             String title = (String) notificationData.get("title");
             String message = (String) notificationData.get("message");
-            notificationService.sendCrmNotification(title, message, 1L, "NEW_SUBMISSION", notificationData);
+            List<Long> userIds = userNotificationPreferenceRepository.findUserIdsByEventTypeAndDeliveryChannelAndOrganizationId(
+                "NEW_SUBMISSION", "PUSH", submission.getOrganizationId());
+            for (Long userId : userIds) {
+                try {
+                    notificationService.sendCrmNotification(title, message, userId, "NEW_SUBMISSION", notificationData);
+                } catch (Exception e) {
+                    log.warn("Failed to send FCM notification to user {}: {}", userId, e.getMessage());
+                }
+            }
 
-            log.info("Sent new submission notification (WebSocket + FCM) for submission ID: {} in org: {}", submission.getId(), submission.getOrganizationId());
+            log.info("Sent new submission notification (WebSocket + FCM to {} users) for submission ID: {} in org: {}",
+                userIds.size(), submission.getId(), submission.getOrganizationId());
             
         } catch (Exception e) {
             log.error("Failed to send new submission notification for submission ID: {}", submission.getId(), e);
@@ -909,8 +947,18 @@ public class IntakeSubmissionServiceImpl implements IntakeSubmissionService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> getSubmissionCountsByPracticeArea() {
-        // This would need a custom repository method - for now return empty map
-        return new HashMap<>();
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered query
+        List<Object[]> practiceAreaCounts = intakeSubmissionRepository.countByOrganizationIdGroupedByPracticeArea(orgId);
+        Map<String, Long> result = new HashMap<>();
+
+        for (Object[] row : practiceAreaCounts) {
+            String practiceArea = (String) row[0];
+            Long count = (Long) row[1];
+            result.put(practiceArea, count);
+        }
+
+        return result;
     }
 
     @Override

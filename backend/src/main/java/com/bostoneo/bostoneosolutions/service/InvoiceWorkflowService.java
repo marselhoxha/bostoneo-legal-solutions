@@ -228,6 +228,7 @@ public class InvoiceWorkflowService {
         
         // Create reminder record
         InvoiceReminder reminder = new InvoiceReminder();
+        reminder.setOrganizationId(invoice.getOrganizationId());  // SECURITY: Set organization ID for tenant isolation
         reminder.setInvoice(invoice);
         reminder.setReminderType(determineReminderType(templateName));
         reminder.setScheduledDate(LocalDate.now());
@@ -237,7 +238,7 @@ public class InvoiceWorkflowService {
         reminder.setMessage(message);
         reminder.setRecipients(Arrays.asList(clientEmail));
         reminder.setCreatedByWorkflow(rule);
-        
+
         reminderRepository.save(reminder);
     }
     
@@ -255,8 +256,9 @@ public class InvoiceWorkflowService {
     
     private void executeCreateReminderAction(InvoiceWorkflowRule rule, Invoice invoice) {
         Map<String, Object> config = rule.getActionConfig();
-        
+
         InvoiceReminder reminder = new InvoiceReminder();
+        reminder.setOrganizationId(invoice.getOrganizationId());  // SECURITY: Set organization ID for tenant isolation
         reminder.setInvoice(invoice);
         reminder.setReminderType(InvoiceReminder.ReminderType.CUSTOM);
         reminder.setScheduledDate(LocalDate.now().plusDays(1)); // Default to tomorrow
@@ -264,7 +266,7 @@ public class InvoiceWorkflowService {
         reminder.setSubject((String) config.getOrDefault("subject", "Invoice Reminder"));
         reminder.setMessage((String) config.getOrDefault("message", ""));
         reminder.setCreatedByWorkflow(rule);
-        
+
         reminderRepository.save(reminder);
     }
     
@@ -285,6 +287,7 @@ public class InvoiceWorkflowService {
         
         // Add late fee as a line item
         InvoiceLineItem feeItem = new InvoiceLineItem();
+        feeItem.setOrganizationId(invoice.getOrganizationId());  // SECURITY: Set organization ID for tenant isolation
         feeItem.setInvoice(invoice);
         feeItem.setDescription(feeDescription);
         feeItem.setQuantity(BigDecimal.ONE);
@@ -320,12 +323,13 @@ public class InvoiceWorkflowService {
     
     private void logExecution(InvoiceWorkflowRule rule, Invoice invoice, String status, String message) {
         InvoiceWorkflowExecution execution = new InvoiceWorkflowExecution();
+        execution.setOrganizationId(invoice.getOrganizationId());  // SECURITY: Set organization ID for tenant isolation
         execution.setWorkflowRule(rule);
         execution.setInvoice(invoice);
         execution.setStatus(status);
         execution.setResultMessage(message);
         execution.setExecutedAt(LocalDateTime.now());
-        
+
         executionRepository.save(execution);
     }
     

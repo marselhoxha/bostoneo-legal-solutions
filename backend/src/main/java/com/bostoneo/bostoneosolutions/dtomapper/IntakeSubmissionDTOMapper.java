@@ -27,6 +27,7 @@ public class IntakeSubmissionDTOMapper {
 
         IntakeSubmissionDTO dto = IntakeSubmissionDTO.builder()
             .id(submission.getId())
+            .organizationId(submission.getOrganizationId())
             .intakeFormId(submission.getFormId())
             .status(submission.getStatus())
             .priorityScore(submission.getPriorityScore())
@@ -93,6 +94,7 @@ public class IntakeSubmissionDTOMapper {
 
         IntakeSubmission.IntakeSubmissionBuilder<?, ?> builder = IntakeSubmission.builder()
             .id(dto.getId())
+            .organizationId(dto.getOrganizationId())
             .formId(dto.getIntakeFormId())
             .status(dto.getStatus())
             .priorityScore(dto.getPriorityScore())

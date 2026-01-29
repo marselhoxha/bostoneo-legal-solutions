@@ -17,6 +17,8 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT;
 @JsonInclude(NON_DEFAULT)
 public class UserEvent {
     private Long id;
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
     private String type;
     private String description;
     private String device;

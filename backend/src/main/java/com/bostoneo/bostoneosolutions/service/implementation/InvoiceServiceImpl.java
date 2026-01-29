@@ -80,7 +80,12 @@ public class InvoiceServiceImpl implements IInvoiceService {
     @AuditLog(action = "CREATE", entityType = "INVOICE", description = "Created new invoice", includeResult = true)
     public Invoice createInvoice(Invoice invoice) {
         log.info("Creating new invoice for client ID: {}", invoice.getClientId());
-        
+
+        // Ensure organization ID is set for tenant isolation
+        if (invoice.getOrganizationId() == null) {
+            invoice.setOrganizationId(getRequiredOrganizationId());
+        }
+
         // Validate invoice
         invoiceValidator.validateForCreate(invoice);
         
@@ -99,6 +104,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
             for (int i = 0; i < invoice.getLineItems().size(); i++) {
                 var lineItem = invoice.getLineItems().get(i);
                 lineItem.setInvoice(invoice);
+                lineItem.setOrganizationId(invoice.getOrganizationId());
                 lineItem.setLineOrder(i);
                 if (lineItem.getAmount() == null && lineItem.getUnitPrice() != null && lineItem.getQuantity() != null) {
                     lineItem.setAmount(lineItem.getUnitPrice().multiply(lineItem.getQuantity()));
@@ -185,6 +191,9 @@ public class InvoiceServiceImpl implements IInvoiceService {
         log.info("Creating invoice from {} time entries for client ID: {}", timeEntryIds.size(), invoice.getClientId());
         Long orgId = getRequiredOrganizationId();
 
+        // SECURITY: Set organization ID for tenant isolation
+        invoice.setOrganizationId(orgId);
+
         // Validate invoice
         invoiceValidator.validateForCreateFromTimeEntries(invoice);
 
@@ -242,6 +251,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
             TimeEntry timeEntry = timeEntries.get(i);
             
             InvoiceLineItem lineItem = new InvoiceLineItem();
+            lineItem.setOrganizationId(orgId);
             lineItem.setDescription(timeEntry.getDescription());
             lineItem.setQuantity(timeEntry.getHours());
             lineItem.setUnitPrice(timeEntry.getRate());

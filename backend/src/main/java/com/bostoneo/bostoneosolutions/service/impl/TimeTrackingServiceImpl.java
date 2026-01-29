@@ -64,7 +64,9 @@ public class TimeTrackingServiceImpl implements TimeTrackingService {
             log.warn("Time entry validation warnings: {}", String.join(", ", validationResult.getWarnings()));
         }
 
+        Long orgId = getRequiredOrganizationId();
         TimeEntry timeEntry = TimeEntry.builder()
+                .organizationId(orgId)
                 .legalCaseId(timeEntryDTO.getLegalCaseId())
                 .userId(timeEntryDTO.getUserId())
                 .date(timeEntryDTO.getDate())

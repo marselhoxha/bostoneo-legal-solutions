@@ -72,18 +72,28 @@ public interface TimeEntryRepository extends PagingAndSortingRepository<TimeEntr
                                    @Param("description") String description,
                                    Pageable pageable);
     
-    // Aggregation queries
+    // ==================== LEGACY AGGREGATION QUERIES (DEPRECATED) ====================
+    // Use tenant-filtered versions in the TENANT-FILTERED METHODS section
+
+    /** @deprecated Use getTotalHoursByCaseAndOrganization for tenant isolation */
+    @Deprecated
     @Query("SELECT SUM(te.hours) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId AND te.status = 'APPROVED'")
     BigDecimal getTotalHoursByCase(@Param("legalCaseId") Long legalCaseId);
-    
+
+    /** @deprecated Use getTotalAmountByCaseAndOrganization for tenant isolation */
+    @Deprecated
     @Query("SELECT SUM(te.hours * te.rate) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId AND te.status = 'APPROVED'")
     BigDecimal getTotalAmountByCase(@Param("legalCaseId") Long legalCaseId);
-    
+
+    /** @deprecated Use getTotalHoursByUserAndDateRangeAndOrganization for tenant isolation */
+    @Deprecated
     @Query("SELECT SUM(te.hours) FROM TimeEntry te WHERE te.userId = :userId AND te.date BETWEEN :startDate AND :endDate")
-    BigDecimal getTotalHoursByUserAndDateRange(@Param("userId") Long userId, 
-                                              @Param("startDate") LocalDate startDate, 
+    BigDecimal getTotalHoursByUserAndDateRange(@Param("userId") Long userId,
+                                              @Param("startDate") LocalDate startDate,
                                               @Param("endDate") LocalDate endDate);
-    
+
+    /** @deprecated Use getTotalBillableAmountByUserAndOrganization for tenant isolation */
+    @Deprecated
     @Query("SELECT SUM(te.hours * te.rate) FROM TimeEntry te WHERE te.userId = :userId AND te.billable = true AND te.status = 'APPROVED'")
     BigDecimal getTotalBillableAmountByUser(@Param("userId") Long userId);
     
@@ -103,22 +113,36 @@ public interface TimeEntryRepository extends PagingAndSortingRepository<TimeEntr
     @Query("SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END FROM Invoice i WHERE i.id = :invoiceId")
     boolean existsInvoiceById(@Param("invoiceId") Long invoiceId);
 
-    // Case summary queries
+    // ==================== LEGACY CASE SUMMARY QUERIES (DEPRECATED) ====================
+    // Use tenant-filtered versions in the TENANT-FILTERED METHODS section
+
+    /** @deprecated Use countByLegalCaseIdAndOrganizationId for tenant isolation */
+    @Deprecated
     @Query("SELECT COUNT(te) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId")
     Long countByLegalCaseId(@Param("legalCaseId") Long legalCaseId);
 
+    /** @deprecated Use countByLegalCaseIdAndStatusAndOrganizationId for tenant isolation */
+    @Deprecated
     @Query("SELECT COUNT(te) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId AND te.status = :status")
     Long countByLegalCaseIdAndStatus(@Param("legalCaseId") Long legalCaseId, @Param("status") TimeEntryStatus status);
 
+    /** @deprecated Use getTotalBillableHoursByCaseAndOrganization for tenant isolation */
+    @Deprecated
     @Query("SELECT COALESCE(SUM(te.hours), 0) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId AND te.billable = true")
     BigDecimal getTotalBillableHoursByCase(@Param("legalCaseId") Long legalCaseId);
 
+    /** @deprecated Use getTotalNonBillableHoursByCaseAndOrganization for tenant isolation */
+    @Deprecated
     @Query("SELECT COALESCE(SUM(te.hours), 0) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId AND te.billable = false")
     BigDecimal getTotalNonBillableHoursByCase(@Param("legalCaseId") Long legalCaseId);
 
+    /** @deprecated Use getTotalAllHoursByCaseAndOrganization for tenant isolation */
+    @Deprecated
     @Query("SELECT COALESCE(SUM(te.hours), 0) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId")
     BigDecimal getTotalAllHoursByCase(@Param("legalCaseId") Long legalCaseId);
 
+    /** @deprecated Use getTotalBillableAmountByCaseAndOrganization for tenant isolation */
+    @Deprecated
     @Query("SELECT COALESCE(SUM(te.hours * te.rate), 0) FROM TimeEntry te WHERE te.legalCaseId = :legalCaseId AND te.billable = true")
     BigDecimal getTotalBillableAmountByCase(@Param("legalCaseId") Long legalCaseId);
 
@@ -202,6 +226,39 @@ public interface TimeEntryRepository extends PagingAndSortingRepository<TimeEntr
         @Param("orgId") Long organizationId,
         @Param("clientId") Long clientId,
         @Param("status") TimeEntryStatus status);
+
+    // ==================== TENANT-FILTERED AGGREGATION METHODS ====================
+
+    @Query("SELECT SUM(te.hours) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.legalCaseId = :legalCaseId AND te.status = 'APPROVED'")
+    BigDecimal getTotalHoursByCaseAndOrganization(@Param("orgId") Long organizationId, @Param("legalCaseId") Long legalCaseId);
+
+    @Query("SELECT SUM(te.hours * te.rate) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.legalCaseId = :legalCaseId AND te.status = 'APPROVED'")
+    BigDecimal getTotalAmountByCaseAndOrganization(@Param("orgId") Long organizationId, @Param("legalCaseId") Long legalCaseId);
+
+    @Query("SELECT SUM(te.hours) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.userId = :userId AND te.date BETWEEN :startDate AND :endDate")
+    BigDecimal getTotalHoursByUserAndDateRangeAndOrganization(@Param("orgId") Long organizationId, @Param("userId") Long userId,
+                                                              @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT SUM(te.hours * te.rate) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.userId = :userId AND te.billable = true AND te.status = 'APPROVED'")
+    BigDecimal getTotalBillableAmountByUserAndOrganization(@Param("orgId") Long organizationId, @Param("userId") Long userId);
+
+    @Query("SELECT COUNT(te) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.legalCaseId = :legalCaseId")
+    Long countByLegalCaseIdAndOrganizationId(@Param("orgId") Long organizationId, @Param("legalCaseId") Long legalCaseId);
+
+    @Query("SELECT COUNT(te) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.legalCaseId = :legalCaseId AND te.status = :status")
+    Long countByLegalCaseIdAndStatusAndOrganizationId(@Param("orgId") Long organizationId, @Param("legalCaseId") Long legalCaseId, @Param("status") TimeEntryStatus status);
+
+    @Query("SELECT COALESCE(SUM(te.hours), 0) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.legalCaseId = :legalCaseId AND te.billable = true")
+    BigDecimal getTotalBillableHoursByCaseAndOrganization(@Param("orgId") Long organizationId, @Param("legalCaseId") Long legalCaseId);
+
+    @Query("SELECT COALESCE(SUM(te.hours), 0) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.legalCaseId = :legalCaseId AND te.billable = false")
+    BigDecimal getTotalNonBillableHoursByCaseAndOrganization(@Param("orgId") Long organizationId, @Param("legalCaseId") Long legalCaseId);
+
+    @Query("SELECT COALESCE(SUM(te.hours), 0) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.legalCaseId = :legalCaseId")
+    BigDecimal getTotalAllHoursByCaseAndOrganization(@Param("orgId") Long organizationId, @Param("legalCaseId") Long legalCaseId);
+
+    @Query("SELECT COALESCE(SUM(te.hours * te.rate), 0) FROM TimeEntry te WHERE te.organizationId = :orgId AND te.legalCaseId = :legalCaseId AND te.billable = true")
+    BigDecimal getTotalBillableAmountByCaseAndOrganization(@Param("orgId") Long organizationId, @Param("legalCaseId") Long legalCaseId);
 } 
  
  

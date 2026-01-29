@@ -655,8 +655,7 @@ export class MessagingStateService implements OnDestroy {
         switchMap(() =>
           this.messagingService.getThreads().pipe(
             // CRITICAL: catchError prevents errors from terminating the polling stream
-            catchError(err => {
-              console.error('Polling error (will retry):', err);
+            catchError(() => {
               // On error, return the current threads (don't clear them)
               // This prevents data from disappearing on transient errors
               return of(this.threadsSubject.value);

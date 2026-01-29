@@ -1,0 +1,509 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-danger-subtle text-danger fs-11 fw-semibold">SUPERADMIN</span>
+            <span class="text-muted fs-12">Platform Administration</span>
+          </div>
+          <h4 class="mb-0 fw-bold">Platform Dashboard</h4>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <!-- System Health Badge -->
+          <div class="d-flex align-items-center gap-2 px-3 py-2 rounded-pill"
+               [ngClass]="'bg-' + getHealthStatusClass(stats?.systemHealth || 'HEALTHY') + '-subtle'"
+               *ngIf="stats">
+            <i [class]="getHealthStatusIcon(stats.systemHealth)"
+               [ngClass]="'text-' + getHealthStatusClass(stats.systemHealth)"></i>
+            <span class="fw-semibold fs-13" [ngClass]="'text-' + getHealthStatusClass(stats.systemHealth)">
+              System {{ stats.systemHealth }}
+            </span>
+          </div>
+          <!-- Last Refreshed -->
+          <small class="text-muted" *ngIf="lastRefreshed">
+            <i class="ri-time-line me-1"></i>
+            Updated {{ lastRefreshed | date:'shortTime' }}
+          </small>
+          <!-- Refresh Button -->
+          <button class="btn btn-soft-primary btn-icon" (click)="loadDashboardData()" [disabled]="isLoading"
+                  ngbTooltip="Refresh Dashboard">
+            <i class="ri-refresh-line" [class.spin]="isLoading"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="text-center py-5" *ngIf="isLoading">
+    <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <h5 class="mt-4">Loading Dashboard</h5>
+    <p class="text-muted">Fetching platform statistics...</p>
+  </div>
+
+  <!-- Error State -->
+  <div class="alert alert-danger d-flex align-items-center" *ngIf="error && !isLoading" role="alert">
+    <i class="ri-error-warning-line fs-4 me-3"></i>
+    <div>
+      <strong>Error:</strong> {{ error }}
+      <button class="btn btn-sm btn-danger ms-3" (click)="loadDashboardData()">Retry</button>
+    </div>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="!isLoading && stats">
+
+    <!-- Primary Stats Row -->
+    <div class="row g-4 mb-4">
+      <!-- Organizations Card -->
+      <div class="col-xl-3 col-md-6">
+        <div class="card card-animate border-0 shadow-sm overflow-hidden cursor-pointer" (click)="navigateToOrganizations()">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-grow-1">
+                <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Organizations</p>
+                <h3 class="mb-0 fw-bold">{{ formatNumber(stats.totalOrganizations) }}</h3>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                  <span class="badge bg-success-subtle text-success">{{ stats.activeOrganizations }} active</span>
+                  <span class="badge bg-danger-subtle text-danger" *ngIf="stats.suspendedOrganizations > 0">
+                    {{ stats.suspendedOrganizations }} suspended
+                  </span>
+                </div>
+              </div>
+              <div class="flex-shrink-0">
+                <div class="avatar-md">
+                  <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-2">
+                    <i class="ri-building-2-line"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer bg-primary-subtle border-0 py-2">
+            <div class="d-flex align-items-center justify-content-center text-primary">
+              <span class="fs-12 fw-medium">View All Organizations</span>
+              <i class="ri-arrow-right-line ms-1"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Card -->
+      <div class="col-xl-3 col-md-6">
+        <div class="card card-animate border-0 shadow-sm overflow-hidden cursor-pointer" (click)="navigateToUsers()">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-grow-1">
+                <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Total Users</p>
+                <h3 class="mb-0 fw-bold">{{ formatNumber(stats.totalUsers) }}</h3>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                  <span class="badge bg-info-subtle text-info">
+                    {{ stats.activeUsersLast7Days }} active (7d)
+                  </span>
+                  <span class="text-muted fs-11">{{ getActiveUsersPercent() }}%</span>
+                </div>
+              </div>
+              <div class="flex-shrink-0">
+                <div class="avatar-md">
+                  <span class="avatar-title bg-info-subtle text-info rounded-circle fs-2">
+                    <i class="ri-group-line"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="progress" style="height: 4px;">
+            <div class="progress-bar bg-info" [style.width.%]="getActiveUsersPercent()"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cases Card -->
+      <div class="col-xl-3 col-md-6">
+        <div class="card card-animate border-0 shadow-sm overflow-hidden">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-grow-1">
+                <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Total Cases</p>
+                <h3 class="mb-0 fw-bold">{{ formatNumber(stats.totalCases) }}</h3>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                  <span class="badge bg-success-subtle text-success">{{ stats.activeCases }} active</span>
+                  <span class="badge bg-secondary-subtle text-secondary">{{ stats.closedCases }} closed</span>
+                </div>
+              </div>
+              <div class="flex-shrink-0">
+                <div class="avatar-md">
+                  <span class="avatar-title bg-success-subtle text-success rounded-circle fs-2">
+                    <i class="ri-briefcase-4-line"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="progress" style="height: 4px;">
+            <div class="progress-bar bg-success" [style.width.%]="getActiveCasesPercent()"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Revenue Card -->
+      <div class="col-xl-3 col-md-6">
+        <div class="card card-animate border-0 shadow-sm overflow-hidden">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="flex-grow-1">
+                <p class="text-uppercase fw-semibold text-muted fs-12 mb-2">Total Revenue</p>
+                <h3 class="mb-0 fw-bold">{{ formatCurrency(stats.totalRevenue) }}</h3>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                  <span class="badge bg-warning-subtle text-warning">
+                    {{ stats.totalInvoices }} invoices
+                  </span>
+                </div>
+              </div>
+              <div class="flex-shrink-0">
+                <div class="avatar-md">
+                  <span class="avatar-title bg-warning-subtle text-warning rounded-circle fs-2">
+                    <i class="ri-money-dollar-circle-line"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer bg-warning-subtle border-0 py-2">
+            <div class="d-flex align-items-center justify-content-center text-warning">
+              <span class="fs-12 fw-medium">{{ stats.totalClients }} Clients</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Secondary Stats Row -->
+    <div class="row g-4 mb-4">
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center py-3">
+            <div class="avatar-sm mx-auto mb-2">
+              <span class="avatar-title bg-soft-primary text-primary rounded-circle fs-4">
+                <i class="ri-user-follow-line"></i>
+              </span>
+            </div>
+            <h5 class="mb-0 fw-bold">{{ formatNumber(stats.activeUsersLast30Days) }}</h5>
+            <p class="text-muted fs-12 mb-0">Active (30d)</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center py-3">
+            <div class="avatar-sm mx-auto mb-2">
+              <span class="avatar-title bg-soft-success text-success rounded-circle fs-4">
+                <i class="ri-checkbox-circle-line"></i>
+              </span>
+            </div>
+            <h5 class="mb-0 fw-bold">{{ formatNumber(stats.closedCases) }}</h5>
+            <p class="text-muted fs-12 mb-0">Cases Closed</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center py-3">
+            <div class="avatar-sm mx-auto mb-2">
+              <span class="avatar-title bg-soft-info text-info rounded-circle fs-4">
+                <i class="ri-contacts-book-line"></i>
+              </span>
+            </div>
+            <h5 class="mb-0 fw-bold">{{ formatNumber(stats.totalClients) }}</h5>
+            <p class="text-muted fs-12 mb-0">Total Clients</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center py-3">
+            <div class="avatar-sm mx-auto mb-2">
+              <span class="avatar-title bg-soft-warning text-warning rounded-circle fs-4">
+                <i class="ri-file-list-3-line"></i>
+              </span>
+            </div>
+            <h5 class="mb-0 fw-bold">{{ formatNumber(stats.totalInvoices) }}</h5>
+            <p class="text-muted fs-12 mb-0">Invoices</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center py-3">
+            <div class="avatar-sm mx-auto mb-2">
+              <span class="avatar-title bg-soft-danger text-danger rounded-circle fs-4">
+                <i class="ri-building-line"></i>
+              </span>
+            </div>
+            <h5 class="mb-0 fw-bold">{{ stats.activeOrganizations }}</h5>
+            <p class="text-muted fs-12 mb-0">Active Orgs</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-2 col-md-4 col-6">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center py-3">
+            <div class="avatar-sm mx-auto mb-2">
+              <span class="avatar-title bg-soft-secondary text-secondary rounded-circle fs-4">
+                <i class="ri-shield-star-line"></i>
+              </span>
+            </div>
+            <h5 class="mb-0 fw-bold text-success">
+              <i class="ri-checkbox-circle-fill"></i>
+            </h5>
+            <p class="text-muted fs-12 mb-0">All Systems Go</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Row -->
+    <div class="row g-4">
+      <!-- Recent Organizations -->
+      <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-transparent border-bottom d-flex align-items-center justify-content-between">
+            <div>
+              <h6 class="mb-0 fw-semibold">
+                <i class="ri-building-2-line me-2 text-primary"></i>Recent Organizations
+              </h6>
+            </div>
+            <button class="btn btn-soft-primary btn-sm" (click)="navigateToOrganizations()">
+              View All <i class="ri-arrow-right-line ms-1"></i>
+            </button>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <tbody>
+                  <tr *ngFor="let org of recentOrganizations" class="cursor-pointer" (click)="viewOrganization(org.id)">
+                    <td style="width: 50px;">
+                      <div class="avatar-sm">
+                        <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-14">
+                          {{ org.name.charAt(0).toUpperCase() }}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <h6 class="mb-0 fw-medium">{{ org.name }}</h6>
+                      <small class="text-muted">{{ org.slug }}</small>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge rounded-pill" [ngClass]="getStatusClass(org.status)">
+                        {{ org.status }}
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge" [ngClass]="getPlanBadgeClass(org.planType)">
+                        {{ org.planType || 'FREE' }}
+                      </span>
+                    </td>
+                    <td class="text-end">
+                      <span class="text-muted fs-12">
+                        <i class="ri-group-line me-1"></i>{{ org.userCount }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr *ngIf="recentOrganizations.length === 0">
+                    <td colspan="5" class="text-center py-4 text-muted">
+                      <i class="ri-building-line fs-2 d-block mb-2"></i>
+                      No organizations yet
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Organizations by Users -->
+      <div class="col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-transparent border-bottom d-flex align-items-center justify-content-between">
+            <div>
+              <h6 class="mb-0 fw-semibold">
+                <i class="ri-trophy-line me-2 text-warning"></i>Top Organizations
+              </h6>
+            </div>
+            <span class="badge bg-warning-subtle text-warning">By Users</span>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <tbody>
+                  <tr *ngFor="let org of topOrganizations; let i = index" class="cursor-pointer" (click)="viewOrganization(org.id)">
+                    <td style="width: 40px;">
+                      <span class="badge rounded-pill"
+                            [ngClass]="{'bg-warning': i === 0, 'bg-secondary-subtle text-secondary': i > 0}">
+                        #{{ i + 1 }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="avatar-xs">
+                          <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-10">
+                            {{ org.name.charAt(0).toUpperCase() }}
+                          </span>
+                        </div>
+                        <div>
+                          <h6 class="mb-0 fw-medium fs-13">{{ org.name }}</h6>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <span class="fw-semibold text-primary">{{ org.userCount }}</span>
+                      <small class="text-muted d-block">users</small>
+                    </td>
+                    <td class="text-center">
+                      <span class="fw-medium">{{ org.caseCount }}</span>
+                      <small class="text-muted d-block">cases</small>
+                    </td>
+                    <td class="text-center">
+                      <span class="fw-medium">{{ org.clientCount }}</span>
+                      <small class="text-muted d-block">clients</small>
+                    </td>
+                  </tr>
+                  <tr *ngIf="topOrganizations.length === 0">
+                    <td colspan="5" class="text-center py-4 text-muted">
+                      <i class="ri-trophy-line fs-2 d-block mb-2"></i>
+                      No data available
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerts and Activity Row -->
+    <div class="row g-4 mt-2 mb-5">
+      <!-- Alerts Section -->
+      <div class="col-xl-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-transparent border-bottom">
+            <div class="d-flex align-items-center justify-content-between">
+              <h6 class="mb-0 fw-semibold">
+                <i class="ri-alarm-warning-line me-2 text-warning"></i>Alerts
+              </h6>
+              <span class="badge bg-warning-subtle text-warning" *ngIf="stats.alerts?.length">
+                {{ stats.alerts.length }}
+              </span>
+            </div>
+          </div>
+          <div class="card-body p-0" style="max-height: 350px; overflow-y: auto;">
+            <div *ngIf="stats.alerts && stats.alerts.length > 0">
+              <div *ngFor="let alert of stats.alerts"
+                   class="d-flex align-items-start gap-3 p-3 border-bottom alert-item">
+                <div class="flex-shrink-0">
+                  <div class="avatar-xs">
+                    <span class="avatar-title rounded-circle fs-5"
+                          [ngClass]="'bg-' + getAlertClass(alert.type) + '-subtle text-' + getAlertClass(alert.type)">
+                      <i [class]="getAlertIcon(alert.type)"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <p class="mb-1 fw-medium fs-13">{{ alert.message }}</p>
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted" *ngIf="alert.organizationName">
+                      <i class="ri-building-line me-1"></i>{{ alert.organizationName }}
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!stats.alerts || stats.alerts.length === 0" class="text-center py-5 text-muted">
+              <i class="ri-checkbox-circle-line fs-1 text-success d-block mb-2"></i>
+              <p class="mb-0">No alerts - all systems healthy!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="col-xl-8">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-transparent border-bottom">
+            <div class="d-flex align-items-center justify-content-between">
+              <h6 class="mb-0 fw-semibold">
+                <i class="ri-history-line me-2 text-primary"></i>Recent Platform Activity
+              </h6>
+              <span class="badge bg-primary-subtle text-primary" *ngIf="stats.recentActivity?.length">
+                Last 24h
+              </span>
+            </div>
+          </div>
+          <div class="card-body p-0" style="max-height: 350px; overflow-y: auto;">
+            <div *ngIf="stats.recentActivity && stats.recentActivity.length > 0">
+              <div *ngFor="let activity of stats.recentActivity"
+                   class="d-flex align-items-center gap-3 p-3 border-bottom activity-item">
+                <div class="flex-shrink-0">
+                  <div class="avatar-xs">
+                    <span class="avatar-title bg-light rounded-circle">
+                      <i [class]="getActivityIcon(activity.action)"></i>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                      <span class="fw-medium">{{ activity.userName || 'System' }}</span>
+                      <span class="text-muted mx-1">{{ activity.action?.toLowerCase() }}</span>
+                      <span class="text-primary fw-medium">{{ activity.entityType }}</span>
+                    </div>
+                    <small class="text-muted">{{ formatTimeAgo(activity.timestamp) }}</small>
+                  </div>
+                  <small class="text-muted" *ngIf="activity.entityName">{{ activity.entityName }}</small>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!stats.recentActivity || stats.recentActivity.length === 0" class="text-center py-5 text-muted">
+              <i class="ri-history-line fs-1 d-block mb-2"></i>
+              <p class="mb-0">No recent activity</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions FAB -->
+    <div class="quick-actions-fab">
+      <div class="dropdown dropup">
+        <button class="btn btn-primary btn-lg rounded-circle shadow-lg" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="ri-add-line fs-4"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end mb-2">
+          <li><h6 class="dropdown-header">Quick Actions</h6></li>
+          <li>
+            <a class="dropdown-item" (click)="navigateToOrganizations()">
+              <i class="ri-building-line me-2 text-primary"></i>View Organizations
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" (click)="navigateToUsers()">
+              <i class="ri-group-line me-2 text-info"></i>View All Users
+            </a>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <a class="dropdown-item" (click)="loadDashboardData()">
+              <i class="ri-refresh-line me-2 text-success"></i>Refresh Data
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>

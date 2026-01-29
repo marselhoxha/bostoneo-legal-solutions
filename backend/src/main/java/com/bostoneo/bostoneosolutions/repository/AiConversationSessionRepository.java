@@ -112,7 +112,14 @@ public interface AiConversationSessionRepository extends JpaRepository<AiConvers
     /**
      * Find session by ID and organization (for security - tenant isolation)
      */
-    Optional<AiConversationSession> findByIdAndOrganizationId(Long id, Long organizationId);
+    @Query(value = "SELECT * FROM ai_conversation_sessions WHERE id = :id AND organization_id = :organizationId", nativeQuery = true)
+    Optional<AiConversationSession> findByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
+
+    /**
+     * Check if session exists by ID (native query for debugging)
+     */
+    @Query(value = "SELECT COUNT(*) FROM ai_conversation_sessions WHERE id = :id", nativeQuery = true)
+    long countById(@Param("id") Long id);
 
     /**
      * Find ONLY general conversations (no caseId) by task type for a user and org with pagination

@@ -18,6 +18,7 @@ public class LegalCaseDTOMapper {
         
         return LegalCaseDTO.builder()
             .id(entity.getId())
+            .organizationId(entity.getOrganizationId())
             .caseNumber(entity.getCaseNumber())
             .title(entity.getTitle())
             .clientName(entity.getClientName())
@@ -47,9 +48,10 @@ public class LegalCaseDTOMapper {
         if (dto == null) {
             return null;
         }
-        
+
         LegalCase entity = new LegalCase();
         entity.setId(dto.getId());
+        entity.setOrganizationId(dto.getOrganizationId());
         entity.setCaseNumber(dto.getCaseNumber());
         entity.setTitle(dto.getTitle());
         entity.setClientName(dto.getClientName());
@@ -92,9 +94,10 @@ public class LegalCaseDTOMapper {
         if (dto == null) {
             return null;
         }
-        
+
         LegalCase entity = new LegalCase();
         entity.setId(dto.getId());
+        entity.setOrganizationId(dto.getOrganizationId());
         entity.setCaseNumber(dto.getCaseNumber());
         entity.setTitle(dto.getTitle());
         entity.setClientName(dto.getClientName());

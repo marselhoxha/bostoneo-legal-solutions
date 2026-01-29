@@ -56,9 +56,11 @@ public class TimerServiceImpl implements TimerService {
 
         // Determine the effective rate to use
         BigDecimal effectiveRate = determineEffectiveRate(request);
-        
+        Long orgId = getRequiredOrganizationId();
+
         // Create new active timer with rate configuration
         ActiveTimer timer = ActiveTimer.builder()
+                .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
                 .userId(userId)
                 .legalCaseId(request.getLegalCaseId())
                 .description(request.getDescription())
@@ -242,6 +244,7 @@ public class TimerServiceImpl implements TimerService {
         
         // Create timer session record with rate information
         TimerSession session = TimerSession.builder()
+            .organizationId(timer.getOrganizationId())  // SECURITY: Set organization ID for tenant isolation
             .userId(timer.getUserId())
             .legalCaseId(timer.getLegalCaseId())
             .description(timer.getDescription())

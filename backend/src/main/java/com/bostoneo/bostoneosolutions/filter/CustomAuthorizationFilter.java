@@ -65,7 +65,7 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
                 }
 
                 TenantContext.setCurrentTenant(organizationId);
-                log.debug("Set tenant context to org: {} for user: {}", organizationId, userId);
+                log.info("REQUEST: {} {} - User: {}, Org: {}", request.getMethod(), request.getRequestURI(), userId, organizationId);
 
                 List<GrantedAuthority> authorities = tokenProvider.getAuthorities(token);
                 Authentication authentication = tokenProvider.getAuthentication(userId, authorities, request);

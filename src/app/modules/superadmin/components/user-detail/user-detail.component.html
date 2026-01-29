@@ -1,0 +1,199 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">User Details</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/superadmin/dashboard">SUPERADMIN</a></li>
+            <li class="breadcrumb-item"><a routerLink="/superadmin/users">Users</a></li>
+            <li class="breadcrumb-item active">Details</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2 text-muted">Loading user details...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error && !isLoading" class="alert alert-danger">
+    {{ error }}
+    <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadUser()">Retry</button>
+  </div>
+
+  <!-- User Details -->
+  <div *ngIf="user && !isLoading">
+    <div class="row">
+      <!-- User Profile Card -->
+      <div class="col-lg-4">
+        <div class="card">
+          <div class="card-body text-center">
+            <div class="mb-3">
+              <img *ngIf="user.imageUrl" [src]="user.imageUrl" class="avatar-xl rounded-circle" alt="">
+              <div *ngIf="!user.imageUrl" class="avatar-xl mx-auto">
+                <span class="avatar-title rounded-circle bg-primary-subtle text-primary fs-1">
+                  {{ user.firstName?.charAt(0) }}{{ user.lastName?.charAt(0) }}
+                </span>
+              </div>
+            </div>
+            <h5 class="mb-1">{{ user.firstName }} {{ user.lastName }}</h5>
+            <p class="text-muted mb-2">{{ user.email }}</p>
+            <span class="badge" [ngClass]="getRoleBadgeClass(user.roleName)">
+              {{ user.roleName?.replace('ROLE_', '') }}
+            </span>
+
+            <div class="mt-4">
+              <span *ngIf="user.enabled" class="badge bg-success-subtle text-success me-1">Active</span>
+              <span *ngIf="!user.enabled" class="badge bg-danger-subtle text-danger me-1">Disabled</span>
+              <span *ngIf="!user.accountNonLocked" class="badge bg-warning-subtle text-warning me-1">Locked</span>
+              <span *ngIf="user.usingMfa" class="badge bg-info-subtle text-info">MFA Enabled</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-primary flex-grow-1" (click)="resetPassword()">
+                <i class="ri-lock-password-line me-1"></i>Reset Password
+              </button>
+              <button class="btn btn-sm flex-grow-1"
+                      [ngClass]="user.enabled ? 'btn-outline-danger' : 'btn-outline-success'"
+                      (click)="toggleUserStatus()">
+                <i [class]="user.enabled ? 'ri-user-unfollow-line me-1' : 'ri-user-follow-line me-1'"></i>
+                {{ user.enabled ? 'Disable' : 'Enable' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Info -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Quick Info</h5>
+          </div>
+          <div class="card-body">
+            <ul class="list-unstyled mb-0">
+              <li class="py-2 border-bottom">
+                <i class="ri-building-line me-2 text-muted"></i>
+                <strong>Organization:</strong>
+                <span class="float-end">{{ user.organizationName || '-' }}</span>
+              </li>
+              <li class="py-2 border-bottom">
+                <i class="ri-phone-line me-2 text-muted"></i>
+                <strong>Phone:</strong>
+                <span class="float-end">{{ user.phone || '-' }}</span>
+              </li>
+              <li class="py-2 border-bottom">
+                <i class="ri-calendar-line me-2 text-muted"></i>
+                <strong>Created:</strong>
+                <span class="float-end">{{ formatDate(user.createdAt) }}</span>
+              </li>
+              <li class="py-2">
+                <i class="ri-login-circle-line me-2 text-muted"></i>
+                <strong>Last Login:</strong>
+                <span class="float-end">{{ user.lastLogin ? formatDate(user.lastLogin) : 'Never' }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity & Stats -->
+      <div class="col-lg-8">
+        <!-- Stats Cards -->
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <div class="card card-animate">
+              <div class="card-body">
+                <div class="d-flex align-items-center">
+                  <div class="avatar-sm flex-shrink-0">
+                    <span class="avatar-title bg-info-subtle text-info rounded-2 fs-2">
+                      <i class="ri-briefcase-line"></i>
+                    </span>
+                  </div>
+                  <div class="flex-grow-1 ms-3">
+                    <p class="text-uppercase fw-medium text-muted mb-1">Cases Assigned</p>
+                    <h4 class="fs-4 mb-0">{{ user.casesAssigned }}</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card card-animate">
+              <div class="card-body">
+                <div class="d-flex align-items-center">
+                  <div class="avatar-sm flex-shrink-0">
+                    <span class="avatar-title bg-success-subtle text-success rounded-2 fs-2">
+                      <i class="ri-checkbox-circle-line"></i>
+                    </span>
+                  </div>
+                  <div class="flex-grow-1 ms-3">
+                    <p class="text-uppercase fw-medium text-muted mb-1">Tasks Completed</p>
+                    <h4 class="fs-4 mb-0">{{ user.tasksCompleted || 0 }}</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card card-animate">
+              <div class="card-body">
+                <div class="d-flex align-items-center">
+                  <div class="avatar-sm flex-shrink-0">
+                    <span class="avatar-title bg-warning-subtle text-warning rounded-2 fs-2">
+                      <i class="ri-file-upload-line"></i>
+                    </span>
+                  </div>
+                  <div class="flex-grow-1 ms-3">
+                    <p class="text-uppercase fw-medium text-muted mb-1">Docs Uploaded</p>
+                    <h4 class="fs-4 mb-0">{{ user.documentsUploaded || 0 }}</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><i class="ri-history-line me-2"></i>Recent Activity</h5>
+          </div>
+          <div class="card-body">
+            <div *ngIf="user.recentActivity?.length" class="activity-timeline">
+              <div *ngFor="let activity of user.recentActivity" class="activity-item py-2 border-bottom">
+                <div class="d-flex">
+                  <div class="flex-shrink-0 me-3">
+                    <span class="badge bg-primary-subtle text-primary">{{ activity.action }}</span>
+                  </div>
+                  <div class="flex-grow-1">
+                    <p class="mb-0">{{ activity.description }}</p>
+                    <small class="text-muted">{{ formatDate(activity.timestamp) }}</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!user.recentActivity?.length" class="text-center text-muted py-4">
+              <i class="ri-history-line fs-1 d-block mb-2"></i>
+              No recent activity
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="row mt-3">
+      <div class="col-12">
+        <button class="btn btn-secondary" (click)="goBack()">
+          <i class="ri-arrow-left-line me-1"></i>Back to Users
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

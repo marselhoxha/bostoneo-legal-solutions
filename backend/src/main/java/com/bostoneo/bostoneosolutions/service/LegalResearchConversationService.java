@@ -111,6 +111,7 @@ public class LegalResearchConversationService {
 
         AiConversationMessage message = AiConversationMessage.builder()
                 .session(session)
+                .organizationId(session.getOrganizationId())
                 .role(role)
                 .content(content)
                 .metadata(metadataMap)
@@ -346,6 +347,7 @@ public class LegalResearchConversationService {
         // Save user message
         AiConversationMessage userMessage = AiConversationMessage.builder()
                 .session(session)
+                .organizationId(session.getOrganizationId())
                 .role("user")
                 .content(query)
                 .ragContextUsed(false)
@@ -458,6 +460,7 @@ public class LegalResearchConversationService {
                     // Save AI response message
                     AiConversationMessage assistantMessage = AiConversationMessage.builder()
                             .session(session)
+                            .organizationId(session.getOrganizationId())
                             .role("assistant")
                             .content(aiResponse)
                             .ragContextUsed(false)
@@ -528,6 +531,7 @@ public class LegalResearchConversationService {
             // Save AI response to conversation
             AiConversationMessage assistantMessage = AiConversationMessage.builder()
                     .session(session)
+                    .organizationId(session.getOrganizationId())
                     .role("assistant")
                     .content(aiResponse)
                     .ragContextUsed(true) // THOROUGH mode uses tools/research

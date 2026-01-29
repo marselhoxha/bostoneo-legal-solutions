@@ -26,6 +26,7 @@ public class IntakeFormDTOMapper {
 
         IntakeFormDTO dto = IntakeFormDTO.builder()
             .id(form.getId())
+            .organizationId(form.getOrganizationId())
             .name(form.getName())
             .description(form.getDescription())
             .formType(form.getFormType())
@@ -70,6 +71,7 @@ public class IntakeFormDTOMapper {
 
         IntakeForm.IntakeFormBuilder<?, ?> builder = IntakeForm.builder()
             .id(dto.getId())
+            .organizationId(dto.getOrganizationId())
             .name(dto.getName())
             .description(dto.getDescription())
             .formType(dto.getFormType())

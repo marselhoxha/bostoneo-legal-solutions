@@ -193,7 +193,7 @@ public class CaseAssignmentController {
     // ==================== Query Operations ====================
     
     @GetMapping("/case/{caseId}")
-    @PreAuthorize("hasRole('ROLE_USER') or @securityService.canAccessCase(#caseId)")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ATTORNEY', 'ROLE_ADMIN', 'ROLE_FINANCE') or @securityService.canAccessCase(#caseId)")
     public ResponseEntity<HttpResponse> getCaseAssignments(@PathVariable Long caseId) {
         log.info("Getting assignments for case {}", caseId);
         
@@ -259,7 +259,7 @@ public class CaseAssignmentController {
     }
     
     @GetMapping("/case/{caseId}/primary")
-    @PreAuthorize("hasRole('ROLE_USER') or @securityService.canAccessCase(#caseId)")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ATTORNEY', 'ROLE_ADMIN', 'ROLE_FINANCE') or @securityService.canAccessCase(#caseId)")
     public ResponseEntity<HttpResponse> getPrimaryAssignment(@PathVariable Long caseId) {
         log.info("Getting primary assignment for case {}", caseId);
         
@@ -288,7 +288,7 @@ public class CaseAssignmentController {
     }
     
     @GetMapping("/case/{caseId}/team")
-    @PreAuthorize("hasRole('ROLE_USER') or @securityService.canAccessCase(#caseId)")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ATTORNEY', 'ROLE_ADMIN', 'ROLE_FINANCE') or @securityService.canAccessCase(#caseId)")
     public ResponseEntity<HttpResponse> getTeamMembers(@PathVariable Long caseId) {
         log.info("Getting team members for case {}", caseId);
         

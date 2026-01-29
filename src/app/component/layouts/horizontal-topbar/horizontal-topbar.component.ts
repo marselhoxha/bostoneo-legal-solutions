@@ -1,6 +1,7 @@
-import { Component, OnInit, EventEmitter, Output, ViewChild, ElementRef, Input, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, EventEmitter, Output, ViewChild, ElementRef, Input, HostListener } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { filter, takeUntil } from 'rxjs/operators';
 
 import { MENU, getMenuForRole, getDefaultRedirectForRole, ROLE_MENU_CONFIGS } from './menu';
 import { MenuItem, UserRole, ROLE_HIERARCHY } from './menu.model';
@@ -12,7 +13,7 @@ import { RbacService } from 'src/app/core/services/rbac.service';
   templateUrl: './horizontal-topbar.component.html',
   styleUrls: ['./horizontal-topbar.component.scss']
 })
-export class HorizontalTopbarComponent implements OnInit {
+export class HorizontalTopbarComponent implements OnInit, OnDestroy {
   @Input() user: User | null = null;
   menu: MenuItem[] = [];
   menuItems: MenuItem[] = [];
@@ -22,43 +23,49 @@ export class HorizontalTopbarComponent implements OnInit {
   showAdminNavigation = false;
   currentUserRole: string = '';
 
+  private destroy$ = new Subject<void>();
+  private menuLoaded = false;
+
   constructor(
     private router: Router,
     private rbacService: RbacService
   ) {
     // Subscribe to route changes to update active menu
     this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd)
+      filter(event => event instanceof NavigationEnd),
+      takeUntil(this.destroy$)
     ).subscribe(() => {
       this.initActiveMenu();
     });
   }
 
   ngOnInit(): void {
-    // Debug: Log current user data
-    const currentUserStr = localStorage.getItem('currentUser');
-    if (currentUserStr) {
-      const currentUser = JSON.parse(currentUserStr);
-      console.log('🔍 HorizontalTopbar - currentUser from localStorage:', currentUser);
-      console.log('🔍 HorizontalTopbar - roles:', currentUser.roles);
-      console.log('🔍 HorizontalTopbar - roleName:', currentUser.roleName);
-    } else {
-      console.log('🔍 HorizontalTopbar - No currentUser in localStorage');
-    }
-
-    // Determine user's primary role and load appropriate menu
+    // Load menu immediately with localStorage data
     this.loadMenuForUserRole();
     this.initActiveMenu();
 
+    // Subscribe to permission changes to reload menu when permissions are available
+    this.rbacService.getCurrentUserPermissions()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(permissions => {
+        if (permissions) {
+          this.loadMenuForUserRole();
+        }
+      });
+
     // Check comprehensive admin access
     const isAdmin = this.rbacService.isAdmin();
-    console.log('🔍 HorizontalTopbar - isAdmin result:', isAdmin);
     if (isAdmin) {
       this.showAdminNavigation = true;
     }
 
     // Initialize responsive menu
     this.updateMenuResponsiveness();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   /**
@@ -68,15 +75,55 @@ export class HorizontalTopbarComponent implements OnInit {
     const userRole = this.getUserPrimaryRole();
     this.currentUserRole = userRole;
 
-    // If user is admin, always load ADMIN_MENU regardless of primary role
-    if (this.rbacService.isAdmin()) {
-      console.log('🔍 loadMenuForUserRole - User is admin, loading ADMIN_MENU');
+    // Check for SUPERADMIN role from multiple sources for reliability
+    const isSuperAdmin = this.checkIsSuperAdmin();
+
+    if (isSuperAdmin) {
+      this.menuItems = getMenuForRole('ROLE_SUPERADMIN');
+      this.currentUserRole = 'ROLE_SUPERADMIN';
+    } else if (this.rbacService.isAdmin()) {
       this.menuItems = getMenuForRole('ROLE_ADMIN');
     } else {
-      // Get menu based on user's role
       this.menuItems = getMenuForRole(userRole);
     }
     this.menu = this.menuItems;
+  }
+
+  /**
+   * Check if user is SUPERADMIN from multiple sources
+   */
+  private checkIsSuperAdmin(): boolean {
+    // 1. Check via RBAC service
+    if (this.rbacService.hasRole('ROLE_SUPERADMIN')) {
+      return true;
+    }
+
+    // 2. Check from user input
+    if (this.user) {
+      const userObj = this.user as any;
+      if (userObj.roleName === 'ROLE_SUPERADMIN' ||
+          userObj.primaryRoleName === 'ROLE_SUPERADMIN' ||
+          (userObj.roles && userObj.roles.includes('ROLE_SUPERADMIN'))) {
+        return true;
+      }
+    }
+
+    // 3. Check from localStorage
+    try {
+      const currentUserStr = localStorage.getItem('currentUser');
+      if (currentUserStr) {
+        const currentUser = JSON.parse(currentUserStr);
+        if (currentUser.roleName === 'ROLE_SUPERADMIN' ||
+            currentUser.primaryRoleName === 'ROLE_SUPERADMIN' ||
+            (currentUser.roles && currentUser.roles.includes('ROLE_SUPERADMIN'))) {
+          return true;
+        }
+      }
+    } catch (error) {
+      // Silently handle localStorage errors
+    }
+
+    return false;
   }
 
   /**
@@ -122,10 +169,11 @@ export class HorizontalTopbarComponent implements OnInit {
         }
       }
     } catch (error) {
-      console.error('Error parsing user from localStorage:', error);
+      // Silently handle localStorage errors
     }
 
     // 3. Try from RBAC service role checks
+    if (this.rbacService.hasRole('ROLE_SUPERADMIN')) return 'ROLE_SUPERADMIN';
     if (this.rbacService.hasRole('ROLE_ADMIN')) return 'ROLE_ADMIN';
     if (this.rbacService.hasRole('ROLE_ATTORNEY')) return 'ROLE_ATTORNEY';
     if (this.rbacService.hasRole('ROLE_FINANCE')) return 'ROLE_FINANCE';
@@ -134,7 +182,6 @@ export class HorizontalTopbarComponent implements OnInit {
     if (this.rbacService.hasRole('ROLE_USER')) return 'ROLE_USER';
 
     // Default to USER role
-    console.warn('Could not determine user role, defaulting to ROLE_USER');
     return 'ROLE_USER';
   }
 

@@ -343,8 +343,14 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
                                                      GenerationType type, Map<String, Object> inputData,
                                                      String result, boolean success) {
         try {
+            // SECURITY: Require organization context for generation logs
             Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
-            AIDocumentGenerationLog log = AIDocumentGenerationLog.builder()
+            if (orgId == null) {
+                log.warn("Cannot save generation log without organization context for user: {}", userId);
+                return null;
+            }
+
+            AIDocumentGenerationLog logEntry = AIDocumentGenerationLog.builder()
                     .organizationId(orgId) // SECURITY: Set organization ID
                     .templateId(templateId)
                     .userId(userId)
@@ -355,13 +361,13 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
                     .success(success)
                     .createdAt(LocalDateTime.now())
                     .build();
-            
+
             if (!success && result != null) {
-                log.setErrorMessage(result);
+                logEntry.setErrorMessage(result);
             }
-            
-            return generationLogRepository.save(log);
-            
+
+            return generationLogRepository.save(logEntry);
+
         } catch (Exception e) {
             log.error("Error saving generation log: {}", e.getMessage());
             return null;

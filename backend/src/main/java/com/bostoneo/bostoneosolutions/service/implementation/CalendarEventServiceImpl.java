@@ -71,9 +71,14 @@ public class CalendarEventServiceImpl implements CalendarEventService {
             throw new IllegalArgumentException("User ID must be provided when creating calendar events");
         }
         
+        Long orgId = getRequiredOrganizationId();
+
         CalendarEvent event = new CalendarEvent();
         CalendarEventDTOMapper.updateCalendarEventFromDTO(eventDTO, event);
-        
+
+        // SECURITY: Set organization ID for tenant isolation
+        event.setOrganizationId(orgId);
+
         // Set default values
         if (event.getStatus() == null) {
             event.setStatus("SCHEDULED");
@@ -81,21 +86,20 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         if (event.getCreatedAt() == null) {
             event.setCreatedAt(LocalDateTime.now());
         }
-        
+
         // Always set color based on event type to ensure consistent colors
         if (event.getEventType() != null) {
             event.setColor(getColorForEventType(event.getEventType()));
         }
-        
+
         // Double-check user ID is still set after mapping (should never be null)
         if (event.getUserId() == null) {
             log.error("User ID lost during DTO mapping for event: {}", event.getTitle());
             event.setUserId(eventDTO.getUserId()); // Restore from DTO
         }
-        
+
         // Link to legal case if caseId is provided
         if (eventDTO.getCaseId() != null) {
-            Long orgId = getRequiredOrganizationId();
             // SECURITY: Use tenant-filtered query
             LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(eventDTO.getCaseId(), orgId)
                     .orElseThrow(() -> new EntityNotFoundException("Case not found or access denied: " + eventDTO.getCaseId()));
@@ -394,10 +398,11 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                 // Process reminder for this event
                 processEventReminder(event);
             }
-        }
 
-        // Also process additional reminders for deadlines
-        processAdditionalReminders();
+            // Also process additional reminders for deadlines within this organization
+            // SECURITY: Process per-organization to maintain tenant isolation
+            processAdditionalReminders(org.getId());
+        }
     }
     
     /**
@@ -517,14 +522,15 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     
     /**
      * Process additional reminders for deadline events
+     * @param organizationId The organization to process reminders for
      */
-    private void processAdditionalReminders() {
-        //log.info("Processing additional reminders for deadline events");
-        
+    private void processAdditionalReminders(Long organizationId) {
+        //log.info("Processing additional reminders for deadline events in org {}", organizationId);
+
         LocalDateTime now = LocalDateTime.now();
-        
-        // Get all deadline events with additional reminders
-        List<CalendarEvent> deadlinesWithAdditionalReminders = calendarEventRepository.findByEventType("DEADLINE")
+
+        // SECURITY: Get deadline events only for this organization
+        List<CalendarEvent> deadlinesWithAdditionalReminders = calendarEventRepository.findByOrganizationIdAndEventType(organizationId, "DEADLINE")
             .stream()
             .filter(e -> e.getAdditionalReminders() != null && !e.getAdditionalReminders().isEmpty())
             .toList();

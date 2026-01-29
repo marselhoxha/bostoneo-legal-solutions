@@ -89,9 +89,11 @@ public interface LegalCaseRepository extends PagingAndSortingRepository<LegalCas
     long countByOrganizationIdAndStatus(Long organizationId, CaseStatus status);
 
     // Secure findById with org verification
-    Optional<LegalCase> findByIdAndOrganizationId(Long id, Long organizationId);
+    @Query("SELECT c FROM LegalCase c WHERE c.id = :id AND c.organizationId = :organizationId")
+    Optional<LegalCase> findByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
 
-    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+    @Query("SELECT COUNT(c) > 0 FROM LegalCase c WHERE c.id = :id AND c.organizationId = :organizationId")
+    boolean existsByIdAndOrganizationId(@Param("id") Long id, @Param("organizationId") Long organizationId);
 
     // For queries filtering by case IDs within an org
     Page<LegalCase> findByOrganizationIdAndIdIn(Long organizationId, List<Long> ids, Pageable pageable);

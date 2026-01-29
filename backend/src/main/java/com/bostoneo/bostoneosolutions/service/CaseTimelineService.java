@@ -158,12 +158,14 @@ public class CaseTimelineService {
         }
 
         // Delete any existing progress (shouldn't exist but just in case)
-        progressRepository.deleteByCaseId(caseId);
+        // SECURITY: Use tenant-filtered delete
+        progressRepository.deleteByOrganizationIdAndCaseId(orgId, caseId);
 
         // Create progress entries for each phase
         for (CaseTimelineTemplate template : templates) {
             CaseTimelineProgress progress = CaseTimelineProgress.builder()
                     .caseId(caseId)
+                    .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
                     .phaseName(template.getPhaseName())
                     .phaseOrder(template.getPhaseOrder())
                     .status(template.getPhaseOrder() == 1 ?
@@ -326,36 +328,99 @@ public class CaseTimelineService {
     }
 
     /**
-     * Map case type from the case to a timeline template type
+     * Map case type from the case to a timeline template type.
+     * Templates: Personal Injury, Medical Malpractice, Criminal Defense, Family Law,
+     * Immigration, Real Estate, Estate, Employment, Bankruptcy, Tax,
+     * Intellectual Property, Class Action, Contract, Corporate, Civil, Environmental, Business
      */
     private String mapCaseTypeToTemplate(String caseType) {
         if (caseType == null) return "Business";
 
         String normalized = caseType.toUpperCase().replace("_", " ").replace("-", " ");
 
-        if (normalized.contains("PERSONAL INJURY") || normalized.contains("PI") ||
-            normalized.contains("AUTO ACCIDENT") || normalized.contains("SLIP") ||
-            normalized.contains("MEDICAL MALPRACTICE")) {
-            return "Personal Injury";
-        } else if (normalized.contains("CRIMINAL") || normalized.contains("DUI") ||
-                   normalized.contains("FELONY") || normalized.contains("MISDEMEANOR")) {
-            return "Criminal Defense";
-        } else if (normalized.contains("FAMILY") || normalized.contains("DIVORCE") ||
-                   normalized.contains("CUSTODY") || normalized.contains("CHILD SUPPORT") ||
-                   normalized.contains("DOMESTIC")) {
-            return "Family Law";
-        } else if (normalized.contains("IMMIGRATION") || normalized.contains("VISA") ||
-                   normalized.contains("CITIZENSHIP") || normalized.contains("ASYLUM")) {
-            return "Immigration";
-        } else if (normalized.contains("REAL ESTATE") || normalized.contains("PROPERTY") ||
-                   normalized.contains("CLOSING") || normalized.contains("TITLE")) {
-            return "Real Estate";
-        } else if (normalized.contains("ESTATE") || normalized.contains("PROBATE") ||
-                   normalized.contains("TRUST") || normalized.contains("WILL")) {
-            return "Estate";
-        } else {
-            return "Business";
+        // Medical Malpractice (check before Personal Injury)
+        if (normalized.contains("MEDICAL MALPRACTICE") || normalized.contains("SURGICAL NEGLIGENCE")) {
+            return "Medical Malpractice";
         }
+        // Personal Injury
+        if (normalized.contains("PERSONAL INJURY") || normalized.contains("PI") ||
+            normalized.contains("AUTO ACCIDENT") || normalized.contains("SLIP AND FALL")) {
+            return "Personal Injury";
+        }
+        // Criminal Defense
+        if (normalized.contains("CRIMINAL") || normalized.contains("DUI") ||
+            normalized.contains("FELONY") || normalized.contains("MISDEMEANOR")) {
+            return "Criminal Defense";
+        }
+        // Family Law
+        if (normalized.contains("FAMILY") || normalized.contains("DIVORCE") ||
+            normalized.contains("CUSTODY") || normalized.contains("CHILD SUPPORT") ||
+            normalized.contains("DOMESTIC")) {
+            return "Family Law";
+        }
+        // Immigration
+        if (normalized.contains("IMMIGRATION") || normalized.contains("VISA") ||
+            normalized.contains("CITIZENSHIP") || normalized.contains("ASYLUM") ||
+            normalized.contains("REMOVAL DEFENSE")) {
+            return "Immigration";
+        }
+        // Real Estate
+        if (normalized.contains("REAL ESTATE") || normalized.contains("PROPERTY") ||
+            normalized.contains("CLOSING") || normalized.contains("TITLE")) {
+            return "Real Estate";
+        }
+        // Estate/Probate (but not Real Estate)
+        if ((normalized.contains("ESTATE") && !normalized.contains("REAL ESTATE")) ||
+            normalized.contains("PROBATE") || normalized.contains("TRUST") ||
+            normalized.contains("WILL") || normalized.contains("ESTATE PLANNING")) {
+            return "Estate";
+        }
+        // Employment
+        if (normalized.contains("EMPLOYMENT") || normalized.contains("DISCRIMINATION") ||
+            normalized.contains("WRONGFUL TERMINATION") || normalized.contains("TITLE VII") ||
+            normalized.contains("MCAD") || normalized.contains("RETALIATION")) {
+            return "Employment";
+        }
+        // Bankruptcy
+        if (normalized.contains("BANKRUPTCY") || normalized.contains("CHAPTER 7") ||
+            normalized.contains("CHAPTER 11") || normalized.contains("CHAPTER 13")) {
+            return "Bankruptcy";
+        }
+        // Tax
+        if (normalized.contains("TAX") || normalized.contains("IRS")) {
+            return "Tax";
+        }
+        // Intellectual Property
+        if (normalized.contains("INTELLECTUAL PROPERTY") || normalized.equals("IP") ||
+            normalized.contains("TRADEMARK") || normalized.contains("PATENT") ||
+            normalized.contains("COPYRIGHT") || normalized.contains("TRADE SECRET")) {
+            return "Intellectual Property";
+        }
+        // Class Action
+        if (normalized.contains("CLASS ACTION") || normalized.contains("QUI TAM") ||
+            normalized.contains("FALSE CLAIMS")) {
+            return "Class Action";
+        }
+        // Contract
+        if (normalized.contains("CONTRACT") || normalized.contains("BREACH")) {
+            return "Contract";
+        }
+        // Corporate
+        if (normalized.contains("CORPORATE") || normalized.contains("MERGERS") ||
+            normalized.contains("ACQUISITIONS") || normalized.contains("M&A")) {
+            return "Corporate";
+        }
+        // Environmental
+        if (normalized.contains("ENVIRONMENTAL") || normalized.contains("EPA") ||
+            normalized.contains("POLLUTION") || normalized.contains("REMEDIATION")) {
+            return "Environmental";
+        }
+        // Civil (general civil litigation)
+        if (normalized.contains("CIVIL") || normalized.contains("CIVIL RIGHTS")) {
+            return "Civil";
+        }
+        // Default to Business for anything else
+        return "Business";
     }
 
     private CaseTimelineDTO buildEmptyTimeline(LegalCase legalCase) {

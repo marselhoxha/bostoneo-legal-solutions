@@ -22,6 +22,7 @@ export interface MenuItem {
 
 // Role types for menu selection
 export type UserRole =
+  | 'ROLE_SUPERADMIN'
   | 'ROLE_ADMIN'
   | 'ROLE_ATTORNEY'
   | 'ROLE_FINANCE'
@@ -31,6 +32,7 @@ export type UserRole =
 
 // Role hierarchy levels
 export const ROLE_HIERARCHY: { [key in UserRole]: number } = {
+  'ROLE_SUPERADMIN': 200,
   'ROLE_ADMIN': 100,
   'ROLE_ATTORNEY': 70,
   'ROLE_FINANCE': 65,
@@ -41,6 +43,7 @@ export const ROLE_HIERARCHY: { [key in UserRole]: number } = {
 
 // Role display names
 export const ROLE_DISPLAY_NAMES: { [key in UserRole]: string } = {
+  'ROLE_SUPERADMIN': 'Super Admin',
   'ROLE_ADMIN': 'Administrator',
   'ROLE_ATTORNEY': 'Attorney',
   'ROLE_FINANCE': 'Finance',

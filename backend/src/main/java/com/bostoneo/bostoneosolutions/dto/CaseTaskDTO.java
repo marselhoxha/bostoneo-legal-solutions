@@ -20,6 +20,8 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CaseTaskDTO {
     private Long id;
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
     private Long caseId;
     private String caseNumber;
     private String caseTitle;

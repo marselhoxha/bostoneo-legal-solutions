@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.model.ActionItem;
 import com.bostoneo.bostoneosolutions.model.TimelineEvent;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.ActionItemRepository;
 import com.bostoneo.bostoneosolutions.repository.TimelineEventRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -34,6 +35,12 @@ public class AnalysisTextParser {
     private final ActionItemRepository actionItemRepository;
     private final TimelineEventRepository timelineEventRepository;
     private final ObjectMapper objectMapper;
+    private final TenantService tenantService;
+
+    private Long getRequiredOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
 
     // Date patterns for various formats
     private static final List<DateTimeFormatter> DATE_FORMATTERS = Arrays.asList(
@@ -99,9 +106,13 @@ public class AnalysisTextParser {
         log.info("Parsing analysis text for structured data: analysisId={}, length={}",
                  analysisId, analysisText.length());
 
+        // SECURITY: Get organization ID for tenant-filtered operations
+        Long orgId = getRequiredOrganizationId();
+
         // Clear existing items for this analysis (in case of re-processing)
-        actionItemRepository.deleteByAnalysisId(analysisId);
-        timelineEventRepository.deleteByAnalysisId(analysisId);
+        // SECURITY: Use tenant-filtered delete to prevent cross-org deletion
+        actionItemRepository.deleteByOrganizationIdAndAnalysisId(orgId, analysisId);
+        timelineEventRepository.deleteByOrganizationIdAndAnalysisId(orgId, analysisId);
 
         // STEP 1: Try to parse embedded JSON first (most accurate)
         boolean jsonParsed = tryParseEmbeddedJson(analysisId, analysisText);
@@ -174,8 +185,10 @@ public class AnalysisTextParser {
                 List<Map<String, Object>> items = (List<Map<String, Object>>) actionItemsObj;
                 List<ActionItem> actionItems = new ArrayList<>();
 
+                Long orgId = getRequiredOrganizationId();
                 for (Map<String, Object> item : items) {
                     ActionItem actionItem = new ActionItem();
+                    actionItem.setOrganizationId(orgId);
                     actionItem.setAnalysisId(analysisId);
                     actionItem.setDescription((String) item.get("description"));
                     actionItem.setPriority((String) item.getOrDefault("priority", "MEDIUM"));
@@ -209,8 +222,10 @@ public class AnalysisTextParser {
                 List<Map<String, Object>> events = (List<Map<String, Object>>) timelineEventsObj;
                 List<TimelineEvent> timelineEvents = new ArrayList<>();
 
+                Long timelineOrgId = getRequiredOrganizationId();
                 for (Map<String, Object> event : events) {
                     TimelineEvent timelineEvent = new TimelineEvent();
+                    timelineEvent.setOrganizationId(timelineOrgId);
                     timelineEvent.setAnalysisId(analysisId);
                     timelineEvent.setTitle((String) event.get("title"));
                     timelineEvent.setEventType((String) event.getOrDefault("eventType", "DEADLINE"));
@@ -276,6 +291,7 @@ public class AnalysisTextParser {
         List<ActionItem> items = new ArrayList<>();
         Pattern pattern = ACTION_PATTERNS[0];
         Matcher matcher = pattern.matcher(text);
+        Long orgId = getRequiredOrganizationId();
 
         while (matcher.find()) {
             String description = cleanDescription(matcher.group(1));
@@ -283,6 +299,7 @@ public class AnalysisTextParser {
                 seen.add(description.toLowerCase());
 
                 ActionItem item = new ActionItem();
+                item.setOrganizationId(orgId);
                 item.setAnalysisId(analysisId);
                 item.setDescription(description);
                 item.setPriority(detectPriority(description));
@@ -298,6 +315,7 @@ public class AnalysisTextParser {
         List<ActionItem> items = new ArrayList<>();
         Pattern pattern = ACTION_PATTERNS[1];
         Matcher matcher = pattern.matcher(text);
+        Long orgId = getRequiredOrganizationId();
 
         LocalDate today = LocalDate.now();
 
@@ -309,6 +327,7 @@ public class AnalysisTextParser {
                 seen.add(description.toLowerCase());
 
                 ActionItem item = new ActionItem();
+                item.setOrganizationId(orgId);
                 item.setAnalysisId(analysisId);
                 item.setDescription("Day " + dayRange + ": " + description);
                 item.setRelatedSection("Action Timeline");
@@ -333,6 +352,7 @@ public class AnalysisTextParser {
         List<ActionItem> items = new ArrayList<>();
         Pattern pattern = ACTION_PATTERNS[2];
         Matcher matcher = pattern.matcher(text);
+        Long orgId = getRequiredOrganizationId();
 
         while (matcher.find()) {
             String description = cleanDescription(matcher.group(1));
@@ -340,6 +360,7 @@ public class AnalysisTextParser {
                 seen.add(description.toLowerCase());
 
                 ActionItem item = new ActionItem();
+                item.setOrganizationId(orgId);
                 item.setAnalysisId(analysisId);
                 item.setDescription(description);
                 item.setPriority(detectPriority(description));
@@ -357,6 +378,7 @@ public class AnalysisTextParser {
     private List<TimelineEvent> extractTimelineEvents(Long analysisId, String text) {
         List<TimelineEvent> events = new ArrayList<>();
         Set<String> seenDates = new HashSet<>();
+        Long orgId = getRequiredOrganizationId();
 
         // Look for timeline sections
         String timelineSection = extractSection(text,
@@ -380,6 +402,7 @@ public class AnalysisTextParser {
                 seenDates.add(dateStr);
 
                 TimelineEvent event = new TimelineEvent();
+                event.setOrganizationId(orgId);
                 event.setAnalysisId(analysisId);
                 event.setEventDate(date);
 
@@ -406,6 +429,7 @@ public class AnalysisTextParser {
     private List<TimelineEvent> extractRelativeDateEvents(Long analysisId, String text, Set<String> seen) {
         List<TimelineEvent> events = new ArrayList<>();
         LocalDate today = LocalDate.now();
+        Long orgId = getRequiredOrganizationId();
 
         // Pattern for "within X days" type expressions
         Pattern relativeDatePattern = Pattern.compile(
@@ -432,6 +456,7 @@ public class AnalysisTextParser {
                 seen.add(dateKey);
 
                 TimelineEvent event = new TimelineEvent();
+                event.setOrganizationId(orgId);
                 event.setAnalysisId(analysisId);
                 event.setEventDate(deadline);
                 event.setTitle("Deadline: " + match.substring(0, Math.min(50, match.length())));

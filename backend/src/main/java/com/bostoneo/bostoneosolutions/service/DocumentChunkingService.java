@@ -54,7 +54,8 @@ public class DocumentChunkingService {
                 .orElseThrow(() -> new IllegalArgumentException("Analysis not found: " + analysisId));
 
         // Delete existing chunks
-        chunkRepository.deleteByAnalysisId(analysisId);
+        // SECURITY: Use tenant-filtered delete to prevent cross-org deletion
+        chunkRepository.deleteByAnalysisIdAndOrganizationId(analysisId, orgId);
 
         // Get text content
         String content = analysis.getDocumentContent();

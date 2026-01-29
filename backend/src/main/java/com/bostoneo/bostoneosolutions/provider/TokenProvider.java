@@ -72,6 +72,8 @@ public class TokenProvider {
 
         // Get organization ID from user
         Long organizationId = userPrincipal.getUser().getOrganizationId();
+        log.info("Creating access token for user {} (id={}) with organizationId={}",
+            userPrincipal.getUser().getEmail(), userPrincipal.getUser().getId(), organizationId);
 
         return JWT.create().withIssuer(BOSTONEO_SOLUTIONS_LLC).withAudience(CLIENT_MANAGEMENT_SERVICE)
                 .withIssuedAt(new Date())

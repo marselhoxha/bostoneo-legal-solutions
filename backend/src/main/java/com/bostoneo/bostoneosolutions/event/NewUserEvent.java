@@ -8,8 +8,10 @@ import org.springframework.context.ApplicationEvent;
 @Getter
 @Setter
 public class NewUserEvent extends ApplicationEvent {
-   private EventType type;
+    private EventType type;
     private String email;
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
 
     public NewUserEvent(String email, EventType type) {
         super(email);
@@ -17,5 +19,10 @@ public class NewUserEvent extends ApplicationEvent {
         this.email = email;
     }
 
-
+    public NewUserEvent(String email, EventType type, Long organizationId) {
+        super(email);
+        this.type = type;
+        this.email = email;
+        this.organizationId = organizationId;
+    }
 }

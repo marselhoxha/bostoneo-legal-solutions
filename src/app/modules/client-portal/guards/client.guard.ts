@@ -7,7 +7,7 @@ import { User } from '../../../interface/user';
 
 /**
  * Guard to protect client portal routes.
- * Only allows access to users with ROLE_CLIENT.
+ * Only allows access to users with ROLE_USER (client portal users).
  */
 @Injectable({
   providedIn: 'root'
@@ -43,15 +43,15 @@ export class ClientGuard implements CanActivate, CanActivateChild {
           return this.router.createUrlTree(['/login']);
         }
 
-        // Check if user has ROLE_CLIENT
-        const hasClientRole = user.roleName === 'ROLE_CLIENT' ||
-                              user.roles?.some((role: string) => role === 'ROLE_CLIENT');
+        // Check if user has ROLE_USER (client portal users)
+        const hasClientRole = user.roleName === 'ROLE_USER' ||
+                              user.roles?.some((role: string) => role === 'ROLE_USER');
 
         if (hasClientRole) {
           return true;
         }
 
-        console.warn('ClientGuard: User does not have ROLE_CLIENT, redirecting');
+        console.warn('ClientGuard: User does not have ROLE_USER, redirecting');
         // Redirect non-clients to their appropriate dashboard
         if (user.roleName === 'ROLE_ATTORNEY' || user.roles?.some((r: string) => r === 'ROLE_ATTORNEY')) {
           return this.router.createUrlTree(['/dashboard/attorney']);

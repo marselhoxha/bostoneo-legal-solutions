@@ -70,10 +70,18 @@ public class CourtListenerService {
         }
 
         try {
+            // Use the Search API with type=d for docket search
             StringBuilder urlBuilder = new StringBuilder(apiProperties.getCourtlistener().getBaseUrl())
-                    .append("dockets/")
+                    .append("search/")
                     .append("?format=json")
-                    .append("&q=").append(query);
+                    .append("&type=d");  // d = dockets
+
+            // URL encode the query
+            try {
+                urlBuilder.append("&q=").append(URLEncoder.encode(query, StandardCharsets.UTF_8));
+            } catch (Exception e) {
+                urlBuilder.append("&q=").append(query);
+            }
 
             if (StringUtils.hasText(court)) {
                 urlBuilder.append("&court=").append(court);
@@ -83,18 +91,18 @@ public class CourtListenerService {
             HttpHeaders headers = createHeaders();
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            log.info("Calling Court Listener Dockets API: {}", url);
+            log.info("Calling Court Listener Search API (dockets): {}", url);
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 return parseDocketsResponse(response.getBody());
             } else {
-                log.error("Court Listener Dockets API returned error: {}", response.getStatusCode());
+                log.error("Court Listener Search API returned error: {}", response.getStatusCode());
                 return Collections.emptyList();
             }
 
         } catch (Exception e) {
-            log.error("Error calling Court Listener Dockets API: ", e);
+            log.error("Error calling Court Listener Search API: ", e);
             return Collections.emptyList();
         }
     }
@@ -107,7 +115,8 @@ public class CourtListenerService {
 
         if (StringUtils.hasText(apiProperties.getCourtlistener().getApiKey())) {
             try {
-                String url = apiProperties.getCourtlistener().getBaseUrl() + "?format=json&limit=1";
+                // Use the base API endpoint without search parameters to check availability
+                String url = apiProperties.getCourtlistener().getBaseUrl();
                 HttpHeaders headers = createHeaders();
                 HttpEntity<String> entity = new HttpEntity<>(headers);
 
@@ -129,11 +138,25 @@ public class CourtListenerService {
     }
 
     private String buildSearchUrl(String endpoint, String query, String jurisdiction, LocalDate fromDate, LocalDate toDate) {
+        // Use the Search API endpoint instead of direct resource endpoints
+        // The Search API supports q, court, date filters - direct endpoints like /opinions/ do not
         StringBuilder url = new StringBuilder(apiProperties.getCourtlistener().getBaseUrl())
-                .append(endpoint).append("/")
-                .append("?format=json")
-                .append("&q=").append(query)
-                .append("&limit=20");
+                .append("search/")
+                .append("?format=json");
+
+        // Set type based on what we're searching for
+        if ("opinions".equals(endpoint)) {
+            url.append("&type=o");  // o = opinions/case law
+        } else if ("dockets".equals(endpoint)) {
+            url.append("&type=d");  // d = dockets
+        }
+
+        // URL encode the query
+        try {
+            url.append("&q=").append(URLEncoder.encode(query, StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            url.append("&q=").append(query);
+        }
 
         if (StringUtils.hasText(jurisdiction)) {
             url.append("&court=").append(jurisdiction);
@@ -504,76 +527,91 @@ public class CourtListenerService {
                         .build();
             }
 
-            // Search CourtListener by citation number
-            // Use clusters endpoint instead of opinions to get case_name directly
-            String encodedCitation = URLEncoder.encode(citationNumber, StandardCharsets.UTF_8);
-            String url = apiProperties.getCourtlistener().getBaseUrl() + "clusters/?cite=" + encodedCitation + "&format=json";
+            // Search CourtListener by citation number using the Citation Lookup API
+            // This is a POST endpoint that accepts text or volume/reporter/page parameters
+            String url = apiProperties.getCourtlistener().getBaseUrl() + "citation-lookup/";
 
             HttpHeaders headers = createHeaders();
-            HttpEntity<String> entity = new HttpEntity<>(headers);
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-            log.info("🔍 CITATION VERIFICATION DEBUG - Searching for: '{}' via /clusters/", citationNumber);
+            // Send citation as text parameter for lookup
+            String requestBody = "text=" + URLEncoder.encode(citationNumber, StandardCharsets.UTF_8);
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+
+            log.info("🔍 CITATION VERIFICATION DEBUG - Searching for: '{}' via /citation-lookup/", citationNumber);
             log.info("🔍 CourtListener API URL: {}", url);
 
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                JsonNode root = objectMapper.readTree(response.getBody());
-                JsonNode results = root.get("results");
+                // Citation-lookup API returns an array of citation results directly
+                JsonNode citationResults = objectMapper.readTree(response.getBody());
 
-                int resultCount = results != null && results.isArray() ? results.size() : 0;
-                log.info("🔍 CourtListener Response - Results count: {}", resultCount);
+                log.debug("📊 First 500 chars of /citation-lookup/ response: {}", response.getBody().substring(0, Math.min(500, response.getBody().length())));
 
-                if (results != null && results.isArray() && results.size() > 0) {
-                    log.debug("📊 First 500 chars of /clusters/ response: {}", response.getBody().substring(0, Math.min(500, response.getBody().length())));
+                if (citationResults != null && citationResults.isArray() && citationResults.size() > 0) {
+                    JsonNode firstResult = citationResults.get(0);
+                    int status = firstResult.path("status").asInt(404);
 
-                    // If we have a target case name, filter results by case name match
-                    JsonNode matchingCluster = null;
-                    if (targetCaseName != null) {
-                        log.debug("🔍 Filtering {} cluster results by case name: '{}'", resultCount, targetCaseName);
+                    if (status == 200) {
+                        // Citation found - get clusters from the response
+                        JsonNode clusters = firstResult.path("clusters");
 
-                        for (int i = 0; i < results.size(); i++) {
-                            JsonNode cluster = results.get(i);
-                            String foundCaseName = cluster.has("case_name") ? cluster.get("case_name").asText() : "";
-                            String foundUrl = cluster.has("absolute_url") ? cluster.get("absolute_url").asText() : "N/A";
+                        if (clusters != null && clusters.isArray() && clusters.size() > 0) {
+                            int clusterCount = clusters.size();
+                            log.info("🔍 CourtListener Response - Found {} clusters", clusterCount);
 
-                            log.debug("🔍 Cluster {}: Case='{}', URL='{}'", i, foundCaseName, foundUrl);
+                            // If we have a target case name, filter clusters by case name match
+                            JsonNode matchingCluster = null;
+                            if (targetCaseName != null) {
+                                log.debug("🔍 Filtering {} cluster results by case name: '{}'", clusterCount, targetCaseName);
 
-                            if (normalizedCaseNameMatch(foundCaseName, targetCaseName)) {
-                                matchingCluster = cluster;
-                                log.info("🎯 MATCHED case name at position {}: '{}', URL: '{}'", i, foundCaseName, foundUrl);
-                                break;
+                                for (int i = 0; i < clusters.size(); i++) {
+                                    JsonNode cluster = clusters.get(i);
+                                    String foundCaseName = cluster.has("case_name") ? cluster.get("case_name").asText() : "";
+                                    String foundUrl = cluster.has("absolute_url") ? cluster.get("absolute_url").asText() : "N/A";
+
+                                    log.debug("🔍 Cluster {}: Case='{}', URL='{}'", i, foundCaseName, foundUrl);
+
+                                    if (normalizedCaseNameMatch(foundCaseName, targetCaseName)) {
+                                        matchingCluster = cluster;
+                                        log.info("🎯 MATCHED case name at position {}: '{}', URL: '{}'", i, foundCaseName, foundUrl);
+                                        break;
+                                    }
+                                }
+
+                                if (matchingCluster == null) {
+                                    log.warn("⚠️ No case name match found in {} clusters for: '{}'", clusterCount, targetCaseName);
+                                    return CitationVerificationResult.builder()
+                                            .found(false)
+                                            .citation(citation)
+                                            .build();
+                                }
+                            } else {
+                                // No case name to filter by - DON'T return first result blindly
+                                log.warn("⚠️ No case name provided for filtering - cannot verify citation accurately");
+                                log.warn("🔍 NOT FOUND - Need case name to filter {} cluster results for: '{}'", clusterCount, citationNumber);
+                                return CitationVerificationResult.builder()
+                                        .found(false)
+                                        .citation(citation)
+                                        .errorMessage("Need case name to verify citation (got " + clusterCount + " potential matches)")
+                                        .build();
                             }
-                        }
 
-                        if (matchingCluster == null) {
-                            log.warn("⚠️ No case name match found in {} clusters for: '{}'", results.size(), targetCaseName);
-                            return CitationVerificationResult.builder()
-                                    .found(false)
-                                    .citation(citation)
-                                    .build();
+                            return parseClusterVerificationResult(matchingCluster, citation);
                         }
                     } else {
-                        // No case name to filter by - DON'T return first result blindly
-                        // This prevents returning wrong URLs when called with just citation number
-                        log.warn("⚠️ No case name provided for filtering - cannot verify citation accurately");
-                        log.warn("🔍 NOT FOUND - Need case name to filter {} cluster results for: '{}'", results.size(), citationNumber);
-                        return CitationVerificationResult.builder()
-                                .found(false)
-                                .citation(citation)
-                                .errorMessage("Need case name to verify citation (got " + results.size() + " potential matches)")
-                                .build();
+                        String errorMsg = firstResult.path("error_message").asText("Citation not found");
+                        log.warn("🔍 Citation lookup returned status {}: {}", status, errorMsg);
                     }
-
-                    return parseClusterVerificationResult(matchingCluster, citation);
-                } else {
-                    log.warn("🔍 NOT FOUND in CourtListener database for citation: '{}'", citationNumber);
-                    return CitationVerificationResult.builder()
-                            .found(false)
-                            .citation(citation)
-                            .errorMessage("Not found in CourtListener database")
-                            .build();
                 }
+
+                log.warn("🔍 NOT FOUND in CourtListener database for citation: '{}'", citationNumber);
+                return CitationVerificationResult.builder()
+                        .found(false)
+                        .citation(citation)
+                        .errorMessage("Not found in CourtListener database")
+                        .build();
             }
 
             // Not found in CourtListener

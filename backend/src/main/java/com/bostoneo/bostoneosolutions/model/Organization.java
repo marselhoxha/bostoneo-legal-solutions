@@ -60,6 +60,25 @@ public class Organization {
     @Column(name = "plan_expires_at")
     private LocalDateTime planExpiresAt;
 
+    // Organization Status
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    @Builder.Default
+    private OrganizationStatus status = OrganizationStatus.ACTIVE;
+
+    // Plan Quotas
+    @Column(name = "max_users")
+    @Builder.Default
+    private Integer maxUsers = 5;
+
+    @Column(name = "max_cases")
+    @Builder.Default
+    private Integer maxCases = 100;
+
+    @Column(name = "max_storage_bytes")
+    @Builder.Default
+    private Long maxStorageBytes = 5368709120L; // 5GB default
+
     // Twilio Subaccount Settings
     @Column(name = "twilio_subaccount_sid", length = 50)
     private String twilioSubaccountSid;
@@ -200,5 +219,13 @@ public class Organization {
         STARTER,
         PROFESSIONAL,
         ENTERPRISE
+    }
+
+    // Organization status enum
+    public enum OrganizationStatus {
+        ACTIVE,
+        SUSPENDED,
+        PENDING,
+        DELETED
     }
 }

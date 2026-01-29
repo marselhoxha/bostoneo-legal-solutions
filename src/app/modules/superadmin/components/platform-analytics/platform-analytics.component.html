@@ -1,0 +1,215 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Platform Analytics</h4>
+        <div class="page-title-right d-flex align-items-center gap-2">
+          <select class="form-select form-select-sm" [(ngModel)]="selectedPeriod" (change)="onPeriodChange()">
+            <option value="week">Last 7 Days</option>
+            <option value="month">Last 30 Days</option>
+            <option value="year">Last Year</option>
+          </select>
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/superadmin/dashboard">SUPERADMIN</a></li>
+            <li class="breadcrumb-item active">Analytics</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2 text-muted">Loading analytics...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error && !isLoading" class="alert alert-danger">
+    {{ error }}
+    <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadAnalytics()">Retry</button>
+  </div>
+
+  <!-- Analytics Dashboard -->
+  <div *ngIf="analytics && !isLoading">
+    <!-- Active Users Cards -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card card-animate">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm flex-shrink-0">
+                <span class="avatar-title bg-primary-subtle text-primary rounded-2 fs-2">
+                  <i class="ri-user-line"></i>
+                </span>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <p class="text-uppercase fw-medium text-muted mb-1">Daily Active Users</p>
+                <h4 class="fs-4 mb-0">{{ analytics.dailyActiveUsers }}</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card card-animate">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm flex-shrink-0">
+                <span class="avatar-title bg-success-subtle text-success rounded-2 fs-2">
+                  <i class="ri-team-line"></i>
+                </span>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <p class="text-uppercase fw-medium text-muted mb-1">Weekly Active Users</p>
+                <h4 class="fs-4 mb-0">{{ analytics.weeklyActiveUsers }}</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card card-animate">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm flex-shrink-0">
+                <span class="avatar-title bg-info-subtle text-info rounded-2 fs-2">
+                  <i class="ri-group-line"></i>
+                </span>
+              </div>
+              <div class="flex-grow-1 ms-3">
+                <p class="text-uppercase fw-medium text-muted mb-1">Monthly Active Users</p>
+                <h4 class="fs-4 mb-0">{{ analytics.monthlyActiveUsers }}</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Organizations -->
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><i class="ri-building-line me-2"></i>Top Organizations by Users</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-borderless align-middle mb-0">
+                <tbody>
+                  <tr *ngFor="let org of analytics.topOrgsByUsers; let i = index">
+                    <td style="width: 40px;">
+                      <span class="badge rounded-pill"
+                            [ngClass]="{'bg-warning': i === 0, 'bg-secondary': i === 1, 'bg-dark': i === 2, 'bg-light text-dark': i > 2}">
+                        {{ i + 1 }}
+                      </span>
+                    </td>
+                    <td>{{ org.organizationName }}</td>
+                    <td class="text-end">
+                      <span class="badge bg-primary-subtle text-primary">{{ org.value }} users</span>
+                    </td>
+                  </tr>
+                  <tr *ngIf="!analytics.topOrgsByUsers?.length">
+                    <td colspan="3" class="text-center text-muted">No data available</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><i class="ri-briefcase-line me-2"></i>Top Organizations by Cases</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-borderless align-middle mb-0">
+                <tbody>
+                  <tr *ngFor="let org of analytics.topOrgsByCases; let i = index">
+                    <td style="width: 40px;">
+                      <span class="badge rounded-pill"
+                            [ngClass]="{'bg-warning': i === 0, 'bg-secondary': i === 1, 'bg-dark': i === 2, 'bg-light text-dark': i > 2}">
+                        {{ i + 1 }}
+                      </span>
+                    </td>
+                    <td>{{ org.organizationName }}</td>
+                    <td class="text-end">
+                      <span class="badge bg-success-subtle text-success">{{ org.value }} cases</span>
+                    </td>
+                  </tr>
+                  <tr *ngIf="!analytics.topOrgsByCases?.length">
+                    <td colspan="3" class="text-center text-muted">No data available</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribution Charts -->
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><i class="ri-pie-chart-line me-2"></i>Cases by Status</h5>
+          </div>
+          <div class="card-body">
+            <div *ngIf="analytics.casesByStatus">
+              <div *ngFor="let status of getObjectKeys(analytics.casesByStatus)" class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                  <span>{{ status }}</span>
+                  <span class="fw-medium">{{ analytics.casesByStatus[status] }}</span>
+                </div>
+                <div class="progress" style="height: 8px;">
+                  <div class="progress-bar"
+                       [ngClass]="{'bg-success': status === 'ACTIVE', 'bg-secondary': status === 'CLOSED', 'bg-warning': status === 'PENDING'}"
+                       [style.width.%]="(analytics.casesByStatus[status] / (analytics.topOrgsByCases[0]?.value || 1)) * 100">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!analytics.casesByStatus || getObjectKeys(analytics.casesByStatus).length === 0"
+                 class="text-center text-muted py-3">
+              No data available
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><i class="ri-pie-chart-2-line me-2"></i>Organizations by Plan</h5>
+          </div>
+          <div class="card-body">
+            <div *ngIf="analytics.organizationsByPlan">
+              <div *ngFor="let plan of getObjectKeys(analytics.organizationsByPlan)" class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                  <span>{{ plan }}</span>
+                  <span class="fw-medium">{{ analytics.organizationsByPlan[plan] }}</span>
+                </div>
+                <div class="progress" style="height: 8px;">
+                  <div class="progress-bar"
+                       [ngClass]="{'bg-primary': plan === 'ENTERPRISE', 'bg-info': plan === 'PROFESSIONAL', 'bg-secondary': plan === 'STARTER'}"
+                       [style.width.%]="100">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!analytics.organizationsByPlan || getObjectKeys(analytics.organizationsByPlan).length === 0"
+                 class="text-center text-muted py-3">
+              No data available
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

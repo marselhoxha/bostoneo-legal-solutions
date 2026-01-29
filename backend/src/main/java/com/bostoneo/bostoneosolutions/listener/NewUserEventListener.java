@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.listener;
 
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.EventService;
 import com.bostoneo.bostoneosolutions.event.NewUserEvent;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +22,20 @@ public class NewUserEventListener {
     @EventListener
     public void onNewUserEvent(NewUserEvent event) {
         log.info("New user event is fired: {}", event);
-        eventService.addUserEvent(event.getEmail(), event.getType(), getDevice(request), getIpAddress(request));
+
+        // SECURITY: Set tenant context if organizationId is provided in the event
+        Long orgId = event.getOrganizationId();
+        if (orgId != null) {
+            TenantContext.setCurrentTenant(orgId);
+            try {
+                eventService.addUserEvent(event.getEmail(), event.getType(), getDevice(request), getIpAddress(request));
+            } finally {
+                // Clear context after processing to prevent leaks
+                TenantContext.clear();
+            }
+        } else {
+            // Fallback: use existing context if available
+            eventService.addUserEvent(event.getEmail(), event.getType(), getDevice(request), getIpAddress(request));
+        }
     }
 }

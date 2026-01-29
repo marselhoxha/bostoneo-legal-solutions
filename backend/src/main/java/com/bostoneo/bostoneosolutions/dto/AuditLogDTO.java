@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 public class AuditLogDTO {
 
     private Long id;
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
     private Long userId;
     private String sessionId;
     private String action;

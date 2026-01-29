@@ -157,8 +157,9 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
             preference = existingOpt.get();
         } else {
             preference = new UserNotificationPreference(userId, eventType);
+            preference.setOrganizationId(orgId);
         }
-        
+
         if (enabled != null) preference.setEnabled(enabled);
         if (emailEnabled != null) preference.setEmailEnabled(emailEnabled);
         if (pushEnabled != null) preference.setPushEnabled(pushEnabled);
@@ -210,7 +211,9 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
     @Override
     public List<UserNotificationPreference> resetToRoleDefaults(Long userId, String roleName) {
         verifyUserAccess(userId);
-        repository.deleteByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered delete to prevent cross-org deletion
+        repository.deleteByOrganizationIdAndUserId(orgId, userId);
         return initializeUserPreferences(userId, roleName);
     }
 
@@ -230,13 +233,17 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
     @Override
     public void deleteUserPreferences(Long userId) {
         verifyUserAccess(userId);
-        repository.deleteByUserId(userId);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered delete to prevent cross-org deletion
+        repository.deleteByOrganizationIdAndUserId(orgId, userId);
     }
 
     @Override
     public void deletePreference(Long userId, String eventType) {
         verifyUserAccess(userId);
-        repository.deleteByUserIdAndEventType(userId, eventType);
+        Long orgId = getRequiredOrganizationId();
+        // SECURITY: Use tenant-filtered delete to prevent cross-org deletion
+        repository.deleteByOrganizationIdAndUserIdAndEventType(orgId, userId, eventType);
     }
 
     @Override
@@ -329,7 +336,8 @@ public class UserNotificationPreferenceServiceImpl implements UserNotificationPr
 
     private UserNotificationPreference createRoleBasedPreference(Long userId, String eventType, String roleName) {
         UserNotificationPreference preference = new UserNotificationPreference(userId, eventType);
-        
+        preference.setOrganizationId(getRequiredOrganizationId());
+
         if (roleName == null) {
             roleName = "DEFAULT";
         }

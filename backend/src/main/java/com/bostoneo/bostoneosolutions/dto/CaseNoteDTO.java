@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CaseNoteDTO {
     private Long id;
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
     private Long caseId;
     private Long userId;
     private UserDTO user;

@@ -77,7 +77,6 @@ export class TokenInterceptor implements HttpInterceptor {
     const currentState = this.refreshState$.getValue();
 
     if (currentState.failed) {
-      console.warn('[TokenInterceptor] No token and session failed, blocking request:', request.url);
       if (!this.router.url.includes('/login')) {
         this.userService.handleSessionExpired();
       }
@@ -89,7 +88,6 @@ export class TokenInterceptor implements HttpInterceptor {
     }
 
     // No token and no refresh in progress - fail the request
-    console.warn('[TokenInterceptor] No authentication token available:', request.url);
     return throwError(() => new Error('Not authenticated'));
   }
 
@@ -105,13 +103,11 @@ export class TokenInterceptor implements HttpInterceptor {
           if (fallbackToken && this.isValidTokenFormat(fallbackToken)) {
             return next.handle(this.addAuthorizationHeader(request, fallbackToken));
           }
-          console.warn('[TokenInterceptor] Token refresh failed, blocking request:', request.url);
           return throwError(() => new Error('Session expired'));
         }
         return next.handle(this.addAuthorizationHeader(request, state.token));
       }),
-      catchError((error) => {
-        console.warn('[TokenInterceptor] Error waiting for token refresh:', error?.message || error);
+      catchError(() => {
         return throwError(() => new Error('Session expired'));
       })
     );
@@ -126,7 +122,6 @@ export class TokenInterceptor implements HttpInterceptor {
 
     const refreshToken = localStorage.getItem(Key.REFRESH_TOKEN);
     if (!refreshToken) {
-      console.warn('[TokenInterceptor] No refresh token available');
       this.refreshState$.next({ inProgress: false, token: null, failed: true });
       this.userService.handleSessionExpired();
       return throwError(() => new Error('No refresh token'));
@@ -138,7 +133,6 @@ export class TokenInterceptor implements HttpInterceptor {
       return this.userService.refreshToken$().pipe(
         switchMap((response: CustomHttpResponse<Profile>) => {
           if (!response?.data?.access_token) {
-            console.warn('[TokenInterceptor] Token refresh failed - no access token');
             this.refreshState$.next({ inProgress: false, token: null, failed: true });
             this.userService.handleSessionExpired();
             return throwError(() => new Error('Session expired'));
@@ -148,8 +142,7 @@ export class TokenInterceptor implements HttpInterceptor {
           this.refreshState$.next({ inProgress: false, token: newToken, failed: false });
           return next.handle(this.addAuthorizationHeader(request, newToken));
         }),
-        catchError((error) => {
-          console.warn('[TokenInterceptor] Token refresh error:', error?.message || error);
+        catchError(() => {
           this.refreshState$.next({ inProgress: false, token: null, failed: true });
           this.userService.handleSessionExpired();
           return throwError(() => new Error('Session expired'));

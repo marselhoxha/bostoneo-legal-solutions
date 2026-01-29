@@ -44,6 +44,11 @@ public class SecurityServiceImpl implements SecurityService {
     }
     
     @Override
+    public boolean canAccessCase(Long caseId) {
+        return hasAccessToCase(caseId);
+    }
+
+    @Override
     public boolean hasAccessToCase(Long caseId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || auth.getPrincipal() == null) {

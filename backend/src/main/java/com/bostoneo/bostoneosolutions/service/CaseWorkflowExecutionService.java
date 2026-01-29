@@ -138,6 +138,7 @@ public class CaseWorkflowExecutionService {
             Map<String, Object> stepConfig = steps.get(i);
             CaseWorkflowStepExecution stepExecution = CaseWorkflowStepExecution.builder()
                     .workflowExecution(execution)
+                    .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
                     .stepNumber(i + 1)
                     .stepName((String) stepConfig.get("name"))
                     .stepType(parseStepType((String) stepConfig.get("type")))
@@ -382,7 +383,9 @@ public class CaseWorkflowExecutionService {
         // Add timeline events if requested
         if ("timeline".equals(displayType) || "full".equals(displayType)) {
             try {
-                List<TimelineEvent> timelineEvents = timelineEventRepository.findByAnalysisIdInOrderByEventDateAsc(analysisIds);
+                // SECURITY: Use org-filtered query
+                Long timelineOrgId = getRequiredOrganizationId();
+                List<TimelineEvent> timelineEvents = timelineEventRepository.findByOrganizationIdAndAnalysisIdInOrderByEventDateAsc(timelineOrgId, analysisIds);
                 List<Map<String, Object>> timelineList = timelineEvents.stream()
                         .map(event -> {
                             Map<String, Object> eventMap = new HashMap<>();
@@ -454,8 +457,10 @@ public class CaseWorkflowExecutionService {
 
             // Save synthesis result as a draft session (so it appears in Drafting taskcard)
             String sessionName = getSynthesisSessionName(synthesisType, execution.getName());
+            Long orgId = getRequiredOrganizationId();
             AiConversationSession session = AiConversationSession.builder()
                     .userId(execution.getCreatedBy().getId())
+                    .organizationId(orgId)
                     .sessionName(sessionName)
                     .sessionType("DRAFTING")
                     .taskType("GENERATE_DRAFT")
@@ -472,6 +477,7 @@ public class CaseWorkflowExecutionService {
             // Create message with synthesis content
             AiConversationMessage message = AiConversationMessage.builder()
                     .session(session)
+                    .organizationId(session.getOrganizationId())
                     .role("assistant")
                     .content(aiResponse)
                     .modelUsed("claude-sonnet-4")
@@ -790,8 +796,10 @@ public class CaseWorkflowExecutionService {
 
                 // Create actual AiConversationSession record
                 String sessionName = getDraftSessionName(generationType, execution.getName());
+                Long sessionOrgId = getRequiredOrganizationId();
                 AiConversationSession session = AiConversationSession.builder()
                         .userId(execution.getCreatedBy().getId())
+                        .organizationId(sessionOrgId)
                         .sessionName(sessionName)
                         .sessionType("DRAFTING")
                         .taskType("GENERATE_DRAFT")
@@ -807,6 +815,7 @@ public class CaseWorkflowExecutionService {
                 // Create initial message with generated content
                 AiConversationMessage message = AiConversationMessage.builder()
                         .session(session)
+                        .organizationId(session.getOrganizationId())
                         .role("assistant")
                         .content(draftContent)
                         .modelUsed("claude-sonnet-4")
@@ -855,8 +864,10 @@ public class CaseWorkflowExecutionService {
 
                     // Create research session record
                     String sessionName = "Research - " + (execution.getName() != null ? execution.getName() : "Workflow");
+                    Long researchOrgId = getRequiredOrganizationId();
                     ResearchSession researchSession = ResearchSession.builder()
                             .sessionId(UUID.randomUUID().toString())
+                            .organizationId(researchOrgId)  // SECURITY: Set organization ID for tenant isolation
                             .userId(execution.getCreatedBy().getId())
                             .sessionName(sessionName)
                             .description("Legal research from workflow: " + execution.getTemplate().getName())

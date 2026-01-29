@@ -36,7 +36,9 @@ public class Lead {
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
-    @Column(name = "email", nullable = false, unique = true, length = 100)
+    // SECURITY: Email uniqueness is per-organization, not global
+    // Composite unique index (organization_id, email) defined in V101 migration
+    @Column(name = "email", nullable = false, length = 100)
     private String email;
 
     @Column(name = "phone", length = 30)

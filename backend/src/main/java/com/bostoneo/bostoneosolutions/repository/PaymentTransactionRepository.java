@@ -10,9 +10,24 @@ import java.util.List;
 
 @Repository
 public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, Long> {
+
+    // ==================== LEGACY METHODS (DEPRECATED) ====================
+    // Use tenant-filtered versions below for proper multi-tenant isolation
+
+    /** @deprecated Use findByOrganizationIdAndInvoiceId for tenant isolation */
+    @Deprecated
     Page<PaymentTransaction> findByInvoiceId(Long invoiceId, Pageable pageable);
+
+    /** @deprecated Use findByOrganizationIdAndTransactionStatus for tenant isolation */
+    @Deprecated
     List<PaymentTransaction> findByTransactionStatus(String status);
+
+    /** @deprecated Use findByOrganizationIdAndTransactionType for tenant isolation */
+    @Deprecated
     List<PaymentTransaction> findByTransactionType(String type);
+
+    /** @deprecated Use findByOrganizationIdAndTransactionStatusIn for tenant isolation */
+    @Deprecated
     List<PaymentTransaction> findByTransactionStatusIn(List<String> statuses);
 
     // ==================== TENANT-FILTERED METHODS ====================
@@ -27,5 +42,9 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
 
     List<PaymentTransaction> findByOrganizationId(Long organizationId);
 
+    List<PaymentTransaction> findByOrganizationIdAndTransactionStatusIn(Long organizationId, List<String> statuses);
+
     long countByOrganizationId(Long organizationId);
+
+    boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 }

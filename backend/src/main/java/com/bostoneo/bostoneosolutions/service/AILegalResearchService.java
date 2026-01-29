@@ -2359,7 +2359,13 @@ public class AILegalResearchService {
                                    Integer resultsCount, Long executionTime) {
         try {
             if (userId != null) {
+                // SECURITY: Require organization context for search history
                 Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+                if (orgId == null) {
+                    log.warn("Cannot save search history without organization context for user: {}", userId);
+                    return;
+                }
+
                 QueryType queryTypeEnum = QueryType.valueOf(searchType.toUpperCase());
 
                 SearchHistory history = SearchHistory.builder()
@@ -2374,7 +2380,7 @@ public class AILegalResearchService {
                     .build();
 
                 searchHistoryRepository.save(history);
-                log.info("Saved search history for user: {} query: {}", userId, query);
+                log.info("Saved search history for user: {} in org: {} query: {}", userId, orgId, query);
             }
         } catch (Exception e) {
             log.error("Failed to save search history: ", e);

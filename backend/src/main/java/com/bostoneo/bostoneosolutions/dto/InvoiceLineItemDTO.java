@@ -12,6 +12,8 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class InvoiceLineItemDTO {
     private Long id;
+    // SECURITY: Required for multi-tenant data isolation
+    private Long organizationId;
     private String description;
     private BigDecimal quantity;
     private BigDecimal unitPrice;

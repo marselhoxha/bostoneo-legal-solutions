@@ -1,0 +1,187 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">System Health</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/superadmin/dashboard">SUPERADMIN</a></li>
+            <li class="breadcrumb-item active">System Health</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading && !health" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2 text-muted">Checking system health...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error && !health" class="alert alert-danger">
+    {{ error }}
+    <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadHealth()">Retry</button>
+  </div>
+
+  <!-- Health Dashboard -->
+  <div *ngIf="health">
+    <!-- Overall Status -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center">
+                <div class="avatar-lg me-3">
+                  <span class="avatar-title rounded-circle fs-1"
+                        [ngClass]="'bg-' + getStatusClass(health.overallStatus) + '-subtle text-' + getStatusClass(health.overallStatus)">
+                    <i [class]="getStatusIcon(health.overallStatus)"></i>
+                  </span>
+                </div>
+                <div>
+                  <h3 class="mb-1">System Status: {{ health.overallStatus }}</h3>
+                  <p class="text-muted mb-0">Last checked: {{ health.checkedAt | date:'medium' }}</p>
+                </div>
+              </div>
+              <button class="btn btn-outline-primary" (click)="loadHealth()" [disabled]="isLoading">
+                <i class="ri-refresh-line me-1" [class.spin]="isLoading"></i>Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Component Status Cards -->
+    <div class="row">
+      <!-- Database -->
+      <div class="col-md-6 col-lg-4">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm me-3">
+                <span class="avatar-title rounded-circle"
+                      [ngClass]="'bg-' + getStatusClass(health.database.status) + '-subtle text-' + getStatusClass(health.database.status)">
+                  <i class="ri-database-2-line"></i>
+                </span>
+              </div>
+              <div class="flex-grow-1">
+                <h6 class="mb-1">Database</h6>
+                <span class="badge" [ngClass]="'bg-' + getStatusClass(health.database.status)">
+                  {{ health.database.status }}
+                </span>
+              </div>
+              <div class="text-end">
+                <small class="text-muted">{{ health.database.responseTimeMs }}ms</small>
+              </div>
+            </div>
+            <p class="text-muted small mt-2 mb-0">{{ health.database.message }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Application -->
+      <div class="col-md-6 col-lg-4">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm me-3">
+                <span class="avatar-title rounded-circle"
+                      [ngClass]="'bg-' + getStatusClass(health.application.status) + '-subtle text-' + getStatusClass(health.application.status)">
+                  <i class="ri-server-line"></i>
+                </span>
+              </div>
+              <div class="flex-grow-1">
+                <h6 class="mb-1">Application</h6>
+                <span class="badge" [ngClass]="'bg-' + getStatusClass(health.application.status)">
+                  {{ health.application.status }}
+                </span>
+              </div>
+            </div>
+            <p class="text-muted small mt-2 mb-0">{{ health.application.message }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Sessions -->
+      <div class="col-md-6 col-lg-4">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm me-3">
+                <span class="avatar-title rounded-circle bg-info-subtle text-info">
+                  <i class="ri-user-line"></i>
+                </span>
+              </div>
+              <div class="flex-grow-1">
+                <h6 class="mb-1">Active Sessions</h6>
+                <h4 class="mb-0">{{ health.activeSessions }}</h4>
+              </div>
+            </div>
+            <p class="text-muted small mt-2 mb-0">Users active in the last hour</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Memory Usage -->
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><i class="ri-cpu-line me-2"></i>Memory Usage</h5>
+          </div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between mb-2">
+              <span>Used: {{ formatBytes(health.memory.usedBytes) }}</span>
+              <span>Total: {{ formatBytes(health.memory.totalBytes) }}</span>
+            </div>
+            <div class="progress" style="height: 20px;">
+              <div class="progress-bar"
+                   [ngClass]="{'bg-success': health.memory.usagePercent < 70, 'bg-warning': health.memory.usagePercent >= 70 && health.memory.usagePercent < 90, 'bg-danger': health.memory.usagePercent >= 90}"
+                   [style.width.%]="health.memory.usagePercent">
+                {{ health.memory.usagePercent | number:'1.1-1' }}%
+              </div>
+            </div>
+            <div class="d-flex justify-content-between mt-2 text-muted small">
+              <span>Free: {{ formatBytes(health.memory.freeBytes) }}</span>
+              <span>{{ health.memory.usagePercent | number:'1.1-1' }}% used</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error Counts -->
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><i class="ri-error-warning-line me-2"></i>Error Counts</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-6">
+                <div class="border rounded p-3 text-center">
+                  <h3 class="mb-1" [class.text-danger]="health.errorCountLastHour > 0">
+                    {{ health.errorCountLastHour }}
+                  </h3>
+                  <small class="text-muted">Last Hour</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="border rounded p-3 text-center">
+                  <h3 class="mb-1" [class.text-warning]="health.errorCountLast24Hours > 10">
+                    {{ health.errorCountLast24Hours }}
+                  </h3>
+                  <small class="text-muted">Last 24 Hours</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

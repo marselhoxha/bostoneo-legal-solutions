@@ -416,8 +416,13 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public UserNotification createUserNotification(Map<String, Object> notificationData) {
         log.info("Creating user notification: {}", notificationData);
-        
+
+        // SECURITY: Get organization ID for tenant isolation
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required for creating notifications"));
+
         UserNotification notification = new UserNotification();
+        notification.setOrganizationId(orgId); // SECURITY: Set organization ID for tenant isolation
         notification.setUserId(getLongValue(notificationData, "userId"));
         notification.setTitle((String) notificationData.get("title"));
         notification.setMessage((String) notificationData.get("message"));

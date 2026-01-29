@@ -437,9 +437,58 @@ export const ADMIN_MENU: MenuItem[] = [
 ];
 
 // ============================================================================
+// SUPERADMIN MENU (ROLE_SUPERADMIN) - Platform administration ONLY
+// SUPERADMINs are platform-level administrators, NOT organization users.
+// They should NOT access tenant-specific routes (cases, clients, etc.)
+// ============================================================================
+export const SUPERADMIN_MENU: MenuItem[] = [
+  {
+    id: 'sa-dashboard',
+    label: 'Dashboard',
+    icon: 'ri-shield-star-line',
+    link: '/superadmin/dashboard'
+  },
+  {
+    id: 'sa-organizations',
+    label: 'Organizations',
+    icon: 'ri-building-2-line',
+    link: '/superadmin/organizations'
+  },
+  {
+    id: 'sa-users',
+    label: 'All Users',
+    icon: 'ri-user-line',
+    link: '/superadmin/users'
+  },
+  {
+    id: 'sa-analytics',
+    label: 'Analytics',
+    icon: 'ri-bar-chart-box-line',
+    link: '/superadmin/analytics'
+  },
+  {
+    id: 'sa-system-health',
+    label: 'System Health',
+    icon: 'ri-heart-pulse-line',
+    link: '/superadmin/system-health'
+  },
+  {
+    id: 'sa-audit-logs',
+    label: 'Audit Logs',
+    icon: 'ri-file-list-3-line',
+    link: '/superadmin/audit-logs'
+  }
+];
+
+// ============================================================================
 // ROLE MENU CONFIGURATIONS
 // ============================================================================
 export const ROLE_MENU_CONFIGS: { [key in UserRole]: RoleMenuConfig } = {
+  'ROLE_SUPERADMIN': {
+    role: 'ROLE_SUPERADMIN',
+    defaultRedirect: '/superadmin/dashboard',
+    menu: SUPERADMIN_MENU
+  },
   'ROLE_USER': {
     role: 'ROLE_USER',
     defaultRedirect: '/client/dashboard',

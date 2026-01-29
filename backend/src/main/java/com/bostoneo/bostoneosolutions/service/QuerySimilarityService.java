@@ -34,20 +34,17 @@ public class QuerySimilarityService {
      * SECURITY: Only returns cache entries from the same organization
      */
     public Optional<AIResearchCache> findSimilarCachedQuery(String query, String searchType, String jurisdiction, String researchMode, String caseId) {
-        // SECURITY: Get current organization and filter cache by org
+        // SECURITY: Require organization context for cache lookup to prevent cross-tenant data leakage
         Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
-        List<AIResearchCache> validCaches;
-        if (orgId != null) {
-            validCaches = cacheRepository.findByOrganizationIdAndQueryTypeAndIsValidTrue(
-                orgId,
-                com.bostoneo.bostoneosolutions.enumeration.QueryType.valueOf(searchType.toUpperCase())
-            );
-        } else {
-            // Fallback for system-level operations (should rarely happen)
-            validCaches = cacheRepository.findByQueryTypeAndIsValidTrue(
-                com.bostoneo.bostoneosolutions.enumeration.QueryType.valueOf(searchType.toUpperCase())
-            );
+        if (orgId == null) {
+            log.warn("SECURITY: No organization context for cache lookup - returning empty to prevent cross-tenant access");
+            return Optional.empty();
         }
+
+        List<AIResearchCache> validCaches = cacheRepository.findByOrganizationIdAndQueryTypeAndIsValidTrue(
+            orgId,
+            com.bostoneo.bostoneosolutions.enumeration.QueryType.valueOf(searchType.toUpperCase())
+        );
 
         if (validCaches.isEmpty()) {
             return Optional.empty();

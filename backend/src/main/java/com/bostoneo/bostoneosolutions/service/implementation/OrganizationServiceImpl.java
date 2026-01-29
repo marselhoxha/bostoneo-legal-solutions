@@ -40,7 +40,9 @@ public class OrganizationServiceImpl implements OrganizationService {
      */
     private void verifyOrganizationAccess(Long organizationId) {
         Long currentOrgId = tenantService.getCurrentOrganizationId().orElse(null);
+        log.info("verifyOrganizationAccess: currentOrgId={}, requestedOrgId={}", currentOrgId, organizationId);
         if (currentOrgId != null && !currentOrgId.equals(organizationId)) {
+            log.warn("SECURITY: Access denied - currentOrgId={} != requestedOrgId={}", currentOrgId, organizationId);
             throw new ApiException("Access denied: Cannot access another organization");
         }
     }

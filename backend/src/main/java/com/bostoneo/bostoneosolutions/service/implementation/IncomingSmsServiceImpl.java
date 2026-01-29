@@ -201,7 +201,9 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
         // Get the lead attorney for this case (if any)
         Long attorneyId = getLeadAttorneyForCase(caseId);
 
+        Long orgId = getRequiredOrganizationId();
         MessageThread thread = MessageThread.builder()
+                .organizationId(orgId)
                 .caseId(caseId != null ? caseId : 0L)
                 .clientId(clientId)
                 .attorneyId(attorneyId)
@@ -261,7 +263,9 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
     }
 
     private CommunicationLog logIncomingSms(IncomingSmsDTO sms, Long clientId, Long caseId, Long threadId) {
+        Long orgId = getRequiredOrganizationId();
         CommunicationLog commLog = CommunicationLog.builder()
+                .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
                 .channel("SMS")
                 .direction("INBOUND")
                 .clientId(clientId)
@@ -278,7 +282,9 @@ public class IncomingSmsServiceImpl implements IncomingSmsService {
     }
 
     private CommunicationLog logUnmatchedSms(IncomingSmsDTO sms) {
+        Long orgId = getRequiredOrganizationId();
         CommunicationLog commLog = CommunicationLog.builder()
+                .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
                 .channel("SMS")
                 .direction("INBOUND")
                 .fromAddress(sms.getFrom())
