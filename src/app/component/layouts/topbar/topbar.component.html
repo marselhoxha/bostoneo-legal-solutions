@@ -330,13 +330,13 @@
                     <button
                       type="button"
                       class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle light-dark-mode"
-                      (click)="toggleTheme()" 
+                      (click)="toggleTheme()"
                     >
                       <i class='bx bx-moon fs-22'></i>
                       <i class='bx bx-sun fs-22'></i>
                     </button>
                   </div>
-                  
+
                 <!-- Messages Dropdown -->
                 <div class="dropdown ms-1 header-item" ngbDropdown #messageDropdown="ngbDropdown" display="dynamic" placement="bottom-end" (openChange)="onMessageDropdownToggle($event)">
                     <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative"
@@ -531,6 +531,13 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Background Tasks Indicator - AI Workspace Tasks (placed after bell, before profile) -->
+                <div class="ms-1 header-item">
+                    <app-background-tasks-indicator
+                      (viewTask)="onBackgroundTaskView($event)">
+                    </app-background-tasks-indicator>
                 </div>
 
                 <div *ngIf="user$ | async as user" class="dropdown ms-sm-3 header-item topbar-user" ngbDropdown display="dynamic" placement="bottom-end" container="body">

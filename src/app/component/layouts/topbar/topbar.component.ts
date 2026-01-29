@@ -31,6 +31,7 @@ import { Key } from 'src/app/enum/key.enum';
 import { ClientPortalService, ClientMessageThread } from 'src/app/modules/client-portal/services/client-portal.service';
 import { TimerService, ActiveTimer } from 'src/app/modules/time-tracking/services/timer.service';
 import { LegalCaseService } from 'src/app/modules/legal/services/legal-case.service';
+import { BackgroundTask } from 'src/app/modules/legal/services/background-task.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -1318,6 +1319,47 @@ export class TopbarComponent implements OnInit, OnDestroy {
     } else {
       this.router.navigate(['/messages']);
     }
+  }
+
+  /**
+   * Handle viewing a background task from the indicator panel
+   * Navigates to AI Workspace and opens the appropriate view
+   */
+  onBackgroundTaskView(task: BackgroundTask): void {
+    const queryParams: any = {};
+
+    // Route based on task type
+    switch (task.type) {
+      case 'workflow':
+        // For workflows, use openWorkflow param
+        if (task.workflowId) {
+          queryParams.openWorkflow = task.workflowId;
+        }
+        break;
+
+      case 'question':
+      case 'draft':
+        // For questions and drafts, use openConversation param
+        if (task.conversationId) {
+          queryParams.openConversation = task.conversationId;
+          queryParams.taskType = task.type;
+        }
+        if (task.backendConversationId) {
+          queryParams.backendId = task.backendConversationId;
+        }
+        break;
+
+      case 'analysis':
+        // For analysis, pass the analysis IDs
+        if (task.conversationId) {
+          queryParams.openConversation = task.conversationId;
+          queryParams.taskType = task.type;
+        }
+        break;
+    }
+
+    // Navigate to AI Workspace (correct route: /legal/ai-assistant/ai-workspace)
+    this.router.navigate(['/legal/ai-assistant/ai-workspace'], { queryParams });
   }
 
   /**

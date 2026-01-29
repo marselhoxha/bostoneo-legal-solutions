@@ -10,6 +10,7 @@ import com.bostoneo.bostoneosolutions.repository.AIAnalysisMessageRepository;
 import com.bostoneo.bostoneosolutions.repository.TimelineEventRepository;
 import com.bostoneo.bostoneosolutions.service.AIDocumentAnalysisService;
 import com.bostoneo.bostoneosolutions.util.CloudStorageUrlConverter;
+import org.springframework.transaction.annotation.Transactional;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -587,6 +588,7 @@ public class AIDocumentAnalyzerController {
      * Delete a document analysis and all related data (messages, action items, timeline events)
      */
     @DeleteMapping("/analysis/{analysisId}")
+    @Transactional
     public ResponseEntity<Map<String, Object>> deleteAnalysis(@PathVariable Long analysisId) {
         log.info("🗑️ Deleting analysis ID: {}", analysisId);
 
@@ -594,7 +596,8 @@ public class AIDocumentAnalyzerController {
             Long orgId = getRequiredOrganizationId();
 
             // SECURITY: First verify the analysis belongs to the current organization
-            Optional<AIDocumentAnalysis> analysisOpt = documentAnalysisService.getAnalysisById(String.valueOf(analysisId));
+            // NOTE: Use getAnalysisByDatabaseId (not getAnalysisById which expects UUID analysis_id)
+            Optional<AIDocumentAnalysis> analysisOpt = documentAnalysisService.getAnalysisByDatabaseId(analysisId);
             if (analysisOpt.isEmpty() || !orgId.equals(analysisOpt.get().getOrganizationId())) {
                 log.warn("Attempted to delete analysis {} that doesn't belong to org {}", analysisId, orgId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)

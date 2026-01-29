@@ -338,6 +338,13 @@ export class AiWorkspaceStateService {
   }
 
   addAnalyzedDocument(document: AnalyzedDocument): void {
+    // Check for duplicates - don't add if document with same ID already exists
+    const existing = this.analyzedDocumentsSubject.value.find(d => d.id === document.id);
+    if (existing) {
+      // Update existing document instead of adding duplicate
+      this.updateAnalyzedDocument(document.id, document);
+      return;
+    }
     // Add new document at the beginning (most recent first)
     const documents = [document, ...this.analyzedDocumentsSubject.value];
     // Keep only the last 20 documents

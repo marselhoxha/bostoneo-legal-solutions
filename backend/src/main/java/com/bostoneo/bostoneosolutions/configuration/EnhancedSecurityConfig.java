@@ -3,6 +3,7 @@ package com.bostoneo.bostoneosolutions.configuration;
 import com.bostoneo.bostoneosolutions.filter.CustomAuthorizationFilter;
 import com.bostoneo.bostoneosolutions.handler.CustomAccessDeniedHandler;
 import com.bostoneo.bostoneosolutions.handler.CustomAuthenticationEntryPoint;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -110,6 +111,11 @@ public class EnhancedSecurityConfig {
         // Authorization Rules
         // SECURITY: All API endpoints require authentication except explicitly public routes
         http.authorizeHttpRequests(authorize -> authorize
+            // CRITICAL: Permit async dispatches - these are internal Spring dispatches to write
+            // responses for DeferredResult/CompletableFuture, not new HTTP requests.
+            // Without this, async response writing fails with "anonymousUser" because there's
+            // no Authorization header in the async dispatch (it's a response write, not a request).
+            .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
             .requestMatchers(OPTIONS).permitAll()
             .requestMatchers(PUBLIC_URLS).permitAll()
             .requestMatchers("/ws/**").permitAll()  // WebSocket has its own token validation

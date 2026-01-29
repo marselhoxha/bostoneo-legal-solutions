@@ -10,6 +10,8 @@
     <i class="ri-menu-line"></i>
   </button>
 
+  <!-- Note: Background Tasks Indicator moved to global topbar for app-wide visibility -->
+
   <!-- Sidebar Backdrop Overlay (Mobile Only) -->
   <div class="sidebar-backdrop" [class.show]="sidebarOpen$ | async" (click)="closeSidebar()"></div>
 
@@ -61,18 +63,29 @@
           <div *ngFor="let doc of filteredAnalyzedDocuments"
                class="sidebar-list-item"
                [class.active]="(activeDocumentId$ | async) === doc.id"
-               (click)="openDocumentInViewer(doc)">
-            <div class="item-icon icon-document">
-              <i class="ri-file-text-line"></i>
+               [class.is-analyzing]="doc.status === 'analyzing'"
+               (click)="doc.status !== 'analyzing' ? openDocumentInViewer(doc) : null">
+            <div class="item-icon icon-document" [class.analyzing]="doc.status === 'analyzing'">
+              <!-- Show spinner when analyzing -->
+              <span class="spinner-border spinner-border-sm" *ngIf="doc.status === 'analyzing'" role="status"></span>
+              <!-- Show file icon when not analyzing -->
+              <i class="ri-file-text-line" *ngIf="doc.status !== 'analyzing'"></i>
             </div>
             <div class="item-content">
               <div class="item-title" [title]="getCleanFileName(doc.fileName)">{{ getCleanFileName(doc.fileName) | slice:0:25 }}{{ getCleanFileName(doc.fileName).length > 25 ? '...' : '' }}</div>
               <div class="item-meta">
-                <span class="sidebar-badge" [ngClass]="getDocTypeBadgeClass(doc.detectedType)">{{ doc.detectedType }}</span>
-                <span>{{ doc.timestamp | date:'MMM d' }}</span>
+                <!-- Show analyzing status -->
+                <span class="sidebar-badge badge-analyzing" *ngIf="doc.status === 'analyzing'">
+                  Analyzing...
+                </span>
+                <!-- Show document type when completed -->
+                <ng-container *ngIf="doc.status !== 'analyzing'">
+                  <span class="sidebar-badge" [ngClass]="getDocTypeBadgeClass(doc.detectedType)">{{ doc.detectedType }}</span>
+                  <span>{{ doc.timestamp | date:'MMM d' }}</span>
+                </ng-container>
               </div>
             </div>
-            <button class="item-delete-btn" (click)="deleteDocument(doc); $event.stopPropagation()" title="Delete document">
+            <button class="item-delete-btn" *ngIf="doc.status !== 'analyzing'" (click)="deleteDocument(doc); $event.stopPropagation()" title="Delete document">
               <i class="ri-delete-bin-line"></i>
             </button>
           </div>

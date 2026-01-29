@@ -30,6 +30,7 @@ import { ActionItemsListComponent } from '../action-items-list/action-items-list
 import { TimelineViewComponent } from '../timeline-view/timeline-view.component';
 import { DocumentAnalysisViewerComponent, AnalyzedDocumentData } from '../document-analysis-viewer/document-analysis-viewer.component';
 import { CollectionViewerComponent } from '../collection-viewer/collection-viewer.component';
+import { BackgroundTasksIndicatorComponent } from './background-tasks-indicator/background-tasks-indicator.component';
 
 // NEW: Refactored services
 import { NotificationService } from '../../../services/notification.service';
@@ -70,7 +71,8 @@ import { DocumentState } from '../../../models/document.model';
     ActionItemsListComponent,
     TimelineViewComponent,
     DocumentAnalysisViewerComponent,
-    CollectionViewerComponent
+    CollectionViewerComponent,
+    BackgroundTasksIndicatorComponent
   ],
   templateUrl: './ai-workspace.component.html',
   styleUrls: ['./ai-workspace.component.scss']
@@ -123,6 +125,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   workflowPollingInterval: any = null;
   workflowPollingStartTime: number = 0; // Track when polling started
   previouslyRunningWorkflowIds: Set<number> = new Set(); // Track workflows for completion notifications
+  workflowTaskIdMapping: Map<number, string> = new Map(); // Map workflow ID to background task ID
   selectedWorkflowForDetails: any = null;
   showWorkflowDetailsModal = false; // Legacy - keeping for backwards compatibility
   showWorkflowDetailsPage = false; // New full-page view
@@ -209,6 +212,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Loading state for analyses
   loadingAnalyses = false;
+
+  // Guard flag to prevent multiple loadAnalysisHistory() calls during initialization
+  private analysisHistoryLoaded = false;
 
   // Filtered analyzed documents based on search query
   get filteredAnalyzedDocuments() {
@@ -987,35 +993,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Check for any tasks that completed while user was away
     this.checkForCompletedBackgroundTasks();
 
-    // ===== CLEAR STALE STATE OR RESTORE ACTIVE STATE =====
-    // Check if there are running background tasks - if so, don't clear state
-    const runningTasks = this.backgroundTaskService.getRunningTasks();
-    if (runningTasks.length > 0) {
-      // Restore the generation state and workflow steps for running tasks
-      this.stateService.setIsGenerating(true);
-
-      // Re-initialize workflow steps for the active task type
-      const activeTask = runningTasks[0];
-      if (activeTask.type === 'question') {
-        this.initializeWorkflowSteps('question');
-        this.selectedTask = ConversationType.Question;
-      } else if (activeTask.type === 'draft') {
-        this.initializeWorkflowSteps('draft');
-        this.selectedTask = ConversationType.Draft;
-      }
-      this.animateWorkflowSteps();
-
-      // Restore active conversation if the task has one
-      if (activeTask.conversationId) {
-        this.stateService.setActiveConversationId(activeTask.conversationId);
-        this.stateService.setShowChat(true);
-        this.stateService.setShowBottomSearchBar(false); // Hide bottom bar while generating
-      }
-    } else {
-      // No running tasks - clear any stale generation state from previous navigation
-      // This prevents showing "Generating response" when returning after navigating away
-      this.stateService.clearStaleGenerationState();
-    }
+    // ===== ALWAYS CLEAR STALE STATE ON NAVIGATION =====
+    // Background tasks run independently - the user should see a fresh workspace
+    // They can check task status via the Background Tasks Indicator in the topbar
+    // This prevents showing "Generating response" when returning after navigating away
+    this.stateService.clearStaleGenerationState();
 
     // ===== STATE SYNCHRONIZATION =====
     // Restore selectedTask based on current state mode
@@ -1030,7 +1012,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         // Load user-specific data when user is available
         if (user && user.id) {
           this.loadUserCases();
-          this.loadAnalysisHistory();
+          this.loadAnalysisHistoryOnce();
         }
       });
 
@@ -1047,7 +1029,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               this.currentUser = response.data.user;
               // Load user-specific data after user is loaded
               this.loadUserCases();
-              this.loadAnalysisHistory();
+              this.loadAnalysisHistoryOnce();
             }
           },
           error: (error) => {
@@ -1065,7 +1047,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Load analysis history for sidebar (Recent Documents section)
     // Only load if user is already available; otherwise it's loaded in userData$ subscription
     if (this.currentUser && this.currentUser.id) {
-      this.loadAnalysisHistory();
+      this.loadAnalysisHistoryOnce();
     }
 
     // Load collections for sidebar
@@ -1397,6 +1379,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Guard method to load analysis history only once during component initialization
+   * Prevents duplicate calls from multiple subscriptions in ngOnInit
+   */
+  private loadAnalysisHistoryOnce(): void {
+    if (this.analysisHistoryLoaded || !this.currentUser?.id) {
+      return;
+    }
+    this.analysisHistoryLoaded = true;
+    this.loadAnalysisHistory();
+  }
+
+  /**
    * Load analysis history from database and populate the sidebar
    */
   loadAnalysisHistory(): void {
@@ -1421,19 +1415,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             status: (h.status?.toLowerCase() === 'completed' ? 'completed' : 'failed') as 'completed' | 'failed'
           }));
 
-          // Merge with current in-memory documents to preserve recently analyzed ones
-          // that might not be in the DB response yet (due to timing/caching)
+          // Preserve documents that are currently being analyzed (status: 'analyzing')
+          // These are local-only and won't be in the DB response yet
           const currentDocs = this.stateService.getAnalyzedDocuments();
-          const dbDocIds = new Set(dbDocs.map(d => d.databaseId));
+          const analyzingDocs = currentDocs.filter(doc => doc.status === 'analyzing');
 
-          // Keep local documents that have full analysis data but aren't in DB response
-          // (recently analyzed documents that haven't synced yet)
-          const localOnlyDocs = currentDocs.filter(doc =>
-            doc.databaseId && !dbDocIds.has(doc.databaseId) && doc.analysis?.fullAnalysis
-          );
-
-          // Merge: DB docs first, then local-only docs
-          const mergedDocs = [...dbDocs, ...localOnlyDocs];
+          // Merge: DB docs first, then any currently analyzing docs
+          const mergedDocs = [...dbDocs, ...analyzingDocs];
 
           // Set to state service (this populates the sidebar)
           this.stateService.setAnalyzedDocuments(mergedDocs);
@@ -1536,9 +1524,33 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.userWorkflows = workflows;
           this.loadingWorkflows = false;
 
+          // Register any running workflows as background tasks (if not already tracked)
+          const runningWorkflows = workflows.filter(w => w.status === 'RUNNING' || w.status === 'PENDING');
+          runningWorkflows.forEach(workflow => {
+            // Only register if not already tracked (check both local map and service)
+            if (!this.workflowTaskIdMapping.has(workflow.id) && !this.backgroundTaskService.hasWorkflowTask(workflow.id)) {
+              const workflowName = workflow.name || workflow.template?.name || 'Workflow';
+              const taskId = this.backgroundTaskService.registerTask(
+                'workflow',
+                workflowName,
+                `Step ${workflow.currentStep || 1} of ${workflow.totalSteps || 0}`,
+                { workflowId: workflow.id }
+              );
+              this.backgroundTaskService.startTask(taskId);
+              this.workflowTaskIdMapping.set(workflow.id, taskId);
+              this.previouslyRunningWorkflowIds.add(workflow.id);
+            } else if (!this.workflowTaskIdMapping.has(workflow.id)) {
+              // Task exists in service but not in our map - sync the mapping
+              const existingTask = this.backgroundTaskService.getTaskByWorkflowId(workflow.id);
+              if (existingTask) {
+                this.workflowTaskIdMapping.set(workflow.id, existingTask.id);
+                this.previouslyRunningWorkflowIds.add(workflow.id);
+              }
+            }
+          });
+
           // Start polling if there are running workflows
-          const hasRunning = workflows.some(w => w.status === 'RUNNING' || w.status === 'PENDING');
-          if (hasRunning) {
+          if (runningWorkflows.length > 0) {
             this.startWorkflowPolling();
           }
 
@@ -1580,10 +1592,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (workflows) => {
-          const runningWorkflows = workflows.filter(w => w.status === 'RUNNING');
+          // Active workflows include RUNNING, PENDING, and WAITING_USER
+          const activeWorkflows = workflows.filter(w =>
+            w.status === 'RUNNING' || w.status === 'PENDING' || w.status === 'WAITING_USER'
+          );
 
-          // Check for newly completed workflows (was running, now completed/failed)
-          const currentRunningIds = new Set(runningWorkflows.map(w => w.id));
+          // Check for newly completed workflows (was tracked, now completed/failed)
           const completedWorkflows = workflows.filter(w =>
             this.previouslyRunningWorkflowIds.has(w.id) &&
             (w.status === 'COMPLETED' || w.status === 'FAILED')
@@ -1592,30 +1606,54 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           // Send notifications for completed workflows
           completedWorkflows.forEach(workflow => {
             const workflowName = workflow.name || workflow.template?.name || 'Workflow';
-            if (workflow.status === 'COMPLETED') {
-              // Register and complete a background task for notification
-              const taskId = this.backgroundTaskService.registerTask(
+            // Get existing task ID or create new one (for workflows started before this session)
+            let taskId = this.workflowTaskIdMapping.get(workflow.id);
+            if (!taskId) {
+              // Workflow was started before this session - create task now
+              taskId = this.backgroundTaskService.registerTask(
                 'workflow',
                 workflowName,
-                'Case workflow completed',
+                workflow.status === 'COMPLETED' ? 'Case workflow completed' : 'Case workflow failed',
                 { workflowId: workflow.id }
               );
+            }
+
+            if (workflow.status === 'COMPLETED') {
               this.backgroundTaskService.completeTask(taskId, workflow);
             } else if (workflow.status === 'FAILED') {
-              const taskId = this.backgroundTaskService.registerTask(
-                'workflow',
-                workflowName,
-                'Case workflow failed',
-                { workflowId: workflow.id }
-              );
               this.backgroundTaskService.failTask(taskId, 'Workflow execution failed');
             }
-            // Remove from tracking
+
+            // Clean up tracking
             this.previouslyRunningWorkflowIds.delete(workflow.id);
+            this.workflowTaskIdMapping.delete(workflow.id);
           });
 
-          // Update tracking for currently running workflows
-          runningWorkflows.forEach(w => this.previouslyRunningWorkflowIds.add(w.id));
+          // Update tracking and progress for active workflows
+          activeWorkflows.forEach(w => {
+            this.previouslyRunningWorkflowIds.add(w.id);
+
+            // Update progress/status on existing background task
+            const taskId = this.workflowTaskIdMapping.get(w.id);
+            if (taskId) {
+              if (w.status === 'WAITING_USER') {
+                // Set task to waiting status
+                this.backgroundTaskService.setTaskWaiting(
+                  taskId,
+                  w.currentStep || 1,
+                  `Step ${w.currentStep || 1} requires your review`
+                );
+              } else {
+                // Update progress for running/pending workflows
+                const progress = w.progressPercentage || Math.round((w.currentStep / w.totalSteps) * 100) || 0;
+                this.backgroundTaskService.updateTaskProgress(
+                  taskId,
+                  progress,
+                  `Step ${w.currentStep || 1} of ${w.totalSteps || 0}`
+                );
+              }
+            }
+          });
 
           // Update the workflows array (creates new reference for change detection)
           this.userWorkflows = [...workflows];
@@ -2111,6 +2149,17 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         this.workflowName = '';
         this.cdr.detectChanges(); // Force close modal immediately
 
+        // Register background task for tracking
+        const taskId = this.backgroundTaskService.registerTask(
+          'workflow',
+          workflowName,
+          `Step 1 of ${execution.totalSteps || 0}`,
+          { workflowId: execution.id }
+        );
+        this.backgroundTaskService.startTask(taskId);
+        this.workflowTaskIdMapping.set(execution.id, taskId);
+        this.previouslyRunningWorkflowIds.add(execution.id);
+
         // Switch to workflow tab so user can see the new workflow
         this.selectedTask = ConversationType.Workflow;
         this.activeTask = ConversationType.Workflow;
@@ -2239,9 +2288,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.documentAnalyzerService.getAnalysisByDatabaseId(databaseId).subscribe({
         next: (result) => {
           // Add document to state
+          // Normalize ID to match loadAnalysisHistory format
+          const normalizedDatabaseId = result.databaseId || databaseId;
+          const normalizedId = `analysis_${normalizedDatabaseId}`;
+
           const newDoc: AnalyzedDocument = {
-            id: result.id || `doc-${databaseId}`,
-            databaseId: result.databaseId || databaseId,
+            id: normalizedId,
+            databaseId: normalizedDatabaseId,
             fileName: result.fileName || 'Unknown Document',
             fileSize: result.fileSize || 0,
             detectedType: result.detectedType || 'Document',
@@ -2264,7 +2317,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
           // Close collection viewer and open document
           this.isViewingCollection = false;
-          this.stateService.openDocumentViewer(newDoc.id);
+          this.stateService.openDocumentViewer(normalizedId);
           this.cdr.detectChanges();
         },
         error: (err) => {
@@ -2310,6 +2363,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     // Mark that user left AI Workspace (re-enables notifications)
     this.backgroundTaskService.setIsOnAiWorkspace(false);
+
+    // Reset guard flag so history is loaded fresh on next navigation to this component
+    this.analysisHistoryLoaded = false;
 
     this.destroy$.next();
     this.destroy$.complete();
@@ -2825,12 +2881,29 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         confirmButtonText: 'Yes, delete it'
       }).then((result) => {
         if (result.isConfirmed) {
-          // Remove from analyzed documents in state
-          this.stateService.removeAnalyzedDocument(doc.id);
-          this.stateService.setActiveDocumentId(null);
-
-          this.notificationService.success('Deleted!', 'Document has been removed.');
-          this.cdr.detectChanges();
+          // If document has a databaseId, delete from backend first
+          if (doc.databaseId) {
+            this.documentAnalyzerService.deleteAnalysis(doc.databaseId)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: () => {
+                  this.stateService.removeAnalyzedDocument(doc.id);
+                  this.stateService.setActiveDocumentId(null);
+                  this.notificationService.success('Deleted!', 'Document has been removed.');
+                  this.cdr.detectChanges();
+                },
+                error: (err) => {
+                  console.error('Failed to delete document:', err);
+                  this.notificationService.error('Error', 'Failed to delete document');
+                }
+              });
+          } else {
+            // No database ID - just remove from state
+            this.stateService.removeAnalyzedDocument(doc.id);
+            this.stateService.setActiveDocumentId(null);
+            this.notificationService.success('Deleted!', 'Document has been removed.');
+            this.cdr.detectChanges();
+          }
         }
       });
     });
@@ -3187,6 +3260,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.stateService.clearConversationMessages();
     this.stateService.setActiveConversationId(null);
 
+    // Reset workflow and generation state - allows starting fresh analysis
+    this.stateService.setIsGenerating(false);
+    this.stateService.setWorkflowSteps([]);
+    this.stateService.clearFollowUpQuestions();
+
     // Select upload task (shows welcome screen with upload taskcard active)
     this.selectedTask = ConversationType.Upload;
     this.activeTask = ConversationType.Upload;
@@ -3504,13 +3582,26 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   /**
    * Finalize the upload process after all files and collection adds are done
    */
-  private finalizeUpload(
+  private async finalizeUpload(
     failedCount: number,
     totalFiles: number,
     sessionId: number | undefined,
     analysisResults: Array<{ id: string; databaseId: number; fileName: string }>,
     targetCollectionId: number | null
-  ): void {
+  ): Promise<void> {
+    // CRITICAL: Refresh token before making follow-up API requests after long analysis
+    // This prevents logout when token expired during the 10+ minute analysis
+    try {
+      if (this.userService.isTokenAboutToExpire(5)) {
+        console.log('[AI Workspace] Refreshing token after long analysis...');
+        await lastValueFrom(this.userService.refreshToken$());
+        console.log('[AI Workspace] Token refreshed successfully');
+      }
+    } catch (error) {
+      console.warn('[AI Workspace] Token refresh failed after analysis, continuing anyway:', error);
+      // Continue anyway - interceptor will handle if truly expired
+    }
+
     // CRITICAL: Complete background task FIRST (before any component operations)
     // This ensures toast notification is sent even if component is destroyed
     if (this.currentAnalysisTaskId) {
@@ -3571,24 +3662,24 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         this.stateService.setShowChat(false);
         this.cdr.detectChanges();
       } else if (analysisResults.length > 0) {
-        // No collection - show document viewer for single document, or last document for batch
+        // No collection - load history from DB and then open the document
+        // IMPORTANT: Don't call displayAnalysisResults() here - loadAnalysisHistory() already includes the doc
+        // Calling both would add the document twice to the sidebar
         const lastResult = analysisResults[analysisResults.length - 1];
-        // Use databaseId for API call (more reliable than frontend id)
-        const analysisId = lastResult.databaseId ? lastResult.databaseId.toString() : lastResult.id;
-        this.documentAnalyzerService.getAnalysisById(analysisId)
-          .pipe(takeUntil(this.destroy$))
-          .subscribe({
-            next: (fullResult) => {
-              // Pass false - no notification needed, background task toast already notified
-              this.displayAnalysisResults(fullResult, false);
-              this.cdr.detectChanges();
-            },
-            error: () => {
-              // Fallback: just refresh the analysis history
-              this.loadAnalysisHistory();
-              this.cdr.detectChanges();
-            }
-          });
+        const databaseId = lastResult.databaseId || lastResult.id;
+        const normalizedId = `analysis_${databaseId}`;
+
+        // Load history first (includes the new document from DB)
+        this.loadAnalysisHistory();
+
+        // After history loads, open the document in viewer
+        setTimeout(() => {
+          const doc = this.stateService.getAnalyzedDocumentById(normalizedId);
+          if (doc) {
+            this.openDocumentInViewer(doc);
+          }
+          this.cdr.detectChanges();
+        }, 500);
       } else {
         // All failed
         this.stateService.addConversationMessage({
@@ -3827,10 +3918,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    *                           Set to false when called from background task handlers to avoid duplicate toasts
    */
   private displayAnalysisResults(result: any, showNotification: boolean = true): void {
+    // Normalize the ID - use the same format as loadAnalysisHistory: 'analysis_${databaseId}'
+    // This ensures no duplicates when loadAnalysisHistory runs after displayAnalysisResults
+    const databaseId = result.databaseId || result.id;
+    const normalizedId = `analysis_${databaseId}`;
+
     // Create analyzed document object for state
     const analyzedDoc: AnalyzedDocument = {
-      id: result.id,
-      databaseId: result.databaseId,
+      id: normalizedId,
+      databaseId: databaseId,
       fileName: result.fileName,
       fileSize: result.fileSize,
       detectedType: result.detectedType || 'Document',
@@ -3850,7 +3946,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Open document viewer in full-page mode (sidebar collapsed)
     this.stateService.setViewerSidebarCollapsed(true);
-    this.stateService.openDocumentViewer(result.id);
+    this.stateService.openDocumentViewer(normalizedId);
 
     // Show success notification only if requested (skip for background task results)
     if (showNotification) {
@@ -3984,6 +4080,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Auto-collapses sidebar for full-page viewer by default
    */
   openDocumentInViewer(document: AnalyzedDocument): void {
+    // Don't open if document is still analyzing
+    if (document.status === 'analyzing') {
+      this.notificationService.info('Analysis in Progress', 'Please wait for the analysis to complete.');
+      return;
+    }
+
     // Auto-collapse sidebar for full-page view when clicking from sidebar
     this.stateService.setViewerSidebarCollapsed(true);
 
@@ -7844,31 +7946,43 @@ You can:
   /**
    * Handle completed analysis task - displays the analysis result
    * Note: No additional notification shown here since toast already notified the user
+   *
+   * IMPORTANT: Only calls loadAnalysisHistory() - does NOT call displayAnalysisResults()
+   * This prevents duplicate documents in sidebar (loadAnalysisHistory already includes the doc from DB)
    */
-  private handleCompletedAnalysisTask(task: BackgroundTask): void {
-    // Refresh the analysis history to show new results
+  private async handleCompletedAnalysisTask(task: BackgroundTask): Promise<void> {
+    // CRITICAL: Refresh token before making follow-up API requests
+    // Token may have expired during long background analysis
+    try {
+      if (this.userService.isTokenAboutToExpire(5)) {
+        console.log('[AI Workspace] Refreshing token in background task handler...');
+        await lastValueFrom(this.userService.refreshToken$());
+        console.log('[AI Workspace] Token refreshed successfully');
+      }
+    } catch (error) {
+      console.warn('[AI Workspace] Token refresh failed in background task handler:', error);
+      // Continue anyway - interceptor will handle if truly expired
+    }
+
+    // Refresh the analysis history to show new results from DB
+    // This already includes the completed analysis - no need to add it separately
     this.loadAnalysisHistory();
 
-    // Display the analysis result if available
+    // After history loads, find and open the completed document
+    // Use setTimeout to wait for loadAnalysisHistory to complete
     if (task.result && task.result.results && task.result.results.length > 0) {
       const lastResult = task.result.results[task.result.results.length - 1];
+      const databaseId = lastResult.databaseId || lastResult.id;
+      const normalizedId = `analysis_${databaseId}`;
 
-      // Use databaseId for API call (more reliable than frontend id)
-      const analysisId = lastResult.databaseId ? lastResult.databaseId.toString() : lastResult.id;
-
-      // Fetch and display the analysis
-      this.documentAnalyzerService.getAnalysisById(analysisId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (fullResult) => {
-            // Pass false to suppress notification - background task toast already notified user
-            this.displayAnalysisResults(fullResult, false);
-            this.cdr.detectChanges();
-          },
-          error: () => {
-            // Silently fail - user can find analysis in history
-          }
-        });
+      // Wait a bit for loadAnalysisHistory to complete, then open the document
+      setTimeout(() => {
+        const doc = this.stateService.getAnalyzedDocumentById(normalizedId);
+        if (doc) {
+          this.openDocumentInViewer(doc);
+          this.cdr.detectChanges();
+        }
+      }, 500);
     }
   }
 
@@ -7885,6 +7999,76 @@ You can:
     }
 
     this.notificationService.success('Workflow Completed', `"${task.title}" has finished processing`);
+  }
+
+  /**
+   * Handle viewing a background task from the indicator panel
+   * Called when user clicks "View" button on a completed task
+   */
+  onBackgroundTaskView(task: BackgroundTask): void {
+    switch (task.type) {
+      case 'question':
+        // Switch to question mode and open the conversation
+        this.selectedTask = ConversationType.Question;
+        if (task.conversationId) {
+          this.switchConversation(task.conversationId);
+        }
+        break;
+
+      case 'draft':
+        // Switch to draft mode and open the conversation
+        this.selectedTask = ConversationType.Draft;
+        if (task.conversationId) {
+          this.switchConversation(task.conversationId);
+        }
+        break;
+
+      case 'analysis':
+        // Switch to upload/analysis mode and display the result
+        this.selectedTask = ConversationType.Upload;
+        if (task.result && task.result.results && task.result.results.length > 0) {
+          const lastResult = task.result.results[task.result.results.length - 1];
+          const analysisId = lastResult.databaseId ? lastResult.databaseId.toString() : lastResult.id;
+
+          // Fetch and display the analysis
+          this.documentAnalyzerService.getAnalysisById(analysisId)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (fullResult) => {
+                this.displayAnalysisResults(fullResult, false);
+                this.cdr.detectChanges();
+              },
+              error: (err) => {
+                console.error('Failed to load analysis:', err);
+                this.notificationService.error('Error', 'Failed to load analysis results');
+              }
+            });
+        }
+        break;
+
+      case 'workflow':
+        // Switch to workflow mode and open the workflow details
+        this.selectedTask = ConversationType.Workflow;
+        if (task.workflowId) {
+          const workflow = this.userWorkflows.find(w => w.id === task.workflowId);
+          if (workflow) {
+            this.viewWorkflowDetails(workflow);
+          } else {
+            // Load the workflow directly if not in list
+            this.caseWorkflowService.getExecutionWithSteps(task.workflowId)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: (executionWithSteps) => {
+                  this.selectedWorkflowForDetails = executionWithSteps;
+                  this.showWorkflowDetailsPage = true;
+                  this.cdr.detectChanges();
+                },
+                error: (err) => console.error('Failed to load workflow:', err)
+              });
+          }
+        }
+        break;
+    }
   }
 
 }

@@ -88,8 +88,11 @@ public class TokenProvider {
     }
     
     public String createRefreshToken(UserPrincipal userPrincipal){
+        // Include organizationId in refresh token for tenant context during token refresh
+        Long organizationId = userPrincipal.getUser().getOrganizationId();
         return JWT.create().withIssuer(BOSTONEO_SOLUTIONS_LLC).withAudience(CLIENT_MANAGEMENT_SERVICE)
                 .withIssuedAt(new Date()).withSubject(String.valueOf(userPrincipal.getUser().getId()))
+                .withClaim("organizationId", organizationId)
                 .withExpiresAt(new Date(currentTimeMillis() + REFRESH_TOKEN_EXPIRATION_TIME))
                 .sign(HMAC512(secret.getBytes()));
     }

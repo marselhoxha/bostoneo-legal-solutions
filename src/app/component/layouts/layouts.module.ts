@@ -18,6 +18,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { PermissionDebuggerComponent } from 'src/app/shared/components/permission-debugger/permission-debugger.component';
 import { OrganizationManagementModule } from 'src/app/modules/organization-management/organization-management.module';
+import { BackgroundTasksIndicatorComponent } from 'src/app/modules/legal/components/ai-assistant/ai-workspace/background-tasks-indicator/background-tasks-indicator.component';
 
 @NgModule({
   declarations: [
@@ -39,7 +40,8 @@ import { OrganizationManagementModule } from 'src/app/modules/organization-manag
     ReactiveFormsModule,
     TranslateModule,
     PermissionDebuggerComponent,
-    OrganizationManagementModule
+    OrganizationManagementModule,
+    BackgroundTasksIndicatorComponent
   ],
   exports: [
     LayoutComponent

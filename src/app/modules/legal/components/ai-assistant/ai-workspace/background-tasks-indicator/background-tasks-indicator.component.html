@@ -1,0 +1,140 @@
+<!-- Background Tasks Indicator - Shows running/completed AI tasks -->
+<div class="tasks-indicator-wrapper" *ngIf="hasTasks">
+  <!-- Tasks Badge Button -->
+  <button class="tasks-badge"
+          [class.has-active]="hasActiveTasks"
+          [class.has-waiting]="!hasActiveTasks && hasWaitingTasks"
+          [class.has-completed]="!hasActiveTasks && !hasWaitingTasks && hasRecentlyCompleted"
+          (click)="togglePanel()">
+    <!-- Active Tasks: Show spinner -->
+    <span class="badge-icon" *ngIf="hasActiveTasks">
+      <span class="spinner-border spinner-border-sm" role="status"></span>
+    </span>
+    <!-- Waiting Tasks: Show pause icon -->
+    <span class="badge-icon" *ngIf="!hasActiveTasks && hasWaitingTasks">
+      <i class="ri-pause-circle-line"></i>
+    </span>
+    <!-- Completed Only: Show check -->
+    <span class="badge-icon" *ngIf="!hasActiveTasks && !hasWaitingTasks && hasRecentlyCompleted">
+      <i class="ri-check-line"></i>
+    </span>
+    <span class="badge-text">
+      Tasks
+      <span class="task-count">({{ taskCount }})</span>
+    </span>
+    <i class="ri-arrow-down-s-line dropdown-arrow" [class.rotated]="isPanelOpen"></i>
+  </button>
+
+  <!-- Tasks Panel Dropdown -->
+  <div class="tasks-panel" *ngIf="isPanelOpen" [@slideDown]>
+    <!-- Panel Header -->
+    <div class="panel-header">
+      <span class="header-title">Background Tasks</span>
+      <button class="clear-btn"
+              *ngIf="hasRecentlyCompleted"
+              (click)="clearCompleted()">
+        Clear completed
+      </button>
+    </div>
+
+    <!-- Task List -->
+    <div class="task-list">
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="tasks.length === 0">
+        <i class="ri-inbox-line"></i>
+        <span>No active tasks</span>
+      </div>
+
+      <!-- Task Items -->
+      <div class="task-item clickable"
+           *ngFor="let task of tasks"
+           [class.is-active]="task.status === 'running' || task.status === 'pending'"
+           [class.is-waiting]="task.status === 'waiting'"
+           [class.is-completed]="task.status === 'completed'"
+           [class.is-failed]="task.status === 'failed'"
+           (click)="navigateToTask(task)">
+
+        <!-- Task Icon -->
+        <div class="task-icon">
+          <i [class]="getTaskIcon(task)"></i>
+        </div>
+
+        <!-- Task Info -->
+        <div class="task-info">
+          <div class="task-name" [title]="task.fileName || task.title">
+            {{ (task.fileName || task.title) | slice:0:30 }}{{ (task.fileName || task.title)?.length > 30 ? '...' : '' }}
+          </div>
+          <div class="task-meta">
+            <span class="task-type">{{ getTaskTypeLabel(task) }}</span>
+            <span class="task-separator">•</span>
+            <span class="task-status" [ngClass]="{
+              'status-active': task.status === 'running' || task.status === 'pending',
+              'status-waiting': task.status === 'waiting',
+              'status-completed': task.status === 'completed',
+              'status-failed': task.status === 'failed'
+            }">
+              <!-- Running/Pending Status -->
+              <ng-container *ngIf="task.status === 'running' || task.status === 'pending'">
+                <span class="spinner-border spinner-border-sm me-1"></span>
+                <!-- Workflow: Show step progress -->
+                <ng-container *ngIf="task.type === 'workflow'">
+                  {{ task.description || 'Processing...' }} • {{ task.elapsedTime }}
+                </ng-container>
+                <!-- Question: Show researching -->
+                <ng-container *ngIf="task.type === 'question'">
+                  Researching... {{ task.elapsedTime }}
+                </ng-container>
+                <!-- Draft: Show generating -->
+                <ng-container *ngIf="task.type === 'draft'">
+                  Generating... {{ task.elapsedTime }}
+                </ng-container>
+                <!-- Analysis: Show analyzing -->
+                <ng-container *ngIf="task.type === 'analysis'">
+                  Analyzing... {{ task.elapsedTime }}
+                </ng-container>
+              </ng-container>
+              <!-- Waiting for Input Status -->
+              <ng-container *ngIf="task.status === 'waiting'">
+                <i class="ri-pause-circle-line me-1"></i>
+                {{ task.waitingMessage || 'Waiting for input' }}
+              </ng-container>
+              <!-- Completed Status -->
+              <ng-container *ngIf="task.status === 'completed'">
+                <i class="ri-check-line me-1"></i>
+                Complete
+              </ng-container>
+              <!-- Failed Status -->
+              <ng-container *ngIf="task.status === 'failed'">
+                <i class="ri-error-warning-line me-1"></i>
+                Failed
+              </ng-container>
+            </span>
+          </div>
+        </div>
+
+        <!-- Action Button - Context-aware -->
+        <button class="task-action-btn"
+                *ngIf="task.status === 'waiting'"
+                (click)="navigateToTask(task); $event.stopPropagation()">
+          Continue
+        </button>
+        <button class="task-action-btn"
+                *ngIf="task.status === 'completed'"
+                (click)="viewTaskResult(task); $event.stopPropagation()">
+          View
+        </button>
+      </div>
+    </div>
+
+    <!-- Panel Footer -->
+    <div class="panel-footer" *ngIf="hasActiveTasks">
+      <span class="footer-text">
+        <i class="ri-information-line me-1"></i>
+        Tasks continue in background while you work
+      </span>
+    </div>
+  </div>
+
+  <!-- Backdrop for closing panel -->
+  <div class="panel-backdrop" *ngIf="isPanelOpen" (click)="closePanel()"></div>
+</div>

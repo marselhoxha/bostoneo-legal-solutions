@@ -11,7 +11,7 @@ export type BackgroundTaskType = 'question' | 'draft' | 'analysis' | 'workflow';
 /**
  * Task status
  */
-export type BackgroundTaskStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type BackgroundTaskStatus = 'pending' | 'running' | 'waiting' | 'completed' | 'failed';
 
 /**
  * Interface for a background task
@@ -27,6 +27,8 @@ export interface BackgroundTask {
   completedAt?: Date;
   result?: any;
   error?: string;
+  waitingMessage?: string; // Message to show when task is waiting for user input
+  waitingStep?: number; // Step number that requires user input
   // Context for navigation
   conversationId?: string;
   backendConversationId?: number;
@@ -119,6 +121,28 @@ export class BackgroundTaskService {
   }
 
   /**
+   * Set task to waiting status (for workflows that need user input)
+   */
+  setTaskWaiting(taskId: string, waitingStep: number, waitingMessage?: string): void {
+    this.updateTask(taskId, {
+      status: 'waiting',
+      waitingStep,
+      waitingMessage: waitingMessage || `Step ${waitingStep} requires your review`
+    });
+  }
+
+  /**
+   * Resume a waiting task (change status back to running)
+   */
+  resumeTask(taskId: string): void {
+    this.updateTask(taskId, {
+      status: 'running',
+      waitingStep: undefined,
+      waitingMessage: undefined
+    });
+  }
+
+  /**
    * Update task progress
    */
   updateTaskProgress(taskId: string, progress: number, description?: string): void {
@@ -203,6 +227,20 @@ export class BackgroundTaskService {
    */
   getTasksByType(type: BackgroundTaskType): BackgroundTask[] {
     return this.tasksSubject.value.filter(t => t.type === type);
+  }
+
+  /**
+   * Get a task by workflow ID (for workflow tasks only)
+   */
+  getTaskByWorkflowId(workflowId: number): BackgroundTask | undefined {
+    return this.tasksSubject.value.find(t => t.type === 'workflow' && t.workflowId === workflowId);
+  }
+
+  /**
+   * Check if a task already exists for a workflow
+   */
+  hasWorkflowTask(workflowId: number): boolean {
+    return this.tasksSubject.value.some(t => t.type === 'workflow' && t.workflowId === workflowId);
   }
 
   /**
@@ -309,6 +347,28 @@ export class BackgroundTaskService {
 
   // ===== PRIVATE METHODS =====
 
+  /**
+   * Play notification sound when a background task completes
+   * Uses graceful error handling - silently fails if audio cannot play
+   */
+  private playTaskCompletionSound(): void {
+    try {
+      const audio = new Audio('assets/sounds/task-complete.mp3');
+      audio.volume = 0.3;
+      audio.addEventListener('error', () => {
+        // Silently fail - audio might not be supported or file might not load
+      });
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Silently fail - autoplay might be blocked by browser
+        });
+      }
+    } catch (error) {
+      // Silently fail
+    }
+  }
+
   private generateTaskId(): string {
     return `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
@@ -326,6 +386,9 @@ export class BackgroundTaskService {
     const icon = this.getTaskIcon(task);
     const iconBg = this.getTaskIconBg(task);
 
+    // Play notification sound
+    this.playTaskCompletionSound();
+
     // Store task reference for navigation
     const taskToNavigate = { ...task };
 
@@ -334,14 +397,15 @@ export class BackgroundTaskService {
       toast: true,
       position: 'top-end',
       showConfirmButton: true,
-      showCancelButton: false,
+      showCloseButton: true,
       confirmButtonText: `<i class="ri-arrow-right-line me-1"></i> View Result`,
-      timer: 20000,
+      timer: 8000,
       timerProgressBar: true,
       customClass: {
         popup: 'ai-task-toast',
         htmlContainer: 'ai-task-toast-body',
-        confirmButton: 'btn btn-sm btn-primary'
+        confirmButton: 'btn btn-sm btn-primary',
+        closeButton: 'toast-close-btn'
       },
       html: `
         <div class="d-flex align-items-start gap-3">
@@ -378,15 +442,20 @@ export class BackgroundTaskService {
   }
 
   private showFailureNotification(task: BackgroundTask): void {
+    // Play notification sound (same sound for failures)
+    this.playTaskCompletionSound();
+
     // Show Velzon-styled error toast
     Swal.fire({
       toast: true,
       position: 'top-end',
       showConfirmButton: false,
-      timer: 10000,
+      showCloseButton: true,
+      timer: 6000,
       timerProgressBar: true,
       customClass: {
-        popup: 'ai-task-toast ai-task-toast-error'
+        popup: 'ai-task-toast ai-task-toast-error',
+        closeButton: 'toast-close-btn'
       },
       html: `
         <div class="d-flex align-items-start gap-3">

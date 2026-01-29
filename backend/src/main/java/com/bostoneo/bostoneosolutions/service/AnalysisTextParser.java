@@ -96,18 +96,26 @@ public class AnalysisTextParser {
     /**
      * Main entry point: Parse analysis text and save extracted items
      * HYBRID APPROACH: Try embedded JSON first, then fall back to regex patterns
+     * @deprecated Use parseAndSaveStructuredData(Long, String, Long) to pass orgId for async safety
      */
+    @Deprecated
     public void parseAndSaveStructuredData(Long analysisId, String analysisText) {
+        parseAndSaveStructuredData(analysisId, analysisText, getRequiredOrganizationId());
+    }
+
+    /**
+     * Main entry point: Parse analysis text and save extracted items (async-safe version)
+     * HYBRID APPROACH: Try embedded JSON first, then fall back to regex patterns
+     * @param orgId Organization ID - must be passed explicitly for async operations
+     */
+    public void parseAndSaveStructuredData(Long analysisId, String analysisText, Long orgId) {
         if (analysisText == null || analysisText.isEmpty()) {
             log.warn("Empty analysis text for analysis ID: {}", analysisId);
             return;
         }
 
-        log.info("Parsing analysis text for structured data: analysisId={}, length={}",
-                 analysisId, analysisText.length());
-
-        // SECURITY: Get organization ID for tenant-filtered operations
-        Long orgId = getRequiredOrganizationId();
+        log.info("Parsing analysis text for structured data: analysisId={}, orgId={}, length={}",
+                 analysisId, orgId, analysisText.length());
 
         // Clear existing items for this analysis (in case of re-processing)
         // SECURITY: Use tenant-filtered delete to prevent cross-org deletion
@@ -115,7 +123,7 @@ public class AnalysisTextParser {
         timelineEventRepository.deleteByOrganizationIdAndAnalysisId(orgId, analysisId);
 
         // STEP 1: Try to parse embedded JSON first (most accurate)
-        boolean jsonParsed = tryParseEmbeddedJson(analysisId, analysisText);
+        boolean jsonParsed = tryParseEmbeddedJson(analysisId, analysisText, orgId);
 
         if (jsonParsed) {
             log.info("Successfully extracted structured data from embedded JSON for analysis {}", analysisId);
@@ -126,14 +134,14 @@ public class AnalysisTextParser {
         log.info("No embedded JSON found, falling back to regex extraction for analysis {}", analysisId);
 
         // Extract and save action items using regex
-        List<ActionItem> actionItems = extractActionItems(analysisId, analysisText);
+        List<ActionItem> actionItems = extractActionItems(analysisId, analysisText, orgId);
         if (!actionItems.isEmpty()) {
             actionItemRepository.saveAll(actionItems);
             log.info("Saved {} action items (regex) for analysis {}", actionItems.size(), analysisId);
         }
 
         // Extract and save timeline events using regex
-        List<TimelineEvent> timelineEvents = extractTimelineEvents(analysisId, analysisText);
+        List<TimelineEvent> timelineEvents = extractTimelineEvents(analysisId, analysisText, orgId);
         if (!timelineEvents.isEmpty()) {
             timelineEventRepository.saveAll(timelineEvents);
             log.info("Saved {} timeline events (regex) for analysis {}", timelineEvents.size(), analysisId);
@@ -143,8 +151,9 @@ public class AnalysisTextParser {
     /**
      * Try to parse embedded JSON from Claude's response
      * Returns true if JSON was found and parsed successfully
+     * @param orgId Organization ID for tenant isolation
      */
-    private boolean tryParseEmbeddedJson(Long analysisId, String text) {
+    private boolean tryParseEmbeddedJson(Long analysisId, String text, Long orgId) {
         try {
             // Look for ```json code block
             String jsonBlock = null;
@@ -185,7 +194,6 @@ public class AnalysisTextParser {
                 List<Map<String, Object>> items = (List<Map<String, Object>>) actionItemsObj;
                 List<ActionItem> actionItems = new ArrayList<>();
 
-                Long orgId = getRequiredOrganizationId();
                 for (Map<String, Object> item : items) {
                     ActionItem actionItem = new ActionItem();
                     actionItem.setOrganizationId(orgId);
@@ -222,10 +230,9 @@ public class AnalysisTextParser {
                 List<Map<String, Object>> events = (List<Map<String, Object>>) timelineEventsObj;
                 List<TimelineEvent> timelineEvents = new ArrayList<>();
 
-                Long timelineOrgId = getRequiredOrganizationId();
                 for (Map<String, Object> event : events) {
                     TimelineEvent timelineEvent = new TimelineEvent();
-                    timelineEvent.setOrganizationId(timelineOrgId);
+                    timelineEvent.setOrganizationId(orgId);
                     timelineEvent.setAnalysisId(analysisId);
                     timelineEvent.setTitle((String) event.get("title"));
                     timelineEvent.setEventType((String) event.getOrDefault("eventType", "DEADLINE"));
@@ -262,8 +269,9 @@ public class AnalysisTextParser {
 
     /**
      * Extract action items from analysis text
+     * @param orgId Organization ID for tenant isolation
      */
-    private List<ActionItem> extractActionItems(Long analysisId, String text) {
+    private List<ActionItem> extractActionItems(Long analysisId, String text, Long orgId) {
         List<ActionItem> items = new ArrayList<>();
         Set<String> seenDescriptions = new HashSet<>();
 
@@ -273,13 +281,13 @@ public class AnalysisTextParser {
         String textToSearch = actionSection != null ? actionSection : text;
 
         // Try checkbox patterns
-        items.addAll(extractCheckboxItems(analysisId, textToSearch, seenDescriptions));
+        items.addAll(extractCheckboxItems(analysisId, textToSearch, seenDescriptions, orgId));
 
         // Try day-based patterns
-        items.addAll(extractDayBasedItems(analysisId, textToSearch, seenDescriptions));
+        items.addAll(extractDayBasedItems(analysisId, textToSearch, seenDescriptions, orgId));
 
         // Try action verb patterns
-        items.addAll(extractActionVerbItems(analysisId, textToSearch, seenDescriptions));
+        items.addAll(extractActionVerbItems(analysisId, textToSearch, seenDescriptions, orgId));
 
         // Deduplicate and limit
         return items.stream()
@@ -287,11 +295,10 @@ public class AnalysisTextParser {
             .toList();
     }
 
-    private List<ActionItem> extractCheckboxItems(Long analysisId, String text, Set<String> seen) {
+    private List<ActionItem> extractCheckboxItems(Long analysisId, String text, Set<String> seen, Long orgId) {
         List<ActionItem> items = new ArrayList<>();
         Pattern pattern = ACTION_PATTERNS[0];
         Matcher matcher = pattern.matcher(text);
-        Long orgId = getRequiredOrganizationId();
 
         while (matcher.find()) {
             String description = cleanDescription(matcher.group(1));
@@ -311,11 +318,10 @@ public class AnalysisTextParser {
         return items;
     }
 
-    private List<ActionItem> extractDayBasedItems(Long analysisId, String text, Set<String> seen) {
+    private List<ActionItem> extractDayBasedItems(Long analysisId, String text, Set<String> seen, Long orgId) {
         List<ActionItem> items = new ArrayList<>();
         Pattern pattern = ACTION_PATTERNS[1];
         Matcher matcher = pattern.matcher(text);
-        Long orgId = getRequiredOrganizationId();
 
         LocalDate today = LocalDate.now();
 
@@ -348,11 +354,10 @@ public class AnalysisTextParser {
         return items;
     }
 
-    private List<ActionItem> extractActionVerbItems(Long analysisId, String text, Set<String> seen) {
+    private List<ActionItem> extractActionVerbItems(Long analysisId, String text, Set<String> seen, Long orgId) {
         List<ActionItem> items = new ArrayList<>();
         Pattern pattern = ACTION_PATTERNS[2];
         Matcher matcher = pattern.matcher(text);
-        Long orgId = getRequiredOrganizationId();
 
         while (matcher.find()) {
             String description = cleanDescription(matcher.group(1));
@@ -374,11 +379,11 @@ public class AnalysisTextParser {
 
     /**
      * Extract timeline events from analysis text
+     * @param orgId Organization ID for tenant isolation
      */
-    private List<TimelineEvent> extractTimelineEvents(Long analysisId, String text) {
+    private List<TimelineEvent> extractTimelineEvents(Long analysisId, String text, Long orgId) {
         List<TimelineEvent> events = new ArrayList<>();
         Set<String> seenDates = new HashSet<>();
-        Long orgId = getRequiredOrganizationId();
 
         // Look for timeline sections
         String timelineSection = extractSection(text,
@@ -418,7 +423,7 @@ public class AnalysisTextParser {
         }
 
         // Also look for relative dates like "within 30 days"
-        events.addAll(extractRelativeDateEvents(analysisId, textToSearch, seenDates));
+        events.addAll(extractRelativeDateEvents(analysisId, textToSearch, seenDates, orgId));
 
         return events.stream()
             .limit(15) // Max 15 timeline events
@@ -426,10 +431,9 @@ public class AnalysisTextParser {
             .toList();
     }
 
-    private List<TimelineEvent> extractRelativeDateEvents(Long analysisId, String text, Set<String> seen) {
+    private List<TimelineEvent> extractRelativeDateEvents(Long analysisId, String text, Set<String> seen, Long orgId) {
         List<TimelineEvent> events = new ArrayList<>();
         LocalDate today = LocalDate.now();
-        Long orgId = getRequiredOrganizationId();
 
         // Pattern for "within X days" type expressions
         Pattern relativeDatePattern = Pattern.compile(

@@ -5,6 +5,7 @@ import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.provider.TokenProvider;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -110,6 +111,15 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        // CRITICAL: Skip filter for async dispatch (response writing)
+        // When DeferredResult/CompletableFuture completes, Spring dispatches to write the response
+        // on a new thread. This dispatch doesn't have the original Authorization header and would
+        // fail with "anonymousUser" without this check.
+        if (request.getDispatcherType() == DispatcherType.ASYNC) {
+            log.debug("Skipping filter for async dispatch: {}", request.getRequestURI());
+            return true;
+        }
+
         // Skip WebSocket upgrade requests (WebSocket has its own token validation)
         String upgrade = request.getHeader("Upgrade");
         if ("websocket".equalsIgnoreCase(upgrade) || request.getRequestURI().startsWith("/ws")) {

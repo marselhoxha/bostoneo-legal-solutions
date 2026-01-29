@@ -378,6 +378,48 @@ $main-content-flex: 1;
   &:hover .item-delete-btn {
     opacity: 1;
   }
+
+  // Analyzing state
+  &.is-analyzing {
+    cursor: default;
+    opacity: 0.85;
+
+    &:hover {
+      background: transparent;
+    }
+
+    .item-icon.analyzing {
+      background: linear-gradient(135deg, rgba(64, 81, 137, 0.15) 0%, rgba(64, 81, 137, 0.1) 100%);
+      color: var(--vz-primary, #405189);
+
+      .spinner-border-sm {
+        width: 14px;
+        height: 14px;
+        border-width: 2px;
+      }
+    }
+
+    .item-title {
+      color: var(--vz-secondary-color, #878a99);
+    }
+  }
+}
+
+// Analyzing badge in sidebar
+.badge-analyzing {
+  background: rgba(64, 81, 137, 0.12) !important;
+  color: var(--vz-primary, #405189) !important;
+  font-weight: 500;
+  animation: pulse-text 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-text {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 // Dark mode icon adjustments - using :host-context for Angular encapsulation
@@ -6361,6 +6403,29 @@ button.filter-chip,
 
   @media (max-width: 768px) {
     display: flex;
+  }
+}
+
+// ===========================
+// BACKGROUND TASKS INDICATOR
+// Fixed position indicator for running/completed AI tasks
+// ===========================
+
+.background-tasks-container {
+  position: fixed;
+  top: 110px;
+  right: 1.5rem;
+  z-index: 1040;
+
+  // On mobile, adjust position
+  @media (max-width: 768px) {
+    top: 110px;
+    right: 1rem;
+  }
+
+  // When drafting mode sidebar is present, adjust position
+  @media (min-width: 1200px) {
+    right: 2rem;
   }
 }
 

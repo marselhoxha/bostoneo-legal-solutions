@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.model.AIDocumentAnalysis;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AIDocumentAnalysisRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
@@ -8,6 +9,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
@@ -74,6 +78,10 @@ public class AIDocumentAnalysisService {
         String analysisId = UUID.randomUUID().toString();
         long startTime = System.currentTimeMillis();
 
+        // CRITICAL: Capture SecurityContext for async callback threads
+        // CompletableFuture callbacks run on reactor threads without the original request's SecurityContext
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
         // Default to 'general' if analysisContext is null or empty
         String effectiveContext = (analysisContext == null || analysisContext.isEmpty()) ? "general" : analysisContext;
 
@@ -99,7 +107,8 @@ public class AIDocumentAnalysisService {
         analysis.setAnalysisType(analysisType);
         analysis.setAnalysisContext(effectiveContext);  // Store user's analysis goal
         analysis.setUserId(userId);
-        analysis.setOrganizationId(getRequiredOrganizationId()); // SECURITY: Require organization ID for tenant isolation
+        Long orgId = getRequiredOrganizationId(); // Capture early for async operations
+        analysis.setOrganizationId(orgId); // SECURITY: Require organization ID for tenant isolation
         analysis.setCaseId(caseId);
         analysis.setStatus("processing");
         analysis.setIsArchived(false);
@@ -136,70 +145,94 @@ public class AIDocumentAnalysisService {
             // Pass sessionId to enable cancellation support (like LegalResearchConversationService)
             return claudeService.generateCompletion(prompt, null, true, sessionId)
                     .thenApply(response -> {
-                        long processingTime = System.currentTimeMillis() - startTime;
-
-                        // Estimate token usage for monitoring (rough: 1 token ≈ 4 characters)
-                        int estimatedResponseTokens = response.length() / 4;
-                        int estimatedPromptTokens = (content.length() + prompt.length()) / 4;
-                        log.info("✅ Document analysis complete: type={}, responseTokens≈{}, promptTokens≈{}, time={}ms, file={}",
-                                classification.documentType, estimatedResponseTokens, estimatedPromptTokens, processingTime, file.getOriginalFilename());
-
-                        savedAnalysis.setAnalysisResult(response);
-                        savedAnalysis.setStatus("completed");
-                        savedAnalysis.setProcessingTimeMs(processingTime);
-
-                        // Parse and store structured data
-                        Map<String, Object> parsedAnalysis = parseAnalysisResponse(response, analysisType);
-                        savedAnalysis.setSummary((String) parsedAnalysis.get("summary"));
-                        savedAnalysis.setRiskScore((Integer) parsedAnalysis.get("riskScore"));
-                        savedAnalysis.setRiskLevel((String) parsedAnalysis.get("riskLevel"));
-
+                        // CRITICAL: Re-establish security and tenant context for this background thread
+                        // Both are ThreadLocal and cleared after the original HTTP request completes
+                        if (auth != null) {
+                            SecurityContextHolder.getContext().setAuthentication(auth);
+                        }
+                        TenantContext.setCurrentTenant(orgId);
                         try {
-                            savedAnalysis.setKeyFindings(objectMapper.writeValueAsString(parsedAnalysis.get("keyFindings")));
-                            savedAnalysis.setRecommendations(objectMapper.writeValueAsString(parsedAnalysis.get("recommendations")));
-                            savedAnalysis.setComplianceIssues(objectMapper.writeValueAsString(parsedAnalysis.get("complianceIssues")));
-                        } catch (Exception e) {
-                            log.error("Error serializing analysis data", e);
-                        }
+                            long processingTime = System.currentTimeMillis() - startTime;
 
-                        // Estimate tokens and cost (rough estimation)
-                        int estimatedTokens = (prompt.length() + response.length()) / 4;
-                        savedAnalysis.setTokensUsed(estimatedTokens);
-                        savedAnalysis.setCostEstimate(estimatedTokens * 0.00003); // Rough estimate
+                            // Estimate token usage for monitoring (rough: 1 token ≈ 4 characters)
+                            int estimatedResponseTokens = response.length() / 4;
+                            int estimatedPromptTokens = (content.length() + prompt.length()) / 4;
+                            log.info("✅ Document analysis complete: type={}, responseTokens≈{}, promptTokens≈{}, time={}ms, file={}",
+                                    classification.documentType, estimatedResponseTokens, estimatedPromptTokens, processingTime, file.getOriginalFilename());
 
-                        AIDocumentAnalysis finalAnalysis = repository.save(savedAnalysis);
+                            savedAnalysis.setAnalysisResult(response);
+                            savedAnalysis.setStatus("completed");
+                            savedAnalysis.setProcessingTimeMs(processingTime);
 
-                        // Extract action items and timeline events using hybrid parsing
-                        // (tries JSON first, then regex patterns)
-                        // Skip for contract-type documents - they don't have actionItems/timelineEvents
-                        if (!isContractType(classification.documentType)) {
+                            // Parse and store structured data
+                            Map<String, Object> parsedAnalysis = parseAnalysisResponse(response, analysisType);
+                            savedAnalysis.setSummary((String) parsedAnalysis.get("summary"));
+                            savedAnalysis.setRiskScore((Integer) parsedAnalysis.get("riskScore"));
+                            savedAnalysis.setRiskLevel((String) parsedAnalysis.get("riskLevel"));
+
                             try {
-                                analysisTextParser.parseAndSaveStructuredData(finalAnalysis.getId(), response);
+                                savedAnalysis.setKeyFindings(objectMapper.writeValueAsString(parsedAnalysis.get("keyFindings")));
+                                savedAnalysis.setRecommendations(objectMapper.writeValueAsString(parsedAnalysis.get("recommendations")));
+                                savedAnalysis.setComplianceIssues(objectMapper.writeValueAsString(parsedAnalysis.get("complianceIssues")));
                             } catch (Exception e) {
-                                log.warn("Failed to extract structured data from analysis {}: {}",
-                                         finalAnalysis.getId(), e.getMessage());
+                                log.error("Error serializing analysis data", e);
                             }
-                        } else {
-                            log.info("Skipping structured data extraction for contract-type document: {}", classification.documentType);
-                        }
 
-                        // Strip JSON block from stored analysis for cleaner display
-                        String cleanedAnalysis = stripJsonBlock(response);
-                        if (!cleanedAnalysis.equals(response)) {
-                            finalAnalysis.setAnalysisResult(cleanedAnalysis);
-                            finalAnalysis = repository.save(finalAnalysis);
-                            log.info("Stripped JSON block from analysis {} ({}->{}chars)",
-                                     finalAnalysis.getId(), response.length(), cleanedAnalysis.length());
-                        }
+                            // Estimate tokens and cost (rough estimation)
+                            int estimatedTokens = (prompt.length() + response.length()) / 4;
+                            savedAnalysis.setTokensUsed(estimatedTokens);
+                            savedAnalysis.setCostEstimate(estimatedTokens * 0.00003); // Rough estimate
 
-                        return finalAnalysis;
+                            AIDocumentAnalysis finalAnalysis = repository.save(savedAnalysis);
+
+                            // Extract action items and timeline events using hybrid parsing
+                            // (tries JSON first, then regex patterns)
+                            // Skip for contract-type documents - they don't have actionItems/timelineEvents
+                            if (!isContractType(classification.documentType)) {
+                                try {
+                                    // Pass orgId explicitly since we're on a reactor thread without tenant context
+                                    analysisTextParser.parseAndSaveStructuredData(finalAnalysis.getId(), response, orgId);
+                                } catch (Exception e) {
+                                    log.warn("Failed to extract structured data from analysis {}: {}",
+                                             finalAnalysis.getId(), e.getMessage());
+                                }
+                            } else {
+                                log.info("Skipping structured data extraction for contract-type document: {}", classification.documentType);
+                            }
+
+                            // Strip JSON block from stored analysis for cleaner display
+                            String cleanedAnalysis = stripJsonBlock(response);
+                            if (!cleanedAnalysis.equals(response)) {
+                                finalAnalysis.setAnalysisResult(cleanedAnalysis);
+                                finalAnalysis = repository.save(finalAnalysis);
+                                log.info("Stripped JSON block from analysis {} ({}->{}chars)",
+                                         finalAnalysis.getId(), response.length(), cleanedAnalysis.length());
+                            }
+
+                            return finalAnalysis;
+                        } finally {
+                            // Clean up security and tenant context to prevent memory leaks
+                            SecurityContextHolder.clearContext();
+                            TenantContext.clear();
+                        }
                     })
                     .exceptionally(ex -> {
-                        log.error("Error analyzing document: {}", ex.getMessage(), ex);
-                        savedAnalysis.setStatus("failed");
-                        savedAnalysis.setErrorMessage(ex.getMessage());
-                        savedAnalysis.setProcessingTimeMs(System.currentTimeMillis() - startTime);
-                        return repository.save(savedAnalysis);
+                        // CRITICAL: Re-establish security and tenant context for error handling thread
+                        if (auth != null) {
+                            SecurityContextHolder.getContext().setAuthentication(auth);
+                        }
+                        TenantContext.setCurrentTenant(orgId);
+                        try {
+                            log.error("Error analyzing document: {}", ex.getMessage(), ex);
+                            savedAnalysis.setStatus("failed");
+                            savedAnalysis.setErrorMessage(ex.getMessage());
+                            savedAnalysis.setProcessingTimeMs(System.currentTimeMillis() - startTime);
+                            return repository.save(savedAnalysis);
+                        } finally {
+                            // Clean up security and tenant context to prevent memory leaks
+                            SecurityContextHolder.clearContext();
+                            TenantContext.clear();
+                        }
                     });
 
         } catch (Exception e) {

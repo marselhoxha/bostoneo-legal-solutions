@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpEventType, HttpContext } from '@angular/common/http';
-import { Observable, BehaviorSubject, throwError } from 'rxjs';
-import { map, catchError, tap, timeout, filter } from 'rxjs/operators';
+import { Observable, BehaviorSubject, throwError, from, lastValueFrom } from 'rxjs';
+import { map, catchError, tap, timeout, filter, switchMap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { UserService } from '../../../service/user.service';
 
@@ -91,69 +91,92 @@ export class DocumentAnalyzerService {
     private userService: UserService
   ) {}
 
-  analyzeDocument(file: File, analysisType: string, sessionId?: number, analysisContext?: string, caseId?: number | null): Observable<DocumentAnalysisResult> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('analysisType', analysisType);
-
-    // Always pass userId to ensure documents are saved under correct user
-    const userId = this.userService.getCurrentUserId();
-    if (userId) {
-      formData.append('userId', userId.toString());
-    }
-
-    if (sessionId) {
-      formData.append('sessionId', sessionId.toString());
-    }
-    if (analysisContext) {
-      formData.append('analysisContext', analysisContext);
-    }
-    if (caseId) {
-      formData.append('caseId', caseId.toString());
-    }
-
-    this.analysisStatusSubject.next('uploading');
-    this.uploadProgressSubject.next({ loaded: 0, total: 0, percentage: 0 });
-
-    return this.http.post<DocumentAnalysisResult>(
-      `${this.apiUrl}/analyze`,
-      formData,
-      {
-        reportProgress: true,
-        observe: 'events',
-        withCredentials: true
+  /**
+   * Ensures a fresh token before long-running operations.
+   * Refreshes token if it expires within the specified buffer time.
+   */
+  private async ensureFreshToken(): Promise<void> {
+    // Refresh if token expires within 15 minutes (buffer for 10-min max analysis + follow-up requests)
+    if (this.userService.isTokenAboutToExpire(15)) {
+      try {
+        console.log('[DocumentAnalyzer] Token about to expire, refreshing before analysis...');
+        await lastValueFrom(this.userService.refreshToken$());
+        console.log('[DocumentAnalyzer] Token refreshed successfully');
+      } catch (error) {
+        console.warn('[DocumentAnalyzer] Failed to proactively refresh token:', error);
+        // Continue anyway - the interceptor will handle if truly expired
       }
-    ).pipe(
-      timeout(620000), // 620 second timeout (backend has 600s = 10 min, this gives 20s buffer)
-      tap(event => {
-        // Handle upload progress events (side effect only, don't emit)
-        if (event.type === HttpEventType.UploadProgress && event.total) {
-          const progress = Math.round(100 * event.loaded / event.total);
-          this.uploadProgressSubject.next({
-            loaded: event.loaded,
-            total: event.total,
-            percentage: progress
-          });
-          if (progress === 100) {
-            this.analysisStatusSubject.next('analyzing');
+    }
+  }
+
+  analyzeDocument(file: File, analysisType: string, sessionId?: number, analysisContext?: string, caseId?: number | null): Observable<DocumentAnalysisResult> {
+    // CRITICAL: Ensure fresh token before long-running document analysis
+    return from(this.ensureFreshToken()).pipe(
+      switchMap(() => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('analysisType', analysisType);
+
+        // Always pass userId to ensure documents are saved under correct user
+        const userId = this.userService.getCurrentUserId();
+        if (userId) {
+          formData.append('userId', userId.toString());
+        }
+
+        if (sessionId) {
+          formData.append('sessionId', sessionId.toString());
+        }
+        if (analysisContext) {
+          formData.append('analysisContext', analysisContext);
+        }
+        if (caseId) {
+          formData.append('caseId', caseId.toString());
+        }
+
+        this.analysisStatusSubject.next('uploading');
+        this.uploadProgressSubject.next({ loaded: 0, total: 0, percentage: 0 });
+
+        return this.http.post<DocumentAnalysisResult>(
+          `${this.apiUrl}/analyze`,
+          formData,
+          {
+            reportProgress: true,
+            observe: 'events',
+            withCredentials: true
           }
-        }
-      }),
-      filter(event => event.type === HttpEventType.Response), // Only emit Response events
-      map(event => {
-        this.analysisStatusSubject.next('completed');
-        return (event as any).body as DocumentAnalysisResult;
-      }),
-      catchError(error => {
-        this.analysisStatusSubject.next('failed');
-        console.error('Document analysis error:', error);
+        ).pipe(
+          timeout(620000), // 620 second timeout (backend has 600s = 10 min, this gives 20s buffer)
+          tap(event => {
+            // Handle upload progress events (side effect only, don't emit)
+            if (event.type === HttpEventType.UploadProgress && event.total) {
+              const progress = Math.round(100 * event.loaded / event.total);
+              this.uploadProgressSubject.next({
+                loaded: event.loaded,
+                total: event.total,
+                percentage: progress
+              });
+              if (progress === 100) {
+                this.analysisStatusSubject.next('analyzing');
+              }
+            }
+          }),
+          filter(event => event.type === HttpEventType.Response), // Only emit Response events
+          map(event => {
+            this.analysisStatusSubject.next('completed');
+            return (event as any).body as DocumentAnalysisResult;
+          }),
+          catchError(error => {
+            this.analysisStatusSubject.next('failed');
+            console.error('Document analysis error:', error);
 
-        // Better error message for timeout
-        if (error.name === 'TimeoutError') {
-          console.error('Analysis timed out after 620 seconds');
-        }
+            // Better error message for timeout
+            if (error.name === 'TimeoutError') {
+              console.error('Analysis timed out after 620 seconds');
+            }
 
-        return throwError(() => error);
+            return throwError(() => error);
+          })
+        );
       })
     );
   }
