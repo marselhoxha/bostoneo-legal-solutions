@@ -1,15 +1,21 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.dto.WorkflowRecommendation;
+import com.bostoneo.bostoneosolutions.model.AIDocumentAnalysis;
 import com.bostoneo.bostoneosolutions.model.CaseWorkflowTemplate;
 import com.bostoneo.bostoneosolutions.model.CaseWorkflowExecution;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
 import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.model.UserPrincipal;
+import com.bostoneo.bostoneosolutions.repository.AIDocumentAnalysisRepository;
 import com.bostoneo.bostoneosolutions.repository.CaseWorkflowTemplateRepository;
 import com.bostoneo.bostoneosolutions.repository.CaseWorkflowExecutionRepository;
+import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.service.CaseWorkflowExecutionService;
+import com.bostoneo.bostoneosolutions.service.WorkflowRecommendationService;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,8 +39,11 @@ public class CaseWorkflowController {
     private final CaseWorkflowTemplateRepository templateRepository;
     private final CaseWorkflowExecutionRepository executionRepository;
     private final CaseWorkflowExecutionService executionService;
+    private final WorkflowRecommendationService recommendationService;
     private final UserRepository<User> userRepository;
     private final TenantService tenantService;
+    private final AIDocumentAnalysisRepository documentAnalysisRepository;
+    private final LegalCaseRepository legalCaseRepository;
 
     /**
      * Helper method to get the current organization ID (required for tenant isolation)
@@ -262,6 +271,99 @@ public class CaseWorkflowController {
         }
     }
 
+    // =====================================================
+    // WORKFLOW RECOMMENDATIONS
+    // =====================================================
+
+    /**
+     * Get workflow recommendations for a specific case
+     * Analyzes case deadlines, phase, and completed workflows to suggest next steps
+     */
+    @GetMapping("/recommendations/case/{caseId}")
+    public ResponseEntity<HttpResponse> getRecommendationsForCase(@PathVariable Long caseId) {
+        log.info("Fetching workflow recommendations for case: {}", caseId);
+
+        try {
+            List<WorkflowRecommendation> recommendations = recommendationService.getRecommendationsForCase(caseId);
+
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .data(Map.of(
+                        "recommendations", recommendations,
+                        "count", recommendations.size(),
+                        "caseId", caseId
+                    ))
+                    .message("Workflow recommendations retrieved successfully")
+                    .status(OK)
+                    .statusCode(OK.value())
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Failed to get recommendations for case {}: {}", caseId, e.getMessage());
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .message("Failed to get recommendations: " + e.getMessage())
+                    .status(OK)
+                    .statusCode(OK.value())
+                    .build()
+            );
+        }
+    }
+
+    /**
+     * Get workflow recommendations for all active cases in the organization
+     * Returns recommendations sorted by urgency (most urgent first)
+     */
+    @GetMapping("/recommendations/all")
+    public ResponseEntity<HttpResponse> getRecommendationsForAllCases() {
+        log.info("Fetching workflow recommendations for all active cases");
+
+        try {
+            List<WorkflowRecommendation> recommendations = recommendationService.getRecommendationsForAllCases();
+
+            // Group by urgency for summary
+            long critical = recommendations.stream()
+                    .filter(r -> r.getUrgency() == WorkflowRecommendation.Urgency.CRITICAL).count();
+            long high = recommendations.stream()
+                    .filter(r -> r.getUrgency() == WorkflowRecommendation.Urgency.HIGH).count();
+            long medium = recommendations.stream()
+                    .filter(r -> r.getUrgency() == WorkflowRecommendation.Urgency.MEDIUM).count();
+            long low = recommendations.stream()
+                    .filter(r -> r.getUrgency() == WorkflowRecommendation.Urgency.LOW).count();
+
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .data(Map.of(
+                        "recommendations", recommendations,
+                        "count", recommendations.size(),
+                        "summary", Map.of(
+                            "critical", critical,
+                            "high", high,
+                            "medium", medium,
+                            "low", low
+                        )
+                    ))
+                    .message("Workflow recommendations retrieved successfully")
+                    .status(OK)
+                    .statusCode(OK.value())
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Failed to get recommendations for all cases: {}", e.getMessage());
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .message("Failed to get recommendations: " + e.getMessage())
+                    .status(OK)
+                    .statusCode(OK.value())
+                    .build()
+            );
+        }
+    }
+
     /**
      * Helper to parse Long from either Number or String
      */
@@ -293,5 +395,75 @@ public class CaseWorkflowController {
 
         log.warn("Unknown principal type: {}", principal.getClass().getName());
         return null;
+    }
+
+    // =====================================================
+    // CASE DOCUMENTS FOR WORKFLOW
+    // =====================================================
+
+    /**
+     * Get analyzed documents for a case to use in workflow
+     * Returns documents that have been analyzed and can be used as workflow input
+     */
+    @GetMapping("/case/{caseId}/documents")
+    public ResponseEntity<HttpResponse> getCaseDocumentsForWorkflow(@PathVariable Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        log.info("Fetching analyzed documents for case {} in org {}", caseId, orgId);
+
+        try {
+            // Verify case exists and belongs to org
+            LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+                    .orElseThrow(() -> new RuntimeException("Case not found: " + caseId));
+
+            // Get analyzed documents for this case
+            List<AIDocumentAnalysis> analyses = documentAnalysisRepository
+                    .findByOrganizationIdAndCaseIdOrderByCreatedAtDesc(orgId, caseId);
+
+            // Filter to only completed analyses and map to simple DTOs
+            List<Map<String, Object>> documents = analyses.stream()
+                    .filter(a -> "completed".equals(a.getStatus()))
+                    .map(a -> {
+                        Map<String, Object> doc = new java.util.HashMap<>();
+                        doc.put("id", a.getId());
+                        doc.put("fileName", a.getFileName());
+                        doc.put("detectedType", a.getDetectedType());
+                        doc.put("analyzedAt", a.getCreatedAt() != null ?
+                                a.getCreatedAt().toString() : null);
+                        doc.put("riskLevel", a.getRiskLevel());
+                        return doc;
+                    })
+                    .toList();
+
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .data(Map.of(
+                        "caseId", caseId,
+                        "caseNumber", legalCase.getCaseNumber(),
+                        "caseTitle", legalCase.getTitle(),
+                        "documents", documents,
+                        "hasDocuments", !documents.isEmpty()
+                    ))
+                    .message("Case documents retrieved successfully")
+                    .status(OK)
+                    .statusCode(OK.value())
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Failed to get documents for case {}: {}", caseId, e.getMessage());
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .data(Map.of(
+                        "caseId", caseId,
+                        "documents", List.of(),
+                        "hasDocuments", false
+                    ))
+                    .message("Failed to get case documents: " + e.getMessage())
+                    .status(OK)
+                    .statusCode(OK.value())
+                    .build()
+            );
+        }
     }
 }

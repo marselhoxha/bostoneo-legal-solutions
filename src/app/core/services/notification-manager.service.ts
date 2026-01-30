@@ -145,7 +145,7 @@ export class NotificationManagerService {
       }
     };
 
-    // Send push notification to all recipients
+    // Send push notification to all recipients (excluding current user)
     const allRecipients = [
       ...recipients.primaryUsers,
       ...(recipients.secondaryUsers || [])
@@ -156,18 +156,16 @@ export class NotificationManagerService {
       arr.findIndex(u => u.id === user.id) === index
     );
 
-    // Send only one notification (not per recipient) since it's a broadcast notification
-    if (uniqueRecipients.length > 0) {
-      try {
-        this.pushNotificationService.sendCustomNotification(payload);
-      } catch (error) {
-        console.error('Failed to send push notification:', error);
-      }
-    }
+    // Filter out current user - users shouldn't get notifications for their own actions
+    const currentUserId = this.currentUser?.id;
+    const recipientsExcludingSelf = uniqueRecipients.filter(u => u.id !== currentUserId);
 
-    // Also send via backend for offline notifications
+    // Skip local push notification broadcast - it would show to current user who made the change
+    // Backend notifications will be sent to other users instead
+
+    // Also send via backend for offline notifications (excluding current user)
     try {
-      const recipientIds = uniqueRecipients.map(u => u.id);
+      const recipientIds = recipientsExcludingSelf.map(u => u.id);
 
       await this.sendBackendNotification(
         title,

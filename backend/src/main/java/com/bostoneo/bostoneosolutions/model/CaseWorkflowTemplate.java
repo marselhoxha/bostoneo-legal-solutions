@@ -9,7 +9,9 @@ import lombok.*;
 import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT;
 
@@ -67,5 +69,34 @@ public class CaseWorkflowTemplate {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Determines if this workflow template requires documents to produce quality output.
+     * Step types DISPLAY, SYNTHESIS, GENERATION, and INTEGRATION need document input.
+     * Step types ACTION, TASK_CREATION, and CASE_UPDATE work without documents.
+     *
+     * @return true if the template has steps that need document input
+     */
+    @SuppressWarnings("unchecked")
+    public boolean requiresDocuments() {
+        if (stepsConfig == null) return false;
+
+        Object stepsObj = stepsConfig.get("steps");
+        if (!(stepsObj instanceof List)) return false;
+
+        List<Map<String, Object>> steps = (List<Map<String, Object>>) stepsObj;
+
+        // Step types that require documents to produce quality output
+        Set<String> documentRequiringTypes = Set.of(
+                "DISPLAY", "SYNTHESIS", "GENERATION", "INTEGRATION"
+        );
+
+        return steps.stream()
+                .map(step -> {
+                    Object type = step.get("type");
+                    return type != null ? type.toString().toUpperCase() : "";
+                })
+                .anyMatch(documentRequiringTypes::contains);
     }
 }

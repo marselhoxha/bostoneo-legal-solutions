@@ -245,4 +245,28 @@ public interface CaseActivityService {
      * Log an invoice created activity
      */
     void logInvoiceCreated(Long caseId, Long invoiceId, Double amount, Long userId);
+
+    // =====================================================
+    // WORKFLOW ACTIVITIES
+    // =====================================================
+
+    /**
+     * Log a workflow started activity
+     */
+    void logWorkflowStarted(Long caseId, Long workflowId, String workflowName, String templateType, Long userId);
+
+    /**
+     * Log a workflow completed activity
+     */
+    void logWorkflowCompleted(Long caseId, Long workflowId, String workflowName, String templateType, Long userId);
+
+    /**
+     * Log a workflow tasks created activity
+     */
+    void logWorkflowTasksCreated(Long caseId, Long workflowId, String workflowName, int taskCount, Long userId);
+
+    /**
+     * Log a generic workflow activity
+     */
+    void logWorkflowActivity(Long caseId, Long workflowId, String workflowName, String activityType, String description, Long userId);
 } 

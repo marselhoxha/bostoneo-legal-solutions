@@ -108,7 +108,10 @@ public class CaseTask {
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
+
+    @Column(name = "workflow_execution_id")
+    private Long workflowExecutionId;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

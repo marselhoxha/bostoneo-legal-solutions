@@ -57,6 +57,60 @@ export interface WorkflowExecution {
   createdAt: string;
 }
 
+export type WorkflowUrgency = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+
+export interface WorkflowRecommendation {
+  templateType: string;
+  templateName: string;
+  templateId: number;
+  caseId: number;
+  caseNumber: string;
+  caseTitle: string;
+  reason: string;
+  urgency: WorkflowUrgency;
+  deadlineDate?: string;
+  daysUntilDeadline?: number;
+  isDismissed: boolean;
+  dismissedAt?: string;
+  createdAt: string;
+  badgeColor?: string;
+  urgencyLabel?: string;
+  // Document availability (for smart document loading)
+  documentsRequired?: boolean;
+  availableDocuments?: number;
+  hasDocuments?: boolean;
+}
+
+export interface CaseDocument {
+  id: number;
+  fileName: string;
+  detectedType: string;
+  analyzedAt: string;
+  riskLevel?: string;
+}
+
+export interface CaseDocumentsResponse {
+  caseId: number;
+  caseNumber: string;
+  caseTitle: string;
+  documents: CaseDocument[];
+  hasDocuments: boolean;
+}
+
+export interface RecommendationSummary {
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+}
+
+export interface RecommendationsResponse {
+  recommendations: WorkflowRecommendation[];
+  count: number;
+  summary?: RecommendationSummary;
+  caseId?: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -201,5 +255,123 @@ export class CaseWorkflowService {
       'custom': '#E5E7EB',               // Gray for custom
     };
     return colors[normalizedType] || '#E5E7EB';
+  }
+
+  // =====================================================
+  // CASE DOCUMENTS FOR WORKFLOW
+  // =====================================================
+
+  /**
+   * Get analyzed documents for a case to use in workflow
+   */
+  getCaseDocuments(caseId: number): Observable<CaseDocumentsResponse> {
+    return this.http.get<any>(`${this.apiUrl}/case/${caseId}/documents`).pipe(
+      map(response => ({
+        caseId: response.data?.caseId,
+        caseNumber: response.data?.caseNumber,
+        caseTitle: response.data?.caseTitle,
+        documents: response.data?.documents || [],
+        hasDocuments: response.data?.hasDocuments || false
+      }))
+    );
+  }
+
+  // =====================================================
+  // WORKFLOW RECOMMENDATIONS
+  // =====================================================
+
+  /**
+   * Get workflow recommendations for a specific case
+   */
+  getRecommendationsForCase(caseId: number): Observable<RecommendationsResponse> {
+    return this.http.get<any>(`${this.apiUrl}/recommendations/case/${caseId}`).pipe(
+      map(response => ({
+        recommendations: this.enrichRecommendations(response.data?.recommendations || []),
+        count: response.data?.count || 0,
+        caseId: response.data?.caseId
+      }))
+    );
+  }
+
+  /**
+   * Get workflow recommendations for all active cases
+   */
+  getRecommendationsForAllCases(): Observable<RecommendationsResponse> {
+    return this.http.get<any>(`${this.apiUrl}/recommendations/all`).pipe(
+      map(response => ({
+        recommendations: this.enrichRecommendations(response.data?.recommendations || []),
+        count: response.data?.count || 0,
+        summary: response.data?.summary
+      }))
+    );
+  }
+
+  /**
+   * Enrich recommendations with UI-friendly properties
+   */
+  private enrichRecommendations(recommendations: WorkflowRecommendation[]): WorkflowRecommendation[] {
+    return recommendations.map(rec => ({
+      ...rec,
+      badgeColor: this.getUrgencyBadgeColor(rec.urgency),
+      urgencyLabel: this.getUrgencyLabel(rec.daysUntilDeadline)
+    }));
+  }
+
+  /**
+   * Get badge color class for urgency level
+   */
+  getUrgencyBadgeColor(urgency: WorkflowUrgency): string {
+    const colors: Record<WorkflowUrgency, string> = {
+      'CRITICAL': 'red',
+      'HIGH': 'orange',
+      'MEDIUM': 'yellow',
+      'LOW': 'green'
+    };
+    return colors[urgency] || 'gray';
+  }
+
+  /**
+   * Get human-readable urgency label
+   */
+  getUrgencyLabel(daysUntilDeadline?: number): string {
+    if (daysUntilDeadline === undefined || daysUntilDeadline === null) {
+      return 'Suggested';
+    }
+
+    if (daysUntilDeadline < 0) {
+      return `Overdue by ${Math.abs(daysUntilDeadline)} day(s)`;
+    } else if (daysUntilDeadline === 0) {
+      return 'Due today';
+    } else if (daysUntilDeadline === 1) {
+      return 'Due tomorrow';
+    } else {
+      return `Due in ${daysUntilDeadline} days`;
+    }
+  }
+
+  /**
+   * Get urgency badge background color (hex)
+   */
+  getUrgencyBadgeBgColor(urgency: WorkflowUrgency): string {
+    const colors: Record<WorkflowUrgency, string> = {
+      'CRITICAL': '#FEE2E2',  // red-100
+      'HIGH': '#FFEDD5',      // orange-100
+      'MEDIUM': '#FEF3C7',    // yellow-100
+      'LOW': '#D1FAE5'        // green-100
+    };
+    return colors[urgency] || '#F3F4F6';
+  }
+
+  /**
+   * Get urgency badge text color (hex)
+   */
+  getUrgencyBadgeTextColor(urgency: WorkflowUrgency): string {
+    const colors: Record<WorkflowUrgency, string> = {
+      'CRITICAL': '#991B1B',  // red-800
+      'HIGH': '#9A3412',      // orange-800
+      'MEDIUM': '#92400E',    // yellow-800
+      'LOW': '#065F46'        // green-800
+    };
+    return colors[urgency] || '#374151';
   }
 }

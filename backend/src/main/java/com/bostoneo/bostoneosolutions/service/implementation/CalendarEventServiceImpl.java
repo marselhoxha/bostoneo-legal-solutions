@@ -135,11 +135,6 @@ public class CalendarEventServiceImpl implements CalendarEventService {
 
                 Set<Long> notificationUserIds = new HashSet<>();
 
-                // Notify the event creator
-                if (savedEvent.getUserId() != null) {
-                    notificationUserIds.add(savedEvent.getUserId());
-                }
-
                 // SECURITY: Get users assigned to the case if this event is related to a case (with org filter)
                 if (savedEvent.getCaseId() != null && savedEvent.getOrganizationId() != null) {
                     List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(savedEvent.getCaseId(), savedEvent.getOrganizationId());
@@ -148,6 +143,11 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
                         }
                     }
+                }
+
+                // Remove the event creator from notification list (don't notify yourself)
+                if (savedEvent.getUserId() != null) {
+                    notificationUserIds.remove(savedEvent.getUserId());
                 }
 
                 for (Long userId : notificationUserIds) {

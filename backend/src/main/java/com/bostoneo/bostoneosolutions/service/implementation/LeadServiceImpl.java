@@ -1099,19 +1099,17 @@ public class LeadServiceImpl implements LeadService {
             // Add assigned user if exists
             if (lead.getAssignedTo() != null) {
                 notificationUserIds.add(lead.getAssignedTo());
-                log.info("📧 Adding assigned user to lead status change notification: {}", lead.getAssignedTo());
             }
-            
-            // Also add the user who made the change (in case lead is unassigned)
-            notificationUserIds.add(userId);
-            log.info("📧 Adding user who made change to lead status change notification: {}", userId);
-            
+
+            // Remove the user who made the change from notifications (don't notify yourself)
+            notificationUserIds.remove(userId);
+
             // Send notification to each user
             for (Long notificationUserId : notificationUserIds) {
-                notificationService.sendCrmNotification(title, message, notificationUserId, 
+                notificationService.sendCrmNotification(title, message, notificationUserId,
                     "LEAD_STATUS_CHANGED", Map.of("leadId", lead.getId(), "oldStatus", oldStatus, "newStatus", newStatus));
             }
-            
+
             log.info("📧 Lead status change notifications sent to {} users", notificationUserIds.size());
             
             log.info("Sent lead status change notification (WebSocket + FCM) for lead ID: {} - {} to {}", lead.getId(), oldStatus, newStatus);

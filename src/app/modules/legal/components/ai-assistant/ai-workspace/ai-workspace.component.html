@@ -995,6 +995,89 @@
           <div class="card-body">
             <!-- Step 1: Template Selection (when no template selected) -->
             <div *ngIf="!selectedWorkflowTemplate" class="workflow-template-selection">
+
+              <!-- ====== WORKFLOW RECOMMENDATIONS PANEL ====== -->
+              <div class="workflow-recommendations-panel" *ngIf="workflowRecommendations.length > 0 || loadingRecommendations">
+                <!-- Panel Header -->
+                <div class="recommendations-header" (click)="toggleRecommendationsPanel()">
+                  <div class="header-left">
+                    <i class="ri-lightbulb-flash-line"></i>
+                    <span class="header-title">Suggested Workflows</span>
+                    <span class="recommendation-count-badge" *ngIf="workflowRecommendations.length > 0">
+                      {{ workflowRecommendations.length }}
+                    </span>
+                    <!-- Urgent Count Badge -->
+                    <span class="urgent-badge" *ngIf="getUrgentRecommendationsCount() > 0">
+                      <i class="ri-alarm-warning-line"></i>
+                      {{ getUrgentRecommendationsCount() }} urgent
+                    </span>
+                  </div>
+                  <div class="header-right">
+                    <button class="btn btn-link btn-sm p-0" (click)="loadWorkflowRecommendations(); $event.stopPropagation()">
+                      <i class="ri-refresh-line"></i>
+                    </button>
+                    <i [class]="showRecommendationsPanel ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                  </div>
+                </div>
+
+                <!-- Panel Content (Collapsible) -->
+                <div class="recommendations-content" *ngIf="showRecommendationsPanel">
+                  <!-- Loading State -->
+                  <div class="recommendations-loading" *ngIf="loadingRecommendations">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span>Loading suggestions...</span>
+                  </div>
+
+                  <!-- Recommendations List -->
+                  <div class="recommendations-list" *ngIf="!loadingRecommendations && workflowRecommendations.length > 0">
+                    <div class="recommendation-item" *ngFor="let rec of workflowRecommendations"
+                         [class.urgency-critical]="rec.urgency === 'CRITICAL'"
+                         [class.urgency-high]="rec.urgency === 'HIGH'"
+                         [class.urgency-medium]="rec.urgency === 'MEDIUM'"
+                         [class.urgency-low]="rec.urgency === 'LOW'">
+                      <!-- Urgency Badge -->
+                      <div class="urgency-indicator"
+                           [style.background-color]="caseWorkflowService.getUrgencyBadgeBgColor(rec.urgency)"
+                           [style.color]="caseWorkflowService.getUrgencyBadgeTextColor(rec.urgency)">
+                        <i [class]="rec.urgency === 'CRITICAL' ? 'ri-alarm-warning-fill' :
+                                    rec.urgency === 'HIGH' ? 'ri-error-warning-fill' :
+                                    rec.urgency === 'MEDIUM' ? 'ri-time-fill' : 'ri-information-fill'"></i>
+                        <span>{{ rec.urgencyLabel }}</span>
+                      </div>
+
+                      <!-- Recommendation Content -->
+                      <div class="recommendation-content">
+                        <div class="rec-header">
+                          <span class="rec-template-icon" [style.background-color]="caseWorkflowService.getTemplateColor(rec.templateType)">
+                            {{ caseWorkflowService.getTemplateIcon(rec.templateType) }}
+                          </span>
+                          <div class="rec-info">
+                            <span class="rec-template-name">{{ rec.templateName }}</span>
+                            <span class="rec-case-info">
+                              <i class="ri-briefcase-line"></i>
+                              {{ rec.caseNumber }} - {{ rec.caseTitle | slice:0:30 }}{{ rec.caseTitle?.length > 30 ? '...' : '' }}
+                            </span>
+                          </div>
+                        </div>
+                        <p class="rec-reason">{{ rec.reason }}</p>
+                      </div>
+
+                      <!-- Action Button -->
+                      <button class="btn-start-workflow" (click)="startWorkflowFromRecommendation(rec)">
+                        <i class="ri-play-circle-line"></i>
+                        Start
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Empty State -->
+                  <div class="recommendations-empty" *ngIf="!loadingRecommendations && workflowRecommendations.length === 0">
+                    <i class="ri-checkbox-circle-line"></i>
+                    <span>No urgent workflows needed</span>
+                  </div>
+                </div>
+              </div>
+
               <!-- Loading state -->
               <div *ngIf="loadingWorkflowTemplates" class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
@@ -2184,6 +2267,95 @@
           <p class="mb-0">Workflows automate repetitive legal tasks and ensure consistent quality across your cases.</p>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Preview Modal (Workflow Recommendation) -->
+<div class="quick-preview-modal-backdrop" *ngIf="showQuickPreviewModal" (click)="closeQuickPreviewModal()">
+  <div class="quick-preview-modal" (click)="$event.stopPropagation()">
+    <!-- Modal Header -->
+    <div class="quick-preview-header">
+      <div class="d-flex align-items-center gap-3">
+        <div class="template-emoji-icon" [style.background-color]="caseWorkflowService.getTemplateColor(quickPreviewRecommendation?.templateType)">
+          <span>{{ caseWorkflowService.getTemplateIcon(quickPreviewRecommendation?.templateType) }}</span>
+        </div>
+        <div>
+          <h5 class="modal-title mb-0">{{ quickPreviewRecommendation?.templateName }}</h5>
+          <span class="quick-preview-case-info">
+            <i class="ri-briefcase-line"></i>
+            {{ quickPreviewRecommendation?.caseNumber }} - {{ quickPreviewRecommendation?.caseTitle }}
+          </span>
+        </div>
+      </div>
+      <button type="button" class="modal-close-btn" (click)="closeQuickPreviewModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <!-- Urgency Badge -->
+    <div class="quick-preview-urgency" *ngIf="quickPreviewRecommendation?.urgency">
+      <span class="urgency-badge" [ngStyle]="getUrgencyBadgeStyle(quickPreviewRecommendation?.urgency)">
+        {{ quickPreviewRecommendation?.urgencyLabel || quickPreviewRecommendation?.urgency }}
+      </span>
+      <span class="urgency-reason">{{ quickPreviewRecommendation?.reason }}</span>
+    </div>
+
+    <!-- Documents Section -->
+    <div class="quick-preview-body">
+      <!-- Loading State -->
+      <div class="quick-preview-loading" *ngIf="loadingCaseDocuments">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <span>Loading case documents...</span>
+      </div>
+
+      <!-- Documents Available -->
+      <div class="quick-preview-documents" *ngIf="!loadingCaseDocuments && caseDocumentsForPreview.length > 0">
+        <div class="documents-header">
+          <i class="ri-file-list-3-line"></i>
+          <span>Select Documents ({{ previewSelectedDocuments.length }}/{{ caseDocumentsForPreview.length }})</span>
+        </div>
+        <div class="documents-list">
+          <div class="document-item" *ngFor="let doc of caseDocumentsForPreview"
+               [class.selected]="isPreviewDocumentSelected(doc.id)"
+               (click)="togglePreviewDocument(doc.id)">
+            <div class="document-checkbox">
+              <i class="ri-checkbox-circle-fill" *ngIf="isPreviewDocumentSelected(doc.id)"></i>
+              <i class="ri-checkbox-blank-circle-line" *ngIf="!isPreviewDocumentSelected(doc.id)"></i>
+            </div>
+            <div class="document-info">
+              <span class="document-name">{{ doc.fileName }}</span>
+              <span class="document-type">{{ doc.detectedType || 'Document' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No Documents Available -->
+      <div class="quick-preview-no-docs" *ngIf="!loadingCaseDocuments && caseDocumentsForPreview.length === 0">
+        <div class="no-docs-icon">
+          <i class="ri-folder-upload-line"></i>
+        </div>
+        <p class="no-docs-title">No Analyzed Documents</p>
+        <p class="no-docs-desc">This case doesn't have any analyzed documents yet. Upload and analyze documents to use this workflow.</p>
+        <button class="btn btn-primary btn-upload-docs" (click)="navigateToUploadForCase()">
+          <i class="ri-upload-2-line"></i>
+          Upload Documents
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="quick-preview-footer">
+      <button type="button" class="btn btn-light" (click)="closeQuickPreviewModal()">
+        Cancel
+      </button>
+      <button type="button" class="btn btn-primary"
+              [disabled]="loadingCaseDocuments || (caseDocumentsForPreview.length === 0)"
+              (click)="confirmQuickPreview()">
+        <i class="ri-play-circle-line"></i>
+        Start Workflow
+      </button>
     </div>
   </div>
 </div>

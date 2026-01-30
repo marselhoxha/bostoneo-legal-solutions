@@ -245,9 +245,11 @@ export class AssignmentSyncService implements OnDestroy {
       catchError(error => {
         console.error('Failed to update task status:', error);
         this.syncInProgress$.next(false);
+        // Extract error message from backend response (HttpResponse structure)
+        const errorMessage = error?.error?.reason || error?.error?.message || error?.message || 'Failed to update task status';
         return of({
           success: false,
-          error: error.message || 'Failed to update task status',
+          error: errorMessage,
           affectedUsers: []
         });
       })
@@ -277,7 +279,7 @@ export class AssignmentSyncService implements OnDestroy {
       map(() => ({ success: true, affectedUsers: [] })),
       catchError(error => {
         console.error('Failed to force sync case:', error);
-        return of({ success: false, error: error.message, affectedUsers: [] });
+        return of({ success: false, error: error?.error?.reason || error?.error?.message || error?.message || 'Operation failed', affectedUsers: [] });
       })
     );
   }
@@ -326,7 +328,7 @@ export class AssignmentSyncService implements OnDestroy {
         this.notificationService.onError('Failed to assign user to case');
         return of({
           success: false,
-          error: error.message,
+          error: error?.error?.reason || error?.error?.message || error?.message || 'Operation failed',
           affectedUsers: []
         });
       })
@@ -388,7 +390,7 @@ export class AssignmentSyncService implements OnDestroy {
         this.notificationService.onError('Failed to reassign case');
         return of({
           success: false,
-          error: error.message,
+          error: error?.error?.reason || error?.error?.message || error?.message || 'Operation failed',
           affectedUsers: []
         });
       })
@@ -439,7 +441,7 @@ export class AssignmentSyncService implements OnDestroy {
         this.notificationService.onError('Failed to assign task');
         return of({
           success: false,
-          error: error.message,
+          error: error?.error?.reason || error?.error?.message || error?.message || 'Operation failed',
           affectedUsers: []
         });
       })
@@ -479,7 +481,7 @@ export class AssignmentSyncService implements OnDestroy {
         this.notificationService.onError('Failed to reassign task');
         return of({
           success: false,
-          error: error.message,
+          error: error?.error?.reason || error?.error?.message || error?.message || 'Operation failed',
           affectedUsers: []
         });
       })
@@ -533,7 +535,7 @@ export class AssignmentSyncService implements OnDestroy {
         this.notificationService.onError('Failed to unassign user');
         return of({
           success: false,
-          error: error.message,
+          error: error?.error?.reason || error?.error?.message || error?.message || 'Operation failed',
           affectedUsers: []
         });
       })

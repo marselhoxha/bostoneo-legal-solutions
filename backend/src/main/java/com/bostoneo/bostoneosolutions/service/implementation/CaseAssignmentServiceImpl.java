@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.service.implementation;
 
 import com.bostoneo.bostoneosolutions.algorithm.SmartAssignmentAlgorithm;
 import com.bostoneo.bostoneosolutions.dto.*;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.enumeration.*;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.model.*;
@@ -102,21 +103,36 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         
         // Record history
         recordAssignmentHistory(assignment, AssignmentAction.CREATED, null, currentUser);
-        
-        // Send notification to assigned user
+
+        // Send notification to assigned user only if NOT self-assignment
+        // Get the current user's ID to check for self-assignment
+        Long currentUserId = null;
         try {
-            String title = "Case Assignment";
-            String message = String.format("You have been assigned to case \"%s\" as %s", 
-                legalCase.getTitle(), request.getRoleType().toString());
-            
-            notificationService.sendCrmNotification(title, message, request.getUserId(), 
-                "CASE_ASSIGNMENT_ADDED", Map.of("caseId", request.getCaseId(), "assignmentId", assignment.getId()));
-            
-            log.info("Case assignment notification sent to user: {}", request.getUserId());
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof UserDTO) {
+                currentUserId = ((UserDTO) auth.getPrincipal()).getId();
+            }
         } catch (Exception e) {
-            log.error("Failed to send case assignment notification: {}", e.getMessage());
+            log.warn("Could not get current user ID for self-assignment check: {}", e.getMessage());
         }
-        
+
+        boolean isSelfAssignment = currentUserId != null && currentUserId.equals(request.getUserId());
+
+        if (!isSelfAssignment) {
+            try {
+                String title = "Case Assignment";
+                String message = String.format("You have been assigned to case \"%s\" as %s",
+                    legalCase.getTitle(), request.getRoleType().toString());
+
+                notificationService.sendCrmNotification(title, message, request.getUserId(),
+                    "CASE_ASSIGNMENT_ADDED", Map.of("caseId", request.getCaseId(), "assignmentId", assignment.getId()));
+
+                log.info("Case assignment notification sent to user: {}", request.getUserId());
+            } catch (Exception e) {
+                log.error("Failed to send case assignment notification: {}", e.getMessage());
+            }
+        }
+
         return mapToDTO(assignment);
     }
     

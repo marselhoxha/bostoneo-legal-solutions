@@ -722,8 +722,10 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
       },
       error: (error) => {
         console.error('Error updating task status:', error);
-        this.notificationService.onError('Error updating task status');
-        
+        // Extract error message from backend response
+        const errorMessage = error?.error?.reason || error?.error?.message || error?.message || 'Error updating task status';
+        this.notificationService.onError(errorMessage);
+
         // Revert changes
         if (this.caseMode) {
           this.loadFromContext();
@@ -983,8 +985,10 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
             }
           }
 
-          // Additionally, if task is assigned, send specific assignment notification
-          if (newTask.id && newTask.assignedToId) {
+          // Additionally, if task is assigned to someone else (not self), send specific assignment notification
+          const currentUserId = this.currentUser?.id;
+          const isSelfAssignment = currentUserId != null && Number(currentUserId) === Number(newTask.assignedToId);
+          if (newTask.id && newTask.assignedToId && !isSelfAssignment) {
             const caseName = this.currentCase?.title;
             const assigneeName = this.getUserNameById(newTask.assignedToId);
 
@@ -1143,6 +1147,10 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
     const oldAssignee = oldTask.assignedToId ? this.getUserNameById(oldTask.assignedToId) : undefined;
     const newAssignee = newTask.assignedToId ? this.getUserNameById(newTask.assignedToId) : undefined;
 
+    // Check self-assignment - compare as numbers to avoid type mismatch
+    const currentUserId = this.currentUser?.id;
+    const isSelfAssignment = currentUserId != null && Number(currentUserId) === Number(newTask.assignedToId);
+
     if (newTask.assignedToId && oldTask.assignedToId !== newTask.assignedToId) {
       // Use AssignmentSyncService for task assignments
       this.assignmentSyncService.assignTaskToUser(
@@ -1150,14 +1158,14 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
         newTask.assignedToId,
         newTask.caseId
       ).subscribe({
-        next: async (syncResult) => {
+        next: (syncResult) => {
           if (syncResult.success) {
-            // Send personalized task assignment notification
-            const assigneeName = this.getUserNameById(newTask.assignedToId!);
-            const caseName = this.currentCase?.title;
+            // Only send notification if NOT self-assignment
+            if (!isSelfAssignment) {
+              const assigneeName = this.getUserNameById(newTask.assignedToId!);
+              const caseName = this.currentCase?.title;
 
-            try {
-              await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
+              this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
                 newTask.id!,
                 newTask.title,
                 newTask.assignedToId!,
@@ -1166,11 +1174,11 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
                 caseName,
                 newTask.dueDate ? new Date(newTask.dueDate).toLocaleDateString() : undefined,
                 newTask.priority
-              );
-            } catch (error) {
-              console.error('Failed to send personalized task assignment notification:', error);
+              ).catch(error => {
+                console.error('Failed to send personalized task assignment notification:', error);
+              });
             }
-            
+
             // Log assignment change
             this.auditLogService.logAssignmentChange(
               'task',
@@ -1568,7 +1576,9 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
           },
           error: (error) => {
             console.error('Error completing task:', error);
-            this.notificationService.onError('Error completing task');
+            // Extract error message from backend response
+            const errorMessage = error?.error?.reason || error?.error?.message || error?.message || 'Error completing task';
+            this.notificationService.onError(errorMessage);
           }
         });
       }
@@ -1609,6 +1619,38 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
     this.showDetailsModal = false;
     this.viewingTask = null;
     this.cdr.detectChanges();
+  }
+
+  /**
+   * Delete task from details modal - stores task reference before closing
+   */
+  deleteTaskFromDetailsModal(event: Event): void {
+    if (!this.viewingTask) {
+      console.error('Cannot delete: no task selected');
+      return;
+    }
+    // Store task reference before closing modal
+    const taskToDelete = { ...this.viewingTask };
+    this.closeDetailsModal();
+    // Call confirm with the stored task reference
+    this.confirm(event, taskToDelete);
+  }
+
+  /**
+   * Edit task from details modal - stores task reference before closing
+   */
+  editTaskFromDetailsModal(): void {
+    if (!this.viewingTask) {
+      console.error('Cannot edit: no task selected');
+      return;
+    }
+    // Store task reference before closing modal
+    const taskToEdit = { ...this.viewingTask };
+    this.closeDetailsModal();
+    // Open edit modal with the stored task reference
+    setTimeout(() => {
+      this.openEditTaskModal(taskToEdit);
+    }, 100);
   }
 
   // ==================== Assign Task Modal Methods ====================
@@ -1706,6 +1748,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
     this.assigningTask = null;
     this.selectedAssigneeId = null;
     this.assigneeSearchTerm = '';
+    this.loadingUsers = false;
     this.cdr.detectChanges();
   }
 
@@ -1745,73 +1788,80 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
     this.loading.submit = true;
     this.cdr.detectChanges();
 
-    const task = this.assigningTask;
-    const oldAssigneeId = task.assignedToId;
+    // Store all values locally before any async operations
+    const taskId = this.assigningTask.id;
+    const taskTitle = this.assigningTask.title;
+    const caseId = this.assigningTask.caseId;
+    const oldAssigneeId = this.assigningTask.assignedToId;
     const selectedId = this.selectedAssigneeId;
+    const dueDate = this.assigningTask.dueDate;
+    const priority = this.assigningTask.priority;
+    const caseName = this.currentCase?.title || this.assigningTask.caseTitle;
 
-    this.assignmentSyncService.assignTaskToUser(
-      task.id,
-      selectedId,
-      task.caseId
-    ).subscribe({
-      next: async (syncResult) => {
-        if (syncResult.success) {
-          // Get assignee name for notification and task update
-          const assigneeName = this.getUserNameById(selectedId);
-          const caseName = this.currentCase?.title || task.caseTitle;
+    // Check self-assignment - compare as numbers to avoid type mismatch
+    const currentUserId = this.currentUser?.id;
+    const isSelfAssignment = currentUserId != null && Number(currentUserId) === Number(selectedId);
 
-          // Update local task with both ID and name
-          task.assignedToId = selectedId;
-          task.assignedToName = assigneeName;
+    // Make direct API call to update task assignment
+    this.caseTaskService.updateTask(taskId, { assignedToId: selectedId }).subscribe({
+      next: (response) => {
+        const updatedTask = response.data;
+        const assigneeName = this.getUserNameById(selectedId);
+        const oldAssigneeName = oldAssigneeId ? this.getUserNameById(oldAssigneeId) : undefined;
 
-          // Send notification
-          try {
-            await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
-              task.id!,
-              task.title,
-              selectedId,
-              assigneeName,
-              task.caseId,
-              caseName,
-              task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
-              task.priority
-            );
-          } catch (error) {
-            console.error('Failed to send assignment notification:', error);
-          }
-
-          // Log assignment change
-          const oldAssigneeName = oldAssigneeId ? this.getUserNameById(oldAssigneeId) : undefined;
-          this.auditLogService.logAssignmentChange(
-            'task',
-            task.id!,
-            task.title,
-            oldAssigneeId ? 'TASK_REASSIGNED' : 'TASK_ASSIGNED',
-            oldAssigneeName,
-            assigneeName,
-            'TaskManagement'
-          ).subscribe();
-
-          // Update context if in case mode
-          if (this.caseMode) {
-            this.caseContextService.updateTask(task);
-          }
-
-          this.filterTasksByStatus();
-          this.notificationService.onSuccess(`Task assigned to ${assigneeName}`);
-
-          // Close modal and reset loading
-          this.loading.submit = false;
-          this.showAssignModal = false;
-          this.assigningTask = null;
-          this.selectedAssigneeId = null;
-          this.assigneeSearchTerm = '';
-          this.cdr.detectChanges();
-        } else {
-          this.loading.submit = false;
-          this.notificationService.onError(syncResult.error || 'Failed to assign task');
-          this.cdr.detectChanges();
+        // Update task in allTasks array
+        const taskIndex = this.allTasks.findIndex(t => t.id === taskId);
+        if (taskIndex !== -1) {
+          this.allTasks[taskIndex].assignedToId = selectedId;
+          this.allTasks[taskIndex].assignedToName = assigneeName;
         }
+
+        // Only send notification if NOT self-assignment
+        if (!isSelfAssignment) {
+          this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
+            taskId,
+            taskTitle,
+            selectedId,
+            assigneeName,
+            caseId,
+            caseName,
+            dueDate ? new Date(dueDate).toLocaleDateString() : undefined,
+            priority
+          ).catch(error => {
+            console.error('Failed to send assignment notification:', error);
+          });
+        }
+
+        // Log assignment change
+        this.auditLogService.logAssignmentChange(
+          'task',
+          taskId,
+          taskTitle,
+          oldAssigneeId ? 'TASK_REASSIGNED' : 'TASK_ASSIGNED',
+          oldAssigneeName,
+          assigneeName,
+          'TaskManagement'
+        ).subscribe();
+
+        // Update context if in case mode
+        if (this.caseMode && taskIndex !== -1) {
+          this.caseContextService.updateTask(this.allTasks[taskIndex]);
+        }
+
+        // Re-filter tasks to update UI
+        this.filterTasksByStatus();
+
+        // Show success message
+        this.notificationService.onSuccess(`Task assigned to ${assigneeName}`);
+
+        // Reset loading and close modal
+        this.loading.submit = false;
+        this.showAssignModal = false;
+        this.assigningTask = null;
+        this.selectedAssigneeId = null;
+        this.assigneeSearchTerm = '';
+        this.loadingUsers = false;
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error assigning task:', error);
@@ -1900,7 +1950,9 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
       },
       error: (error) => {
         console.error('Error updating task status:', error);
-        this.notificationService.onError('Error updating task status');
+        // Extract error message from backend response
+        const errorMessage = error?.error?.reason || error?.error?.message || error?.message || 'Error updating task status';
+        this.notificationService.onError(errorMessage);
       }
     });
   }

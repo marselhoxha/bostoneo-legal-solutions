@@ -1,3 +1,16 @@
+/* ==================== Hide Tooltips When Modal is Open ==================== */
+/* This ensures tooltips don't remain visible when a modal opens */
+:host ::ng-deep .ngb-tooltip-window {
+  z-index: 1040 !important; /* Below modal backdrop (1050) */
+}
+
+/* Hide all tooltips when our custom modals are open */
+:host.modal-open ::ng-deep .tooltip,
+:host.modal-open ::ng-deep .ngb-tooltip-window {
+  display: none !important;
+  opacity: 0 !important;
+}
+
 /* ==================== Stats Cards ==================== */
 .stat-card {
   border: none;
@@ -569,6 +582,7 @@
   color: var(--vz-secondary-color);
   font-size: 0.875rem;
   transition: color 0.2s ease;
+  pointer-events: none;
 }
 
 .search-box .form-control:focus + .search-icon,

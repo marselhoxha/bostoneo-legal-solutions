@@ -134,4 +134,14 @@ public interface AiConversationSessionRepository extends JpaRepository<AiConvers
             @Param("taskType") String taskType,
             Pageable pageable
     );
+
+    /**
+     * Find all drafting sessions for a specific case and organization
+     * Used by CaseContextService to get existing drafts for a case
+     */
+    @Query("SELECT s FROM AiConversationSession s WHERE s.caseId = :caseId AND s.organizationId = :orgId ORDER BY COALESCE(s.lastInteractionAt, s.createdAt) DESC")
+    List<AiConversationSession> findByCaseIdAndOrganizationId(
+            @Param("caseId") Long caseId,
+            @Param("orgId") Long organizationId
+    );
 }

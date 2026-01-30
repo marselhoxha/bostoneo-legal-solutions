@@ -38,7 +38,7 @@ import { QuillEditorService } from '../../../services/quill-editor.service';
 import { AiWorkspaceStateService, AnalyzedDocument } from '../../../services/ai-workspace-state.service';
 import { ConversationOrchestrationService } from '../../../services/conversation-orchestration.service';
 import { DocumentTransformationService } from '../../../services/document-transformation.service';
-import { CaseWorkflowService, WorkflowTemplate } from '../../../services/case-workflow.service';
+import { CaseWorkflowService, WorkflowTemplate, WorkflowRecommendation, WorkflowUrgency } from '../../../services/case-workflow.service';
 import { BackgroundTaskService, BackgroundTask } from '../../../services/background-task.service';
 
 // NEW: Models and enums
@@ -134,6 +134,19 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   expandedStepId: number | null = null;
   expandedStepIds: Set<number> = new Set(); // Track which steps are expanded
   allStepsExpanded = false;
+
+  // Workflow Recommendations state
+  workflowRecommendations: any[] = [];
+  loadingRecommendations = false;
+  recommendationsSummary: { critical: number; high: number; medium: number; low: number } | null = null;
+  showRecommendationsPanel = true; // Show/hide the suggestions panel
+
+  // Quick Preview Modal state (for starting workflow from recommendation)
+  showQuickPreviewModal = false;
+  quickPreviewRecommendation: any = null;
+  caseDocumentsForPreview: any[] = [];
+  loadingCaseDocuments = false;
+  previewSelectedDocuments: number[] = [];
 
   // Legacy properties for backwards compatibility (will be removed progressively)
   currentStep = 1;
@@ -927,7 +940,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private conversationOrchestration: ConversationOrchestrationService,
     private transformationService: DocumentTransformationService,
     private route: ActivatedRoute,
-    private caseWorkflowService: CaseWorkflowService,
+    public caseWorkflowService: CaseWorkflowService,
     private backgroundTaskService: BackgroundTaskService
   ) {}
 
@@ -1055,6 +1068,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Load workflow templates for Case Workflow
     this.loadWorkflowTemplates();
+
+    // Load workflow recommendations for suggestions panel
+    this.loadWorkflowRecommendations();
 
     // Load user's workflow executions
     this.loadUserWorkflows();
@@ -1510,6 +1526,193 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         }
       });
+  }
+
+  /**
+   * Load workflow recommendations for suggestions panel
+   */
+  loadWorkflowRecommendations(): void {
+    this.loadingRecommendations = true;
+    this.caseWorkflowService.getRecommendationsForAllCases()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.workflowRecommendations = response.recommendations || [];
+          this.recommendationsSummary = response.summary || null;
+          this.loadingRecommendations = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Failed to load workflow recommendations:', error);
+          this.workflowRecommendations = [];
+          this.recommendationsSummary = null;
+          this.loadingRecommendations = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Get urgency badge color class
+   */
+  getUrgencyBadgeClass(urgency: string): string {
+    const classes: Record<string, string> = {
+      'CRITICAL': 'badge-danger',
+      'HIGH': 'badge-warning',
+      'MEDIUM': 'badge-soft-warning',
+      'LOW': 'badge-soft-success'
+    };
+    return classes[urgency] || 'badge-soft-secondary';
+  }
+
+  /**
+   * Get urgency badge background style
+   */
+  getUrgencyBadgeStyle(urgency: string): { [key: string]: string } {
+    return {
+      'background-color': this.caseWorkflowService.getUrgencyBadgeBgColor(urgency as WorkflowUrgency),
+      'color': this.caseWorkflowService.getUrgencyBadgeTextColor(urgency as WorkflowUrgency)
+    };
+  }
+
+  /**
+   * Start workflow from recommendation - shows quick preview modal with auto-loaded documents
+   */
+  startWorkflowFromRecommendation(recommendation: WorkflowRecommendation): void {
+    // Store recommendation and open quick preview modal
+    this.quickPreviewRecommendation = recommendation;
+    this.showQuickPreviewModal = true;
+    this.loadingCaseDocuments = true;
+    this.caseDocumentsForPreview = [];
+    this.previewSelectedDocuments = [];
+
+    // Find the template
+    const template = this.workflowTemplates.find(t => t.id === recommendation.templateId);
+    if (template) {
+      this.selectedWorkflowTemplate = template;
+    }
+
+    // Load case documents
+    this.caseWorkflowService.getCaseDocuments(recommendation.caseId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.caseDocumentsForPreview = response.documents || [];
+          // Auto-select all documents
+          this.previewSelectedDocuments = this.caseDocumentsForPreview.map(d => d.id);
+          this.loadingCaseDocuments = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Failed to load case documents:', err);
+          this.loadingCaseDocuments = false;
+          this.cdr.detectChanges();
+        }
+      });
+
+    // Load template if not found
+    if (!template) {
+      this.caseWorkflowService.getWorkflowTemplate(recommendation.templateId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (tmpl) => {
+            this.selectedWorkflowTemplate = tmpl;
+            this.cdr.detectChanges();
+          },
+          error: (err) => {
+            console.error('Failed to load template:', err);
+          }
+        });
+    }
+  }
+
+  /**
+   * Toggle document selection in quick preview
+   */
+  togglePreviewDocument(docId: number): void {
+    const index = this.previewSelectedDocuments.indexOf(docId);
+    if (index > -1) {
+      this.previewSelectedDocuments.splice(index, 1);
+    } else {
+      this.previewSelectedDocuments.push(docId);
+    }
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Check if a document is selected in quick preview
+   */
+  isPreviewDocumentSelected(docId: number): boolean {
+    return this.previewSelectedDocuments.includes(docId);
+  }
+
+  /**
+   * Confirm and start workflow from quick preview
+   */
+  confirmQuickPreview(): void {
+    if (!this.quickPreviewRecommendation || !this.selectedWorkflowTemplate) {
+      return;
+    }
+
+    // Check if documents are required but none selected
+    const requiresDocs = this.quickPreviewRecommendation.documentsRequired !== false;
+    if (requiresDocs && this.previewSelectedDocuments.length === 0) {
+      this.notificationService.error('Document Required', 'Please select at least one document for this workflow');
+      return;
+    }
+
+    // Set up workflow and start
+    this.selectedCaseId = this.quickPreviewRecommendation.caseId;
+    this.workflowName = `${this.quickPreviewRecommendation.templateName} - ${this.quickPreviewRecommendation.caseNumber}`;
+    this.workflowSelectedDocuments = this.previewSelectedDocuments;
+
+    // Close quick preview and start workflow directly
+    this.closeQuickPreviewModal();
+    this.startWorkflow();
+  }
+
+  /**
+   * Close quick preview modal and reset state
+   */
+  closeQuickPreviewModal(): void {
+    this.showQuickPreviewModal = false;
+    this.quickPreviewRecommendation = null;
+    this.caseDocumentsForPreview = [];
+    this.previewSelectedDocuments = [];
+    this.loadingCaseDocuments = false;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Navigate to upload documents for case (when no documents available)
+   */
+  navigateToUploadForCase(): void {
+    if (this.quickPreviewRecommendation) {
+      this.selectedCaseId = this.quickPreviewRecommendation.caseId;
+      this.closeQuickPreviewModal();
+      // Switch to upload task and trigger file upload
+      this.selectedTask = ConversationType.Upload;
+      // Small delay to let task switch complete
+      setTimeout(() => {
+        this.triggerFileUpload();
+      }, 100);
+    }
+  }
+
+  /**
+   * Toggle recommendations panel visibility
+   */
+  toggleRecommendationsPanel(): void {
+    this.showRecommendationsPanel = !this.showRecommendationsPanel;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Get total urgent recommendations count (critical + high)
+   */
+  getUrgentRecommendationsCount(): number {
+    if (!this.recommendationsSummary) return 0;
+    return (this.recommendationsSummary.critical || 0) + (this.recommendationsSummary.high || 0);
   }
 
   /**

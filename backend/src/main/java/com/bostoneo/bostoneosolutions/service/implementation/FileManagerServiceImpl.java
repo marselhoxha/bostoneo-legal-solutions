@@ -992,39 +992,37 @@ public class FileManagerServiceImpl implements FileManagerService {
             // Send document version update notifications
             try {
                 String title = "Document Version Updated";
-                String message = String.format("New version (v%d) of document \"%s\" has been uploaded", 
+                String message = String.format("New version (v%d) of document \"%s\" has been uploaded",
                     newVersionNumber, fileName != null ? fileName : fileItem.getName());
-                
+
                 Set<Long> notificationUserIds = new HashSet<>();
-                
+
                 // SECURITY: Get users assigned to the case if this file is related to a case (with org filter)
                 if (fileItem.getCaseId() != null && fileItem.getOrganizationId() != null) {
                     List<CaseAssignment> caseAssignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(fileItem.getCaseId(), fileItem.getOrganizationId());
                     for (CaseAssignment assignment : caseAssignments) {
                         if (assignment.getAssignedTo() != null) {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
-                            log.info("📧 Adding case assignee to document version notification: {}", assignment.getAssignedTo().getId());
                         }
                     }
                 }
-                
-                // Always add the user who uploaded the new version
+
+                // Remove the user who uploaded the new version from notifications (don't notify yourself)
                 Long uploadedBy = getCurrentUserId();
                 if (uploadedBy != null) {
-                    notificationUserIds.add(uploadedBy);
-                    log.info("📧 Adding user who uploaded version to document version notification: {}", uploadedBy);
+                    notificationUserIds.remove(uploadedBy);
                 }
-                
+
                 // Send notifications to all collected users
                 for (Long userId : notificationUserIds) {
-                    notificationService.sendCrmNotification(title, message, userId, 
+                    notificationService.sendCrmNotification(title, message, userId,
                         "DOCUMENT_VERSION_UPDATED", Map.of("fileId", fileId,
                                                            "versionId", newVersion.getId(),
                                                            "versionNumber", newVersionNumber,
                                                            "fileName", fileName != null ? fileName : fileItem.getName(),
                                                            "caseId", fileItem.getCaseId() != null ? fileItem.getCaseId() : 0));
                 }
-                
+
                 log.info("📧 Document version update notifications sent to {} users", notificationUserIds.size());
             } catch (Exception e) {
                 log.error("Failed to send document version update notifications: {}", e.getMessage());

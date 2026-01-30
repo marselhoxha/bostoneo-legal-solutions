@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
 import com.bostoneo.bostoneosolutions.dto.*;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.enumeration.TaskStatus;
 import com.bostoneo.bostoneosolutions.enumeration.TaskPriority;
 import com.bostoneo.bostoneosolutions.model.CaseTask;
@@ -71,6 +72,46 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         throw new RuntimeException("Authentication required - could not determine current user");
     }
 
+    /**
+     * Check if the current user has admin or manager privileges.
+     * Admins and managers can modify any task.
+     */
+    private boolean isAdminOrManager() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof UserPrincipal) {
+                UserPrincipal userPrincipal = (UserPrincipal) principal;
+                return userPrincipal.hasRole("ADMIN") || userPrincipal.hasRole("ROLE_ADMIN") ||
+                       userPrincipal.hasRole("MANAGER") || userPrincipal.hasRole("ROLE_MANAGER");
+            } else if (principal instanceof UserDTO) {
+                UserDTO userDTO = (UserDTO) principal;
+                String role = userDTO.getRoleName();
+                return role != null && (role.equalsIgnoreCase("ADMIN") || role.equalsIgnoreCase("ROLE_ADMIN") ||
+                       role.equalsIgnoreCase("MANAGER") || role.equalsIgnoreCase("ROLE_MANAGER"));
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if the current user can modify a specific task.
+     * Admins/Managers can modify any task.
+     * Other users can only modify tasks assigned to them.
+     */
+    private void validateTaskModificationPermission(CaseTask task) {
+        if (isAdminOrManager()) {
+            return; // Admins and managers can modify any task
+        }
+
+        Long currentUserId = getCurrentUserId();
+        Long assignedToId = task.getAssignedTo() != null ? task.getAssignedTo().getId() : null;
+
+        if (assignedToId == null || !assignedToId.equals(currentUserId)) {
+            throw new ApiException("You can only modify tasks assigned to you");
+        }
+    }
+
     @Override
     public CaseTaskDTO createTask(CreateTaskRequest request) {
         log.info("Creating new task for case {}", request.getCaseId());
@@ -132,7 +173,7 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             throw new IllegalStateException("Failed to save task - no ID generated");
         }
 
-        // Send notifications to case assignees
+        // Send notifications to case assignees (excluding the current user who created the task)
         try {
             String title = "New Task Created";
             String message = String.format("New task \"%s\" has been created for case \"%s\"",
@@ -152,6 +193,9 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             if (savedTask.getAssignedTo() != null) {
                 notificationUserIds.add(savedTask.getAssignedTo().getId());
             }
+
+            // Remove the current user from notification list (don't notify yourself)
+            notificationUserIds.remove(currentUserId);
 
             for (Long userId : notificationUserIds) {
                 notificationService.sendCrmNotification(title, message, userId,
@@ -176,7 +220,11 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // SECURITY: Use tenant-filtered query to find the task
         CaseTask task = caseTaskRepository.findByIdAndOrganizationId(taskId, orgId)
             .orElseThrow(() -> new IllegalArgumentException("Task not found or access denied: " + taskId));
-        
+
+        // AUTHORIZATION: Check if user can modify this task
+        // Admins/Managers can modify any task, others can only modify their assigned tasks
+        validateTaskModificationPermission(task);
+
         // Track status change for notifications
         TaskStatus oldStatus = task.getStatus();
         TaskStatus newStatus = request.getStatus();
@@ -247,50 +295,54 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         CaseTask updatedTask = caseTaskRepository.save(task);
         
         // Send task reassignment notifications if assignee changed
-        if (newAssignedToId != null && oldAssignedTo != null && 
+        // Skip notification if user is assigning to themselves (self-assignment)
+        Long currentUserId = getCurrentUserId();
+        boolean isSelfAssignment = newAssignedToId != null && newAssignedToId.equals(currentUserId);
+
+        if (!isSelfAssignment && newAssignedToId != null && oldAssignedTo != null &&
             !oldAssignedTo.getId().equals(newAssignedToId) && newAssignedToId != 0) {
-            // Task was reassigned to a different user
+            // Task was reassigned to a different user (not self)
             try {
                 String title = "Task Assigned";
-                String message = String.format("You have been assigned to task \"%s\"", 
+                String message = String.format("You have been assigned to task \"%s\"",
                     updatedTask.getTitle());
-                
+
                 // Send notification to the newly assigned user
-                notificationService.sendCrmNotification(title, message, newAssignedToId, 
-                    "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(), 
+                notificationService.sendCrmNotification(title, message, newAssignedToId,
+                    "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(),
                                            "caseId", updatedTask.getLegalCase().getId(),
                                            "taskTitle", updatedTask.getTitle()));
-                                           
+
                 log.info("📧 Task reassignment notification sent to user: {}", newAssignedToId);
             } catch (Exception e) {
                 log.error("Failed to send task reassignment notification: {}", e.getMessage());
             }
-        } else if (newAssignedToId != null && oldAssignedTo == null && newAssignedToId != 0) {
-            // Task was assigned for the first time
+        } else if (!isSelfAssignment && newAssignedToId != null && oldAssignedTo == null && newAssignedToId != 0) {
+            // Task was assigned for the first time (not self)
             try {
                 String title = "Task Assigned";
-                String message = String.format("You have been assigned to task \"%s\"", 
+                String message = String.format("You have been assigned to task \"%s\"",
                     updatedTask.getTitle());
-                
+
                 // Send notification to the newly assigned user
-                notificationService.sendCrmNotification(title, message, newAssignedToId, 
-                    "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(), 
+                notificationService.sendCrmNotification(title, message, newAssignedToId,
+                    "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(),
                                            "caseId", updatedTask.getLegalCase().getId(),
                                            "taskTitle", updatedTask.getTitle()));
-                                           
+
                 //log.info("📧 Task assignment notification sent to user: {}", newAssignedToId);
             } catch (Exception e) {
                 log.error("Failed to send task assignment notification: {}", e.getMessage());
             }
         }
         
-        // Send status change notifications
+        // Send status change notifications (excluding the user who made the change)
         if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
             try {
                 String title = "Task Status Changed";
-                String message = String.format("Task \"%s\" status changed from %s to %s", 
+                String message = String.format("Task \"%s\" status changed from %s to %s",
                     updatedTask.getTitle(), oldStatus, newStatus);
-                
+
                 Set<Long> notificationUserIds = new HashSet<>();
 
                 // SECURITY: Get users assigned to the case with org filter
@@ -305,6 +357,9 @@ public class TaskManagementServiceImpl implements TaskManagementService {
                 if (updatedTask.getAssignedTo() != null) {
                     notificationUserIds.add(updatedTask.getAssignedTo().getId());
                 }
+
+                // Remove the current user from notification list (don't notify yourself)
+                notificationUserIds.remove(currentUserId);
 
                 for (Long userId : notificationUserIds) {
                     notificationService.sendCrmNotification(title, message, userId,
@@ -476,24 +531,29 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         
         // Save the updated task
         CaseTask updatedTask = caseTaskRepository.save(task);
-        
-        // Send task assignment notification
-        try {
-            String title = "Task Assigned";
-            String message = String.format("You have been assigned to task \"%s\"", 
-                updatedTask.getTitle());
-            
-            // Send notification to the assigned user
-            notificationService.sendCrmNotification(title, message, userId, 
-                "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(), 
-                                       "caseId", updatedTask.getLegalCase().getId(),
-                                       "taskTitle", updatedTask.getTitle()));
-                                       
-            //log.info("📧 Task assignment notification sent to user: {}", userId);
-        } catch (Exception e) {
-            log.error("Failed to send task assignment notification: {}", e.getMessage());
+
+        // Send task assignment notification only if NOT self-assignment
+        Long currentUserId = getCurrentUserId();
+        boolean isSelfAssignment = userId.equals(currentUserId);
+
+        if (!isSelfAssignment) {
+            try {
+                String title = "Task Assigned";
+                String message = String.format("You have been assigned to task \"%s\"",
+                    updatedTask.getTitle());
+
+                // Send notification to the assigned user
+                notificationService.sendCrmNotification(title, message, userId,
+                    "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(),
+                                           "caseId", updatedTask.getLegalCase().getId(),
+                                           "taskTitle", updatedTask.getTitle()));
+
+                //log.info("📧 Task assignment notification sent to user: {}", userId);
+            } catch (Exception e) {
+                log.error("Failed to send task assignment notification: {}", e.getMessage());
+            }
         }
-        
+
         //log.info("Successfully assigned task {} to user {}", taskId, userId);
         return convertToDTO(updatedTask);
     }
@@ -506,7 +566,11 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // SECURITY: Use tenant-filtered query to find the task
         CaseTask task = caseTaskRepository.findByIdAndOrganizationId(taskId, orgId)
             .orElseThrow(() -> new IllegalArgumentException("Task not found or access denied: " + taskId));
-        
+
+        // AUTHORIZATION: Check if user can modify this task
+        // Admins/Managers can modify any task, others can only modify their assigned tasks
+        validateTaskModificationPermission(task);
+
         // Update the status
         task.setStatus(status);
         
@@ -523,13 +587,14 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         
         // Save the updated task
         CaseTask updatedTask = caseTaskRepository.save(task);
-        
-        // Send status change notifications
+
+        // Send status change notifications (excluding the user who made the change)
         try {
+            Long currentUserId = getCurrentUserId();
             String title = "Task Status Changed";
-            String message = String.format("Task \"%s\" status changed to %s", 
+            String message = String.format("Task \"%s\" status changed to %s",
                 updatedTask.getTitle(), status);
-            
+
             Set<Long> notificationUserIds = new HashSet<>();
 
             // SECURITY: Get users assigned to the case with org filter
@@ -544,6 +609,9 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             if (updatedTask.getAssignedTo() != null) {
                 notificationUserIds.add(updatedTask.getAssignedTo().getId());
             }
+
+            // Remove the current user from notification list (don't notify yourself)
+            notificationUserIds.remove(currentUserId);
 
             for (Long userId : notificationUserIds) {
                 notificationService.sendCrmNotification(title, message, userId,
@@ -568,6 +636,10 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // SECURITY: Use tenant-filtered query to find the task
         CaseTask task = caseTaskRepository.findByIdAndOrganizationId(taskId, orgId)
             .orElseThrow(() -> new IllegalArgumentException("Task not found or access denied: " + taskId));
+
+        // AUTHORIZATION: Check if user can modify this task
+        // Admins/Managers can modify any task, others can only modify their assigned tasks
+        validateTaskModificationPermission(task);
         
         // Update task status to completed
         task.setStatus(TaskStatus.COMPLETED);

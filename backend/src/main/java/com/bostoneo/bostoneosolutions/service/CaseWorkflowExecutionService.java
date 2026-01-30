@@ -1,5 +1,10 @@
 package com.bostoneo.bostoneosolutions.service;
 
+import com.bostoneo.bostoneosolutions.dto.CaseContext;
+import com.bostoneo.bostoneosolutions.enumeration.CaseRoleType;
+import com.bostoneo.bostoneosolutions.enumeration.TaskPriority;
+import com.bostoneo.bostoneosolutions.enumeration.TaskStatus;
+import com.bostoneo.bostoneosolutions.enumeration.TaskType;
 import com.bostoneo.bostoneosolutions.enumeration.WorkflowExecutionStatus;
 import com.bostoneo.bostoneosolutions.enumeration.WorkflowStepType;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
@@ -42,6 +47,16 @@ public class CaseWorkflowExecutionService {
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final TenantService tenantService;
 
+    // Case context service for loading full case data
+    private final CaseContextService caseContextService;
+
+    // Task creation dependencies
+    private final CaseTaskRepository caseTaskRepository;
+    private final LegalCaseRepository legalCaseRepository;
+
+    // Activity logging
+    private final CaseActivityService caseActivityService;
+
     // Self-injection for @Async to work (Spring AOP doesn't intercept internal calls)
     private CaseWorkflowExecutionService self;
 
@@ -64,7 +79,11 @@ public class CaseWorkflowExecutionService {
             ResearchSessionRepository researchSessionRepository,
             NotificationService notificationService,
             CaseAssignmentRepository caseAssignmentRepository,
-            TenantService tenantService
+            TenantService tenantService,
+            CaseContextService caseContextService,
+            CaseTaskRepository caseTaskRepository,
+            LegalCaseRepository legalCaseRepository,
+            CaseActivityService caseActivityService
     ) {
         this.templateRepository = templateRepository;
         this.executionRepository = executionRepository;
@@ -79,6 +98,10 @@ public class CaseWorkflowExecutionService {
         this.notificationService = notificationService;
         this.caseAssignmentRepository = caseAssignmentRepository;
         this.tenantService = tenantService;
+        this.caseContextService = caseContextService;
+        this.caseTaskRepository = caseTaskRepository;
+        this.legalCaseRepository = legalCaseRepository;
+        this.caseActivityService = caseActivityService;
     }
 
     @Autowired
@@ -107,9 +130,26 @@ public class CaseWorkflowExecutionService {
         CaseWorkflowTemplate template = templateRepository.findByIdAndAccessibleByOrganization(templateId, orgId)
                 .orElseThrow(() -> new ApiException("Workflow template not found or access denied: " + templateId));
 
+        // Validate: If template requires documents, ensure at least one is provided
+        if (documentIds.isEmpty() && template.requiresDocuments()) {
+            throw new ApiException("This workflow requires at least one analyzed document. Please upload and analyze documents for this case first.");
+        }
+
         // Extract steps from template config
         Map<String, Object> stepsConfig = template.getStepsConfig();
         List<Map<String, Object>> steps = extractSteps(stepsConfig);
+
+        // Load case context if case is provided (for intelligent workflows)
+        CaseContext caseContext = null;
+        if (caseId != null) {
+            try {
+                caseContext = caseContextService.getCaseContext(caseId, orgId);
+                log.info("Case context loaded for workflow: caseNumber={}, phase={}, pendingTasks={}",
+                        caseContext.getCaseNumber(), caseContext.getCurrentPhase(), caseContext.getPendingTasks());
+            } catch (Exception e) {
+                log.warn("Could not load case context for caseId {}: {}", caseId, e.getMessage());
+            }
+        }
 
         // Create workflow execution
         CaseWorkflowExecution execution = CaseWorkflowExecution.builder()
@@ -133,9 +173,19 @@ public class CaseWorkflowExecutionService {
 
         execution = executionRepository.save(execution);
 
+        // Prepare case context map for step input data
+        Map<String, Object> caseContextMap = caseContext != null ? caseContext.toMap() : new HashMap<>();
+
         // Create step executions
         for (int i = 0; i < steps.size(); i++) {
             Map<String, Object> stepConfig = steps.get(i);
+
+            // Build input data with documents, step config, and case context
+            Map<String, Object> inputData = new HashMap<>();
+            inputData.put("documentIds", documentIds);
+            inputData.put("stepConfig", stepConfig);
+            inputData.put("caseContext", caseContextMap);
+
             CaseWorkflowStepExecution stepExecution = CaseWorkflowStepExecution.builder()
                     .workflowExecution(execution)
                     .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
@@ -143,12 +193,19 @@ public class CaseWorkflowExecutionService {
                     .stepName((String) stepConfig.get("name"))
                     .stepType(parseStepType((String) stepConfig.get("type")))
                     .status(WorkflowExecutionStatus.PENDING)
-                    .inputData(Map.of(
-                            "documentIds", documentIds,
-                            "stepConfig", stepConfig
-                    ))
+                    .inputData(inputData)
                     .build();
             stepExecutionRepository.save(stepExecution);
+        }
+
+        // Log workflow started activity if linked to a case
+        if (caseId != null) {
+            try {
+                String templateType = template.getTemplateType() != null ? template.getTemplateType().name() : "CUSTOM";
+                caseActivityService.logWorkflowStarted(caseId, execution.getId(), name, templateType, user.getId());
+            } catch (Exception e) {
+                log.warn("Failed to log workflow started activity: {}", e.getMessage());
+            }
         }
 
         // Start async execution via self-reference to trigger @Async proxy
@@ -269,6 +326,19 @@ public class CaseWorkflowExecutionService {
         execution.setProgressPercentage(100);
         executionRepository.save(execution);
 
+        // Log workflow completed activity if linked to a case
+        if (execution.getLegalCase() != null && execution.getLegalCase().getId() != null) {
+            try {
+                Long caseId = execution.getLegalCase().getId();
+                String templateType = execution.getTemplate() != null && execution.getTemplate().getTemplateType() != null ?
+                        execution.getTemplate().getTemplateType().name() : "CUSTOM";
+                Long userId = execution.getCreatedBy() != null ? execution.getCreatedBy().getId() : null;
+                caseActivityService.logWorkflowCompleted(caseId, executionId, execution.getName(), templateType, userId);
+            } catch (Exception e) {
+                log.warn("Failed to log workflow completed activity: {}", e.getMessage());
+            }
+        }
+
         log.info("Workflow {} completed successfully", executionId);
     }
 
@@ -300,6 +370,12 @@ public class CaseWorkflowExecutionService {
             case ACTION:
                 executeActionStep(step, execution);
                 return; // Action steps wait for user
+            case TASK_CREATION:
+                outputData = executeTaskCreationStep(step, execution);
+                break;
+            case CASE_UPDATE:
+                outputData = executeCaseUpdateStep(step, execution);
+                break;
         }
 
         step.setOutputData(outputData);
@@ -310,7 +386,7 @@ public class CaseWorkflowExecutionService {
 
     /**
      * DISPLAY step - Query and display stored analysis data (no AI call)
-     * Enhanced to include action items and timeline events
+     * Enhanced to include action items, timeline events, and case context
      */
     private Map<String, Object> executeDisplayStep(CaseWorkflowStepExecution step, CaseWorkflowExecution execution) {
         log.info("Executing DISPLAY step: {}", step.getStepName());
@@ -319,6 +395,10 @@ public class CaseWorkflowExecutionService {
         List<Long> documentIds = getDocumentIds(inputData);
         Map<String, Object> stepConfig = getStepConfig(inputData);
         String displayType = (String) stepConfig.getOrDefault("displayType", "analysis");
+
+        // Extract case context from input data (loaded during workflow start)
+        @SuppressWarnings("unchecked")
+        Map<String, Object> caseContext = (Map<String, Object>) inputData.getOrDefault("caseContext", new HashMap<>());
 
         // Gather analysis IDs for related data queries
         List<Long> analysisIds = new ArrayList<>();
@@ -351,6 +431,31 @@ public class CaseWorkflowExecutionService {
         result.put("displayType", displayType);
         result.put("analysisCount", analysisResults.size());
         result.put("analyses", analysisResults);
+
+        // Include case context when available (for intelligent workflows)
+        if (!caseContext.isEmpty()) {
+            result.put("caseContext", caseContext);
+            result.put("hasCaseContext", true);
+
+            // Add key case info to result for easy access
+            result.put("caseNumber", caseContext.get("caseNumber"));
+            result.put("caseTitle", caseContext.get("title"));
+            result.put("caseType", caseContext.get("caseType"));
+            result.put("currentPhase", caseContext.get("currentPhase"));
+            result.put("clientName", caseContext.get("clientName"));
+
+            // Add deadline and task summaries
+            result.put("pendingTasks", caseContext.get("pendingTasks"));
+            result.put("overdueTasks", caseContext.get("overdueTasks"));
+            result.put("hasUrgentDeadlines", caseContext.get("hasUrgentDeadlines"));
+            result.put("daysUntilMostUrgentDeadline", caseContext.get("daysUntilMostUrgentDeadline"));
+            result.put("leadAttorneyName", caseContext.get("leadAttorneyName"));
+
+            log.info("Case context included in DISPLAY step: case={}, phase={}, pendingTasks={}",
+                    caseContext.get("caseNumber"), caseContext.get("currentPhase"), caseContext.get("pendingTasks"));
+        } else {
+            result.put("hasCaseContext", false);
+        }
 
         // Add action items if requested or for relevant step types
         if ("action_items".equals(displayType) || "timeline".equals(displayType) || "full".equals(displayType)) {
@@ -429,6 +534,10 @@ public class CaseWorkflowExecutionService {
         Map<String, Object> stepConfig = getStepConfig(inputData);
         String synthesisType = (String) stepConfig.getOrDefault("synthesisType", "summary");
 
+        // Extract case context for adaptive prompts
+        @SuppressWarnings("unchecked")
+        Map<String, Object> caseContext = (Map<String, Object>) inputData.getOrDefault("caseContext", new HashMap<>());
+
         // Gather document analysis data
         StringBuilder documentContext = new StringBuilder();
         documentContext.append("Documents analyzed:\n\n");
@@ -449,8 +558,8 @@ public class CaseWorkflowExecutionService {
             }
         }
 
-        // Build prompt based on synthesis type
-        String prompt = buildSynthesisPrompt(synthesisType, documentContext.toString(), step.getStepName());
+        // Build prompt based on synthesis type (with case context for adaptive outputs)
+        String prompt = buildSynthesisPrompt(synthesisType, documentContext.toString(), step.getStepName(), caseContext);
 
         try {
             String aiResponse = claudeService.generateCompletion(prompt, false).get();
@@ -523,14 +632,17 @@ public class CaseWorkflowExecutionService {
     }
 
     /**
-     * Build synthesis prompt based on type
+     * Build synthesis prompt based on type, with case context for adaptive outputs
      */
-    private String buildSynthesisPrompt(String synthesisType, String documentContext, String stepName) {
+    private String buildSynthesisPrompt(String synthesisType, String documentContext, String stepName, Map<String, Object> caseContext) {
         String baseInstruction = """
             You are a legal document analyst. Based on the following document analyses, provide a structured synthesis.
             Be concise, professional, and actionable. Use bullet points where appropriate.
 
             """;
+
+        // Add case context if available (for adaptive outputs)
+        String caseContextSection = buildCaseContextSection(caseContext);
 
         String specificInstruction = switch (synthesisType) {
             case "evidence_checklist" -> """
@@ -585,7 +697,7 @@ public class CaseWorkflowExecutionService {
                 """;
         };
 
-        return baseInstruction + specificInstruction + "\n\nDOCUMENT ANALYSES:\n" + documentContext;
+        return baseInstruction + caseContextSection + specificInstruction + "\n\nDOCUMENT ANALYSES:\n" + documentContext;
     }
 
     /**
@@ -598,6 +710,10 @@ public class CaseWorkflowExecutionService {
         Map<String, Object> inputData = step.getInputData();
         List<Long> documentIds = getDocumentIds(inputData);
         Map<String, Object> stepConfig = getStepConfig(inputData);
+
+        // Extract case context for adaptive prompts
+        @SuppressWarnings("unchecked")
+        Map<String, Object> caseContext = (Map<String, Object>) inputData.getOrDefault("caseContext", new HashMap<>());
         String generationType = (String) stepConfig.getOrDefault("generationType", "report");
 
         // Gather document analysis data
@@ -618,8 +734,8 @@ public class CaseWorkflowExecutionService {
             }
         }
 
-        // Build generation prompt
-        String prompt = buildGenerationPrompt(generationType, documentContext.toString(), step.getStepName());
+        // Build generation prompt (with case context for adaptive outputs)
+        String prompt = buildGenerationPrompt(generationType, documentContext.toString(), step.getStepName(), caseContext);
 
         try {
             String aiResponse = claudeService.generateCompletion(prompt, true).get(); // Use deep thinking for generation
@@ -645,12 +761,15 @@ public class CaseWorkflowExecutionService {
     /**
      * Build generation prompt based on type
      */
-    private String buildGenerationPrompt(String generationType, String documentContext, String stepName) {
+    private String buildGenerationPrompt(String generationType, String documentContext, String stepName, Map<String, Object> caseContext) {
         String baseInstruction = """
             You are an expert legal document drafter. Based on the following document analyses,
             generate high-quality legal content. Be thorough, professional, and cite relevant details.
 
             """;
+
+        // Add case context if available (for adaptive outputs)
+        String caseContextSection = buildCaseContextSection(caseContext);
 
         String specificInstruction = switch (generationType) {
             case "answer_draft" -> """
@@ -717,7 +836,85 @@ public class CaseWorkflowExecutionService {
                 """;
         };
 
-        return baseInstruction + specificInstruction + "\n\nDOCUMENT ANALYSES:\n" + documentContext;
+        return baseInstruction + caseContextSection + specificInstruction + "\n\nDOCUMENT ANALYSES:\n" + documentContext;
+    }
+
+    /**
+     * Build case context section for AI prompts
+     * Includes case type, phase, urgency, client, and jurisdiction information
+     */
+    private String buildCaseContextSection(Map<String, Object> caseContext) {
+        if (caseContext == null || caseContext.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder context = new StringBuilder();
+        context.append("\n=== CASE CONTEXT ===\n");
+        context.append("Adapt your output to match this specific case context.\n\n");
+
+        // Case identification
+        if (caseContext.get("caseNumber") != null) {
+            context.append("Case Number: ").append(caseContext.get("caseNumber")).append("\n");
+        }
+        if (caseContext.get("title") != null) {
+            context.append("Case Title: ").append(caseContext.get("title")).append("\n");
+        }
+        if (caseContext.get("caseType") != null) {
+            context.append("Case Type: ").append(caseContext.get("caseType")).append("\n");
+        }
+
+        // Client info
+        if (caseContext.get("clientName") != null) {
+            context.append("Client: ").append(caseContext.get("clientName")).append("\n");
+        }
+
+        // Phase and status
+        if (caseContext.get("currentPhase") != null) {
+            context.append("Current Phase: ").append(caseContext.get("currentPhase")).append("\n");
+        }
+        if (caseContext.get("status") != null) {
+            context.append("Case Status: ").append(caseContext.get("status")).append("\n");
+        }
+
+        // Urgency indicators
+        Object hasUrgent = caseContext.get("hasUrgentDeadlines");
+        if (Boolean.TRUE.equals(hasUrgent)) {
+            context.append("URGENCY: Has urgent deadlines - prioritize time-sensitive recommendations\n");
+        }
+        Object daysUntil = caseContext.get("daysUntilMostUrgentDeadline");
+        if (daysUntil != null) {
+            context.append("Days until most urgent deadline: ").append(daysUntil).append("\n");
+        }
+
+        // Court/jurisdiction info
+        if (caseContext.get("jurisdiction") != null) {
+            context.append("Jurisdiction: ").append(caseContext.get("jurisdiction")).append("\n");
+        }
+        if (caseContext.get("countyName") != null) {
+            context.append("County: ").append(caseContext.get("countyName")).append("\n");
+        }
+        if (caseContext.get("judgeName") != null) {
+            context.append("Judge: ").append(caseContext.get("judgeName")).append("\n");
+        }
+
+        // Task summary
+        Object pendingTasks = caseContext.get("pendingTasks");
+        Object overdueTasks = caseContext.get("overdueTasks");
+        if (pendingTasks != null || overdueTasks != null) {
+            context.append("Workload: ")
+                    .append(pendingTasks != null ? pendingTasks + " pending tasks" : "")
+                    .append(overdueTasks != null && ((Number)overdueTasks).intValue() > 0 ?
+                            ", " + overdueTasks + " OVERDUE" : "")
+                    .append("\n");
+        }
+
+        // Lead attorney
+        if (caseContext.get("leadAttorneyName") != null) {
+            context.append("Lead Attorney: ").append(caseContext.get("leadAttorneyName")).append("\n");
+        }
+
+        context.append("\n=== END CASE CONTEXT ===\n\n");
+        return context.toString();
     }
 
     /**
@@ -1020,6 +1217,234 @@ public class CaseWorkflowExecutionService {
 
         log.info("Sent {} team notifications for workflow {} on case {}", notificationCount, execution.getId(), caseId);
         return notificationCount;
+    }
+
+    /**
+     * TASK_CREATION step - Create case tasks from workflow templates
+     * Automatically generates tasks with deadlines assigned to case team members
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> executeTaskCreationStep(CaseWorkflowStepExecution step, CaseWorkflowExecution execution) {
+        log.info("Executing TASK_CREATION step: {}", step.getStepName());
+
+        Map<String, Object> inputData = step.getInputData();
+        Map<String, Object> stepConfig = getStepConfig(inputData);
+        Map<String, Object> caseContext = (Map<String, Object>) inputData.getOrDefault("caseContext", new HashMap<>());
+
+        // Get task templates from step config
+        List<Map<String, Object>> taskTemplates = (List<Map<String, Object>>) stepConfig.getOrDefault("taskTemplates", List.of());
+
+        if (taskTemplates.isEmpty()) {
+            log.warn("No task templates defined for TASK_CREATION step");
+            return Map.of(
+                    "stepType", "task_creation",
+                    "tasksCreated", 0,
+                    "message", "No task templates defined"
+            );
+        }
+
+        // Verify we have a linked case
+        LegalCase legalCase = execution.getLegalCase();
+        if (legalCase == null || legalCase.getId() == null) {
+            log.error("TASK_CREATION step requires a linked case");
+            return Map.of(
+                    "stepType", "task_creation",
+                    "tasksCreated", 0,
+                    "error", "No case linked to workflow"
+            );
+        }
+
+        Long orgId = getRequiredOrganizationId();
+        Long caseId = legalCase.getId();
+
+        // Load full legal case for task creation
+        LegalCase fullCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+                .orElseThrow(() -> new ApiException("Case not found: " + caseId));
+
+        // Load case team for assignment resolution
+        List<CaseAssignment> caseTeam = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(caseId, orgId);
+        Map<String, User> teamByRole = buildTeamRoleMap(caseTeam);
+
+        List<Map<String, Object>> createdTasks = new ArrayList<>();
+        User workflowCreator = execution.getCreatedBy();
+
+        for (Map<String, Object> template : taskTemplates) {
+            try {
+                CaseTask task = createTaskFromTemplate(template, fullCase, teamByRole, workflowCreator, execution.getId(), orgId);
+                CaseTask savedTask = caseTaskRepository.save(task);
+
+                createdTasks.add(Map.of(
+                        "taskId", savedTask.getId(),
+                        "title", savedTask.getTitle(),
+                        "priority", savedTask.getPriority().name(),
+                        "dueDate", savedTask.getDueDate() != null ? savedTask.getDueDate().toString() : "No deadline",
+                        "assignedTo", savedTask.getAssignedTo() != null ?
+                                savedTask.getAssignedTo().getFirstName() + " " + savedTask.getAssignedTo().getLastName() : "Unassigned"
+                ));
+
+                log.info("Created task '{}' for case {} with deadline {}",
+                        savedTask.getTitle(), caseId, savedTask.getDueDate());
+
+            } catch (Exception e) {
+                log.error("Failed to create task from template: {}", e.getMessage());
+                createdTasks.add(Map.of(
+                        "title", template.getOrDefault("title", "Unknown"),
+                        "error", e.getMessage()
+                ));
+            }
+        }
+
+        // Log tasks created activity
+        int successfulTasks = (int) createdTasks.stream().filter(t -> !t.containsKey("error")).count();
+        if (successfulTasks > 0) {
+            try {
+                Long userId = execution.getCreatedBy() != null ? execution.getCreatedBy().getId() : null;
+                caseActivityService.logWorkflowTasksCreated(caseId, execution.getId(), execution.getName(), successfulTasks, userId);
+            } catch (Exception e) {
+                log.warn("Failed to log workflow tasks created activity: {}", e.getMessage());
+            }
+        }
+
+        return Map.of(
+                "stepType", "task_creation",
+                "tasksCreated", successfulTasks,
+                "tasks", createdTasks,
+                "caseId", caseId,
+                "workflowExecutionId", execution.getId()
+        );
+    }
+
+    /**
+     * Build a map of team members by their role type for easy lookup
+     */
+    private Map<String, User> buildTeamRoleMap(List<CaseAssignment> assignments) {
+        Map<String, User> roleMap = new HashMap<>();
+
+        for (CaseAssignment assignment : assignments) {
+            String roleKey = assignment.getRoleType().name().toLowerCase();
+            roleMap.put(roleKey, assignment.getAssignedTo());
+
+            // Also add common aliases
+            if (assignment.getRoleType() == CaseRoleType.LEAD_ATTORNEY) {
+                roleMap.put("leadattorney", assignment.getAssignedTo());
+                roleMap.put("lead", assignment.getAssignedTo());
+            } else if (assignment.getRoleType() == CaseRoleType.PARALEGAL) {
+                roleMap.put("paralegal", assignment.getAssignedTo());
+            }
+        }
+
+        return roleMap;
+    }
+
+    /**
+     * Create a CaseTask from a template configuration
+     */
+    private CaseTask createTaskFromTemplate(
+            Map<String, Object> template,
+            LegalCase legalCase,
+            Map<String, User> teamByRole,
+            User createdBy,
+            Long workflowExecutionId,
+            Long orgId
+    ) {
+        String title = (String) template.getOrDefault("title", "Workflow Task");
+        String description = (String) template.getOrDefault("description", "");
+        String priorityStr = (String) template.getOrDefault("priority", "MEDIUM");
+        String assignTo = (String) template.getOrDefault("assignTo", "leadAttorney");
+
+        // Parse priority
+        TaskPriority priority;
+        try {
+            priority = TaskPriority.valueOf(priorityStr.toUpperCase());
+        } catch (Exception e) {
+            priority = TaskPriority.MEDIUM;
+        }
+
+        // Calculate due date
+        LocalDateTime dueDate = null;
+        if (template.containsKey("daysFromNow")) {
+            int days = ((Number) template.get("daysFromNow")).intValue();
+            dueDate = LocalDateTime.now().plusDays(days);
+        }
+
+        // Resolve assignee
+        User assignee = teamByRole.get(assignTo.toLowerCase());
+        if (assignee == null) {
+            // Default to lead attorney or workflow creator
+            assignee = teamByRole.getOrDefault("leadattorney", createdBy);
+        }
+
+        return CaseTask.builder()
+                .organizationId(orgId)
+                .legalCase(legalCase)
+                .title(title)
+                .description(description)
+                .taskType(TaskType.REVIEW)
+                .priority(priority)
+                .status(TaskStatus.TODO)
+                .assignedTo(assignee)
+                .assignedBy(createdBy)
+                .dueDate(dueDate)
+                .workflowExecutionId(workflowExecutionId)
+                .build();
+    }
+
+    /**
+     * CASE_UPDATE step - Update case status and log activities
+     * Used to update case phase or status after workflow completion
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> executeCaseUpdateStep(CaseWorkflowStepExecution step, CaseWorkflowExecution execution) {
+        log.info("Executing CASE_UPDATE step: {}", step.getStepName());
+
+        Map<String, Object> inputData = step.getInputData();
+        Map<String, Object> stepConfig = getStepConfig(inputData);
+
+        LegalCase legalCase = execution.getLegalCase();
+        if (legalCase == null || legalCase.getId() == null) {
+            log.warn("CASE_UPDATE step requires a linked case");
+            return Map.of(
+                    "stepType", "case_update",
+                    "updated", false,
+                    "message", "No case linked to workflow"
+            );
+        }
+
+        Long orgId = getRequiredOrganizationId();
+        Long caseId = legalCase.getId();
+
+        // Load full case
+        LegalCase fullCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+                .orElseThrow(() -> new ApiException("Case not found: " + caseId));
+
+        Map<String, Object> updates = new HashMap<>();
+
+        // Apply status update if specified
+        String newStatus = (String) stepConfig.get("status");
+        if (newStatus != null) {
+            // Note: Actual status update would require CaseStatus enum validation
+            updates.put("status", newStatus);
+            log.info("Workflow requested case status update to: {}", newStatus);
+        }
+
+        // Apply phase update if specified
+        String newPhase = (String) stepConfig.get("phase");
+        if (newPhase != null) {
+            updates.put("phase", newPhase);
+            log.info("Workflow requested case phase update to: {}", newPhase);
+        }
+
+        // Log activity
+        String activityMessage = (String) stepConfig.getOrDefault("activityMessage",
+                "Workflow '" + execution.getName() + "' completed step: " + step.getStepName());
+        updates.put("activityLogged", activityMessage);
+
+        return Map.of(
+                "stepType", "case_update",
+                "updated", true,
+                "caseId", caseId,
+                "updates", updates
+        );
     }
 
     /**

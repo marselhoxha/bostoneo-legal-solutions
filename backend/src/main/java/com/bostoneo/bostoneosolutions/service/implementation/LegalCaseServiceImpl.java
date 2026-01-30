@@ -46,6 +46,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -80,6 +82,25 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
                 .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
+    /**
+     * Get the current user's ID from the security context.
+     * Returns null if the user cannot be determined.
+     */
+    private Long getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof UserDTO) {
+                    return ((UserDTO) principal).getId();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not get current user ID: {}", e.getMessage());
+        }
+        return null;
     }
 
     @Override
@@ -128,18 +149,21 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         existingCase.setPaymentStatus(caseDTO.getPaymentStatus());
         
         existingCase = legalCaseRepository.save(existingCase);
-        
+
         // Check for status changes and trigger notifications
         String newStatus = existingCase.getStatus() != null ? existingCase.getStatus().toString() : null;
         String newPriority = existingCase.getPriority() != null ? existingCase.getPriority().toString() : null;
-        
+
+        // Get the current user's ID to exclude from notifications (don't notify yourself)
+        Long currentUserId = getCurrentUserId();
+
         // Trigger notifications for case status changes
         if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
             try {
                 String title = "Case Status Changed";
-                String message = String.format("Case \"%s\" status changed from %s to %s", 
+                String message = String.format("Case \"%s\" status changed from %s to %s",
                     existingCase.getTitle(), oldStatus, newStatus);
-                
+
                 // Get all users assigned to this case
                 Set<Long> notificationUserIds = new HashSet<>();
                 try {
@@ -147,37 +171,36 @@ public class LegalCaseServiceImpl implements LegalCaseService {
                     for (CaseAssignment assignment : caseAssignments) {
                         if (assignment.getAssignedTo() != null) {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
-                            log.info("📧 Adding case assignee to status change notification: {} {} ({})", 
-                                assignment.getAssignedTo().getFirstName(), 
-                                assignment.getAssignedTo().getLastName(),
-                                assignment.getRoleType());
                         }
                     }
                 } catch (Exception e) {
                     log.error("Failed to get case assignments for notifications: {}", e.getMessage());
                 }
-                
+
+                // Remove the current user from notification list (don't notify yourself)
+                notificationUserIds.remove(currentUserId);
+
                 // Send notification to each assigned user
                 for (Long userId : notificationUserIds) {
-                    notificationService.sendCrmNotification(title, message, userId, "CASE_STATUS_CHANGED", 
+                    notificationService.sendCrmNotification(title, message, userId, "CASE_STATUS_CHANGED",
                         Map.of("caseId", existingCase.getId(), "oldStatus", oldStatus, "newStatus", newStatus));
                 }
-                
-                log.info("Case status change notifications sent to {} users for case ID: {}, status: {} -> {}", 
-                    notificationUserIds.size(), 
+
+                log.info("Case status change notifications sent to {} users for case ID: {}, status: {} -> {}",
+                    notificationUserIds.size(),
                     existingCase.getId(), oldStatus, newStatus);
             } catch (Exception e) {
                 log.error("Failed to send case status change notification for case ID: {}", existingCase.getId(), e);
             }
         }
-        
+
         // Trigger notifications for case priority changes
         if (oldPriority != null && newPriority != null && !oldPriority.equals(newPriority)) {
             try {
                 String title = "Case Priority Changed";
-                String message = String.format("Case \"%s\" priority changed from %s to %s", 
+                String message = String.format("Case \"%s\" priority changed from %s to %s",
                     existingCase.getTitle(), oldPriority, newPriority);
-                
+
                 // Get all users assigned to this case
                 Set<Long> notificationUserIds = new HashSet<>();
                 try {
@@ -185,30 +208,29 @@ public class LegalCaseServiceImpl implements LegalCaseService {
                     for (CaseAssignment assignment : caseAssignments) {
                         if (assignment.getAssignedTo() != null) {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
-                            log.info("📧 Adding case assignee to priority change notification: {} {} ({})", 
-                                assignment.getAssignedTo().getFirstName(), 
-                                assignment.getAssignedTo().getLastName(),
-                                assignment.getRoleType());
                         }
                     }
                 } catch (Exception e) {
                     log.error("Failed to get case assignments for notifications: {}", e.getMessage());
                 }
-                
+
+                // Remove the current user from notification list (don't notify yourself)
+                notificationUserIds.remove(currentUserId);
+
                 // Send notification to each assigned user
                 for (Long userId : notificationUserIds) {
-                    notificationService.sendCrmNotification(title, message, userId, "CASE_PRIORITY_CHANGED", 
+                    notificationService.sendCrmNotification(title, message, userId, "CASE_PRIORITY_CHANGED",
                         Map.of("caseId", existingCase.getId(), "oldPriority", oldPriority, "newPriority", newPriority));
                 }
-                
-                log.info("Case priority change notifications sent to {} users for case ID: {}, priority: {} -> {}", 
-                    notificationUserIds.size(), 
+
+                log.info("Case priority change notifications sent to {} users for case ID: {}, priority: {} -> {}",
+                    notificationUserIds.size(),
                     existingCase.getId(), oldPriority, newPriority);
             } catch (Exception e) {
                 log.error("Failed to send case priority change notification for case ID: {}", existingCase.getId(), e);
             }
         }
-        
+
         return legalCaseDTOMapper.toDTO(existingCase);
     }
 
@@ -922,15 +944,13 @@ public class LegalCaseServiceImpl implements LegalCaseService {
                     for (CaseAssignment assignment : caseAssignments) {
                         if (assignment.getAssignedTo() != null) {
                             notificationUserIds.add(assignment.getAssignedTo().getId());
-                            log.info("📧 Adding case assignee to document version notification: {}", assignment.getAssignedTo().getId());
                         }
                     }
                 }
-                
-                // Always add the user who uploaded the new version
+
+                // Remove the user who uploaded the new version from notifications (don't notify yourself)
                 if (uploadedBy != null) {
-                    notificationUserIds.add(uploadedBy);
-                    log.info("📧 Adding user who uploaded version to document version notification: {}", uploadedBy);
+                    notificationUserIds.remove(uploadedBy);
                 }
                 
                 // Send notifications to all collected users

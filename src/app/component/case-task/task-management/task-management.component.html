@@ -442,16 +442,16 @@
                 </td>
                 <td class="text-end pe-4">
                   <div class="d-flex gap-1 justify-content-end">
-                    <button class="btn btn-sm btn-soft-info" (click)="viewTaskDetails(task)" ngbTooltip="View Details">
+                    <button class="btn btn-sm btn-soft-info" #viewBtnList (click)="viewBtnList.blur(); viewTaskDetails(task)" ngbTooltip="View Details" triggers="hover">
                       <i class="ri-eye-line"></i>
                     </button>
-                    <button class="btn btn-sm btn-soft-primary" (click)="openEditTaskModal(task)" ngbTooltip="Edit">
+                    <button class="btn btn-sm btn-soft-primary" #editBtnList (click)="editBtnList.blur(); openEditTaskModal(task)" ngbTooltip="Edit" triggers="hover">
                       <i class="ri-edit-2-line"></i>
                     </button>
-                    <button class="btn btn-sm btn-soft-warning" (click)="openAssignModal(task)" ngbTooltip="Assign">
+                    <button class="btn btn-sm btn-soft-warning" #assignBtnList (click)="assignBtnList.blur(); openAssignModal(task)" ngbTooltip="Assign" triggers="hover">
                       <i class="ri-user-add-line"></i>
                     </button>
-                    <button class="btn btn-sm btn-soft-danger" (click)="confirm($event, task)" ngbTooltip="Delete">
+                    <button class="btn btn-sm btn-soft-danger" #deleteBtnList (click)="deleteBtnList.blur(); confirm($event, task)" ngbTooltip="Delete" triggers="hover">
                       <i class="ri-delete-bin-line"></i>
                     </button>
                   </div>
@@ -543,17 +543,17 @@
                 </td>
                 <td class="text-end pe-4">
                   <div class="d-flex gap-1 justify-content-end">
-                    <button class="btn btn-sm btn-soft-info" (click)="viewTaskDetails(task)" ngbTooltip="View">
+                    <button class="btn btn-sm btn-soft-info" #viewBtn (click)="viewBtn.blur(); viewTaskDetails(task)" ngbTooltip="View" triggers="hover">
                       <i class="ri-eye-line"></i>
                     </button>
-                    <button class="btn btn-sm btn-soft-primary" (click)="openEditTaskModal(task)" ngbTooltip="Edit">
+                    <button class="btn btn-sm btn-soft-primary" #editBtn (click)="editBtn.blur(); openEditTaskModal(task)" ngbTooltip="Edit" triggers="hover">
                       <i class="ri-edit-2-line"></i>
                     </button>
-                    <button class="btn btn-sm btn-soft-warning" (click)="openAssignModal(task)" ngbTooltip="Reassign">
+                    <button class="btn btn-sm btn-soft-warning" #reassignBtn (click)="reassignBtn.blur(); openAssignModal(task)" ngbTooltip="Reassign" triggers="hover">
                       <i class="ri-user-shared-line"></i>
                     </button>
                     <button class="btn btn-sm btn-soft-success" *ngIf="task.status !== 'COMPLETED'"
-                            (click)="quickCompleteTask(task)" ngbTooltip="Mark Complete">
+                            #completeBtn (click)="completeBtn.blur(); quickCompleteTask(task)" ngbTooltip="Mark Complete" triggers="hover">
                       <i class="ri-checkbox-circle-line"></i>
                     </button>
                   </div>
@@ -920,14 +920,14 @@
 
       <div class="modal-footer border-top bg-light">
         <div class="d-flex justify-content-between w-100">
-          <button type="button" class="btn btn-outline-danger" (click)="closeDetailsModal(); confirm($event, viewingTask)">
+          <button type="button" class="btn btn-outline-danger" (click)="deleteTaskFromDetailsModal($event)">
             <i class="ri-delete-bin-line me-1"></i>Delete
           </button>
           <div class="d-flex gap-2">
             <button type="button" class="btn btn-light" (click)="closeDetailsModal()">
               Close
             </button>
-            <button type="button" class="btn btn-primary" (click)="closeDetailsModal(); openEditTaskModal(viewingTask)">
+            <button type="button" class="btn btn-primary" (click)="editTaskFromDetailsModal()">
               <i class="ri-edit-2-line me-1"></i>Edit Task
             </button>
           </div>

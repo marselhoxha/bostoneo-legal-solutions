@@ -948,4 +948,143 @@ public class CaseActivityServiceImpl implements CaseActivityService {
             log.error("Failed to log invoice activity: {}", e.getMessage());
         }
     }
+
+    // =====================================================
+    // WORKFLOW ACTIVITIES
+    // =====================================================
+
+    @Override
+    public void logWorkflowStarted(Long caseId, Long workflowId, String workflowName, String templateType, Long userId) {
+        log.info("Logging workflow started for case ID: {}, workflow: {}", caseId, workflowName);
+
+        try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId);
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("WORKFLOW_STARTED");
+            activity.setReferenceId(workflowId);
+            activity.setReferenceType("workflow");
+            activity.setDescription("Started workflow \"" + workflowName + "\" (" + templateType + ")");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("workflowId", workflowId);
+            metadata.put("workflowName", workflowName);
+            metadata.put("templateType", templateType);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing workflow started metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log workflow started activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logWorkflowCompleted(Long caseId, Long workflowId, String workflowName, String templateType, Long userId) {
+        log.info("Logging workflow completed for case ID: {}, workflow: {}", caseId, workflowName);
+
+        try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId);
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("WORKFLOW_COMPLETED");
+            activity.setReferenceId(workflowId);
+            activity.setReferenceType("workflow");
+            activity.setDescription("Completed workflow \"" + workflowName + "\"");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("workflowId", workflowId);
+            metadata.put("workflowName", workflowName);
+            metadata.put("templateType", templateType);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing workflow completed metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log workflow completed activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logWorkflowTasksCreated(Long caseId, Long workflowId, String workflowName, int taskCount, Long userId) {
+        log.info("Logging workflow tasks created for case ID: {}, workflow: {}, tasks: {}", caseId, workflowName, taskCount);
+
+        try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId);
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("WORKFLOW_TASKS_CREATED");
+            activity.setReferenceId(workflowId);
+            activity.setReferenceType("workflow");
+            activity.setDescription("Workflow \"" + workflowName + "\" created " + taskCount + " task(s)");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("workflowId", workflowId);
+            metadata.put("workflowName", workflowName);
+            metadata.put("taskCount", taskCount);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing workflow tasks metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log workflow tasks created activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logWorkflowActivity(Long caseId, Long workflowId, String workflowName, String activityType, String description, Long userId) {
+        log.info("Logging workflow activity for case ID: {}, workflow: {}, type: {}", caseId, workflowName, activityType);
+
+        try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId);
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType(activityType);
+            activity.setReferenceId(workflowId);
+            activity.setReferenceType("workflow");
+            activity.setDescription(description);
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("workflowId", workflowId);
+            metadata.put("workflowName", workflowName);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing workflow activity metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log workflow activity: {}", e.getMessage());
+        }
+    }
 } 
