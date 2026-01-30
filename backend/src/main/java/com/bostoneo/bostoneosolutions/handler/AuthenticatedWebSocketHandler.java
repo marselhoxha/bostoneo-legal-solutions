@@ -28,7 +28,9 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
     @Value("${jwt.secret}")
     private String secret;
 
-    // Store authenticated sessions with user ID as key
+    // Store authenticated sessions - sessionId -> session (supports multiple tabs per user)
+    private final Map<String, WebSocketSession> allSessions = new ConcurrentHashMap<>();
+    // Legacy map for single session per user (for backward compatibility with sendNotificationToUser)
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
     private final Map<String, String> sessionUsers = new ConcurrentHashMap<>();
     // SECURITY: Track organization ID per session for tenant-isolated broadcasts
@@ -49,7 +51,8 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
                 if (userId != null && tokenProvider.isTokenValid(userId, token)) {
                     String userIdStr = userId.toString();
 
-                    // Store the session
+                    // Store the session in ALL maps
+                    allSessions.put(session.getId(), session);
                     userSessions.put(userIdStr, session);
                     sessionUsers.put(session.getId(), userIdStr);
 
@@ -59,8 +62,9 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
                         sessionOrganizations.put(session.getId(), organizationId);
                     }
 
-                    log.info("WebSocket authenticated for user: {} (org: {})", userId, organizationId);
-                    
+                    log.info("WebSocket connected: user={}, org={}, session={}, totalSessions={}",
+                        userId, organizationId, session.getId(), allSessions.size());
+
                     // Send welcome message
                     sendMessage(session, createMessage("connected", "WebSocket connection authenticated successfully"));
                 } else {
@@ -79,12 +83,18 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        String userId = sessionUsers.remove(session.getId());
-        sessionOrganizations.remove(session.getId());  // SECURITY: Clean up org tracking
-        if (userId != null) {
+        String sessionId = session.getId();
+        String userId = sessionUsers.remove(sessionId);
+        sessionOrganizations.remove(sessionId);
+        allSessions.remove(sessionId);
+
+        // Only remove from userSessions if this was the active session for that user
+        if (userId != null && userSessions.get(userId) != null &&
+            userSessions.get(userId).getId().equals(sessionId)) {
             userSessions.remove(userId);
-            log.info("WebSocket connection closed for user: {} - Status: {}", userId, status);
         }
+
+        log.info("WebSocket closed: user={}, session={}, remainingSessions={}", userId, sessionId, allSessions.size());
     }
 
     @Override
@@ -112,18 +122,35 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
      * Send notification to a specific user
      */
     public void sendNotificationToUser(String userId, Object notification) {
+        log.info("Sending WebSocket notification to user: {} (active sessions: {})", userId, userSessions.keySet());
         WebSocketSession session = userSessions.get(userId);
         if (session != null && session.isOpen()) {
             try {
                 String message = createMessage("notification", notification);
                 sendMessage(session, message);
-                log.debug("Notification sent to user: {}", userId);
+                log.info("WebSocket notification delivered to user: {}", userId);
             } catch (Exception e) {
                 log.error("Failed to send notification to user {}: {}", userId, e.getMessage());
             }
         } else {
-            log.debug("No active WebSocket session for user: {}", userId);
+            log.warn("No active WebSocket session for user: {} - notification will be available on page refresh", userId);
         }
+    }
+
+    /**
+     * Check if a user has an active WebSocket connection
+     */
+    public boolean isUserConnected(Long userId) {
+        if (userId == null) return false;
+        WebSocketSession session = userSessions.get(userId.toString());
+        return session != null && session.isOpen();
+    }
+
+    /**
+     * Get count of connected users
+     */
+    public int getConnectedUserCount() {
+        return (int) userSessions.values().stream().filter(WebSocketSession::isOpen).count();
     }
 
     /**
@@ -142,26 +169,34 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
 
     /**
      * SECURITY: Broadcast message only to users in the specified organization
+     * Broadcasts to ALL sessions (supports multiple tabs/windows per user)
      */
     public void broadcastToOrganization(Long organizationId, Object message) {
         if (organizationId == null) {
-            log.warn("SECURITY: broadcastToOrganization called with null organizationId - message not sent");
+            log.warn("broadcastToOrganization called with null organizationId");
             return;
         }
+
         String messageStr = createMessage("broadcast", message);
-        userSessions.entrySet().parallelStream()
-                .filter(entry -> {
-                    WebSocketSession session = entry.getValue();
-                    Long sessionOrgId = sessionOrganizations.get(session.getId());
-                    return session.isOpen() && organizationId.equals(sessionOrgId);
-                })
-                .forEach(entry -> {
-                    try {
-                        sendMessage(entry.getValue(), messageStr);
-                    } catch (Exception e) {
-                        log.error("Failed to broadcast message to session {}: {}", entry.getValue().getId(), e.getMessage());
-                    }
-                });
+        int sentCount = 0;
+
+        // Iterate over ALL sessions and send to those with matching org
+        for (Map.Entry<String, WebSocketSession> entry : allSessions.entrySet()) {
+            String sessionId = entry.getKey();
+            WebSocketSession session = entry.getValue();
+            Long sessionOrgId = sessionOrganizations.get(sessionId);
+
+            if (session.isOpen() && organizationId.equals(sessionOrgId)) {
+                try {
+                    sendMessage(session, messageStr);
+                    sentCount++;
+                } catch (Exception e) {
+                    log.error("Failed to send to session {}: {}", sessionId, e.getMessage());
+                }
+            }
+        }
+
+        log.info("Broadcast sent to {} sessions in org {}", sentCount, organizationId);
     }
 
     private String extractTokenFromSession(WebSocketSession session) {

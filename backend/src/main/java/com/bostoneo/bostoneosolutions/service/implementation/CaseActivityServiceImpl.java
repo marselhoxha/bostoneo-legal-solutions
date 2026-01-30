@@ -777,6 +777,227 @@ public class CaseActivityServiceImpl implements CaseActivityService {
         }
     }
 
+    @Override
+    public void logAssignmentTransferred(Long caseId, Long fromUserId, String fromUserName, Long toUserId, String toUserName, String roleType, Long userId) {
+        log.info("Logging assignment transfer for case ID: {}, from: {} to: {}", caseId, fromUserName, toUserName);
+
+        try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId);
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("ASSIGNMENT_TRANSFERRED");
+            activity.setReferenceId(toUserId);
+            activity.setReferenceType("user");
+            activity.setDescription("Assignment transferred from " + fromUserName + " to " + toUserName + " as " + roleType);
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("fromUserId", fromUserId);
+            metadata.put("fromUserName", fromUserName);
+            metadata.put("toUserId", toUserId);
+            metadata.put("toUserName", toUserName);
+            metadata.put("roleType", roleType);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing transfer metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log assignment transfer activity: {}", e.getMessage());
+        }
+    }
+
+    // =====================================================
+    // TASK ACTIVITIES
+    // =====================================================
+
+    @Override
+    public void logTaskCreated(Long caseId, Long taskId, String taskTitle, Long assigneeId, String assigneeName, Long userId) {
+        log.info("Logging task created for case ID: {}, task: {}", caseId, taskTitle);
+
+        try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId);
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("TASK_CREATED");
+            activity.setReferenceId(taskId);
+            activity.setReferenceType("task");
+            String description = "Task \"" + taskTitle + "\" created";
+            if (assigneeName != null) {
+                description += " and assigned to " + assigneeName;
+            }
+            activity.setDescription(description);
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("taskId", taskId);
+            metadata.put("taskTitle", taskTitle);
+            if (assigneeId != null) {
+                metadata.put("assigneeId", assigneeId);
+                metadata.put("assigneeName", assigneeName);
+            }
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing task created metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log task created activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logTaskAssigned(Long caseId, Long taskId, String taskTitle, Long assigneeId, String assigneeName, Long userId) {
+        log.info("Logging task assignment for case ID: {}, task: {}, assignee: {}", caseId, taskTitle, assigneeName);
+
+        try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId);
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("TASK_ASSIGNED");
+            activity.setReferenceId(taskId);
+            activity.setReferenceType("task");
+            activity.setDescription("Task \"" + taskTitle + "\" assigned to " + assigneeName);
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("taskId", taskId);
+            metadata.put("taskTitle", taskTitle);
+            metadata.put("assigneeId", assigneeId);
+            metadata.put("assigneeName", assigneeName);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing task assigned metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log task assigned activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logTaskReassigned(Long caseId, Long taskId, String taskTitle, Long fromUserId, String fromUserName, Long toUserId, String toUserName, Long userId) {
+        log.info("Logging task reassignment for case ID: {}, task: {}, from: {} to: {}", caseId, taskTitle, fromUserName, toUserName);
+
+        try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId);
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("TASK_REASSIGNED");
+            activity.setReferenceId(taskId);
+            activity.setReferenceType("task");
+            activity.setDescription("Task \"" + taskTitle + "\" reassigned from " + fromUserName + " to " + toUserName);
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("taskId", taskId);
+            metadata.put("taskTitle", taskTitle);
+            metadata.put("fromUserId", fromUserId);
+            metadata.put("fromUserName", fromUserName);
+            metadata.put("toUserId", toUserId);
+            metadata.put("toUserName", toUserName);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing task reassigned metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log task reassigned activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logTaskCompleted(Long caseId, Long taskId, String taskTitle, Long userId) {
+        log.info("Logging task completed for case ID: {}, task: {}", caseId, taskTitle);
+
+        try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId);
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("TASK_COMPLETED");
+            activity.setReferenceId(taskId);
+            activity.setReferenceType("task");
+            activity.setDescription("Task \"" + taskTitle + "\" completed");
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("taskId", taskId);
+            metadata.put("taskTitle", taskTitle);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing task completed metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log task completed activity: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void logTaskStatusChanged(Long caseId, Long taskId, String taskTitle, String oldStatus, String newStatus, Long userId) {
+        log.info("Logging task status change for case ID: {}, task: {}, {} -> {}", caseId, taskTitle, oldStatus, newStatus);
+
+        try {
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            CaseActivity activity = new CaseActivity();
+            activity.setOrganizationId(orgId);
+            activity.setCaseId(caseId);
+            activity.setUserId(userId);
+            activity.setActivityType("TASK_STATUS_CHANGED");
+            activity.setReferenceId(taskId);
+            activity.setReferenceType("task");
+            activity.setDescription("Task \"" + taskTitle + "\" status changed from " + oldStatus + " to " + newStatus);
+            activity.setCreatedAt(LocalDateTime.now());
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("taskId", taskId);
+            metadata.put("taskTitle", taskTitle);
+            metadata.put("oldStatus", oldStatus);
+            metadata.put("newStatus", newStatus);
+
+            try {
+                activity.setMetadataJson(objectMapper.writeValueAsString(metadata));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing task status change metadata", e);
+                activity.setMetadataJson("{}");
+            }
+
+            caseActivityRepository.save(activity);
+        } catch (Exception e) {
+            log.error("Failed to log task status change activity: {}", e.getMessage());
+        }
+    }
+
     // =====================================================
     // COMMUNICATION ACTIVITIES
     // =====================================================

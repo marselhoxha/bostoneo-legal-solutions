@@ -16,7 +16,7 @@ import { NotificationService, PushNotification } from 'src/app/service/notificat
 import { UserService } from 'src/app/service/user.service';
 import { User } from 'src/app/interface/user';
 import { State } from '@ngrx/store';
-import { Observable, BehaviorSubject, map, Subject, takeUntil } from 'rxjs';
+import { Observable, BehaviorSubject, map, Subject, takeUntil, filter } from 'rxjs';
 import { CustomHttpResponse, Profile } from 'src/app/interface/appstates';
 import { NavigationEnd } from '@angular/router';
 import { PushNotificationService } from 'src/app/core/services/push-notification.service';
@@ -357,7 +357,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
           }
 
           // Add notification via service (maintains state across route changes)
-          this.addNotification(notification);
+          // Play sound for real-time Firebase push notifications
+          this.addNotification(notification, true);
           // Mark that we have new notifications
           this.hasNewNotifications = true;
           // Force change detection
@@ -371,8 +372,50 @@ export class TopbarComponent implements OnInit, OnDestroy {
       .subscribe(token => {
         this.firebaseToken = token;
       });
+
+    // Subscribe to WebSocket notifications for real-time updates
+    this.initializeWebSocketNotifications();
   }
-  
+
+  /**
+   * Initialize WebSocket notifications for real-time bell icon updates
+   */
+  private initializeWebSocketNotifications(): void {
+    // Ensure WebSocket is connected
+    this.webSocketService.ensureConnected();
+
+    // Subscribe to WebSocket messages
+    this.webSocketService.getMessages()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(message => {
+        if (message.type === 'notification' && message.data) {
+          const wsNotification = {
+            notification: {
+              title: message.data.title,
+              body: message.data.message
+            },
+            data: {
+              type: message.data.type?.toLowerCase() || 'default',
+              url: message.data.url || '/dashboard',
+              priority: message.data.priority?.toLowerCase() || 'normal',
+              backendId: message.data.id,
+              isFromBackend: false,
+              createdAt: message.data.createdAt || new Date().toISOString(),
+              read: message.data.read || false,
+              entityId: message.data.entityId,
+              entityType: message.data.entityType,
+              triggeredByUserId: message.data.triggeredByUserId,
+              triggeredByName: message.data.triggeredByName
+            }
+          };
+
+          this.addNotification(wsNotification, true);
+          this.hasNewNotifications = true;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
   /**
    * Initialize backend notifications - load missed notifications from database
    */
@@ -486,8 +529,10 @@ export class TopbarComponent implements OnInit, OnDestroy {
   
   /**
    * Add a notification to the list (via service for persistence)
+   * @param notification The notification data
+   * @param playSound Whether to play notification sound (default: false for historical, true for real-time)
    */
-  private addNotification(notification: any): void {
+  private addNotification(notification: any, playSound: boolean = false): void {
     // Handle timestamp - use backend timestamp if available, otherwise current time
     let timestamp = new Date();
     if (notification.data?.createdAt) {
@@ -522,8 +567,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
     // Add via service (handles duplicates, filtering, and persistence)
     const wasAdded = this.notificationService.addPushNotification(notificationObj);
 
-    // Trigger bell animation and sound only for new real-time notifications that were actually added
-    if (wasAdded && !notification.data?.isFromBackend) {
+    // Trigger bell animation and sound for new real-time notifications that were actually added
+    if (wasAdded && playSound) {
       this.triggerBellAnimation();
       this.playNotificationSound();
     }
@@ -544,36 +589,21 @@ export class TopbarComponent implements OnInit, OnDestroy {
   }
   
   /**
-   * Play notification sound
+   * Play notification sound - simple and reliable
    */
   private playNotificationSound(): void {
-    try {
-      // Check if notification sound exists
-      const audioUrl = 'assets/sounds/notification.mp3';
-      
-      // Create new audio element
-      const audio = new Audio(audioUrl);
-      
-      // Set volume and handle errors
-      if (audio) {
-        audio.volume = 0.3;
-        
-        // Add error handler to avoid console errors
-        audio.addEventListener('error', () => {
-          // Silently fail if sound cannot be played
-        });
-
-        // Try to play and catch any errors
-        const playPromise = audio.play();
-
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            // Audio playback prevented by browser policy
-          });
-        }
-      }
-    } catch (error) {
-      // Notification sound not available
+    // Use a pre-loaded audio element for instant playback
+    const audio = document.getElementById('notificationSound') as HTMLAudioElement;
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {
+        // Browser blocked autoplay, user hasn't interacted yet
+      });
+    } else {
+      // Fallback: create audio element
+      const newAudio = new Audio('/assets/sounds/notification.mp3');
+      newAudio.volume = 0.5;
+      newAudio.play().catch(() => {});
     }
   }
   
@@ -644,20 +674,34 @@ export class TopbarComponent implements OnInit, OnDestroy {
     // Stop event propagation to prevent dropdown close
     event?.stopPropagation();
 
+    console.log('Notification clicked:', notification);
+
     // Mark notification as read both locally and in backend
     if (!notification.read && notification.id) {
-      // Remove from the service's notification list immediately
-      this.notificationService.markPushNotificationAsRead(notification.id);
-      this.cdr.detectChanges();
+      console.log('Marking notification as read:', notification.id);
 
       // Extract the actual backend ID (remove 'backend_' prefix if present)
       let backendId = notification.id;
       if (notification.id.startsWith('backend_')) {
         backendId = notification.id.replace('backend_', '');
       }
+      console.log('Backend ID for API call:', backendId);
 
-      // Persist to backend using the correct ID format
-      this.notificationService.markAsRead(backendId).subscribe();
+      // Persist to backend FIRST, then remove from local list
+      this.notificationService.markAsRead(backendId).subscribe({
+        next: () => {
+          console.log('Backend marked notification as read successfully');
+          // Remove from the service's notification list after backend confirms
+          this.notificationService.markPushNotificationAsRead(notification.id);
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Failed to mark notification as read in backend:', err);
+          // Still remove locally even if backend fails
+          this.notificationService.markPushNotificationAsRead(notification.id);
+          this.cdr.detectChanges();
+        }
+      });
     }
 
     // Show notification details in modal - with small delay to prevent interaction issues

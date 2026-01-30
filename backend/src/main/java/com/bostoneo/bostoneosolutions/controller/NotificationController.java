@@ -315,7 +315,7 @@ public class NotificationController {
      * Mark notification as read
      */
     @PutMapping("/{notificationId}/read")
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> markAsRead(@PathVariable Long notificationId) {
         log.info("Marking notification as read: {}", notificationId);
         
@@ -383,7 +383,7 @@ public class NotificationController {
      * Delete notification
      */
     @DeleteMapping("/{notificationId}")
-    @PreAuthorize("hasRole('ROLE_USER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> deleteNotification(@PathVariable Long notificationId) {
         log.info("Deleting notification: {}", notificationId);
 

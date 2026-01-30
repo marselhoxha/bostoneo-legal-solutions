@@ -13,6 +13,7 @@ import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.EmailService;
 import com.bostoneo.bostoneosolutions.service.UserNotificationPreferenceService;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -46,6 +47,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final UserNotificationPreferenceService userNotificationPreferenceService;
     private final UserRepository<User> userRepository;
     private final TenantService tenantService;
+    private final AuthenticatedWebSocketHandler webSocketHandler;
     
     @Value("${firebase.config.path}")
     private String firebaseConfigPath;
@@ -85,16 +87,16 @@ public class NotificationServiceImpl implements NotificationService {
             }
         }
 
-        // SECURITY: First check if the token already exists within this organization
+        // First check if the token already exists within this organization
         Optional<NotificationToken> existingToken = tokenRepository.findByTokenAndOrganizationId(tokenDTO.getToken(), orgId);
 
         if (existingToken.isPresent()) {
             // Update existing token record
             NotificationToken token = existingToken.get();
-            // SECURITY: Only allow updating if the token already belongs to this user
+            // Token reassignment within same org is allowed (user switched on same device)
             if (token.getUserId() != null && !token.getUserId().equals(tokenDTO.getUserId())) {
-                log.warn("Attempt to hijack notification token from user {} by user {}", token.getUserId(), tokenDTO.getUserId());
-                throw new RuntimeException("Cannot update token belonging to another user");
+                log.info("Reassigning notification token from user {} to user {} (same device login)",
+                    token.getUserId(), tokenDTO.getUserId());
             }
             token.setUserId(tokenDTO.getUserId());
             token.setPlatform(tokenDTO.getPlatform());
@@ -468,7 +470,31 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         UserNotification savedNotification = userNotificationRepository.save(notification);
-        log.info("User notification created with ID: {}", savedNotification.getId());
+        log.info("User notification created with ID: {} for user: {}", savedNotification.getId(), userId);
+
+        // Send real-time notification via WebSocket
+        if (userId != null) {
+            try {
+                log.info("Preparing WebSocket notification for user: {}", userId);
+                Map<String, Object> wsNotification = new HashMap<>();
+                wsNotification.put("id", savedNotification.getId());
+                wsNotification.put("title", savedNotification.getTitle());
+                wsNotification.put("message", savedNotification.getMessage());
+                wsNotification.put("type", savedNotification.getType());
+                wsNotification.put("priority", savedNotification.getPriority());
+                wsNotification.put("read", false);
+                wsNotification.put("createdAt", savedNotification.getCreatedAt());
+                wsNotification.put("entityId", savedNotification.getEntityId());
+                wsNotification.put("entityType", savedNotification.getEntityType());
+                wsNotification.put("url", savedNotification.getUrl());
+                wsNotification.put("triggeredByUserId", savedNotification.getTriggeredByUserId());
+                wsNotification.put("triggeredByName", savedNotification.getTriggeredByName());
+
+                webSocketHandler.sendNotificationToUser(userId.toString(), wsNotification);
+            } catch (Exception e) {
+                log.error("Failed to send WebSocket notification to user {}: {}", userId, e.getMessage());
+            }
+        }
 
         return savedNotification;
     }
@@ -492,14 +518,17 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    @Transactional
     public void markNotificationAsRead(Long notificationId) {
         log.info("Marking notification {} as read", notificationId);
         Long orgId = tenantService.getCurrentOrganizationId()
                 .orElseThrow(() -> new RuntimeException("Organization context required"));
-        userNotificationRepository.markAsReadByIdAndOrganizationId(notificationId, orgId, LocalDateTime.now());
+        int updated = userNotificationRepository.markAsReadByIdAndOrganizationId(notificationId, orgId, LocalDateTime.now());
+        log.info("Marked notification {} as read, rows affected: {}", notificationId, updated);
     }
 
     @Override
+    @Transactional
     public void markAllNotificationsAsRead(Long userId) {
         log.info("Marking all notifications as read for user: {}", userId);
         Long orgId = tenantService.getCurrentOrganizationId()

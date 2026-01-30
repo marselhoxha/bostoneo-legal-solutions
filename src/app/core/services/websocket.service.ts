@@ -44,6 +44,7 @@ export class WebSocketService implements OnDestroy {
   private taskMessages$ = new Subject<WebSocketMessage>();
   private assignmentMessages$ = new Subject<WebSocketMessage>();
   private notificationMessages$ = new Subject<WebSocketMessage>();
+  private transferMessages$ = new Subject<WebSocketMessage>();
   
   // Configuration
   private readonly wsUrl = environment.wsUrl;
@@ -289,7 +290,32 @@ export class WebSocketService implements OnDestroy {
       case 'MEMBER_REMOVED':
         this.assignmentMessages$.next(message);
         break;
-        
+
+      case 'TRANSFER_REQUEST_CREATED':
+      case 'TRANSFER_REQUEST_APPROVED':
+      case 'TRANSFER_REQUEST_REJECTED':
+        this.transferMessages$.next(message);
+        this.assignmentMessages$.next(message); // Also emit to assignments for dashboard
+        break;
+
+      case 'broadcast':
+        // Handle broadcast messages - check nested type
+        if (message.data && message.data.type) {
+          const nestedType = message.data.type;
+          if (nestedType === 'TRANSFER_REQUEST_CREATED' ||
+              nestedType === 'TRANSFER_REQUEST_APPROVED' ||
+              nestedType === 'TRANSFER_REQUEST_REJECTED') {
+            const innerMessage = { ...message.data, type: nestedType };
+            this.transferMessages$.next(innerMessage);
+            this.assignmentMessages$.next(innerMessage);
+          } else if (nestedType === 'CASE_TRANSFERRED') {
+            const innerMessage = { ...message.data, type: nestedType };
+            this.assignmentMessages$.next(innerMessage);
+            this.caseMessages$.next(innerMessage);
+          }
+        }
+        break;
+
       case 'NOTIFICATION':
       case 'ALERT':
       case 'SYSTEM_MESSAGE':
@@ -447,6 +473,13 @@ export class WebSocketService implements OnDestroy {
     return this.notificationMessages$.asObservable().pipe(
       filter(message => !userId || message.userId === userId)
     );
+  }
+
+  /**
+   * Get transfer request messages (for pending transfers updates)
+   */
+  getTransferMessages(): Observable<WebSocketMessage> {
+    return this.transferMessages$.asObservable();
   }
 
   // ==================== Private Methods ====================

@@ -8,8 +8,10 @@ import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.model.*;
 import com.bostoneo.bostoneosolutions.repository.*;
 import com.bostoneo.bostoneosolutions.service.CaseAssignmentService;
+import com.bostoneo.bostoneosolutions.service.CaseActivityService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
 // import com.bostoneo.bostoneosolutions.service.UserService; // Temporarily commented
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +46,9 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     private final LegalCaseRepository legalCaseRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final CaseActivityService caseActivityService;
     private final TenantService tenantService;
+    private final AuthenticatedWebSocketHandler webSocketHandler;
     // private final UserService userService; // Temporarily commented to avoid circular dependency
     private final SmartAssignmentAlgorithm smartAssignmentAlgorithm;
 
@@ -133,6 +137,21 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             }
         }
 
+        // Log activity for case timeline
+        try {
+            String assigneeName = assignedTo.getFirstName() + " " + assignedTo.getLastName();
+            caseActivityService.logAssignmentAdded(
+                request.getCaseId(),
+                request.getUserId(),
+                assigneeName,
+                request.getRoleType().toString(),
+                currentUserId
+            );
+            log.info("Assignment activity logged for case: {}", request.getCaseId());
+        } catch (Exception e) {
+            log.error("Failed to log assignment activity: {}", e.getMessage());
+        }
+
         return mapToDTO(assignment);
     }
     
@@ -184,20 +203,35 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         // Send notification to assigned user
         try {
             String title = "Case Auto-Assignment";
-            String message = String.format("You have been auto-assigned to case \"%s\" as %s", 
+            String message = String.format("You have been auto-assigned to case \"%s\" as %s",
                 legalCase.getTitle(), CaseRoleType.LEAD_ATTORNEY.toString());
-            
-            notificationService.sendCrmNotification(title, message, recommendedUser.getId(), 
+
+            notificationService.sendCrmNotification(title, message, recommendedUser.getId(),
                 "CASE_ASSIGNMENT_ADDED", Map.of("caseId", caseId, "assignmentId", assignment.getId()));
-            
+
             log.info("Case auto-assignment notification sent to user: {}", recommendedUser.getId());
         } catch (Exception e) {
             log.error("Failed to send case auto-assignment notification: {}", e.getMessage());
         }
-        
+
+        // Log activity for case timeline
+        try {
+            String assigneeName = recommendedUser.getFirstName() + " " + recommendedUser.getLastName();
+            caseActivityService.logAssignmentAdded(
+                caseId,
+                recommendedUser.getId(),
+                assigneeName,
+                CaseRoleType.LEAD_ATTORNEY.toString(),
+                systemUser.getId()
+            );
+            log.info("Auto-assignment activity logged for case: {}", caseId);
+        } catch (Exception e) {
+            log.error("Failed to log auto-assignment activity: {}", e.getMessage());
+        }
+
         return mapToDTO(assignment);
     }
-    
+
     @Override
     public CaseAssignmentDTO transferCase(com.bostoneo.bostoneosolutions.dto.CaseTransferRequest request) {
         log.info("Transferring case {} from user {} to user {}",
@@ -215,8 +249,8 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         if (toUser == null) {
             throw new ApiException("To user not found");
         }
-        User currentUser = getSystemUser(); // Temporarily use system user for testing
-        
+        User currentUser = getCurrentUser();
+
         // Check if transfer request already exists
         if (transferRequestRepository.existsPendingRequest(request.getCaseId(), request.getFromUserId())) {
             throw new ApiException("Transfer request already pending for this case");
@@ -235,12 +269,49 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             .build();
         
         transferReq = transferRequestRepository.save(transferReq);
-        
+        log.info("Transfer request saved with ID: {} and status: {}", transferReq.getId(), transferReq.getStatus());
+
         // If user has authority, auto-approve
-        if (hasTransferAuthority(currentUser)) {
-            return processTransfer(transferReq, currentUser, "Auto-approved");
+        boolean hasAuthority = hasTransferAuthority(currentUser);
+        log.info("Transfer authority check for user {} ({}): hasAuthority={}",
+            currentUser.getId(), currentUser.getFirstName() + " " + currentUser.getLastName(), hasAuthority);
+        log.info("User roles: {}", currentUser.getRoles());
+
+        if (hasAuthority) {
+            log.info("=== AUTO-APPROVING transfer request {} ===", transferReq.getId());
+            CaseAssignmentDTO result = processTransfer(transferReq, currentUser, "Auto-approved");
+
+            // Broadcast WebSocket notification for auto-approved transfer
+            try {
+                Map<String, Object> wsNotification = Map.of(
+                    "type", "TRANSFER_REQUEST_APPROVED",
+                    "transferRequest", mapTransferToDTO(transferReq),
+                    "timestamp", System.currentTimeMillis()
+                );
+                webSocketHandler.broadcastToOrganization(orgId, wsNotification);
+                log.info("WebSocket notification sent for auto-approved transfer request {}", transferReq.getId());
+            } catch (Exception e) {
+                log.error("Failed to send WebSocket notification for auto-approved transfer: {}", e.getMessage());
+            }
+
+            return result;
         }
-        
+
+        log.info("=== TRANSFER REQUEST {} PENDING - awaiting approval ===", transferReq.getId());
+
+        // Broadcast WebSocket notification to all users in organization for real-time pending transfers update
+        try {
+            Map<String, Object> wsNotification = Map.of(
+                "type", "TRANSFER_REQUEST_CREATED",
+                "transferRequest", mapTransferToDTO(transferReq),
+                "timestamp", System.currentTimeMillis()
+            );
+            webSocketHandler.broadcastToOrganization(orgId, wsNotification);
+            log.info("WebSocket notification sent for pending transfer request {}", transferReq.getId());
+        } catch (Exception e) {
+            log.error("Failed to send WebSocket notification for transfer request: {}", e.getMessage());
+        }
+
         return mapTransferToAssignmentDTO(transferReq);
     }
     
@@ -272,6 +343,12 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
 
         User currentUser = getSystemUser(); // Temporarily use system user for testing
 
+        // Get user info for activity logging
+        User unassignedUser = userRepository.get(userId);
+        String unassignedUserName = unassignedUser != null
+            ? unassignedUser.getFirstName() + " " + unassignedUser.getLastName()
+            : "User " + userId;
+
         // Deactivate all matching assignments (handles duplicates)
         for (CaseAssignment assignment : assignments) {
             assignment.setActive(false);
@@ -286,6 +363,60 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
 
         // Update workload once
         updateUserWorkload(userId);
+
+        // Log activity for case timeline
+        try {
+            Long performedByUserId = null;
+            try {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.getPrincipal() instanceof UserDTO) {
+                    performedByUserId = ((UserDTO) auth.getPrincipal()).getId();
+                }
+            } catch (Exception e) {
+                log.warn("Could not get current user ID for activity log: {}", e.getMessage());
+            }
+
+            caseActivityService.logAssignmentRemoved(
+                caseId,
+                userId,
+                unassignedUserName,
+                performedByUserId
+            );
+            log.info("Unassignment activity logged for case: {}, user: {}", caseId, userId);
+        } catch (Exception e) {
+            log.error("Failed to log unassignment activity: {}", e.getMessage());
+        }
+
+        // Send notification to unassigned user (unless self-unassigning)
+        try {
+            Long currentUserId = null;
+            try {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.getPrincipal() instanceof UserDTO) {
+                    currentUserId = ((UserDTO) auth.getPrincipal()).getId();
+                }
+            } catch (Exception e) {
+                log.warn("Could not get current user ID: {}", e.getMessage());
+            }
+
+            boolean isSelfUnassignment = currentUserId != null && currentUserId.equals(userId);
+            if (!isSelfUnassignment) {
+                // Get case info for notification
+                LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId).orElse(null);
+                String caseTitle = legalCase != null ? legalCase.getTitle() : "Case #" + caseId;
+
+                String title = "Removed from Case";
+                String message = String.format("You have been removed from case \"%s\"%s",
+                    caseTitle, reason != null ? " - " + reason : "");
+
+                notificationService.sendCrmNotification(title, message, userId,
+                    "CASE_ASSIGNMENT_REMOVED", Map.of("caseId", caseId));
+
+                log.info("Unassignment notification sent to user: {}", userId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send unassignment notification: {}", e.getMessage());
+        }
     }
     
     @Override
@@ -628,10 +759,12 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     
     @Override
     public Page<CaseTransferRequestDTO> getPendingTransferRequests(Pageable pageable) {
-        // SECURITY: Use tenant-filtered query
-        Page<com.bostoneo.bostoneosolutions.model.CaseTransferRequest> requests = tenantService.getCurrentOrganizationId()
-            .map(orgId -> transferRequestRepository.findByOrganizationIdAndStatus(orgId, TransferStatus.PENDING, pageable))
+        Long orgId = tenantService.getCurrentOrganizationId()
             .orElseThrow(() -> new RuntimeException("Organization context required"));
+        log.info("Getting pending transfer requests for org: {}", orgId);
+        Page<com.bostoneo.bostoneosolutions.model.CaseTransferRequest> requests =
+            transferRequestRepository.findByOrganizationIdAndStatus(orgId, TransferStatus.PENDING, pageable);
+        log.info("Found {} pending transfer requests", requests.getTotalElements());
         return requests.map(this::mapTransferToDTO);
     }
     
@@ -649,6 +782,19 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         User currentUser = getSystemUser(); // Temporarily use system user for testing
         CaseAssignmentDTO result = processTransfer(request, currentUser, notes);
 
+        // Broadcast WebSocket notification for transfer approval
+        try {
+            Map<String, Object> wsNotification = Map.of(
+                "type", "TRANSFER_REQUEST_APPROVED",
+                "transferRequest", mapTransferToDTO(request),
+                "timestamp", System.currentTimeMillis()
+            );
+            webSocketHandler.broadcastToOrganization(orgId, wsNotification);
+            log.info("WebSocket notification sent for approved transfer request {}", requestId);
+        } catch (Exception e) {
+            log.error("Failed to send WebSocket notification for transfer approval: {}", e.getMessage());
+        }
+
         return mapTransferToDTO(request);
     }
 
@@ -658,20 +804,33 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         // SECURITY: Use tenant-filtered query
         com.bostoneo.bostoneosolutions.model.CaseTransferRequest request = transferRequestRepository.findByIdAndOrganizationId(requestId, orgId)
             .orElseThrow(() -> new ApiException("Transfer request not found or access denied"));
-        
+
         if (request.getStatus() != TransferStatus.PENDING) {
             throw new ApiException("Transfer request is not pending");
         }
-        
+
         User currentUser = getSystemUser(); // Temporarily use system user for testing
-        
+
         request.setStatus(TransferStatus.REJECTED);
         request.setApprovedBy(currentUser);
         request.setApprovalNotes(notes);
         request.setProcessedAt(LocalDateTime.now());
-        
+
         transferRequestRepository.save(request);
-        
+
+        // Broadcast WebSocket notification for transfer rejection
+        try {
+            Map<String, Object> wsNotification = Map.of(
+                "type", "TRANSFER_REQUEST_REJECTED",
+                "transferRequest", mapTransferToDTO(request),
+                "timestamp", System.currentTimeMillis()
+            );
+            webSocketHandler.broadcastToOrganization(orgId, wsNotification);
+            log.info("WebSocket notification sent for rejected transfer request {}", requestId);
+        } catch (Exception e) {
+            log.error("Failed to send WebSocket notification for transfer rejection: {}", e.getMessage());
+        }
+
         return mapTransferToDTO(request);
     }
     
@@ -716,11 +875,16 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     }
     
     private boolean hasTransferAuthority(User user) {
-        // Check if user has manager or senior role
+        // Only managers, partners, and admins can auto-approve transfers
+        // Senior associates and regular attorneys should require approval
         return user.getRoles().stream()
-            .anyMatch(role -> role.getName().contains("MANAGER") || 
-                             role.getName().contains("SENIOR") ||
-                             role.getName().contains("PARTNER"));
+            .anyMatch(role -> {
+                String roleName = role.getName().toUpperCase();
+                return roleName.contains("MANAGER") ||
+                       roleName.contains("PARTNER") ||
+                       roleName.contains("ADMIN") ||
+                       roleName.equals("ROLE_ADMIN");
+            });
     }
     
     private CaseAssignmentDTO processTransfer(com.bostoneo.bostoneosolutions.model.CaseTransferRequest request, User approver, String notes) {
@@ -793,9 +957,84 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
 
         recordAssignmentHistory(newAssignment, AssignmentAction.TRANSFERRED, historyNote, approver);
 
+        // Log activities for case timeline
+        try {
+            Long caseId = request.getLegalCase().getId();
+            String fromUserName = getFullName(request.getFromUser());
+            String toUserName = getFullName(request.getToUser());
+
+            // Log removal of old assignee (if there was one)
+            if (!currentAssignments.isEmpty()) {
+                caseActivityService.logAssignmentRemoved(
+                    caseId,
+                    request.getFromUser().getId(),
+                    fromUserName,
+                    approver.getId()
+                );
+            }
+
+            // Log addition of new assignee
+            caseActivityService.logAssignmentAdded(
+                caseId,
+                request.getToUser().getId(),
+                toUserName,
+                roleType.toString(),
+                approver.getId()
+            );
+
+            log.info("Transfer activities logged for case: {}", caseId);
+        } catch (Exception e) {
+            log.error("Failed to log transfer activities: {}", e.getMessage());
+        }
+
+        // Send notifications
+        try {
+            String caseTitle = request.getLegalCase().getTitle();
+            String fromUserName = getFullName(request.getFromUser());
+            String toUserName = getFullName(request.getToUser());
+
+            // Notify old assignee about removal
+            String fromTitle = "Case Reassigned";
+            String fromMessage = String.format("Your assignment on case \"%s\" has been transferred to %s%s",
+                caseTitle, toUserName, request.getReason() != null ? " - " + request.getReason() : "");
+
+            notificationService.sendCrmNotification(fromTitle, fromMessage, request.getFromUser().getId(),
+                "CASE_ASSIGNMENT_TRANSFERRED", Map.of("caseId", request.getLegalCase().getId()));
+
+            // Notify new assignee about assignment
+            String toTitle = "Case Assignment";
+            String toMessage = String.format("You have been assigned to case \"%s\" as %s (transferred from %s)",
+                caseTitle, roleType.toString(), fromUserName);
+
+            notificationService.sendCrmNotification(toTitle, toMessage, request.getToUser().getId(),
+                "CASE_ASSIGNMENT_ADDED", Map.of("caseId", request.getLegalCase().getId(), "assignmentId", newAssignment.getId()));
+
+            log.info("Transfer notifications sent to users: {} and {}", request.getFromUser().getId(), request.getToUser().getId());
+        } catch (Exception e) {
+            log.error("Failed to send transfer notifications: {}", e.getMessage());
+        }
+
+        // Broadcast WebSocket notification for transfer completion (so all users see assignment change)
+        try {
+            Map<String, Object> wsNotification = Map.of(
+                "type", "CASE_TRANSFERRED",
+                "caseId", request.getLegalCase().getId(),
+                "fromUserId", request.getFromUser().getId(),
+                "toUserId", request.getToUser().getId(),
+                "fromUserName", getFullName(request.getFromUser()),
+                "toUserName", getFullName(request.getToUser()),
+                "caseTitle", request.getLegalCase().getTitle(),
+                "timestamp", System.currentTimeMillis()
+            );
+            webSocketHandler.broadcastToOrganization(request.getOrganizationId(), wsNotification);
+            log.info("WebSocket CASE_TRANSFERRED notification sent for case {}", request.getLegalCase().getId());
+        } catch (Exception e) {
+            log.error("Failed to send CASE_TRANSFERRED WebSocket notification: {}", e.getMessage());
+        }
+
         return mapToDTO(newAssignment);
     }
-    
+
     private void updateUserWorkload(Long userId) {
         calculateUserWorkload(userId);
     }
@@ -982,10 +1221,12 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof UserDTO) {
             UserDTO userDTO = (UserDTO) auth.getPrincipal();
+            log.info("Getting current user with ID: {}", userDTO.getId());
             User user = userRepository.get(userDTO.getId());
             if (user == null) {
                 throw new ApiException("Current user not found");
             }
+            log.info("Current user: {} {} (roles: {})", user.getFirstName(), user.getLastName(), user.getRoles());
             return user;
         }
         throw new ApiException("No authenticated user found");

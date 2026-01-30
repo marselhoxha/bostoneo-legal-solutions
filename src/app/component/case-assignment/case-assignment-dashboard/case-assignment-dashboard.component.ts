@@ -17,7 +17,6 @@ import { AssignmentRulesService } from '../../../core/services/assignment-rules.
 import { TaskAnalyticsService } from '../../../core/services/task-analytics.service';
 import { PerformanceDashboardService, ExecutiveSummary } from '../../../core/services/performance-dashboard.service';
 import { AssignmentSyncService } from '../../../core/services/assignment-sync.service';
-import { AuditLogService } from '../../../core/services/audit-log.service';
 import { WebSocketService } from '../../../core/services/websocket.service';
 import { 
   CaseAssignment, 
@@ -36,6 +35,16 @@ import {
 } from '../../../interface/case-assignment';
 import { User } from '../../../interface/user';
 
+interface AssignedAttorneyInfo {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  roleType?: CaseRoleType;
+  workloadWeight?: number;
+  assignmentId?: number;
+}
+
 interface LegalCase {
   id: number;
   title: string;
@@ -46,7 +55,7 @@ interface LegalCase {
   priority: string;
   estimatedWorkload?: number;
   createdAt: Date;
-  assignedAttorneys?: User[];
+  assignedAttorneys?: AssignedAttorneyInfo[];
 }
 
 interface CaseTypeStats {
@@ -170,7 +179,6 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     private taskAnalyticsService: TaskAnalyticsService,
     private performanceDashboard: PerformanceDashboardService,
     private assignmentSyncService: AssignmentSyncService,
-    private auditLogService: AuditLogService,
     private webSocketService: WebSocketService,
     private legalCaseService: LegalCaseService,
     private ngZone: NgZone,
@@ -706,15 +714,19 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
       catchError(() => of({ data: [] }))
     ).subscribe({
       next: (response) => {
-        // Ensure pendingTransfers is always an array
-        const data = response.data;
-        this.pendingTransfers = Array.isArray(data) ? data : [];
-        this.cdr.markForCheck();
+        this.ngZone.run(() => {
+          const data = response.data;
+          this.pendingTransfers = Array.isArray(data) ? data : [];
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        });
       },
-      error: (error) => {
-        console.error('Error loading pending transfers:', error);
-        this.pendingTransfers = [];
-        this.cdr.markForCheck();
+      error: () => {
+        this.ngZone.run(() => {
+          this.pendingTransfers = [];
+          this.cdr.markForCheck();
+          this.cdr.detectChanges();
+        });
       }
     });
   }
@@ -828,7 +840,7 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
     this.loading.assigning = true;
     const formData = this.assignmentForm.value;
-    
+
     const request: CaseAssignmentRequest = {
       caseId: formData.caseId,
       userId: formData.userId,
@@ -839,68 +851,80 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
       notes: formData.notes
     };
 
-    // Use AssignmentSyncService for proper coordination
-    this.assignmentSyncService.assignUserToCase(request).pipe(
+    // Call CaseAssignmentService directly
+    this.caseAssignmentService.assignCase(request).pipe(
       takeUntil(this.destroy$),
       finalize(() => {
         this.loading.assigning = false;
         this.cdr.markForCheck();
       })
     ).subscribe({
-      next: (syncResult) => {
-        if (syncResult.success) {
-          const assignment = syncResult.data;
+      next: (response) => {
+        const assignment = response.data;
 
-          // Show SweetAlert success
-          import('sweetalert2').then(Swal => {
-            Swal.default.fire({
-              icon: 'success',
-              title: 'Assigned',
-              text: 'Case assigned successfully',
-              timer: 2000,
-              showConfirmButton: false
-            });
+        // Show SweetAlert success (same as remove assignment)
+        import('sweetalert2').then(Swal => {
+          Swal.default.fire({
+            icon: 'success',
+            title: 'Assigned',
+            text: 'Attorney assigned to case successfully',
+            timer: 2000,
+            showConfirmButton: false
           });
+        });
 
-          this.assignments.push(assignment);
-          this.assignmentForm.reset();
-          this.selectedCase = null;
-          this.selectedAttorney = null;
-          
-          // Send notification to assigned user
-          const caseName = this.cases.find(c => c.id === request.caseId)?.title || `Case ${request.caseId}`;
-          this.notificationService.notifyCaseAssignment(
-            request.userId,
-            request.caseId,
-            caseName,
-            request.roleType
-          ).subscribe();
-          
-          // Log assignment change
-          const userName = this.attorneys.find(a => a.id === request.userId);
-          this.auditLogService.logAssignmentChange(
-            'case',
-            request.caseId,
-            caseName,
-            'CASE_ASSIGNED',
-            undefined,
-            userName ? `${userName.firstName} ${userName.lastName}` : `User ${request.userId}`,
-            'CaseAssignmentDashboard'
-          ).subscribe();
-          
-          // Update context if in case mode
-          if (this.caseMode && this.currentCaseId) {
-            this.caseContextService.syncWithBackend(this.currentCaseId).subscribe();
+        // Add to assignments list (create new array for OnPush)
+        this.assignments = [...this.assignments, assignment];
+
+        // Update the selected case's assigned attorneys immediately
+        if (this.selectedCase && this.selectedCase.id === request.caseId) {
+          const assignedAttorney = this.attorneys.find(a => a.id === request.userId);
+          if (assignedAttorney) {
+            const currentAttorneys = this.selectedCase.assignedAttorneys || [];
+            // Check if not already in the list
+            const alreadyAssigned = currentAttorneys.some(a => a.id === assignedAttorney.id);
+            if (!alreadyAssigned) {
+              const newAttorney: AssignedAttorneyInfo = {
+                id: assignedAttorney.id,
+                firstName: assignedAttorney.firstName,
+                lastName: assignedAttorney.lastName,
+                email: assignedAttorney.email,
+                roleType: request.roleType,
+                workloadWeight: request.workloadWeight,
+                assignmentId: assignment?.id
+              };
+              // Create new object reference for OnPush change detection
+              this.selectedCase = {
+                ...this.selectedCase,
+                assignedAttorneys: [...currentAttorneys, newAttorney]
+              };
+            }
           }
-          
-          this.loadWorkloadData();
-        } else {
-          this.notificationService.onError(syncResult.error || 'Failed to assign case');
         }
+
+        // Reset form and clear selected attorney (but keep case selected)
+        this.assignmentForm.patchValue({
+          userId: null,
+          roleType: 'LEAD_ATTORNEY',
+          workloadWeight: 50
+        });
+        this.selectedAttorney = null;
+
+        // Force UI update
+        this.cdr.markForCheck();
+
+        // Note: Notifications are handled by the backend to avoid duplicates
+
+        // Update context if in case mode
+        if (this.caseMode && this.currentCaseId) {
+          this.caseContextService.syncWithBackend(this.currentCaseId).subscribe();
+        }
+
+        this.loadWorkloadData();
       },
       error: (error) => {
         console.error('Error assigning case:', error);
-        this.notificationService.onError('Failed to assign case');
+        this.notificationService.onError(error?.error?.message || 'Failed to assign case');
       }
     });
   }
@@ -1015,39 +1039,35 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (syncResult) => {
         if (syncResult.success) {
-          this.notificationService.onSuccess('Transfer completed successfully');
+          this.notificationService.onSuccess('Transfer initiated successfully');
           this.transferForm.reset();
-          
-          // Send notifications to affected users
-          const caseName = this.cases.find(c => c.id === transferRequest.caseId)?.title || `Case ${transferRequest.caseId}`;
-          const fromUser = this.attorneys.find(a => a.id === transferRequest.fromUserId);
-          const toUser = this.attorneys.find(a => a.id === transferRequest.toUserId);
-          
-          // Notify the new assignee
-          this.notificationService.notifyCaseAssignment(
-            transferRequest.toUserId,
-            transferRequest.caseId,
-            caseName,
-            'LEAD_ATTORNEY' // Default role for transfers
-          ).subscribe();
-          
-          // Log transfer in audit
-          this.auditLogService.logAssignmentChange(
-            'case',
-            transferRequest.caseId,
-            caseName,
-            'CASE_TRANSFERRED',
-            fromUser ? `${fromUser.firstName} ${fromUser.lastName}` : `User ${transferRequest.fromUserId}`,
-            toUser ? `${toUser.firstName} ${toUser.lastName}` : `User ${transferRequest.toUserId}`,
-            'CaseAssignmentDashboard'
-          ).subscribe();
-          
-          // Update context if in case mode
-          if (this.caseMode && this.currentCaseId) {
-            this.caseContextService.syncWithBackend(this.currentCaseId).subscribe();
-          } else {
-            this.loadInitialData();
-          }
+
+          // Reload all data to show updated state
+          this.ngZone.run(() => {
+            // Load pending transfers first, then other data
+            this.caseAssignmentService.getPendingTransferRequests().subscribe({
+              next: (response) => {
+                const data = response.data;
+                this.pendingTransfers = Array.isArray(data) ? data : [];
+                this.cdr.detectChanges();
+              }
+            });
+
+            // Update assignments
+            if (this.caseMode && this.currentCaseId) {
+              this.caseContextService.syncWithBackend(this.currentCaseId).subscribe(() => {
+                this.cdr.detectChanges();
+              });
+            }
+
+            // Reload assignments list
+            this.caseAssignmentService.getAllAssignments(0, 1000).subscribe({
+              next: (response) => {
+                this.assignments = response.data || [];
+                this.cdr.detectChanges();
+              }
+            });
+          });
         } else {
           this.notificationService.onError(syncResult.error || 'Failed to transfer case');
         }
@@ -1083,7 +1103,9 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     this.assignmentSyncService.unassignUserFromCase(
       assignment.caseId,
       assignment.userId,
-      'Manual removal via assignment dashboard'
+      'Manual removal via assignment dashboard',
+      assignment.caseTitle,
+      assignment.caseNumber
     ).pipe(
       takeUntil(this.destroy$)
     ).subscribe({
@@ -1104,17 +1126,7 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
           this.myAssignments = this.myAssignments.filter(a => a.id !== assignment.id);
           this.cdr.markForCheck();
 
-          // Log removal in audit
-          const caseName = assignment.caseTitle || `Case ${assignment.caseId}`;
-          this.auditLogService.logAssignmentChange(
-            'case',
-            assignment.caseId,
-            caseName,
-            'CASE_UNASSIGNED',
-            assignment.userName,
-            undefined,
-            'CaseAssignmentDashboard'
-          ).subscribe();
+          // Note: Audit logging is handled by the backend
 
           // Update context if in case mode
           if (this.caseMode && this.currentCaseId) {
@@ -1133,6 +1145,186 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Unassign attorney from selected case (from Selected Case card)
+   */
+  unassignFromSelectedCase(attorney: AssignedAttorneyInfo): void {
+    if (!this.selectedCase) {
+      this.notificationService.onError('No case selected');
+      return;
+    }
+
+    import('sweetalert2').then(Swal => {
+      Swal.default.fire({
+        title: 'Remove Assignment',
+        text: `Are you sure you want to remove ${attorney.firstName} ${attorney.lastName} from this case?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Remove',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.performUnassignFromSelectedCase(attorney);
+        }
+      });
+    });
+  }
+
+  private performUnassignFromSelectedCase(attorney: AssignedAttorneyInfo): void {
+    if (!this.selectedCase) return;
+
+    this.assignmentSyncService.unassignUserFromCase(
+      this.selectedCase.id,
+      attorney.id,
+      'Manual removal via assignment dashboard',
+      this.selectedCase.title,
+      this.selectedCase.caseNumber
+    ).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (syncResult) => {
+        if (syncResult.success) {
+          this.notificationService.onSuccess(`${attorney.firstName} ${attorney.lastName} removed from case`);
+
+          // Update selected case's assigned attorneys
+          if (this.selectedCase) {
+            this.selectedCase.assignedAttorneys = this.selectedCase.assignedAttorneys?.filter(
+              a => a.id !== attorney.id
+            ) || [];
+          }
+
+          // Update assignments list
+          this.assignments = this.assignments.filter(
+            a => !(a.caseId === this.selectedCase?.id && a.userId === attorney.id)
+          );
+
+          this.cdr.detectChanges();
+          this.loadWorkloadData();
+        } else {
+          this.notificationService.onError(syncResult.error || 'Failed to remove assignment');
+        }
+      },
+      error: (error) => {
+        console.error('Error removing assignment:', error);
+        this.notificationService.onError('Failed to remove assignment');
+      }
+    });
+  }
+
+  /**
+   * Transfer assignment from selected case (from Selected Case card)
+   */
+  transferFromSelectedCase(attorney: AssignedAttorneyInfo): void {
+    if (!this.selectedCase) {
+      this.notificationService.onError('No case selected');
+      return;
+    }
+
+    // Get available attorneys for transfer (exclude the current attorney)
+    const availableAttorneys = this.attorneys.filter(a => a.id !== attorney.id);
+
+    if (availableAttorneys.length === 0) {
+      this.notificationService.onWarning('No other attorneys available for transfer');
+      return;
+    }
+
+    // Create options object for the select dropdown
+    const attorneyOptions: { [key: string]: string } = {};
+    availableAttorneys.forEach(a => {
+      const workload = this.getAttorneyWorkload(a.id);
+      const workloadStr = workload ? ` (${workload.capacityPercentage}% workload)` : '';
+      attorneyOptions[a.id.toString()] = `${a.firstName} ${a.lastName}${workloadStr}`;
+    });
+
+    import('sweetalert2').then(Swal => {
+      Swal.default.fire({
+        title: 'Transfer Assignment',
+        html: `<p>Transfer <strong>${attorney.firstName} ${attorney.lastName}</strong>'s assignment to:</p>`,
+        input: 'select',
+        inputOptions: attorneyOptions,
+        inputPlaceholder: 'Select an attorney',
+        showCancelButton: true,
+        confirmButtonText: 'Transfer',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#405189',
+        inputValidator: (value) => {
+          if (!value) {
+            return 'Please select an attorney';
+          }
+          return null;
+        }
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          const newAttorneyId = parseInt(result.value);
+          const newAttorney = availableAttorneys.find(a => a.id === newAttorneyId);
+          if (newAttorney) {
+            this.performTransferFromSelectedCase(attorney, newAttorney);
+          }
+        }
+      });
+    });
+  }
+
+  private performTransferFromSelectedCase(fromAttorney: AssignedAttorneyInfo, toAttorney: User): void {
+    if (!this.selectedCase) return;
+
+    this.assignmentSyncService.reassignCase(
+      this.selectedCase.id,
+      fromAttorney.id,
+      toAttorney.id,
+      'Assignment transferred via dashboard',
+      this.selectedCase.title,
+      this.selectedCase.caseNumber
+    ).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (syncResult) => {
+        if (syncResult.success) {
+          this.notificationService.onSuccess(
+            `Assignment transferred from ${fromAttorney.firstName} ${fromAttorney.lastName} to ${toAttorney.firstName} ${toAttorney.lastName}`
+          );
+
+          // Update selected case's assigned attorneys
+          if (this.selectedCase && this.selectedCase.assignedAttorneys) {
+            const index = this.selectedCase.assignedAttorneys.findIndex(a => a.id === fromAttorney.id);
+            if (index > -1) {
+              this.selectedCase.assignedAttorneys[index] = {
+                id: toAttorney.id,
+                firstName: toAttorney.firstName,
+                lastName: toAttorney.lastName,
+                email: toAttorney.email,
+                roleType: fromAttorney.roleType,
+                workloadWeight: fromAttorney.workloadWeight,
+                assignmentId: fromAttorney.assignmentId
+              };
+            }
+          }
+
+          // Update assignments list
+          const assignmentIndex = this.assignments.findIndex(
+            a => a.caseId === this.selectedCase?.id && a.userId === fromAttorney.id
+          );
+          if (assignmentIndex > -1) {
+            this.assignments[assignmentIndex].userId = toAttorney.id;
+            this.assignments[assignmentIndex].userName = `${toAttorney.firstName} ${toAttorney.lastName}`;
+            this.assignments[assignmentIndex].userEmail = toAttorney.email;
+          }
+
+          this.cdr.detectChanges();
+          this.loadWorkloadData();
+        } else {
+          this.notificationService.onError(syncResult.error || 'Failed to transfer assignment');
+        }
+      },
+      error: (error) => {
+        console.error('Error transferring assignment:', error);
+        this.notificationService.onError('Failed to transfer assignment');
+      }
+    });
+  }
+
   // Utility Methods
   private loadCaseAssignments(caseId: number): void {
     this.caseAssignmentService.getCaseAssignments(caseId).pipe(
@@ -1141,10 +1333,22 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         if (this.selectedCase) {
-          this.selectedCase.assignedAttorneys = response.data.map((assignment: CaseAssignment) =>
-            this.attorneys.find(attorney => attorney.id === assignment.userId)
-          ).filter(Boolean);
-          this.cdr.markForCheck();
+          this.selectedCase.assignedAttorneys = response.data.map((assignment: CaseAssignment) => {
+            const attorney = this.attorneys.find(a => a.id === assignment.userId);
+            if (attorney) {
+              return {
+                id: attorney.id,
+                firstName: attorney.firstName,
+                lastName: attorney.lastName,
+                email: attorney.email,
+                roleType: assignment.roleType,
+                workloadWeight: assignment.workloadWeight,
+                assignmentId: assignment.id
+              } as AssignedAttorneyInfo;
+            }
+            return null;
+          }).filter(Boolean) as AssignedAttorneyInfo[];
+          this.cdr.detectChanges();
         }
       },
       error: (error) => {
@@ -1378,7 +1582,8 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
     return caseType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
 
-  formatRoleType(roleType: CaseRoleType): string {
+  formatRoleType(roleType: CaseRoleType | undefined): string {
+    if (!roleType) return 'Unknown';
     return roleType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
 
@@ -1387,6 +1592,9 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
       this.selectedTab = tab;
       if (tab === 'analytics' && !this.analytics) {
         this.loadWorkloadData();
+      }
+      if (tab === 'transfers') {
+        this.loadPendingTransfers();
       }
       this.cdr.markForCheck();
       this.cdr.detectChanges();
@@ -1412,9 +1620,23 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
 
   // Permission and Role Methods
   isManager(): boolean {
-    // Check if current user has manager permissions
-    // This could be based on user roles, permissions, etc.
-    return true; // For now, return true to allow access
+    // For now, all users can access manager features
+    return true;
+  }
+
+  /**
+   * Check if current user can manage assignments (unassign/transfer)
+   * For now, all users can manage assignments
+   */
+  canManageAssignment(caseId: number): boolean {
+    return true;
+  }
+
+  /**
+   * Check if current user is admin
+   */
+  isAdmin(): boolean {
+    return this.userService.isAdmin();
   }
 
   getUserDisplayName(user: User): string {
@@ -1469,14 +1691,42 @@ export class CaseAssignmentDashboardComponent implements OnInit, OnDestroy {
    * Subscribe to WebSocket updates for real-time assignment changes
    */
   private subscribeToWebSocketUpdates(): void {
+    // Subscribe to ALL messages and reload pending transfers for broadcasts
+    this.webSocketService.getMessages().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(message => {
+      if (message.type === 'broadcast') {
+        this.loadPendingTransfers();
+      }
+    });
+
+    // Subscribe to assignment changes
     this.webSocketService.getAssignmentMessages(this.currentCaseId || undefined).pipe(
       takeUntil(this.destroy$)
     ).subscribe(message => {
       if (message.type === 'CASE_ASSIGNED' || message.type === 'CASE_UNASSIGNED' || message.type === 'CASE_TRANSFERRED') {
-        // Handle real-time assignment updates
         this.handleRealTimeAssignmentUpdate(message);
       }
+      if (message.type === 'TRANSFER_REQUEST_CREATED' ||
+          message.type === 'TRANSFER_REQUEST_APPROVED' ||
+          message.type === 'TRANSFER_REQUEST_REJECTED') {
+        this.handleRealTimeTransferRequest(message);
+      }
     });
+
+    // Subscribe to transfer request updates
+    this.webSocketService.getTransferMessages().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(message => {
+      this.handleRealTimeTransferRequest(message);
+    });
+  }
+
+  /**
+   * Handle real-time transfer request updates from WebSocket
+   */
+  private handleRealTimeTransferRequest(message: any): void {
+    this.loadPendingTransfers();
   }
 
   /**

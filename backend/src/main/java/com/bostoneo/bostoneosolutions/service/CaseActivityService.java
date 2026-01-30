@@ -213,6 +213,40 @@ public interface CaseActivityService {
      */
     void logAssignmentRemoved(Long caseId, Long assigneeId, String assigneeName, Long userId);
 
+    /**
+     * Log a case assignment transfer activity
+     */
+    void logAssignmentTransferred(Long caseId, Long fromUserId, String fromUserName, Long toUserId, String toUserName, String roleType, Long userId);
+
+    // =====================================================
+    // TASK ACTIVITIES
+    // =====================================================
+
+    /**
+     * Log a task created activity
+     */
+    void logTaskCreated(Long caseId, Long taskId, String taskTitle, Long assigneeId, String assigneeName, Long userId);
+
+    /**
+     * Log a task assigned activity
+     */
+    void logTaskAssigned(Long caseId, Long taskId, String taskTitle, Long assigneeId, String assigneeName, Long userId);
+
+    /**
+     * Log a task reassigned activity
+     */
+    void logTaskReassigned(Long caseId, Long taskId, String taskTitle, Long fromUserId, String fromUserName, Long toUserId, String toUserName, Long userId);
+
+    /**
+     * Log a task completed activity
+     */
+    void logTaskCompleted(Long caseId, Long taskId, String taskTitle, Long userId);
+
+    /**
+     * Log a task status changed activity
+     */
+    void logTaskStatusChanged(Long caseId, Long taskId, String taskTitle, String oldStatus, String newStatus, Long userId);
+
     // =====================================================
     // COMMUNICATION ACTIVITIES
     // =====================================================

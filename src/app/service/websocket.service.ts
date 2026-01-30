@@ -56,7 +56,7 @@ export class WebSocketService implements OnDestroy {
         }
       };
 
-      this.socket.onclose = (event) => {
+      this.socket.onclose = () => {
         this.connectionStatus.next(false);
         this.attemptReconnect(token);
       };
@@ -73,7 +73,30 @@ export class WebSocketService implements OnDestroy {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       setTimeout(() => this.connect(token), this.reconnectDelay);
+    } else {
+      // Reset attempts after max reached, allowing future reconnection
+      this.reconnectAttempts = 0;
     }
+  }
+
+  /**
+   * Ensure WebSocket is connected, reconnecting if necessary
+   */
+  ensureConnected(): void {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      const token = localStorage.getItem('access-token') || localStorage.getItem(Key.TOKEN);
+      if (token) {
+        this.reconnectAttempts = 0; // Reset to allow fresh connection
+        this.connect(token);
+      }
+    }
+  }
+
+  /**
+   * Check if currently connected
+   */
+  isCurrentlyConnected(): boolean {
+    return this.socket?.readyState === WebSocket.OPEN;
   }
 
   disconnect(): void {

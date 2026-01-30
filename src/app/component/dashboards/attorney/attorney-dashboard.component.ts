@@ -727,7 +727,8 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
 
       // Assignments
       'ASSIGNMENT_ADDED': { type: 'task', title: 'Team Member Assigned', icon: 'ri-user-add-line', color: 'success', displayType: 'Assignment' },
-      'ASSIGNMENT_REMOVED': { type: 'task', title: 'Team Member Removed', icon: 'ri-user-unfollow-line', color: 'secondary', displayType: 'Unassigned' },
+      'ASSIGNMENT_REMOVED': { type: 'task', title: 'Team Member Removed', icon: 'ri-user-unfollow-line', color: 'warning', displayType: 'Unassigned' },
+      'ASSIGNMENT_TRANSFERRED': { type: 'task', title: 'Assignment Transferred', icon: 'ri-exchange-line', color: 'info', displayType: 'Transfer' },
 
       // Communications
       'CLIENT_CONTACTED': { type: 'communication', title: 'Client Contacted', icon: 'ri-phone-line', color: 'info', displayType: 'Contact' },
@@ -741,7 +742,10 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
 
       // Tasks/Reminders
       'TASK_CREATED': { type: 'task', title: 'Task Created', icon: 'ri-task-line', color: 'primary', displayType: 'Task' },
+      'TASK_ASSIGNED': { type: 'task', title: 'Task Assigned', icon: 'ri-user-add-line', color: 'success', displayType: 'Assigned' },
+      'TASK_REASSIGNED': { type: 'task', title: 'Task Reassigned', icon: 'ri-user-shared-line', color: 'info', displayType: 'Reassigned' },
       'TASK_UPDATED': { type: 'task', title: 'Task Updated', icon: 'ri-edit-line', color: 'info', displayType: 'Task' },
+      'TASK_STATUS_CHANGED': { type: 'task', title: 'Task Status Changed', icon: 'ri-exchange-line', color: 'warning', displayType: 'Status' },
       'TASK_COMPLETED': { type: 'task', title: 'Task Completed', icon: 'ri-checkbox-circle-line', color: 'success', displayType: 'Completed' },
       'TASK_DELETED': { type: 'task', title: 'Task Deleted', icon: 'ri-delete-bin-line', color: 'secondary', displayType: 'Deleted' },
 

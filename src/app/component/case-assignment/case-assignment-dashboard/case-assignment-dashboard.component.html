@@ -333,6 +333,59 @@
                   <p class="mb-0"><strong>Workload:</strong> {{ selectedCase.estimatedWorkload }}%</p>
                 </div>
               </div>
+
+              <!-- Assigned Attorneys Section -->
+              <div class="mt-3 pt-3 border-top">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <h6 class="fs-13 mb-0">
+                    <i class="ri-user-star-line me-1 text-primary"></i>Assigned Attorneys
+                    <span class="badge bg-primary-subtle text-primary ms-1" *ngIf="selectedCase.assignedAttorneys?.length">
+                      {{ selectedCase.assignedAttorneys.length }}
+                    </span>
+                  </h6>
+                </div>
+                <div *ngIf="selectedCase.assignedAttorneys && selectedCase.assignedAttorneys.length > 0">
+                  <div class="d-flex flex-column gap-2">
+                    <div *ngFor="let attorney of selectedCase.assignedAttorneys"
+                         class="d-flex align-items-center justify-content-between bg-light rounded px-3 py-2">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-xs me-2">
+                          <span class="avatar-title rounded-circle fs-11"
+                                [ngClass]="attorney.roleType === 'LEAD_ATTORNEY' ? 'bg-success-subtle text-success' : 'bg-primary-subtle text-primary'">
+                            {{ attorney.firstName?.charAt(0) || 'U' }}
+                          </span>
+                        </div>
+                        <div>
+                          <span class="fs-13 fw-medium">{{ attorney.firstName }} {{ attorney.lastName }}</span>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="badge fs-10"
+                                  [ngClass]="attorney.roleType === 'LEAD_ATTORNEY' ? 'bg-success-subtle text-success' : 'bg-info-subtle text-info'">
+                              {{ formatRoleType(attorney.roleType) }}
+                            </span>
+                            <span class="text-muted fs-11" *ngIf="attorney.workloadWeight">{{ attorney.workloadWeight }}%</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="d-flex gap-1" *ngIf="canManageAssignment(selectedCase.id)">
+                        <button class="btn btn-soft-warning btn-sm px-2 py-1"
+                                (click)="transferFromSelectedCase(attorney); $event.stopPropagation()"
+                                title="Transfer to another attorney">
+                          <i class="ri-exchange-line fs-12"></i>
+                        </button>
+                        <button class="btn btn-soft-danger btn-sm px-2 py-1"
+                                (click)="unassignFromSelectedCase(attorney); $event.stopPropagation()"
+                                title="Remove from case">
+                          <i class="ri-user-unfollow-line fs-12"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div *ngIf="!selectedCase.assignedAttorneys || selectedCase.assignedAttorneys.length === 0"
+                     class="text-muted fs-13 py-2">
+                  <i class="ri-information-line me-1"></i>No attorneys assigned to this case yet.
+                </div>
+              </div>
             </div>
           </div>
 
@@ -384,7 +437,7 @@
 
             <!-- Assignment Action -->
             <div class="card-footer bg-transparent" [hidden]="!selectedCase || !selectedAttorney">
-              <div class="row align-items-center g-3">
+              <div class="row align-items-end g-3">
                 <div class="col-md-4">
                   <label class="form-label mb-1 fs-12">Role</label>
                   <select class="form-select form-select-sm" [formControl]="assignmentForm.controls['roleType']">
@@ -397,8 +450,9 @@
                          [formControl]="assignmentForm.controls['workloadWeight']"
                          min="1" max="100" placeholder="50">
                 </div>
-                <div class="col-md-4 d-flex align-items-end">
-                  <button class="btn btn-primary w-100" (click)="assignCase()" [disabled]="loading.assigning">
+                <div class="col-md-4">
+                  <button class="btn btn-primary btn-sm w-100" (click)="assignCase()" [disabled]="loading.assigning"
+                          style="height: 31px;">
                     <span *ngIf="loading.assigning" class="spinner-border spinner-border-sm me-1"></span>
                     <i *ngIf="!loading.assigning" class="ri-user-add-line me-1"></i>
                     {{ loading.assigning ? 'Assigning...' : 'Assign' }}

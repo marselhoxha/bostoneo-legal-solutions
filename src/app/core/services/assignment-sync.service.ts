@@ -88,13 +88,14 @@ export class AssignmentSyncService implements OnDestroy {
   /**
    * Reassign case to different user
    */
-  reassignCase(caseId: number, fromUserId: number, toUserId: number, reason?: string): Observable<SyncResult> {
+  reassignCase(caseId: number, fromUserId: number, toUserId: number, reason?: string, caseName?: string, caseNumber?: string): Observable<SyncResult> {
     const change: AssignmentChange = {
       type: 'CASE_REASSIGNMENT',
       entityId: caseId,
       entityType: 'case',
       userId: toUserId,
       previousUserId: fromUserId,
+      assignmentData: { caseName, caseNumber },
       metadata: {
         initiatedBy: this.currentUser?.id || 0,
         timestamp: new Date(),
@@ -173,12 +174,13 @@ export class AssignmentSyncService implements OnDestroy {
   /**
    * Unassign user from case
    */
-  unassignUserFromCase(caseId: number, userId: number, reason?: string): Observable<SyncResult> {
+  unassignUserFromCase(caseId: number, userId: number, reason?: string, caseName?: string, caseNumber?: string): Observable<SyncResult> {
     const change: AssignmentChange = {
       type: 'UNASSIGNMENT',
       entityId: caseId,
       entityType: 'case',
       userId: userId,
+      assignmentData: { caseName, caseNumber },
       metadata: {
         initiatedBy: this.currentUser?.id || 0,
         timestamp: new Date(),
@@ -338,24 +340,17 @@ export class AssignmentSyncService implements OnDestroy {
   private processCaseReassignment(change: AssignmentChange): Observable<SyncResult> {
     this.syncInProgress$.next(true);
 
-    // First get case info
-    return this.caseContextService.getCurrentCase().pipe(
-      switchMap(caseData => {
-        if (!caseData) {
-          throw new Error('Case not found');
-        }
+    // Create transfer request directly using the change data
+    // No need to rely on case context which might not be set
+    const transferRequest: CaseTransferRequest = {
+      caseId: change.entityId,
+      fromUserId: change.previousUserId!,
+      toUserId: change.userId,
+      reason: change.metadata.reason || 'Case reassignment',
+      urgency: TransferUrgency.MEDIUM
+    };
 
-        // Create transfer request
-        const transferRequest: CaseTransferRequest = {
-          caseId: change.entityId,
-          fromUserId: change.previousUserId!,
-          toUserId: change.userId,
-          reason: change.metadata.reason || 'Case reassignment',
-          urgency: TransferUrgency.MEDIUM
-        };
-
-        return this.caseAssignmentService.transferCase(transferRequest);
-      }),
+    return this.caseAssignmentService.transferCase(transferRequest).pipe(
       switchMap((response) => {
         const assignment = response.data;
         
@@ -373,15 +368,13 @@ export class AssignmentSyncService implements OnDestroy {
         
         // Broadcast change
         this.broadcastChange(change, assignment);
-        
-        // Send notifications to both users
-        return this.sendReassignmentNotifications(change, assignment).pipe(
-          map(() => ({
-            success: true,
-            data: assignment,
-            affectedUsers: [change.userId, change.previousUserId!].filter(id => id)
-          }))
-        );
+
+        // Note: Notifications are now handled by the backend to avoid duplicates
+        return of({
+          success: true,
+          data: assignment,
+          affectedUsers: [change.userId, change.previousUserId!].filter(id => id)
+        });
       }),
       tap(() => this.syncInProgress$.next(false)),
       catchError(error => {
@@ -521,8 +514,7 @@ export class AssignmentSyncService implements OnDestroy {
         // Broadcast change
         this.broadcastChange(change, null);
 
-        // Send notification
-        this.sendUnassignmentNotification(change);
+        // Note: Notifications are now handled by the backend to avoid duplicates
       }),
       map(() => ({
         success: true,
@@ -567,25 +559,26 @@ export class AssignmentSyncService implements OnDestroy {
   }
 
   private sendReassignmentNotifications(change: AssignmentChange, assignment: CaseAssignment): Observable<void> {
+    // Get case info from change data or context
     const caseData = this.caseContextService.getCurrentCaseSnapshot();
-    if (!caseData) return of();
+    const caseName = change.assignmentData?.caseName || caseData?.title || caseData?.caseNumber || `Case #${change.entityId}`;
 
     // Notify new assignee
     const newAssigneeNotification = this.notificationService.notifyCaseAssignment(
       change.userId,
       change.entityId,
-      caseData.title || `Case #${caseData.caseNumber}`,
+      caseName,
       assignment.roleType
     );
 
-    // Notify previous assignee if exists
-    const previousAssigneeNotification = change.previousUserId ? 
+    // Notify previous assignee if exists (they are being removed/replaced)
+    const previousAssigneeNotification = change.previousUserId ?
       this.notificationService.sendToUser({
         userId: change.previousUserId,
         type: 'CASE_UPDATE',
-        priority: 'MEDIUM',
+        priority: 'HIGH',
         title: 'Case Reassigned',
-        message: `Case "${caseData.title || caseData.caseNumber}" has been reassigned to another team member`,
+        message: `Your assignment on case "${caseName}" has been transferred to another team member${change.metadata.reason ? ` - ${change.metadata.reason}` : ''}`,
         data: { caseId: change.entityId, reason: change.metadata.reason },
         relatedEntityId: change.entityId,
         relatedEntityType: 'case'
@@ -604,15 +597,16 @@ export class AssignmentSyncService implements OnDestroy {
   }
 
   private sendUnassignmentNotification(change: AssignmentChange): void {
+    // Get case info from change data or context
     const caseData = this.caseContextService.getCurrentCaseSnapshot();
-    if (!caseData) return;
+    const caseName = change.assignmentData?.caseName || caseData?.title || caseData?.caseNumber || `Case #${change.entityId}`;
 
     this.notificationService.sendToUser({
       userId: change.userId,
       type: 'CASE_UPDATE',
-      priority: 'MEDIUM',
+      priority: 'HIGH',
       title: 'Removed from Case',
-      message: `You have been removed from case "${caseData.title || caseData.caseNumber}"`,
+      message: `You have been removed from case "${caseName}"${change.metadata.reason ? ` - ${change.metadata.reason}` : ''}`,
       data: { caseId: change.entityId, reason: change.metadata.reason },
       relatedEntityId: change.entityId,
       relatedEntityType: 'case'
