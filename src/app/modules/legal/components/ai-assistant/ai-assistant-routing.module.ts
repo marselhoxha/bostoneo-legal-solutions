@@ -57,6 +57,12 @@ const routes: Routes = [
     data: { title: 'Intellectual Property Tools' }
   },
   {
+    path: 'practice-areas/personal-injury',
+    loadComponent: () => import('./practice-areas/personal-injury/personal-injury.component').then(m => m.PersonalInjuryComponent),
+    canActivate: [AuthenticationGuard],
+    data: { title: 'Personal Injury Tools' }
+  },
+  {
     path: 'templates',
     loadComponent: () => import('./templates/template-library.component').then(m => m.TemplateLibraryComponent),
     canActivate: [AuthenticationGuard],

@@ -109,6 +109,30 @@ export interface LegalCase {
   documents?: CaseDocument[];
   notes?: CaseNote[];
   activities?: CaseActivity[];
+
+  // Personal Injury (PI) Specific Fields
+  injuryDate?: Date;
+  injuryType?: string;
+  injuryDescription?: string;
+  accidentLocation?: string;
+  liabilityAssessment?: string;
+  comparativeNegligencePercent?: number;
+  medicalProviders?: string;
+  medicalExpensesTotal?: number;
+  lostWages?: number;
+  futureMedicalEstimate?: number;
+  painSufferingMultiplier?: number;
+  settlementDemandAmount?: number;
+  settlementOfferAmount?: number;
+  settlementFinalAmount?: number;
+  settlementDate?: Date;
+  insuranceCompany?: string;
+  insurancePolicyNumber?: string;
+  insurancePolicyLimit?: number;
+  insuranceAdjusterName?: string;
+  insuranceAdjusterContact?: string;
+  defendantName?: string;
+  defendantAddress?: string;
 }
 
 export interface DocumentVersion {

@@ -1,0 +1,1880 @@
+<div class="container-fluid" style="margin-top: 100px;">
+  <!-- Page Header - E-Signatures Style -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-header-wrapper">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div>
+            <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Practice Areas</div>
+            <h4 class="mb-0">Personal Injury</h4>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <!-- Case Selector -->
+            <div class="case-selector-wrapper d-none d-md-block" ngbDropdown #caseDropdown="ngbDropdown">
+              <div class="case-selector-input-wrapper">
+                <i class="ri-folder-line case-selector-icon"></i>
+                <input type="text" class="form-control case-selector-input"
+                       [value]="caseSearchInput"
+                       (input)="onCaseSearchInput($event)"
+                       (focus)="showCaseDropdown = caseSearchInput.length >= 2"
+                       (blur)="closeCaseDropdown()"
+                       placeholder="Link to case...">
+                <span class="case-selector-spinner" *ngIf="isSearchingCases">
+                  <span class="spinner-border spinner-border-sm"></span>
+                </span>
+              </div>
+              <!-- Search Results Dropdown -->
+              <div class="case-selector-dropdown" *ngIf="showCaseDropdown && searchResults.length > 0">
+                <div class="case-result-item"
+                     *ngFor="let caseItem of searchResults"
+                     (mousedown)="selectCase(caseItem)">
+                  <div class="case-result-icon">
+                    <i class="ri-folder-line"></i>
+                  </div>
+                  <div class="case-result-info">
+                    <div class="case-result-number">{{ caseItem.caseNumber }}</div>
+                    <div class="case-result-title">{{ caseItem.title }}</div>
+                    <div class="case-result-client">{{ caseItem.clientName }}</div>
+                  </div>
+                  <div class="case-result-type">
+                    <span class="badge bg-primary-subtle text-primary">{{ caseItem.type }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="case-selector-dropdown case-selector-empty" *ngIf="showCaseDropdown && searchResults.length === 0 && caseSearchInput.length >= 2 && !isSearchingCases">
+                <div class="text-center py-3 text-muted">
+                  <i class="ri-search-line fs-4 d-block mb-2"></i>
+                  <small>No PI cases found</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Linked Case Badge -->
+            <div class="linked-case-badge" *ngIf="linkedCase">
+              <i class="ri-folder-check-line me-2"></i>
+              <span class="case-badge-number">{{ linkedCase.caseNumber }}</span>
+              <span class="case-badge-separator">-</span>
+              <span class="case-badge-client text-truncate">{{ linkedCase.clientName }}</span>
+              <button class="btn-unlink" (click)="unlinkCase()" title="Unlink case">
+                <i class="ri-close-line"></i>
+              </button>
+            </div>
+
+            <!-- Global Search -->
+            <div class="search-box d-none d-lg-block">
+              <input type="text" class="form-control search-input"
+                     [(ngModel)]="globalSearch"
+                     placeholder="Search tools...">
+              <i class="ri-search-line search-icon"></i>
+            </div>
+            <!-- Quick Actions -->
+            <div class="btn-group">
+              <button class="btn btn-primary" (click)="openQuickCalculator()">
+                <i class="ri-calculator-line me-1"></i> Quick Calculate
+              </button>
+              <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+                      data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">Toggle Dropdown</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'case-value'">
+                    <i class="ri-calculator-line me-2 text-primary"></i> Case Value Calculator
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'demand-letter'">
+                    <i class="ri-file-text-line me-2 text-info"></i> Demand Letter
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'medical-tracker'">
+                    <i class="ri-hospital-line me-2 text-success"></i> Medical Tracker
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'settlement'">
+                    <i class="ri-money-dollar-circle-line me-2 text-warning"></i> Settlement Tracker
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li class="dropdown-header text-muted small">Professional Tools</li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'medical-records'" [class.disabled]="!linkedCase">
+                    <i class="ri-file-medical-line me-2 text-info"></i> Medical Records
+                    <span class="badge bg-info-subtle text-info ms-auto" *ngIf="!linkedCase">Link Case</span>
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'medical-summary'" [class.disabled]="!linkedCase">
+                    <i class="ri-article-line me-2 text-primary"></i> Medical Summary
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'damage-analysis'" [class.disabled]="!linkedCase">
+                    <i class="ri-bar-chart-grouped-line me-2 text-danger"></i> Damage Analysis
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'document-checklist'" [class.disabled]="!linkedCase">
+                    <i class="ri-checkbox-multiple-line me-2 text-warning"></i> Document Checklist
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Stats Cards - Minimal Design -->
+  <div class="stats-row" *ngIf="activeTab === 'dashboard'">
+    <!-- Latest Case Value -->
+    <div class="stat-item cursor-pointer" (click)="activeTab = 'case-value'">
+      <div class="stat-header">
+        <span class="stat-label">{{ linkedCase ? 'CASE VALUE' : 'LATEST CASE VALUE' }}</span>
+        <span class="stat-indicator stat-indicator-primary">
+          <i class="ri-calculator-line"></i>
+        </span>
+      </div>
+      <div class="stat-body">
+        <i class="ri-funds-line stat-icon text-primary"></i>
+        <span class="stat-value">{{ formatCompactCurrency(linkedCase ? getLinkedCaseValue() : latestCaseValue) }}</span>
+      </div>
+    </div>
+
+    <!-- Medical Total -->
+    <div class="stat-item cursor-pointer" (click)="activeTab = 'medical-tracker'">
+      <div class="stat-header">
+        <span class="stat-label">MEDICAL TOTAL</span>
+        <span class="stat-indicator stat-indicator-success">
+          <i class="ri-hospital-line"></i>
+        </span>
+      </div>
+      <div class="stat-body">
+        <i class="ri-heart-pulse-line stat-icon text-success"></i>
+        <span class="stat-value">{{ formatCompactCurrency(linkedCase ? getLinkedCaseMedicalTotal() : getTotalMedicalBills()) }}</span>
+      </div>
+    </div>
+
+    <!-- Days Since Injury (when case linked) / Providers Tracked (when no case) -->
+    <div class="stat-item cursor-pointer" (click)="activeTab = linkedCase ? 'case-value' : 'medical-tracker'">
+      <div class="stat-header">
+        <span class="stat-label">{{ linkedCase && getDaysSinceInjury() ? 'DAYS SINCE INJURY' : 'PROVIDERS TRACKED' }}</span>
+        <span class="stat-indicator stat-indicator-info">
+          <i [class]="linkedCase && getDaysSinceInjury() ? 'ri-calendar-line' : 'ri-user-heart-line'"></i>
+        </span>
+      </div>
+      <div class="stat-body">
+        <i [class]="linkedCase && getDaysSinceInjury() ? 'ri-time-line stat-icon text-info' : 'ri-team-line stat-icon text-info'"></i>
+        <span class="stat-value">{{ linkedCase && getDaysSinceInjury() ? getDaysSinceInjury() : medicalProviders.length }}</span>
+      </div>
+    </div>
+
+    <!-- Settlement Gap (when case linked) / Negotiations (when no case) -->
+    <div class="stat-item cursor-pointer" (click)="activeTab = 'settlement'">
+      <div class="stat-header">
+        <span class="stat-label">{{ linkedCase && linkedCase.settlementDemandAmount ? 'SETTLEMENT GAP' : 'NEGOTIATIONS' }}</span>
+        <span class="stat-indicator stat-indicator-warning">
+          <i class="ri-exchange-dollar-line"></i>
+        </span>
+      </div>
+      <div class="stat-body">
+        <i class="ri-money-dollar-circle-line stat-icon text-warning"></i>
+        <span class="stat-value" *ngIf="linkedCase && linkedCase.settlementDemandAmount">
+          {{ formatCompactCurrency((linkedCase.settlementDemandAmount || 0) - (linkedCase.settlementOfferAmount || 0)) }}
+        </span>
+        <span class="stat-value" *ngIf="!linkedCase || !linkedCase.settlementDemandAmount">{{ settlementHistory.length }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Card with Tabs -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-bottom">
+          <ul ngbNav #nav="ngbNav" [(activeId)]="activeTab" class="nav nav-pills nav-custom-pills gap-2">
+            <li [ngbNavItem]="'dashboard'">
+              <a ngbNavLink class="d-flex align-items-center gap-2">
+                <i class="ri-dashboard-line fs-16"></i>
+                <span>Dashboard</span>
+              </a>
+              <ng-template ngbNavContent>
+                <!-- Dashboard Tab Content -->
+                <div class="py-4">
+                  <!-- Featured Tools Section -->
+                  <div class="mb-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                      <h5 class="mb-0 fw-semibold"><i class="ri-tools-line text-primary me-2"></i>AI-Powered Tools</h5>
+                    </div>
+
+                    <!-- Featured Tool Card - Case Value Calculator -->
+                    <div class="featured-tool-card" (click)="activeTab = 'case-value'">
+                      <span class="featured-badge">Featured</span>
+                      <div class="tool-header">
+                        <div class="tool-icon-large">
+                          <i class="ri-calculator-line"></i>
+                        </div>
+                        <div class="tool-info">
+                          <h4>Case Value Calculator</h4>
+                          <p>Estimate total case value with AI-powered analysis, pain & suffering multipliers, and comparative negligence adjustments.</p>
+                        </div>
+                      </div>
+                      <div class="tool-footer">
+                        <span class="tool-action">Open Calculator <i class="ri-arrow-right-line"></i></span>
+                        <span class="tool-stat" *ngIf="latestCaseValue > 0">Last calc: {{ formatCompactCurrency(latestCaseValue) }}</span>
+                      </div>
+                    </div>
+
+                    <!-- Secondary Tool Cards -->
+                    <div class="row g-3 mt-2">
+                      <!-- Demand Letter Generator -->
+                      <div class="col-xl-4 col-md-6">
+                        <div class="secondary-tool-card h-100" (click)="activeTab = 'demand-letter'">
+                          <div class="tool-icon-wrapper demand-letter">
+                            <i class="ri-file-text-line"></i>
+                          </div>
+                          <div class="tool-name">Demand Letter Generator</div>
+                          <div class="tool-description">Generate professional demand packages with AI assistance.</div>
+                          <div class="tool-meta">
+                            <span class="open-link">Open <i class="ri-arrow-right-s-line"></i></span>
+                            <span class="stat" *ngIf="generatedDemand">1 draft</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Medical Provider Tracker -->
+                      <div class="col-xl-4 col-md-6">
+                        <div class="secondary-tool-card h-100" (click)="activeTab = 'medical-tracker'">
+                          <div class="tool-icon-wrapper medical-tracker">
+                            <i class="ri-hospital-line"></i>
+                          </div>
+                          <div class="tool-name">Medical Provider Tracker</div>
+                          <div class="tool-description">Track all providers, treatment dates, and expenses.</div>
+                          <div class="tool-meta">
+                            <span class="open-link">Open <i class="ri-arrow-right-s-line"></i></span>
+                            <span class="stat" *ngIf="medicalProviders.length > 0">{{ medicalProviders.length }} providers</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Settlement Tracker -->
+                      <div class="col-xl-4 col-md-6">
+                        <div class="secondary-tool-card h-100" (click)="activeTab = 'settlement'">
+                          <div class="tool-icon-wrapper settlement">
+                            <i class="ri-money-dollar-circle-line"></i>
+                          </div>
+                          <div class="tool-name">Settlement Tracker</div>
+                          <div class="tool-description">Track negotiations, offers, and counter-offers.</div>
+                          <div class="tool-meta">
+                            <span class="open-link">Open <i class="ri-arrow-right-s-line"></i></span>
+                            <span class="stat" *ngIf="settlementHistory.length > 0">{{ settlementHistory.length }} events</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Recent Activity Section -->
+                  <div class="mt-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                      <h5 class="mb-0 fw-semibold"><i class="ri-time-line text-primary me-2"></i>Recent Activity</h5>
+                    </div>
+                    <div class="activity-card">
+                      <div class="activity-list" *ngIf="recentActivity.length > 0">
+                        <div class="activity-item" *ngFor="let activity of recentActivity" (click)="openActivityItem(activity)">
+                          <div class="activity-icon" [ngClass]="activity.toolType">
+                            <i [class]="getToolIcon(activity.toolType)"></i>
+                          </div>
+                          <div class="activity-content">
+                            <div class="activity-title">{{ activity.title }}</div>
+                            <div class="activity-meta">{{ getToolName(activity.toolType) }}</div>
+                          </div>
+                          <div class="activity-time">{{ formatActivityTime(activity.timestamp) }}</div>
+                        </div>
+                      </div>
+                      <div class="activity-empty" *ngIf="recentActivity.length === 0">
+                        <div class="empty-state-illustration">
+                          <div class="empty-state-icon-lg">
+                            <i class="ri-folder-history-line"></i>
+                          </div>
+                          <div class="empty-state-circles">
+                            <span></span><span></span><span></span>
+                          </div>
+                        </div>
+                        <h6 class="fw-semibold mb-2">No Recent Activity</h6>
+                        <p class="text-muted mb-0">Start using the tools above to track your work.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
+
+            <li [ngbNavItem]="'case-value'">
+              <a ngbNavLink class="d-flex align-items-center gap-2">
+                <i class="ri-calculator-line fs-16"></i>
+                <span>Case Value</span>
+                <span class="badge bg-primary-subtle text-primary ms-1" *ngIf="latestCaseValue > 0">{{ formatCompactCurrency(latestCaseValue) }}</span>
+              </a>
+              <ng-template ngbNavContent>
+                <!-- Case Value Calculator Tab Content -->
+                <div class="py-4">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                    <div>
+                      <h5 class="mb-1 fw-semibold">Case Value Calculator</h5>
+                      <p class="text-muted mb-0 fs-13">Estimate total case value with AI-powered analysis</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="prefilled-badge" *ngIf="linkedCase && prefilledFromCase">
+                        <i class="ri-magic-line me-1"></i> Pre-filled from {{ linkedCase.caseNumber }}
+                      </span>
+                      <button class="btn btn-soft-secondary" (click)="loadCaseValueSample()">
+                        <i class="ri-file-copy-line me-1"></i> Load Sample
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="tool-layout">
+                    <!-- Input Panel -->
+                    <div class="input-panel">
+                      <div class="panel-card">
+                        <div class="panel-header">
+                          <h6 class="mb-0"><i class="ri-edit-line me-2 text-primary"></i>Case Details</h6>
+                        </div>
+                        <div class="panel-body">
+                          <form [formGroup]="caseValueForm">
+                            <!-- Step 1: Injury Details -->
+                            <div class="form-section">
+                              <div class="section-header" (click)="toggleSection('injury')">
+                                <span class="step-number">1</span>
+                                <span class="step-title">Injury Details</span>
+                                <i class="ri-arrow-down-s-line step-icon" [class.collapsed]="collapsedSections.injury"></i>
+                              </div>
+                              <div class="section-content" [class.collapsed]="collapsedSections.injury">
+                                <div class="row g-3">
+                                  <div class="col-12">
+                                    <label class="form-label">Type of Injury</label>
+                                    <select class="form-select" formControlName="injuryType">
+                                      <option *ngFor="let type of injuryTypes" [value]="type.value">
+                                        {{ type.label }}
+                                      </option>
+                                    </select>
+                                    <small class="form-text">Selected multiplier: <strong>{{ getMultiplier() }}x</strong></small>
+                                  </div>
+                                  <div class="col-12">
+                                    <label class="form-label">Injury Description</label>
+                                    <textarea class="form-control" formControlName="injuryDescription" rows="3"
+                                              placeholder="Describe the injuries sustained, treatment received, and impact on daily life..."></textarea>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Step 2: Economic Damages -->
+                            <div class="form-section">
+                              <div class="section-header" (click)="toggleSection('economic')">
+                                <span class="step-number">2</span>
+                                <span class="step-title">Economic Damages</span>
+                                <i class="ri-arrow-down-s-line step-icon" [class.collapsed]="collapsedSections.economic"></i>
+                              </div>
+                              <div class="section-content" [class.collapsed]="collapsedSections.economic">
+                                <div class="row g-3">
+                                  <div class="col-md-4">
+                                    <label class="form-label">Medical Expenses</label>
+                                    <div class="input-group">
+                                      <span class="input-group-text">$</span>
+                                      <input type="number" class="form-control" formControlName="medicalExpenses" placeholder="0">
+                                    </div>
+                                  </div>
+                                  <div class="col-md-4">
+                                    <label class="form-label">Lost Wages</label>
+                                    <div class="input-group">
+                                      <span class="input-group-text">$</span>
+                                      <input type="number" class="form-control" formControlName="lostWages" placeholder="0">
+                                    </div>
+                                  </div>
+                                  <div class="col-md-4">
+                                    <label class="form-label">Future Medical</label>
+                                    <div class="input-group">
+                                      <span class="input-group-text">$</span>
+                                      <input type="number" class="form-control" formControlName="futureMedical" placeholder="0">
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Step 3: Multiplier -->
+                            <div class="form-section">
+                              <div class="section-header" (click)="toggleSection('multiplier')">
+                                <span class="step-number">3</span>
+                                <span class="step-title">Pain & Suffering Multiplier</span>
+                                <i class="ri-arrow-down-s-line step-icon" [class.collapsed]="collapsedSections.multiplier"></i>
+                              </div>
+                              <div class="section-content" [class.collapsed]="collapsedSections.multiplier">
+                                <div class="multiplier-slider-wrapper">
+                                  <div class="slider-header">
+                                    <label>Multiplier Value</label>
+                                    <span class="current-value">{{ getMultiplier() }}x</span>
+                                  </div>
+                                  <div class="slider-track">
+                                    <div class="slider-fill" [style.width.%]="getSliderFillPercent()"></div>
+                                  </div>
+                                  <input type="range" min="1" max="5" step="0.5"
+                                         [value]="getMultiplier()"
+                                         (input)="onMultiplierSliderChange($event)">
+                                  <div class="slider-labels">
+                                    <span>1.0x</span>
+                                    <span>2.5x</span>
+                                    <span>5.0x</span>
+                                  </div>
+                                </div>
+                                <small class="form-text">
+                                  <i class="ri-information-line me-1"></i>
+                                  Default multiplier based on injury type. Adjust manually if needed.
+                                </small>
+                              </div>
+                            </div>
+
+                            <!-- Step 4: Liability -->
+                            <div class="form-section">
+                              <div class="section-header" (click)="toggleSection('liability')">
+                                <span class="step-number">4</span>
+                                <span class="step-title">Liability Assessment</span>
+                                <i class="ri-arrow-down-s-line step-icon" [class.collapsed]="collapsedSections.liability"></i>
+                              </div>
+                              <div class="section-content" [class.collapsed]="collapsedSections.liability">
+                                <div class="row g-3">
+                                  <div class="col-md-6">
+                                    <label class="form-label">Liability Status</label>
+                                    <select class="form-select" formControlName="liabilityAssessment">
+                                      <option *ngFor="let option of liabilityOptions" [value]="option.value">
+                                        {{ option.label }}
+                                      </option>
+                                    </select>
+                                  </div>
+                                  <div class="col-md-6" *ngIf="caseValueForm.get('liabilityAssessment')?.value === 'COMPARATIVE'">
+                                    <label class="form-label">Client's Negligence %</label>
+                                    <div class="input-group">
+                                      <input type="number" class="form-control" formControlName="comparativeNegligence"
+                                             min="0" max="100" placeholder="0">
+                                      <span class="input-group-text">%</span>
+                                    </div>
+                                    <small class="form-text">MA follows modified comparative negligence (51% bar)</small>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Calculate Button -->
+                            <div class="mt-4">
+                              <button type="button" class="btn btn-primary w-100" (click)="calculateCaseValue()"
+                                      [disabled]="caseValueForm.invalid || isCalculating">
+                                <span *ngIf="!isCalculating">
+                                  <i class="ri-calculator-line me-1"></i> Calculate Case Value
+                                </span>
+                                <span *ngIf="isCalculating">
+                                  <span class="spinner-border spinner-border-sm me-2"></span>Analyzing...
+                                </span>
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Results Panel -->
+                    <div class="results-panel">
+                      <div class="panel-card">
+                        <div class="panel-header">
+                          <h6 class="mb-0"><i class="ri-funds-line me-2 text-success"></i>Estimated Value</h6>
+                        </div>
+                        <div class="panel-body">
+                          <!-- Results Display -->
+                          <div *ngIf="calculatedValue">
+                            <!-- Hero Value -->
+                            <div class="value-hero">
+                              <div class="value-label">Estimated Case Value</div>
+                              <div class="value-amount">{{ formatCurrency(calculatedValue.adjustedCaseValue) }}</div>
+                              <div class="value-subtext" *ngIf="calculatedValue.comparativeNegligence > 0">
+                                After {{ calculatedValue.comparativeNegligence }}% adjustment
+                              </div>
+                            </div>
+
+                            <!-- Chart Section -->
+                            <div class="chart-container">
+                              <div class="chart-title">Damages Breakdown</div>
+                              <div class="chart-wrapper">
+                                <canvas #damageChart></canvas>
+                              </div>
+                              <div class="chart-legend">
+                                <div class="legend-item">
+                                  <span class="legend-color economic"></span>
+                                  <span class="legend-label">Economic ({{ getEconomicPercent() }}%)</span>
+                                </div>
+                                <div class="legend-item">
+                                  <span class="legend-color non-economic"></span>
+                                  <span class="legend-label">Non-Economic ({{ getNonEconomicPercent() }}%)</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Breakdown -->
+                            <div class="breakdown-section">
+                              <div class="breakdown-header">Calculation Breakdown</div>
+                              <div class="breakdown-table">
+                                <div class="breakdown-row">
+                                  <span class="row-label">Medical Expenses</span>
+                                  <span class="row-value">{{ formatCurrency(calculatedValue.medicalExpenses) }}</span>
+                                </div>
+                                <div class="breakdown-row">
+                                  <span class="row-label">Lost Wages</span>
+                                  <span class="row-value">{{ formatCurrency(calculatedValue.lostWages) }}</span>
+                                </div>
+                                <div class="breakdown-row">
+                                  <span class="row-label">Future Medical</span>
+                                  <span class="row-value">{{ formatCurrency(calculatedValue.futureMedical) }}</span>
+                                </div>
+                                <div class="breakdown-row subtotal">
+                                  <span class="row-label">Economic Subtotal</span>
+                                  <span class="row-value">{{ formatCurrency(calculatedValue.economicDamages) }}</span>
+                                </div>
+                                <div class="breakdown-row multiplier">
+                                  <span class="row-label">Pain & Suffering <span class="multiplier-badge">{{ calculatedValue.multiplier }}x</span></span>
+                                  <span class="row-value">{{ formatCurrency(calculatedValue.nonEconomicDamages) }}</span>
+                                </div>
+                                <div class="breakdown-row total">
+                                  <span class="row-label">Total Case Value</span>
+                                  <span class="row-value">{{ formatCurrency(calculatedValue.adjustedCaseValue) }}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Liability Adjustment Alert -->
+                            <div class="adjustment-alert" *ngIf="calculatedValue.comparativeNegligence > 0">
+                              <i class="ri-alert-line alert-icon"></i>
+                              <div class="alert-content">
+                                <div class="alert-title">Comparative Negligence Applied</div>
+                                <p class="alert-text">Value reduced by {{ calculatedValue.comparativeNegligence }}% due to client's comparative fault.</p>
+                              </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="panel-actions">
+                              <button class="btn btn-outline-primary" (click)="requestAIAnalysis()">
+                                <i class="ri-robot-line"></i> AI Analysis
+                              </button>
+                              <button class="btn btn-outline-secondary" (click)="exportResults()">
+                                <i class="ri-download-line"></i> Export
+                              </button>
+                            </div>
+
+                            <!-- Save to Case Button -->
+                            <div class="save-to-case-section" *ngIf="linkedCase">
+                              <button class="btn btn-success w-100" (click)="saveCaseValueToCase()">
+                                <i class="ri-save-line me-2"></i> Save to Case: {{ linkedCase.caseNumber }}
+                              </button>
+                              <small class="text-muted d-block text-center mt-2">
+                                Updates injury details, damages, and multiplier in the linked case
+                              </small>
+                            </div>
+                          </div>
+
+                          <!-- Empty State -->
+                          <div class="results-empty" *ngIf="!calculatedValue">
+                            <div class="empty-state-illustration">
+                              <div class="empty-state-icon-lg">
+                                <i class="ri-calculator-line"></i>
+                              </div>
+                              <div class="empty-state-circles">
+                                <span></span><span></span><span></span>
+                              </div>
+                            </div>
+                            <h6 class="fw-semibold mb-2">No Calculation Yet</h6>
+                            <p class="text-muted mb-0">Fill in the injury details and damages to calculate the estimated case value.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
+
+            <li [ngbNavItem]="'demand-letter'">
+              <a ngbNavLink class="d-flex align-items-center gap-2">
+                <i class="ri-file-text-line fs-16"></i>
+                <span>Demand Letter</span>
+                <span class="badge bg-info-subtle text-info ms-1" *ngIf="generatedDemand">Draft</span>
+              </a>
+              <ng-template ngbNavContent>
+                <!-- Demand Letter Tab Content -->
+                <div class="py-4">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                    <div>
+                      <h5 class="mb-1 fw-semibold">Demand Letter Generator</h5>
+                      <p class="text-muted mb-0 fs-13">Generate professional demand packages with AI assistance</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <div class="mode-toggle">
+                        <button class="mode-btn" [class.active]="demandMode === 'express'" (click)="setDemandMode('express')">
+                          <i class="ri-flashlight-line"></i> Express
+                        </button>
+                        <button class="mode-btn" [class.active]="demandMode === 'detailed'" (click)="setDemandMode('detailed')">
+                          <i class="ri-file-list-3-line"></i> Detailed
+                        </button>
+                      </div>
+                      <button class="btn btn-soft-secondary" (click)="loadDemandSample()">
+                        <i class="ri-file-copy-line me-1"></i> Sample
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="tool-layout">
+                    <!-- Input Panel -->
+                    <div class="input-panel">
+                      <div class="panel-card">
+                        <div class="panel-header">
+                          <h6 class="mb-0"><i class="ri-edit-line me-2 text-primary"></i>Letter Details</h6>
+                        </div>
+                        <div class="panel-body">
+                          <form [formGroup]="demandForm">
+                            <!-- Party Information -->
+                            <div class="demand-form-section">
+                              <div class="section-title"><i class="ri-user-line"></i> Party Information</div>
+                              <div class="row g-3">
+                                <div class="col-md-6">
+                                  <label class="form-label">Client Name</label>
+                                  <input type="text" class="form-control" formControlName="clientName" placeholder="Client's full name">
+                                </div>
+                                <div class="col-md-6">
+                                  <label class="form-label">Defendant Name</label>
+                                  <input type="text" class="form-control" formControlName="defendantName" placeholder="Defendant's full name">
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Insurance Information -->
+                            <div class="demand-form-section">
+                              <div class="section-title"><i class="ri-shield-check-line"></i> Insurance Information</div>
+                              <div class="row g-3">
+                                <div class="col-md-4">
+                                  <label class="form-label">Insurance Company</label>
+                                  <input type="text" class="form-control" formControlName="insuranceCompany" placeholder="Company name">
+                                </div>
+                                <div class="col-md-4">
+                                  <label class="form-label">Adjuster Name</label>
+                                  <input type="text" class="form-control" formControlName="adjusterName" placeholder="Optional">
+                                </div>
+                                <div class="col-md-4">
+                                  <label class="form-label">Claim Number</label>
+                                  <input type="text" class="form-control" formControlName="claimNumber" placeholder="Optional">
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Accident Details -->
+                            <div class="demand-form-section">
+                              <div class="section-title"><i class="ri-car-line"></i> Accident Details</div>
+                              <div class="row g-3">
+                                <div class="col-md-6">
+                                  <label class="form-label">Accident Date</label>
+                                  <input type="date" class="form-control" formControlName="accidentDate">
+                                </div>
+                                <div class="col-md-6">
+                                  <label class="form-label">Accident Location</label>
+                                  <input type="text" class="form-control" formControlName="accidentLocation" placeholder="Where did it occur?">
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Injury Details -->
+                            <div class="demand-form-section">
+                              <div class="section-title"><i class="ri-heart-pulse-line"></i> Injury Details</div>
+                              <div class="row g-3">
+                                <div class="col-md-6">
+                                  <label class="form-label">Injury Type</label>
+                                  <select class="form-select" formControlName="injuryType">
+                                    <option value="">Select injury type</option>
+                                    <option *ngFor="let type of injuryTypes" [value]="type.value">{{ type.label }}</option>
+                                  </select>
+                                </div>
+                                <div class="col-md-6">
+                                  <label class="form-label">Policy Limit (if known)</label>
+                                  <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" formControlName="policyLimit" placeholder="Optional">
+                                  </div>
+                                </div>
+                                <div class="col-12">
+                                  <label class="form-label">Injury Description</label>
+                                  <textarea class="form-control" formControlName="injuryDescription" rows="2"
+                                            placeholder="Describe the injuries and symptoms..."></textarea>
+                                </div>
+                                <div class="col-12">
+                                  <label class="form-label">Liability Details</label>
+                                  <textarea class="form-control" formControlName="liabilityDetails" rows="2"
+                                            placeholder="Explain why defendant is at fault..."></textarea>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Damages -->
+                            <div class="demand-form-section">
+                              <div class="section-title"><i class="ri-money-dollar-box-line"></i> Damages</div>
+                              <div class="row g-3">
+                                <div class="col-md-3">
+                                  <label class="form-label">Medical Expenses</label>
+                                  <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" formControlName="medicalExpenses">
+                                  </div>
+                                </div>
+                                <div class="col-md-3">
+                                  <label class="form-label">Lost Wages</label>
+                                  <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" formControlName="lostWages">
+                                  </div>
+                                </div>
+                                <div class="col-md-3">
+                                  <label class="form-label">Future Medical</label>
+                                  <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" formControlName="futureMedical">
+                                  </div>
+                                </div>
+                                <div class="col-md-3">
+                                  <label class="form-label">P&S Multiplier</label>
+                                  <input type="number" class="form-control" formControlName="painSufferingMultiplier" step="0.5" min="1" max="10">
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Demand Total -->
+                            <div class="demand-total-display">
+                              <div class="total-label">
+                                <i class="ri-money-dollar-circle-line"></i> Total Demand
+                              </div>
+                              <div class="total-value">{{ formatCurrency(calculateDemandTotal()) }}</div>
+                            </div>
+
+                            <!-- Generate Button -->
+                            <div class="mt-4">
+                              <button type="button" class="btn btn-primary w-100" (click)="generateDemandLetter()"
+                                      [disabled]="demandForm.invalid || isGeneratingDemand">
+                                <span *ngIf="!isGeneratingDemand">
+                                  <i class="ri-quill-pen-line me-1"></i> Generate Letter
+                                </span>
+                                <span *ngIf="isGeneratingDemand">
+                                  <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+                                </span>
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Preview Panel -->
+                    <div class="results-panel">
+                      <div class="panel-card">
+                        <div class="panel-header d-flex justify-content-between align-items-center">
+                          <h6 class="mb-0"><i class="ri-file-paper-2-line me-2 text-info"></i>Document Preview</h6>
+                          <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-success" *ngIf="linkedCase && generatedDemand" (click)="saveDemandDataToCase()">
+                              <i class="ri-save-line me-1"></i> Save to Case
+                            </button>
+                            <button class="btn btn-sm btn-soft-primary" *ngIf="generatedDemand" (click)="exportDemandLetter()">
+                              <i class="ri-download-line me-1"></i> Export
+                            </button>
+                          </div>
+                        </div>
+                        <div class="panel-body p-0">
+                          <div class="demand-preview-panel">
+                            <div class="preview-header">
+                              <div class="letterhead-title">LAW OFFICES</div>
+                              <div class="letterhead-subtitle">Attorneys at Law</div>
+                            </div>
+                            <div class="preview-content" *ngIf="generatedDemand">
+                              <div [innerHTML]="generatedDemand | aiResponseFormatter"></div>
+                            </div>
+                            <div class="preview-empty" *ngIf="!generatedDemand">
+                              <div class="empty-state-illustration">
+                                <div class="empty-state-icon-lg">
+                                  <i class="ri-file-text-line"></i>
+                                </div>
+                                <div class="empty-state-circles">
+                                  <span></span><span></span><span></span>
+                                </div>
+                              </div>
+                              <h6 class="fw-semibold mb-2">No Letter Generated</h6>
+                              <p class="text-muted mb-0">Fill in the form and click "Generate Letter" to create your demand letter.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
+
+            <li [ngbNavItem]="'medical-tracker'">
+              <a ngbNavLink class="d-flex align-items-center gap-2">
+                <i class="ri-hospital-line fs-16"></i>
+                <span>Medical Tracker</span>
+                <span class="badge bg-success-subtle text-success ms-1" *ngIf="medicalProviders.length > 0">{{ medicalProviders.length }}</span>
+              </a>
+              <ng-template ngbNavContent>
+                <!-- Medical Tracker Tab Content -->
+                <div class="py-4">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                    <div>
+                      <h5 class="mb-1 fw-semibold">Medical Provider Tracker</h5>
+                      <p class="text-muted mb-0 fs-13">Track all providers, treatment dates, and expenses</p>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-lg-8">
+                      <div class="panel-card">
+                        <div class="panel-header">
+                          <h6 class="mb-0"><i class="ri-add-line me-2 text-primary"></i>Add Medical Provider</h6>
+                        </div>
+                        <div class="panel-body">
+                          <!-- Add Provider Form -->
+                          <div class="row g-3">
+                            <div class="col-md-3">
+                              <label class="form-label">Provider Name</label>
+                              <input type="text" class="form-control" [(ngModel)]="newProvider.name" placeholder="Hospital/Doctor name">
+                            </div>
+                            <div class="col-md-3">
+                              <label class="form-label">Specialty</label>
+                              <select class="form-select" [(ngModel)]="newProvider.specialty">
+                                <option value="">Select specialty</option>
+                                <option *ngFor="let specialty of medicalSpecialties" [value]="specialty">{{ specialty }}</option>
+                              </select>
+                            </div>
+                            <div class="col-md-3">
+                              <label class="form-label">Treatment Dates</label>
+                              <input type="text" class="form-control" [(ngModel)]="newProvider.treatmentDates" placeholder="e.g., 01/15/24 - 06/30/24">
+                            </div>
+                            <div class="col-md-3">
+                              <label class="form-label">Total Bills</label>
+                              <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" [(ngModel)]="newProvider.totalBills" placeholder="0">
+                              </div>
+                            </div>
+                          </div>
+                          <button class="btn btn-primary mt-3" (click)="addMedicalProvider()" [disabled]="!newProvider.name || newProvider.totalBills <= 0">
+                            <i class="ri-add-line me-1"></i> Add Provider
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Providers Grid -->
+                      <div class="providers-grid mt-3">
+                        <div class="provider-card" *ngFor="let provider of medicalProviders">
+                          <button class="provider-delete" (click)="confirmRemoveProvider(provider.id)">
+                            <i class="ri-close-line"></i>
+                          </button>
+                          <div class="provider-header">
+                            <div class="specialty-icon" [ngClass]="getSpecialtyClass(provider.specialty)">
+                              <i [class]="getSpecialtyIcon(provider.specialty)"></i>
+                            </div>
+                            <div class="provider-info">
+                              <div class="provider-name">{{ provider.name }}</div>
+                              <div class="provider-specialty">{{ provider.specialty || 'General' }}</div>
+                            </div>
+                          </div>
+                          <div class="provider-details">
+                            <span class="treatment-dates">{{ provider.treatmentDates || 'Dates not specified' }}</span>
+                            <span class="total-bills">{{ formatCurrency(provider.totalBills) }}</span>
+                          </div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div class="providers-empty" *ngIf="medicalProviders.length === 0">
+                          <div class="empty-state-illustration">
+                            <div class="empty-state-icon-lg">
+                              <i class="ri-hospital-line"></i>
+                            </div>
+                            <div class="empty-state-circles">
+                              <span></span><span></span><span></span>
+                            </div>
+                          </div>
+                          <h6 class="fw-semibold mb-2">No Providers Added</h6>
+                          <p class="text-muted mb-0">Add medical providers using the form above to track treatment and expenses.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Summary Sidebar -->
+                    <div class="col-lg-4">
+                      <div class="medical-summary-card">
+                        <div class="summary-header">
+                          <h6 class="mb-0"><i class="ri-pie-chart-2-line me-2 text-success"></i>Summary</h6>
+                        </div>
+                        <div class="summary-body">
+                          <div class="stat-row">
+                            <span class="stat-label">Total Providers</span>
+                            <span class="stat-value count">{{ medicalProviders.length }}</span>
+                          </div>
+                          <div class="stat-row">
+                            <span class="stat-label">Total Medical Bills</span>
+                            <span class="stat-value amount">{{ formatCurrency(getTotalMedicalBills()) }}</span>
+                          </div>
+                          <div class="sync-notice">
+                            <i class="ri-refresh-line"></i>
+                            <span>Medical expenses are automatically synced with the Case Value Calculator and Demand Letter Generator.</span>
+                          </div>
+
+                          <!-- Save to Case Button -->
+                          <div class="mt-3" *ngIf="linkedCase && medicalProviders.length > 0">
+                            <button class="btn btn-success w-100" (click)="saveMedicalProvidersToCase()">
+                              <i class="ri-save-line me-2"></i> Save to Case
+                            </button>
+                            <small class="text-muted d-block text-center mt-2">
+                              Saves providers to {{ linkedCase.caseNumber }}
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
+
+            <li [ngbNavItem]="'settlement'">
+              <a ngbNavLink class="d-flex align-items-center gap-2">
+                <i class="ri-money-dollar-circle-line fs-16"></i>
+                <span>Settlement</span>
+                <span class="badge bg-warning-subtle text-warning ms-1" *ngIf="settlementHistory.length > 0">{{ settlementHistory.length }}</span>
+              </a>
+              <ng-template ngbNavContent>
+                <!-- Settlement Tracker Tab Content -->
+                <div class="py-4">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                    <div>
+                      <h5 class="mb-1 fw-semibold">Settlement Tracker</h5>
+                      <p class="text-muted mb-0 fs-13">Track negotiations, offers, and counter-offers</p>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-lg-6">
+                      <div class="settlement-form-card">
+                        <div class="form-header">
+                          <h6 class="mb-0"><i class="ri-add-line me-2 text-warning"></i>Log Settlement Event</h6>
+                        </div>
+                        <div class="form-body">
+                          <form [formGroup]="settlementForm">
+                            <div class="row g-3">
+                              <div class="col-md-6">
+                                <label class="form-label">Demand Amount</label>
+                                <div class="input-group">
+                                  <span class="input-group-text">$</span>
+                                  <input type="number" class="form-control" formControlName="demandAmount">
+                                </div>
+                              </div>
+                              <div class="col-md-6">
+                                <label class="form-label">Offer Amount</label>
+                                <div class="input-group">
+                                  <span class="input-group-text">$</span>
+                                  <input type="number" class="form-control" formControlName="offerAmount">
+                                </div>
+                              </div>
+                              <div class="col-md-6">
+                                <label class="form-label">Offer Date</label>
+                                <input type="date" class="form-control" formControlName="offerDate">
+                              </div>
+                              <div class="col-md-6">
+                                <label class="form-label">Counter Offer</label>
+                                <div class="input-group">
+                                  <span class="input-group-text">$</span>
+                                  <input type="number" class="form-control" formControlName="counterAmount">
+                                </div>
+                              </div>
+                              <div class="col-12">
+                                <label class="form-label">Notes</label>
+                                <textarea class="form-control" formControlName="notes" rows="2" placeholder="Add notes about this negotiation event..."></textarea>
+                              </div>
+                            </div>
+                            <div class="mt-4 d-flex gap-2">
+                              <button type="button" class="btn btn-primary" (click)="addSettlementEvent()" [disabled]="settlementForm.invalid">
+                                <i class="ri-add-line me-1"></i> Log Event
+                              </button>
+                              <button type="button" class="btn btn-success" *ngIf="linkedCase"
+                                      (click)="saveSettlementToCase()"
+                                      [disabled]="settlementForm.get('demandAmount')?.value <= 0">
+                                <i class="ri-save-line me-1"></i> Save to Case
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+
+                      <!-- Gap Visualization -->
+                      <div class="negotiation-gap-visual mt-3" *ngIf="getLatestDemand() > 0 || getLatestOffer() > 0">
+                        <div class="gap-header">
+                          <span class="gap-title">Negotiation Gap</span>
+                          <span class="gap-amount">{{ formatCurrency(getNegotiationGap()) }}</span>
+                        </div>
+                        <div class="gap-bars">
+                          <div class="bar-wrapper">
+                            <div class="bar-label">
+                              <span class="label-text">Demand</span>
+                              <span class="label-value">{{ formatCurrency(getLatestDemand()) }}</span>
+                            </div>
+                            <div class="bar-track">
+                              <div class="bar-fill demand" [style.width.%]="100"></div>
+                            </div>
+                          </div>
+                          <div class="bar-wrapper">
+                            <div class="bar-label">
+                              <span class="label-text">Offer</span>
+                              <span class="label-value">{{ formatCurrency(getLatestOffer()) }}</span>
+                            </div>
+                            <div class="bar-track">
+                              <div class="bar-fill offer" [style.width.%]="getOfferPercent()"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                      <div class="settlement-timeline-card">
+                        <div class="timeline-header">
+                          <h6 class="mb-0">Settlement History</h6>
+                          <button class="clear-btn" *ngIf="settlementHistory.length > 0" (click)="confirmClearHistory()">
+                            <i class="ri-delete-bin-line"></i> Clear
+                          </button>
+                        </div>
+                        <div class="timeline-body">
+                          <div class="settlement-timeline" *ngIf="settlementHistory.length > 0">
+                            <div class="timeline-event" *ngFor="let event of settlementHistory; let i = index">
+                              <div class="event-marker"></div>
+                              <div class="event-card">
+                                <div class="event-date">{{ event.date | date:'MMM d, yyyy' }}</div>
+                                <div class="event-amounts">
+                                  <div class="amount-item" *ngIf="event.demandAmount">
+                                    <div class="amount-label">Demand</div>
+                                    <div class="amount-value demand">{{ formatCurrency(event.demandAmount) }}</div>
+                                  </div>
+                                  <div class="amount-item" *ngIf="event.offerAmount">
+                                    <div class="amount-label">Offer</div>
+                                    <div class="amount-value offer">{{ formatCurrency(event.offerAmount) }}</div>
+                                  </div>
+                                  <div class="amount-item" *ngIf="event.counterAmount">
+                                    <div class="amount-label">Counter</div>
+                                    <div class="amount-value counter">{{ formatCurrency(event.counterAmount) }}</div>
+                                  </div>
+                                </div>
+                                <p class="event-notes" *ngIf="event.notes">{{ event.notes }}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="settlement-empty" *ngIf="settlementHistory.length === 0">
+                            <div class="empty-state-illustration">
+                              <div class="empty-state-icon-lg">
+                                <i class="ri-exchange-dollar-line"></i>
+                              </div>
+                              <div class="empty-state-circles">
+                                <span></span><span></span><span></span>
+                              </div>
+                            </div>
+                            <h6 class="fw-semibold mb-2">No Events Logged</h6>
+                            <p class="text-muted mb-0">Log settlement events using the form to track your negotiation history.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
+
+            <!-- Medical Records Tab (Professional) -->
+            <li ngbNavItem="medical-records">
+              <a ngbNavLink>
+                <i class="ri-file-medical-line me-2"></i> Medical Records
+              </a>
+              <ng-template ngbNavContent>
+                <div class="professional-tool-content" (click)="loadMedicalRecords()">
+                  <!-- Header -->
+                  <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                      <h5 class="mb-1">Medical Records</h5>
+                      <p class="text-muted mb-0">Detailed medical record tracking with ICD codes and procedures</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-primary" (click)="scanCaseDocuments()" [disabled]="!linkedCase || isScanningDocuments">
+                        <span *ngIf="!isScanningDocuments">
+                          <i class="ri-robot-line me-1"></i> Scan Documents
+                        </span>
+                        <span *ngIf="isScanningDocuments">
+                          <span class="spinner-border spinner-border-sm me-1"></span> Scanning...
+                        </span>
+                      </button>
+                      <button class="btn btn-soft-primary" (click)="loadMedicalRecords()" [disabled]="!linkedCase">
+                        <i class="ri-refresh-line me-1"></i> Refresh
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Scan Result Alert -->
+                  <div class="alert alert-success d-flex align-items-center mb-3" *ngIf="scanResult && scanResult.recordsCreated > 0">
+                    <i class="ri-checkbox-circle-line fs-4 me-3"></i>
+                    <div>
+                      <strong>Documents Scanned!</strong>
+                      <p class="mb-0">Created {{ scanResult.recordsCreated }} medical records from {{ scanResult.documentsScanned }} documents.</p>
+                    </div>
+                    <button class="btn-close ms-auto" (click)="scanResult = null"></button>
+                  </div>
+
+                  <!-- No Case Linked Warning -->
+                  <div class="alert alert-warning d-flex align-items-center" *ngIf="!linkedCase">
+                    <i class="ri-information-line fs-4 me-3"></i>
+                    <div>
+                      <strong>Link a Case</strong>
+                      <p class="mb-0">Use the case selector above to link a PI case and access professional medical record tracking.</p>
+                    </div>
+                  </div>
+
+                  <!-- Medical Records Content -->
+                  <div class="row" *ngIf="linkedCase">
+                    <!-- Add/Edit Form -->
+                    <div class="col-lg-5">
+                      <div class="card">
+                        <div class="card-header">
+                          <h6 class="mb-0">{{ editingMedicalRecord ? 'Edit' : 'Add' }} Medical Record</h6>
+                        </div>
+                        <div class="card-body">
+                          <form [formGroup]="medicalRecordForm">
+                            <div class="mb-3">
+                              <label class="form-label">Provider Name *</label>
+                              <input type="text" class="form-control" formControlName="providerName" placeholder="e.g., Boston Medical Center">
+                            </div>
+                            <div class="row mb-3">
+                              <div class="col-6">
+                                <label class="form-label">Provider Type</label>
+                                <select class="form-select" formControlName="providerType">
+                                  <option value="">Select type...</option>
+                                  <option *ngFor="let type of providerTypes" [value]="type.value">{{ type.label }}</option>
+                                </select>
+                              </div>
+                              <div class="col-6">
+                                <label class="form-label">Record Type *</label>
+                                <select class="form-select" formControlName="recordType">
+                                  <option *ngFor="let type of recordTypes" [value]="type.value">{{ type.label }}</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div class="row mb-3">
+                              <div class="col-6">
+                                <label class="form-label">Treatment Date *</label>
+                                <input type="date" class="form-control" formControlName="treatmentDate">
+                              </div>
+                              <div class="col-6">
+                                <label class="form-label">End Date</label>
+                                <input type="date" class="form-control" formControlName="treatmentEndDate">
+                              </div>
+                            </div>
+                            <div class="row mb-3">
+                              <div class="col-4">
+                                <label class="form-label">Billed</label>
+                                <div class="input-group">
+                                  <span class="input-group-text">$</span>
+                                  <input type="number" class="form-control" formControlName="billedAmount">
+                                </div>
+                              </div>
+                              <div class="col-4">
+                                <label class="form-label">Adjusted</label>
+                                <div class="input-group">
+                                  <span class="input-group-text">$</span>
+                                  <input type="number" class="form-control" formControlName="adjustedAmount">
+                                </div>
+                              </div>
+                              <div class="col-4">
+                                <label class="form-label">Paid</label>
+                                <div class="input-group">
+                                  <span class="input-group-text">$</span>
+                                  <input type="number" class="form-control" formControlName="paidAmount">
+                                </div>
+                              </div>
+                            </div>
+                            <div class="mb-3">
+                              <label class="form-label">Key Findings</label>
+                              <textarea class="form-control" formControlName="keyFindings" rows="2" placeholder="Important clinical findings..."></textarea>
+                            </div>
+                            <div class="mb-3">
+                              <label class="form-label">Treatment Provided</label>
+                              <textarea class="form-control" formControlName="treatmentProvided" rows="2" placeholder="Treatments, medications, procedures..."></textarea>
+                            </div>
+                            <div class="d-flex gap-2">
+                              <button type="button" class="btn btn-primary flex-grow-1" (click)="saveMedicalRecord()">
+                                <i class="ri-save-line me-1"></i> {{ editingMedicalRecord ? 'Update' : 'Add' }} Record
+                              </button>
+                              <button type="button" class="btn btn-soft-secondary" *ngIf="editingMedicalRecord" (click)="resetMedicalRecordForm()">
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Records List -->
+                    <div class="col-lg-7">
+                      <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                          <h6 class="mb-0">Medical Records ({{ medicalRecords.length }})</h6>
+                        </div>
+                        <div class="card-body p-0">
+                          <div class="table-responsive">
+                            <table class="table table-hover mb-0" *ngIf="medicalRecords.length > 0">
+                              <thead class="table-light">
+                                <tr>
+                                  <th>Date</th>
+                                  <th>Provider</th>
+                                  <th>Type</th>
+                                  <th class="text-end">Billed</th>
+                                  <th class="text-center">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr *ngFor="let record of medicalRecords">
+                                  <td>{{ record.treatmentDate | date:'MM/dd/yyyy' }}</td>
+                                  <td>
+                                    <div class="fw-medium">{{ record.providerName }}</div>
+                                    <small class="text-muted">{{ record.providerType }}</small>
+                                  </td>
+                                  <td><span class="badge bg-primary-subtle text-primary">{{ record.recordType }}</span></td>
+                                  <td class="text-end">{{ formatCurrency(record.billedAmount || 0) }}</td>
+                                  <td class="text-center">
+                                    <button class="btn btn-sm btn-soft-primary me-1" (click)="editMedicalRecord(record)" title="Edit">
+                                      <i class="ri-edit-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-soft-danger" (click)="deleteMedicalRecord(record)" title="Delete">
+                                      <i class="ri-delete-bin-line"></i>
+                                    </button>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          <div class="text-center py-4" *ngIf="medicalRecords.length === 0 && !isLoadingMedicalRecords">
+                            <i class="ri-file-medical-line fs-1 text-muted"></i>
+                            <p class="text-muted mt-2 mb-0">No medical records yet. Add your first record using the form.</p>
+                          </div>
+                          <div class="text-center py-4" *ngIf="isLoadingMedicalRecords">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="text-muted mt-2 mb-0">Loading records...</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
+
+            <!-- Medical Summary Tab -->
+            <li ngbNavItem="medical-summary">
+              <a ngbNavLink>
+                <i class="ri-article-line me-2"></i> Medical Summary
+              </a>
+              <ng-template ngbNavContent>
+                <div class="medical-summary-container">
+                  <!-- No Case Linked Warning -->
+                  <div class="alert alert-warning d-flex align-items-center" *ngIf="!linkedCase">
+                    <i class="ri-information-line fs-4 me-3"></i>
+                    <div>
+                      <strong>Link a Case</strong>
+                      <p class="mb-0">Use the case selector above to link a PI case and generate a medical summary.</p>
+                    </div>
+                  </div>
+
+                  <!-- Medical Summary Content -->
+                  <div *ngIf="linkedCase">
+                    <!-- Summary Not Generated Yet -->
+                    <div class="empty-summary-state" *ngIf="!medicalSummary && !isGeneratingSummary">
+                      <div class="empty-state-icon">
+                        <i class="ri-file-chart-line"></i>
+                      </div>
+                      <h4>No Medical Summary Generated</h4>
+                      <p class="text-muted">Generate an AI-powered comprehensive medical summary based on your medical records.</p>
+                      <button class="btn btn-primary btn-lg" (click)="generateMedicalSummary()">
+                        <i class="ri-magic-line me-2"></i> Generate Medical Summary
+                      </button>
+                    </div>
+
+                    <!-- Summary Display -->
+                    <div *ngIf="medicalSummary">
+                      <!-- Hero Stats Row -->
+                      <div class="summary-hero-stats mb-4">
+                        <div class="hero-stat-card completeness">
+                          <div class="stat-icon">
+                            <svg viewBox="0 0 36 36" class="circular-chart">
+                              <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                              <path class="circle" [attr.stroke-dasharray]="medicalSummary.completenessScore + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                              <text x="18" y="20.35" class="percentage">{{ medicalSummary.completenessScore }}%</text>
+                            </svg>
+                          </div>
+                          <div class="stat-content">
+                            <span class="stat-label">Completeness</span>
+                            <span class="stat-status" [class.text-success]="medicalSummary.completenessScore >= 80" [class.text-warning]="medicalSummary.completenessScore >= 50 && medicalSummary.completenessScore < 80" [class.text-danger]="medicalSummary.completenessScore < 50">
+                              {{ medicalSummary.completenessScore >= 80 ? 'Excellent' : medicalSummary.completenessScore >= 50 ? 'Good' : 'Needs Work' }}
+                            </span>
+                          </div>
+                        </div>
+                        <div class="hero-stat-card providers">
+                          <div class="stat-icon"><i class="ri-hospital-line"></i></div>
+                          <div class="stat-content">
+                            <span class="stat-value">{{ medicalSummary.totalProviders }}</span>
+                            <span class="stat-label">Providers</span>
+                          </div>
+                        </div>
+                        <div class="hero-stat-card visits">
+                          <div class="stat-icon"><i class="ri-calendar-check-line"></i></div>
+                          <div class="stat-content">
+                            <span class="stat-value">{{ medicalSummary.totalVisits }}</span>
+                            <span class="stat-label">Visits</span>
+                          </div>
+                        </div>
+                        <div class="hero-stat-card billing">
+                          <div class="stat-icon"><i class="ri-money-dollar-circle-line"></i></div>
+                          <div class="stat-content">
+                            <span class="stat-value text-success">{{ formatCurrency(medicalSummary.totalBilled || 0) }}</span>
+                            <span class="stat-label">Total Billed</span>
+                          </div>
+                        </div>
+                        <div class="hero-stat-card duration">
+                          <div class="stat-icon"><i class="ri-time-line"></i></div>
+                          <div class="stat-content">
+                            <span class="stat-value">{{ medicalSummary.treatmentDurationDays }}</span>
+                            <span class="stat-label">Days in Treatment</span>
+                          </div>
+                        </div>
+                        <div class="hero-stat-card action">
+                          <button class="btn btn-primary" (click)="generateMedicalSummary()" [disabled]="isGeneratingSummary">
+                            <span *ngIf="!isGeneratingSummary"><i class="ri-refresh-line me-1"></i> Regenerate</span>
+                            <span *ngIf="isGeneratingSummary"><span class="spinner-border spinner-border-sm me-1"></span> Generating...</span>
+                          </button>
+                          <small class="text-muted d-block mt-1" *ngIf="medicalSummary.generatedAt">
+                            Last updated {{ medicalSummary.generatedAt | date:'short' }}
+                          </small>
+                        </div>
+                      </div>
+
+                      <!-- Main Content Grid -->
+                      <div class="row g-4">
+                        <!-- Left Column - Diagnoses -->
+                        <div class="col-lg-4">
+                          <!-- Diagnoses Card -->
+                          <div class="summary-card diagnoses-card" *ngIf="medicalSummary.diagnosisList && medicalSummary.diagnosisList.length > 0">
+                            <div class="card-icon"><i class="ri-stethoscope-line"></i></div>
+                            <h6 class="card-title">Diagnoses (ICD-10)</h6>
+                            <div class="diagnoses-list">
+                              <div class="diagnosis-chip" *ngFor="let diag of medicalSummary.diagnosisList" [class.primary]="diag.primary">
+                                <span class="icd-code">{{ diag.icd_code }}</span>
+                                <span class="diagnosis-desc">{{ diag.description }}</span>
+                                <span class="primary-badge" *ngIf="diag.primary">Primary</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Right Column - Highlights & Prognosis -->
+                        <div class="col-lg-8">
+                          <!-- Key Highlights -->
+                          <div class="summary-card highlights-card" *ngIf="medicalSummary.keyHighlights">
+                            <div class="card-header-row">
+                              <div class="card-icon primary"><i class="ri-lightbulb-flash-line"></i></div>
+                              <h6 class="card-title">Key Highlights</h6>
+                            </div>
+                            <div class="card-content highlights-content" [innerHTML]="medicalSummary.keyHighlights | aiResponseFormatter"></div>
+                          </div>
+                          <div class="summary-card highlights-card empty" *ngIf="!medicalSummary.keyHighlights">
+                            <div class="card-header-row">
+                              <div class="card-icon muted"><i class="ri-lightbulb-flash-line"></i></div>
+                              <h6 class="card-title text-muted">Key Highlights</h6>
+                            </div>
+                            <div class="empty-content">
+                              <p class="mb-0 text-muted">Click "Regenerate" to generate key highlights from your medical records.</p>
+                            </div>
+                          </div>
+
+                          <!-- Prognosis Assessment -->
+                          <div class="summary-card prognosis-card" *ngIf="medicalSummary.prognosisAssessment">
+                            <div class="card-header-row">
+                              <div class="card-icon info"><i class="ri-heart-pulse-line"></i></div>
+                              <h6 class="card-title">Prognosis Assessment</h6>
+                            </div>
+                            <div class="card-content prognosis-content" [innerHTML]="medicalSummary.prognosisAssessment | aiResponseFormatter"></div>
+                          </div>
+                          <div class="summary-card prognosis-card empty" *ngIf="!medicalSummary.prognosisAssessment">
+                            <div class="card-header-row">
+                              <div class="card-icon muted"><i class="ri-heart-pulse-line"></i></div>
+                              <h6 class="card-title text-muted">Prognosis Assessment</h6>
+                            </div>
+                            <div class="empty-content">
+                              <p class="mb-0 text-muted">Click "Regenerate" to generate prognosis assessment from your medical records.</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Full Width - Red Flags -->
+                        <div class="col-12" *ngIf="medicalSummary.redFlags && medicalSummary.redFlags.length > 0">
+                          <div class="summary-card red-flags-card full-width">
+                            <div class="card-header-row">
+                              <div class="card-icon danger"><i class="ri-alert-line"></i></div>
+                              <h6 class="card-title text-danger">Red Flags ({{ medicalSummary.redFlags.length }})</h6>
+                            </div>
+                            <div class="red-flags-grid">
+                              <div class="red-flag-chip" *ngFor="let flag of medicalSummary.redFlags" [class.high]="flag.severity === 'HIGH'" [class.medium]="flag.severity === 'MEDIUM'" [class.low]="flag.severity === 'LOW'">
+                                <span class="severity-indicator"></span>
+                                <span class="flag-text">{{ flag.description }}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Full Width: Treatment Chronology Section -->
+                      <div class="chronology-section mt-4">
+                        <!-- Treatment Gaps & Documentation Status - Above Table -->
+                        <div class="info-row" *ngIf="(medicalSummary.treatmentGapDays && medicalSummary.treatmentGapDays > 0) || medicalSummary.completenessNotes">
+                          <!-- Treatment Gaps -->
+                          <div class="info-card gaps-info" *ngIf="medicalSummary.treatmentGapDays && medicalSummary.treatmentGapDays > 0">
+                            <div class="info-icon warning">
+                              <i class="ri-timer-flash-line"></i>
+                            </div>
+                            <div class="info-content">
+                              <span class="info-label">Treatment Gaps Detected</span>
+                              <div class="info-value">
+                                <span class="gap-number">{{ medicalSummary.treatmentGapDays }}</span>
+                                <span class="gap-unit">days</span>
+                              </div>
+                              <span class="info-note">Gaps longer than 30 days may affect case value</span>
+                            </div>
+                          </div>
+
+                          <!-- Documentation Status -->
+                          <div class="info-card docs-info" *ngIf="medicalSummary.completenessNotes">
+                            <div class="info-icon" [class.success]="medicalSummary.completenessScore >= 80" [class.warning]="medicalSummary.completenessScore >= 50 && medicalSummary.completenessScore < 80" [class.danger]="medicalSummary.completenessScore < 50">
+                              <i class="ri-file-list-3-line"></i>
+                            </div>
+                            <div class="info-content">
+                              <span class="info-label">Documentation Status</span>
+                              <p class="info-text">{{ medicalSummary.completenessNotes }}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Treatment Chronology Table -->
+                        <div class="chronology-card-wrapper" *ngIf="medicalSummary.treatmentChronology">
+                          <div class="chronology-header">
+                            <div class="header-left">
+                              <i class="ri-calendar-check-line"></i>
+                              <span class="header-title">Treatment Chronology</span>
+                            </div>
+                            <div class="header-right">
+                              <span class="stat-pill visits"><i class="ri-hospital-line"></i> {{ medicalSummary.totalVisits }} visits</span>
+                              <span class="stat-pill duration" *ngIf="medicalSummary.treatmentDurationDays"><i class="ri-time-line"></i> {{ medicalSummary.treatmentDurationDays }} days</span>
+                            </div>
+                          </div>
+                          <div class="chronology-table-container">
+                            <table class="treatment-table">
+                              <thead>
+                                <tr>
+                                  <th class="col-date">Date</th>
+                                  <th class="col-provider">Provider</th>
+                                  <th class="col-type">Type</th>
+                                  <th class="col-findings">Key Findings</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr *ngFor="let record of medicalRecords; let i = index" class="treatment-row">
+                                  <td class="col-date">
+                                    <span class="date-value">{{ record.treatmentDate | date:'MMM d, yyyy' }}</span>
+                                  </td>
+                                  <td class="col-provider">
+                                    <span class="provider-name">{{ record.providerName }}</span>
+                                  </td>
+                                  <td class="col-type">
+                                    <span class="type-badge" [attr.data-type]="record.recordType">
+                                      {{ record.recordType }}
+                                    </span>
+                                  </td>
+                                  <td class="col-findings">
+                                    <span class="findings-text">{{ record.keyFindings || '-' }}</span>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div class="chronology-card-wrapper empty" *ngIf="!medicalSummary.treatmentChronology">
+                          <div class="empty-state">
+                            <i class="ri-calendar-todo-line"></i>
+                            <p>Click "Regenerate" to generate treatment chronology</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
+
+            <!-- Damage Analysis Tab -->
+            <li ngbNavItem="damage-analysis">
+              <a ngbNavLink>
+                <i class="ri-bar-chart-grouped-line me-2"></i> Damage Analysis
+              </a>
+              <ng-template ngbNavContent>
+                <div class="professional-tool-content" (click)="loadDamageElements()">
+                  <!-- Header -->
+                  <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                      <h5 class="mb-1">Comprehensive Damage Analysis</h5>
+                      <p class="text-muted mb-0">Full damage breakdown with AI comparable case analysis</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-soft-success" (click)="syncMedicalExpenses()" [disabled]="!linkedCase" title="Sync from medical records">
+                        <i class="ri-refresh-line me-1"></i> Sync Medical
+                      </button>
+                      <button class="btn btn-primary" (click)="calculateComprehensiveDamages()" [disabled]="!linkedCase || isCalculatingDamages">
+                        <span *ngIf="!isCalculatingDamages"><i class="ri-calculator-line me-1"></i> Calculate with AI</span>
+                        <span *ngIf="isCalculatingDamages"><span class="spinner-border spinner-border-sm me-1"></span> Calculating...</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- No Case Linked Warning -->
+                  <div class="alert alert-warning d-flex align-items-center" *ngIf="!linkedCase">
+                    <i class="ri-information-line fs-4 me-3"></i>
+                    <div>
+                      <strong>Link a Case</strong>
+                      <p class="mb-0">Use the case selector above to link a PI case for comprehensive damage analysis.</p>
+                    </div>
+                  </div>
+
+                  <!-- Damage Analysis Content -->
+                  <div class="row" *ngIf="linkedCase">
+                    <!-- Left: Add Damage Element -->
+                    <div class="col-lg-4">
+                      <div class="card mb-3">
+                        <div class="card-header"><h6 class="mb-0">Add Damage Element</h6></div>
+                        <div class="card-body">
+                          <div class="mb-3">
+                            <label class="form-label">Type</label>
+                            <select class="form-select" [(ngModel)]="newDamageElement.elementType">
+                              <option *ngFor="let type of damageElementTypes" [value]="type.value">{{ type.label }}</option>
+                            </select>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">Description *</label>
+                            <input type="text" class="form-control" [(ngModel)]="newDamageElement.elementName" placeholder="e.g., Boston Medical ER">
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <div class="input-group">
+                              <span class="input-group-text">$</span>
+                              <input type="number" class="form-control" [(ngModel)]="newDamageElement.baseAmount">
+                            </div>
+                          </div>
+                          <div class="row mb-3">
+                            <div class="col-6">
+                              <label class="form-label">Method</label>
+                              <select class="form-select" [(ngModel)]="newDamageElement.calculationMethod">
+                                <option *ngFor="let method of calculationMethods" [value]="method.value">{{ method.label }}</option>
+                              </select>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label">Confidence</label>
+                              <select class="form-select" [(ngModel)]="newDamageElement.confidenceLevel">
+                                <option *ngFor="let level of confidenceLevels" [value]="level.value">{{ level.label }}</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" [(ngModel)]="newDamageElement.notes" rows="2"></textarea>
+                          </div>
+                          <button class="btn btn-primary w-100" (click)="addDamageElement()" [disabled]="!newDamageElement.elementName">
+                            <i class="ri-add-line me-1"></i> Add Element
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Quick Calculators -->
+                      <div class="card">
+                        <div class="card-header"><h6 class="mb-0">Quick Calculators</h6></div>
+                        <div class="card-body">
+                          <p class="text-muted small mb-2">IRS Mileage Rate: ${{ irsMileageRate }}/mile</p>
+                          <div class="d-grid gap-2">
+                            <button class="btn btn-soft-primary btn-sm" disabled>
+                              <i class="ri-car-line me-1"></i> Calculate Mileage
+                            </button>
+                            <button class="btn btn-soft-primary btn-sm" disabled>
+                              <i class="ri-home-line me-1"></i> Household Services
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Right: Damage Summary & Elements -->
+                    <div class="col-lg-8">
+                      <!-- Damage Summary -->
+                      <div class="card mb-3" *ngIf="damageCalculation">
+                        <div class="card-header bg-primary-subtle">
+                          <h6 class="mb-0 text-primary">
+                            <i class="ri-funds-line me-1"></i> Case Value Range
+                          </h6>
+                        </div>
+                        <div class="card-body">
+                          <div class="row text-center">
+                            <div class="col-4">
+                              <div class="text-muted small">LOW</div>
+                              <div class="fs-5 fw-semibold">{{ formatCurrency(damageCalculation.lowValue || 0) }}</div>
+                            </div>
+                            <div class="col-4 border-start border-end">
+                              <div class="text-muted small">LIKELY</div>
+                              <div class="fs-4 fw-bold text-primary">{{ formatCurrency(damageCalculation.midValue || 0) }}</div>
+                            </div>
+                            <div class="col-4">
+                              <div class="text-muted small">HIGH</div>
+                              <div class="fs-5 fw-semibold">{{ formatCurrency(damageCalculation.highValue || 0) }}</div>
+                            </div>
+                          </div>
+                          <hr>
+                          <div class="row">
+                            <div class="col-6">
+                              <div class="d-flex justify-content-between">
+                                <span class="text-muted">Economic Damages</span>
+                                <span class="fw-medium">{{ formatCurrency(damageCalculation.economicDamagesTotal || 0) }}</span>
+                              </div>
+                            </div>
+                            <div class="col-6">
+                              <div class="d-flex justify-content-between">
+                                <span class="text-muted">Non-Economic</span>
+                                <span class="fw-medium">{{ formatCurrency(damageCalculation.nonEconomicDamagesTotal || 0) }}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Damage Elements List -->
+                      <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                          <h6 class="mb-0">Damage Elements ({{ damageElements.length }})</h6>
+                        </div>
+                        <div class="card-body p-0">
+                          <div class="list-group list-group-flush" *ngIf="damageElements.length > 0">
+                            <div class="list-group-item d-flex align-items-center" *ngFor="let element of damageElements">
+                              <div class="avatar-sm me-3">
+                                <span class="avatar-title bg-primary-subtle text-primary rounded">
+                                  <i [class]="getDamageTypeIcon(element.elementType)"></i>
+                                </span>
+                              </div>
+                              <div class="flex-grow-1">
+                                <h6 class="mb-0">{{ element.elementName }}</h6>
+                                <small class="text-muted">{{ getDamageTypeLabel(element.elementType) }}</small>
+                              </div>
+                              <div class="text-end me-3">
+                                <div class="fw-semibold">{{ formatCurrency(element.calculatedAmount || 0) }}</div>
+                                <span class="badge bg-{{ getConfidenceColor(element.confidenceLevel || 'MEDIUM') }}-subtle text-{{ getConfidenceColor(element.confidenceLevel || 'MEDIUM') }}">
+                                  {{ element.confidenceLevel }}
+                                </span>
+                              </div>
+                              <button class="btn btn-sm btn-soft-danger" (click)="deleteDamageElement(element)">
+                                <i class="ri-delete-bin-line"></i>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="text-center py-4" *ngIf="damageElements.length === 0 && !isLoadingDamages">
+                            <i class="ri-bar-chart-grouped-line fs-1 text-muted"></i>
+                            <p class="text-muted mt-2 mb-0">No damage elements yet. Add elements using the form or sync from medical records.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
+
+            <!-- Document Checklist Tab -->
+            <li ngbNavItem="document-checklist">
+              <a ngbNavLink>
+                <i class="ri-checkbox-multiple-line me-2"></i> Document Checklist
+              </a>
+              <ng-template ngbNavContent>
+                <div class="professional-tool-content" (click)="loadDocumentChecklist()">
+                  <!-- Header -->
+                  <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                      <h5 class="mb-1">Document Checklist</h5>
+                      <p class="text-muted mb-0">Track required documents and case preparation status</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-soft-primary" (click)="initializeDocumentChecklist()" [disabled]="!linkedCase || documentChecklist.length > 0">
+                        <i class="ri-file-add-line me-1"></i> Initialize Checklist
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- No Case Linked Warning -->
+                  <div class="alert alert-warning d-flex align-items-center" *ngIf="!linkedCase">
+                    <i class="ri-information-line fs-4 me-3"></i>
+                    <div>
+                      <strong>Link a Case</strong>
+                      <p class="mb-0">Use the case selector above to link a PI case and track required documents.</p>
+                    </div>
+                  </div>
+
+                  <!-- Document Checklist Content -->
+                  <div class="row" *ngIf="linkedCase">
+                    <!-- Completeness Score -->
+                    <div class="col-lg-4">
+                      <div class="card mb-3" *ngIf="documentCompleteness">
+                        <div class="card-body text-center">
+                          <h6 class="text-muted mb-2">DOCUMENT COMPLETENESS</h6>
+                          <div class="fs-1 fw-bold text-{{ documentCompleteness.completenessPercent >= 80 ? 'success' : documentCompleteness.completenessPercent >= 50 ? 'warning' : 'danger' }}">
+                            {{ documentCompleteness.completenessPercent }}%
+                          </div>
+                          <div class="progress mt-3" style="height: 8px;">
+                            <div class="progress-bar bg-{{ documentCompleteness.completenessPercent >= 80 ? 'success' : documentCompleteness.completenessPercent >= 50 ? 'warning' : 'danger' }}"
+                                 [style.width.%]="documentCompleteness.completenessPercent"></div>
+                          </div>
+                          <div class="mt-3 text-muted small">
+                            {{ documentCompleteness.receivedCount }} of {{ documentCompleteness.requiredCount }} required documents
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Missing Documents Alert -->
+                      <div class="card" *ngIf="documentCompleteness && documentCompleteness.missingDocuments.length > 0">
+                        <div class="card-header bg-warning-subtle">
+                          <h6 class="mb-0 text-warning"><i class="ri-alert-line me-1"></i> Missing Documents</h6>
+                        </div>
+                        <div class="card-body">
+                          <div class="missing-doc-item mb-2" *ngFor="let doc of documentCompleteness.missingDocuments">
+                            <i class="ri-file-warning-line text-warning me-2"></i>
+                            <span>{{ doc.type }} - {{ doc.subtype }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Checklist Items -->
+                    <div class="col-lg-8">
+                      <div class="card">
+                        <div class="card-header">
+                          <h6 class="mb-0">Document Status</h6>
+                        </div>
+                        <div class="card-body p-0">
+                          <div class="table-responsive" *ngIf="documentChecklist.length > 0">
+                            <table class="table table-hover mb-0">
+                              <thead class="table-light">
+                                <tr>
+                                  <th>Document</th>
+                                  <th>Status</th>
+                                  <th>Requested</th>
+                                  <th class="text-center">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr *ngFor="let item of documentChecklist">
+                                  <td>
+                                    <div class="fw-medium">{{ item.documentType }}</div>
+                                    <small class="text-muted">{{ item.documentSubtype }}</small>
+                                  </td>
+                                  <td>
+                                    <span class="badge bg-{{ getStatusColor(item.status) }}-subtle text-{{ getStatusColor(item.status) }}">
+                                      {{ item.status }}
+                                    </span>
+                                    <span class="badge bg-danger ms-1" *ngIf="item.isOverdue">OVERDUE</span>
+                                  </td>
+                                  <td>
+                                    <span *ngIf="item.requestedDate">{{ item.requestedDate | date:'MM/dd' }}</span>
+                                    <span *ngIf="item.daysSinceRequested" class="text-muted small ms-1">({{ item.daysSinceRequested }}d ago)</span>
+                                    <span *ngIf="!item.requestedDate" class="text-muted">-</span>
+                                  </td>
+                                  <td class="text-center">
+                                    <button class="btn btn-sm btn-soft-success me-1" *ngIf="item.status !== 'RECEIVED'" (click)="markDocumentReceived(item)" title="Mark Received">
+                                      <i class="ri-checkbox-circle-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-soft-primary" *ngIf="item.status !== 'RECEIVED'" (click)="requestDocument(item)" title="Log Request">
+                                      <i class="ri-mail-send-line"></i>
+                                    </button>
+                                    <i class="ri-check-double-line text-success fs-5" *ngIf="item.status === 'RECEIVED'"></i>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          <div class="text-center py-4" *ngIf="documentChecklist.length === 0 && !isLoadingChecklist">
+                            <i class="ri-checkbox-multiple-line fs-1 text-muted"></i>
+                            <p class="text-muted mt-2 mb-3">No checklist items yet.</p>
+                            <button class="btn btn-primary" (click)="initializeDocumentChecklist()">
+                              <i class="ri-file-add-line me-1"></i> Initialize Default Checklist
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
+          </ul>
+        </div>
+        <div class="card-body pt-0">
+          <div [ngbNavOutlet]="nav"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating Action Button -->
+<div class="fab-container" [class.fab-expanded]="fabExpanded">
+  <button class="fab-main btn btn-primary" (click)="fabExpanded = !fabExpanded" title="Quick Actions">
+    <i class="ri-add-line" [class.rotate-45]="fabExpanded"></i>
+  </button>
+  <div class="fab-actions" *ngIf="fabExpanded">
+    <button class="fab-action btn btn-primary" (click)="activeTab = 'case-value'; fabExpanded = false" title="Calculate Case Value">
+      <i class="ri-calculator-line"></i>
+      <span>Case Value</span>
+    </button>
+    <button class="fab-action btn btn-info" (click)="activeTab = 'demand-letter'; fabExpanded = false" title="Generate Demand Letter">
+      <i class="ri-file-text-line"></i>
+      <span>Demand Letter</span>
+    </button>
+    <button class="fab-action btn btn-success" (click)="activeTab = 'medical-tracker'; fabExpanded = false" title="Medical Tracker">
+      <i class="ri-hospital-line"></i>
+      <span>Medical Tracker</span>
+    </button>
+    <button class="fab-action btn btn-warning" (click)="activeTab = 'settlement'; fabExpanded = false" title="Settlement Tracker">
+      <i class="ri-money-dollar-circle-line"></i>
+      <span>Settlement</span>
+    </button>
+  </div>
+  <div class="fab-backdrop" *ngIf="fabExpanded" (click)="fabExpanded = false"></div>
+</div>

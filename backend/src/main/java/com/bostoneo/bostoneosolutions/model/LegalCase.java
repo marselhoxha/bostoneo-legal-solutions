@@ -133,6 +133,84 @@ public class LegalCase {
     @Column(name = "timeline_initialized")
     private Boolean timelineInitialized;
 
+    // ============================================
+    // Personal Injury (PI) Specific Fields
+    // ============================================
+
+    // Injury Information
+    @Column(name = "injury_date")
+    @Temporal(TemporalType.DATE)
+    private Date injuryDate;
+
+    @Column(name = "injury_type")
+    private String injuryType;
+
+    @Column(name = "injury_description", columnDefinition = "TEXT")
+    private String injuryDescription;
+
+    @Column(name = "accident_location")
+    private String accidentLocation;
+
+    @Column(name = "liability_assessment")
+    private String liabilityAssessment;
+
+    @Column(name = "comparative_negligence_percent")
+    private Integer comparativeNegligencePercent;
+
+    // Medical Providers (JSONB)
+    @Column(name = "medical_providers", columnDefinition = "jsonb")
+    private String medicalProviders;
+
+    // Financial Damages
+    @Column(name = "medical_expenses_total")
+    private Double medicalExpensesTotal;
+
+    @Column(name = "lost_wages")
+    private Double lostWages;
+
+    @Column(name = "future_medical_estimate")
+    private Double futureMedicalEstimate;
+
+    @Column(name = "pain_suffering_multiplier")
+    private Double painSufferingMultiplier;
+
+    // Settlement Information
+    @Column(name = "settlement_demand_amount")
+    private Double settlementDemandAmount;
+
+    @Column(name = "settlement_offer_amount")
+    private Double settlementOfferAmount;
+
+    @Column(name = "settlement_final_amount")
+    private Double settlementFinalAmount;
+
+    @Column(name = "settlement_date")
+    @Temporal(TemporalType.DATE)
+    private Date settlementDate;
+
+    // Insurance Information
+    @Column(name = "insurance_company")
+    private String insuranceCompany;
+
+    @Column(name = "insurance_policy_number")
+    private String insurancePolicyNumber;
+
+    @Column(name = "insurance_policy_limit")
+    private Double insurancePolicyLimit;
+
+    @Column(name = "insurance_adjuster_name")
+    private String insuranceAdjusterName;
+
+    @Column(name = "insurance_adjuster_contact")
+    private String insuranceAdjusterContact;
+
+    // Defendant Information
+    @Column(name = "defendant_name")
+    private String defendantName;
+
+    @Column(name = "defendant_address", columnDefinition = "TEXT")
+    private String defendantAddress;
+
     @PrePersist
     protected void onCreate() {
         createdAt = new Date();

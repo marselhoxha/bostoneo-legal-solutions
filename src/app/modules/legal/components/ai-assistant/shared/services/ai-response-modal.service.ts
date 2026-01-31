@@ -120,4 +120,21 @@ export class AiResponseModalService {
   openLicenseAgreement(content: string, licenseData?: any): NgbModalRef {
     return this.open('License Agreement', content, licenseData);
   }
+
+  // Personal Injury Practice Area Methods
+  openCaseValueAnalysis(content: string, caseValueData?: any): NgbModalRef {
+    return this.open('PI Case Value Analysis', content, caseValueData);
+  }
+
+  openDemandLetter(content: string, demandData?: any): NgbModalRef {
+    return this.open('Personal Injury Demand Letter', content, demandData);
+  }
+
+  openMedicalChronology(content: string, medicalData?: any): NgbModalRef {
+    return this.open('Medical Chronology', content, medicalData);
+  }
+
+  openSettlementAnalysis(content: string, settlementData?: any): NgbModalRef {
+    return this.open('Settlement Analysis', content, settlementData);
+  }
 }

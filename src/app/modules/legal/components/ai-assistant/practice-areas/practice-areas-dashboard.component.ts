@@ -25,11 +25,28 @@ interface PracticeAreaTool {
 export class PracticeAreasDashboardComponent implements OnInit {
   practiceAreas: PracticeAreaTool[] = [
     {
+      id: 'personal-injury',
+      name: 'Personal Injury',
+      description: 'Comprehensive PI case tools with demand letter generation',
+      icon: 'ri-first-aid-kit-line',
+      color: 'danger',
+      features: [
+        'Case value calculator',
+        'Demand letter generator',
+        'Medical provider tracker',
+        'Settlement negotiation tracker',
+        'Damages calculation'
+      ],
+      route: '/legal/ai-assistant/practice-areas/personal-injury',
+      isAvailable: true,
+      usageCount: 0
+    },
+    {
       id: 'criminal-defense',
       name: 'Criminal Defense',
       description: 'AI-powered tools for criminal defense attorneys',
       icon: 'ri-shield-line',
-      color: 'danger',
+      color: 'secondary',
       features: [
         'Motion drafting assistance',
         'Sentencing guidelines calculator',

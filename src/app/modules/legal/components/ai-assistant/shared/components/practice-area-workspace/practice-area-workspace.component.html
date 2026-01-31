@@ -1,0 +1,127 @@
+<div class="workspace-wrapper">
+  <!-- Tool Cards Header -->
+  <div class="tools-header">
+    <div class="tools-grid">
+      <button
+        *ngFor="let tool of tools"
+        class="tool-card"
+        [class.active]="isToolActive(tool.id)"
+        (click)="onToolClick(tool.id)">
+        <div class="tool-icon-wrapper">
+          <i [class]="tool.icon"></i>
+        </div>
+        <div class="tool-info">
+          <span class="tool-name">{{ tool.name }}</span>
+          <span class="tool-hint" *ngIf="getToolHistoryCount(tool.id) > 0">
+            {{ getToolHistoryCount(tool.id) }} saved
+          </span>
+        </div>
+        <div class="tool-active-indicator" *ngIf="isToolActive(tool.id)"></div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="workspace-main">
+    <ng-content></ng-content>
+  </div>
+
+  <!-- History Floating Button -->
+  <button
+    class="history-fab"
+    [class.has-items]="getTotalHistoryCount() > 0"
+    [class.panel-open]="isHistoryPanelOpen"
+    (click)="toggleHistoryPanel()">
+    <i class="ri-history-line"></i>
+    <span class="history-badge" *ngIf="getTotalHistoryCount() > 0 && !isHistoryPanelOpen">
+      {{ getTotalHistoryCount() }}
+    </span>
+  </button>
+
+  <!-- History Slide Panel -->
+  <div class="history-panel" [class.open]="isHistoryPanelOpen">
+    <div class="history-panel-header">
+      <h5>
+        <i class="ri-history-line me-2"></i>
+        History
+      </h5>
+      <button class="btn-close-panel" (click)="toggleHistoryPanel()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="history-panel-filters" *ngIf="getTotalHistoryCount() > 0">
+      <button
+        class="filter-chip"
+        [class.active]="!activeHistoryFilter"
+        (click)="setHistoryFilter(null)">
+        All
+      </button>
+      <button
+        *ngFor="let tool of tools"
+        class="filter-chip"
+        [class.active]="activeHistoryFilter === tool.id"
+        (click)="setHistoryFilter(tool.id)">
+        <i [class]="tool.icon" class="me-1"></i>
+        {{ tool.name.split(' ')[0] }}
+      </button>
+    </div>
+
+    <div class="history-panel-content">
+      <!-- Loading State -->
+      <div class="history-loading" *ngIf="isLoading">
+        <div class="spinner-border spinner-border-sm text-primary"></div>
+        <span>Loading...</span>
+      </div>
+
+      <!-- Empty State -->
+      <div class="history-empty" *ngIf="!isLoading && getTotalHistoryCount() === 0">
+        <div class="empty-icon">
+          <i class="ri-folder-history-line"></i>
+        </div>
+        <h6>No History Yet</h6>
+        <p>Your calculations and generated documents will appear here.</p>
+      </div>
+
+      <!-- History List -->
+      <div class="history-list" *ngIf="!isLoading && getTotalHistoryCount() > 0">
+        <div class="history-group" *ngFor="let group of filteredHistoryGroups">
+          <div class="group-date">{{ group.label }}</div>
+          <div class="history-cards">
+            <div
+              *ngFor="let item of group.items"
+              class="history-card"
+              [class.selected]="isHistoryItemSelected(item)"
+              (click)="onHistoryItemClick(item)">
+              <div class="history-card-icon">
+                <i [class]="getToolIcon(item.toolType)"></i>
+              </div>
+              <div class="history-card-content">
+                <div class="history-card-title">{{ item.title }}</div>
+                <div class="history-card-meta">
+                  <span class="meta-tool">{{ getToolName(item.toolType) }}</span>
+                  <span class="meta-time">{{ formatTime(item.createdAt) }}</span>
+                </div>
+              </div>
+              <div class="history-card-actions">
+                <button
+                  class="btn-action"
+                  (click)="onDeleteHistoryItem($event, item)"
+                  title="Delete">
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay when panel is open -->
+  <div
+    class="history-overlay"
+    [class.visible]="isHistoryPanelOpen"
+    (click)="toggleHistoryPanel()">
+  </div>
+</div>

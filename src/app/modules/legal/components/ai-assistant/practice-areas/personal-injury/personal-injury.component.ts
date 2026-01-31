@@ -1,0 +1,1912 @@
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { Subject, BehaviorSubject, Observable, of } from 'rxjs';
+import { takeUntil, debounceTime, distinctUntilChanged, switchMap, catchError, map } from 'rxjs/operators';
+import { NgbNavModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
+import { PracticeAreaBaseComponent } from '../../shared/practice-area-base.component';
+import { AiResponseFormatterPipe } from '../../shared/ai-response-formatter.pipe';
+import { AiResponseModalService } from '../../shared/services/ai-response-modal.service';
+import { WorkspaceStateService } from '../../shared/services/workspace-state.service';
+import { ToolHistoryItem } from '../../shared/models/tool-history.model';
+import { CaseService } from '../../../../services/case.service';
+import { LegalCase } from '../../../../interfaces/case.interface';
+import { environment } from '../../../../../../../environments/environment';
+import Swal from 'sweetalert2';
+import { Chart, registerables } from 'chart.js';
+
+// PI Professional Platform Services
+import { PIMedicalRecordService } from '../../shared/services/pi-medical-record.service';
+import { PIDocumentChecklistService } from '../../shared/services/pi-document-checklist.service';
+import { PIDamageCalculationService } from '../../shared/services/pi-damage-calculation.service';
+import { PIMedicalSummaryService } from '../../shared/services/pi-medical-summary.service';
+
+// PI Professional Platform Models
+import {
+  PIMedicalRecord,
+  RECORD_TYPES,
+  PROVIDER_TYPES
+} from '../../shared/models/pi-medical-record.model';
+import {
+  PIDocumentChecklist,
+  DocumentCompletenessScore,
+  DOCUMENT_TYPES,
+  DOCUMENT_STATUSES
+} from '../../shared/models/pi-document-checklist.model';
+import {
+  PIDamageElement,
+  PIDamageCalculation,
+  DAMAGE_ELEMENT_TYPES,
+  CALCULATION_METHODS,
+  CONFIDENCE_LEVELS,
+  IRS_MILEAGE_RATE
+} from '../../shared/models/pi-damage-calculation.model';
+import {
+  PIMedicalSummary,
+  ProviderSummaryItem,
+  DiagnosisItem,
+  RedFlagItem,
+  TreatmentGap
+} from '../../shared/models/pi-medical-summary.model';
+
+// Register Chart.js components
+Chart.register(...registerables);
+
+interface MedicalProvider {
+  id: string;
+  name: string;
+  specialty: string;
+  treatmentDates: string;
+  totalBills: number;
+}
+
+interface CaseValueCalculation {
+  medicalExpenses: number;
+  lostWages: number;
+  futureMedical: number;
+  economicDamages: number;
+  multiplier: number;
+  nonEconomicDamages: number;
+  totalCaseValue: number;
+  comparativeNegligence: number;
+  adjustedCaseValue: number;
+}
+
+interface ActivityItem {
+  id: string;
+  toolType: string;
+  title: string;
+  timestamp: Date;
+  data?: any;
+}
+
+@Component({
+  selector: 'app-personal-injury',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    RouterModule,
+    NgbNavModule,
+    NgbDropdownModule,
+    AiResponseFormatterPipe
+  ],
+  templateUrl: './personal-injury.component.html',
+  styleUrls: ['./personal-injury.component.scss']
+})
+export class PersonalInjuryComponent extends PracticeAreaBaseComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('damageChart') damageChartRef!: ElementRef<HTMLCanvasElement>;
+  private damageChart: Chart<'doughnut'> | null = null;
+
+  private destroy$ = new Subject<void>();
+
+  // View State Management (Tab-based)
+  activeTab: string = 'dashboard';
+
+  // FAB and Search
+  fabExpanded: boolean = false;
+  globalSearch: string = '';
+
+  // Case Context Integration
+  linkedCase: LegalCase | null = null;
+  caseSearchTerm$ = new BehaviorSubject<string>('');
+  searchResults: LegalCase[] = [];
+  isSearchingCases: boolean = false;
+  showCaseDropdown: boolean = false;
+  caseSearchInput: string = '';
+  prefilledFromCase: boolean = false;
+
+  // Dashboard Metrics
+  latestCaseValue: number = 0;
+  recentActivity: ActivityItem[] = [];
+
+  // Case Value Calculator
+  caseValueForm: FormGroup;
+  calculatedValue: CaseValueCalculation | null = null;
+  isCalculating: boolean = false;
+
+  // Collapsible Sections State
+  collapsedSections: { [key: string]: boolean } = {
+    injury: false,
+    economic: false,
+    multiplier: false,
+    liability: false
+  };
+
+  // Demand Letter Generator
+  demandForm: FormGroup;
+  generatedDemand: string = '';
+  isGeneratingDemand: boolean = false;
+  demandMode: 'express' | 'detailed' = 'express';
+
+  // Medical Providers Tracker
+  medicalProviders: MedicalProvider[] = [];
+  newProvider: MedicalProvider = {
+    id: '',
+    name: '',
+    specialty: '',
+    treatmentDates: '',
+    totalBills: 0
+  };
+
+  // Settlement Tracker
+  settlementForm: FormGroup;
+  settlementHistory: any[] = [];
+
+  // Injury Types
+  injuryTypes = [
+    { value: 'soft_tissue', label: 'Soft Tissue (Whiplash, Sprains)', multiplier: 1.5 },
+    { value: 'fracture', label: 'Fractures / Broken Bones', multiplier: 2.5 },
+    { value: 'disc_injury', label: 'Disc Herniation / Bulge', multiplier: 3.0 },
+    { value: 'tbi', label: 'Traumatic Brain Injury (TBI)', multiplier: 4.0 },
+    { value: 'spinal', label: 'Spinal Cord Injury', multiplier: 5.0 },
+    { value: 'burn', label: 'Severe Burns', multiplier: 4.0 },
+    { value: 'amputation', label: 'Amputation / Loss of Limb', multiplier: 5.0 },
+    { value: 'wrongful_death', label: 'Wrongful Death', multiplier: 5.0 },
+    { value: 'other', label: 'Other Serious Injury', multiplier: 2.5 }
+  ];
+
+  // Liability Options
+  liabilityOptions = [
+    { value: 'CLEAR', label: 'Clear Liability (100% Defendant Fault)' },
+    { value: 'COMPARATIVE', label: 'Comparative Negligence (Shared Fault)' },
+    { value: 'DISPUTED', label: 'Disputed Liability' }
+  ];
+
+  // Medical Specialties
+  medicalSpecialties = [
+    'Emergency Medicine',
+    'Orthopedics',
+    'Neurology',
+    'Physical Therapy',
+    'Chiropractic',
+    'Pain Management',
+    'Surgery',
+    'Radiology',
+    'Primary Care',
+    'Psychology/Psychiatry',
+    'Other'
+  ];
+
+  // ==========================================
+  // PI Professional Platform Properties
+  // ==========================================
+
+  // Medical Records (Professional)
+  medicalRecords: PIMedicalRecord[] = [];
+  isLoadingMedicalRecords: boolean = false;
+  isScanningDocuments: boolean = false;
+  scanResult: any = null;
+  medicalRecordForm: FormGroup;
+  editingMedicalRecord: PIMedicalRecord | null = null;
+  recordTypes = RECORD_TYPES;
+  providerTypes = PROVIDER_TYPES;
+
+  // Medical Summary
+  medicalSummary: PIMedicalSummary | null = null;
+  isGeneratingSummary: boolean = false;
+  summaryExists: boolean = false;
+
+  // Document Checklist
+  documentChecklist: PIDocumentChecklist[] = [];
+  isLoadingChecklist: boolean = false;
+  documentCompleteness: DocumentCompletenessScore | null = null;
+  documentTypes = DOCUMENT_TYPES;
+  documentStatuses = DOCUMENT_STATUSES;
+
+  // Damage Elements (Professional)
+  damageElements: PIDamageElement[] = [];
+  damageCalculation: PIDamageCalculation | null = null;
+  isLoadingDamages: boolean = false;
+  isCalculatingDamages: boolean = false;
+  damageElementTypes = DAMAGE_ELEMENT_TYPES;
+  calculationMethods = CALCULATION_METHODS;
+  confidenceLevels = CONFIDENCE_LEVELS;
+  irsMileageRate = IRS_MILEAGE_RATE;
+
+  // New Damage Element Form
+  newDamageElement: Partial<PIDamageElement> = {
+    elementType: 'PAST_MEDICAL',
+    elementName: '',
+    calculationMethod: 'ACTUAL',
+    baseAmount: 0,
+    calculatedAmount: 0,
+    confidenceLevel: 'MEDIUM'
+  };
+
+  constructor(
+    private fb: FormBuilder,
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef,
+    private aiModalService: AiResponseModalService,
+    private workspaceState: WorkspaceStateService,
+    private caseService: CaseService,
+    private medicalRecordService: PIMedicalRecordService,
+    private documentChecklistService: PIDocumentChecklistService,
+    private damageCalculationService: PIDamageCalculationService,
+    private medicalSummaryService: PIMedicalSummaryService
+  ) {
+    super();
+
+    // Initialize Case Value Calculator Form
+    this.caseValueForm = this.fb.group({
+      injuryType: ['soft_tissue', Validators.required],
+      injuryDescription: ['', Validators.required],
+      medicalExpenses: [0, [Validators.required, Validators.min(0)]],
+      lostWages: [0, [Validators.required, Validators.min(0)]],
+      futureMedical: [0, [Validators.min(0)]],
+      customMultiplier: [null],
+      liabilityAssessment: ['CLEAR', Validators.required],
+      comparativeNegligence: [0, [Validators.min(0), Validators.max(100)]]
+    });
+
+    // Initialize Demand Letter Form
+    this.demandForm = this.fb.group({
+      clientName: ['', Validators.required],
+      defendantName: ['', Validators.required],
+      insuranceCompany: ['', Validators.required],
+      adjusterName: [''],
+      claimNumber: [''],
+      accidentDate: ['', Validators.required],
+      accidentLocation: ['', Validators.required],
+      injuryType: ['', Validators.required],
+      injuryDescription: ['', Validators.required],
+      liabilityDetails: ['', Validators.required],
+      medicalExpenses: [0, Validators.required],
+      lostWages: [0],
+      futureMedical: [0],
+      policyLimit: [null],
+      painSufferingMultiplier: [2.5, Validators.required]
+    });
+
+    // Initialize Settlement Form
+    this.settlementForm = this.fb.group({
+      demandAmount: [0, Validators.required],
+      offerAmount: [0],
+      offerDate: [''],
+      counterAmount: [0],
+      notes: ['']
+    });
+
+    // Initialize Medical Record Form (Professional)
+    this.medicalRecordForm = this.fb.group({
+      providerName: ['', Validators.required],
+      providerType: [''],
+      providerNpi: [''],
+      providerAddress: [''],
+      providerPhone: [''],
+      recordType: ['FOLLOW_UP', Validators.required],
+      treatmentDate: ['', Validators.required],
+      treatmentEndDate: [''],
+      billedAmount: [0],
+      adjustedAmount: [0],
+      paidAmount: [0],
+      keyFindings: [''],
+      treatmentProvided: [''],
+      prognosisNotes: [''],
+      workRestrictions: ['']
+    });
+  }
+
+  ngOnInit(): void {
+    this.loadSavedData();
+    this.loadRecentActivity();
+
+    // Update multiplier when injury type changes
+    this.caseValueForm.get('injuryType')?.valueChanges.subscribe(injuryType => {
+      // Clear custom multiplier when injury type changes
+      if (!this.caseValueForm.get('customMultiplier')?.value) {
+        this.cdr.detectChanges();
+      }
+    });
+
+    // Set up case search with debounce
+    this.caseSearchTerm$.pipe(
+      takeUntil(this.destroy$),
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(term => {
+        if (!term || term.length < 2) {
+          this.searchResults = [];
+          return of(null);
+        }
+        this.isSearchingCases = true;
+        return this.caseService.searchCases(term, 0, 10).pipe(
+          catchError(() => of(null))
+        );
+      })
+    ).subscribe(response => {
+      this.isSearchingCases = false;
+      if (response?.data?.page?.content) {
+        // Filter to show only PI-related cases
+        this.searchResults = response.data.page.content.filter((c: LegalCase) =>
+          c.type?.toLowerCase().includes('personal injury') ||
+          c.type?.toLowerCase().includes('pi') ||
+          c.type?.toLowerCase().includes('injury') ||
+          c.type?.toLowerCase().includes('accident')
+        );
+      } else {
+        this.searchResults = [];
+      }
+      this.cdr.detectChanges();
+    });
+  }
+
+  ngAfterViewInit(): void {
+    // Chart will be created when results are available
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    if (this.damageChart) {
+      this.damageChart.destroy();
+    }
+  }
+
+  loadSavedData(): void {
+    const savedProviders = localStorage.getItem('pi_medical_providers');
+    if (savedProviders) {
+      this.medicalProviders = JSON.parse(savedProviders);
+    }
+
+    const savedHistory = localStorage.getItem('pi_settlement_history');
+    if (savedHistory) {
+      this.settlementHistory = JSON.parse(savedHistory);
+    }
+
+    const savedCaseValue = localStorage.getItem('pi_latest_case_value');
+    if (savedCaseValue) {
+      this.latestCaseValue = parseFloat(savedCaseValue);
+    }
+  }
+
+  loadRecentActivity(): void {
+    const savedActivity = localStorage.getItem('pi_recent_activity');
+    if (savedActivity) {
+      this.recentActivity = JSON.parse(savedActivity);
+    }
+  }
+
+  saveRecentActivity(): void {
+    localStorage.setItem('pi_recent_activity', JSON.stringify(this.recentActivity.slice(0, 10)));
+  }
+
+  addActivity(toolType: string, title: string, data?: any): void {
+    const activity: ActivityItem = {
+      id: Date.now().toString(),
+      toolType,
+      title,
+      timestamp: new Date(),
+      data
+    };
+    this.recentActivity.unshift(activity);
+    this.recentActivity = this.recentActivity.slice(0, 10); // Keep only last 10
+    this.saveRecentActivity();
+  }
+
+  // ==========================================
+  // View Navigation
+  // ==========================================
+
+  openTool(toolId: string): void {
+    this.activeTab = toolId;
+    this.cdr.detectChanges();
+
+    // Create chart if opening case value and there are results
+    if (toolId === 'case-value' && this.calculatedValue) {
+      setTimeout(() => this.createDamageChart(), 100);
+    }
+  }
+
+  backToDashboard(): void {
+    this.activeTab = 'dashboard';
+  }
+
+  openActivityItem(activity: ActivityItem): void {
+    this.openTool(activity.toolType);
+    // Could also restore the activity data here if needed
+  }
+
+  openQuickCalculator(): void {
+    this.activeTab = 'case-value';
+  }
+
+  toggleSection(sectionKey: string): void {
+    this.collapsedSections[sectionKey] = !this.collapsedSections[sectionKey];
+  }
+
+  // ==========================================
+  // Case Value Calculator Methods
+  // ==========================================
+
+  getMultiplier(): number {
+    const customMultiplier = this.caseValueForm.get('customMultiplier')?.value;
+    if (customMultiplier && customMultiplier > 0) {
+      return customMultiplier;
+    }
+    const injuryType = this.caseValueForm.get('injuryType')?.value;
+    const injury = this.injuryTypes.find(i => i.value === injuryType);
+    return injury?.multiplier || 2.0;
+  }
+
+  getSliderFillPercent(): number {
+    const multiplier = this.getMultiplier();
+    return ((multiplier - 1) / 4) * 100; // Maps 1-5 to 0-100%
+  }
+
+  onMultiplierSliderChange(event: Event): void {
+    const value = parseFloat((event.target as HTMLInputElement).value);
+    this.caseValueForm.patchValue({ customMultiplier: value });
+  }
+
+  getEconomicPercent(): number {
+    if (!this.calculatedValue) return 0;
+    const total = this.calculatedValue.economicDamages + this.calculatedValue.nonEconomicDamages;
+    if (total === 0) return 0;
+    return Math.round((this.calculatedValue.economicDamages / total) * 100);
+  }
+
+  getNonEconomicPercent(): number {
+    if (!this.calculatedValue) return 0;
+    return 100 - this.getEconomicPercent();
+  }
+
+  calculateCaseValue(): void {
+    if (this.caseValueForm.invalid) {
+      this.markFormGroupTouched(this.caseValueForm);
+      return;
+    }
+
+    this.isCalculating = true;
+    const formData = this.caseValueForm.value;
+
+    // Calculate locally first for immediate feedback
+    const medicalExpenses = formData.medicalExpenses || 0;
+    const lostWages = formData.lostWages || 0;
+    const futureMedical = formData.futureMedical || 0;
+    const economicDamages = medicalExpenses + lostWages + futureMedical;
+    const multiplier = this.getMultiplier();
+    const nonEconomicDamages = economicDamages * multiplier;
+    const totalCaseValue = economicDamages + nonEconomicDamages;
+    const comparativeNegligence = formData.comparativeNegligence || 0;
+    const adjustedCaseValue = totalCaseValue * (1 - comparativeNegligence / 100);
+
+    this.calculatedValue = {
+      medicalExpenses,
+      lostWages,
+      futureMedical,
+      economicDamages,
+      multiplier,
+      nonEconomicDamages,
+      totalCaseValue,
+      comparativeNegligence,
+      adjustedCaseValue
+    };
+
+    // Update latest case value
+    this.latestCaseValue = adjustedCaseValue;
+    localStorage.setItem('pi_latest_case_value', adjustedCaseValue.toString());
+
+    // Add to activity
+    this.addActivity('case-value', `${this.formatCompactCurrency(adjustedCaseValue)} Case Value`);
+
+    // Create chart
+    setTimeout(() => this.createDamageChart(), 100);
+
+    // Build case context for AI (if case is linked)
+    const caseContext = this.linkedCase ? {
+      caseNumber: this.linkedCase.caseNumber,
+      clientName: this.linkedCase.clientName,
+      caseType: this.linkedCase.type,
+      status: this.linkedCase.status,
+      description: this.linkedCase.description,
+      filingDate: this.linkedCase.importantDates?.filingDate,
+      courtInfo: this.linkedCase.courtInfo ?
+        `${this.linkedCase.courtInfo.countyName || ''} - ${this.linkedCase.courtInfo.judgeName || ''}` : null
+    } : null;
+
+    // Call AI for detailed analysis
+    this.http.post<any>(`${environment.apiUrl}/api/ai/personal-injury/analyze-case-value`, {
+      ...formData,
+      calculatedValue: this.calculatedValue,
+      caseContext
+    }).subscribe({
+      next: (response) => {
+        if (response.success && response.analysis) {
+          const contextInfo = {
+            'Injury Type': this.injuryTypes.find(i => i.value === formData.injuryType)?.label || formData.injuryType,
+            'Medical Expenses': `$${medicalExpenses.toLocaleString()}`,
+            'Lost Wages': `$${lostWages.toLocaleString()}`,
+            'Future Medical': `$${futureMedical.toLocaleString()}`,
+            'Multiplier': `${multiplier}x`,
+            'Estimated Case Value': `$${adjustedCaseValue.toLocaleString()}`
+          };
+          this.aiModalService.openCaseValueAnalysis(response.analysis, contextInfo);
+        }
+        this.isCalculating = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isCalculating = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  createDamageChart(): void {
+    if (!this.calculatedValue || !this.damageChartRef) return;
+
+    // Destroy existing chart
+    if (this.damageChart) {
+      this.damageChart.destroy();
+    }
+
+    const ctx = this.damageChartRef.nativeElement.getContext('2d');
+    if (!ctx) return;
+
+    this.damageChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Economic', 'Non-Economic'],
+        datasets: [{
+          data: [this.calculatedValue.economicDamages, this.calculatedValue.nonEconomicDamages],
+          backgroundColor: ['#405189', '#0ab39c'],
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        cutout: '60%',
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const value = context.raw as number;
+                return ` ${context.label}: ${this.formatCurrency(value)}`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  requestAIAnalysis(): void {
+    if (!this.calculatedValue) return;
+
+    const formData = this.caseValueForm.value;
+    this.http.post<any>(`${environment.apiUrl}/api/ai/personal-injury/analyze-case-value`, {
+      ...formData,
+      calculatedValue: this.calculatedValue
+    }).subscribe({
+      next: (response) => {
+        if (response.success && response.analysis) {
+          const contextInfo = {
+            'Injury Type': this.injuryTypes.find(i => i.value === formData.injuryType)?.label || formData.injuryType,
+            'Estimated Case Value': this.formatCurrency(this.calculatedValue!.adjustedCaseValue)
+          };
+          this.aiModalService.openCaseValueAnalysis(response.analysis, contextInfo);
+        }
+      },
+      error: (err) => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to get AI analysis. Please try again.',
+          customClass: { confirmButton: 'btn btn-primary' }
+        });
+      }
+    });
+  }
+
+  exportResults(): void {
+    // TODO: Implement export functionality
+    Swal.fire({
+      icon: 'info',
+      title: 'Export',
+      text: 'Export functionality coming soon!',
+      customClass: { confirmButton: 'btn btn-primary' }
+    });
+  }
+
+  // ==========================================
+  // Demand Letter Generator Methods
+  // ==========================================
+
+  setDemandMode(mode: 'express' | 'detailed'): void {
+    this.demandMode = mode;
+  }
+
+  calculateDemandTotal(): number {
+    const medical = this.demandForm.get('medicalExpenses')?.value || 0;
+    const wages = this.demandForm.get('lostWages')?.value || 0;
+    const future = this.demandForm.get('futureMedical')?.value || 0;
+    const multiplier = this.demandForm.get('painSufferingMultiplier')?.value || 2.5;
+    const economic = medical + wages + future;
+    const nonEconomic = economic * multiplier;
+    return economic + nonEconomic;
+  }
+
+  generateDemandLetter(): void {
+    if (this.demandForm.invalid) {
+      this.markFormGroupTouched(this.demandForm);
+      return;
+    }
+
+    this.isGeneratingDemand = true;
+    const formData = this.demandForm.value;
+    const totalDemand = this.calculateDemandTotal();
+
+    // Build case context for AI (if case is linked)
+    const caseContext = this.linkedCase ? {
+      caseNumber: this.linkedCase.caseNumber,
+      clientName: this.linkedCase.clientName,
+      caseType: this.linkedCase.type,
+      status: this.linkedCase.status,
+      description: this.linkedCase.description,
+      filingDate: this.linkedCase.importantDates?.filingDate,
+      courtInfo: this.linkedCase.courtInfo ?
+        `${this.linkedCase.courtInfo.countyName || ''} - ${this.linkedCase.courtInfo.judgeName || ''}` : null
+    } : null;
+
+    const requestData = {
+      ...formData,
+      totalDemand,
+      mode: this.demandMode,
+      painSufferingAmount: (formData.medicalExpenses + formData.lostWages + formData.futureMedical) * formData.painSufferingMultiplier,
+      caseContext
+    };
+
+    this.http.post<any>(`${environment.apiUrl}/api/ai/personal-injury/generate-demand-letter`, requestData)
+      .subscribe({
+        next: (response) => {
+          if (response.success && response.demandLetter) {
+            this.generatedDemand = response.demandLetter;
+
+            // Add to activity
+            this.addActivity('demand-letter', `${formData.clientName} v. ${formData.defendantName}`);
+
+            const contextInfo = {
+              'Client': formData.clientName,
+              'Defendant': formData.defendantName,
+              'Insurance Company': formData.insuranceCompany,
+              'Accident Date': formData.accidentDate,
+              'Total Demand': `$${totalDemand.toLocaleString()}`
+            };
+            this.aiModalService.openDemandLetter(response.demandLetter, contextInfo);
+          } else {
+            this.generatedDemand = 'Error generating demand letter. Please try again.';
+          }
+          this.isGeneratingDemand = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error generating demand letter:', error);
+          this.generatedDemand = 'Error connecting to AI service. Please try again later.';
+          this.isGeneratingDemand = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  exportDemandLetter(): void {
+    // TODO: Implement export functionality
+    Swal.fire({
+      icon: 'info',
+      title: 'Export',
+      text: 'Export functionality coming soon!',
+      customClass: { confirmButton: 'btn btn-primary' }
+    });
+  }
+
+  // ==========================================
+  // Medical Provider Tracker Methods
+  // ==========================================
+
+  addMedicalProvider(): void {
+    if (!this.newProvider.name || this.newProvider.totalBills <= 0) {
+      return;
+    }
+
+    this.medicalProviders.push({
+      ...this.newProvider,
+      id: Date.now().toString()
+    });
+
+    localStorage.setItem('pi_medical_providers', JSON.stringify(this.medicalProviders));
+
+    // Add to activity
+    this.addActivity('medical-tracker', `Added: ${this.newProvider.name}`);
+
+    // Reset form
+    this.newProvider = {
+      id: '',
+      name: '',
+      specialty: '',
+      treatmentDates: '',
+      totalBills: 0
+    };
+
+    // Update case value form with new total
+    this.updateMedicalExpensesTotal();
+  }
+
+  confirmRemoveProvider(id: string): void {
+    Swal.fire({
+      title: 'Remove Provider?',
+      text: 'Are you sure you want to remove this medical provider?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, remove',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        confirmButton: 'btn btn-danger me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.removeProvider(id);
+      }
+    });
+  }
+
+  removeProvider(id: string): void {
+    this.medicalProviders = this.medicalProviders.filter(p => p.id !== id);
+    localStorage.setItem('pi_medical_providers', JSON.stringify(this.medicalProviders));
+    this.updateMedicalExpensesTotal();
+  }
+
+  updateMedicalExpensesTotal(): void {
+    const total = this.medicalProviders.reduce((sum, p) => sum + p.totalBills, 0);
+    this.caseValueForm.patchValue({ medicalExpenses: total });
+    this.demandForm.patchValue({ medicalExpenses: total });
+  }
+
+  getTotalMedicalBills(): number {
+    return this.medicalProviders.reduce((sum, p) => sum + p.totalBills, 0);
+  }
+
+  getSpecialtyClass(specialty: string): string {
+    const classMap: Record<string, string> = {
+      'Emergency Medicine': 'emergency',
+      'Orthopedics': 'orthopedics',
+      'Neurology': 'neurology',
+      'Physical Therapy': 'physical-therapy',
+      'Chiropractic': 'chiropractic',
+      'Pain Management': 'pain-management',
+      'Surgery': 'surgery',
+      'Radiology': 'radiology',
+      'Primary Care': 'primary-care',
+      'Psychology/Psychiatry': 'psychology'
+    };
+    return classMap[specialty] || 'default';
+  }
+
+  // ==========================================
+  // Settlement Tracker Methods
+  // ==========================================
+
+  addSettlementEvent(): void {
+    if (this.settlementForm.invalid) {
+      return;
+    }
+
+    const event = {
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      ...this.settlementForm.value
+    };
+
+    this.settlementHistory.push(event);
+    localStorage.setItem('pi_settlement_history', JSON.stringify(this.settlementHistory));
+
+    // Add to activity
+    this.addActivity('settlement', `${this.formatCompactCurrency(this.settlementForm.value.demandAmount)} Settlement Event`);
+
+    // Reset form
+    this.settlementForm.reset();
+  }
+
+  confirmClearHistory(): void {
+    Swal.fire({
+      title: 'Clear Settlement History?',
+      text: 'Are you sure you want to clear all settlement history? This cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, clear all',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        confirmButton: 'btn btn-danger me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.clearSettlementHistory();
+      }
+    });
+  }
+
+  clearSettlementHistory(): void {
+    this.settlementHistory = [];
+    localStorage.removeItem('pi_settlement_history');
+  }
+
+  getLatestDemand(): number {
+    if (this.settlementHistory.length === 0) return 0;
+    const latest = this.settlementHistory[this.settlementHistory.length - 1];
+    return latest.demandAmount || 0;
+  }
+
+  getLatestOffer(): number {
+    if (this.settlementHistory.length === 0) return 0;
+    const latest = this.settlementHistory[this.settlementHistory.length - 1];
+    return latest.offerAmount || 0;
+  }
+
+  getNegotiationGap(): number {
+    return this.getLatestDemand() - this.getLatestOffer();
+  }
+
+  getOfferPercent(): number {
+    const demand = this.getLatestDemand();
+    const offer = this.getLatestOffer();
+    if (demand === 0) return 0;
+    return Math.min(100, (offer / demand) * 100);
+  }
+
+  // ==========================================
+  // Case Context Integration Methods
+  // ==========================================
+
+  onCaseSearchInput(event: Event): void {
+    const term = (event.target as HTMLInputElement).value;
+    this.caseSearchInput = term;
+    this.caseSearchTerm$.next(term);
+    this.showCaseDropdown = term.length >= 2;
+  }
+
+  selectCase(caseItem: LegalCase): void {
+    this.linkedCase = caseItem;
+    this.caseSearchInput = '';
+    this.searchResults = [];
+    this.showCaseDropdown = false;
+    this.workspaceState.setLinkedCase(Number(caseItem.id));
+
+    // Load full case details and prefill forms
+    this.loadCaseData(caseItem.id);
+  }
+
+  unlinkCase(): void {
+    this.linkedCase = null;
+    this.prefilledFromCase = false;
+    this.workspaceState.setLinkedCase(null);
+    Swal.fire({
+      icon: 'info',
+      title: 'Case Unlinked',
+      text: 'The case has been unlinked. Form data is preserved.',
+      timer: 2000,
+      showConfirmButton: false,
+      customClass: { popup: 'swal2-sm' }
+    });
+  }
+
+  loadCaseData(caseId: string): void {
+    this.caseService.getCaseById(caseId).subscribe({
+      next: (response) => {
+        if (response?.data?.case) {
+          const caseData = response.data.case as LegalCase;
+          this.linkedCase = caseData;
+          this.prefillFormsFromCase(caseData);
+          this.prefilledFromCase = true;
+          this.cdr.detectChanges();
+
+          // Load all professional platform data for the linked case
+          this.loadMedicalRecords();
+          this.loadDocumentChecklist();
+          this.loadDamageElements();
+          this.loadMedicalSummary();
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Case Linked',
+            html: `<strong>${caseData.caseNumber}</strong> has been linked.<br>Forms have been pre-filled with case data.`,
+            timer: 3000,
+            showConfirmButton: false,
+            customClass: { popup: 'swal2-sm' }
+          });
+        }
+      },
+      error: (err) => {
+        console.error('Error loading case data:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to load case data. Please try again.',
+          customClass: { confirmButton: 'btn btn-primary' }
+        });
+      }
+    });
+  }
+
+  prefillFormsFromCase(caseData: LegalCase): void {
+    // Pre-fill Case Value Calculator form
+    this.caseValueForm.patchValue({
+      injuryType: caseData.injuryType || 'soft_tissue',
+      injuryDescription: caseData.injuryDescription || '',
+      medicalExpenses: caseData.medicalExpensesTotal || 0,
+      lostWages: caseData.lostWages || 0,
+      futureMedical: caseData.futureMedicalEstimate || 0,
+      customMultiplier: caseData.painSufferingMultiplier || null,
+      liabilityAssessment: caseData.liabilityAssessment || 'CLEAR',
+      comparativeNegligence: caseData.comparativeNegligencePercent || 0
+    });
+
+    // Pre-fill Demand Letter form
+    this.demandForm.patchValue({
+      clientName: caseData.clientName || '',
+      defendantName: caseData.defendantName || '',
+      insuranceCompany: caseData.insuranceCompany || '',
+      adjusterName: caseData.insuranceAdjusterName || '',
+      accidentDate: caseData.injuryDate ? this.formatDateForInput(caseData.injuryDate) : '',
+      accidentLocation: caseData.accidentLocation || '',
+      injuryType: caseData.injuryType || '',
+      injuryDescription: caseData.injuryDescription || '',
+      medicalExpenses: caseData.medicalExpensesTotal || 0,
+      lostWages: caseData.lostWages || 0,
+      futureMedical: caseData.futureMedicalEstimate || 0,
+      policyLimit: caseData.insurancePolicyLimit || null,
+      painSufferingMultiplier: caseData.painSufferingMultiplier || 2.5
+    });
+
+    // Pre-fill Settlement form
+    this.settlementForm.patchValue({
+      demandAmount: caseData.settlementDemandAmount || 0,
+      offerAmount: caseData.settlementOfferAmount || 0
+    });
+
+    // Load medical providers from case data (if JSON string)
+    if (caseData.medicalProviders) {
+      try {
+        const providers = JSON.parse(caseData.medicalProviders);
+        if (Array.isArray(providers)) {
+          this.medicalProviders = providers;
+          localStorage.setItem('pi_medical_providers', JSON.stringify(this.medicalProviders));
+        }
+      } catch (e) {
+        console.log('Could not parse medical providers from case');
+      }
+    }
+  }
+
+  formatDateForInput(date: Date | string): string {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toISOString().split('T')[0];
+  }
+
+  // Save methods for syncing back to case
+  saveCaseValueToCase(): void {
+    if (!this.linkedCase || !this.calculatedValue) return;
+
+    const formData = this.caseValueForm.value;
+    const updateData = {
+      injuryType: formData.injuryType,
+      injuryDescription: formData.injuryDescription,
+      medicalExpensesTotal: formData.medicalExpenses,
+      lostWages: formData.lostWages,
+      futureMedicalEstimate: formData.futureMedical,
+      painSufferingMultiplier: this.getMultiplier(),
+      liabilityAssessment: formData.liabilityAssessment,
+      comparativeNegligencePercent: formData.comparativeNegligence
+    };
+
+    this.caseService.updateCase(String(this.linkedCase.id), updateData).subscribe({
+      next: () => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Saved to Case',
+          text: 'Case value data has been saved to the linked case.',
+          timer: 2500,
+          showConfirmButton: false
+        });
+      },
+      error: () => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Save Failed',
+          text: 'Could not save data to case. Please try again.',
+          customClass: { confirmButton: 'btn btn-primary' }
+        });
+      }
+    });
+  }
+
+  saveMedicalProvidersToCase(): void {
+    if (!this.linkedCase) return;
+
+    const medicalTotal = this.getTotalMedicalBills();
+    const updateData = {
+      medicalProviders: JSON.stringify(this.medicalProviders),
+      medicalExpensesTotal: medicalTotal
+    };
+
+    this.caseService.updateCase(String(this.linkedCase.id), updateData).subscribe({
+      next: () => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Saved to Case',
+          text: 'Medical providers have been saved to the linked case.',
+          timer: 2500,
+          showConfirmButton: false
+        });
+      },
+      error: () => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Save Failed',
+          text: 'Could not save medical providers to case. Please try again.',
+          customClass: { confirmButton: 'btn btn-primary' }
+        });
+      }
+    });
+  }
+
+  saveSettlementToCase(): void {
+    if (!this.linkedCase) return;
+
+    const formData = this.settlementForm.value;
+    const updateData = {
+      settlementDemandAmount: formData.demandAmount || this.getLatestDemand(),
+      settlementOfferAmount: formData.offerAmount || this.getLatestOffer()
+    };
+
+    this.caseService.updateCase(String(this.linkedCase.id), updateData).subscribe({
+      next: () => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Saved to Case',
+          text: 'Settlement data has been saved to the linked case.',
+          timer: 2500,
+          showConfirmButton: false
+        });
+      },
+      error: () => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Save Failed',
+          text: 'Could not save settlement data to case. Please try again.',
+          customClass: { confirmButton: 'btn btn-primary' }
+        });
+      }
+    });
+  }
+
+  saveDemandDataToCase(): void {
+    if (!this.linkedCase) return;
+
+    const formData = this.demandForm.value;
+    const updateData = {
+      defendantName: formData.defendantName,
+      insuranceCompany: formData.insuranceCompany,
+      insuranceAdjusterName: formData.adjusterName,
+      insurancePolicyLimit: formData.policyLimit,
+      accidentLocation: formData.accidentLocation
+    };
+
+    this.caseService.updateCase(String(this.linkedCase.id), updateData).subscribe({
+      next: () => {
+        Swal.fire({
+          icon: 'success',
+          title: 'Saved to Case',
+          text: 'Demand letter data has been saved to the linked case.',
+          timer: 2500,
+          showConfirmButton: false
+        });
+      },
+      error: () => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Save Failed',
+          text: 'Could not save demand data to case. Please try again.',
+          customClass: { confirmButton: 'btn btn-primary' }
+        });
+      }
+    });
+  }
+
+  // Get dashboard stats from linked case
+  getLinkedCaseValue(): number {
+    if (!this.linkedCase) return this.latestCaseValue;
+    const medical = this.linkedCase.medicalExpensesTotal || 0;
+    const wages = this.linkedCase.lostWages || 0;
+    const future = this.linkedCase.futureMedicalEstimate || 0;
+    const multiplier = this.linkedCase.painSufferingMultiplier || 2;
+    const economic = medical + wages + future;
+    const total = economic + (economic * multiplier);
+    const negligence = this.linkedCase.comparativeNegligencePercent || 0;
+    return total * (1 - negligence / 100);
+  }
+
+  getLinkedCaseMedicalTotal(): number {
+    if (!this.linkedCase) return this.getTotalMedicalBills();
+    return this.linkedCase.medicalExpensesTotal || this.getTotalMedicalBills();
+  }
+
+  getDaysSinceInjury(): number | null {
+    if (!this.linkedCase?.injuryDate) return null;
+    const injuryDate = new Date(this.linkedCase.injuryDate);
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - injuryDate.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  closeCaseDropdown(): void {
+    setTimeout(() => {
+      this.showCaseDropdown = false;
+    }, 200);
+  }
+
+  // ==========================================
+  // PI Professional Platform Methods
+  // ==========================================
+
+  // --- Medical Records (Professional) ---
+
+  loadMedicalRecords(): void {
+    if (!this.linkedCase?.id) return;
+
+    this.isLoadingMedicalRecords = true;
+    this.medicalRecordService.getRecordsByCaseId(Number(this.linkedCase.id)).subscribe({
+      next: (records) => {
+        this.medicalRecords = records;
+        this.isLoadingMedicalRecords = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading medical records:', err);
+        this.isLoadingMedicalRecords = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  scanCaseDocuments(): void {
+    if (!this.linkedCase?.id) return;
+
+    this.isScanningDocuments = true;
+    this.scanResult = null;
+
+    Swal.fire({
+      title: 'Scanning Documents',
+      html: 'Analyzing case documents with AI...<br><small>This may take a minute.</small>',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    this.medicalRecordService.scanCaseDocuments(Number(this.linkedCase.id)).subscribe({
+      next: (result) => {
+        this.scanResult = result;
+        this.isScanningDocuments = false;
+        this.loadMedicalRecords(); // Refresh the records list
+        this.cdr.detectChanges();
+
+        Swal.fire({
+          icon: result.recordsCreated > 0 ? 'success' : 'info',
+          title: 'Scan Complete',
+          html: `
+            <div class="text-start">
+              <p><strong>Documents Scanned:</strong> ${result.documentsScanned}</p>
+              <p><strong>Records Created:</strong> ${result.recordsCreated}</p>
+              ${result.errors?.length > 0 ? `<p class="text-warning"><strong>Errors:</strong> ${result.errors.length}</p>` : ''}
+            </div>
+            ${result.recordsCreated > 0 ? '<p class="text-success mt-2">Medical records have been auto-populated from your documents.</p>' : '<p class="text-muted mt-2">No new medical documents found to process.</p>'}
+          `,
+          confirmButtonText: 'View Records'
+        }).then(() => {
+          // Navigate to Medical Records tab to show the auto-populated records
+          this.activeTab = 'medical-records';
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => {
+        console.error('Error scanning documents:', err);
+        this.isScanningDocuments = false;
+        this.cdr.detectChanges();
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Scan Failed',
+          text: err.error?.message || 'Failed to scan documents. Please try again.',
+          confirmButtonText: 'OK'
+        });
+      }
+    });
+  }
+
+  saveMedicalRecord(): void {
+    if (!this.linkedCase?.id || this.medicalRecordForm.invalid) {
+      this.markFormGroupTouched(this.medicalRecordForm);
+      return;
+    }
+
+    const recordData: PIMedicalRecord = {
+      ...this.medicalRecordForm.value,
+      caseId: Number(this.linkedCase.id)
+    };
+
+    if (this.editingMedicalRecord?.id) {
+      // Update existing
+      this.medicalRecordService.updateRecord(
+        Number(this.linkedCase.id),
+        this.editingMedicalRecord.id,
+        recordData
+      ).subscribe({
+        next: () => {
+          this.loadMedicalRecords();
+          this.resetMedicalRecordForm();
+          Swal.fire({
+            icon: 'success',
+            title: 'Record Updated',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        },
+        error: (err) => {
+          console.error('Error updating record:', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to update medical record'
+          });
+        }
+      });
+    } else {
+      // Create new
+      this.medicalRecordService.createRecord(Number(this.linkedCase.id), recordData).subscribe({
+        next: () => {
+          this.loadMedicalRecords();
+          this.resetMedicalRecordForm();
+          Swal.fire({
+            icon: 'success',
+            title: 'Record Added',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        },
+        error: (err) => {
+          console.error('Error creating record:', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to create medical record'
+          });
+        }
+      });
+    }
+  }
+
+  editMedicalRecord(record: PIMedicalRecord): void {
+    this.editingMedicalRecord = record;
+    this.medicalRecordForm.patchValue({
+      providerName: record.providerName,
+      providerType: record.providerType,
+      providerNpi: record.providerNpi,
+      providerAddress: record.providerAddress,
+      providerPhone: record.providerPhone,
+      recordType: record.recordType,
+      treatmentDate: record.treatmentDate,
+      treatmentEndDate: record.treatmentEndDate,
+      billedAmount: record.billedAmount,
+      adjustedAmount: record.adjustedAmount,
+      paidAmount: record.paidAmount,
+      keyFindings: record.keyFindings,
+      treatmentProvided: record.treatmentProvided,
+      prognosisNotes: record.prognosisNotes,
+      workRestrictions: record.workRestrictions
+    });
+  }
+
+  deleteMedicalRecord(record: PIMedicalRecord): void {
+    if (!this.linkedCase?.id || !record.id) return;
+
+    Swal.fire({
+      title: 'Delete Record?',
+      text: `Are you sure you want to delete the record for ${record.providerName}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        confirmButton: 'btn btn-danger me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.medicalRecordService.deleteRecord(Number(this.linkedCase!.id), record.id!).subscribe({
+          next: () => {
+            this.loadMedicalRecords();
+            Swal.fire({
+              icon: 'success',
+              title: 'Deleted',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          },
+          error: (err) => {
+            console.error('Error deleting record:', err);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Failed to delete medical record'
+            });
+          }
+        });
+      }
+    });
+  }
+
+  resetMedicalRecordForm(): void {
+    this.editingMedicalRecord = null;
+    this.medicalRecordForm.reset({
+      recordType: 'FOLLOW_UP',
+      billedAmount: 0,
+      adjustedAmount: 0,
+      paidAmount: 0
+    });
+  }
+
+  // --- Medical Summary ---
+
+  loadMedicalSummary(): void {
+    if (!this.linkedCase?.id) return;
+
+    this.medicalSummaryService.getMedicalSummary(Number(this.linkedCase.id)).subscribe({
+      next: (result) => {
+        this.medicalSummary = result.summary;
+        this.summaryExists = result.exists;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading medical summary:', err);
+      }
+    });
+  }
+
+  generateMedicalSummary(): void {
+    if (!this.linkedCase?.id) return;
+
+    this.isGeneratingSummary = true;
+    this.medicalSummaryService.generateMedicalSummary(Number(this.linkedCase.id)).subscribe({
+      next: (summary) => {
+        this.medicalSummary = summary;
+        this.summaryExists = true;
+        this.isGeneratingSummary = false;
+        this.cdr.detectChanges();
+        Swal.fire({
+          icon: 'success',
+          title: 'Summary Generated',
+          text: `Completeness Score: ${summary.completenessScore}%`,
+          timer: 3000,
+          showConfirmButton: false
+        });
+      },
+      error: (err) => {
+        console.error('Error generating summary:', err);
+        this.isGeneratingSummary = false;
+        this.cdr.detectChanges();
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: err.error?.message || 'Failed to generate medical summary. Make sure you have medical records entered.'
+        });
+      }
+    });
+  }
+
+  // --- Document Checklist ---
+
+  loadDocumentChecklist(): void {
+    if (!this.linkedCase?.id) return;
+
+    this.isLoadingChecklist = true;
+    this.documentChecklistService.getChecklistByCaseId(Number(this.linkedCase.id)).subscribe({
+      next: (checklist) => {
+        this.documentChecklist = checklist;
+        this.isLoadingChecklist = false;
+        this.loadDocumentCompleteness();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading checklist:', err);
+        this.isLoadingChecklist = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  initializeDocumentChecklist(): void {
+    if (!this.linkedCase?.id) return;
+
+    this.isLoadingChecklist = true;
+    this.documentChecklistService.initializeDefaultChecklist(Number(this.linkedCase.id)).subscribe({
+      next: (checklist) => {
+        this.documentChecklist = checklist;
+        this.isLoadingChecklist = false;
+        this.loadDocumentCompleteness();
+        this.cdr.detectChanges();
+        Swal.fire({
+          icon: 'success',
+          title: 'Checklist Initialized',
+          text: `${checklist.length} document items created`,
+          timer: 2500,
+          showConfirmButton: false
+        });
+      },
+      error: (err) => {
+        console.error('Error initializing checklist:', err);
+        this.isLoadingChecklist = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  loadDocumentCompleteness(): void {
+    if (!this.linkedCase?.id) return;
+
+    this.documentChecklistService.getCompletenessScore(Number(this.linkedCase.id)).subscribe({
+      next: (completeness) => {
+        this.documentCompleteness = completeness;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading completeness:', err);
+      }
+    });
+  }
+
+  markDocumentReceived(item: PIDocumentChecklist): void {
+    if (!this.linkedCase?.id || !item.id) return;
+
+    this.documentChecklistService.markAsReceived(Number(this.linkedCase.id), item.id).subscribe({
+      next: () => {
+        this.loadDocumentChecklist();
+        Swal.fire({
+          icon: 'success',
+          title: 'Document Received',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      },
+      error: (err) => {
+        console.error('Error marking received:', err);
+      }
+    });
+  }
+
+  requestDocument(item: PIDocumentChecklist): void {
+    if (!this.linkedCase?.id || !item.id) return;
+
+    Swal.fire({
+      title: 'Request Document',
+      input: 'text',
+      inputLabel: 'Request sent to:',
+      inputPlaceholder: 'e.g., Boston Medical Center Records Dept',
+      showCancelButton: true,
+      confirmButtonText: 'Log Request',
+      customClass: {
+        confirmButton: 'btn btn-primary me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.documentChecklistService.requestDocument(
+          Number(this.linkedCase!.id),
+          item.id!,
+          result.value
+        ).subscribe({
+          next: () => {
+            this.loadDocumentChecklist();
+            Swal.fire({
+              icon: 'success',
+              title: 'Request Logged',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          },
+          error: (err) => {
+            console.error('Error logging request:', err);
+          }
+        });
+      }
+    });
+  }
+
+  // --- Damage Calculation (Professional) ---
+
+  loadDamageElements(): void {
+    if (!this.linkedCase?.id) return;
+
+    this.isLoadingDamages = true;
+    this.damageCalculationService.getDamageElements(Number(this.linkedCase.id)).subscribe({
+      next: (elements) => {
+        this.damageElements = elements;
+        this.isLoadingDamages = false;
+        this.loadDamageCalculation();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading damage elements:', err);
+        this.isLoadingDamages = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  loadDamageCalculation(): void {
+    if (!this.linkedCase?.id) return;
+
+    this.damageCalculationService.getDamageCalculation(Number(this.linkedCase.id)).subscribe({
+      next: (calculation) => {
+        this.damageCalculation = calculation;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading damage calculation:', err);
+      }
+    });
+  }
+
+  addDamageElement(): void {
+    if (!this.linkedCase?.id || !this.newDamageElement.elementName) return;
+
+    const element: PIDamageElement = {
+      caseId: Number(this.linkedCase.id),
+      elementType: this.newDamageElement.elementType || 'PAST_MEDICAL',
+      elementName: this.newDamageElement.elementName,
+      calculationMethod: this.newDamageElement.calculationMethod || 'ACTUAL',
+      baseAmount: this.newDamageElement.baseAmount || 0,
+      calculatedAmount: this.newDamageElement.calculatedAmount || this.newDamageElement.baseAmount || 0,
+      confidenceLevel: this.newDamageElement.confidenceLevel || 'MEDIUM',
+      notes: this.newDamageElement.notes
+    };
+
+    this.damageCalculationService.createDamageElement(Number(this.linkedCase.id), element).subscribe({
+      next: () => {
+        this.loadDamageElements();
+        this.resetNewDamageElement();
+        Swal.fire({
+          icon: 'success',
+          title: 'Damage Element Added',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      },
+      error: (err) => {
+        console.error('Error adding damage element:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to add damage element'
+        });
+      }
+    });
+  }
+
+  deleteDamageElement(element: PIDamageElement): void {
+    if (!this.linkedCase?.id || !element.id) return;
+
+    Swal.fire({
+      title: 'Delete Damage Element?',
+      text: `Are you sure you want to delete "${element.elementName}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        confirmButton: 'btn btn-danger me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.damageCalculationService.deleteDamageElement(
+          Number(this.linkedCase!.id),
+          element.id!
+        ).subscribe({
+          next: () => {
+            this.loadDamageElements();
+            Swal.fire({
+              icon: 'success',
+              title: 'Deleted',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          },
+          error: (err) => {
+            console.error('Error deleting element:', err);
+          }
+        });
+      }
+    });
+  }
+
+  calculateComprehensiveDamages(): void {
+    if (!this.linkedCase?.id) return;
+
+    this.isCalculatingDamages = true;
+    const caseContext = {
+      injuryType: this.linkedCase.injuryType || this.caseValueForm.get('injuryType')?.value,
+      jurisdiction: 'Massachusetts'
+    };
+
+    this.damageCalculationService.calculateDamagesWithAI(
+      Number(this.linkedCase.id),
+      caseContext
+    ).subscribe({
+      next: (calculation) => {
+        this.damageCalculation = calculation;
+        this.isCalculatingDamages = false;
+        this.cdr.detectChanges();
+
+        // Show AI analysis in modal if available
+        if (calculation.comparableAnalysis?.success && calculation.comparableAnalysis.analysis) {
+          this.aiModalService.openCaseValueAnalysis(
+            calculation.comparableAnalysis.analysis,
+            {
+              'Total Damages': this.formatCurrency(calculation.adjustedDamagesTotal || 0),
+              'Economic': this.formatCurrency(calculation.economicDamagesTotal || 0),
+              'Non-Economic': this.formatCurrency(calculation.nonEconomicDamagesTotal || 0),
+              'Value Range': `${this.formatCurrency(calculation.lowValue || 0)} - ${this.formatCurrency(calculation.highValue || 0)}`
+            }
+          );
+        }
+      },
+      error: (err) => {
+        console.error('Error calculating damages:', err);
+        this.isCalculatingDamages = false;
+        this.cdr.detectChanges();
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to calculate damages'
+        });
+      }
+    });
+  }
+
+  syncMedicalExpenses(): void {
+    if (!this.linkedCase?.id) return;
+
+    this.damageCalculationService.syncMedicalExpenses(Number(this.linkedCase.id)).subscribe({
+      next: () => {
+        this.loadDamageElements();
+        Swal.fire({
+          icon: 'success',
+          title: 'Medical Expenses Synced',
+          text: 'Past medical expenses updated from medical records',
+          timer: 2500,
+          showConfirmButton: false
+        });
+      },
+      error: (err) => {
+        console.error('Error syncing medical expenses:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to sync medical expenses'
+        });
+      }
+    });
+  }
+
+  resetNewDamageElement(): void {
+    this.newDamageElement = {
+      elementType: 'PAST_MEDICAL',
+      elementName: '',
+      calculationMethod: 'ACTUAL',
+      baseAmount: 0,
+      calculatedAmount: 0,
+      confidenceLevel: 'MEDIUM'
+    };
+  }
+
+  getDamageTypeIcon(type: string): string {
+    const found = this.damageElementTypes.find(t => t.value === type);
+    return found?.icon || 'ri-file-list-line';
+  }
+
+  getDamageTypeLabel(type: string): string {
+    const found = this.damageElementTypes.find(t => t.value === type);
+    return found?.label || type;
+  }
+
+  getStatusColor(status: string): string {
+    const found = this.documentStatuses.find(s => s.value === status);
+    return found?.color || 'secondary';
+  }
+
+  getConfidenceColor(level: string): string {
+    const found = this.confidenceLevels.find(c => c.value === level);
+    return found?.color || 'secondary';
+  }
+
+  // ==========================================
+  // Sample Data Loaders
+  // ==========================================
+
+  loadCaseValueSample(): void {
+    this.caseValueForm.patchValue({
+      injuryType: 'disc_injury',
+      injuryDescription: 'L4-L5 disc herniation with radiculopathy following rear-end motor vehicle collision. Client underwent 6 months of physical therapy and received epidural steroid injections. Ongoing pain affecting daily activities and work capacity.',
+      medicalExpenses: 45000,
+      lostWages: 18000,
+      futureMedical: 25000,
+      liabilityAssessment: 'CLEAR',
+      comparativeNegligence: 0
+    });
+  }
+
+  loadDemandSample(): void {
+    this.demandForm.patchValue({
+      clientName: 'John Smith',
+      defendantName: 'Jane Doe',
+      insuranceCompany: 'ABC Insurance Company',
+      adjusterName: 'Michael Johnson',
+      claimNumber: 'CLM-2024-123456',
+      accidentDate: '2024-06-15',
+      accidentLocation: 'Intersection of Main Street and Oak Avenue, Boston, MA',
+      injuryType: 'disc_injury',
+      injuryDescription: 'L4-L5 disc herniation with radiculopathy. Client experienced immediate neck and back pain following the collision. MRI confirmed disc herniation at L4-L5 level with nerve root impingement.',
+      liabilityDetails: 'Defendant failed to stop at red light and struck client vehicle from behind while client was lawfully stopped. Police report confirms defendant at fault. No contributing factors from client.',
+      medicalExpenses: 45000,
+      lostWages: 18000,
+      futureMedical: 25000,
+      policyLimit: 100000,
+      painSufferingMultiplier: 3.0
+    });
+
+    // Also load sample medical providers
+    this.medicalProviders = [
+      {
+        id: '1',
+        name: 'Boston Medical Center ER',
+        specialty: 'Emergency Medicine',
+        treatmentDates: '2024-06-15',
+        totalBills: 8500
+      },
+      {
+        id: '2',
+        name: 'Dr. Sarah Wilson',
+        specialty: 'Orthopedics',
+        treatmentDates: '2024-06-20 - 2024-12-15',
+        totalBills: 12000
+      },
+      {
+        id: '3',
+        name: 'Boston Physical Therapy',
+        specialty: 'Physical Therapy',
+        treatmentDates: '2024-07-01 - 2024-12-31',
+        totalBills: 18000
+      },
+      {
+        id: '4',
+        name: 'Advanced Imaging Center',
+        specialty: 'Radiology',
+        treatmentDates: '2024-06-18, 2024-09-15',
+        totalBills: 6500
+      }
+    ];
+    localStorage.setItem('pi_medical_providers', JSON.stringify(this.medicalProviders));
+  }
+
+  // ==========================================
+  // Helper Methods
+  // ==========================================
+
+  getSpecialtyIcon(specialty: string): string {
+    const icons: Record<string, string> = {
+      'Emergency Medicine': 'ri-hospital-line',
+      'Orthopedics': 'ri-body-scan-line',
+      'Neurology': 'ri-brain-line',
+      'Physical Therapy': 'ri-walk-line',
+      'Chiropractic': 'ri-spine-line',
+      'Pain Management': 'ri-medicine-bottle-line',
+      'Surgery': 'ri-surgical-mask-line',
+      'Radiology': 'ri-scan-line',
+      'Primary Care': 'ri-stethoscope-line',
+      'Psychology/Psychiatry': 'ri-mental-health-line'
+    };
+    return icons[specialty] || 'ri-hospital-line';
+  }
+
+  getToolIcon(toolType: string): string {
+    const icons: Record<string, string> = {
+      'case-value': 'ri-calculator-line',
+      'demand-letter': 'ri-file-text-line',
+      'medical-tracker': 'ri-hospital-line',
+      'settlement': 'ri-money-dollar-circle-line'
+    };
+    return icons[toolType] || 'ri-tools-line';
+  }
+
+  getToolName(toolType: string): string {
+    const names: Record<string, string> = {
+      'case-value': 'Case Value Calculator',
+      'demand-letter': 'Demand Letter Generator',
+      'medical-tracker': 'Medical Provider Tracker',
+      'settlement': 'Settlement Tracker'
+    };
+    return names[toolType] || toolType;
+  }
+
+  formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  }
+
+  formatCompactCurrency(amount: number): string {
+    if (amount === 0) return '$0';
+    if (amount >= 1000000) {
+      return '$' + (amount / 1000000).toFixed(1) + 'M';
+    }
+    if (amount >= 1000) {
+      return '$' + Math.round(amount / 1000) + 'K';
+    }
+    return this.formatCurrency(amount);
+  }
+
+  formatActivityTime(timestamp: Date | string): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+}

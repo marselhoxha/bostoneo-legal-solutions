@@ -94,6 +94,76 @@ public class LegalCaseDTO {
     // Assigned attorneys for display in case list
     private List<AssignedAttorneyDTO> assignedAttorneys;
 
+    // ============================================
+    // Personal Injury (PI) Specific Fields
+    // ============================================
+
+    // Injury Information
+    private Date injuryDate;
+    private String injuryType;
+    private String injuryDescription;
+    private String accidentLocation;
+    private String liabilityAssessment;
+    private Integer comparativeNegligencePercent;
+
+    // Medical Providers (JSON string or parsed list)
+    private String medicalProviders;
+
+    // Financial Damages
+    private BigDecimal medicalExpensesTotal;
+    private BigDecimal lostWages;
+    private BigDecimal futureMedicalEstimate;
+    private BigDecimal painSufferingMultiplier;
+
+    // Settlement Information
+    private BigDecimal settlementDemandAmount;
+    private BigDecimal settlementOfferAmount;
+    private BigDecimal settlementFinalAmount;
+    private Date settlementDate;
+
+    // Insurance Information
+    private String insuranceCompany;
+    private String insurancePolicyNumber;
+    private BigDecimal insurancePolicyLimit;
+    private String insuranceAdjusterName;
+    private String insuranceAdjusterContact;
+
+    // Defendant Information
+    private String defendantName;
+    private String defendantAddress;
+
+    // ============================================
+    // PI Computed Fields (for Case Value Calculator)
+    // ============================================
+
+    // Get total economic damages
+    public BigDecimal getEconomicDamages() {
+        BigDecimal medical = medicalExpensesTotal != null ? medicalExpensesTotal : BigDecimal.ZERO;
+        BigDecimal wages = lostWages != null ? lostWages : BigDecimal.ZERO;
+        BigDecimal future = futureMedicalEstimate != null ? futureMedicalEstimate : BigDecimal.ZERO;
+        return medical.add(wages).add(future);
+    }
+
+    // Get non-economic damages (pain & suffering)
+    public BigDecimal getNonEconomicDamages() {
+        BigDecimal multiplier = painSufferingMultiplier != null ? painSufferingMultiplier : new BigDecimal("2.0");
+        return getEconomicDamages().multiply(multiplier);
+    }
+
+    // Get total case value before negligence adjustment
+    public BigDecimal getTotalCaseValue() {
+        return getEconomicDamages().add(getNonEconomicDamages());
+    }
+
+    // Get adjusted case value (after comparative negligence)
+    public BigDecimal getAdjustedCaseValue() {
+        if (comparativeNegligencePercent == null || comparativeNegligencePercent == 0) {
+            return getTotalCaseValue();
+        }
+        BigDecimal reduction = new BigDecimal(100 - comparativeNegligencePercent).divide(new BigDecimal("100"));
+        return getTotalCaseValue().multiply(reduction);
+    }
+
     // Helper method to generate rate configuration summary
     public String getRateConfigurationSummary() {
         if (defaultRate == null) {
