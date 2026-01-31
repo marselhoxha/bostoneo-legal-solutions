@@ -712,3 +712,26 @@ body > div > .dropdown-menu.user-profile-dropdown {
   border: 1px solid var(--vz-border-color);
 }
 
+
+
+// ==========================================
+// GLOBAL: Citation Viewer Modal Styles
+// ==========================================
+.citation-viewer-modal-window {
+  .modal-dialog {
+    max-width: 700px;
+  }
+
+  .modal-content {
+    border: none !important;
+    border-radius: 0;
+    overflow: hidden;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .modal-body {
+    padding: 0 !important;
+    background: transparent;
+  }
+}

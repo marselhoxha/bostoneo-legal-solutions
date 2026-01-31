@@ -1,0 +1,39 @@
+<button type="button" class="btn-close-float" (click)="activeModal.dismiss()">
+  <i class="ri-close-line"></i>
+</button>
+
+<div class="loading-state" *ngIf="isLoading">
+  <div class="spinner-border" role="status"></div>
+</div>
+
+<div class="error-state" *ngIf="hasError">
+  <p>{{ errorMessage }}</p>
+  <button class="btn btn-sm btn-light" (click)="loadDocument()">Retry</button>
+</div>
+
+<ngx-extended-pdf-viewer
+  *ngIf="!isLoading && !hasError && pdfSrc"
+  [src]="pdfSrc"
+  [page]="page"
+  [zoom]="zoom"
+  [showToolbar]="false"
+  [showSidebarButton]="false"
+  [showFindButton]="false"
+  [showPagingButtons]="false"
+  [showZoomButtons]="false"
+  [showPresentationModeButton]="false"
+  [showOpenFileButton]="false"
+  [showPrintButton]="false"
+  [showDownloadButton]="false"
+  [showSecondaryToolbarButton]="false"
+  [showRotateButton]="false"
+  [showHandToolButton]="false"
+  [showScrollingButton]="false"
+  [showSpreadButton]="false"
+  [showPropertiesButton]="false"
+  [textLayer]="true"
+  [handTool]="false"
+  (pdfLoaded)="onPdfLoaded()"
+  (pageChange)="onPageChange($event)"
+  height="100%"
+></ngx-extended-pdf-viewer>

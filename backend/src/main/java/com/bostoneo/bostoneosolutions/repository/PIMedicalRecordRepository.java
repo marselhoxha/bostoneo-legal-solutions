@@ -110,4 +110,23 @@ public interface PIMedicalRecordRepository extends JpaRepository<PIMedicalRecord
      * Find medical record by document ID
      */
     Optional<PIMedicalRecord> findByDocumentIdAndOrganizationId(Long documentId, Long organizationId);
+
+    /**
+     * Find record IDs that have a linked document but no citation metadata.
+     * Used for batch re-scanning existing records.
+     */
+    @Query("SELECT m.id FROM PIMedicalRecord m " +
+           "WHERE m.organizationId = :orgId " +
+           "AND m.documentId IS NOT NULL " +
+           "AND m.citationMetadata IS NULL")
+    List<Long> findRecordIdsWithoutCitationMetadata(@Param("orgId") Long organizationId);
+
+    /**
+     * Count records that need citation metadata re-scan
+     */
+    @Query("SELECT COUNT(m) FROM PIMedicalRecord m " +
+           "WHERE m.organizationId = :orgId " +
+           "AND m.documentId IS NOT NULL " +
+           "AND m.citationMetadata IS NULL")
+    long countRecordsWithoutCitationMetadata(@Param("orgId") Long organizationId);
 }

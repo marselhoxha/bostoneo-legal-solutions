@@ -5,7 +5,7 @@ import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subject, BehaviorSubject, Observable, of } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, switchMap, catchError, map } from 'rxjs/operators';
-import { NgbNavModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbNavModule, NgbDropdownModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { PracticeAreaBaseComponent } from '../../shared/practice-area-base.component';
 import { AiResponseFormatterPipe } from '../../shared/ai-response-formatter.pipe';
 import { AiResponseModalService } from '../../shared/services/ai-response-modal.service';
@@ -27,8 +27,11 @@ import { PIMedicalSummaryService } from '../../shared/services/pi-medical-summar
 import {
   PIMedicalRecord,
   RECORD_TYPES,
-  PROVIDER_TYPES
+  PROVIDER_TYPES,
+  FieldCitation,
+  CitationMetadata
 } from '../../shared/models/pi-medical-record.model';
+import { CitationViewerModalComponent } from '../../citation-viewer-modal/citation-viewer-modal.component';
 import {
   PIDocumentChecklist,
   DocumentCompletenessScore,
@@ -247,7 +250,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     private medicalRecordService: PIMedicalRecordService,
     private documentChecklistService: PIDocumentChecklistService,
     private damageCalculationService: PIDamageCalculationService,
-    private medicalSummaryService: PIMedicalSummaryService
+    private medicalSummaryService: PIMedicalSummaryService,
+    private modalService: NgbModal
   ) {
     super();
 
@@ -1763,6 +1767,95 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   getConfidenceColor(level: string): string {
     const found = this.confidenceLevels.find(c => c.value === level);
     return found?.color || 'secondary';
+  }
+
+  // ==========================================
+  // Smart Citation Methods
+  // ==========================================
+
+  /**
+   * Check if a medical record has citation metadata for a specific field
+   */
+  hasCitation(record: PIMedicalRecord, fieldName: string): boolean {
+    if (!record.citationMetadata || !record.documentId) {
+      return false;
+    }
+    const citation = record.citationMetadata[fieldName];
+    return citation !== undefined && citation !== null;
+  }
+
+  /**
+   * Get citation data for a specific field
+   */
+  getCitation(record: PIMedicalRecord, fieldName: string): FieldCitation | null {
+    if (!this.hasCitation(record, fieldName)) {
+      return null;
+    }
+    return record.citationMetadata![fieldName] as FieldCitation;
+  }
+
+  /**
+   * Get the field value for display in the citation viewer
+   */
+  getFieldValue(record: PIMedicalRecord, fieldName: string): string {
+    const fieldValues: Record<string, string | undefined> = {
+      treatmentDate: record.treatmentDate,
+      providerName: record.providerName,
+      recordType: record.recordType,
+      keyFindings: record.keyFindings,
+      treatmentProvided: record.treatmentProvided
+    };
+    return fieldValues[fieldName] || '';
+  }
+
+  /**
+   * Open the citation viewer modal for a specific field
+   */
+  openCitation(record: PIMedicalRecord, fieldName: string): void {
+    // Only open if there's citation data and a linked document
+    if (!this.hasCitation(record, fieldName)) {
+      // If no citation but document exists, still allow viewing the document
+      if (record.documentId) {
+        this.openDocumentViewer(record);
+      }
+      return;
+    }
+
+    const citation = this.getCitation(record, fieldName);
+    if (!citation) return;
+
+    const modalRef = this.modalService.open(CitationViewerModalComponent, {
+      size: 'lg',
+      centered: true,
+      backdrop: 'static',
+      windowClass: 'citation-viewer-modal-window'
+    });
+
+    modalRef.componentInstance.documentId = record.documentId;
+    modalRef.componentInstance.documentName = record.documentName || `Document #${record.documentId}`;
+    modalRef.componentInstance.fieldName = fieldName;
+    modalRef.componentInstance.fieldValue = this.getFieldValue(record, fieldName);
+    modalRef.componentInstance.citation = citation;
+  }
+
+  /**
+   * Open document viewer without citation navigation (fallback)
+   */
+  openDocumentViewer(record: PIMedicalRecord): void {
+    if (!record.documentId) return;
+
+    const modalRef = this.modalService.open(CitationViewerModalComponent, {
+      size: 'lg',
+      centered: true,
+      backdrop: 'static',
+      windowClass: 'citation-viewer-modal-window'
+    });
+
+    modalRef.componentInstance.documentId = record.documentId;
+    modalRef.componentInstance.documentName = record.documentName || `Document #${record.documentId}`;
+    modalRef.componentInstance.fieldName = '';
+    modalRef.componentInstance.fieldValue = '';
+    modalRef.componentInstance.citation = null;
   }
 
   // ==========================================

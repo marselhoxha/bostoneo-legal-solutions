@@ -123,6 +123,11 @@ public class PIMedicalRecord {
     @Column(name = "document_id")
     private Long documentId;
 
+    // Citation Metadata (JSONB) - stores page numbers, excerpts for each extracted field
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "citation_metadata", columnDefinition = "jsonb")
+    private Map<String, Object> citationMetadata;
+
     // Metadata
     @CreationTimestamp
     @Column(name = "created_at")

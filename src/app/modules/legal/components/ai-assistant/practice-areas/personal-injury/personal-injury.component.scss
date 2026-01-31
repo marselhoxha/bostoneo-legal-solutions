@@ -2858,6 +2858,59 @@
   }
 }
 
+// Smart Citation Styles for Treatment Table Cells
+.treatment-table tbody .treatment-row td {
+  position: relative;
+
+  // Citation indicator icon
+  .citation-indicator {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.7rem;
+    color: #405189;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+
+  // Cells with citation data
+  &.has-citation {
+    cursor: pointer;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+      background-color: rgba(64, 81, 137, 0.08) !important;
+      box-shadow: inset 0 0 0 1px rgba(64, 81, 137, 0.2);
+
+      .citation-indicator {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+    }
+
+    &:active {
+      background-color: rgba(64, 81, 137, 0.12) !important;
+    }
+  }
+}
+
+// Specific column citation indicator positioning
+.treatment-table tbody .treatment-row td {
+  &.col-date.has-citation .citation-indicator {
+    right: 0.75rem;
+  }
+
+  &.col-type.has-citation .citation-indicator {
+    right: 0.5rem;
+    top: 0.5rem;
+  }
+
+  &.col-findings.has-citation .citation-indicator {
+    right: 1rem;
+  }
+}
+
 // Record Type Badges with Colors
 .type-badge {
   display: inline-block;

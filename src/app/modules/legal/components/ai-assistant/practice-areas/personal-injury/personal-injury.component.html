@@ -1505,19 +1505,35 @@
                               </thead>
                               <tbody>
                                 <tr *ngFor="let record of medicalRecords; let i = index" class="treatment-row">
-                                  <td class="col-date">
+                                  <td class="col-date"
+                                      [class.has-citation]="hasCitation(record, 'treatmentDate')"
+                                      (click)="openCitation(record, 'treatmentDate')"
+                                      [title]="hasCitation(record, 'treatmentDate') ? 'Click to view source' : ''">
                                     <span class="date-value">{{ record.treatmentDate | date:'MMM d, yyyy' }}</span>
+                                    <i class="ri-link citation-indicator" *ngIf="hasCitation(record, 'treatmentDate')"></i>
                                   </td>
-                                  <td class="col-provider">
+                                  <td class="col-provider"
+                                      [class.has-citation]="hasCitation(record, 'providerName')"
+                                      (click)="openCitation(record, 'providerName')"
+                                      [title]="hasCitation(record, 'providerName') ? 'Click to view source' : ''">
                                     <span class="provider-name">{{ record.providerName }}</span>
+                                    <i class="ri-link citation-indicator" *ngIf="hasCitation(record, 'providerName')"></i>
                                   </td>
-                                  <td class="col-type">
+                                  <td class="col-type"
+                                      [class.has-citation]="hasCitation(record, 'recordType')"
+                                      (click)="openCitation(record, 'recordType')"
+                                      [title]="hasCitation(record, 'recordType') ? 'Click to view source' : ''">
                                     <span class="type-badge" [attr.data-type]="record.recordType">
                                       {{ record.recordType }}
                                     </span>
+                                    <i class="ri-link citation-indicator" *ngIf="hasCitation(record, 'recordType')"></i>
                                   </td>
-                                  <td class="col-findings">
+                                  <td class="col-findings"
+                                      [class.has-citation]="hasCitation(record, 'keyFindings')"
+                                      (click)="openCitation(record, 'keyFindings')"
+                                      [title]="hasCitation(record, 'keyFindings') ? 'Click to view source' : ''">
                                     <span class="findings-text">{{ record.keyFindings || '-' }}</span>
+                                    <i class="ri-link citation-indicator" *ngIf="hasCitation(record, 'keyFindings')"></i>
                                   </td>
                                 </tr>
                               </tbody>

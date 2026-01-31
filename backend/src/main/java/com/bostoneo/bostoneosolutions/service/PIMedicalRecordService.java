@@ -106,4 +106,21 @@ public interface PIMedicalRecordService {
      * @return The created medical record DTO, or null if not a medical document
      */
     PIMedicalRecordDTO analyzeFileAndCreateRecord(Long caseId, Long fileId);
+
+    /**
+     * Re-scan a medical record to extract citation metadata from the linked document.
+     * This is used for records that were created before the citation feature was added.
+     *
+     * @param recordId The medical record ID to re-scan
+     * @return The updated medical record DTO with citation metadata
+     */
+    PIMedicalRecordDTO rescanRecordForCitations(Long recordId);
+
+    /**
+     * Get all medical records that are missing citation metadata.
+     * Used by the batch re-scan service.
+     *
+     * @return List of record IDs that need citation metadata
+     */
+    List<Long> getRecordsWithoutCitations();
 }

@@ -15,6 +15,32 @@ export interface Procedure {
   units?: number;
 }
 
+/**
+ * Citation reference for a single field
+ * Contains information to locate the source text in the original document
+ */
+export interface FieldCitation {
+  page: number;          // 1-indexed page number
+  excerpt: string;       // Exact text snippet from the document (20-80 chars)
+  charOffset?: number;   // Character offset from start of document
+}
+
+/**
+ * Citation metadata for a medical record
+ * Maps field names to their source locations in the document
+ */
+export interface CitationMetadata {
+  treatmentDate?: FieldCitation;
+  providerName?: FieldCitation;
+  recordType?: FieldCitation;
+  keyFindings?: FieldCitation;
+  treatmentProvided?: FieldCitation;
+  diagnoses?: Array<{ icd_code: string; page: number; excerpt: string; charOffset?: number }>;
+  procedures?: Array<{ cpt_code: string; page: number; excerpt: string; charOffset?: number }>;
+  billedAmount?: FieldCitation;
+  [key: string]: FieldCitation | Array<any> | undefined;
+}
+
 export interface PIMedicalRecord {
   id?: number;
   caseId: number;
@@ -58,6 +84,9 @@ export interface PIMedicalRecord {
   // Document Reference
   documentId?: number;
   documentName?: string;
+
+  // Citation Metadata - source locations for extracted data
+  citationMetadata?: CitationMetadata;
 
   // Related info
   caseNumber?: string;

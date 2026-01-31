@@ -70,6 +70,9 @@ public class PIMedicalRecordDTO {
     private Long documentId;
     private String documentName;
 
+    // Citation Metadata - stores page numbers, excerpts for each extracted field
+    private Map<String, Object> citationMetadata;
+
     // Related info
     private String caseNumber;
     private String clientName;
