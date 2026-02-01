@@ -200,18 +200,36 @@ public class PIDocumentChecklistServiceImpl implements PIDocumentChecklistServic
     public Map<String, Object> getCompletenessScore(Long caseId) {
         Long orgId = getRequiredOrganizationId();
 
-        long required = repository.countByCaseIdAndOrganizationIdAndRequiredTrue(caseId, orgId);
-        long received = repository.countByCaseIdAndOrganizationIdAndReceivedTrue(caseId, orgId);
-        Double percentage = repository.calculateCompletenessPercent(caseId, orgId);
+        // Get all checklist items for this case
+        List<PIDocumentChecklist> allItems = repository.findByCaseIdAndOrganizationIdOrderByDocumentType(caseId, orgId);
+
+        // Total counts (all documents)
+        long totalCount = allItems.size();
+        long totalReceived = allItems.stream().filter(PIDocumentChecklist::getReceived).count();
+        long totalMissing = allItems.stream().filter(i -> "MISSING".equals(i.getStatus())).count();
+        long totalRequested = allItems.stream().filter(i -> "REQUESTED".equals(i.getStatus())).count();
+
+        // Calculate percentage based on ALL documents (received / total * 100)
+        double percentage = totalCount > 0 ? (double) totalReceived / totalCount * 100 : 0;
 
         Map<String, Object> result = new HashMap<>();
-        result.put("requiredCount", required);
-        result.put("receivedCount", received);
-        result.put("completenessPercent", percentage != null ? Math.round(percentage) : 0);
-        result.put("missingCount", required - received);
+        result.put("totalCount", totalCount);
+        result.put("receivedCount", totalReceived);
+        result.put("missingCount", totalMissing);
+        result.put("requestedCount", totalRequested);
+        result.put("completenessPercent", Math.round(percentage));
 
-        // Get missing required documents
-        List<PIDocumentChecklist> missing = repository.findMissingDocuments(caseId, orgId);
+        // Also include required-only stats for reference
+        long requiredCount = allItems.stream().filter(i -> Boolean.TRUE.equals(i.getRequired())).count();
+        long requiredReceived = allItems.stream().filter(i -> Boolean.TRUE.equals(i.getRequired()) && i.getReceived()).count();
+        result.put("requiredCount", requiredCount);
+        result.put("requiredReceivedCount", requiredReceived);
+
+        // Get missing documents (status = MISSING, not just required)
+        List<PIDocumentChecklist> missing = allItems.stream()
+                .filter(i -> "MISSING".equals(i.getStatus()))
+                .collect(Collectors.toList());
+
         result.put("missingDocuments", missing.stream()
                 .map(m -> Map.of(
                         "type", m.getDocumentType(),

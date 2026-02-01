@@ -1652,7 +1652,7 @@
                         </div>
                         <div class="completeness-label">Document Completeness</div>
                         <div class="completeness-detail">
-                          {{ documentCompleteness.receivedCount }} of {{ documentCompleteness.requiredCount }} received
+                          {{ documentCompleteness.receivedCount }} of {{ documentCompleteness.totalCount || documentChecklist.length }} received
                         </div>
                       </div>
 
@@ -1696,75 +1696,95 @@
                       </div>
                     </div>
 
-                    <!-- Right: Document Cards -->
+                    <!-- Right: Document Groups -->
                     <div class="col-lg-9">
-                      <div class="document-cards-container" *ngIf="documentChecklist.length > 0">
-                        <div class="document-card" *ngFor="let item of documentChecklist"
-                             [class.doc-received]="item.status === 'RECEIVED'"
-                             [class.doc-missing]="item.status === 'MISSING'"
-                             [class.doc-requested]="item.status === 'REQUESTED'"
-                             [class.doc-overdue]="item.isOverdue"
-                             [class.doc-selected]="bulkSelectMode && selectedForBulk.has(item.id!)">
-                          <!-- Bulk Selection Checkbox -->
-                          <div class="doc-checkbox" *ngIf="bulkSelectMode && item.status !== 'RECEIVED'">
-                            <input type="checkbox" class="form-check-input"
-                                   [checked]="selectedForBulk.has(item.id!)"
-                                   (change)="toggleBulkSelection(item)">
-                          </div>
-                          <div class="doc-icon">
-                            <i [class]="getDocumentTypeIcon(item.documentType)"></i>
-                          </div>
-                          <div class="doc-info">
-                            <div class="doc-type">
-                              {{ getDocumentTypeLabel(item.documentType) }}
-                              <!-- Request count badge -->
-                              <span class="request-count-badge" *ngIf="item.requestCount && item.requestCount > 0"
-                                    title="{{item.requestCount}} request(s) sent">
-                                <i class="ri-mail-send-line"></i> {{ item.requestCount }}
+                      <div class="document-groups-container" *ngIf="documentChecklist.length > 0">
+                        <!-- Document Group -->
+                        <div class="document-group" *ngFor="let group of groupedDocuments; trackBy: trackByGroupType"
+                             [class]="getGroupStatusClass(group)">
+                          <!-- Group Header -->
+                          <div class="group-header">
+                            <div class="group-title">
+                              <i [class]="group.icon"></i>
+                              <span>{{ group.label }}</span>
+                            </div>
+                            <div class="group-stats">
+                              <span class="group-count" [class.all-received]="group.receivedCount === group.totalCount">
+                                {{ group.receivedCount }}/{{ group.totalCount }}
                               </span>
-                            </div>
-                            <div class="doc-subtype">{{ item.documentSubtype }}</div>
-                            <div class="doc-meta" *ngIf="item.requestedDate">
-                              <i class="ri-calendar-line"></i>
-                              Requested {{ item.requestedDate | date:'MMM d' }}
-                              <span class="days-ago" *ngIf="item.daysSinceRequested">({{ item.daysSinceRequested }}d ago)</span>
-                            </div>
-                            <div class="doc-meta doc-meta-recipient" *ngIf="item.requestSentTo">
-                              <i class="ri-user-line"></i>
-                              {{ item.requestSentTo }}
+                              <i class="ri-checkbox-circle-fill text-success" *ngIf="group.receivedCount === group.totalCount"></i>
                             </div>
                           </div>
-                          <div class="doc-status">
-                            <span class="status-badge"
-                                  [class.status-received]="item.status === 'RECEIVED'"
-                                  [class.status-missing]="item.status === 'MISSING'"
-                                  [class.status-requested]="item.status === 'REQUESTED'"
-                                  [class.status-pending]="item.status === 'PENDING'">
-                              {{ getStatusLabel(item.status) }}
-                            </span>
-                            <span class="overdue-badge" *ngIf="item.isOverdue">Overdue</span>
-                          </div>
-                          <div class="doc-actions">
-                            <button class="action-btn action-receive"
-                                    *ngIf="item.status !== 'RECEIVED'"
-                                    (click)="markDocumentReceived(item)"
-                                    title="Mark as Received">
-                              <i class="ri-checkbox-circle-line"></i>
-                            </button>
-                            <button class="action-btn action-request"
-                                    *ngIf="item.status !== 'RECEIVED'"
-                                    (click)="requestDocument(item)"
-                                    title="Send Request (Email/SMS)">
-                              <i class="ri-send-plane-line"></i>
-                            </button>
-                            <button class="action-btn action-history"
-                                    *ngIf="item.requestCount && item.requestCount > 0"
-                                    (click)="viewRequestHistory(item)"
-                                    title="View Request History">
-                              <i class="ri-history-line"></i>
-                            </button>
-                            <div class="received-check" *ngIf="item.status === 'RECEIVED'">
-                              <i class="ri-check-double-line"></i>
+
+                          <!-- Group Items -->
+                          <div class="group-items">
+                            <div class="document-item" *ngFor="let item of group.items; trackBy: trackByDocId"
+                                 [class.item-received]="item.status === 'RECEIVED'"
+                                 [class.item-missing]="item.status === 'MISSING'"
+                                 [class.item-requested]="item.status === 'REQUESTED'"
+                                 [class.item-selected]="bulkSelectMode && isSelectedForBulk(item.id!)">
+                              <!-- Bulk Selection Checkbox -->
+                              <div class="item-checkbox" *ngIf="bulkSelectMode && item.status !== 'RECEIVED'">
+                                <input type="checkbox" class="form-check-input"
+                                       [checked]="isSelectedForBulk(item.id!)"
+                                       (click)="toggleBulkSelection(item, $event)">
+                              </div>
+                              <!-- Item Info -->
+                              <div class="item-info">
+                                <span class="item-name">{{ item.documentSubtype || 'General' }}</span>
+                                <span class="item-meta" *ngIf="item.requestCount && item.requestCount > 0">
+                                  <i class="ri-mail-send-line"></i> {{ item.requestCount }}x requested
+                                </span>
+                              </div>
+                              <!-- Status -->
+                              <div class="item-status">
+                                <span class="status-badge"
+                                      [class.status-received]="item.status === 'RECEIVED'"
+                                      [class.status-missing]="item.status === 'MISSING'"
+                                      [class.status-requested]="item.status === 'REQUESTED'"
+                                      [class.status-pending]="item.status === 'PENDING'"
+                                      [class.status-na]="item.status === 'NOT_APPLICABLE'">
+                                  {{ getStatusLabel(item.status) }}
+                                </span>
+                              </div>
+                              <!-- Actions -->
+                              <div class="item-actions">
+                                <button class="action-btn action-receive"
+                                        *ngIf="item.status !== 'RECEIVED'"
+                                        (click)="markDocumentReceived(item)"
+                                        title="Mark as Received">
+                                  <i class="ri-checkbox-circle-line"></i>
+                                </button>
+                                <button class="action-btn action-request"
+                                        *ngIf="item.status !== 'RECEIVED'"
+                                        (click)="requestDocument(item)"
+                                        title="Send Request">
+                                  <i class="ri-send-plane-line"></i>
+                                </button>
+                                <!-- Status Change Dropdown -->
+                                <div class="action-dropdown" ngbDropdown container="body" placement="bottom-right">
+                                  <button class="action-btn action-status" ngbDropdownToggle title="Change Status">
+                                    <i class="ri-exchange-line"></i>
+                                  </button>
+                                  <div ngbDropdownMenu class="status-dropdown-menu">
+                                    <div class="dropdown-header">Change Status</div>
+                                    <button ngbDropdownItem *ngFor="let status of documentStatuses"
+                                            [class.active]="item.status === status.value"
+                                            (click)="changeDocumentStatus(item, status.value)">
+                                      <span class="status-dot" [class]="'dot-' + status.color"></span>
+                                      {{ status.label }}
+                                    </button>
+                                  </div>
+                                </div>
+                                <button class="action-btn action-delete"
+                                        (click)="deleteDocumentChecklistItem(item)"
+                                        title="Remove">
+                                  <i class="ri-delete-bin-line"></i>
+                                </button>
+                                <div class="received-check" *ngIf="item.status === 'RECEIVED'">
+                                  <i class="ri-check-double-line"></i>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>

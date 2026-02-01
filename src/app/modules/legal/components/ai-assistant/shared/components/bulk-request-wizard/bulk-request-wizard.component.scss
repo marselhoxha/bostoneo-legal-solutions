@@ -10,7 +10,7 @@
 
 // Header with Steps
 .wizard-header {
-  padding: 1.5rem 2rem;
+  padding: 0.75rem 1.5rem;
   border-bottom: 1px solid #e9ebec;
   background: #f3f6f9;
   flex-shrink: 0;
@@ -27,7 +27,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
   opacity: 0.5;
   transition: opacity 0.3s ease;
 
@@ -37,8 +37,8 @@
 }
 
 .step-number {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #e9ebec;
   color: #6c757d;
@@ -46,7 +46,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   transition: all 0.3s ease;
 
   .step.active & {
@@ -61,11 +61,11 @@
 }
 
 .step-label {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 500;
   color: #6c757d;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 
   .step.active & {
     color: #405189;
@@ -73,11 +73,11 @@
 }
 
 .step-connector {
-  width: 60px;
+  width: 40px;
   height: 2px;
   background: #e9ebec;
-  margin: 0 1rem;
-  margin-bottom: 1.5rem;
+  margin: 0 0.5rem;
+  margin-bottom: 1rem;
   transition: background 0.3s ease;
 
   &.completed {

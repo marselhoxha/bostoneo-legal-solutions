@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -23,7 +23,8 @@ interface ManualRecipient {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './bulk-request-wizard.component.html',
-  styleUrls: ['./bulk-request-wizard.component.scss']
+  styleUrls: ['./bulk-request-wizard.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BulkRequestWizardComponent implements OnInit {
   @Input() caseId!: number;
@@ -49,10 +50,19 @@ export class BulkRequestWizardComponent implements OnInit {
   // Expanded groups
   expandedGroups: Set<string> = new Set();
 
-  constructor(private documentRequestService: PIDocumentRequestService) {}
+  // Track if already initialized
+  private initialized = false;
+
+  constructor(
+    private documentRequestService: PIDocumentRequestService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
-    this.loadPreview();
+    if (!this.initialized && this.caseId && this.selectedItemIds.length > 0) {
+      this.initialized = true;
+      this.loadPreview();
+    }
   }
 
   loadPreview(): void {
@@ -60,6 +70,7 @@ export class BulkRequestWizardComponent implements OnInit {
 
     this.isLoading = true;
     this.error = null;
+    this.cdr.markForCheck();
 
     this.documentRequestService.previewBulkRequests(this.caseId, this.selectedItemIds).subscribe({
       next: (preview) => {
@@ -85,11 +96,13 @@ export class BulkRequestWizardComponent implements OnInit {
         if (preview.recipientGroups.length > 0) {
           this.expandedGroups.add(preview.recipientGroups[0].groupKey);
         }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Error loading preview:', err);
         this.error = 'Failed to analyze selected items. Please try again.';
         this.isLoading = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -98,12 +111,14 @@ export class BulkRequestWizardComponent implements OnInit {
   nextStep(): void {
     if (this.currentStep < 3) {
       this.currentStep++;
+      this.cdr.markForCheck();
     }
   }
 
   prevStep(): void {
     if (this.currentStep > 1) {
       this.currentStep--;
+      this.cdr.markForCheck();
     }
   }
 
@@ -114,6 +129,7 @@ export class BulkRequestWizardComponent implements OnInit {
     } else {
       this.expandedGroups.add(groupKey);
     }
+    this.cdr.markForCheck();
   }
 
   isGroupExpanded(groupKey: string): boolean {
@@ -127,6 +143,7 @@ export class BulkRequestWizardComponent implements OnInit {
     } else {
       this.skippedItems.add(itemId);
     }
+    this.cdr.markForCheck();
   }
 
   isItemSkipped(itemId: number): boolean {
@@ -199,6 +216,7 @@ export class BulkRequestWizardComponent implements OnInit {
 
     this.isSending = true;
     this.error = null;
+    this.cdr.markForCheck();
 
     // Build the submit request
     const request: BulkRequestSubmit = {
@@ -226,12 +244,14 @@ export class BulkRequestWizardComponent implements OnInit {
     this.documentRequestService.sendConfirmedBulkRequests(this.caseId, request).subscribe({
       next: (result) => {
         this.isSending = false;
+        this.cdr.markForCheck();
         this.completed.emit(result);
       },
       error: (err) => {
         console.error('Error sending bulk requests:', err);
         this.error = 'Failed to send requests. Please try again.';
         this.isSending = false;
+        this.cdr.markForCheck();
       }
     });
   }

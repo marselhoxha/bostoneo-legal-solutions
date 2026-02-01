@@ -226,6 +226,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
   // Document Checklist
   documentChecklist: PIDocumentChecklist[] = [];
+  groupedDocuments: { type: string; label: string; icon: string; items: PIDocumentChecklist[]; receivedCount: number; totalCount: number }[] = [];
   isLoadingChecklist: boolean = false;
   documentCompleteness: DocumentCompletenessScore | null = null;
   documentTypes = DOCUMENT_TYPES;
@@ -2093,7 +2094,9 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.isLoadingChecklist = true;
     this.documentChecklistService.getChecklistByCaseId(Number(this.linkedCase.id)).subscribe({
       next: (checklist) => {
-        this.documentChecklist = checklist;
+        // Sort by ID to maintain stable order
+        this.documentChecklist = checklist.sort((a, b) => (a.id || 0) - (b.id || 0));
+        this.updateGroupedDocuments();
         this.isLoadingChecklist = false;
         this.loadDocumentCompleteness();
         this.cdr.detectChanges();
@@ -2149,18 +2152,167 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   markDocumentReceived(item: PIDocumentChecklist): void {
     if (!this.linkedCase?.id || !item.id) return;
 
+    const previousStatus = item.status;
+    const previousReceived = item.received;
+
+    // Update local state immediately for responsive UI - create new array reference
+    this.documentChecklist = this.documentChecklist.map(d => {
+      if (d.id === item.id) {
+        return {
+          ...d,
+          status: 'RECEIVED',
+          received: true,
+          receivedDate: new Date().toISOString().split('T')[0]
+        };
+      }
+      return d;
+    });
+    this.updateGroupedDocuments();
+    this.cdr.detectChanges();
+
     this.documentChecklistService.markAsReceived(Number(this.linkedCase.id), item.id).subscribe({
       next: () => {
-        this.loadDocumentChecklist();
+        this.loadDocumentCompleteness();
         Swal.fire({
           icon: 'success',
           title: 'Document Received',
-          timer: 2000,
+          timer: 1500,
           showConfirmButton: false
         });
       },
       error: (err) => {
         console.error('Error marking received:', err);
+        // Revert on error - create new array reference
+        this.documentChecklist = this.documentChecklist.map(d => {
+          if (d.id === item.id) {
+            return { ...d, status: previousStatus, received: previousReceived };
+          }
+          return d;
+        });
+        this.updateGroupedDocuments();
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
+   * Change the status of a document checklist item
+   */
+  changeDocumentStatus(item: PIDocumentChecklist, newStatus: string): void {
+    if (!this.linkedCase?.id || !item.id) return;
+
+    // Skip if same status
+    if (item.status === newStatus) return;
+
+    const previousStatus = item.status;
+    const previousReceived = item.received;
+    const isNowReceived = newStatus === 'RECEIVED';
+
+    // Update local state immediately - create new array reference
+    this.documentChecklist = this.documentChecklist.map(d => {
+      if (d.id === item.id) {
+        return {
+          ...d,
+          status: newStatus,
+          received: isNowReceived,
+          receivedDate: isNowReceived ? new Date().toISOString().split('T')[0] : d.receivedDate
+        };
+      }
+      return d;
+    });
+    this.updateGroupedDocuments();
+    this.cdr.detectChanges();
+
+    const updatedItem: PIDocumentChecklist = {
+      ...item,
+      status: newStatus,
+      received: isNowReceived,
+      receivedDate: isNowReceived ? new Date().toISOString().split('T')[0] : item.receivedDate
+    };
+
+    this.documentChecklistService.updateChecklistItem(
+      Number(this.linkedCase.id),
+      item.id,
+      updatedItem
+    ).subscribe({
+      next: () => {
+        this.loadDocumentCompleteness();
+        const statusLabel = this.getStatusLabel(newStatus);
+        Swal.fire({
+          icon: 'success',
+          title: 'Status Updated',
+          text: `Document status changed to ${statusLabel}`,
+          timer: 1500,
+          showConfirmButton: false
+        });
+      },
+      error: (err) => {
+        console.error('Error updating status:', err);
+        // Revert on error - create new array reference
+        this.documentChecklist = this.documentChecklist.map(d => {
+          if (d.id === item.id) {
+            return { ...d, status: previousStatus, received: previousReceived };
+          }
+          return d;
+        });
+        this.updateGroupedDocuments();
+        this.cdr.detectChanges();
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to update document status'
+        });
+      }
+    });
+  }
+
+  /**
+   * Delete a document checklist item with confirmation
+   */
+  deleteDocumentChecklistItem(item: PIDocumentChecklist): void {
+    if (!this.linkedCase?.id || !item.id) return;
+
+    const docName = item.documentSubtype || this.getDocumentTypeLabel(item.documentType);
+
+    Swal.fire({
+      title: 'Remove from Checklist?',
+      html: `<p>Are you sure you want to remove <strong>${docName}</strong> from the document checklist?</p>
+             <p class="text-muted small">This will not delete any uploaded files.</p>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      confirmButtonText: 'Yes, remove it',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.documentChecklistService.deleteChecklistItem(
+          Number(this.linkedCase!.id),
+          item.id!
+        ).subscribe({
+          next: () => {
+            // Remove from local array immediately for responsive UI
+            this.documentChecklist = this.documentChecklist.filter(d => d.id !== item.id);
+            this.updateGroupedDocuments();
+            this.loadDocumentCompleteness();
+            this.cdr.detectChanges();
+
+            Swal.fire({
+              icon: 'success',
+              title: 'Removed',
+              text: `${docName} has been removed from the checklist`,
+              timer: 1500,
+              showConfirmButton: false
+            });
+          },
+          error: (err) => {
+            console.error('Error deleting checklist item:', err);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Failed to remove document from checklist'
+            });
+          }
+        });
       }
     });
   }
@@ -2529,18 +2681,30 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     if (!this.bulkSelectMode) {
       this.selectedForBulk.clear();
     }
+    this.cdr.detectChanges();
   }
 
   /**
    * Toggle item selection for bulk request
    */
-  toggleBulkSelection(item: PIDocumentChecklist): void {
+  toggleBulkSelection(item: PIDocumentChecklist, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
     if (!item.id) return;
     if (this.selectedForBulk.has(item.id)) {
       this.selectedForBulk.delete(item.id);
     } else {
       this.selectedForBulk.add(item.id);
     }
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Check if item is selected for bulk
+   */
+  isSelectedForBulk(itemId: number): boolean {
+    return this.selectedForBulk.has(itemId);
   }
 
   /**
@@ -2552,6 +2716,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     // This prevents creating new array references on every change detection
     this.bulkWizardItemIds = Array.from(this.selectedForBulk);
     this.showBulkWizard = true;
+    this.cdr.detectChanges();
   }
 
   /**
@@ -2830,6 +2995,60 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
   getDocumentCountByStatus(status: string): number {
     return this.documentChecklist.filter(item => item.status === status).length;
+  }
+
+  /**
+   * TrackBy function for document checklist to prevent unnecessary re-renders
+   */
+  trackByDocId(index: number, item: PIDocumentChecklist): number {
+    return item.id || index;
+  }
+
+  /**
+   * TrackBy function for groups
+   */
+  trackByGroupType(index: number, group: { type: string }): string {
+    return group.type;
+  }
+
+  /**
+   * Update the cached grouped documents - call this when documentChecklist changes
+   */
+  updateGroupedDocuments(): void {
+    const groups: { [key: string]: PIDocumentChecklist[] } = {};
+
+    // Group by document type
+    this.documentChecklist.forEach(item => {
+      const type = item.documentType || 'OTHER';
+      if (!groups[type]) {
+        groups[type] = [];
+      }
+      groups[type].push(item);
+    });
+
+    // Define order of groups
+    const typeOrder = ['POLICE_REPORT', 'MEDICAL_RECORDS', 'MEDICAL_BILLS', 'INSURANCE', 'WAGE_DOCUMENTATION', 'PHOTOGRAPHS', 'WITNESS', 'EXPERT', 'OTHER'];
+
+    // Convert to array and sort by predefined order
+    this.groupedDocuments = typeOrder
+      .filter(type => groups[type] && groups[type].length > 0)
+      .map(type => ({
+        type,
+        label: this.getDocumentTypeLabel(type),
+        icon: this.getDocumentTypeIcon(type),
+        items: groups[type].sort((a, b) => (a.id || 0) - (b.id || 0)),
+        receivedCount: groups[type].filter(i => i.status === 'RECEIVED').length,
+        totalCount: groups[type].length
+      }));
+  }
+
+  /**
+   * Get group completion status class
+   */
+  getGroupStatusClass(group: { receivedCount: number; totalCount: number }): string {
+    if (group.receivedCount === group.totalCount) return 'group-complete';
+    if (group.receivedCount > 0) return 'group-partial';
+    return 'group-pending';
   }
 
   getConfidenceColor(level: string): string {

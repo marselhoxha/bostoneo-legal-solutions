@@ -51,10 +51,13 @@ export interface PIDocumentChecklist {
 }
 
 export interface DocumentCompletenessScore {
-  requiredCount: number;
+  totalCount: number;
   receivedCount: number;
-  completenessPercent: number;
   missingCount: number;
+  requestedCount: number;
+  completenessPercent: number;
+  requiredCount: number;
+  requiredReceivedCount: number;
   missingDocuments: {
     type: string;
     subtype: string;

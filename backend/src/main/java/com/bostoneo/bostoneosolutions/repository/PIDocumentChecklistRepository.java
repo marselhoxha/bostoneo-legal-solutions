@@ -77,13 +77,18 @@ public interface PIDocumentChecklistRepository extends JpaRepository<PIDocumentC
     long countByCaseIdAndOrganizationIdAndRequiredTrue(Long caseId, Long organizationId);
 
     /**
-     * Calculate completeness percentage
+     * Calculate completeness percentage (only counts received items that are also required)
      */
-    @Query("SELECT CAST(COUNT(CASE WHEN c.received = true THEN 1 END) AS double) / " +
+    @Query("SELECT CAST(COUNT(CASE WHEN c.received = true AND c.required = true THEN 1 END) AS double) / " +
            "NULLIF(COUNT(CASE WHEN c.required = true THEN 1 END), 0) * 100 " +
            "FROM PIDocumentChecklist c " +
            "WHERE c.caseId = :caseId AND c.organizationId = :orgId")
     Double calculateCompletenessPercent(@Param("caseId") Long caseId, @Param("orgId") Long organizationId);
+
+    /**
+     * Count required documents that have been received
+     */
+    long countByCaseIdAndOrganizationIdAndRequiredTrueAndReceivedTrue(Long caseId, Long organizationId);
 
     /**
      * Get document type summary
