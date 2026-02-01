@@ -150,14 +150,25 @@ export class CalendarService {
   private formatEventDatesForBackend(event: any): any {
     const formattedEvent = { ...event };
 
-    // Remove the frontend-only 'start' and 'end' properties to avoid conflicts with backend
-    if (formattedEvent.start && formattedEvent.startTime) {
-      delete formattedEvent.start;
+    // Convert 'start' to 'startTime' if startTime doesn't exist
+    if (formattedEvent.start && !formattedEvent.startTime) {
+      formattedEvent.startTime = formattedEvent.start;
     }
-    if (formattedEvent.end && formattedEvent.endTime) {
-      delete formattedEvent.end;
+    if (formattedEvent.end && !formattedEvent.endTime) {
+      formattedEvent.endTime = formattedEvent.end;
     }
-    
+
+    // Always remove frontend-only 'start' and 'end' properties
+    delete formattedEvent.start;
+    delete formattedEvent.end;
+
+    // Remove read-only or computed fields that shouldn't be sent to backend
+    delete formattedEvent.userName;
+    delete formattedEvent.caseTitle;
+    delete formattedEvent.caseNumber;
+    delete formattedEvent.createdAt;
+    delete formattedEvent.updatedAt;
+
     // Ensure reminderMinutes is sent as a number
     if (formattedEvent.reminderMinutes !== undefined) {
       if (formattedEvent.reminderMinutes === 'custom' || formattedEvent.reminderMinutes === '') {
@@ -184,11 +195,11 @@ export class CalendarService {
     // Convert startTime to format Java LocalDateTime can parse
     if (formattedEvent.startTime) {
       // Handle both Date objects and string dates
-      formattedEvent.startTime = formattedEvent.startTime instanceof Date 
+      formattedEvent.startTime = formattedEvent.startTime instanceof Date
         ? this.formatDateForJava(formattedEvent.startTime)
         : this.formatStringDateForJava(formattedEvent.startTime);
     }
-    
+
     // Convert endTime to format Java LocalDateTime can parse (if it exists)
     if (formattedEvent.endTime) {
       // Handle both Date objects and string dates
@@ -257,15 +268,18 @@ export class CalendarService {
     };
   }
 
+  // Track reminders shown in this session to prevent duplicates
+  private shownReminders = new Set<string>();
+
   /**
    * Generate reminders for deadlines
    * Iterates through deadlines and dispatches appropriate reminders
    */
   generateDeadlineReminders(): Observable<any> {
     return this.getEvents().pipe(
-      map(events => events.filter(event => 
+      map(events => events.filter(event =>
         // Only get deadlines that haven't sent reminders
-        event.eventType === 'DEADLINE' && 
+        event.eventType === 'DEADLINE' &&
         !event.reminderSent &&
         event.reminderMinutes > 0
       )),
@@ -274,9 +288,21 @@ export class CalendarService {
         // Find deadlines that need reminders
         return deadlines.filter(deadline => {
           const deadlineDate = new Date(deadline.start);
+
+          // Skip if the deadline has already passed
+          if (deadlineDate < now) {
+            return false;
+          }
+
+          // Skip if we already showed this reminder in this session
+          const reminderKey = `primary-${deadline.id}`;
+          if (this.shownReminders.has(reminderKey)) {
+            return false;
+          }
+
           const reminderTime = new Date(deadlineDate.getTime() - (deadline.reminderMinutes * 60 * 1000));
-          
-          // If reminder time is now or in the past, we should send reminder
+
+          // If reminder time is now or in the past (but deadline is still future)
           return reminderTime <= now;
         });
       }),
@@ -284,21 +310,34 @@ export class CalendarService {
         if (deadlinesToRemind.length === 0) {
           return of([]);
         }
-        
+
         // Process each deadline that needs a reminder
         const reminderUpdates = deadlinesToRemind.map(deadline => {
+          // Mark as shown in this session BEFORE showing (prevents duplicates)
+          const reminderKey = `primary-${deadline.id}`;
+          this.shownReminders.add(reminderKey);
+
           // Show notification or perform reminder action
           this.showDeadlineReminder(deadline);
-          
-          // Update the deadline to mark reminder as sent
-          const updatedDeadline = {
-            ...deadline,
+
+          // Only send the fields that need to be updated (minimal payload)
+          const updatePayload = {
+            id: deadline.id,
+            title: deadline.title,
+            startTime: deadline.startTime || deadline.start,
+            eventType: deadline.eventType,
             reminderSent: true
           };
-          
-          return this.updateEvent(deadline.id.toString(), updatedDeadline);
+
+          return this.updateEvent(deadline.id.toString(), updatePayload).pipe(
+            catchError(error => {
+              console.error(`Failed to mark reminder sent for event ${deadline.id}:`, error);
+              // Return success anyway - we already showed the reminder
+              return of(null);
+            })
+          );
         });
-        
+
         return forkJoin(reminderUpdates);
       })
     );
@@ -309,30 +348,42 @@ export class CalendarService {
    */
   checkAdditionalReminders(): Observable<any> {
     return this.getEvents().pipe(
-      map(events => events.filter(event => 
+      map(events => events.filter(event =>
         // Only get deadlines with additional reminders
-        event.eventType === 'DEADLINE' && 
-        event.additionalReminders && 
+        event.eventType === 'DEADLINE' &&
+        event.additionalReminders &&
         event.additionalReminders.length > 0
       )),
       map(deadlines => {
         const now = new Date();
         // Find deadlines with additional reminders to send
         const deadlinesWithReminders = [];
-        
+
         deadlines.forEach(deadline => {
           const deadlineDate = new Date(deadline.start);
+
+          // Skip if the deadline has already passed
+          if (deadlineDate < now) {
+            return;
+          }
+
           const additionalRemindersToSend = [];
-          
+
           deadline.additionalReminders.forEach(reminderMinutes => {
+            // Skip if already shown in this session
+            const reminderKey = `additional-${deadline.id}-${reminderMinutes}`;
+            if (this.shownReminders.has(reminderKey)) {
+              return;
+            }
+
             const reminderTime = new Date(deadlineDate.getTime() - (reminderMinutes * 60 * 1000));
-            
+
             // If reminder time is now or in the past, and hasn't been sent
             if (reminderTime <= now && !deadline.remindersSent?.includes(reminderMinutes)) {
               additionalRemindersToSend.push(reminderMinutes);
             }
           });
-          
+
           if (additionalRemindersToSend.length > 0) {
             deadlinesWithReminders.push({
               deadline,
@@ -340,30 +391,39 @@ export class CalendarService {
             });
           }
         });
-        
+
         return deadlinesWithReminders;
       }),
       switchMap(deadlinesWithReminders => {
         if (deadlinesWithReminders.length === 0) {
           return of([]);
         }
-        
+
         // Process each deadline with additional reminders
         const reminderUpdates = deadlinesWithReminders.map(({ deadline, additionalRemindersToSend }) => {
+          // Mark as shown in this session BEFORE showing
+          additionalRemindersToSend.forEach(minutes => {
+            const reminderKey = `additional-${deadline.id}-${minutes}`;
+            this.shownReminders.add(reminderKey);
+          });
+
           // Show notifications for additional reminders
           additionalRemindersToSend.forEach(minutes => {
             this.showDeadlineReminder(deadline, minutes);
           });
-          
-          // Update the deadline to mark additional reminders as sent
+
+          // Update the deadline to mark additional reminders as sent (minimal payload)
           const remindersSent = deadline.remindersSent || [];
-          const updatedDeadline = {
-            ...deadline,
+          const updatePayload = {
+            id: deadline.id,
+            title: deadline.title,
+            startTime: deadline.startTime || deadline.start,
+            eventType: deadline.eventType,
             remindersSent: [...remindersSent, ...additionalRemindersToSend]
           };
-          
+
           // Add error handling to prevent infinite retries
-          return this.updateEvent(deadline.id.toString(), updatedDeadline).pipe(
+          return this.updateEvent(deadline.id.toString(), updatePayload).pipe(
             catchError(error => {
               console.error(`Failed to update reminder status for event ${deadline.id}:`, error);
               // Return empty observable or a default value to continue processing

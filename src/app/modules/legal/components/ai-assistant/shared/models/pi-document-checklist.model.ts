@@ -24,6 +24,9 @@ export interface PIDocumentChecklist {
   requestSentTo?: string;
   followUpDate?: string;
   followUpCount?: number;
+  requestCount?: number;
+  lastRequestAt?: string;
+  totalFee?: number;
 
   // Document Reference
   documentId?: number;

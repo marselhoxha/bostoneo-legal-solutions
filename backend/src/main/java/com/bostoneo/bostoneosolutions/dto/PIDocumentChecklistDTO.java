@@ -49,6 +49,14 @@ public class PIDocumentChecklistDTO {
 
     private Integer followUpCount;
 
+    // Request System Fields
+    private Integer requestCount;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastRequestAt;
+
+    private java.math.BigDecimal totalFee;
+
     // Document Reference
     private Long documentId;
     private String documentName;

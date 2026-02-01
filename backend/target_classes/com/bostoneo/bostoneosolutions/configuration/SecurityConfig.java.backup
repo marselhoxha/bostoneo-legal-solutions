@@ -1,0 +1,223 @@
+package com.bostoneo.bostoneosolutions.configuration;
+
+import com.bostoneo.bostoneosolutions.filter.CustomAuthorizationFilter;
+import com.bostoneo.bostoneosolutions.handler.CustomAccessDeniedHandler;
+import com.bostoneo.bostoneosolutions.handler.CustomAuthenticationEntryPoint;
+import com.bostoneo.bostoneosolutions.security.CustomPermissionEvaluator;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.stereotype.Component;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static com.bostoneo.bostoneosolutions.constant.Constants.PUBLIC_URLS;
+import static org.springframework.http.HttpMethod.DELETE;
+import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.HttpMethod.OPTIONS;
+import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
+
+// @Configuration  // Disabled - using EnhancedSecurityConfig instead
+@EnableMethodSecurity
+@RequiredArgsConstructor
+@EnableWebSecurity
+@Slf4j
+public class SecurityConfig {
+
+    private final BCryptPasswordEncoder encoder;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final UserDetailsService userDetailsService;
+    private final CustomAuthorizationFilter customAuthorizationFilter;
+    private final CustomPermissionEvaluator permissionEvaluator;
+
+    /**
+     * Temporary filter to bypass RBAC for admin endpoints during development
+     */
+    @Component
+    public static class TemporaryRbacBypassFilter extends OncePerRequestFilter {
+        @Override
+        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+                throws ServletException, IOException {
+            String path = request.getRequestURI();
+            
+            // Temporary bypass for critical admin endpoints
+            if (path.startsWith("/api/roles") || path.startsWith("/api/users") || path.startsWith("/api/permissions")) {
+                log.warn("⚠️ TEMPORARY: Bypassing normal security filters for admin endpoint: {}", path);
+            }
+            
+            filterChain.doFilter(request, response);
+        }
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, TemporaryRbacBypassFilter rbacBypassFilter) throws Exception{
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(configure -> configure.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
+                .exceptionHandling(exception ->
+                        exception.accessDeniedHandler(customAccessDeniedHandler)
+                                .authenticationEntryPoint(customAuthenticationEntryPoint))
+                .authorizeHttpRequests(request ->
+                        request.requestMatchers(PUBLIC_URLS).permitAll()
+                                .requestMatchers(OPTIONS).permitAll()
+                                // TEMPORARY: Allow access to these admin endpoints with just authentication
+                                .requestMatchers(GET, "/api/roles", "/api/roles/**").authenticated()
+                                .requestMatchers(GET, "/api/permissions", "/api/permissions/**").authenticated()
+                                .requestMatchers(GET, "/api/users", "/api/users/**").authenticated()
+                                // Expense management endpoints - require authentication
+                                .requestMatchers("/api/expenses/**").authenticated()
+                                .requestMatchers("/api/expense-categories/**").authenticated()
+                                .requestMatchers("/api/vendors/**").authenticated()
+                                // Using the enhanced RBAC system with more granular permissions
+                                .requestMatchers(DELETE, "/user/delete/**").hasAuthority("CLIENT:DELETE")
+                                .requestMatchers("/api/admin/**").hasRole("ADMINISTRATOR")
+                                .requestMatchers("/api/cases/**").access((authentication, context) -> 
+                                    hasCaseAccess(authentication, context))
+                                .requestMatchers("/api/documents/**").access((authentication, context) -> 
+                                    hasDocumentAccess(authentication, context))
+                                .anyRequest().authenticated());
+                                
+        // Add our custom filter before the authentication filter to log bypass messages
+        http.addFilterBefore(rbacBypassFilter, UsernamePasswordAuthenticationFilter.class);
+        
+        // Add the normal authorization filter
+        http.addFilterBefore(customAuthorizationFilter, UsernamePasswordAuthenticationFilter.class);
+        
+        return http.build();
+    }
+    
+    // Custom access decision for case-related endpoints
+    private AuthorizationDecision hasCaseAccess(Supplier<Authentication> authentication, 
+                                              RequestAuthorizationContext context) {
+        String path = context.getRequest().getRequestURI();
+        String method = context.getRequest().getMethod();
+        
+        // Log request details for debugging
+        log.info("Case access check: {} {}", method, path);
+        log.info("User authorities: {}", authentication.get().getAuthorities());
+
+        // For admin users, always allow access - check for correct role name
+        if (authentication.get().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SYSADMIN"))) {
+            log.info("Granting access to admin user");
+            return new AuthorizationDecision(true);
+        }
+        
+        // Extract case ID from path if present
+        Pattern pattern = Pattern.compile("/api/cases/(\\d+)");
+        Matcher matcher = pattern.matcher(path);
+        
+        if (matcher.find()) {
+            Long caseId = Long.parseLong(matcher.group(1));
+            String action = getActionFromMethod(method);
+            
+            return new AuthorizationDecision(
+                permissionEvaluator.hasPermission(
+                    authentication.get(), 
+                    caseId, 
+                    "CASE", 
+                    action
+                )
+            );
+        }
+        
+        // For collection endpoints (no specific case ID)
+        String action = path.contains("/new") ? "CREATE" : "VIEW";
+        return new AuthorizationDecision(
+            authentication.get().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("CASE:" + action) || 
+                             a.getAuthority().equals("ROLE_ADMIN") || 
+                             a.getAuthority().equals("ROLE_SYSADMIN"))
+        );
+    }
+    
+    // Similar implementation for document access
+    private AuthorizationDecision hasDocumentAccess(Supplier<Authentication> authentication, 
+                                                  RequestAuthorizationContext context) {
+        // Check for admin roles first
+        if (authentication.get().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SYSADMIN"))) {
+            return new AuthorizationDecision(true);
+        }
+        
+        // For now, allow all authenticated users to access documents
+        return new AuthorizationDecision(true);
+    }
+    
+    private String getActionFromMethod(String method) {
+        switch (method) {
+            case "GET": return "VIEW";
+            case "POST": return "CREATE";
+            case "PUT": case "PATCH": return "EDIT";
+            case "DELETE": return "DELETE";
+            default: return "VIEW";
+        }
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        var corsConfiguration = new CorsConfiguration();
+        corsConfiguration.setAllowCredentials(true);
+        corsConfiguration.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:3000", "http://securecapita.org"));
+        //corsConfiguration.setAllowedOrigins(Arrays.asList("*"));
+        corsConfiguration.setAllowedHeaders(Arrays.asList("Origin", "Access-Control-Allow-Origin", "Content-Type",
+                "Accept", "Jwt-Token", "Authorization", "Origin", "Accept", "X-Requested-With",
+                "Access-Control-Request-Method", "Access-Control-Request-Headers", "Cache-Control"));
+        corsConfiguration.setExposedHeaders(Arrays.asList("Origin", "Content-Type", "Accept", "Jwt-Token", "Authorization",
+                "Access-Control-Allow-Origin", "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials", "File-Name"));
+        corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        var source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfiguration);
+        return source;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(){
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(encoder);
+        return new ProviderManager(authProvider);
+    }
+    
+    @Bean
+    public MethodSecurityExpressionHandler methodSecurityExpressionHandler() {
+        DefaultMethodSecurityExpressionHandler expressionHandler = new DefaultMethodSecurityExpressionHandler();
+        expressionHandler.setPermissionEvaluator(permissionEvaluator);
+        return expressionHandler;
+    }
+}
+

@@ -144,7 +144,7 @@ public class CalendarEventController {
     }
 
     @PutMapping("/events/{id}")
-    @PreAuthorize("hasAuthority('UPDATE:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:EDIT')")
     public ResponseEntity<HttpResponse> updateEvent(
             @PathVariable Long id,
             @Valid @RequestBody CalendarEventDTO eventDTO) {
@@ -163,7 +163,7 @@ public class CalendarEventController {
     }
 
     @DeleteMapping("/events/{id}")
-    @PreAuthorize("hasAuthority('DELETE:CALENDAR')")
+    @PreAuthorize("hasAuthority('CALENDAR:DELETE')")
     public ResponseEntity<HttpResponse> deleteEvent(@PathVariable Long id) {
         log.info("Deleting calendar event with ID: {}", id);
         

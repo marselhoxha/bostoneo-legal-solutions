@@ -204,6 +204,25 @@ public class LegalCase {
     @Column(name = "insurance_adjuster_contact")
     private String insuranceAdjusterContact;
 
+    @Column(name = "insurance_adjuster_email")
+    private String insuranceAdjusterEmail;
+
+    @Column(name = "insurance_adjuster_phone", length = 50)
+    private String insuranceAdjusterPhone;
+
+    // Employer Information (for wage documentation requests)
+    @Column(name = "employer_name")
+    private String employerName;
+
+    @Column(name = "employer_email")
+    private String employerEmail;
+
+    @Column(name = "employer_phone", length = 50)
+    private String employerPhone;
+
+    @Column(name = "employer_hr_contact")
+    private String employerHrContact;
+
     // Defendant Information
     @Column(name = "defendant_name")
     private String defendantName;

@@ -121,6 +121,12 @@
                     <i class="ri-checkbox-multiple-line me-2 text-warning"></i> Document Checklist
                   </a>
                 </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'provider-directory'">
+                    <i class="ri-contacts-book-line me-2 text-info"></i> Provider Directory
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
@@ -1741,16 +1747,29 @@
                 <i class="ri-checkbox-multiple-line me-2"></i> Document Checklist
               </a>
               <ng-template ngbNavContent>
-                <div class="professional-tool-content" (click)="loadDocumentChecklist()">
+                <div class="professional-tool-content document-checklist-content" (click)="loadDocumentChecklist()">
                   <!-- Header -->
                   <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                       <h5 class="mb-1">Document Checklist</h5>
-                      <p class="text-muted mb-0">Track required documents and case preparation status</p>
+                      <p class="text-muted mb-0">Track required documents and send requests via Email/SMS</p>
                     </div>
-                    <div class="d-flex gap-2">
-                      <button class="btn btn-soft-primary" (click)="initializeDocumentChecklist()" [disabled]="!linkedCase || documentChecklist.length > 0">
-                        <i class="ri-file-add-line me-1"></i> Initialize Checklist
+                    <div class="d-flex gap-2" *ngIf="linkedCase && documentChecklist.length > 0">
+                      <button class="btn btn-sm"
+                              [class.btn-primary]="bulkSelectMode"
+                              [class.btn-soft-secondary]="!bulkSelectMode"
+                              (click)="toggleBulkSelectMode()">
+                        <i class="ri-checkbox-multiple-line me-1"></i>
+                        {{ bulkSelectMode ? 'Cancel' : 'Bulk Select' }}
+                      </button>
+                      <button class="btn btn-success btn-sm"
+                              *ngIf="bulkSelectMode && selectedForBulk.size > 0"
+                              (click)="sendBulkRequests()">
+                        <i class="ri-send-plane-line me-1"></i>
+                        Request Selected ({{ selectedForBulk.size }})
+                      </button>
+                      <button class="btn btn-soft-primary btn-sm" (click)="initializeDocumentChecklist()" [disabled]="documentChecklist.length > 0">
+                        <i class="ri-refresh-line me-1"></i> Reset
                       </button>
                     </div>
                   </div>
@@ -1766,95 +1785,408 @@
 
                   <!-- Document Checklist Content -->
                   <div class="row" *ngIf="linkedCase">
-                    <!-- Completeness Score -->
-                    <div class="col-lg-4">
-                      <div class="card mb-3" *ngIf="documentCompleteness">
-                        <div class="card-body text-center">
-                          <h6 class="text-muted mb-2">DOCUMENT COMPLETENESS</h6>
-                          <div class="fs-1 fw-bold text-{{ documentCompleteness.completenessPercent >= 80 ? 'success' : documentCompleteness.completenessPercent >= 50 ? 'warning' : 'danger' }}">
-                            {{ documentCompleteness.completenessPercent }}%
+                    <!-- Left Sidebar: Stats -->
+                    <div class="col-lg-3">
+                      <!-- Completeness Ring -->
+                      <div class="completeness-card mb-3" *ngIf="documentCompleteness">
+                        <div class="completeness-ring-wrapper">
+                          <svg class="completeness-ring" viewBox="0 0 100 100">
+                            <circle class="ring-bg" cx="50" cy="50" r="42" />
+                            <circle class="ring-fill"
+                                    [class.ring-success]="getCompletenessPercent() >= 80"
+                                    [class.ring-warning]="getCompletenessPercent() >= 50 && getCompletenessPercent() < 80"
+                                    [class.ring-danger]="getCompletenessPercent() < 50"
+                                    cx="50" cy="50" r="42"
+                                    [style.stroke-dasharray]="(getCompletenessPercent() * 2.64) + ', 264'" />
+                          </svg>
+                          <div class="completeness-value">
+                            <span class="percent">{{ getCompletenessPercent() }}</span>
+                            <span class="symbol">%</span>
                           </div>
-                          <div class="progress mt-3" style="height: 8px;">
-                            <div class="progress-bar bg-{{ documentCompleteness.completenessPercent >= 80 ? 'success' : documentCompleteness.completenessPercent >= 50 ? 'warning' : 'danger' }}"
-                                 [style.width.%]="documentCompleteness.completenessPercent"></div>
+                        </div>
+                        <div class="completeness-label">Document Completeness</div>
+                        <div class="completeness-detail">
+                          {{ documentCompleteness.receivedCount }} of {{ documentCompleteness.requiredCount }} received
+                        </div>
+                      </div>
+
+                      <!-- Quick Stats -->
+                      <div class="checklist-stats">
+                        <div class="stat-item stat-received">
+                          <i class="ri-checkbox-circle-fill"></i>
+                          <div class="stat-info">
+                            <span class="stat-value">{{ getDocumentCountByStatus('RECEIVED') }}</span>
+                            <span class="stat-label">Received</span>
                           </div>
-                          <div class="mt-3 text-muted small">
-                            {{ documentCompleteness.receivedCount }} of {{ documentCompleteness.requiredCount }} required documents
+                        </div>
+                        <div class="stat-item stat-missing">
+                          <i class="ri-close-circle-fill"></i>
+                          <div class="stat-info">
+                            <span class="stat-value">{{ getMissingDocuments().length }}</span>
+                            <span class="stat-label">Missing</span>
+                          </div>
+                        </div>
+                        <div class="stat-item stat-requested">
+                          <i class="ri-time-fill"></i>
+                          <div class="stat-info">
+                            <span class="stat-value">{{ getDocumentCountByStatus('REQUESTED') }}</span>
+                            <span class="stat-label">Requested</span>
                           </div>
                         </div>
                       </div>
 
                       <!-- Missing Documents Alert -->
-                      <div class="card" *ngIf="documentCompleteness && documentCompleteness.missingDocuments.length > 0">
-                        <div class="card-header bg-warning-subtle">
-                          <h6 class="mb-0 text-warning"><i class="ri-alert-line me-1"></i> Missing Documents</h6>
+                      <div class="missing-docs-card" *ngIf="getMissingDocuments().length > 0">
+                        <div class="missing-header">
+                          <i class="ri-alert-fill"></i>
+                          <span>Missing ({{ getMissingDocuments().length }})</span>
                         </div>
-                        <div class="card-body">
-                          <div class="missing-doc-item mb-2" *ngFor="let doc of documentCompleteness.missingDocuments">
-                            <i class="ri-file-warning-line text-warning me-2"></i>
-                            <span>{{ doc.type }} - {{ doc.subtype }}</span>
+                        <div class="missing-list">
+                          <div class="missing-item" *ngFor="let doc of getMissingDocuments()">
+                            <i [class]="getDocumentTypeIcon(doc.documentType)"></i>
+                            <span>{{ doc.documentSubtype || getDocumentTypeLabel(doc.documentType) }}</span>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <!-- Checklist Items -->
-                    <div class="col-lg-8">
-                      <div class="card">
-                        <div class="card-header">
-                          <h6 class="mb-0">Document Status</h6>
-                        </div>
-                        <div class="card-body p-0">
-                          <div class="table-responsive" *ngIf="documentChecklist.length > 0">
-                            <table class="table table-hover mb-0">
-                              <thead class="table-light">
-                                <tr>
-                                  <th>Document</th>
-                                  <th>Status</th>
-                                  <th>Requested</th>
-                                  <th class="text-center">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr *ngFor="let item of documentChecklist">
-                                  <td>
-                                    <div class="fw-medium">{{ item.documentType }}</div>
-                                    <small class="text-muted">{{ item.documentSubtype }}</small>
-                                  </td>
-                                  <td>
-                                    <span class="badge bg-{{ getStatusColor(item.status) }}-subtle text-{{ getStatusColor(item.status) }}">
-                                      {{ item.status }}
-                                    </span>
-                                    <span class="badge bg-danger ms-1" *ngIf="item.isOverdue">OVERDUE</span>
-                                  </td>
-                                  <td>
-                                    <span *ngIf="item.requestedDate">{{ item.requestedDate | date:'MM/dd' }}</span>
-                                    <span *ngIf="item.daysSinceRequested" class="text-muted small ms-1">({{ item.daysSinceRequested }}d ago)</span>
-                                    <span *ngIf="!item.requestedDate" class="text-muted">-</span>
-                                  </td>
-                                  <td class="text-center">
-                                    <button class="btn btn-sm btn-soft-success me-1" *ngIf="item.status !== 'RECEIVED'" (click)="markDocumentReceived(item)" title="Mark Received">
-                                      <i class="ri-checkbox-circle-line"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-soft-primary" *ngIf="item.status !== 'RECEIVED'" (click)="requestDocument(item)" title="Log Request">
-                                      <i class="ri-mail-send-line"></i>
-                                    </button>
-                                    <i class="ri-check-double-line text-success fs-5" *ngIf="item.status === 'RECEIVED'"></i>
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
+                    <!-- Right: Document Cards -->
+                    <div class="col-lg-9">
+                      <div class="document-cards-container" *ngIf="documentChecklist.length > 0">
+                        <div class="document-card" *ngFor="let item of documentChecklist"
+                             [class.doc-received]="item.status === 'RECEIVED'"
+                             [class.doc-missing]="item.status === 'MISSING'"
+                             [class.doc-requested]="item.status === 'REQUESTED'"
+                             [class.doc-overdue]="item.isOverdue"
+                             [class.doc-selected]="bulkSelectMode && selectedForBulk.has(item.id!)">
+                          <!-- Bulk Selection Checkbox -->
+                          <div class="doc-checkbox" *ngIf="bulkSelectMode && item.status !== 'RECEIVED'">
+                            <input type="checkbox" class="form-check-input"
+                                   [checked]="selectedForBulk.has(item.id!)"
+                                   (change)="toggleBulkSelection(item)">
                           </div>
-                          <div class="text-center py-4" *ngIf="documentChecklist.length === 0 && !isLoadingChecklist">
-                            <i class="ri-checkbox-multiple-line fs-1 text-muted"></i>
-                            <p class="text-muted mt-2 mb-3">No checklist items yet.</p>
-                            <button class="btn btn-primary" (click)="initializeDocumentChecklist()">
-                              <i class="ri-file-add-line me-1"></i> Initialize Default Checklist
+                          <div class="doc-icon">
+                            <i [class]="getDocumentTypeIcon(item.documentType)"></i>
+                          </div>
+                          <div class="doc-info">
+                            <div class="doc-type">
+                              {{ getDocumentTypeLabel(item.documentType) }}
+                              <!-- Request count badge -->
+                              <span class="request-count-badge" *ngIf="item.requestCount && item.requestCount > 0"
+                                    title="{{item.requestCount}} request(s) sent">
+                                <i class="ri-mail-send-line"></i> {{ item.requestCount }}
+                              </span>
+                            </div>
+                            <div class="doc-subtype">{{ item.documentSubtype }}</div>
+                            <div class="doc-meta" *ngIf="item.requestedDate">
+                              <i class="ri-calendar-line"></i>
+                              Requested {{ item.requestedDate | date:'MMM d' }}
+                              <span class="days-ago" *ngIf="item.daysSinceRequested">({{ item.daysSinceRequested }}d ago)</span>
+                            </div>
+                            <div class="doc-meta doc-meta-recipient" *ngIf="item.requestSentTo">
+                              <i class="ri-user-line"></i>
+                              {{ item.requestSentTo }}
+                            </div>
+                          </div>
+                          <div class="doc-status">
+                            <span class="status-badge"
+                                  [class.status-received]="item.status === 'RECEIVED'"
+                                  [class.status-missing]="item.status === 'MISSING'"
+                                  [class.status-requested]="item.status === 'REQUESTED'"
+                                  [class.status-pending]="item.status === 'PENDING'">
+                              {{ getStatusLabel(item.status) }}
+                            </span>
+                            <span class="overdue-badge" *ngIf="item.isOverdue">Overdue</span>
+                          </div>
+                          <div class="doc-actions">
+                            <button class="action-btn action-receive"
+                                    *ngIf="item.status !== 'RECEIVED'"
+                                    (click)="markDocumentReceived(item)"
+                                    title="Mark as Received">
+                              <i class="ri-checkbox-circle-line"></i>
+                            </button>
+                            <button class="action-btn action-request"
+                                    *ngIf="item.status !== 'RECEIVED'"
+                                    (click)="requestDocument(item)"
+                                    title="Send Request (Email/SMS)">
+                              <i class="ri-send-plane-line"></i>
+                            </button>
+                            <button class="action-btn action-history"
+                                    *ngIf="item.requestCount && item.requestCount > 0"
+                                    (click)="viewRequestHistory(item)"
+                                    title="View Request History">
+                              <i class="ri-history-line"></i>
+                            </button>
+                            <div class="received-check" *ngIf="item.status === 'RECEIVED'">
+                              <i class="ri-check-double-line"></i>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Empty State -->
+                      <div class="empty-checklist" *ngIf="documentChecklist.length === 0 && !isLoadingChecklist">
+                        <div class="empty-icon">
+                          <i class="ri-checkbox-multiple-line"></i>
+                        </div>
+                        <h6>No Document Checklist</h6>
+                        <p>Initialize a checklist to track required documents for this case.</p>
+                        <button class="btn btn-primary" (click)="initializeDocumentChecklist()">
+                          <i class="ri-file-add-line me-1"></i> Initialize Checklist
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
+
+            <!-- Provider Directory Tab -->
+            <li ngbNavItem="provider-directory">
+              <a ngbNavLink>
+                <i class="ri-contacts-book-line me-2"></i> Provider Directory
+                <span class="badge bg-info-subtle text-info ms-1" *ngIf="providers.length > 0">{{ providers.length }}</span>
+              </a>
+              <ng-template ngbNavContent>
+                <div class="professional-tool-content">
+                  <!-- Header -->
+                  <div class="provider-header">
+                    <div class="provider-header-text">
+                      <h5 class="mb-1">Provider Directory</h5>
+                      <p class="text-muted mb-0 d-none d-sm-block">Contact information and fee schedules for medical providers</p>
+                    </div>
+                    <button class="btn btn-primary add-provider-btn" (click)="showAddProviderModal()">
+                      <i class="ri-add-line"></i>
+                      <span class="btn-text">Add Provider</span>
+                    </button>
+                  </div>
+
+                  <!-- Provider Toolbar - Type Filter & Search -->
+                  <div class="provider-toolbar">
+                    <div class="toolbar-left">
+                      <span class="provider-count">
+                        <i class="ri-contacts-book-2-line"></i>
+                        <strong>{{ filteredProviders.length }}</strong>
+                        <span class="count-label">{{ filteredProviders.length === 1 ? 'Provider' : 'Providers' }}</span>
+                      </span>
+                      <div class="type-breakdown" *ngIf="providers.length > 0">
+                        <button *ngFor="let item of getProviderTypeCounts()"
+                                class="type-chip"
+                                [class.active]="providerTypeFilter === item.type"
+                                [style.--chip-color]="item.color"
+                                (click)="providerTypeFilter = providerTypeFilter === item.type ? '' : item.type; filterProviders()">
+                          <i [class]="item.icon"></i>
+                          <span class="chip-label">{{ item.label }}</span>
+                          <span class="chip-count">{{ item.count }}</span>
+                        </button>
+                        <button class="type-chip clear" *ngIf="providerTypeFilter"
+                                (click)="providerTypeFilter = ''; filterProviders()">
+                          <i class="ri-close-line"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="search-filter-group">
+                      <div class="search-input-enhanced">
+                        <i class="ri-search-line"></i>
+                        <input type="text" placeholder="Search providers..."
+                               [(ngModel)]="providerSearchTerm"
+                               (ngModelChange)="filterProviders()">
+                        <button class="search-clear" *ngIf="providerSearchTerm" (click)="providerSearchTerm = ''; filterProviders()">
+                          <i class="ri-close-line"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Provider Cards - Full Width -->
+                  <div class="provider-content">
+                      <!-- Loading -->
+                      <div *ngIf="isLoadingProviders" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                          <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-2">Loading providers...</p>
+                      </div>
+
+                      <!-- Provider Cards Grid -->
+                      <div class="provider-cards-grid" *ngIf="!isLoadingProviders && filteredProviders.length > 0">
+                        <div class="provider-card-enhanced" *ngFor="let provider of filteredProviders"
+                             [attr.data-type]="provider.providerType"
+                             [class.selected]="selectedProvider?.id === provider.id"
+                             (click)="selectProvider(provider)">
+                          <!-- Card Header -->
+                          <div class="pce-header">
+                            <div class="pce-icon"
+                                 [class.icon-hospital]="provider.providerType === 'HOSPITAL'"
+                                 [class.icon-clinic]="provider.providerType === 'CLINIC'"
+                                 [class.icon-imaging]="provider.providerType === 'IMAGING'"
+                                 [class.icon-therapy]="provider.providerType === 'PHYSICAL_THERAPY'"
+                                 [class.icon-chiro]="provider.providerType === 'CHIROPRACTIC'"
+                                 [class.icon-pharmacy]="provider.providerType === 'PHARMACY'"
+                                 [class.icon-lab]="provider.providerType === 'LABORATORY'"
+                                 [class.icon-urgent]="provider.providerType === 'URGENT_CARE'">
+                              <i [class]="getProviderIcon(provider.providerType)"></i>
+                            </div>
+                          </div>
+
+                          <!-- Card Body -->
+                          <div class="pce-body">
+                            <h6 class="pce-name">{{ provider.providerName }}</h6>
+                            <div class="pce-location" *ngIf="provider.city || provider.address">
+                              <i class="ri-map-pin-2-line"></i>
+                              <span>{{ provider.city }}{{ provider.state ? ', ' + provider.state : '' }}</span>
+                            </div>
+                          </div>
+
+                          <!-- Provider Type Badge -->
+                          <div class="pce-footer">
+                            <div class="pce-type-badge" [attr.data-type]="provider.providerType">
+                              <i [class]="getProviderIcon(provider.providerType)"></i>
+                              {{ providerDirectoryService.getProviderTypeLabel(provider.providerType || 'OTHER') }}
+                            </div>
+                          </div>
+
+                          <!-- Quick Actions -->
+                          <div class="pce-actions" (click)="$event.stopPropagation()">
+                            <button class="pce-action-btn" (click)="selectProvider(provider)" title="View Details">
+                              <i class="ri-eye-line"></i>
+                            </button>
+                            <button class="pce-action-btn" (click)="editProvider(provider)" title="Edit">
+                              <i class="ri-pencil-line"></i>
+                            </button>
+                            <button class="pce-action-btn delete" (click)="deleteProvider(provider)" title="Delete">
+                              <i class="ri-delete-bin-line"></i>
                             </button>
                           </div>
                         </div>
                       </div>
-                    </div>
+
+                      <!-- Detail Panel (shows when provider selected) -->
+                      <div class="provider-detail-panel" *ngIf="selectedProvider">
+                        <div class="pdp-header">
+                          <div class="pdp-title">
+                            <i [class]="getProviderIcon(selectedProvider.providerType)"></i>
+                            <span>{{ selectedProvider.providerName }}</span>
+                          </div>
+                          <button class="pdp-close" (click)="selectedProvider = null">
+                            <i class="ri-close-line"></i>
+                          </button>
+                        </div>
+                        <div class="pdp-body">
+                          <!-- Location -->
+                          <div class="pdp-section" *ngIf="selectedProvider.address || selectedProvider.city">
+                            <div class="pdp-section-title"><i class="ri-map-pin-line"></i> Address</div>
+                            <div class="pdp-address">
+                              <span *ngIf="selectedProvider.address">{{ selectedProvider.address }}</span>
+                              <span>{{ selectedProvider.city }}{{ selectedProvider.state ? ', ' + selectedProvider.state : '' }} {{ selectedProvider.zip }}</span>
+                            </div>
+                          </div>
+
+                          <!-- Records Department -->
+                          <div class="pdp-section" *ngIf="selectedProvider.recordsEmail || selectedProvider.recordsPhone || selectedProvider.recordsFax">
+                            <div class="pdp-section-title"><i class="ri-folder-received-line"></i> Records Department</div>
+                            <div class="pdp-contact-list">
+                              <div class="pdp-contact" *ngIf="selectedProvider.recordsContactName">
+                                <i class="ri-user-line"></i>
+                                <span>{{ selectedProvider.recordsContactName }}</span>
+                              </div>
+                              <div class="pdp-contact copyable" *ngIf="selectedProvider.recordsEmail" (click)="copyToClipboard(selectedProvider.recordsEmail, 'Email')">
+                                <i class="ri-mail-line"></i>
+                                <span>{{ selectedProvider.recordsEmail }}</span>
+                                <i class="ri-file-copy-line copy-hint"></i>
+                              </div>
+                              <div class="pdp-contact copyable" *ngIf="selectedProvider.recordsPhone" (click)="copyToClipboard(selectedProvider.recordsPhone, 'Phone')">
+                                <i class="ri-phone-line"></i>
+                                <span>{{ providerDirectoryService.formatPhone(selectedProvider.recordsPhone) }}</span>
+                                <i class="ri-file-copy-line copy-hint"></i>
+                              </div>
+                              <div class="pdp-contact copyable" *ngIf="selectedProvider.recordsFax" (click)="copyToClipboard(selectedProvider.recordsFax, 'Fax')">
+                                <i class="ri-printer-line"></i>
+                                <span>{{ providerDirectoryService.formatPhone(selectedProvider.recordsFax) }}</span>
+                                <i class="ri-file-copy-line copy-hint"></i>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Billing Department -->
+                          <div class="pdp-section" *ngIf="selectedProvider.billingEmail || selectedProvider.billingPhone">
+                            <div class="pdp-section-title"><i class="ri-money-dollar-circle-line"></i> Billing Department</div>
+                            <div class="pdp-contact-list">
+                              <div class="pdp-contact" *ngIf="selectedProvider.billingContactName">
+                                <i class="ri-user-line"></i>
+                                <span>{{ selectedProvider.billingContactName }}</span>
+                              </div>
+                              <div class="pdp-contact copyable" *ngIf="selectedProvider.billingEmail" (click)="copyToClipboard(selectedProvider.billingEmail, 'Email')">
+                                <i class="ri-mail-line"></i>
+                                <span>{{ selectedProvider.billingEmail }}</span>
+                                <i class="ri-file-copy-line copy-hint"></i>
+                              </div>
+                              <div class="pdp-contact copyable" *ngIf="selectedProvider.billingPhone" (click)="copyToClipboard(selectedProvider.billingPhone, 'Phone')">
+                                <i class="ri-phone-line"></i>
+                                <span>{{ providerDirectoryService.formatPhone(selectedProvider.billingPhone) }}</span>
+                                <i class="ri-file-copy-line copy-hint"></i>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Fees -->
+                          <div class="pdp-section" *ngIf="selectedProvider.baseFee || selectedProvider.perPageFee || selectedProvider.rushFee">
+                            <div class="pdp-section-title"><i class="ri-price-tag-3-line"></i> Fee Schedule</div>
+                            <div class="pdp-fees">
+                              <div class="pdp-fee" *ngIf="selectedProvider.baseFee">
+                                <span class="fee-label">Base Fee</span>
+                                <span class="fee-amount">${{ selectedProvider.baseFee | number:'1.2-2' }}</span>
+                              </div>
+                              <div class="pdp-fee" *ngIf="selectedProvider.perPageFee">
+                                <span class="fee-label">Per Page</span>
+                                <span class="fee-amount">${{ selectedProvider.perPageFee | number:'1.2-2' }}</span>
+                              </div>
+                              <div class="pdp-fee rush" *ngIf="selectedProvider.rushFee">
+                                <span class="fee-label">Rush Fee</span>
+                                <span class="fee-amount">${{ selectedProvider.rushFee | number:'1.2-2' }}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Notes -->
+                          <div class="pdp-section" *ngIf="selectedProvider.notes">
+                            <div class="pdp-section-title"><i class="ri-sticky-note-line"></i> Notes</div>
+                            <div class="pdp-notes">{{ selectedProvider.notes }}</div>
+                          </div>
+                        </div>
+                        <div class="pdp-footer">
+                          <button class="btn btn-soft-primary" (click)="editProvider(selectedProvider)">
+                            <i class="ri-pencil-line me-1"></i> Edit Provider
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Empty State -->
+                      <div *ngIf="!isLoadingProviders && filteredProviders.length === 0" class="providers-empty">
+                        <div class="empty-state-illustration">
+                          <div class="empty-state-icon-lg">
+                            <i class="ri-contacts-book-line"></i>
+                          </div>
+                          <div class="empty-state-circles">
+                            <span></span><span></span><span></span>
+                          </div>
+                        </div>
+                        <h6 class="fw-semibold mb-2" *ngIf="!providerSearchTerm && !providerTypeFilter">No Providers Added</h6>
+                        <h6 class="fw-semibold mb-2" *ngIf="providerSearchTerm || providerTypeFilter">No Matches Found</h6>
+                        <p class="text-muted mb-3" *ngIf="!providerSearchTerm && !providerTypeFilter">
+                          Add medical providers to quickly access their contact info when requesting records.
+                        </p>
+                        <p class="text-muted mb-3" *ngIf="providerSearchTerm || providerTypeFilter">
+                          Try adjusting your search or filter criteria.
+                        </p>
+                        <button *ngIf="!providerSearchTerm && !providerTypeFilter" class="btn btn-primary" (click)="showAddProviderModal()">
+                          <i class="ri-add-line me-1"></i> Add Provider
+                        </button>
+                        <button *ngIf="providerSearchTerm || providerTypeFilter" class="btn btn-outline-secondary"
+                                (click)="providerSearchTerm = ''; providerTypeFilter = ''; filterProviders()">
+                          <i class="ri-refresh-line me-1"></i> Clear Filters
+                        </button>
+                      </div>
                   </div>
                 </div>
               </ng-template>
@@ -1893,4 +2225,167 @@
     </button>
   </div>
   <div class="fab-backdrop" *ngIf="fabExpanded" (click)="fabExpanded = false"></div>
+</div>
+
+<!-- Provider Directory Modal -->
+<div class="modal fade show" id="providerModal" tabindex="-1" *ngIf="showProviderModal" style="display: block;">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ri-building-line me-2 text-primary"></i>
+          {{ editingProvider?.id ? 'Edit Provider' : 'Add Provider' }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeProviderModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <!-- Basic Info -->
+          <div class="col-12">
+            <h6 class="text-primary mb-3"><i class="ri-information-line me-1"></i> Basic Information</h6>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Provider Name *</label>
+            <input type="text" class="form-control" [(ngModel)]="editingProvider!.providerName"
+                   placeholder="e.g., Massachusetts General Hospital">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Provider Type</label>
+            <select class="form-select" [(ngModel)]="editingProvider!.providerType">
+              <option value="">Select type...</option>
+              <option *ngFor="let type of providerDirectoryService.getProviderTypes()" [value]="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Main Phone</label>
+            <input type="tel" class="form-control" [(ngModel)]="editingProvider!.mainPhone"
+                   placeholder="(555) 123-4567">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Main Email</label>
+            <input type="email" class="form-control" [(ngModel)]="editingProvider!.mainEmail"
+                   placeholder="info@provider.com">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Address</label>
+            <input type="text" class="form-control" [(ngModel)]="editingProvider!.address"
+                   placeholder="Street address">
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">City</label>
+            <input type="text" class="form-control" [(ngModel)]="editingProvider!.city">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">State</label>
+            <input type="text" class="form-control" [(ngModel)]="editingProvider!.state">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">ZIP</label>
+            <input type="text" class="form-control" [(ngModel)]="editingProvider!.zip">
+          </div>
+
+          <!-- Records Contact -->
+          <div class="col-12 mt-4">
+            <h6 class="text-success mb-3"><i class="ri-file-text-line me-1"></i> Records Department</h6>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Contact Name</label>
+            <input type="text" class="form-control" [(ngModel)]="editingProvider!.recordsContactName">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Records Email</label>
+            <input type="email" class="form-control" [(ngModel)]="editingProvider!.recordsEmail"
+                   placeholder="records@provider.com">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Records Phone</label>
+            <input type="tel" class="form-control" [(ngModel)]="editingProvider!.recordsPhone">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Records Fax</label>
+            <input type="tel" class="form-control" [(ngModel)]="editingProvider!.recordsFax">
+          </div>
+
+          <!-- Billing Contact -->
+          <div class="col-12 mt-4">
+            <h6 class="text-info mb-3"><i class="ri-money-dollar-circle-line me-1"></i> Billing Department</h6>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Contact Name</label>
+            <input type="text" class="form-control" [(ngModel)]="editingProvider!.billingContactName">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Billing Email</label>
+            <input type="email" class="form-control" [(ngModel)]="editingProvider!.billingEmail"
+                   placeholder="billing@provider.com">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Billing Phone</label>
+            <input type="tel" class="form-control" [(ngModel)]="editingProvider!.billingPhone">
+          </div>
+
+          <!-- Fees -->
+          <div class="col-12 mt-4">
+            <h6 class="text-warning mb-3"><i class="ri-price-tag-line me-1"></i> Fee Information</h6>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Base Fee ($)</label>
+            <input type="number" class="form-control" [(ngModel)]="editingProvider!.baseFee"
+                   placeholder="25.00" step="0.01">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Per Page Fee ($)</label>
+            <input type="number" class="form-control" [(ngModel)]="editingProvider!.perPageFee"
+                   placeholder="0.50" step="0.01">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Rush Fee ($)</label>
+            <input type="number" class="form-control" [(ngModel)]="editingProvider!.rushFee"
+                   placeholder="50.00" step="0.01">
+          </div>
+
+          <!-- Notes -->
+          <div class="col-12 mt-3">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="editingProvider!.notes"
+                      placeholder="Any special instructions or notes about this provider..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" (click)="closeProviderModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="saveProvider()"
+                [disabled]="!editingProvider?.providerName || isSavingProvider">
+          <span *ngIf="!isSavingProvider">
+            <i class="ri-save-line me-1"></i> {{ editingProvider?.id ? 'Update' : 'Save' }} Provider
+          </span>
+          <span *ngIf="isSavingProvider">
+            <span class="spinner-border spinner-border-sm me-1"></span> Saving...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="showProviderModal" (click)="closeProviderModal()"></div>
+
+<!-- Bulk Request Wizard Modal -->
+<div class="bulk-wizard-modal" *ngIf="showBulkWizard">
+  <div class="bulk-wizard-backdrop" (click)="onBulkWizardCancelled()"></div>
+  <div class="bulk-wizard-container">
+    <div class="bulk-wizard-header">
+      <h5 class="mb-0">
+        <i class="ri-mail-send-line me-2"></i>Send Bulk Requests
+      </h5>
+      <button class="btn-close" (click)="onBulkWizardCancelled()"></button>
+    </div>
+    <app-bulk-request-wizard
+      [caseId]="linkedCase?.id!"
+      [selectedItemIds]="bulkWizardItemIds"
+      (completed)="onBulkWizardCompleted($event)"
+      (cancelled)="onBulkWizardCancelled()">
+    </app-bulk-request-wizard>
+  </div>
 </div>

@@ -1,0 +1,368 @@
+<div class="bulk-wizard">
+  <!-- Header with Steps -->
+  <div class="wizard-header">
+    <div class="wizard-steps">
+      <div class="step" [class.active]="currentStep === 1" [class.completed]="currentStep > 1">
+        <div class="step-number">
+          <span *ngIf="currentStep <= 1">1</span>
+          <i *ngIf="currentStep > 1" class="ri-check-line"></i>
+        </div>
+        <span class="step-label">Analysis</span>
+      </div>
+      <div class="step-connector" [class.completed]="currentStep > 1"></div>
+      <div class="step" [class.active]="currentStep === 2" [class.completed]="currentStep > 2">
+        <div class="step-number">
+          <span *ngIf="currentStep <= 2">2</span>
+          <i *ngIf="currentStep > 2" class="ri-check-line"></i>
+        </div>
+        <span class="step-label">Review & Fix</span>
+      </div>
+      <div class="step-connector" [class.completed]="currentStep > 2"></div>
+      <div class="step" [class.active]="currentStep === 3">
+        <div class="step-number">3</div>
+        <span class="step-label">Confirm</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="wizard-loading">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Analyzing selected items...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="wizard-error">
+    <div class="alert alert-danger">
+      <i class="ri-error-warning-line me-2"></i>
+      {{ error }}
+    </div>
+    <button class="btn btn-secondary" (click)="loadPreview()">
+      <i class="ri-refresh-line me-1"></i> Retry
+    </button>
+  </div>
+
+  <!-- Step 1: Analysis -->
+  <div *ngIf="!isLoading && !error && currentStep === 1 && preview" class="wizard-step step-analysis">
+    <div class="row">
+      <!-- Summary Cards -->
+      <div class="col-md-4">
+        <div class="summary-card ready">
+          <div class="summary-icon">
+            <i class="ri-check-double-line"></i>
+          </div>
+          <div class="summary-content">
+            <div class="summary-value">{{ preview.resolvedCount }}</div>
+            <div class="summary-label">Ready to Send</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="summary-card attention" [class.empty]="preview.unresolvedCount === 0">
+          <div class="summary-icon">
+            <i class="ri-alert-line"></i>
+          </div>
+          <div class="summary-content">
+            <div class="summary-value">{{ preview.unresolvedCount }}</div>
+            <div class="summary-label">Need Info</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="summary-card info">
+          <div class="summary-icon">
+            <i class="ri-group-line"></i>
+          </div>
+          <div class="summary-content">
+            <div class="summary-value">{{ preview.recipientGroups.length }}</div>
+            <div class="summary-label">Recipients</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grouping Info -->
+    <div *ngIf="preview.warnings && preview.warnings.length > 0" class="grouping-info mt-4">
+      <div class="alert alert-info mb-0">
+        <i class="ri-information-line me-2"></i>
+        <span *ngFor="let warning of preview.warnings; let i = index">
+          {{ warning }}<span *ngIf="i < preview.warnings.length - 1"> • </span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Recipient Groups Preview -->
+    <div class="groups-preview mt-4">
+      <h6 class="section-title">
+        <i class="ri-mail-send-line me-2"></i>Recipients
+      </h6>
+      <div class="group-list">
+        <div *ngFor="let group of preview.recipientGroups" class="group-item">
+          <div class="group-header">
+            <div class="group-info">
+              <span class="group-name">{{ group.recipientName }}</span>
+              <span class="badge bg-light text-dark ms-2">
+                {{ group.items.length }} document{{ group.items.length !== 1 ? 's' : '' }}
+              </span>
+            </div>
+            <div class="group-channel">
+              <span class="badge" [ngClass]="{
+                'bg-primary-subtle text-primary': group.suggestedChannel === 'EMAIL',
+                'bg-success-subtle text-success': group.suggestedChannel === 'SMS',
+                'bg-secondary-subtle text-secondary': group.suggestedChannel === 'FAX'
+              }">
+                <i [class]="getChannelIcon(group.suggestedChannel)" class="me-1"></i>
+                {{ group.suggestedChannel }}
+              </span>
+            </div>
+          </div>
+          <div class="group-docs">
+            <span *ngFor="let item of group.items; let last = last" class="doc-tag">
+              {{ getDocumentTypeLabel(item.documentType) }}<span *ngIf="!last">, </span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unresolved Items Preview -->
+    <div *ngIf="preview.unresolvedItems.length > 0" class="unresolved-preview mt-4">
+      <h6 class="section-title text-warning">
+        <i class="ri-alert-line me-2"></i>Need Manual Entry
+      </h6>
+      <div class="unresolved-list">
+        <div *ngFor="let item of preview.unresolvedItems" class="unresolved-item">
+          <span class="doc-type">{{ getDocumentTypeLabel(item.documentType) }}</span>
+          <span class="resolution-msg text-muted">{{ item.resolutionMessage }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Review & Fix -->
+  <div *ngIf="!isLoading && !error && currentStep === 2 && preview" class="wizard-step step-review">
+    <!-- Resolved Groups -->
+    <div *ngIf="preview.recipientGroups.length > 0" class="resolved-section">
+      <h6 class="section-title">
+        <i class="ri-check-double-line me-2 text-success"></i>Ready to Send
+      </h6>
+
+      <div class="accordion" id="recipientAccordion">
+        <div *ngFor="let group of preview.recipientGroups; let i = index" class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button"
+                    [class.collapsed]="!isGroupExpanded(group.groupKey)"
+                    type="button"
+                    (click)="toggleGroup(group.groupKey)">
+              <div class="d-flex align-items-center justify-content-between w-100 pe-3">
+                <div class="recipient-info">
+                  <span class="recipient-name">{{ group.recipientName }}</span>
+                  <span class="badge bg-light text-dark ms-2">{{ group.items.length }}</span>
+                </div>
+                <div class="channel-selector" (click)="$event.stopPropagation()">
+                  <select class="form-select form-select-sm"
+                          [ngModel]="getChannel(group.groupKey)"
+                          (ngModelChange)="setChannel(group.groupKey, $event)">
+                    <option *ngFor="let ch of group.availableChannels" [value]="ch">
+                      {{ ch }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </button>
+          </h2>
+          <div class="accordion-collapse collapse" [class.show]="isGroupExpanded(group.groupKey)">
+            <div class="accordion-body">
+              <div class="contact-info mb-3">
+                <span *ngIf="group.email" class="contact-item">
+                  <i class="ri-mail-line me-1"></i>{{ group.email }}
+                </span>
+                <span *ngIf="group.phone" class="contact-item">
+                  <i class="ri-phone-line me-1"></i>{{ group.phone }}
+                </span>
+              </div>
+              <div class="items-list">
+                <div *ngFor="let item of group.items" class="item-row"
+                     [class.skipped]="isItemSkipped(item.checklistItemId)">
+                  <div class="item-info">
+                    <span class="doc-type">{{ getDocumentTypeLabel(item.documentType) }}</span>
+                    <span *ngIf="item.documentSubtype" class="doc-subtype">
+                      ({{ item.documentSubtype }})
+                    </span>
+                    <span *ngIf="item.alreadyRequested" class="badge bg-warning-subtle text-warning ms-2">
+                      <i class="ri-time-line me-1"></i>Already requested
+                    </span>
+                  </div>
+                  <button class="btn btn-sm"
+                          [class.btn-outline-danger]="!isItemSkipped(item.checklistItemId)"
+                          [class.btn-outline-success]="isItemSkipped(item.checklistItemId)"
+                          (click)="toggleSkipItem(item.checklistItemId)">
+                    <i [class]="isItemSkipped(item.checklistItemId) ? 'ri-add-line' : 'ri-close-line'"></i>
+                    {{ isItemSkipped(item.checklistItemId) ? 'Include' : 'Skip' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unresolved Items - Manual Entry -->
+    <div *ngIf="preview.unresolvedItems.length > 0" class="unresolved-section mt-4">
+      <h6 class="section-title text-warning">
+        <i class="ri-edit-line me-2"></i>Enter Recipient Details
+      </h6>
+
+      <div *ngFor="let item of preview.unresolvedItems" class="manual-entry-card">
+        <div class="manual-header">
+          <div class="doc-info">
+            <span class="doc-type">{{ getDocumentTypeLabel(item.documentType) }}</span>
+            <span *ngIf="item.providerName" class="provider-name">- {{ item.providerName }}</span>
+          </div>
+          <button class="btn btn-sm"
+                  [class.btn-outline-danger]="!isItemSkipped(item.checklistItemId)"
+                  [class.btn-outline-success]="isItemSkipped(item.checklistItemId)"
+                  (click)="toggleSkipItem(item.checklistItemId)">
+            {{ isItemSkipped(item.checklistItemId) ? 'Include' : 'Skip' }}
+          </button>
+        </div>
+
+        <div *ngIf="!isItemSkipped(item.checklistItemId)" class="manual-form">
+          <div class="row g-2">
+            <div class="col-md-4">
+              <label class="form-label small">Recipient Name *</label>
+              <input type="text" class="form-control form-control-sm"
+                     [(ngModel)]="manualRecipients[item.checklistItemId].name"
+                     placeholder="Enter name">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Email</label>
+              <input type="email" class="form-control form-control-sm"
+                     [(ngModel)]="manualRecipients[item.checklistItemId].email"
+                     placeholder="email@example.com">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Phone</label>
+              <input type="tel" class="form-control form-control-sm"
+                     [(ngModel)]="manualRecipients[item.checklistItemId].phone"
+                     placeholder="(555) 123-4567">
+            </div>
+          </div>
+          <div *ngIf="!isManualRecipientValid(item.checklistItemId)" class="text-danger small mt-1">
+            <i class="ri-information-line me-1"></i>
+            Name and either email or phone required
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Confirm -->
+  <div *ngIf="!isLoading && !error && currentStep === 3 && preview" class="wizard-step step-confirm">
+    <div class="confirm-summary">
+      <h5 class="mb-4">
+        <i class="ri-send-plane-2-line me-2"></i>Ready to Send
+      </h5>
+
+      <!-- Summary Stats -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="stat-box">
+            <div class="stat-value text-primary">{{ totalToSend }}</div>
+            <div class="stat-label">Documents</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-box">
+            <div class="stat-value text-info">{{ totalEmails }}</div>
+            <div class="stat-label">Emails</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-box">
+            <div class="stat-value text-success">{{ totalSms }}</div>
+            <div class="stat-label">SMS</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-box">
+            <div class="stat-value text-muted">{{ totalSkipped }}</div>
+            <div class="stat-label">Skipped</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recipients List -->
+      <h6 class="section-title">Recipients</h6>
+      <div class="recipients-confirm-list">
+        <div *ngFor="let group of preview.recipientGroups"
+             class="recipient-confirm-item"
+             [class.all-skipped]="isGroupAllSkipped(group)">
+          <div class="recipient-row">
+            <div class="recipient-info">
+              <i [class]="getChannelIcon(getChannel(group.groupKey))" class="channel-icon me-2"></i>
+              <span class="recipient-name">{{ group.recipientName }}</span>
+            </div>
+            <div class="doc-count">
+              {{ getGroupActiveItemsCount(group) }} docs
+            </div>
+          </div>
+        </div>
+
+        <!-- Manual recipients that are valid -->
+        <ng-container *ngFor="let item of preview.unresolvedItems">
+          <div *ngIf="!isItemSkipped(item.checklistItemId) && isManualRecipientValid(item.checklistItemId)"
+               class="recipient-confirm-item manual">
+            <div class="recipient-row">
+              <div class="recipient-info">
+                <i class="ri-mail-line channel-icon me-2"></i>
+                <span class="recipient-name">{{ manualRecipients[item.checklistItemId].name }}</span>
+                <span class="badge bg-info-subtle text-info ms-2">Manual</span>
+              </div>
+              <div class="doc-count">1 doc</div>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+
+      <!-- Skipped Items -->
+      <div *ngIf="totalSkipped > 0" class="skipped-summary mt-4">
+        <h6 class="section-title text-muted">
+          <i class="ri-skip-forward-line me-2"></i>Skipped Items ({{ totalSkipped }})
+        </h6>
+        <p class="text-muted small">These items will not be sent.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer Navigation -->
+  <div class="wizard-footer">
+    <div class="footer-left">
+      <button class="btn btn-light" (click)="cancel()">Cancel</button>
+    </div>
+    <div class="footer-right">
+      <button *ngIf="currentStep > 1" class="btn btn-secondary me-2" (click)="prevStep()">
+        <i class="ri-arrow-left-line me-1"></i> Back
+      </button>
+      <button *ngIf="currentStep < 3" class="btn btn-primary"
+              [disabled]="isLoading"
+              (click)="nextStep()">
+        Next <i class="ri-arrow-right-line ms-1"></i>
+      </button>
+      <button *ngIf="currentStep === 3" class="btn btn-success"
+              [disabled]="isSending || totalToSend === 0"
+              (click)="sendRequests()">
+        <span *ngIf="!isSending">
+          <i class="ri-send-plane-line me-1"></i> Send {{ totalToSend }} Request{{ totalToSend !== 1 ? 's' : '' }}
+        </span>
+        <span *ngIf="isSending">
+          <span class="spinner-border spinner-border-sm me-1"></span> Sending...
+        </span>
+      </button>
+    </div>
+  </div>
+</div>

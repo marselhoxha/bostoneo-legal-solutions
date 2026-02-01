@@ -1,0 +1,163 @@
+package com.bostoneo.bostoneosolutions.service.implementation;
+
+import com.bostoneo.bostoneosolutions.dto.*;
+import com.bostoneo.bostoneosolutions.model.*;
+import com.bostoneo.bostoneosolutions.enumeration.*;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.repository.*;
+import com.bostoneo.bostoneosolutions.service.CaseAssignmentService;
+import com.bostoneo.bostoneosolutions.service.UserService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+@Slf4j
+public class CaseAssignmentServiceImpl implements CaseAssignmentService {
+    
+    private final CaseAssignmentRepository assignmentRepository;
+    private final UserWorkloadRepository workloadRepository;
+    private final AttorneyExpertiseRepository expertiseRepository;
+    private final CaseAssignmentHistoryRepository historyRepository;
+    private final AssignmentRuleRepository ruleRepository;
+    private final CaseTransferRequestRepository transferRequestRepository;
+    private final CaseTaskRepository taskRepository;
+    private final LegalCaseRepository legalCaseRepository;
+    private final UserRepository userRepository;
+    private final UserService userService;
+    
+    @Override
+    public CaseAssignmentDTO assignCase(CaseAssignmentRequest request) {
+        // TODO: Implement case assignment logic
+        throw new UnsupportedOperationException("Case assignment not yet implemented");
+    }
+    
+    @Override
+    public CaseAssignmentDTO autoAssignCase(Long caseId) {
+        // TODO: Implement auto assignment logic
+        throw new UnsupportedOperationException("Auto assignment not yet implemented");
+    }
+    
+    @Override
+    public CaseAssignmentDTO transferCase(com.bostoneo.bostoneosolutions.dto.CaseTransferRequest request) {
+        // TODO: Implement case transfer logic
+        throw new UnsupportedOperationException("Case transfer not yet implemented");
+    }
+    
+    @Override
+    public void unassignCase(Long caseId, Long userId, String reason) {
+        // TODO: Implement case unassignment logic
+        throw new UnsupportedOperationException("Case unassignment not yet implemented");
+    }
+    
+    @Override
+    public List<CaseAssignmentDTO> getCaseAssignments(Long caseId) {
+        // Return empty list for now
+        return new ArrayList<>();
+    }
+    
+    @Override
+    public Page<CaseAssignmentDTO> getUserAssignments(Long userId, Pageable pageable) {
+        // Return empty page for now
+        return new PageImpl<>(new ArrayList<>(), pageable, 0);
+    }
+    
+    @Override
+    public CaseAssignmentDTO getPrimaryAssignment(Long caseId) {
+        // TODO: Implement primary assignment retrieval
+        return null;
+    }
+    
+    @Override
+    public List<CaseAssignmentDTO> getTeamMembers(Long caseId) {
+        // Return empty list for now
+        return new ArrayList<>();
+    }
+    
+    @Override
+    public UserWorkloadDTO calculateUserWorkload(Long userId) {
+        // Return basic workload DTO for now
+        return UserWorkloadDTO.builder()
+            .userId(userId)
+            .userName("User " + userId)
+            .userEmail("user" + userId + "@example.com")
+            .calculationDate(LocalDate.now())
+            .activeCasesCount(0)
+            .totalWorkloadPoints(BigDecimal.ZERO)
+            .capacityPercentage(BigDecimal.ZERO)
+            .maxCapacityPoints(new BigDecimal("100"))
+            .lastCalculatedAt(LocalDateTime.now())
+            .build();
+    }
+    
+    @Override
+    public List<UserWorkloadDTO> getTeamWorkload(Long managerId) {
+        // Return empty list for now
+        return new ArrayList<>();
+    }
+    
+    @Override
+    public WorkloadAnalyticsDTO getWorkloadAnalytics() {
+        // Return basic analytics for now
+        return WorkloadAnalyticsDTO.builder()
+            .averageWorkload(BigDecimal.ZERO)
+            .build();
+    }
+    
+    @Override
+    public List<AssignmentRuleDTO> getActiveRules() {
+        // Return empty list for now
+        return new ArrayList<>();
+    }
+    
+    @Override
+    public AssignmentRuleDTO createRule(AssignmentRuleDTO ruleDTO) {
+        // TODO: Implement rule creation
+        throw new UnsupportedOperationException("Rule creation not yet implemented");
+    }
+    
+    @Override
+    public void updateRule(Long ruleId, AssignmentRuleDTO ruleDTO) {
+        // TODO: Implement rule update
+        throw new UnsupportedOperationException("Rule update not yet implemented");
+    }
+    
+    @Override
+    public Page<AssignmentHistoryDTO> getAssignmentHistory(Long caseId, Pageable pageable) {
+        // Return empty page for now
+        return new PageImpl<>(new ArrayList<>(), pageable, 0);
+    }
+    
+    @Override
+    public Page<CaseTransferRequestDTO> getPendingTransferRequests(Pageable pageable) {
+        // Return empty page for now
+        return new PageImpl<>(new ArrayList<>(), pageable, 0);
+    }
+    
+    @Override
+    public CaseTransferRequestDTO approveTransfer(Long requestId, String notes) {
+        // TODO: Implement transfer approval
+        throw new UnsupportedOperationException("Transfer approval not yet implemented");
+    }
+    
+    @Override
+    public CaseTransferRequestDTO rejectTransfer(Long requestId, String notes) {
+        // TODO: Implement transfer rejection
+        throw new UnsupportedOperationException("Transfer rejection not yet implemented");
+    }
+}

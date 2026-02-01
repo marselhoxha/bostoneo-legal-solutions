@@ -127,6 +127,14 @@ public class LegalCaseDTO {
     private BigDecimal insurancePolicyLimit;
     private String insuranceAdjusterName;
     private String insuranceAdjusterContact;
+    private String insuranceAdjusterEmail;
+    private String insuranceAdjusterPhone;
+
+    // Employer Information
+    private String employerName;
+    private String employerEmail;
+    private String employerPhone;
+    private String employerHrContact;
 
     // Defendant Information
     private String defendantName;

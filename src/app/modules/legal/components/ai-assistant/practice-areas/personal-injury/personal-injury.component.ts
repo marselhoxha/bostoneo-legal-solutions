@@ -22,6 +22,16 @@ import { PIMedicalRecordService } from '../../shared/services/pi-medical-record.
 import { PIDocumentChecklistService } from '../../shared/services/pi-document-checklist.service';
 import { PIDamageCalculationService } from '../../shared/services/pi-damage-calculation.service';
 import { PIMedicalSummaryService } from '../../shared/services/pi-medical-summary.service';
+import {
+  PIDocumentRequestService,
+  DocumentRecipient,
+  DocumentRequestLog,
+  DocumentRequestTemplate,
+  SendDocumentRequest,
+  BulkSendResult
+} from '../../shared/services/pi-document-request.service';
+import { BulkRequestWizardComponent } from '../../shared/components/bulk-request-wizard/bulk-request-wizard.component';
+import { PIProviderDirectoryService, ProviderDirectory } from '../../shared/services/pi-provider-directory.service';
 
 // PI Professional Platform Models
 import {
@@ -95,7 +105,8 @@ interface ActivityItem {
     RouterModule,
     NgbNavModule,
     NgbDropdownModule,
-    AiResponseFormatterPipe
+    AiResponseFormatterPipe,
+    BulkRequestWizardComponent
   ],
   templateUrl: './personal-injury.component.html',
   styleUrls: ['./personal-injury.component.scss']
@@ -220,6 +231,26 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   documentTypes = DOCUMENT_TYPES;
   documentStatuses = DOCUMENT_STATUSES;
 
+  // Document Request System (Smart Routing)
+  selectedChecklistItem: PIDocumentChecklist | null = null;
+  resolvedRecipient: DocumentRecipient | null = null;
+  requestTemplates: DocumentRequestTemplate[] = [];
+  selectedTemplate: DocumentRequestTemplate | null = null;
+  requestHistory: DocumentRequestLog[] = [];
+  isResolvingRecipient: boolean = false;
+  isSendingRequest: boolean = false;
+  isLoadingHistory: boolean = false;
+  selectedChannel: string = 'EMAIL';
+  customRecipient: {
+    name: string;
+    email: string;
+    phone: string;
+  } = { name: '', email: '', phone: '' };
+  bulkSelectMode: boolean = false;
+  selectedForBulk: Set<number> = new Set();
+  showBulkWizard: boolean = false;
+  bulkWizardItemIds: number[] = [];
+
   // Damage Elements (Professional)
   damageElements: PIDamageElement[] = [];
   damageCalculation: PIDamageCalculation | null = null;
@@ -240,6 +271,137 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     confidenceLevel: 'MEDIUM'
   };
 
+  // Provider Directory
+  providers: ProviderDirectory[] = [];
+  filteredProviders: ProviderDirectory[] = [];
+  isLoadingProviders: boolean = false;
+  providerSearchTerm: string = '';
+  providerTypeFilter: string = '';
+  providerViewMode: 'cards' | 'table' = 'cards';
+  showProviderModal: boolean = false;
+  editingProvider: ProviderDirectory | null = null;
+  isSavingProvider: boolean = false;
+  expandedProviderId: number | null = null;
+  selectedProvider: ProviderDirectory | null = null;
+
+  // Getter for providers with records contact
+  get providersWithRecordsContact(): number {
+    return this.providers.filter(p => p.recordsEmail || p.recordsPhone).length;
+  }
+
+  // Getter for providers with billing contact
+  get providersWithBillingContact(): number {
+    return this.providers.filter(p => p.billingEmail || p.billingPhone).length;
+  }
+
+  // Get count of fully complete providers (has both records and billing contact)
+  getCompleteProviders(): number {
+    return this.providers.filter(p =>
+      (p.recordsEmail || p.recordsPhone) && (p.billingEmail || p.billingPhone)
+    ).length;
+  }
+
+  // Get providers without any contact info
+  getProvidersWithoutContact(): number {
+    return this.providers.filter(p =>
+      !p.recordsEmail && !p.recordsPhone && !p.billingEmail && !p.billingPhone
+    ).length;
+  }
+
+  // Get provider completeness percentage (based on having contact info)
+  getProviderCompletenessPercent(): number {
+    if (this.providers.length === 0) return 0;
+    return Math.round((this.providersWithRecordsContact / this.providers.length) * 100);
+  }
+
+  // Get provider type counts for the mini breakdown
+  getProviderTypeCounts(): { type: string; label: string; count: number; color: string; icon: string }[] {
+    const typeCounts: { [key: string]: number } = {};
+    const typeInfo: { [key: string]: { label: string; color: string; icon: string } } = {
+      'HOSPITAL': { label: 'Hospital', color: '#f06548', icon: 'ri-hospital-line' },
+      'CLINIC': { label: 'Clinic', color: '#0ab39c', icon: 'ri-stethoscope-line' },
+      'IMAGING': { label: 'Imaging', color: '#299cdb', icon: 'ri-scan-line' },
+      'PHYSICAL_THERAPY': { label: 'PT', color: '#f7b84b', icon: 'ri-walk-line' },
+      'CHIROPRACTIC': { label: 'Chiro', color: '#7c3aed', icon: 'ri-spine-line' },
+      'PHARMACY': { label: 'Pharmacy', color: '#ec4899', icon: 'ri-medicine-bottle-line' },
+      'LABORATORY': { label: 'Lab', color: '#14b8a6', icon: 'ri-test-tube-line' },
+      'URGENT_CARE': { label: 'Urgent Care', color: '#f97316', icon: 'ri-first-aid-kit-line' },
+      'OTHER': { label: 'Other', color: '#64748b', icon: 'ri-building-2-line' }
+    };
+
+    this.providers.forEach(p => {
+      const type = p.providerType || 'OTHER';
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+
+    return Object.entries(typeCounts)
+      .map(([type, count]) => ({
+        type,
+        label: typeInfo[type]?.label || type,
+        count,
+        color: typeInfo[type]?.color || '#64748b',
+        icon: typeInfo[type]?.icon || 'ri-building-2-line'
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }
+
+  // Get provider contact status for card display
+  getProviderContactStatus(provider: ProviderDirectory): { hasRecords: boolean; hasBilling: boolean; hasFees: boolean } {
+    return {
+      hasRecords: !!(provider.recordsEmail || provider.recordsPhone || provider.recordsFax),
+      hasBilling: !!(provider.billingEmail || provider.billingPhone),
+      hasFees: !!(provider.baseFee || provider.perPageFee || provider.rushFee)
+    };
+  }
+
+  // Toggle provider card expansion
+  toggleProviderExpand(providerId: number | undefined): void {
+    if (!providerId) return;
+    this.expandedProviderId = this.expandedProviderId === providerId ? null : providerId;
+  }
+
+  // Select provider to show in detail panel
+  selectProvider(provider: ProviderDirectory): void {
+    this.selectedProvider = this.selectedProvider?.id === provider.id ? null : provider;
+  }
+
+  // Get icon for provider type
+  getProviderIcon(providerType: string): string {
+    const icons: { [key: string]: string } = {
+      'HOSPITAL': 'ri-hospital-line',
+      'CLINIC': 'ri-stethoscope-line',
+      'IMAGING': 'ri-scan-line',
+      'LABORATORY': 'ri-test-tube-line',
+      'PHARMACY': 'ri-capsule-line',
+      'PHYSICAL_THERAPY': 'ri-walk-line',
+      'CHIROPRACTOR': 'ri-body-scan-line',
+      'SPECIALIST': 'ri-user-star-line',
+      'PRIMARY_CARE': 'ri-heart-pulse-line',
+      'EMERGENCY': 'ri-first-aid-kit-line',
+      'SURGERY_CENTER': 'ri-surgical-mask-line',
+      'MENTAL_HEALTH': 'ri-mental-health-line',
+      'OTHER': 'ri-building-2-line'
+    };
+    return icons[providerType] || icons['OTHER'];
+  }
+
+  // Copy to clipboard with toast feedback
+  copyToClipboard(text: string, label: string): void {
+    navigator.clipboard.writeText(text).then(() => {
+      // Show a brief toast notification
+      const toast = document.createElement('div');
+      toast.className = 'copy-toast';
+      toast.innerHTML = `<i class="ri-check-line"></i> ${label} copied!`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.classList.add('show'), 10);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    });
+  }
+
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
@@ -251,6 +413,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     private documentChecklistService: PIDocumentChecklistService,
     private damageCalculationService: PIDamageCalculationService,
     private medicalSummaryService: PIMedicalSummaryService,
+    private documentRequestService: PIDocumentRequestService,
+    public providerDirectoryService: PIProviderDirectoryService,
     private modalService: NgbModal
   ) {
     super();
@@ -318,6 +482,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   ngOnInit(): void {
     this.loadSavedData();
     this.loadRecentActivity();
+    this.loadProviders();
 
     // Update multiplier when injury type changes
     this.caseValueForm.get('injuryType')?.valueChanges.subscribe(injuryType => {
@@ -1521,43 +1686,429 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     });
   }
 
+  /**
+   * Open smart document request dialog with auto-resolved recipient
+   */
   requestDocument(item: PIDocumentChecklist): void {
     if (!this.linkedCase?.id || !item.id) return;
 
+    this.selectedChecklistItem = item;
+    this.resolvedRecipient = null;
+    this.selectedTemplate = null;
+    this.requestHistory = [];
+    this.selectedChannel = 'EMAIL';
+    this.customRecipient = { name: '', email: '', phone: '' };
+    this.isResolvingRecipient = true;
+
+    // Show loading modal
     Swal.fire({
-      title: 'Request Document',
-      input: 'text',
-      inputLabel: 'Request sent to:',
-      inputPlaceholder: 'e.g., Boston Medical Center Records Dept',
+      title: 'Resolving Recipient...',
+      html: `<div class="text-muted">Looking up contact information for ${this.getDocumentTypeLabel(item.documentType)}</div>`,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    // Resolve recipient from medical records, case data, or provider directory
+    this.documentRequestService.resolveRecipient(Number(this.linkedCase.id), item.id).subscribe({
+      next: (recipient) => {
+        this.resolvedRecipient = recipient;
+        this.isResolvingRecipient = false;
+
+        // Load templates for this document type
+        this.documentRequestService.getTemplates(item.documentType).subscribe({
+          next: (templates) => {
+            this.requestTemplates = templates;
+            if (recipient.suggestedTemplateCode) {
+              this.selectedTemplate = templates.find(t => t.templateCode === recipient.suggestedTemplateCode) || null;
+            }
+            Swal.close();
+            this.showRequestDialog();
+          },
+          error: () => {
+            Swal.close();
+            this.showRequestDialog();
+          }
+        });
+      },
+      error: (err) => {
+        console.error('Error resolving recipient:', err);
+        this.isResolvingRecipient = false;
+        Swal.close();
+        // Show dialog anyway with manual entry
+        this.showRequestDialog();
+      }
+    });
+  }
+
+  /**
+   * Show the smart document request dialog
+   */
+  private showRequestDialog(): void {
+    if (!this.selectedChecklistItem) return;
+
+    const item = this.selectedChecklistItem;
+    const recipient = this.resolvedRecipient;
+    const resolved = recipient?.resolved || false;
+
+    // Build channel options based on available contact methods
+    const channelOptions: { [key: string]: string } = {};
+    if (resolved) {
+      if (recipient?.email) channelOptions['EMAIL'] = 'Email';
+      if (recipient?.phone) channelOptions['SMS'] = 'SMS';
+    } else {
+      channelOptions['EMAIL'] = 'Email';
+      channelOptions['SMS'] = 'SMS';
+    }
+
+    const hasChannels = Object.keys(channelOptions).length > 0;
+    const defaultChannel = recipient?.email ? 'EMAIL' : (recipient?.phone ? 'SMS' : 'EMAIL');
+
+    Swal.fire({
+      title: `Request ${this.getDocumentTypeLabel(item.documentType)}`,
+      width: 600,
+      html: `
+        <div class="text-start">
+          <!-- Recipient Info -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Recipient</label>
+            ${resolved ? `
+              <div class="alert alert-success py-2 mb-2">
+                <i class="ri-check-line me-2"></i>
+                <strong>${recipient?.recipientName || 'Unknown'}</strong>
+                <small class="d-block text-muted">${recipient?.resolutionMessage}</small>
+              </div>
+              <div class="row g-2">
+                ${recipient?.email ? `
+                <div class="col-md-6">
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="ri-mail-line"></i></span>
+                    <input type="text" class="form-control" value="${recipient.email}" readonly>
+                  </div>
+                </div>` : ''}
+                ${recipient?.phone ? `
+                <div class="col-md-6">
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="ri-phone-line"></i></span>
+                    <input type="text" class="form-control" value="${recipient.phone}" readonly>
+                  </div>
+                </div>` : ''}
+              </div>
+            ` : `
+              <div class="alert alert-warning py-2 mb-2">
+                <i class="ri-information-line me-2"></i>
+                ${recipient?.resolutionMessage || 'Manual entry required'}
+              </div>
+              <div class="row g-2">
+                <div class="col-12">
+                  <input type="text" class="form-control form-control-sm" id="swal-recipient-name"
+                         placeholder="Recipient Name" value="${item.providerName || ''}">
+                </div>
+                <div class="col-md-6">
+                  <input type="email" class="form-control form-control-sm" id="swal-recipient-email"
+                         placeholder="Email Address">
+                </div>
+                <div class="col-md-6">
+                  <input type="tel" class="form-control form-control-sm" id="swal-recipient-phone"
+                         placeholder="Phone Number">
+                </div>
+              </div>
+            `}
+          </div>
+
+          <!-- Channel Selection -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Send Via</label>
+            <div class="btn-group w-100" role="group">
+              ${Object.entries(channelOptions).map(([value, label]) => `
+                <input type="radio" class="btn-check" name="channel" id="channel-${value}"
+                       value="${value}" ${value === defaultChannel ? 'checked' : ''}>
+                <label class="btn btn-outline-primary" for="channel-${value}">
+                  <i class="${this.documentRequestService.getChannelIcon(value)} me-1"></i> ${label}
+                </label>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Template Selection -->
+          ${this.requestTemplates.length > 0 ? `
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Message Template</label>
+            <select class="form-select form-select-sm" id="swal-template">
+              <option value="">-- Select Template --</option>
+              ${this.requestTemplates.map(t => `
+                <option value="${t.id}" ${t.id === this.selectedTemplate?.id ? 'selected' : ''}>
+                  ${t.templateName} ${t.isSystem ? '(System)' : ''}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+          ` : ''}
+
+          <!-- Document Fee -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Document Fee (Optional)</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">$</span>
+              <input type="number" class="form-control" id="swal-doc-fee" placeholder="0.00" step="0.01" min="0">
+            </div>
+            <small class="text-muted">Track document acquisition costs</small>
+          </div>
+        </div>
+      `,
       showCancelButton: true,
-      confirmButtonText: 'Log Request',
+      confirmButtonText: '<i class="ri-send-plane-line me-1"></i> Send Request',
+      cancelButtonText: 'Cancel',
       customClass: {
         confirmButton: 'btn btn-primary me-2',
         cancelButton: 'btn btn-secondary'
       },
-      buttonsStyling: false
+      buttonsStyling: false,
+      preConfirm: () => {
+        const channelEl = document.querySelector('input[name="channel"]:checked') as HTMLInputElement;
+        const templateEl = document.getElementById('swal-template') as HTMLSelectElement;
+        const feeEl = document.getElementById('swal-doc-fee') as HTMLInputElement;
+
+        // Get recipient info (either resolved or manual)
+        let recipientName = recipient?.recipientName || '';
+        let recipientEmail = recipient?.email || '';
+        let recipientPhone = recipient?.phone || '';
+
+        if (!resolved) {
+          const nameEl = document.getElementById('swal-recipient-name') as HTMLInputElement;
+          const emailEl = document.getElementById('swal-recipient-email') as HTMLInputElement;
+          const phoneEl = document.getElementById('swal-recipient-phone') as HTMLInputElement;
+          recipientName = nameEl?.value || '';
+          recipientEmail = emailEl?.value || '';
+          recipientPhone = phoneEl?.value || '';
+        }
+
+        const channel = channelEl?.value || 'EMAIL';
+        if (channel === 'EMAIL' && !recipientEmail) {
+          Swal.showValidationMessage('Email address is required for email channel');
+          return false;
+        }
+        if (channel === 'SMS' && !recipientPhone) {
+          Swal.showValidationMessage('Phone number is required for SMS channel');
+          return false;
+        }
+
+        return {
+          channel,
+          templateId: templateEl?.value ? parseInt(templateEl.value) : null,
+          documentFee: feeEl?.value ? parseFloat(feeEl.value) : null,
+          recipientName,
+          recipientEmail,
+          recipientPhone
+        };
+      }
     }).then((result) => {
       if (result.isConfirmed && result.value) {
-        this.documentChecklistService.requestDocument(
-          Number(this.linkedCase!.id),
-          item.id!,
-          result.value
-        ).subscribe({
-          next: () => {
-            this.loadDocumentChecklist();
-            Swal.fire({
-              icon: 'success',
-              title: 'Request Logged',
-              timer: 2000,
-              showConfirmButton: false
-            });
-          },
-          error: (err) => {
-            console.error('Error logging request:', err);
-          }
+        this.sendDocumentRequest(result.value);
+      }
+    });
+  }
+
+  /**
+   * Send the document request
+   */
+  private sendDocumentRequest(formData: any): void {
+    if (!this.linkedCase?.id || !this.selectedChecklistItem?.id) return;
+
+    this.isSendingRequest = true;
+
+    const request: SendDocumentRequest = {
+      recipientType: this.resolvedRecipient?.recipientType || 'MANUAL',
+      recipientName: formData.recipientName,
+      recipientEmail: formData.recipientEmail,
+      recipientPhone: formData.recipientPhone,
+      channel: formData.channel,
+      templateId: formData.templateId,
+      documentFee: formData.documentFee
+    };
+
+    Swal.fire({
+      title: 'Sending Request...',
+      html: `<div class="text-muted">Sending ${formData.channel.toLowerCase()} to ${formData.recipientName || formData.recipientEmail}</div>`,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    this.documentRequestService.sendRequest(
+      Number(this.linkedCase.id),
+      this.selectedChecklistItem.id,
+      request
+    ).subscribe({
+      next: (logEntry) => {
+        this.isSendingRequest = false;
+        this.loadDocumentChecklist();
+
+        const success = logEntry.channelStatus === 'SENT';
+        Swal.fire({
+          icon: success ? 'success' : 'warning',
+          title: success ? 'Request Sent' : 'Request Logged',
+          html: success
+            ? `<p>${formData.channel} sent to <strong>${formData.recipientName || formData.recipientEmail}</strong></p>`
+            : `<p>Request logged but delivery status: ${logEntry.channelStatus}</p>`,
+          timer: 3000,
+          showConfirmButton: false
+        });
+
+        this.selectedChecklistItem = null;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error sending request:', err);
+        this.isSendingRequest = false;
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to send document request. Please try again.',
+          customClass: { confirmButton: 'btn btn-primary' }
         });
       }
     });
+  }
+
+  /**
+   * View request history for a checklist item
+   */
+  viewRequestHistory(item: PIDocumentChecklist): void {
+    if (!this.linkedCase?.id || !item.id) return;
+
+    this.isLoadingHistory = true;
+
+    Swal.fire({
+      title: 'Request History',
+      html: '<div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span> Loading...</div>',
+      showConfirmButton: false,
+      allowOutsideClick: true
+    });
+
+    this.documentRequestService.getRequestHistory(Number(this.linkedCase.id), item.id).subscribe({
+      next: (history) => {
+        this.requestHistory = history;
+        this.isLoadingHistory = false;
+
+        if (history.length === 0) {
+          Swal.fire({
+            title: 'Request History',
+            html: `<div class="text-center py-4 text-muted">
+              <i class="ri-mail-send-line fs-1 d-block mb-2"></i>
+              <p>No requests have been sent for this document yet.</p>
+            </div>`,
+            confirmButtonText: 'Close',
+            customClass: { confirmButton: 'btn btn-secondary' },
+            buttonsStyling: false
+          });
+          return;
+        }
+
+        const historyHtml = history.map(log => `
+          <div class="border-bottom pb-2 mb-2">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <strong>${log.recipientName || log.recipientEmail}</strong>
+                <span class="badge bg-${this.documentRequestService.getChannelStatusColor(log.channelStatus)} ms-2">
+                  ${log.channelStatus}
+                </span>
+              </div>
+              <small class="text-muted">${new Date(log.sentAt).toLocaleDateString()}</small>
+            </div>
+            <div class="small text-muted">
+              <i class="${this.documentRequestService.getChannelIcon(log.channel)} me-1"></i>
+              ${this.documentRequestService.getChannelLabel(log.channel)}
+              ${log.documentFee ? ` | Fee: $${log.documentFee.toFixed(2)}` : ''}
+            </div>
+          </div>
+        `).join('');
+
+        Swal.fire({
+          title: `Request History (${history.length})`,
+          html: `<div class="text-start" style="max-height: 300px; overflow-y: auto;">${historyHtml}</div>`,
+          confirmButtonText: 'Close',
+          customClass: { confirmButton: 'btn btn-secondary' },
+          buttonsStyling: false
+        });
+      },
+      error: (err) => {
+        console.error('Error loading history:', err);
+        this.isLoadingHistory = false;
+        Swal.close();
+      }
+    });
+  }
+
+  /**
+   * Toggle bulk select mode
+   */
+  toggleBulkSelectMode(): void {
+    this.bulkSelectMode = !this.bulkSelectMode;
+    if (!this.bulkSelectMode) {
+      this.selectedForBulk.clear();
+    }
+  }
+
+  /**
+   * Toggle item selection for bulk request
+   */
+  toggleBulkSelection(item: PIDocumentChecklist): void {
+    if (!item.id) return;
+    if (this.selectedForBulk.has(item.id)) {
+      this.selectedForBulk.delete(item.id);
+    } else {
+      this.selectedForBulk.add(item.id);
+    }
+  }
+
+  /**
+   * Send bulk document requests - opens the wizard
+   */
+  sendBulkRequests(): void {
+    if (!this.linkedCase?.id || this.selectedForBulk.size === 0) return;
+    // Store the selected IDs as an array before opening the wizard
+    // This prevents creating new array references on every change detection
+    this.bulkWizardItemIds = Array.from(this.selectedForBulk);
+    this.showBulkWizard = true;
+  }
+
+  /**
+   * Handle bulk wizard completion
+   */
+  onBulkWizardCompleted(result: BulkSendResult): void {
+    this.showBulkWizard = false;
+    this.bulkSelectMode = false;
+    this.selectedForBulk.clear();
+    this.loadDocumentChecklist();
+
+    // Show success message
+    const hasErrors = result.failedCount > 0;
+    Swal.fire({
+      icon: hasErrors ? 'warning' : 'success',
+      title: 'Bulk Request Complete',
+      html: `
+        <div class="text-start">
+          <p><strong>${result.sentCount}</strong> documents sent successfully</p>
+          ${result.emailsSent > 0 ? `<p class="text-muted"><i class="ri-mail-line me-1"></i>${result.emailsSent} email(s)</p>` : ''}
+          ${result.smsSent > 0 ? `<p class="text-muted"><i class="ri-smartphone-line me-1"></i>${result.smsSent} SMS message(s)</p>` : ''}
+          ${result.skippedCount > 0 ? `<p class="text-muted">${result.skippedCount} item(s) skipped</p>` : ''}
+          ${result.failedCount > 0 ? `<p class="text-danger"><strong>${result.failedCount}</strong> request(s) failed</p>` : ''}
+        </div>
+      `,
+      confirmButtonText: 'OK',
+      customClass: { confirmButton: 'btn btn-primary' },
+      buttonsStyling: false
+    });
+  }
+
+  /**
+   * Handle bulk wizard cancellation
+   */
+  onBulkWizardCancelled(): void {
+    this.showBulkWizard = false;
   }
 
   // --- Damage Calculation (Professional) ---
@@ -1762,6 +2313,44 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   getStatusColor(status: string): string {
     const found = this.documentStatuses.find(s => s.value === status);
     return found?.color || 'secondary';
+  }
+
+  getStatusLabel(status: string): string {
+    const found = this.documentStatuses.find(s => s.value === status);
+    return found?.label || status;
+  }
+
+  getDocumentTypeLabel(type: string): string {
+    const found = this.documentTypes.find(t => t.value === type);
+    return found?.label || type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  getDocumentTypeIcon(type: string): string {
+    const icons: { [key: string]: string } = {
+      'POLICE_REPORT': 'ri-shield-line',
+      'MEDICAL_RECORDS': 'ri-file-list-3-line',
+      'MEDICAL_BILLS': 'ri-money-dollar-circle-line',
+      'WAGE_DOCUMENTATION': 'ri-briefcase-line',
+      'INSURANCE': 'ri-shield-check-line',
+      'PHOTOGRAPHS': 'ri-camera-line',
+      'WITNESS': 'ri-user-voice-line',
+      'EXPERT': 'ri-user-star-line',
+      'OTHER': 'ri-file-line'
+    };
+    return icons[type] || 'ri-file-line';
+  }
+
+  getCompletenessPercent(): number {
+    if (!this.documentCompleteness) return 0;
+    return Math.min(this.documentCompleteness.completenessPercent, 100);
+  }
+
+  getMissingDocuments(): any[] {
+    return this.documentChecklist.filter(item => item.status === 'MISSING');
+  }
+
+  getDocumentCountByStatus(status: string): number {
+    return this.documentChecklist.filter(item => item.status === status).length;
   }
 
   getConfidenceColor(level: string): string {
@@ -2001,5 +2590,159 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  // ==========================================
+  // Provider Directory Methods
+  // ==========================================
+
+  loadProviders(): void {
+    this.isLoadingProviders = true;
+    this.providerDirectoryService.getAllProviders().subscribe({
+      next: (providers) => {
+        this.providers = providers;
+        this.filteredProviders = providers;
+        this.isLoadingProviders = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading providers:', err);
+        this.isLoadingProviders = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  filterProviders(): void {
+    const term = this.providerSearchTerm.toLowerCase().trim();
+    let filtered = this.providers;
+
+    // Filter by search term
+    if (term) {
+      filtered = filtered.filter(p =>
+        p.providerName?.toLowerCase().includes(term) ||
+        p.city?.toLowerCase().includes(term) ||
+        p.state?.toLowerCase().includes(term) ||
+        p.providerType?.toLowerCase().includes(term) ||
+        p.recordsEmail?.toLowerCase().includes(term) ||
+        p.billingEmail?.toLowerCase().includes(term)
+      );
+    }
+
+    // Filter by provider type
+    if (this.providerTypeFilter) {
+      filtered = filtered.filter(p => p.providerType === this.providerTypeFilter);
+    }
+
+    this.filteredProviders = filtered;
+  }
+
+  showAddProviderModal(): void {
+    this.editingProvider = {
+      providerName: '',
+      providerType: '',
+      mainPhone: '',
+      mainEmail: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      recordsContactName: '',
+      recordsPhone: '',
+      recordsEmail: '',
+      recordsFax: '',
+      billingContactName: '',
+      billingPhone: '',
+      billingEmail: '',
+      baseFee: undefined,
+      perPageFee: undefined,
+      rushFee: undefined,
+      notes: ''
+    };
+    this.showProviderModal = true;
+  }
+
+  editProvider(provider: ProviderDirectory): void {
+    this.editingProvider = { ...provider };
+    this.showProviderModal = true;
+  }
+
+  closeProviderModal(): void {
+    this.showProviderModal = false;
+    this.editingProvider = null;
+  }
+
+  saveProvider(): void {
+    if (!this.editingProvider?.providerName) return;
+
+    this.isSavingProvider = true;
+
+    const saveObs = this.editingProvider.id
+      ? this.providerDirectoryService.updateProvider(this.editingProvider.id, this.editingProvider)
+      : this.providerDirectoryService.createProvider(this.editingProvider);
+
+    saveObs.subscribe({
+      next: () => {
+        this.isSavingProvider = false;
+        this.closeProviderModal();
+        this.loadProviders();
+        Swal.fire({
+          icon: 'success',
+          title: 'Provider Saved',
+          text: `${this.editingProvider?.providerName} has been ${this.editingProvider?.id ? 'updated' : 'added'} to the directory.`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+      },
+      error: (err) => {
+        console.error('Error saving provider:', err);
+        this.isSavingProvider = false;
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to save provider. Please try again.'
+        });
+      }
+    });
+  }
+
+  deleteProvider(provider: ProviderDirectory): void {
+    Swal.fire({
+      title: 'Delete Provider?',
+      text: `Are you sure you want to delete "${provider.providerName}" from the directory?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#f06548',
+      customClass: {
+        confirmButton: 'btn btn-danger me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed && provider.id) {
+        this.providerDirectoryService.deleteProvider(provider.id).subscribe({
+          next: () => {
+            this.loadProviders();
+            Swal.fire({
+              icon: 'success',
+              title: 'Deleted',
+              text: 'Provider has been removed from the directory.',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          },
+          error: (err) => {
+            console.error('Error deleting provider:', err);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Failed to delete provider. Please try again.'
+            });
+          }
+        });
+      }
+    });
   }
 }

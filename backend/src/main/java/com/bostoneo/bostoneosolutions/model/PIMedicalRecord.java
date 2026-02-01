@@ -60,6 +60,23 @@ public class PIMedicalRecord {
     @Column(name = "provider_fax", length = 50)
     private String providerFax;
 
+    // Records Department Contact
+    @Column(name = "records_email")
+    private String recordsEmail;
+
+    @Column(name = "records_phone", length = 50)
+    private String recordsPhone;
+
+    @Column(name = "records_fax", length = 50)
+    private String recordsFax;
+
+    // Billing Department Contact
+    @Column(name = "billing_email")
+    private String billingEmail;
+
+    @Column(name = "billing_phone", length = 50)
+    private String billingPhone;
+
     // Record Type & Dates
     @Column(name = "record_type", nullable = false, length = 50)
     private String recordType; // ER, Follow-up, Surgery, PT, Imaging, Lab, Consultation

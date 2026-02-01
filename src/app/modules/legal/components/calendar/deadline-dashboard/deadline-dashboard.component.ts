@@ -282,13 +282,16 @@ export class DeadlineDashboardComponent implements OnInit, OnDestroy {
       cancelButtonColor: '#d33'
     }).then((result) => {
       if (result.isConfirmed) {
-        // Create an updated copy of the deadline
-        const updatedDeadline = {
-          ...deadline,
+        // Create minimal update payload with only required fields
+        const updatePayload = {
+          id: deadline.id,
+          title: deadline.title,
+          startTime: deadline.startTime || deadline.start,
+          eventType: deadline.eventType,
           status: 'COMPLETED' as 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'RESCHEDULED' | 'PENDING'
         };
-        
-        this.calendarService.updateEvent(deadline.id.toString(), updatedDeadline).subscribe({
+
+        this.calendarService.updateEvent(deadline.id.toString(), updatePayload).subscribe({
           next: () => {
             Swal.fire('Completed!', 'Deadline has been marked as completed.', 'success');
             this.loadDeadlines();

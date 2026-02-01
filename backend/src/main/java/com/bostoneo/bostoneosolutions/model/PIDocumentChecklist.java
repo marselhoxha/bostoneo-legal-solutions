@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -70,6 +71,16 @@ public class PIDocumentChecklist {
 
     @Column(name = "follow_up_count")
     private Integer followUpCount;
+
+    // Request System Fields (populated by trigger)
+    @Column(name = "request_count")
+    private Integer requestCount;
+
+    @Column(name = "last_request_at")
+    private LocalDateTime lastRequestAt;
+
+    @Column(name = "total_fee", precision = 10, scale = 2)
+    private BigDecimal totalFee;
 
     // Document Reference
     @Column(name = "document_id")

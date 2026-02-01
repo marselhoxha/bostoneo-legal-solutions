@@ -35,6 +35,15 @@ public class PIMedicalRecordDTO {
     private String providerPhone;
     private String providerFax;
 
+    // Records Department Contact
+    private String recordsEmail;
+    private String recordsPhone;
+    private String recordsFax;
+
+    // Billing Department Contact
+    private String billingEmail;
+    private String billingPhone;
+
     // Record Type & Dates
     private String recordType;
 
