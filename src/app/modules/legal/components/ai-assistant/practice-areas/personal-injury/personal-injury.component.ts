@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewInit, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -407,6 +407,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     private fb: FormBuilder,
     private http: HttpClient,
     private cdr: ChangeDetectorRef,
+    private ngZone: NgZone,
     private aiModalService: AiResponseModalService,
     private workspaceState: WorkspaceStateService,
     private caseService: CaseService,
@@ -2152,27 +2153,10 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   markDocumentReceived(item: PIDocumentChecklist): void {
     if (!this.linkedCase?.id || !item.id) return;
 
-    const previousStatus = item.status;
-    const previousReceived = item.received;
-
-    // Update local state immediately for responsive UI - create new array reference
-    this.documentChecklist = this.documentChecklist.map(d => {
-      if (d.id === item.id) {
-        return {
-          ...d,
-          status: 'RECEIVED',
-          received: true,
-          receivedDate: new Date().toISOString().split('T')[0]
-        };
-      }
-      return d;
-    });
-    this.updateGroupedDocuments();
-    this.cdr.detectChanges();
-
     this.documentChecklistService.markAsReceived(Number(this.linkedCase.id), item.id).subscribe({
       next: () => {
-        this.loadDocumentCompleteness();
+        // Reload everything fresh from server
+        this.loadDocumentChecklist();
         Swal.fire({
           icon: 'success',
           title: 'Document Received',
@@ -2182,15 +2166,11 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       },
       error: (err) => {
         console.error('Error marking received:', err);
-        // Revert on error - create new array reference
-        this.documentChecklist = this.documentChecklist.map(d => {
-          if (d.id === item.id) {
-            return { ...d, status: previousStatus, received: previousReceived };
-          }
-          return d;
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to mark document as received'
         });
-        this.updateGroupedDocuments();
-        this.cdr.detectChanges();
       }
     });
   }
@@ -2204,24 +2184,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     // Skip if same status
     if (item.status === newStatus) return;
 
-    const previousStatus = item.status;
-    const previousReceived = item.received;
     const isNowReceived = newStatus === 'RECEIVED';
-
-    // Update local state immediately - create new array reference
-    this.documentChecklist = this.documentChecklist.map(d => {
-      if (d.id === item.id) {
-        return {
-          ...d,
-          status: newStatus,
-          received: isNowReceived,
-          receivedDate: isNowReceived ? new Date().toISOString().split('T')[0] : d.receivedDate
-        };
-      }
-      return d;
-    });
-    this.updateGroupedDocuments();
-    this.cdr.detectChanges();
 
     const updatedItem: PIDocumentChecklist = {
       ...item,
@@ -2236,7 +2199,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       updatedItem
     ).subscribe({
       next: () => {
-        this.loadDocumentCompleteness();
+        // Reload everything fresh from server
+        this.loadDocumentChecklist();
         const statusLabel = this.getStatusLabel(newStatus);
         Swal.fire({
           icon: 'success',
@@ -2248,15 +2212,6 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       },
       error: (err) => {
         console.error('Error updating status:', err);
-        // Revert on error - create new array reference
-        this.documentChecklist = this.documentChecklist.map(d => {
-          if (d.id === item.id) {
-            return { ...d, status: previousStatus, received: previousReceived };
-          }
-          return d;
-        });
-        this.updateGroupedDocuments();
-        this.cdr.detectChanges();
         Swal.fire({
           icon: 'error',
           title: 'Error',
@@ -2998,17 +2953,17 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   /**
-   * TrackBy function for document checklist to prevent unnecessary re-renders
+   * TrackBy function for document checklist - includes status to trigger re-render on status change
    */
-  trackByDocId(index: number, item: PIDocumentChecklist): number {
-    return item.id || index;
+  trackByDocId(index: number, item: PIDocumentChecklist): string {
+    return `${item.id || index}-${item.status}`;
   }
 
   /**
-   * TrackBy function for groups
+   * TrackBy function for groups - includes counts to trigger re-render
    */
-  trackByGroupType(index: number, group: { type: string }): string {
-    return group.type;
+  trackByGroupType(index: number, group: { type: string; receivedCount: number; totalCount: number }): string {
+    return `${group.type}-${group.receivedCount}-${group.totalCount}`;
   }
 
   /**
@@ -3017,29 +2972,29 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   updateGroupedDocuments(): void {
     const groups: { [key: string]: PIDocumentChecklist[] } = {};
 
-    // Group by document type
+    // Group by document type - create fresh copies to ensure change detection
     this.documentChecklist.forEach(item => {
       const type = item.documentType || 'OTHER';
       if (!groups[type]) {
         groups[type] = [];
       }
-      groups[type].push(item);
+      groups[type].push({ ...item });
     });
 
     // Define order of groups
     const typeOrder = ['POLICE_REPORT', 'MEDICAL_RECORDS', 'MEDICAL_BILLS', 'INSURANCE', 'WAGE_DOCUMENTATION', 'PHOTOGRAPHS', 'WITNESS', 'EXPERT', 'OTHER'];
 
-    // Convert to array and sort by predefined order
-    this.groupedDocuments = typeOrder
+    // Convert to array and sort by predefined order - create new array reference
+    this.groupedDocuments = [...typeOrder
       .filter(type => groups[type] && groups[type].length > 0)
       .map(type => ({
         type,
         label: this.getDocumentTypeLabel(type),
         icon: this.getDocumentTypeIcon(type),
-        items: groups[type].sort((a, b) => (a.id || 0) - (b.id || 0)),
+        items: [...groups[type].sort((a, b) => (a.id || 0) - (b.id || 0))],
         receivedCount: groups[type].filter(i => i.status === 'RECEIVED').length,
         totalCount: groups[type].length
-      }));
+      }))];
   }
 
   /**

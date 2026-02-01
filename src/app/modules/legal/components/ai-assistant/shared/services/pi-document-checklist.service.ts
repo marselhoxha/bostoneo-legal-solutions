@@ -17,7 +17,9 @@ export class PIDocumentChecklistService {
    * Get document checklist for a case
    */
   getChecklistByCaseId(caseId: number): Observable<PIDocumentChecklist[]> {
-    return this.http.get<any>(`${this.baseUrl}/${caseId}/document-checklist`).pipe(
+    // Add cache-busting timestamp to prevent browser caching
+    const timestamp = new Date().getTime();
+    return this.http.get<any>(`${this.baseUrl}/${caseId}/document-checklist?_t=${timestamp}`).pipe(
       map(response => response.data?.checklist || [])
     );
   }
