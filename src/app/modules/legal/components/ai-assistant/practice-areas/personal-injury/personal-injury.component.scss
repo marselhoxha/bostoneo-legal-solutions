@@ -1421,13 +1421,21 @@
   }
 }
 
+// ==================== Medical Records Container ====================
+.medical-records-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
 // ==================== Medical Provider Styles ====================
 .providers-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
+  width: 100%;
 
-  @media (max-width: 991.98px) {
+  @media (max-width: 767.98px) {
     grid-template-columns: 1fr;
   }
 }
@@ -1439,6 +1447,7 @@
   padding: 1rem;
   position: relative;
   transition: all 0.25s ease;
+  overflow: hidden;
 
   &:hover {
     transform: translateY(-2px);
@@ -1532,6 +1541,8 @@
     .treatment-dates {
       font-size: 0.75rem;
       color: var(--vz-secondary-color);
+      display: flex;
+      align-items: center;
     }
 
     .total-bills {
@@ -1540,6 +1551,35 @@
       color: var(--vz-success);
     }
   }
+
+  .provider-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    min-height: 28px;
+  }
+
+  .provider-card-actions {
+    position: absolute;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    .btn {
+      padding: 0.25rem 0.5rem;
+    }
+  }
+
+  &:hover .provider-card-actions {
+    opacity: 1;
+  }
+
+  // Clickable card cursor
+  cursor: pointer;
 }
 
 .providers-empty {
@@ -1560,8 +1600,6 @@
   border-radius: 12px;
   border: 1px solid rgba(var(--vz-success-rgb), 0.2);
   overflow: hidden;
-  position: sticky;
-  top: 1rem;
 
   .summary-header {
     background: linear-gradient(to right, rgba(var(--vz-success-rgb), 0.1), transparent);

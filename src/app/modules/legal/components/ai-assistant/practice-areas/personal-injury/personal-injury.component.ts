@@ -322,7 +322,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       'CLINIC': { label: 'Clinic', color: '#0ab39c', icon: 'ri-stethoscope-line' },
       'IMAGING': { label: 'Imaging', color: '#299cdb', icon: 'ri-scan-line' },
       'PHYSICAL_THERAPY': { label: 'PT', color: '#f7b84b', icon: 'ri-walk-line' },
-      'CHIROPRACTIC': { label: 'Chiro', color: '#7c3aed', icon: 'ri-spine-line' },
+      'CHIROPRACTIC': { label: 'Chiro', color: '#7c3aed', icon: 'ri-body-scan-line' },
       'PHARMACY': { label: 'Pharmacy', color: '#ec4899', icon: 'ri-medicine-bottle-line' },
       'LABORATORY': { label: 'Lab', color: '#14b8a6', icon: 'ri-test-tube-line' },
       'URGENT_CARE': { label: 'Urgent Care', color: '#f97316', icon: 'ri-first-aid-kit-line' },
@@ -956,13 +956,492 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   updateMedicalExpensesTotal(): void {
-    const total = this.medicalProviders.reduce((sum, p) => sum + p.totalBills, 0);
+    const total = this.getTotalMedicalBills();
     this.caseValueForm.patchValue({ medicalExpenses: total });
     this.demandForm.patchValue({ medicalExpenses: total });
   }
 
   getTotalMedicalBills(): number {
+    // Use medicalRecords (database) as primary source
+    if (this.medicalRecords.length > 0) {
+      return this.medicalRecords.reduce((sum, r) => sum + (r.billedAmount || 0), 0);
+    }
+    // Fallback to localStorage medicalProviders if no records
     return this.medicalProviders.reduce((sum, p) => sum + p.totalBills, 0);
+  }
+
+  getTotalMedicalPaid(): number {
+    return this.medicalRecords.reduce((sum, r) => sum + (r.paidAmount || 0), 0);
+  }
+
+  getTotalMedicalOutstanding(): number {
+    return this.getTotalMedicalBills() - this.getTotalMedicalPaid();
+  }
+
+  getUniqueProviderCount(): number {
+    const uniqueProviders = new Set(this.medicalRecords.map(r => r.providerName?.toLowerCase()));
+    return uniqueProviders.size;
+  }
+
+  getMedicalDateRange(): { start: Date | null; end: Date | null } {
+    if (this.medicalRecords.length === 0) {
+      return { start: null, end: null };
+    }
+    const dates = this.medicalRecords
+      .map(r => r.treatmentDate ? new Date(r.treatmentDate) : null)
+      .filter((d): d is Date => d !== null)
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    if (dates.length === 0) {
+      return { start: null, end: null };
+    }
+    return { start: dates[0], end: dates[dates.length - 1] };
+  }
+
+  getProviderTypeClass(providerType: string): string {
+    const classMap: Record<string, string> = {
+      'HOSPITAL': 'emergency',
+      'EMERGENCY_ROOM': 'emergency',
+      'CLINIC': 'primary-care',
+      'ORTHOPEDIC': 'orthopedics',
+      'NEUROLOGY': 'neurology',
+      'PHYSICAL_THERAPY': 'physical-therapy',
+      'CHIROPRACTIC': 'chiropractic',
+      'PAIN_MANAGEMENT': 'pain-management',
+      'SURGERY_CENTER': 'surgery',
+      'IMAGING': 'radiology',
+      'RADIOLOGY': 'radiology',
+      'PRIMARY_CARE': 'primary-care',
+      'MENTAL_HEALTH': 'psychology'
+    };
+    return classMap[providerType] || 'default';
+  }
+
+  getProviderTypeIcon(providerType: string): string {
+    const icons: Record<string, string> = {
+      'HOSPITAL': 'ri-hospital-line',
+      'EMERGENCY_ROOM': 'ri-first-aid-kit-line',
+      'CLINIC': 'ri-stethoscope-line',
+      'ORTHOPEDIC': 'ri-body-scan-line',
+      'NEUROLOGY': 'ri-brain-line',
+      'PHYSICAL_THERAPY': 'ri-walk-line',
+      'CHIROPRACTIC': 'ri-body-scan-line',
+      'PAIN_MANAGEMENT': 'ri-medicine-bottle-line',
+      'SURGERY_CENTER': 'ri-surgical-mask-line',
+      'IMAGING': 'ri-scan-line',
+      'RADIOLOGY': 'ri-scan-line',
+      'PRIMARY_CARE': 'ri-stethoscope-line',
+      'MENTAL_HEALTH': 'ri-mental-health-line',
+      'PHARMACY': 'ri-capsule-line'
+    };
+    return icons[providerType] || 'ri-hospital-line';
+  }
+
+  getProviderTypeLabel(providerType: string): string {
+    const type = this.providerTypes.find(t => t.value === providerType);
+    return type?.label || providerType || '';
+  }
+
+  getRecordTypeLabel(recordType: string): string {
+    const type = this.recordTypes.find(t => t.value === recordType);
+    return type?.label || recordType || '';
+  }
+
+  openQuickAddModal(): void {
+    this.editingMedicalRecord = null;
+    this.medicalRecordForm.reset({
+      recordType: 'FOLLOW_UP',
+      billedAmount: 0,
+      adjustedAmount: 0,
+      paidAmount: 0
+    });
+
+    Swal.fire({
+      title: 'Quick Add Medical Record',
+      html: `
+        <div class="text-start">
+          <div class="mb-3">
+            <label class="form-label">Provider Name *</label>
+            <input type="text" id="swal-provider-name" class="form-control" placeholder="e.g., Boston Medical Center">
+          </div>
+          <div class="row mb-3">
+            <div class="col-6">
+              <label class="form-label">Provider Type</label>
+              <select id="swal-provider-type" class="form-select">
+                <option value="">Select type...</option>
+                ${this.providerTypes.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Treatment Date *</label>
+              <input type="date" id="swal-treatment-date" class="form-control">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Billed Amount *</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" id="swal-billed-amount" class="form-control" placeholder="0">
+            </div>
+          </div>
+          <a href="javascript:void(0)" class="text-primary small" id="swal-show-more">
+            <i class="ri-add-line me-1"></i>More Details
+          </a>
+          <div id="swal-more-fields" style="display: none;" class="mt-3">
+            <div class="mb-3">
+              <label class="form-label">Key Findings</label>
+              <textarea id="swal-key-findings" class="form-control" rows="2" placeholder="Important clinical findings..."></textarea>
+            </div>
+            <div class="row mb-3">
+              <div class="col-6">
+                <label class="form-label">Paid Amount</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" id="swal-paid-amount" class="form-control" placeholder="0">
+                </div>
+              </div>
+              <div class="col-6">
+                <label class="form-label">Record Type</label>
+                <select id="swal-record-type" class="form-select">
+                  ${this.recordTypes.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '<i class="ri-add-line me-1"></i> Add Record',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        confirmButton: 'btn btn-primary me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false,
+      width: 500,
+      didOpen: () => {
+        const showMore = document.getElementById('swal-show-more');
+        const moreFields = document.getElementById('swal-more-fields');
+        if (showMore && moreFields) {
+          showMore.onclick = () => {
+            moreFields.style.display = moreFields.style.display === 'none' ? 'block' : 'none';
+            showMore.innerHTML = moreFields.style.display === 'none'
+              ? '<i class="ri-add-line me-1"></i>More Details'
+              : '<i class="ri-subtract-line me-1"></i>Less Details';
+          };
+        }
+      },
+      preConfirm: () => {
+        const providerName = (document.getElementById('swal-provider-name') as HTMLInputElement).value;
+        const treatmentDate = (document.getElementById('swal-treatment-date') as HTMLInputElement).value;
+        const billedAmount = parseFloat((document.getElementById('swal-billed-amount') as HTMLInputElement).value) || 0;
+
+        if (!providerName || !treatmentDate) {
+          Swal.showValidationMessage('Provider name and treatment date are required');
+          return false;
+        }
+
+        return {
+          providerName,
+          providerType: (document.getElementById('swal-provider-type') as HTMLSelectElement).value,
+          treatmentDate,
+          billedAmount,
+          paidAmount: parseFloat((document.getElementById('swal-paid-amount') as HTMLInputElement)?.value) || 0,
+          keyFindings: (document.getElementById('swal-key-findings') as HTMLTextAreaElement)?.value || '',
+          recordType: (document.getElementById('swal-record-type') as HTMLSelectElement)?.value || 'FOLLOW_UP'
+        };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.saveQuickAddRecord(result.value);
+      }
+    });
+  }
+
+  saveQuickAddRecord(data: any): void {
+    if (!this.linkedCase?.id) return;
+
+    const recordData: PIMedicalRecord = {
+      caseId: Number(this.linkedCase.id),
+      providerName: data.providerName,
+      providerType: data.providerType,
+      treatmentDate: data.treatmentDate,
+      billedAmount: data.billedAmount,
+      paidAmount: data.paidAmount,
+      keyFindings: data.keyFindings,
+      recordType: data.recordType
+    };
+
+    this.medicalRecordService.createRecord(Number(this.linkedCase.id), recordData).subscribe({
+      next: () => {
+        this.loadMedicalRecords();
+        this.addActivity('medical-records', `Added: ${data.providerName}`);
+        Swal.fire({
+          icon: 'success',
+          title: 'Record Added',
+          text: `${data.providerName} has been added to medical records.`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+      },
+      error: (err) => {
+        console.error('Error creating record:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to create medical record'
+        });
+      }
+    });
+  }
+
+  openRecordDetailModal(record: PIMedicalRecord): void {
+    const hasCitations = record.citationMetadata && Object.keys(record.citationMetadata).length > 0;
+
+    Swal.fire({
+      title: record.providerName,
+      html: `
+        <div class="text-start">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="badge bg-primary-subtle text-primary">${this.getRecordTypeLabel(record.recordType)}</span>
+            <span class="badge bg-info-subtle text-info">${this.getProviderTypeLabel(record.providerType)}</span>
+            ${hasCitations ? '<span class="badge bg-success-subtle text-success"><i class="ri-link me-1"></i>Has Citations</span>' : ''}
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <div class="text-muted small">Treatment Date</div>
+              <div class="fw-medium">${record.treatmentDate ? new Date(record.treatmentDate).toLocaleDateString() : 'Not specified'}</div>
+            </div>
+            ${record.treatmentEndDate ? `
+            <div class="col-6">
+              <div class="text-muted small">End Date</div>
+              <div class="fw-medium">${new Date(record.treatmentEndDate).toLocaleDateString()}</div>
+            </div>
+            ` : ''}
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-4">
+              <div class="text-muted small">Billed</div>
+              <div class="fw-semibold">${this.formatCurrency(record.billedAmount || 0)}</div>
+            </div>
+            <div class="col-4">
+              <div class="text-muted small">Adjusted</div>
+              <div class="fw-medium">${this.formatCurrency(record.adjustedAmount || 0)}</div>
+            </div>
+            <div class="col-4">
+              <div class="text-muted small">Paid</div>
+              <div class="fw-medium text-success">${this.formatCurrency(record.paidAmount || 0)}</div>
+            </div>
+          </div>
+
+          ${record.keyFindings ? `
+          <div class="mb-3">
+            <div class="text-muted small mb-1">Key Findings</div>
+            <div class="p-2 bg-light rounded small">${record.keyFindings}</div>
+          </div>
+          ` : ''}
+
+          ${record.treatmentProvided ? `
+          <div class="mb-3">
+            <div class="text-muted small mb-1">Treatment Provided</div>
+            <div class="p-2 bg-light rounded small">${record.treatmentProvided}</div>
+          </div>
+          ` : ''}
+
+          ${record.prognosisNotes ? `
+          <div class="mb-3">
+            <div class="text-muted small mb-1">Prognosis</div>
+            <div class="p-2 bg-light rounded small">${record.prognosisNotes}</div>
+          </div>
+          ` : ''}
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '<i class="ri-edit-line me-1"></i> Edit',
+      cancelButtonText: 'Close',
+      showDenyButton: hasCitations,
+      denyButtonText: '<i class="ri-link me-1"></i> View Sources',
+      customClass: {
+        confirmButton: 'btn btn-primary me-2',
+        denyButton: 'btn btn-soft-info me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false,
+      width: 550
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.editMedicalRecord(record);
+        this.openEditRecordModal();
+      } else if (result.isDenied && hasCitations) {
+        // Open citation viewer for first available citation
+        const firstField = Object.keys(record.citationMetadata || {})[0];
+        if (firstField) {
+          this.openCitation(record, firstField);
+        }
+      }
+    });
+  }
+
+  openEditRecordModal(): void {
+    if (!this.editingMedicalRecord) return;
+
+    Swal.fire({
+      title: 'Edit Medical Record',
+      html: `
+        <div class="text-start">
+          <div class="mb-3">
+            <label class="form-label">Provider Name *</label>
+            <input type="text" id="swal-edit-provider-name" class="form-control" value="${this.editingMedicalRecord.providerName || ''}">
+          </div>
+          <div class="row mb-3">
+            <div class="col-6">
+              <label class="form-label">Provider Type</label>
+              <select id="swal-edit-provider-type" class="form-select">
+                <option value="">Select type...</option>
+                ${this.providerTypes.map(t => `<option value="${t.value}" ${t.value === this.editingMedicalRecord?.providerType ? 'selected' : ''}>${t.label}</option>`).join('')}
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Record Type</label>
+              <select id="swal-edit-record-type" class="form-select">
+                ${this.recordTypes.map(t => `<option value="${t.value}" ${t.value === this.editingMedicalRecord?.recordType ? 'selected' : ''}>${t.label}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-6">
+              <label class="form-label">Treatment Date *</label>
+              <input type="date" id="swal-edit-treatment-date" class="form-control" value="${this.editingMedicalRecord.treatmentDate || ''}">
+            </div>
+            <div class="col-6">
+              <label class="form-label">End Date</label>
+              <input type="date" id="swal-edit-treatment-end" class="form-control" value="${this.editingMedicalRecord.treatmentEndDate || ''}">
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-4">
+              <label class="form-label">Billed</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" id="swal-edit-billed" class="form-control" value="${this.editingMedicalRecord.billedAmount || 0}">
+              </div>
+            </div>
+            <div class="col-4">
+              <label class="form-label">Adjusted</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" id="swal-edit-adjusted" class="form-control" value="${this.editingMedicalRecord.adjustedAmount || 0}">
+              </div>
+            </div>
+            <div class="col-4">
+              <label class="form-label">Paid</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" id="swal-edit-paid" class="form-control" value="${this.editingMedicalRecord.paidAmount || 0}">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Key Findings</label>
+            <textarea id="swal-edit-findings" class="form-control" rows="2">${this.editingMedicalRecord.keyFindings || ''}</textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Treatment Provided</label>
+            <textarea id="swal-edit-treatment" class="form-control" rows="2">${this.editingMedicalRecord.treatmentProvided || ''}</textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Prognosis Notes</label>
+            <textarea id="swal-edit-prognosis" class="form-control" rows="2">${this.editingMedicalRecord.prognosisNotes || ''}</textarea>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '<i class="ri-save-line me-1"></i> Save Changes',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        confirmButton: 'btn btn-primary me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false,
+      width: 600,
+      preConfirm: () => {
+        const providerName = (document.getElementById('swal-edit-provider-name') as HTMLInputElement).value;
+        const treatmentDate = (document.getElementById('swal-edit-treatment-date') as HTMLInputElement).value;
+
+        if (!providerName || !treatmentDate) {
+          Swal.showValidationMessage('Provider name and treatment date are required');
+          return false;
+        }
+
+        return {
+          providerName,
+          providerType: (document.getElementById('swal-edit-provider-type') as HTMLSelectElement).value,
+          recordType: (document.getElementById('swal-edit-record-type') as HTMLSelectElement).value,
+          treatmentDate,
+          treatmentEndDate: (document.getElementById('swal-edit-treatment-end') as HTMLInputElement).value || null,
+          billedAmount: parseFloat((document.getElementById('swal-edit-billed') as HTMLInputElement).value) || 0,
+          adjustedAmount: parseFloat((document.getElementById('swal-edit-adjusted') as HTMLInputElement).value) || 0,
+          paidAmount: parseFloat((document.getElementById('swal-edit-paid') as HTMLInputElement).value) || 0,
+          keyFindings: (document.getElementById('swal-edit-findings') as HTMLTextAreaElement).value,
+          treatmentProvided: (document.getElementById('swal-edit-treatment') as HTMLTextAreaElement).value,
+          prognosisNotes: (document.getElementById('swal-edit-prognosis') as HTMLTextAreaElement).value
+        };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value && this.editingMedicalRecord?.id) {
+        this.saveEditedRecord(result.value);
+      }
+    });
+  }
+
+  saveEditedRecord(data: any): void {
+    if (!this.linkedCase?.id || !this.editingMedicalRecord?.id) return;
+
+    const recordData: PIMedicalRecord = {
+      ...data,
+      caseId: Number(this.linkedCase.id)
+    };
+
+    this.medicalRecordService.updateRecord(
+      Number(this.linkedCase.id),
+      this.editingMedicalRecord.id,
+      recordData
+    ).subscribe({
+      next: () => {
+        this.loadMedicalRecords();
+        this.resetMedicalRecordForm();
+        Swal.fire({
+          icon: 'success',
+          title: 'Record Updated',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      },
+      error: (err) => {
+        console.error('Error updating record:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to update medical record'
+        });
+      }
+    });
+  }
+
+  syncMedicalToCalculator(): void {
+    const total = this.getTotalMedicalBills();
+    this.caseValueForm.patchValue({ medicalExpenses: total });
+    this.demandForm.patchValue({ medicalExpenses: total });
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Synced',
+      html: `Medical expenses of <strong>${this.formatCurrency(total)}</strong> synced to Case Value Calculator.`,
+      timer: 2500,
+      showConfirmButton: false
+    });
   }
 
   getSpecialtyClass(specialty: string): string {
@@ -2526,7 +3005,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       'Orthopedics': 'ri-body-scan-line',
       'Neurology': 'ri-brain-line',
       'Physical Therapy': 'ri-walk-line',
-      'Chiropractic': 'ri-spine-line',
+      'Chiropractic': 'ri-body-scan-line',
       'Pain Management': 'ri-medicine-bottle-line',
       'Surgery': 'ri-surgical-mask-line',
       'Radiology': 'ri-scan-line',

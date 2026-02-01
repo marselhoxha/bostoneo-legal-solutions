@@ -89,8 +89,9 @@
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                  <a class="dropdown-item" (click)="activeTab = 'medical-tracker'">
-                    <i class="ri-hospital-line me-2 text-success"></i> Medical Tracker
+                  <a class="dropdown-item" (click)="activeTab = 'medical-records'" [class.disabled]="!linkedCase">
+                    <i class="ri-hospital-line me-2 text-success"></i> Medical Records
+                    <span class="badge bg-info-subtle text-info ms-auto" *ngIf="!linkedCase">Link Case</span>
                   </a>
                 </li>
                 <li>
@@ -100,12 +101,6 @@
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li class="dropdown-header text-muted small">Professional Tools</li>
-                <li>
-                  <a class="dropdown-item" (click)="activeTab = 'medical-records'" [class.disabled]="!linkedCase">
-                    <i class="ri-file-medical-line me-2 text-info"></i> Medical Records
-                    <span class="badge bg-info-subtle text-info ms-auto" *ngIf="!linkedCase">Link Case</span>
-                  </a>
-                </li>
                 <li>
                   <a class="dropdown-item" (click)="activeTab = 'medical-summary'" [class.disabled]="!linkedCase">
                     <i class="ri-article-line me-2 text-primary"></i> Medical Summary
@@ -152,7 +147,7 @@
     </div>
 
     <!-- Medical Total -->
-    <div class="stat-item cursor-pointer" (click)="activeTab = 'medical-tracker'">
+    <div class="stat-item cursor-pointer" (click)="activeTab = 'medical-records'">
       <div class="stat-header">
         <span class="stat-label">MEDICAL TOTAL</span>
         <span class="stat-indicator stat-indicator-success">
@@ -165,17 +160,17 @@
       </div>
     </div>
 
-    <!-- Days Since Injury (when case linked) / Providers Tracked (when no case) -->
-    <div class="stat-item cursor-pointer" (click)="activeTab = linkedCase ? 'case-value' : 'medical-tracker'">
+    <!-- Days Since Injury (when case linked) / Records Count (when no case) -->
+    <div class="stat-item cursor-pointer" (click)="activeTab = linkedCase ? 'case-value' : 'medical-records'">
       <div class="stat-header">
-        <span class="stat-label">{{ linkedCase && getDaysSinceInjury() ? 'DAYS SINCE INJURY' : 'PROVIDERS TRACKED' }}</span>
+        <span class="stat-label">{{ linkedCase && getDaysSinceInjury() ? 'DAYS SINCE INJURY' : 'MEDICAL RECORDS' }}</span>
         <span class="stat-indicator stat-indicator-info">
-          <i [class]="linkedCase && getDaysSinceInjury() ? 'ri-calendar-line' : 'ri-user-heart-line'"></i>
+          <i [class]="linkedCase && getDaysSinceInjury() ? 'ri-calendar-line' : 'ri-file-medical-line'"></i>
         </span>
       </div>
       <div class="stat-body">
-        <i [class]="linkedCase && getDaysSinceInjury() ? 'ri-time-line stat-icon text-info' : 'ri-team-line stat-icon text-info'"></i>
-        <span class="stat-value">{{ linkedCase && getDaysSinceInjury() ? getDaysSinceInjury() : medicalProviders.length }}</span>
+        <i [class]="linkedCase && getDaysSinceInjury() ? 'ri-time-line stat-icon text-info' : 'ri-file-list-line stat-icon text-info'"></i>
+        <span class="stat-value">{{ linkedCase && getDaysSinceInjury() ? getDaysSinceInjury() : medicalRecords.length }}</span>
       </div>
     </div>
 
@@ -252,17 +247,17 @@
                         </div>
                       </div>
 
-                      <!-- Medical Provider Tracker -->
+                      <!-- Medical Records -->
                       <div class="col-xl-4 col-md-6">
-                        <div class="secondary-tool-card h-100" (click)="activeTab = 'medical-tracker'">
+                        <div class="secondary-tool-card h-100" (click)="activeTab = 'medical-records'">
                           <div class="tool-icon-wrapper medical-tracker">
                             <i class="ri-hospital-line"></i>
                           </div>
-                          <div class="tool-name">Medical Provider Tracker</div>
-                          <div class="tool-description">Track all providers, treatment dates, and expenses.</div>
+                          <div class="tool-name">Medical Records</div>
+                          <div class="tool-description">Track all providers, treatment dates, and billing.</div>
                           <div class="tool-meta">
                             <span class="open-link">Open <i class="ri-arrow-right-s-line"></i></span>
-                            <span class="stat" *ngIf="medicalProviders.length > 0">{{ medicalProviders.length }} providers</span>
+                            <span class="stat" *ngIf="medicalRecords.length > 0">{{ medicalRecords.length }} records</span>
                           </div>
                         </div>
                       </div>
@@ -830,134 +825,6 @@
               </ng-template>
             </li>
 
-            <li [ngbNavItem]="'medical-tracker'">
-              <a ngbNavLink class="d-flex align-items-center gap-2">
-                <i class="ri-hospital-line fs-16"></i>
-                <span>Medical Tracker</span>
-                <span class="badge bg-success-subtle text-success ms-1" *ngIf="medicalProviders.length > 0">{{ medicalProviders.length }}</span>
-              </a>
-              <ng-template ngbNavContent>
-                <!-- Medical Tracker Tab Content -->
-                <div class="py-4">
-                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
-                    <div>
-                      <h5 class="mb-1 fw-semibold">Medical Provider Tracker</h5>
-                      <p class="text-muted mb-0 fs-13">Track all providers, treatment dates, and expenses</p>
-                    </div>
-                  </div>
-
-                  <div class="row">
-                    <div class="col-lg-8">
-                      <div class="panel-card">
-                        <div class="panel-header">
-                          <h6 class="mb-0"><i class="ri-add-line me-2 text-primary"></i>Add Medical Provider</h6>
-                        </div>
-                        <div class="panel-body">
-                          <!-- Add Provider Form -->
-                          <div class="row g-3">
-                            <div class="col-md-3">
-                              <label class="form-label">Provider Name</label>
-                              <input type="text" class="form-control" [(ngModel)]="newProvider.name" placeholder="Hospital/Doctor name">
-                            </div>
-                            <div class="col-md-3">
-                              <label class="form-label">Specialty</label>
-                              <select class="form-select" [(ngModel)]="newProvider.specialty">
-                                <option value="">Select specialty</option>
-                                <option *ngFor="let specialty of medicalSpecialties" [value]="specialty">{{ specialty }}</option>
-                              </select>
-                            </div>
-                            <div class="col-md-3">
-                              <label class="form-label">Treatment Dates</label>
-                              <input type="text" class="form-control" [(ngModel)]="newProvider.treatmentDates" placeholder="e.g., 01/15/24 - 06/30/24">
-                            </div>
-                            <div class="col-md-3">
-                              <label class="form-label">Total Bills</label>
-                              <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" class="form-control" [(ngModel)]="newProvider.totalBills" placeholder="0">
-                              </div>
-                            </div>
-                          </div>
-                          <button class="btn btn-primary mt-3" (click)="addMedicalProvider()" [disabled]="!newProvider.name || newProvider.totalBills <= 0">
-                            <i class="ri-add-line me-1"></i> Add Provider
-                          </button>
-                        </div>
-                      </div>
-
-                      <!-- Providers Grid -->
-                      <div class="providers-grid mt-3">
-                        <div class="provider-card" *ngFor="let provider of medicalProviders">
-                          <button class="provider-delete" (click)="confirmRemoveProvider(provider.id)">
-                            <i class="ri-close-line"></i>
-                          </button>
-                          <div class="provider-header">
-                            <div class="specialty-icon" [ngClass]="getSpecialtyClass(provider.specialty)">
-                              <i [class]="getSpecialtyIcon(provider.specialty)"></i>
-                            </div>
-                            <div class="provider-info">
-                              <div class="provider-name">{{ provider.name }}</div>
-                              <div class="provider-specialty">{{ provider.specialty || 'General' }}</div>
-                            </div>
-                          </div>
-                          <div class="provider-details">
-                            <span class="treatment-dates">{{ provider.treatmentDates || 'Dates not specified' }}</span>
-                            <span class="total-bills">{{ formatCurrency(provider.totalBills) }}</span>
-                          </div>
-                        </div>
-
-                        <!-- Empty State -->
-                        <div class="providers-empty" *ngIf="medicalProviders.length === 0">
-                          <div class="empty-state-illustration">
-                            <div class="empty-state-icon-lg">
-                              <i class="ri-hospital-line"></i>
-                            </div>
-                            <div class="empty-state-circles">
-                              <span></span><span></span><span></span>
-                            </div>
-                          </div>
-                          <h6 class="fw-semibold mb-2">No Providers Added</h6>
-                          <p class="text-muted mb-0">Add medical providers using the form above to track treatment and expenses.</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Summary Sidebar -->
-                    <div class="col-lg-4">
-                      <div class="medical-summary-card">
-                        <div class="summary-header">
-                          <h6 class="mb-0"><i class="ri-pie-chart-2-line me-2 text-success"></i>Summary</h6>
-                        </div>
-                        <div class="summary-body">
-                          <div class="stat-row">
-                            <span class="stat-label">Total Providers</span>
-                            <span class="stat-value count">{{ medicalProviders.length }}</span>
-                          </div>
-                          <div class="stat-row">
-                            <span class="stat-label">Total Medical Bills</span>
-                            <span class="stat-value amount">{{ formatCurrency(getTotalMedicalBills()) }}</span>
-                          </div>
-                          <div class="sync-notice">
-                            <i class="ri-refresh-line"></i>
-                            <span>Medical expenses are automatically synced with the Case Value Calculator and Demand Letter Generator.</span>
-                          </div>
-
-                          <!-- Save to Case Button -->
-                          <div class="mt-3" *ngIf="linkedCase && medicalProviders.length > 0">
-                            <button class="btn btn-success w-100" (click)="saveMedicalProvidersToCase()">
-                              <i class="ri-save-line me-2"></i> Save to Case
-                            </button>
-                            <small class="text-muted d-block text-center mt-2">
-                              Saves providers to {{ linkedCase.caseNumber }}
-                            </small>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </ng-template>
-            </li>
-
             <li [ngbNavItem]="'settlement'">
               <a ngbNavLink class="d-flex align-items-center gap-2">
                 <i class="ri-money-dollar-circle-line fs-16"></i>
@@ -1109,30 +976,32 @@
               </ng-template>
             </li>
 
-            <!-- Medical Records Tab (Professional) -->
+            <!-- Medical Records Tab -->
             <li ngbNavItem="medical-records">
-              <a ngbNavLink>
-                <i class="ri-file-medical-line me-2"></i> Medical Records
+              <a ngbNavLink class="d-flex align-items-center gap-2">
+                <i class="ri-hospital-line fs-16"></i>
+                <span>Medical Records</span>
+                <span class="badge bg-success-subtle text-success ms-1" *ngIf="medicalRecords.length > 0">{{ medicalRecords.length }}</span>
               </a>
               <ng-template ngbNavContent>
-                <div class="professional-tool-content" (click)="loadMedicalRecords()">
-                  <!-- Header -->
-                  <div class="d-flex justify-content-between align-items-center mb-4">
+                <!-- Medical Records Tab Content -->
+                <div class="medical-records-container py-4">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
                     <div>
-                      <h5 class="mb-1">Medical Records</h5>
-                      <p class="text-muted mb-0">Detailed medical record tracking with ICD codes and procedures</p>
+                      <h5 class="mb-1 fw-semibold">Medical Records</h5>
+                      <p class="text-muted mb-0 fs-13">Track all providers, treatment dates, and billing</p>
                     </div>
                     <div class="d-flex gap-2">
-                      <button class="btn btn-primary" (click)="scanCaseDocuments()" [disabled]="!linkedCase || isScanningDocuments">
+                      <button class="btn btn-primary" (click)="openQuickAddModal()" [disabled]="!linkedCase">
+                        <i class="ri-add-line me-1"></i> Quick Add
+                      </button>
+                      <button class="btn btn-soft-info" (click)="scanCaseDocuments()" [disabled]="!linkedCase || isScanningDocuments">
                         <span *ngIf="!isScanningDocuments">
-                          <i class="ri-robot-line me-1"></i> Scan Documents
+                          <i class="ri-robot-line me-1"></i> Scan
                         </span>
                         <span *ngIf="isScanningDocuments">
-                          <span class="spinner-border spinner-border-sm me-1"></span> Scanning...
+                          <span class="spinner-border spinner-border-sm me-1"></span>
                         </span>
-                      </button>
-                      <button class="btn btn-soft-primary" (click)="loadMedicalRecords()" [disabled]="!linkedCase">
-                        <i class="ri-refresh-line me-1"></i> Refresh
                       </button>
                     </div>
                   </div>
@@ -1152,139 +1021,116 @@
                     <i class="ri-information-line fs-4 me-3"></i>
                     <div>
                       <strong>Link a Case</strong>
-                      <p class="mb-0">Use the case selector above to link a PI case and access professional medical record tracking.</p>
+                      <p class="mb-0">Use the case selector above to link a PI case and track medical records.</p>
                     </div>
                   </div>
 
                   <!-- Medical Records Content -->
                   <div class="row" *ngIf="linkedCase">
-                    <!-- Add/Edit Form -->
-                    <div class="col-lg-5">
-                      <div class="card">
-                        <div class="card-header">
-                          <h6 class="mb-0">{{ editingMedicalRecord ? 'Edit' : 'Add' }} Medical Record</h6>
+                    <div class="col-lg-8">
+                      <!-- Providers Grid -->
+                      <div class="providers-grid">
+                        <div class="provider-card" *ngFor="let record of medicalRecords" (click)="openRecordDetailModal(record)">
+                          <button class="provider-delete" (click)="deleteMedicalRecord(record); $event.stopPropagation()">
+                            <i class="ri-close-line"></i>
+                          </button>
+                          <div class="provider-header">
+                            <div class="specialty-icon" [ngClass]="getProviderTypeClass(record.providerType)">
+                              <i [class]="getProviderTypeIcon(record.providerType)"></i>
+                            </div>
+                            <div class="provider-info">
+                              <div class="provider-name">{{ record.providerName }}</div>
+                              <div class="provider-specialty">{{ getProviderTypeLabel(record.providerType) || 'Medical Provider' }}</div>
+                            </div>
+                          </div>
+                          <div class="provider-details">
+                            <span class="treatment-dates">
+                              <i class="ri-calendar-line me-1"></i>
+                              {{ record.treatmentDate | date:'MMM d, yyyy' }}
+                              <span *ngIf="record.treatmentEndDate"> - {{ record.treatmentEndDate | date:'MMM d, yyyy' }}</span>
+                            </span>
+                            <span class="total-bills">{{ formatCurrency(record.billedAmount || 0) }}</span>
+                          </div>
+                          <div class="provider-card-footer" *ngIf="record.keyFindings || record.recordType">
+                            <span class="badge bg-primary-subtle text-primary me-2" *ngIf="record.recordType">{{ getRecordTypeLabel(record.recordType) }}</span>
+                            <span class="text-muted small text-truncate" *ngIf="record.keyFindings">{{ record.keyFindings }}</span>
+                          </div>
+                          <div class="provider-card-actions">
+                            <button class="btn btn-sm btn-soft-primary" (click)="editMedicalRecord(record); $event.stopPropagation()" title="Edit">
+                              <i class="ri-edit-line"></i>
+                            </button>
+                          </div>
                         </div>
-                        <div class="card-body">
-                          <form [formGroup]="medicalRecordForm">
-                            <div class="mb-3">
-                              <label class="form-label">Provider Name *</label>
-                              <input type="text" class="form-control" formControlName="providerName" placeholder="e.g., Boston Medical Center">
+
+                        <!-- Empty State -->
+                        <div class="providers-empty" *ngIf="medicalRecords.length === 0 && !isLoadingMedicalRecords">
+                          <div class="empty-state-illustration">
+                            <div class="empty-state-icon-lg">
+                              <i class="ri-hospital-line"></i>
                             </div>
-                            <div class="row mb-3">
-                              <div class="col-6">
-                                <label class="form-label">Provider Type</label>
-                                <select class="form-select" formControlName="providerType">
-                                  <option value="">Select type...</option>
-                                  <option *ngFor="let type of providerTypes" [value]="type.value">{{ type.label }}</option>
-                                </select>
-                              </div>
-                              <div class="col-6">
-                                <label class="form-label">Record Type *</label>
-                                <select class="form-select" formControlName="recordType">
-                                  <option *ngFor="let type of recordTypes" [value]="type.value">{{ type.label }}</option>
-                                </select>
-                              </div>
+                            <div class="empty-state-circles">
+                              <span></span><span></span><span></span>
                             </div>
-                            <div class="row mb-3">
-                              <div class="col-6">
-                                <label class="form-label">Treatment Date *</label>
-                                <input type="date" class="form-control" formControlName="treatmentDate">
-                              </div>
-                              <div class="col-6">
-                                <label class="form-label">End Date</label>
-                                <input type="date" class="form-control" formControlName="treatmentEndDate">
-                              </div>
-                            </div>
-                            <div class="row mb-3">
-                              <div class="col-4">
-                                <label class="form-label">Billed</label>
-                                <div class="input-group">
-                                  <span class="input-group-text">$</span>
-                                  <input type="number" class="form-control" formControlName="billedAmount">
-                                </div>
-                              </div>
-                              <div class="col-4">
-                                <label class="form-label">Adjusted</label>
-                                <div class="input-group">
-                                  <span class="input-group-text">$</span>
-                                  <input type="number" class="form-control" formControlName="adjustedAmount">
-                                </div>
-                              </div>
-                              <div class="col-4">
-                                <label class="form-label">Paid</label>
-                                <div class="input-group">
-                                  <span class="input-group-text">$</span>
-                                  <input type="number" class="form-control" formControlName="paidAmount">
-                                </div>
-                              </div>
-                            </div>
-                            <div class="mb-3">
-                              <label class="form-label">Key Findings</label>
-                              <textarea class="form-control" formControlName="keyFindings" rows="2" placeholder="Important clinical findings..."></textarea>
-                            </div>
-                            <div class="mb-3">
-                              <label class="form-label">Treatment Provided</label>
-                              <textarea class="form-control" formControlName="treatmentProvided" rows="2" placeholder="Treatments, medications, procedures..."></textarea>
-                            </div>
-                            <div class="d-flex gap-2">
-                              <button type="button" class="btn btn-primary flex-grow-1" (click)="saveMedicalRecord()">
-                                <i class="ri-save-line me-1"></i> {{ editingMedicalRecord ? 'Update' : 'Add' }} Record
-                              </button>
-                              <button type="button" class="btn btn-soft-secondary" *ngIf="editingMedicalRecord" (click)="resetMedicalRecordForm()">
-                                Cancel
-                              </button>
-                            </div>
-                          </form>
+                          </div>
+                          <h6 class="fw-semibold mb-2">No Medical Records</h6>
+                          <p class="text-muted mb-3">Add medical records to track treatment and expenses.</p>
+                          <button class="btn btn-primary" (click)="openQuickAddModal()">
+                            <i class="ri-add-line me-1"></i> Add First Record
+                          </button>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div class="providers-empty" *ngIf="isLoadingMedicalRecords">
+                          <div class="spinner-border text-primary" role="status"></div>
+                          <p class="text-muted mt-2 mb-0">Loading records...</p>
                         </div>
                       </div>
                     </div>
 
-                    <!-- Records List -->
-                    <div class="col-lg-7">
-                      <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                          <h6 class="mb-0">Medical Records ({{ medicalRecords.length }})</h6>
+                    <!-- Summary Sidebar -->
+                    <div class="col-lg-4">
+                      <div class="medical-summary-card">
+                        <div class="summary-header">
+                          <h6 class="mb-0"><i class="ri-pie-chart-2-line me-2 text-success"></i>Summary</h6>
                         </div>
-                        <div class="card-body p-0">
-                          <div class="table-responsive">
-                            <table class="table table-hover mb-0" *ngIf="medicalRecords.length > 0">
-                              <thead class="table-light">
-                                <tr>
-                                  <th>Date</th>
-                                  <th>Provider</th>
-                                  <th>Type</th>
-                                  <th class="text-end">Billed</th>
-                                  <th class="text-center">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr *ngFor="let record of medicalRecords">
-                                  <td>{{ record.treatmentDate | date:'MM/dd/yyyy' }}</td>
-                                  <td>
-                                    <div class="fw-medium">{{ record.providerName }}</div>
-                                    <small class="text-muted">{{ record.providerType }}</small>
-                                  </td>
-                                  <td><span class="badge bg-primary-subtle text-primary">{{ record.recordType }}</span></td>
-                                  <td class="text-end">{{ formatCurrency(record.billedAmount || 0) }}</td>
-                                  <td class="text-center">
-                                    <button class="btn btn-sm btn-soft-primary me-1" (click)="editMedicalRecord(record)" title="Edit">
-                                      <i class="ri-edit-line"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-soft-danger" (click)="deleteMedicalRecord(record)" title="Delete">
-                                      <i class="ri-delete-bin-line"></i>
-                                    </button>
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
+                        <div class="summary-body">
+                          <div class="stat-row">
+                            <span class="stat-label">Total Records</span>
+                            <span class="stat-value count">{{ medicalRecords.length }}</span>
                           </div>
-                          <div class="text-center py-4" *ngIf="medicalRecords.length === 0 && !isLoadingMedicalRecords">
-                            <i class="ri-file-medical-line fs-1 text-muted"></i>
-                            <p class="text-muted mt-2 mb-0">No medical records yet. Add your first record using the form.</p>
+                          <div class="stat-row">
+                            <span class="stat-label">Unique Providers</span>
+                            <span class="stat-value count">{{ getUniqueProviderCount() }}</span>
                           </div>
-                          <div class="text-center py-4" *ngIf="isLoadingMedicalRecords">
-                            <div class="spinner-border text-primary" role="status"></div>
-                            <p class="text-muted mt-2 mb-0">Loading records...</p>
+                          <div class="stat-row">
+                            <span class="stat-label">Total Billed</span>
+                            <span class="stat-value amount">{{ formatCurrency(getTotalMedicalBills()) }}</span>
+                          </div>
+                          <div class="stat-row">
+                            <span class="stat-label">Total Paid</span>
+                            <span class="stat-value amount text-success">{{ formatCurrency(getTotalMedicalPaid()) }}</span>
+                          </div>
+                          <div class="stat-row">
+                            <span class="stat-label">Outstanding</span>
+                            <span class="stat-value amount text-warning">{{ formatCurrency(getTotalMedicalOutstanding()) }}</span>
+                          </div>
+                          <div class="stat-row" *ngIf="getMedicalDateRange().start">
+                            <span class="stat-label">Treatment Period</span>
+                            <span class="stat-value small">{{ getMedicalDateRange().start | date:'MMM yyyy' }} - {{ getMedicalDateRange().end | date:'MMM yyyy' }}</span>
+                          </div>
+                          <div class="sync-notice">
+                            <i class="ri-refresh-line"></i>
+                            <span>Medical expenses are automatically synced with the Case Value Calculator and Demand Letter Generator.</span>
+                          </div>
+
+                          <!-- Quick Actions -->
+                          <div class="mt-3 d-grid gap-2">
+                            <button class="btn btn-soft-primary btn-sm" (click)="activeTab = 'medical-summary'">
+                              <i class="ri-article-line me-1"></i> Generate Summary
+                            </button>
+                            <button class="btn btn-soft-success btn-sm" (click)="syncMedicalToCalculator()">
+                              <i class="ri-calculator-line me-1"></i> Sync to Calculator
+                            </button>
                           </div>
                         </div>
                       </div>
