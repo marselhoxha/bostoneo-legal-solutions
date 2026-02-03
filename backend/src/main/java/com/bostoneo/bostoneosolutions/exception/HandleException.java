@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -118,6 +119,19 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason("Access denied. You don\'t have access")
+                        .developerMessage(exception.getMessage())
+                        .status(FORBIDDEN)
+                        .statusCode(FORBIDDEN.value())
+                        .build(), FORBIDDEN);
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<HttpResponse> authorizationDeniedException(AuthorizationDeniedException exception) {
+        log.error("Authorization denied: {}", exception.getMessage());
+        return new ResponseEntity<>(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .reason("You don't have permission to perform this action")
                         .developerMessage(exception.getMessage())
                         .status(FORBIDDEN)
                         .statusCode(FORBIDDEN.value())

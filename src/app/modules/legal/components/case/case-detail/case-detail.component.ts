@@ -40,6 +40,7 @@ import { NotificationService } from '../../../../../service/notification.service
 import { AuditLogService } from '../../../../../core/services/audit-log.service';
 import { PushNotificationService } from '../../../../../core/services/push-notification.service';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../../core/services/notification-manager.service';
+import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField, TYPE_TO_PRACTICE_AREA } from '../../../shared/practice-area-fields.config';
 
 @Component({
   selector: 'app-case-detail',
@@ -111,6 +112,11 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   // Description expand/collapse
   isDescriptionExpanded = false;
   private readonly DESCRIPTION_MAX_LENGTH = 500;
+
+  // Practice area specific fields
+  currentPracticeAreaSections: PracticeAreaSection[] = [];
+  practiceAreaFieldsConfig = PRACTICE_AREA_FIELDS;
+  private practiceAreaDatePickers: any[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -195,6 +201,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.destroyPracticeAreaDatePickers();
   }
   
   private setupRoleBasedPermissions(): void {
@@ -228,10 +235,11 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       this.case = currentCase as any;
       this.contextLoaded = true;
       this.loadCaseEvents(currentCase.id);
+      this.loadPracticeAreaFields();
       this.cdr.detectChanges();
       return;
     }
-    
+
     // Load case and set context
     this.loadCase(caseId.toString());
     this.contextLoaded = true;
@@ -244,6 +252,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       .subscribe(caseData => {
         if (caseData) {
           this.case = caseData as any;
+          this.loadPracticeAreaFields();
           this.cdr.detectChanges();
         }
       });
@@ -612,15 +621,19 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isEditing = !this.isEditing;
     if (this.isEditing) {
       this.updateFormWithCaseData();
+      // Add practice area form controls
+      this.addPracticeAreaFormControls();
       // Force change detection to update the view
       this.cdr.detectChanges();
       // Initialize Flatpickr after view updates with a longer timeout
       setTimeout(() => {
         this.initializeFlatpickr();
+        this.initPracticeAreaDatePickers();
       }, 500);
     } else {
       // Clean up flatpickr instances when exiting edit mode
       this.destroyFlatpickrInstances();
+      this.destroyPracticeAreaDatePickers();
     }
   }
 
@@ -769,6 +782,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           this.loadCaseEvents(this.case.id);
           this.loadCaseTeam(this.case.id);
           this.loadAllCaseTasks(this.case.id);
+          this.loadPracticeAreaFields();
         }
       },
       error: (err) => {
@@ -1299,12 +1313,31 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           paymentStatus: formValues.paymentStatus
         };
 
+        // Add practice area specific fields to update data
+        this.currentPracticeAreaSections.forEach(section => {
+          section.fields.forEach(field => {
+            const value = formValues[field.name];
+            if (value !== null && value !== undefined && value !== '') {
+              if (field.type === 'date' && value) {
+                (updateData as any)[field.name] = formatDate(value);
+              } else if (field.type === 'currency' || field.type === 'number') {
+                (updateData as any)[field.name] = value ? parseFloat(value) : null;
+              } else {
+                (updateData as any)[field.name] = value;
+              }
+            }
+          });
+        });
+
         // Store original values for change detection
         const originalStatus = this.case.status;
         const originalPriority = this.case.priority;
         const caseName = this.case.title;
         const caseNumber = this.case.caseNumber;
-        
+
+        // Debug: Log the update data being sent
+        console.log('Updating case with data:', JSON.stringify(updateData, null, 2));
+
         // Call the API to update the case
         this.caseService.updateCase(this.case.id, updateData).subscribe({
           next: async (response) => {
@@ -3068,5 +3101,158 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     return null;
+  }
+
+  // ========================
+  // Practice Area Field Methods
+  // ========================
+
+  /**
+   * Load practice area fields based on the case's practice area or type
+   */
+  loadPracticeAreaFields(): void {
+    if (!this.case) return;
+
+    // Get practice area from case
+    let practiceArea = (this.case as any).practiceArea;
+
+    // If no practiceArea set, try to map from type
+    if (!practiceArea && this.case.type) {
+      practiceArea = this.mapTypeToArea(this.case.type);
+    }
+
+    // If still no match, check if the type itself is a valid practice area key
+    if (!practiceArea && this.case.type && this.practiceAreaFieldsConfig[this.case.type]) {
+      practiceArea = this.case.type;
+    }
+
+    // Get the practice area configuration
+    this.currentPracticeAreaSections = practiceArea ? (this.practiceAreaFieldsConfig[practiceArea] || []) : [];
+
+    // Add form controls for practice area fields when in edit mode
+    if (this.isEditing && this.currentPracticeAreaSections.length > 0) {
+      this.addPracticeAreaFormControls();
+    }
+  }
+
+  /**
+   * Map case type to practice area for backwards compatibility
+   */
+  private mapTypeToArea(type: string): string {
+    if (!type) return '';
+
+    // First try exact match
+    if (TYPE_TO_PRACTICE_AREA[type]) {
+      return TYPE_TO_PRACTICE_AREA[type];
+    }
+
+    // Try case-insensitive match
+    const typeUpper = type.toUpperCase();
+    for (const [key, value] of Object.entries(TYPE_TO_PRACTICE_AREA)) {
+      if (key.toUpperCase() === typeUpper) {
+        return value;
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * Add form controls for practice area specific fields
+   */
+  private addPracticeAreaFormControls(): void {
+    this.currentPracticeAreaSections.forEach(section => {
+      section.fields.forEach(field => {
+        if (!this.editForm.contains(field.name)) {
+          const value = this.getFieldValue(field.name);
+          this.editForm.addControl(field.name, this.fb.control(value));
+        } else {
+          this.editForm.get(field.name)?.setValue(this.getFieldValue(field.name));
+        }
+      });
+    });
+  }
+
+  /**
+   * Get the value of a practice area field from the case object
+   */
+  getFieldValue(fieldName: string): any {
+    if (!this.case) return null;
+    return (this.case as any)[fieldName] ?? null;
+  }
+
+  /**
+   * Get the label for a select option value
+   */
+  getLabelForSelectValue(field: PracticeAreaField, value: string): string {
+    if (!field.options || !value) return value || '';
+    const option = field.options.find(o => o.value === value);
+    return option ? option.label : value;
+  }
+
+  /**
+   * Initialize date pickers for practice area date fields
+   */
+  private initPracticeAreaDatePickers(): void {
+    // Destroy existing pickers
+    this.destroyPracticeAreaDatePickers();
+
+    // Wait for DOM to be ready
+    setTimeout(() => {
+      this.currentPracticeAreaSections.forEach(section => {
+        section.fields.forEach(field => {
+          if (field.type === 'date') {
+            const element = document.getElementById(`pa_edit_${field.name}`);
+            if (element) {
+              const currentValue = this.editForm.get(field.name)?.value;
+              const defaultDate = currentValue ? new Date(currentValue) : null;
+
+              const picker = flatpickr(element, {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'F j, Y',
+                allowInput: true,
+                defaultDate: defaultDate,
+                onChange: (selectedDates) => {
+                  if (selectedDates.length > 0) {
+                    this.editForm.get(field.name)?.setValue(selectedDates[0]);
+                  }
+                }
+              });
+              this.practiceAreaDatePickers.push(picker);
+            }
+          }
+        });
+      });
+    }, 100);
+  }
+
+  /**
+   * Destroy all practice area date pickers
+   */
+  private destroyPracticeAreaDatePickers(): void {
+    this.practiceAreaDatePickers.forEach(picker => {
+      if (picker && typeof picker.destroy === 'function') {
+        picker.destroy();
+      }
+    });
+    this.practiceAreaDatePickers = [];
+  }
+
+  /**
+   * Get all practice area field names for cleanup
+   */
+  private getAllPracticeAreaFieldNames(): string[] {
+    const fieldNames: string[] = [];
+    Object.values(this.practiceAreaFieldsConfig).forEach(sections => {
+      sections.forEach(section => {
+        section.fields.forEach(field => {
+          if (!fieldNames.includes(field.name)) {
+            fieldNames.push(field.name);
+          }
+        });
+      });
+    });
+    return fieldNames;
   }
 }

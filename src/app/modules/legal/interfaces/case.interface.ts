@@ -133,6 +133,49 @@ export interface LegalCase {
   insuranceAdjusterContact?: string;
   defendantName?: string;
   defendantAddress?: string;
+
+  // Practice Area Identifier
+  practiceArea?: string;
+
+  // Criminal Defense Fields
+  primaryCharge?: string;
+  chargeLevel?: string;
+  docketNumber?: string;
+  bailAmount?: number;
+  arrestDate?: Date;
+  prosecutorName?: string;
+
+  // Family Law Fields
+  caseSubtype?: string;
+  spouseName?: string;
+  marriageDate?: Date;
+  separationDate?: Date;
+  hasMinorChildren?: boolean;
+  childrenCount?: number;
+  custodyArrangement?: string;
+
+  // Immigration Fields
+  formType?: string;
+  uscisNumber?: string;
+  petitionerName?: string;
+  beneficiaryName?: string;
+  priorityDate?: Date;
+  visaCategory?: string;
+
+  // Real Estate Fields
+  transactionType?: string;
+  propertyAddress?: string;
+  purchasePrice?: number;
+  closingDate?: Date;
+  buyerName?: string;
+  sellerName?: string;
+
+  // Intellectual Property Fields
+  ipType?: string;
+  applicationNumber?: string;
+  ipFilingDate?: Date;
+  inventorName?: string;
+  technologyArea?: string;
 }
 
 export interface DocumentVersion {

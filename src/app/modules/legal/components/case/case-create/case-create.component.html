@@ -196,6 +196,150 @@
                 </div>
               </div>
 
+              <!-- Practice Area Specific Fields -->
+              <div class="row mb-4" *ngIf="currentPracticeAreaSections.length > 0">
+                <div class="col-12">
+                  <div class="card border shadow-none" *ngFor="let section of currentPracticeAreaSections">
+                    <div class="card-header bg-soft-primary">
+                      <h5 class="card-title mb-0">
+                        <i [class]="section.icon + ' align-middle me-2'" *ngIf="section.icon"></i>
+                        {{ section.title }}
+                      </h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-3">
+                        <ng-container *ngFor="let field of section.fields">
+                          <div [class]="field.colSize || 'col-md-6'">
+                            <div class="mb-3">
+                              <!-- Text Input -->
+                              <ng-container *ngIf="field.type === 'text'">
+                                <label [for]="'pa_' + field.name" class="form-label">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <input type="text" class="form-control" [id]="'pa_' + field.name"
+                                  [formControlName]="field.name"
+                                  [placeholder]="field.placeholder || ''"
+                                  [ngClass]="{'is-invalid': hasError(field.name)}">
+                                <div class="invalid-feedback" *ngIf="hasError(field.name)">
+                                  {{ getErrorMessage(field.name) }}
+                                </div>
+                              </ng-container>
+
+                              <!-- Textarea -->
+                              <ng-container *ngIf="field.type === 'textarea'">
+                                <label [for]="'pa_' + field.name" class="form-label">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <textarea class="form-control" [id]="'pa_' + field.name" rows="3"
+                                  [formControlName]="field.name"
+                                  [placeholder]="field.placeholder || ''"
+                                  [ngClass]="{'is-invalid': hasError(field.name)}"></textarea>
+                                <div class="invalid-feedback" *ngIf="hasError(field.name)">
+                                  {{ getErrorMessage(field.name) }}
+                                </div>
+                              </ng-container>
+
+                              <!-- Select -->
+                              <ng-container *ngIf="field.type === 'select'">
+                                <label [for]="'pa_' + field.name" class="form-label">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <select class="form-select" [id]="'pa_' + field.name"
+                                  [formControlName]="field.name"
+                                  [ngClass]="{'is-invalid': hasError(field.name)}">
+                                  <option value="">Select {{ field.label }}</option>
+                                  <option *ngFor="let opt of field.options" [value]="opt.value">
+                                    {{ opt.label }}
+                                  </option>
+                                </select>
+                                <div class="invalid-feedback" *ngIf="hasError(field.name)">
+                                  {{ getErrorMessage(field.name) }}
+                                </div>
+                              </ng-container>
+
+                              <!-- Date -->
+                              <ng-container *ngIf="field.type === 'date'">
+                                <label [for]="'pa_' + field.name" class="form-label">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <div class="input-group">
+                                  <span class="input-group-text bg-light border-end-0">
+                                    <i class="ri-calendar-line align-middle"></i>
+                                  </span>
+                                  <input type="text" class="form-control border-start-0 flatpickr-input"
+                                    [id]="'pa_' + field.name"
+                                    [formControlName]="field.name"
+                                    [placeholder]="'Select ' + field.label"
+                                    [ngClass]="{'is-invalid': hasError(field.name)}">
+                                </div>
+                                <div class="invalid-feedback d-block" *ngIf="hasError(field.name)">
+                                  {{ getErrorMessage(field.name) }}
+                                </div>
+                              </ng-container>
+
+                              <!-- Currency -->
+                              <ng-container *ngIf="field.type === 'currency'">
+                                <label [for]="'pa_' + field.name" class="form-label">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <div class="input-group">
+                                  <span class="input-group-text bg-light border-end-0">
+                                    <i class="ri-money-dollar-circle-line align-middle"></i>
+                                  </span>
+                                  <input type="number" class="form-control border-start-0"
+                                    [id]="'pa_' + field.name"
+                                    [formControlName]="field.name"
+                                    [placeholder]="field.placeholder || '0.00'"
+                                    min="0" step="0.01"
+                                    [ngClass]="{'is-invalid': hasError(field.name)}">
+                                </div>
+                                <div class="invalid-feedback" *ngIf="hasError(field.name)">
+                                  {{ getErrorMessage(field.name) }}
+                                </div>
+                              </ng-container>
+
+                              <!-- Number -->
+                              <ng-container *ngIf="field.type === 'number'">
+                                <label [for]="'pa_' + field.name" class="form-label">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <input type="number" class="form-control"
+                                  [id]="'pa_' + field.name"
+                                  [formControlName]="field.name"
+                                  [placeholder]="field.placeholder || '0'"
+                                  min="0"
+                                  [ngClass]="{'is-invalid': hasError(field.name)}">
+                                <div class="invalid-feedback" *ngIf="hasError(field.name)">
+                                  {{ getErrorMessage(field.name) }}
+                                </div>
+                              </ng-container>
+
+                              <!-- Checkbox -->
+                              <ng-container *ngIf="field.type === 'checkbox'">
+                                <div class="form-check mt-4">
+                                  <input type="checkbox" class="form-check-input"
+                                    [id]="'pa_' + field.name"
+                                    [formControlName]="field.name">
+                                  <label class="form-check-label" [for]="'pa_' + field.name">
+                                    {{ field.label }}
+                                  </label>
+                                </div>
+                              </ng-container>
+                            </div>
+                          </div>
+                        </ng-container>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Court Information (Optional) -->
               <div class="row mb-4">
                 <div class="col-12">

@@ -70,6 +70,43 @@ public class LegalCaseDTOMapper {
             .employerHrContact(entity.getEmployerHrContact())
             .defendantName(entity.getDefendantName())
             .defendantAddress(entity.getDefendantAddress())
+            // Practice Area
+            .practiceArea(entity.getPracticeArea())
+            // Criminal Defense fields
+            .primaryCharge(entity.getPrimaryCharge())
+            .chargeLevel(entity.getChargeLevel())
+            .docketNumber(entity.getDocketNumber())
+            .bailAmount(entity.getBailAmount() != null ? java.math.BigDecimal.valueOf(entity.getBailAmount()) : null)
+            .arrestDate(entity.getArrestDate())
+            .prosecutorName(entity.getProsecutorName())
+            // Family Law fields
+            .caseSubtype(entity.getCaseSubtype())
+            .spouseName(entity.getSpouseName())
+            .marriageDate(entity.getMarriageDate())
+            .separationDate(entity.getSeparationDate())
+            .hasMinorChildren(entity.getHasMinorChildren())
+            .childrenCount(entity.getChildrenCount())
+            .custodyArrangement(entity.getCustodyArrangement())
+            // Immigration fields
+            .formType(entity.getFormType())
+            .uscisNumber(entity.getUscisNumber())
+            .petitionerName(entity.getPetitionerName())
+            .beneficiaryName(entity.getBeneficiaryName())
+            .priorityDate(entity.getPriorityDate())
+            .visaCategory(entity.getVisaCategory())
+            // Real Estate fields
+            .transactionType(entity.getTransactionType())
+            .propertyAddress(entity.getPropertyAddress())
+            .purchasePrice(entity.getPurchasePrice() != null ? java.math.BigDecimal.valueOf(entity.getPurchasePrice()) : null)
+            .closingDate(entity.getClosingDate())
+            .buyerName(entity.getBuyerName())
+            .sellerName(entity.getSellerName())
+            // Intellectual Property fields
+            .ipType(entity.getIpType())
+            .applicationNumber(entity.getApplicationNumber())
+            .ipFilingDate(entity.getIpFilingDate())
+            .inventorName(entity.getInventorName())
+            .technologyArea(entity.getTechnologyArea())
             .build();
     }
     
@@ -132,6 +169,43 @@ public class LegalCaseDTOMapper {
         entity.setEmployerHrContact(dto.getEmployerHrContact());
         entity.setDefendantName(dto.getDefendantName());
         entity.setDefendantAddress(dto.getDefendantAddress());
+        // Practice Area
+        entity.setPracticeArea(dto.getPracticeArea());
+        // Criminal Defense fields
+        entity.setPrimaryCharge(dto.getPrimaryCharge());
+        entity.setChargeLevel(dto.getChargeLevel());
+        entity.setDocketNumber(dto.getDocketNumber());
+        entity.setBailAmount(dto.getBailAmount() != null ? dto.getBailAmount().doubleValue() : null);
+        entity.setArrestDate(dto.getArrestDate());
+        entity.setProsecutorName(dto.getProsecutorName());
+        // Family Law fields
+        entity.setCaseSubtype(dto.getCaseSubtype());
+        entity.setSpouseName(dto.getSpouseName());
+        entity.setMarriageDate(dto.getMarriageDate());
+        entity.setSeparationDate(dto.getSeparationDate());
+        entity.setHasMinorChildren(dto.getHasMinorChildren());
+        entity.setChildrenCount(dto.getChildrenCount());
+        entity.setCustodyArrangement(dto.getCustodyArrangement());
+        // Immigration fields
+        entity.setFormType(dto.getFormType());
+        entity.setUscisNumber(dto.getUscisNumber());
+        entity.setPetitionerName(dto.getPetitionerName());
+        entity.setBeneficiaryName(dto.getBeneficiaryName());
+        entity.setPriorityDate(dto.getPriorityDate());
+        entity.setVisaCategory(dto.getVisaCategory());
+        // Real Estate fields
+        entity.setTransactionType(dto.getTransactionType());
+        entity.setPropertyAddress(dto.getPropertyAddress());
+        entity.setPurchasePrice(dto.getPurchasePrice() != null ? dto.getPurchasePrice().doubleValue() : null);
+        entity.setClosingDate(dto.getClosingDate());
+        entity.setBuyerName(dto.getBuyerName());
+        entity.setSellerName(dto.getSellerName());
+        // Intellectual Property fields
+        entity.setIpType(dto.getIpType());
+        entity.setApplicationNumber(dto.getApplicationNumber());
+        entity.setIpFilingDate(dto.getIpFilingDate());
+        entity.setInventorName(dto.getInventorName());
+        entity.setTechnologyArea(dto.getTechnologyArea());
 
         return entity;
     }

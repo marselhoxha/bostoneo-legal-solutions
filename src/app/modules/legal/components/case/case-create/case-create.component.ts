@@ -14,6 +14,7 @@ import { CaseService } from '../../../services/case.service';
 import { UserService } from '../../../../../service/user.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField } from '../../../shared/practice-area-fields.config';
 
 @Component({
   selector: 'app-case-create',
@@ -45,21 +46,28 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   // Case types array for dropdown
   caseTypes = ['CIVIL', 'CRIMINAL', 'FAMILY', 'BUSINESS', 'REAL_ESTATE', 'IMMIGRATION', 'INTELLECTUAL_PROPERTY', 'OTHER'];
 
-  // Practice areas array for dropdown
+  // Practice areas array for dropdown (only areas with specific fields)
   practiceAreas = [
     'Personal Injury',
-    'Family Law',
     'Criminal Defense',
-    'Business Law',
-    'Real Estate Law',
+    'Family Law',
     'Immigration Law',
+    'Real Estate Law',
+    'Intellectual Property',
+    'Business Law',
     'Estate Planning',
     'Employment Law',
-    'Intellectual Property',
     'Bankruptcy',
     'Civil Litigation',
     'Other'
   ];
+
+  // Practice area specific fields configuration
+  currentPracticeAreaSections: PracticeAreaSection[] = [];
+  practiceAreaFieldsConfig = PRACTICE_AREA_FIELDS;
+
+  // Flatpickr instances for practice area date fields
+  private practiceAreaDatePickers: any[] = [];
 
   // Billing types array for dropdown
   billingTypes = [
@@ -129,11 +137,87 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       caseNumber: uniqueCaseNumber,
       filingDate: today
     });
+
+    // Subscribe to practice area changes
+    this.caseForm.get('practiceArea')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(value => {
+        this.onPracticeAreaChange(value);
+      });
+  }
+
+  onPracticeAreaChange(practiceArea: string): void {
+    // Destroy existing practice area date pickers
+    this.practiceAreaDatePickers.forEach(picker => picker.destroy());
+    this.practiceAreaDatePickers = [];
+
+    // Remove old practice area form controls
+    const allFieldNames = this.getAllPracticeAreaFieldNames();
+    allFieldNames.forEach(fieldName => {
+      if (this.caseForm.contains(fieldName)) {
+        this.caseForm.removeControl(fieldName);
+      }
+    });
+
+    // Get the new practice area configuration
+    this.currentPracticeAreaSections = this.practiceAreaFieldsConfig[practiceArea] || [];
+
+    // Add new form controls for the selected practice area
+    this.currentPracticeAreaSections.forEach(section => {
+      section.fields.forEach(field => {
+        const validators = field.required ? [Validators.required] : [];
+        let defaultValue: any = '';
+        if (field.type === 'checkbox') {
+          defaultValue = false;
+        } else if (field.type === 'number' || field.type === 'currency') {
+          defaultValue = null;
+        }
+        this.caseForm.addControl(field.name, this.fb.control(defaultValue, validators));
+      });
+    });
+
+    // Initialize date pickers for practice area date fields after view updates
+    setTimeout(() => this.initPracticeAreaDatePickers(), 0);
+  }
+
+  private getAllPracticeAreaFieldNames(): string[] {
+    const fieldNames: string[] = [];
+    Object.values(this.practiceAreaFieldsConfig).forEach(sections => {
+      sections.forEach(section => {
+        section.fields.forEach(field => {
+          if (!fieldNames.includes(field.name)) {
+            fieldNames.push(field.name);
+          }
+        });
+      });
+    });
+    return fieldNames;
+  }
+
+  private initPracticeAreaDatePickers(): void {
+    this.currentPracticeAreaSections.forEach(section => {
+      section.fields.forEach(field => {
+        if (field.type === 'date') {
+          const element = document.getElementById(`pa_${field.name}`);
+          if (element) {
+            const picker = flatpickr(element, {
+              dateFormat: 'Y-m-d',
+              altInput: true,
+              altFormat: 'F j, Y',
+              allowInput: true
+            });
+            this.practiceAreaDatePickers.push(picker);
+          }
+        }
+      });
+    });
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    // Clean up practice area date pickers
+    this.practiceAreaDatePickers.forEach(picker => picker.destroy());
   }
 
   loadAttorneys(): void {
@@ -254,6 +338,22 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       totalAmount: 0,
       paymentStatus: this.caseForm.value.paymentStatus
     };
+
+    // Add practice area specific fields
+    this.currentPracticeAreaSections.forEach(section => {
+      section.fields.forEach(field => {
+        const value = this.caseForm.value[field.name];
+        if (value !== null && value !== undefined && value !== '') {
+          if (field.type === 'date' && value) {
+            caseData[field.name] = new Date(value);
+          } else if (field.type === 'currency' || field.type === 'number') {
+            caseData[field.name] = value ? parseFloat(value) : null;
+          } else {
+            caseData[field.name] = value;
+          }
+        }
+      });
+    });
 
     // Make the actual API call
     this.caseService.createCase(caseData).subscribe({

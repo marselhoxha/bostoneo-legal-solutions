@@ -465,6 +465,59 @@
                 </div>
               </div>
 
+              <!-- Practice Area Specific Information (View Mode) -->
+              <ng-container *ngIf="currentPracticeAreaSections.length > 0">
+                <div class="details-section mt-4" *ngFor="let section of currentPracticeAreaSections">
+                  <div class="section-header">
+                    <div class="section-icon bg-primary-subtle">
+                      <i [class]="section.icon ? section.icon + ' text-primary' : 'ri-file-list-3-line text-primary'"></i>
+                    </div>
+                    <div class="section-title">
+                      <h6>{{ section.title }}</h6>
+                      <span class="section-subtitle">Practice area specific details</span>
+                    </div>
+                  </div>
+
+                  <div class="info-grid">
+                    <ng-container *ngFor="let field of section.fields">
+                      <div class="info-item" *ngIf="getFieldValue(field.name) !== null && getFieldValue(field.name) !== undefined && getFieldValue(field.name) !== ''">
+                        <div class="info-icon-sm">
+                          <ng-container [ngSwitch]="field.type">
+                            <i *ngSwitchCase="'date'" class="ri-calendar-line"></i>
+                            <i *ngSwitchCase="'currency'" class="ri-money-dollar-circle-line"></i>
+                            <i *ngSwitchCase="'number'" class="ri-hashtag"></i>
+                            <i *ngSwitchCase="'checkbox'" class="ri-checkbox-circle-line"></i>
+                            <i *ngSwitchDefault class="ri-file-text-line"></i>
+                          </ng-container>
+                        </div>
+                        <div class="info-details">
+                          <span class="info-label">{{ field.label }}</span>
+                          <span class="info-value">
+                            <ng-container [ngSwitch]="field.type">
+                              <ng-container *ngSwitchCase="'currency'">
+                                ${{ getFieldValue(field.name) | number:'1.2-2' }}
+                              </ng-container>
+                              <ng-container *ngSwitchCase="'date'">
+                                {{ getFieldValue(field.name) | date:'mediumDate' }}
+                              </ng-container>
+                              <ng-container *ngSwitchCase="'checkbox'">
+                                {{ getFieldValue(field.name) ? 'Yes' : 'No' }}
+                              </ng-container>
+                              <ng-container *ngSwitchCase="'select'">
+                                {{ getLabelForSelectValue(field, getFieldValue(field.name)) }}
+                              </ng-container>
+                              <ng-container *ngSwitchDefault>
+                                {{ getFieldValue(field.name) }}
+                              </ng-container>
+                            </ng-container>
+                          </span>
+                        </div>
+                      </div>
+                    </ng-container>
+                  </div>
+                </div>
+              </ng-container>
+
             </div>
 
           <!-- Edit Mode -->
@@ -618,7 +671,123 @@
                 </div>
               </div>
             </div>
-            
+
+            <!-- Practice Area Specific Fields (Edit Mode) -->
+            <ng-container *ngIf="currentPracticeAreaSections.length > 0">
+              <div class="row mt-4" *ngFor="let section of currentPracticeAreaSections">
+                <div class="col-12">
+                  <div class="card border shadow-none">
+                    <div class="card-header bg-soft-primary">
+                      <h5 class="card-title mb-0">
+                        <i [class]="section.icon ? section.icon + ' align-middle me-2' : 'ri-file-list-3-line align-middle me-2'"></i>
+                        {{ section.title }}
+                      </h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-3">
+                        <ng-container *ngFor="let field of section.fields">
+                          <div [class]="field.colSize || 'col-md-6'">
+                            <div class="mb-3">
+                              <!-- Text Input -->
+                              <ng-container *ngIf="field.type === 'text'">
+                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <input type="text" class="form-control" [id]="'pa_edit_' + field.name"
+                                  [formControlName]="field.name"
+                                  [placeholder]="field.placeholder || ''">
+                              </ng-container>
+
+                              <!-- Textarea -->
+                              <ng-container *ngIf="field.type === 'textarea'">
+                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <textarea class="form-control" [id]="'pa_edit_' + field.name" rows="3"
+                                  [formControlName]="field.name"
+                                  [placeholder]="field.placeholder || ''"></textarea>
+                              </ng-container>
+
+                              <!-- Select -->
+                              <ng-container *ngIf="field.type === 'select'">
+                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <select class="form-select" [id]="'pa_edit_' + field.name" [formControlName]="field.name">
+                                  <option value="">Select {{ field.label }}</option>
+                                  <option *ngFor="let option of field.options" [value]="option.value">
+                                    {{ option.label }}
+                                  </option>
+                                </select>
+                              </ng-container>
+
+                              <!-- Date -->
+                              <ng-container *ngIf="field.type === 'date'">
+                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <div class="input-group">
+                                  <span class="input-group-text bg-light border-end-0">
+                                    <i class="ri-calendar-line align-middle"></i>
+                                  </span>
+                                  <input type="text" class="form-control border-start-0 flatpickr-input"
+                                    [id]="'pa_edit_' + field.name"
+                                    [formControlName]="field.name"
+                                    [placeholder]="field.placeholder || 'Select date'">
+                                </div>
+                              </ng-container>
+
+                              <!-- Currency -->
+                              <ng-container *ngIf="field.type === 'currency'">
+                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <div class="input-group">
+                                  <span class="input-group-text bg-light border-end-0">$</span>
+                                  <input type="number" class="form-control border-start-0" [id]="'pa_edit_' + field.name"
+                                    [formControlName]="field.name"
+                                    [placeholder]="field.placeholder || '0.00'"
+                                    step="0.01" min="0">
+                                </div>
+                              </ng-container>
+
+                              <!-- Number -->
+                              <ng-container *ngIf="field.type === 'number'">
+                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
+                                  {{ field.label }}
+                                  <span class="text-danger" *ngIf="field.required">*</span>
+                                </label>
+                                <input type="number" class="form-control" [id]="'pa_edit_' + field.name"
+                                  [formControlName]="field.name"
+                                  [placeholder]="field.placeholder || '0'">
+                              </ng-container>
+
+                              <!-- Checkbox -->
+                              <ng-container *ngIf="field.type === 'checkbox'">
+                                <div class="form-check mt-4">
+                                  <input class="form-check-input" type="checkbox" [id]="'pa_edit_' + field.name"
+                                    [formControlName]="field.name">
+                                  <label class="form-check-label fw-semibold text-white-dark" [for]="'pa_edit_' + field.name">
+                                    {{ field.label }}
+                                    <span class="text-danger" *ngIf="field.required">*</span>
+                                  </label>
+                                </div>
+                              </ng-container>
+                            </div>
+                          </div>
+                        </ng-container>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
             <div class="text-end mt-4">
               <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-soft-danger btn-animation waves-effect waves-light" (click)="onCancel()">

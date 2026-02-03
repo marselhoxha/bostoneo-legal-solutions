@@ -8,6 +8,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.experimental.SuperBuilder;
 
 import java.util.Date;
@@ -159,6 +161,7 @@ public class LegalCase {
 
     // Medical Providers (JSONB)
     @Column(name = "medical_providers", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String medicalProviders;
 
     // Financial Damages
@@ -229,6 +232,123 @@ public class LegalCase {
 
     @Column(name = "defendant_address", columnDefinition = "TEXT")
     private String defendantAddress;
+
+    // ============================================
+    // Practice Area Identifier
+    // ============================================
+    @Column(name = "practice_area")
+    private String practiceArea;
+
+    // ============================================
+    // Criminal Defense Fields
+    // ============================================
+    @Column(name = "primary_charge")
+    private String primaryCharge;
+
+    @Column(name = "charge_level")
+    private String chargeLevel;
+
+    @Column(name = "docket_number")
+    private String docketNumber;
+
+    @Column(name = "bail_amount")
+    private Double bailAmount;
+
+    @Column(name = "arrest_date")
+    @Temporal(TemporalType.DATE)
+    private Date arrestDate;
+
+    @Column(name = "prosecutor_name")
+    private String prosecutorName;
+
+    // ============================================
+    // Family Law Fields
+    // ============================================
+    @Column(name = "case_subtype")
+    private String caseSubtype;
+
+    @Column(name = "spouse_name")
+    private String spouseName;
+
+    @Column(name = "marriage_date")
+    @Temporal(TemporalType.DATE)
+    private Date marriageDate;
+
+    @Column(name = "separation_date")
+    @Temporal(TemporalType.DATE)
+    private Date separationDate;
+
+    @Column(name = "has_minor_children")
+    private Boolean hasMinorChildren;
+
+    @Column(name = "children_count")
+    private Integer childrenCount;
+
+    @Column(name = "custody_arrangement")
+    private String custodyArrangement;
+
+    // ============================================
+    // Immigration Fields
+    // ============================================
+    @Column(name = "form_type")
+    private String formType;
+
+    @Column(name = "uscis_number")
+    private String uscisNumber;
+
+    @Column(name = "petitioner_name")
+    private String petitionerName;
+
+    @Column(name = "beneficiary_name")
+    private String beneficiaryName;
+
+    @Column(name = "priority_date")
+    @Temporal(TemporalType.DATE)
+    private Date priorityDate;
+
+    @Column(name = "visa_category")
+    private String visaCategory;
+
+    // ============================================
+    // Real Estate Fields
+    // ============================================
+    @Column(name = "transaction_type")
+    private String transactionType;
+
+    @Column(name = "property_address", columnDefinition = "TEXT")
+    private String propertyAddress;
+
+    @Column(name = "purchase_price")
+    private Double purchasePrice;
+
+    @Column(name = "closing_date")
+    @Temporal(TemporalType.DATE)
+    private Date closingDate;
+
+    @Column(name = "buyer_name")
+    private String buyerName;
+
+    @Column(name = "seller_name")
+    private String sellerName;
+
+    // ============================================
+    // Intellectual Property Fields
+    // ============================================
+    @Column(name = "ip_type")
+    private String ipType;
+
+    @Column(name = "application_number")
+    private String applicationNumber;
+
+    @Column(name = "ip_filing_date")
+    @Temporal(TemporalType.DATE)
+    private Date ipFilingDate;
+
+    @Column(name = "inventor_name")
+    private String inventorName;
+
+    @Column(name = "technology_area")
+    private String technologyArea;
 
     @PrePersist
     protected void onCreate() {

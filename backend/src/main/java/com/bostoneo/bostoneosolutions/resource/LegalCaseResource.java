@@ -250,7 +250,7 @@ public class LegalCaseResource {
     }
 
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('CASE:UPDATE') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('CASE:EDIT') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "UPDATE", entityType = "LEGAL_CASE", description = "Updated legal case information")
     public ResponseEntity<HttpResponse> updateCase(
             @AuthenticationPrincipal UserDTO user,
@@ -268,7 +268,7 @@ public class LegalCaseResource {
     }
 
     @PutMapping("/status/{id}/{status}")
-    @PreAuthorize("hasAuthority('CASE:UPDATE') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('CASE:EDIT') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "UPDATE", entityType = "LEGAL_CASE", description = "Updated legal case status")
     public ResponseEntity<HttpResponse> updateCaseStatus(
             @AuthenticationPrincipal UserDTO user,
@@ -531,7 +531,7 @@ public class LegalCaseResource {
     }
     
     @PostMapping("/{id}/activities")
-    @PreAuthorize("hasAuthority('CASE:UPDATE') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('CASE:EDIT') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "LEGAL_CASE", description = "Added case activity entry")
     public ResponseEntity<HttpResponse> logCaseActivity(
             @AuthenticationPrincipal UserDTO user,

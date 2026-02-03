@@ -105,7 +105,11 @@ public class LegalCaseServiceImpl implements LegalCaseService {
 
     @Override
     public LegalCaseDTO createCase(LegalCaseDTO caseDTO) {
+        // SECURITY: Set organization_id from tenant context for multi-tenant isolation
+        Long orgId = getRequiredOrganizationId();
+
         LegalCase legalCase = legalCaseDTOMapper.toEntity(caseDTO);
+        legalCase.setOrganizationId(orgId);
         legalCase = legalCaseRepository.save(legalCase);
         return legalCaseDTOMapper.toDTO(legalCase);
     }

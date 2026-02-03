@@ -141,6 +141,61 @@ public class LegalCaseDTO {
     private String defendantAddress;
 
     // ============================================
+    // Practice Area Identifier
+    // ============================================
+    private String practiceArea;
+
+    // ============================================
+    // Criminal Defense Fields
+    // ============================================
+    private String primaryCharge;
+    private String chargeLevel;
+    private String docketNumber;
+    private BigDecimal bailAmount;
+    private Date arrestDate;
+    private String prosecutorName;
+
+    // ============================================
+    // Family Law Fields
+    // ============================================
+    private String caseSubtype;
+    private String spouseName;
+    private Date marriageDate;
+    private Date separationDate;
+    private Boolean hasMinorChildren;
+    private Integer childrenCount;
+    private String custodyArrangement;
+
+    // ============================================
+    // Immigration Fields
+    // ============================================
+    private String formType;
+    private String uscisNumber;
+    private String petitionerName;
+    private String beneficiaryName;
+    private Date priorityDate;
+    private String visaCategory;
+
+    // ============================================
+    // Real Estate Fields
+    // ============================================
+    private String transactionType;
+    private String propertyAddress;
+    private BigDecimal purchasePrice;
+    private Date closingDate;
+    private String buyerName;
+    private String sellerName;
+
+    // ============================================
+    // Intellectual Property Fields
+    // ============================================
+    private String ipType;
+    private String applicationNumber;
+    private Date ipFilingDate;
+    private String inventorName;
+    private String technologyArea;
+
+    // ============================================
     // PI Computed Fields (for Case Value Calculator)
     // ============================================
 
