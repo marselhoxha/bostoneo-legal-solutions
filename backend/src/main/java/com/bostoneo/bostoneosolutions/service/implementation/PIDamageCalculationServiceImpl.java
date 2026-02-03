@@ -244,10 +244,72 @@ public class PIDamageCalculationServiceImpl implements PIDamageCalculationServic
                 .orElseThrow(() -> new ResourceNotFoundException("Calculation not found"));
 
         entity.setComparableAnalysis(aiAnalysis);
+
+        // Check if settlement analysis was provided in the context
+        @SuppressWarnings("unchecked")
+        Map<String, Object> settlementAnalysis = caseContext != null ?
+                (Map<String, Object>) caseContext.get("settlementAnalysis") : null;
+        if (settlementAnalysis != null) {
+            entity.setSettlementAnalysis(settlementAnalysis);
+            calculation.setSettlementAnalysis(settlementAnalysis);
+        }
+
         calculationRepository.save(entity);
 
         calculation.setComparableAnalysis(aiAnalysis);
         return calculation;
+    }
+
+    /**
+     * Save settlement analysis from case value calculation
+     */
+    public PIDamageCalculationDTO saveSettlementAnalysis(Long caseId, Map<String, Object> settlementAnalysis) {
+        Long orgId = getRequiredOrganizationId();
+        log.info("Saving settlement analysis for case: {} in org: {}", caseId, orgId);
+
+        // Get or create calculation record
+        PIDamageCalculation calculation = calculationRepository
+                .findByCaseIdAndOrganizationId(caseId, orgId)
+                .orElse(PIDamageCalculation.builder()
+                        .caseId(caseId)
+                        .organizationId(orgId)
+                        .build());
+
+        calculation.setSettlementAnalysis(settlementAnalysis);
+
+        // Update value ranges from settlement analysis if present
+        if (settlementAnalysis.get("settlementRangeLow") != null) {
+            calculation.setLowValue(toBigDecimal(settlementAnalysis.get("settlementRangeLow")));
+        }
+        if (settlementAnalysis.get("realisticRecovery") != null) {
+            calculation.setMidValue(toBigDecimal(settlementAnalysis.get("realisticRecovery")));
+        }
+        if (settlementAnalysis.get("settlementRangeHigh") != null) {
+            calculation.setHighValue(toBigDecimal(settlementAnalysis.get("settlementRangeHigh")));
+        }
+        if (settlementAnalysis.get("economicDamages") != null) {
+            calculation.setEconomicDamagesTotal(toBigDecimal(settlementAnalysis.get("economicDamages")));
+        }
+        if (settlementAnalysis.get("nonEconomicDamages") != null) {
+            calculation.setNonEconomicDamagesTotal(toBigDecimal(settlementAnalysis.get("nonEconomicDamages")));
+        }
+
+        calculation.setCalculatedAt(LocalDateTime.now());
+        PIDamageCalculation saved = calculationRepository.save(calculation);
+        log.info("Settlement analysis saved for case: {}", caseId);
+
+        return mapCalculationToDTO(saved);
+    }
+
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) return null;
+        if (value instanceof BigDecimal) return (BigDecimal) value;
+        if (value instanceof Number) return BigDecimal.valueOf(((Number) value).doubleValue());
+        try {
+            return new BigDecimal(value.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Override
@@ -596,6 +658,7 @@ public class PIDamageCalculationServiceImpl implements PIDamageCalculationServic
                 .midValue(entity.getMidValue())
                 .highValue(entity.getHighValue())
                 .comparableAnalysis(entity.getComparableAnalysis())
+                .settlementAnalysis(entity.getSettlementAnalysis())
                 .calculatedAt(entity.getCalculatedAt())
                 .calculationNotes(entity.getCalculationNotes())
                 .createdAt(entity.getCreatedAt())

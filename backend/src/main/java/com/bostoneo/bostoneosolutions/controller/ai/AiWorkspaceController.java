@@ -541,7 +541,7 @@ public class AiWorkspaceController {
         @PathVariable Long documentId,
         @AuthenticationPrincipal User user,
         @RequestParam(required = false) Long userId,
-        @RequestParam(defaultValue = "true") boolean includeMetadata
+        @RequestParam(defaultValue = "false") boolean includeMetadata
     ) {
         try {
             Long effectiveUserId = (user != null) ? user.getId() : userId;
@@ -593,7 +593,7 @@ public class AiWorkspaceController {
         @PathVariable Long documentId,
         @AuthenticationPrincipal User user,
         @RequestParam(required = false) Long userId,
-        @RequestParam(defaultValue = "true") boolean includeMetadata
+        @RequestParam(defaultValue = "false") boolean includeMetadata
     ) {
         try {
             Long effectiveUserId = (user != null) ? user.getId() : userId;

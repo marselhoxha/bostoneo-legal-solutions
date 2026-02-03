@@ -347,6 +347,29 @@ public class PIDamageCalculationController {
                         .build());
     }
 
+    /**
+     * Save settlement analysis from case value calculation
+     */
+    @PostMapping("/settlement-analysis")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> saveSettlementAnalysis(
+            @PathVariable("caseId") Long caseId,
+            @RequestBody Map<String, Object> settlementAnalysis) {
+
+        log.info("Saving settlement analysis for case: {}", caseId);
+
+        PIDamageCalculationDTO calculation = damageService.saveSettlementAnalysis(caseId, settlementAnalysis);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("calculation", calculation))
+                        .message("Settlement analysis saved successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
     // ===== Quick Damage Calculators =====
 
     /**

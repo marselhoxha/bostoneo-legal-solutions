@@ -35,10 +35,14 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
 // iText PDF imports
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
 import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.io.font.constants.StandardFonts;
@@ -428,6 +432,40 @@ public class AiWorkspaceDocumentService {
     public List<AiWorkspaceDocument> getCaseDocuments(Long caseId, Long userId) {
         Long orgId = getRequiredOrganizationId();
         return documentRepository.findByCaseIdAndOrganizationIdAndDeletedAtIsNullOrderByCreatedAtDesc(caseId, orgId);
+    }
+
+    /**
+     * Get the latest demand letter for a case.
+     * Returns document content and metadata for the most recent demand letter.
+     */
+    @SuppressWarnings("deprecation")
+    public Map<String, Object> getLatestDemandLetterForCase(Long caseId, Long userId) {
+        Long orgId = getRequiredOrganizationId();
+        List<AiWorkspaceDocument> caseDocuments = documentRepository.findByCaseIdAndOrganizationIdAndDeletedAtIsNullOrderByCreatedAtDesc(caseId, orgId);
+
+        // Find the most recent demand letter
+        for (AiWorkspaceDocument doc : caseDocuments) {
+            if ("demand_letter".equals(doc.getDocumentType())) {
+                // Get the latest version content (using deprecated method with suppressed warning)
+                // Parent document ownership already verified via orgId filter above
+                List<AiWorkspaceDocumentVersion> versions = versionRepository
+                    .findByDocumentIdOrderByVersionNumberDesc(doc.getId());
+
+                if (!versions.isEmpty()) {
+                    AiWorkspaceDocumentVersion latestVersion = versions.get(0);
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("documentId", doc.getId());
+                    result.put("conversationId", doc.getSessionId());
+                    result.put("title", doc.getTitle());
+                    result.put("content", latestVersion.getContent());
+                    result.put("generatedAt", doc.getCreatedAt());
+                    result.put("wordCount", latestVersion.getWordCount());
+                    return result;
+                }
+            }
+        }
+
+        return null; // No demand letter found
     }
 
     /**
@@ -1534,15 +1572,276 @@ public class AiWorkspaceDocumentService {
     }
 
     /**
-     * Process inline Markdown formatting (bold **text**, italic *text*)
+     * Process inline Markdown formatting (bold **text**, italic *text*, links [text](url))
      * Returns plain text with formatting stripped (simplified version)
      */
     private String processInlineFormatting(String text) {
+        // Convert Markdown links [text](url) to just the text
+        text = text.replaceAll("\\[([^\\]]+)\\]\\([^)]+\\)", "$1");
         // Remove Markdown bold **
         text = text.replaceAll("\\*\\*(.+?)\\*\\*", "$1");
         // Remove Markdown italic *
         text = text.replaceAll("\\*(.+?)\\*", "$1");
         return text;
+    }
+
+    /**
+     * Convert HTML content to plain text with basic formatting preserved.
+     * Handles common HTML elements from rich text editors.
+     */
+    private String convertHtmlToPlainText(String html) {
+        if (html == null || html.isEmpty()) {
+            return "";
+        }
+
+        String text = html;
+
+        // First, decode HTML entities (do this early to help with pattern matching)
+        text = text.replace("&amp;", "&");
+        text = text.replace("&lt;", "<");
+        text = text.replace("&gt;", ">");
+        text = text.replace("&quot;", "\"");
+        text = text.replace("&apos;", "'");
+        text = text.replace("&nbsp;", " ");
+        text = text.replace("&#39;", "'");
+        text = text.replace("&#124;", "|");   // Pipe character (decimal)
+        text = text.replace("&#x7c;", "|");   // Pipe character (hex)
+        text = text.replace("&#x7C;", "|");   // Pipe character (hex uppercase)
+        text = text.replace("&vert;", "|");   // Pipe character (named entity)
+        text = text.replace("&verbar;", "|"); // Pipe character (another named entity)
+        text = text.replace("&#8739;", "|");  // Unicode pipe
+
+        // Handle HTML tables FIRST - convert to proper markdown table format
+        text = convertHtmlTablesToMarkdown(text);
+
+        // Also detect and preserve markdown-style tables that might be wrapped in HTML tags
+        // Pattern: lines that look like "| something | something |" possibly inside <p> tags
+        text = text.replaceAll("<p[^>]*>\\s*(\\|[^<]+\\|)\\s*</p>", "\n$1\n");
+
+        // Handle table rows separated by <br> within a single paragraph
+        // This converts inline table rows to separate lines
+        java.util.regex.Pattern tableInParagraph = java.util.regex.Pattern.compile(
+            "<p[^>]*>((?:\\|[^|<]+)+\\|(?:<br\\s*/?>(?:\\|[^|<]+)+\\|)+)</p>",
+            java.util.regex.Pattern.CASE_INSENSITIVE
+        );
+        java.util.regex.Matcher tableMatcher = tableInParagraph.matcher(text);
+        while (tableMatcher.find()) {
+            String tableContent = tableMatcher.group(1);
+            String converted = tableContent.replaceAll("<br\\s*/?>", "\n");
+            text = text.replace(tableMatcher.group(0), "\n" + converted + "\n");
+        }
+
+        // Preserve line breaks from block elements
+        text = text.replaceAll("</p>\\s*<p[^>]*>", "\n\n");  // Paragraph breaks
+        text = text.replaceAll("<p[^>]*>", "");               // Opening p tags
+        text = text.replaceAll("</p>", "\n");                 // Closing p tags
+        text = text.replaceAll("<br\\s*/?>", "\n");           // Line breaks
+        text = text.replaceAll("</div>\\s*<div[^>]*>", "\n"); // Div breaks
+        text = text.replaceAll("<div[^>]*>", "");             // Opening div tags
+        text = text.replaceAll("</div>", "\n");               // Closing div tags
+
+        // Convert headers to markdown-style for processing
+        text = text.replaceAll("(?i)<h1[^>]*>(.*?)</h1>", "\n# $1\n");
+        text = text.replaceAll("(?i)<h2[^>]*>(.*?)</h2>", "\n## $1\n");
+        text = text.replaceAll("(?i)<h3[^>]*>(.*?)</h3>", "\n### $1\n");
+        text = text.replaceAll("(?i)<h4[^>]*>(.*?)</h4>", "\n#### $1\n");
+
+        // Convert bold/strong to markdown (using (?s) for multiline and non-greedy)
+        text = text.replaceAll("(?i)<strong[^>]*>(.*?)</strong>", "**$1**");
+        text = text.replaceAll("(?i)<b[^>]*>(.*?)</b>", "**$1**");
+
+        // Convert italic/em to markdown
+        text = text.replaceAll("(?i)<em[^>]*>(.*?)</em>", "*$1*");
+        text = text.replaceAll("(?i)<i[^>]*>(.*?)</i>", "*$1*");
+
+        // Extract link text (remove href)
+        text = text.replaceAll("(?i)<a[^>]*>(.*?)</a>", "$1");
+
+        // Convert list items
+        text = text.replaceAll("(?i)<li[^>]*>", "\n• ");
+        text = text.replaceAll("(?i)</li>", "");
+        text = text.replaceAll("(?i)</?[uo]l[^>]*>", "\n");
+
+        // Remove span tags but keep content
+        text = text.replaceAll("(?i)</?span[^>]*>", "");
+
+        // Remove all remaining HTML tags
+        text = text.replaceAll("<[^>]+>", "");
+
+        // Clean up extra whitespace
+        text = text.replaceAll("[ \\t]+", " ");           // Multiple spaces to single
+        text = text.replaceAll("\n[ \\t]+", "\n");        // Leading whitespace on lines
+        text = text.replaceAll("[ \\t]+\n", "\n");        // Trailing whitespace on lines
+        text = text.replaceAll("\n{3,}", "\n\n");         // Max 2 consecutive newlines
+
+        return text.trim();
+    }
+
+    /**
+     * Convert HTML tables to markdown table format
+     */
+    private String convertHtmlTablesToMarkdown(String html) {
+        // Simple approach: find table sections and convert row by row
+        StringBuilder result = new StringBuilder();
+        String remaining = html;
+        String lowerHtml = html.toLowerCase();
+
+        log.info("PDF Export: Looking for HTML tables in content (length={})", html.length());
+        log.info("PDF Export: Contains <table>: {}, contains ql-table: {}, contains <tr>: {}",
+            lowerHtml.contains("<table"), lowerHtml.contains("ql-table"), lowerHtml.contains("<tr"));
+
+        // Log a sample of the content for debugging
+        if (html.length() > 0) {
+            log.info("PDF Export: Content sample (first 500 chars): {}",
+                html.substring(0, Math.min(500, html.length())).replace("\n", "\\n"));
+        }
+
+        // Case-insensitive search for table tags
+        int searchFrom = 0;
+        while (true) {
+            int tableStart = lowerHtml.indexOf("<table", searchFrom);
+            if (tableStart == -1) break;
+
+            int tableEndTag = lowerHtml.indexOf("</table>", tableStart);
+            if (tableEndTag == -1) break;
+
+            log.info("PDF Export: Found HTML table at position {}", tableStart);
+
+            // Add content before table
+            result.append(remaining.substring(searchFrom, tableStart));
+
+            // Extract table content (use original case)
+            String tableHtml = remaining.substring(tableStart, tableEndTag + 8);
+            log.info("PDF Export: Table HTML length: {}", tableHtml.length());
+
+            String markdownTable = convertSingleHtmlTable(tableHtml);
+            log.info("PDF Export: Converted table to markdown: {}", markdownTable.substring(0, Math.min(200, markdownTable.length())));
+
+            result.append("\n");
+            result.append(markdownTable);
+            result.append("\n");
+
+            searchFrom = tableEndTag + 8;
+        }
+
+        // Append remaining content after last table (or all content if no tables)
+        if (searchFrom < remaining.length()) {
+            result.append(remaining.substring(searchFrom));
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * Consolidate table rows that might be separated by blank lines.
+     * This handles cases where markdown tables have extra spacing between rows.
+     */
+    private String consolidateTableRows(String content) {
+        String[] lines = content.split("\n");
+        StringBuilder result = new StringBuilder();
+        List<String> pendingTableRows = new ArrayList<>();
+        boolean lastWasTableRow = false;
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+            boolean isTableRow = trimmed.contains("|") && trimmed.split("\\|").length >= 2;
+            boolean isSeparatorRow = trimmed.matches("^\\|?[\\s\\-:|]+\\|?$") && trimmed.contains("-");
+            boolean isEmpty = trimmed.isEmpty();
+
+            if (isTableRow || isSeparatorRow) {
+                // Flush any non-table content first
+                if (!pendingTableRows.isEmpty() && !lastWasTableRow) {
+                    for (String pending : pendingTableRows) {
+                        result.append(pending).append("\n");
+                    }
+                    pendingTableRows.clear();
+                }
+                result.append(trimmed).append("\n");
+                lastWasTableRow = true;
+            } else if (isEmpty && lastWasTableRow) {
+                // Skip blank lines between table rows - don't add to output yet
+                // This consolidates the table
+                continue;
+            } else {
+                // Non-table content
+                if (lastWasTableRow) {
+                    result.append("\n"); // Add one blank line after table
+                }
+                result.append(line).append("\n");
+                lastWasTableRow = false;
+            }
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * Convert a single HTML table to markdown format
+     * Handles standard HTML tables and Quill editor table format
+     */
+    private String convertSingleHtmlTable(String tableHtml) {
+        StringBuilder markdown = new StringBuilder();
+        log.info("PDF Export: Converting HTML table, length={}", tableHtml.length());
+
+        // Extract rows - handle both <tr> and <tbody><tr> patterns
+        java.util.regex.Pattern rowPattern = java.util.regex.Pattern.compile(
+            "(?i)<tr[^>]*>(.*?)</tr>",
+            java.util.regex.Pattern.DOTALL
+        );
+        java.util.regex.Matcher rowMatcher = rowPattern.matcher(tableHtml);
+
+        boolean isFirstRow = true;
+        int columnCount = 0;
+        int rowCount = 0;
+
+        while (rowMatcher.find()) {
+            String rowContent = rowMatcher.group(1);
+            rowCount++;
+
+            // Extract cells (th or td) - Quill uses both
+            java.util.regex.Pattern cellPattern = java.util.regex.Pattern.compile(
+                "(?i)<t[hd][^>]*>(.*?)</t[hd]>",
+                java.util.regex.Pattern.DOTALL
+            );
+            java.util.regex.Matcher cellMatcher = cellPattern.matcher(rowContent);
+
+            StringBuilder row = new StringBuilder("| ");
+            int cellCount = 0;
+
+            while (cellMatcher.find()) {
+                String cellContent = cellMatcher.group(1);
+                // Strip any remaining HTML tags from cell content (including Quill's <p>, <strong>, etc.)
+                cellContent = cellContent.replaceAll("<[^>]+>", "");
+                // Decode HTML entities
+                cellContent = cellContent.replace("&nbsp;", " ")
+                                        .replace("&amp;", "&")
+                                        .replace("&lt;", "<")
+                                        .replace("&gt;", ">")
+                                        .trim();
+                // Replace newlines with space
+                cellContent = cellContent.replaceAll("\\s+", " ");
+                row.append(cellContent).append(" | ");
+                cellCount++;
+            }
+
+            if (cellCount > 0) {
+                markdown.append(row.toString().trim()).append("\n");
+
+                // After first row (header), add separator
+                if (isFirstRow) {
+                    columnCount = cellCount;
+                    StringBuilder separator = new StringBuilder("|");
+                    for (int i = 0; i < columnCount; i++) {
+                        separator.append("---|");
+                    }
+                    markdown.append(separator).append("\n");
+                    isFirstRow = false;
+                }
+            }
+        }
+
+        log.info("PDF Export: Converted {} rows with {} columns", rowCount, columnCount);
+        return markdown.toString();
     }
 
     /**
@@ -1751,17 +2050,62 @@ public class AiWorkspaceDocumentService {
     }
 
     /**
-     * Convert Markdown content to PDF paragraphs
+     * Convert Markdown or HTML content to PDF paragraphs
+     * Handles headers, lists, tables, bold/italic formatting, and links
+     * Automatically detects HTML content and converts it appropriately
      */
-    private void convertMarkdownToPdf(String markdown, Document document, PdfFont headerFont, PdfFont normalFont) throws IOException {
-        if (markdown == null || markdown.isEmpty()) {
+    private void convertMarkdownToPdf(String content, Document document, PdfFont headerFont, PdfFont normalFont) throws IOException {
+        if (content == null || content.isEmpty()) {
             return;
         }
 
-        String[] lines = markdown.split("\n");
+        // Detect if content is HTML (contains common HTML tags)
+        boolean isHtml = content.contains("<p") || content.contains("<div") ||
+                         content.contains("<strong") || content.contains("<span") ||
+                         content.contains("<br") || content.contains("<a ");
 
-        for (String line : lines) {
+        String processedContent = content;
+        if (isHtml) {
+            log.info("PDF Export: Detected HTML content, converting to plain text");
+            log.info("PDF Export: Content contains <table>: {}", content.contains("<table"));
+            processedContent = convertHtmlToPlainText(content);
+            log.info("PDF Export: After HTML conversion, contains pipe: {}", processedContent.contains("|"));
+            // Log first 500 chars of processed content for debugging
+            log.info("PDF Export: Processed content preview: {}",
+                processedContent.substring(0, Math.min(500, processedContent.length())));
+        }
+
+        // Pre-process: remove blank lines between table rows to consolidate tables
+        processedContent = consolidateTableRows(processedContent);
+
+        String[] lines = processedContent.split("\n");
+        List<String> tableRows = new ArrayList<>();
+        boolean inTable = false;
+
+        for (int lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            String line = lines[lineIndex];
             String trimmed = line.trim();
+
+            // Check if this is a table row (contains | and has multiple columns)
+            boolean isTableRow = trimmed.contains("|") && (trimmed.split("\\|").length >= 2);
+            boolean isSeparatorRow = trimmed.matches("^\\|?[\\s\\-:|]+\\|?$") && trimmed.contains("-");
+
+            if (isTableRow && !isSeparatorRow) {
+                if (!inTable) {
+                    inTable = true;
+                    tableRows.clear();
+                }
+                tableRows.add(trimmed);
+                continue;
+            } else if (isSeparatorRow && inTable) {
+                // Skip separator row (---|---|---)
+                continue;
+            } else if (inTable && tableRows.size() > 0) {
+                // End of table - render it
+                renderPdfTable(document, tableRows, headerFont, normalFont);
+                tableRows.clear();
+                inTable = false;
+            }
 
             if (trimmed.isEmpty()) {
                 continue;
@@ -1774,7 +2118,7 @@ public class AiWorkspaceDocumentService {
                     level++;
                 }
 
-                String headerText = trimmed.substring(level).trim();
+                String headerText = processInlineFormatting(trimmed.substring(level).trim());
                 float fontSize = level == 1 ? 16 : (level == 2 ? 14 : 12);
 
                 Paragraph para = new Paragraph(headerText)
@@ -1782,7 +2126,7 @@ public class AiWorkspaceDocumentService {
                         .setFontSize(fontSize)
                         .setMarginTop(level == 1 ? 20 : 15)
                         .setMarginBottom(10)
-                        .setKeepTogether(true); // Prevent page break in middle of header
+                        .setKeepTogether(true);
                 document.add(para);
                 continue;
             }
@@ -1799,8 +2143,8 @@ public class AiWorkspaceDocumentService {
                 continue;
             }
 
-            // Check for bullet lists (- Item or * Item)
-            if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+            // Check for bullet lists (- Item or * Item) - but not if it looks like a table separator
+            if ((trimmed.startsWith("- ") || trimmed.startsWith("* ")) && !trimmed.contains("|")) {
                 String itemText = trimmed.substring(2).trim();
                 Paragraph para = new Paragraph("• " + processInlineFormatting(itemText))
                         .setFont(normalFont)
@@ -1811,34 +2155,105 @@ public class AiWorkspaceDocumentService {
                 continue;
             }
 
-            // Regular paragraph with bold formatting
-            Paragraph para = new Paragraph()
-                    .setFont(normalFont)
-                    .setFontSize(12)
-                    .setMarginBottom(10)
-                    .setTextAlignment(TextAlignment.JUSTIFIED);
+            // Regular paragraph with bold formatting and link processing
+            addFormattedParagraph(document, trimmed, normalFont);
+        }
 
-            // Process inline formatting (bold **text**)
-            String[] parts = trimmed.split("\\*\\*");
-            for (int i = 0; i < parts.length; i++) {
-                if (i % 2 == 0) {
-                    // Normal text
-                    if (!parts[i].isEmpty()) {
-                        para.add(new Text(parts[i]).setFont(normalFont));
-                    }
-                } else {
-                    // Bold text
-                    try {
-                        PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
-                        para.add(new Text(parts[i]).setFont(boldFont));
-                    } catch (IOException e) {
-                        para.add(new Text(parts[i]).setFont(normalFont));
-                    }
+        // Handle table at end of document
+        if (inTable && tableRows.size() > 0) {
+            renderPdfTable(document, tableRows, headerFont, normalFont);
+        }
+    }
+
+    /**
+     * Render a markdown table as a PDF table
+     */
+    private void renderPdfTable(Document document, List<String> rows, PdfFont headerFont, PdfFont normalFont) throws IOException {
+        if (rows.isEmpty()) return;
+
+        // Parse first row to determine column count
+        String[] headerCells = parseTableRow(rows.get(0));
+        int columnCount = headerCells.length;
+
+        if (columnCount == 0) return;
+
+        // Create table with equal column widths
+        Table table = new Table(UnitValue.createPercentArray(columnCount)).useAllAvailableWidth();
+        table.setMarginTop(10);
+        table.setMarginBottom(10);
+
+        // Add header row
+        for (String cell : headerCells) {
+            Cell headerCell = new Cell()
+                    .add(new Paragraph(processInlineFormatting(cell.trim()))
+                            .setFont(headerFont)
+                            .setFontSize(10))
+                    .setBackgroundColor(new DeviceRgb(240, 240, 240))
+                    .setPadding(5);
+            table.addHeaderCell(headerCell);
+        }
+
+        // Add data rows
+        for (int i = 1; i < rows.size(); i++) {
+            String[] cells = parseTableRow(rows.get(i));
+            for (int j = 0; j < columnCount; j++) {
+                String cellText = j < cells.length ? cells[j].trim() : "";
+                Cell dataCell = new Cell()
+                        .add(new Paragraph(processInlineFormatting(cellText))
+                                .setFont(normalFont)
+                                .setFontSize(10))
+                        .setPadding(5);
+                table.addCell(dataCell);
+            }
+        }
+
+        document.add(table);
+    }
+
+    /**
+     * Parse a markdown table row into cells
+     */
+    private String[] parseTableRow(String row) {
+        // Remove leading/trailing pipes and split by pipe
+        String cleaned = row.trim();
+        if (cleaned.startsWith("|")) cleaned = cleaned.substring(1);
+        if (cleaned.endsWith("|")) cleaned = cleaned.substring(0, cleaned.length() - 1);
+        return cleaned.split("\\|");
+    }
+
+    /**
+     * Add a formatted paragraph with bold text and proper link handling
+     */
+    private void addFormattedParagraph(Document document, String text, PdfFont normalFont) throws IOException {
+        // Only strip markdown links, NOT bold formatting (we need ** markers for bold rendering)
+        text = text.replaceAll("\\[([^\\]]+)\\]\\([^)]+\\)", "$1");
+
+        Paragraph para = new Paragraph()
+                .setFont(normalFont)
+                .setFontSize(12)
+                .setMarginBottom(10)
+                .setTextAlignment(TextAlignment.JUSTIFIED);
+
+        // Process bold formatting (**text**)
+        String[] parts = text.split("\\*\\*");
+        for (int i = 0; i < parts.length; i++) {
+            if (i % 2 == 0) {
+                // Normal text
+                if (!parts[i].isEmpty()) {
+                    para.add(new Text(parts[i]).setFont(normalFont));
+                }
+            } else {
+                // Bold text
+                try {
+                    PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
+                    para.add(new Text(parts[i]).setFont(boldFont));
+                } catch (IOException e) {
+                    para.add(new Text(parts[i]).setFont(normalFont));
                 }
             }
-
-            document.add(para);
         }
+
+        document.add(para);
     }
 
     /**

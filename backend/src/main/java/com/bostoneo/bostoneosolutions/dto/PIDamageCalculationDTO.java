@@ -52,6 +52,9 @@ public class PIDamageCalculationDTO {
     // AI Comparable Analysis
     private Map<String, Object> comparableAnalysis;
 
+    // AI Settlement Analysis (from case value calculation)
+    private Map<String, Object> settlementAnalysis;
+
     // Calculation Info
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime calculatedAt;

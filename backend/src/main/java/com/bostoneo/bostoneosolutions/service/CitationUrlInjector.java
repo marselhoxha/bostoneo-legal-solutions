@@ -94,16 +94,17 @@ public class CitationUrlInjector {
 
         // ===== MASSACHUSETTS STATUTES (GENERIC PATTERNS) =====
 
-        // M.G.L. chapter with complex subsections: M.G.L. c. 90, § 24(1)(f)(1)
+        // M.G.L. chapter with complex subsections: M.G.L. c. 90, § 24(1)(f)(1), M.G.L. c. 176D, § 3(9)
+        // Note: Chapter can have letter suffix (90, 90A, 90B, 93A, 176D, etc.)
         CITATION_URL_MAP.put(
-            Pattern.compile("\\bM\\.G\\.L\\.\\s*c\\.\\s*(\\d+[AB]?),?\\s*§\\s*([\\d()a-zA-Z\\-]+)(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[M.G.L. c. $1, § $2 - View →](https://malegislature.gov/Laws/GeneralLaws)"
+            Pattern.compile("\\bM\\.G\\.L\\.\\s*c\\.\\s*(\\d+[A-Z]?),?\\s*§§?\\s*([\\d()a-zA-Z\\-,\\s]+)(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[M.G.L. c. $1, § $2](https://malegislature.gov/Laws/GeneralLaws)"
         );
 
-        // M.G.L. chapter only (no section): M.G.L. c. 90
+        // M.G.L. chapter only (no section): M.G.L. c. 90, M.G.L. c. 176D
         CITATION_URL_MAP.put(
-            Pattern.compile("\\bM\\.G\\.L\\.\\s*c\\.\\s*(\\d+[AB]?)(?!\\s*,?\\s*§)(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
-            "[M.G.L. c. $1 - View →](https://malegislature.gov/Laws/GeneralLaws)"
+            Pattern.compile("\\bM\\.G\\.L\\.\\s*c\\.\\s*(\\d+[A-Z]?)(?!\\s*,?\\s*§)(?! - Source:)(?! - View)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[M.G.L. c. $1](https://malegislature.gov/Laws/GeneralLaws)"
         );
 
         // Mass. R. Crim. P. with complex subsections: Mass. R. Crim. P. 13(a)(2)

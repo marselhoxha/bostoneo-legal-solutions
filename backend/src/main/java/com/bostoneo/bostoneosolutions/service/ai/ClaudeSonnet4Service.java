@@ -1320,10 +1320,13 @@ public class ClaudeSonnet4Service implements AIService {
 
         // Detect draft generation - needs higher token limit for complete documents
         // Includes workflow-generated drafts (e.g., "Draft an ANSWER to the complaint")
+        // Also includes demand letter generation which needs comprehensive output
         boolean isDraftGeneration = lowerPrompt.contains("generate a professional legal") ||
                                    lowerPrompt.contains("generate a complete, properly formatted legal document") ||
                                    lowerPrompt.contains("generate an answer") ||
                                    lowerPrompt.contains("generate a response") ||
+                                   lowerPrompt.contains("generate a professional demand letter") ||
+                                   lowerPrompt.contains("generate a demand letter") ||
                                    lowerPrompt.contains("draft a motion") ||
                                    lowerPrompt.contains("draft an answer") ||
                                    lowerPrompt.contains("draft a response") ||

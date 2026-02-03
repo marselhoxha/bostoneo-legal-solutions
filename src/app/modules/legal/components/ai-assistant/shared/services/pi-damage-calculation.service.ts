@@ -146,6 +146,15 @@ export class PIDamageCalculationService {
     );
   }
 
+  /**
+   * Save settlement analysis from case value calculation
+   */
+  saveSettlementAnalysis(caseId: number, settlementAnalysis: any): Observable<PIDamageCalculation> {
+    return this.http.post<any>(`${this.baseUrl}/${caseId}/damages/settlement-analysis`, settlementAnalysis).pipe(
+      map(response => response.data?.calculation)
+    );
+  }
+
   // ===== Quick Damage Calculators =====
 
   /**

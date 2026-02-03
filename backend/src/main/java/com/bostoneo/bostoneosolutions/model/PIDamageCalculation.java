@@ -95,6 +95,11 @@ public class PIDamageCalculation {
     @Column(name = "comparable_analysis", columnDefinition = "jsonb")
     private Map<String, Object> comparableAnalysis;
 
+    // AI Settlement Analysis (from case value calculation)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "settlement_analysis", columnDefinition = "jsonb")
+    private Map<String, Object> settlementAnalysis;
+
     // Calculation Info
     @Column(name = "calculated_at")
     private LocalDateTime calculatedAt;

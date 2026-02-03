@@ -87,6 +87,11 @@ public interface PIDamageCalculationService {
     Map<String, Object> getComparableAnalysis(Long caseId, String injuryType, String jurisdiction);
 
     /**
+     * Save settlement analysis from case value calculation
+     */
+    PIDamageCalculationDTO saveSettlementAnalysis(Long caseId, Map<String, Object> settlementAnalysis);
+
+    /**
      * Calculate household services damages
      */
     PIDamageElementDTO calculateHouseholdServices(Long caseId, BigDecimal monthlyRate, int months, String notes);

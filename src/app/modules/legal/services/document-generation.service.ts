@@ -292,12 +292,16 @@ export class DocumentGenerationService {
 
   /**
    * Convert HTML to Markdown for backend export
-   * Preserves all formatting (headers, bold, italic, lists, links)
+   * Preserves all formatting (headers, bold, italic, lists, links, tables)
    */
   convertHtmlToMarkdown(html: string): string {
     if (!html) return '';
 
     let markdown = html;
+
+    // TABLES - Must be processed FIRST before stripping other HTML tags
+    // Convert HTML tables to markdown table format
+    markdown = this.convertHtmlTablesToMarkdown(markdown);
 
     // Headers (H1-H6) - process from H6 to H1 to avoid conflicts
     markdown = markdown.replace(/<h6[^>]*>(.*?)<\/h6>/gi, '\n###### $1\n\n');
@@ -367,6 +371,117 @@ export class DocumentGenerationService {
 
     // Trim leading/trailing whitespace
     markdown = markdown.trim();
+
+    return markdown;
+  }
+
+  /**
+   * Convert HTML tables to Markdown table format
+   * Handles both standard HTML tables and Quill editor table format
+   */
+  private convertHtmlTablesToMarkdown(html: string): string {
+    if (!html) return '';
+
+    let result = html;
+    const lowerHtml = html.toLowerCase();
+
+    // Find all <table> elements and convert them
+    let searchFrom = 0;
+    let output = '';
+
+    while (true) {
+      const tableStart = lowerHtml.indexOf('<table', searchFrom);
+      if (tableStart === -1) break;
+
+      const tableEndTag = lowerHtml.indexOf('</table>', tableStart);
+      if (tableEndTag === -1) break;
+
+      // Add content before table
+      output += result.substring(searchFrom, tableStart);
+
+      // Extract table HTML
+      const tableHtml = result.substring(tableStart, tableEndTag + 8);
+
+      // Convert table to markdown
+      const markdownTable = this.convertSingleHtmlTable(tableHtml);
+
+      output += '\n' + markdownTable + '\n';
+
+      searchFrom = tableEndTag + 8;
+    }
+
+    // Append remaining content after last table (or all content if no tables)
+    if (searchFrom > 0) {
+      output += result.substring(searchFrom);
+      return output;
+    }
+
+    return result;
+  }
+
+  /**
+   * Convert a single HTML table to Markdown format
+   */
+  private convertSingleHtmlTable(tableHtml: string): string {
+    const rows: string[] = [];
+
+    // Extract rows using regex - handles both <tr> and nested formats
+    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    let rowMatch;
+
+    while ((rowMatch = rowRegex.exec(tableHtml)) !== null) {
+      const rowContent = rowMatch[1];
+
+      // Extract cells (th or td)
+      const cellRegex = /<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi;
+      let cellMatch;
+      const cells: string[] = [];
+
+      while ((cellMatch = cellRegex.exec(rowContent)) !== null) {
+        let cellContent = cellMatch[1];
+
+        // Strip nested HTML tags from cell content (Quill uses <p>, <strong>, etc.)
+        cellContent = cellContent.replace(/<[^>]+>/g, '');
+
+        // Decode HTML entities
+        cellContent = cellContent
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&#124;/g, '\\|')  // Escape pipe characters
+          .replace(/&#x7c;/gi, '\\|')
+          .replace(/&vert;/gi, '\\|')
+          .replace(/&verbar;/gi, '\\|')
+          .trim();
+
+        // Normalize whitespace
+        cellContent = cellContent.replace(/\s+/g, ' ');
+
+        cells.push(cellContent);
+      }
+
+      if (cells.length > 0) {
+        rows.push('| ' + cells.join(' | ') + ' |');
+      }
+    }
+
+    if (rows.length === 0) {
+      return '';
+    }
+
+    // Build markdown table
+    let markdown = rows[0] + '\n';
+
+    // Add separator row after header
+    const columnCount = (rows[0].match(/\|/g) || []).length - 1;
+    const separator = '|' + '---|'.repeat(columnCount);
+    markdown += separator + '\n';
+
+    // Add remaining rows
+    for (let i = 1; i < rows.length; i++) {
+      markdown += rows[i] + '\n';
+    }
 
     return markdown;
   }

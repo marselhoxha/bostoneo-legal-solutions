@@ -147,7 +147,37 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         existingCase.setTotalHours(caseDTO.getTotalHours());
         existingCase.setTotalAmount(caseDTO.getTotalAmount());
         existingCase.setPaymentStatus(caseDTO.getPaymentStatus());
-        
+
+        // Update Personal Injury (PI) fields - only if provided (not null)
+        if (caseDTO.getInjuryDate() != null) existingCase.setInjuryDate(caseDTO.getInjuryDate());
+        if (caseDTO.getInjuryType() != null) existingCase.setInjuryType(caseDTO.getInjuryType());
+        if (caseDTO.getInjuryDescription() != null) existingCase.setInjuryDescription(caseDTO.getInjuryDescription());
+        if (caseDTO.getAccidentLocation() != null) existingCase.setAccidentLocation(caseDTO.getAccidentLocation());
+        if (caseDTO.getLiabilityAssessment() != null) existingCase.setLiabilityAssessment(caseDTO.getLiabilityAssessment());
+        if (caseDTO.getComparativeNegligencePercent() != null) existingCase.setComparativeNegligencePercent(caseDTO.getComparativeNegligencePercent());
+        if (caseDTO.getMedicalProviders() != null) existingCase.setMedicalProviders(caseDTO.getMedicalProviders());
+        if (caseDTO.getMedicalExpensesTotal() != null) existingCase.setMedicalExpensesTotal(caseDTO.getMedicalExpensesTotal().doubleValue());
+        if (caseDTO.getLostWages() != null) existingCase.setLostWages(caseDTO.getLostWages().doubleValue());
+        if (caseDTO.getFutureMedicalEstimate() != null) existingCase.setFutureMedicalEstimate(caseDTO.getFutureMedicalEstimate().doubleValue());
+        if (caseDTO.getPainSufferingMultiplier() != null) existingCase.setPainSufferingMultiplier(caseDTO.getPainSufferingMultiplier().doubleValue());
+        if (caseDTO.getSettlementDemandAmount() != null) existingCase.setSettlementDemandAmount(caseDTO.getSettlementDemandAmount().doubleValue());
+        if (caseDTO.getSettlementOfferAmount() != null) existingCase.setSettlementOfferAmount(caseDTO.getSettlementOfferAmount().doubleValue());
+        if (caseDTO.getSettlementFinalAmount() != null) existingCase.setSettlementFinalAmount(caseDTO.getSettlementFinalAmount().doubleValue());
+        if (caseDTO.getSettlementDate() != null) existingCase.setSettlementDate(caseDTO.getSettlementDate());
+        if (caseDTO.getInsuranceCompany() != null) existingCase.setInsuranceCompany(caseDTO.getInsuranceCompany());
+        if (caseDTO.getInsurancePolicyNumber() != null) existingCase.setInsurancePolicyNumber(caseDTO.getInsurancePolicyNumber());
+        if (caseDTO.getInsurancePolicyLimit() != null) existingCase.setInsurancePolicyLimit(caseDTO.getInsurancePolicyLimit().doubleValue());
+        if (caseDTO.getInsuranceAdjusterName() != null) existingCase.setInsuranceAdjusterName(caseDTO.getInsuranceAdjusterName());
+        if (caseDTO.getInsuranceAdjusterContact() != null) existingCase.setInsuranceAdjusterContact(caseDTO.getInsuranceAdjusterContact());
+        if (caseDTO.getInsuranceAdjusterEmail() != null) existingCase.setInsuranceAdjusterEmail(caseDTO.getInsuranceAdjusterEmail());
+        if (caseDTO.getInsuranceAdjusterPhone() != null) existingCase.setInsuranceAdjusterPhone(caseDTO.getInsuranceAdjusterPhone());
+        if (caseDTO.getEmployerName() != null) existingCase.setEmployerName(caseDTO.getEmployerName());
+        if (caseDTO.getEmployerEmail() != null) existingCase.setEmployerEmail(caseDTO.getEmployerEmail());
+        if (caseDTO.getEmployerPhone() != null) existingCase.setEmployerPhone(caseDTO.getEmployerPhone());
+        if (caseDTO.getEmployerHrContact() != null) existingCase.setEmployerHrContact(caseDTO.getEmployerHrContact());
+        if (caseDTO.getDefendantName() != null) existingCase.setDefendantName(caseDTO.getDefendantName());
+        if (caseDTO.getDefendantAddress() != null) existingCase.setDefendantAddress(caseDTO.getDefendantAddress());
+
         existingCase = legalCaseRepository.save(existingCase);
 
         // Check for status changes and trigger notifications

@@ -107,11 +107,6 @@
                   </a>
                 </li>
                 <li>
-                  <a class="dropdown-item" (click)="activeTab = 'damage-analysis'" [class.disabled]="!linkedCase">
-                    <i class="ri-bar-chart-grouped-line me-2 text-danger"></i> Damage Analysis
-                  </a>
-                </li>
-                <li>
                   <a class="dropdown-item" (click)="activeTab = 'document-checklist'" [class.disabled]="!linkedCase">
                     <i class="ri-checkbox-multiple-line me-2 text-warning"></i> Document Checklist
                   </a>
@@ -317,288 +312,433 @@
 
             <li [ngbNavItem]="'case-value'">
               <a ngbNavLink class="d-flex align-items-center gap-2">
-                <i class="ri-calculator-line fs-16"></i>
-                <span>Case Value</span>
+                <i class="ri-funds-line fs-16"></i>
+                <span>Case Valuation</span>
                 <span class="badge bg-primary-subtle text-primary ms-1" *ngIf="latestCaseValue > 0">{{ formatCompactCurrency(latestCaseValue) }}</span>
               </a>
               <ng-template ngbNavContent>
-                <!-- Case Value Calculator Tab Content -->
-                <div class="py-4">
+                <!-- Unified Case Valuation Tab Content -->
+                <div class="case-valuation-container py-4">
+                  <!-- Header with Actions -->
                   <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
                     <div>
-                      <h5 class="mb-1 fw-semibold">Case Value Calculator</h5>
-                      <p class="text-muted mb-0 fs-13">Estimate total case value with AI-powered analysis</p>
+                      <h5 class="mb-1 fw-semibold">Case Valuation</h5>
+                      <p class="text-muted mb-0 fs-13">Comprehensive damage analysis with AI-powered case value estimation</p>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                       <span class="prefilled-badge" *ngIf="linkedCase && prefilledFromCase">
                         <i class="ri-magic-line me-1"></i> Pre-filled from {{ linkedCase.caseNumber }}
                       </span>
-                      <button class="btn btn-soft-secondary" (click)="loadCaseValueSample()">
-                        <i class="ri-file-copy-line me-1"></i> Load Sample
+                      <button class="btn btn-soft-success" (click)="syncMedicalExpenses()" [disabled]="!linkedCase" title="Sync damage elements from medical records">
+                        <i class="ri-refresh-line me-1"></i> Sync Medical
+                      </button>
+                      <button class="btn btn-primary" (click)="calculateAndAnalyze()" [disabled]="caseValueForm.invalid || isCalculating || isCalculatingDamages">
+                        <span *ngIf="!isCalculating && !isCalculatingDamages">
+                          <i class="ri-calculator-line me-1"></i> Calculate & Analyze
+                        </span>
+                        <span *ngIf="isCalculating || isCalculatingDamages">
+                          <span class="spinner-border spinner-border-sm me-1"></span> {{ isCalculating ? 'Calculating...' : 'Analyzing...' }}
+                        </span>
                       </button>
                     </div>
                   </div>
 
-                  <div class="tool-layout">
-                    <!-- Input Panel -->
-                    <div class="input-panel">
-                      <div class="panel-card">
-                        <div class="panel-header">
-                          <h6 class="mb-0"><i class="ri-edit-line me-2 text-primary"></i>Case Details</h6>
+                  <!-- EXECUTIVE DECISION PANEL (Shows when we have calculation data or saved damage calculation) -->
+                  <div class="executive-decision-panel" *ngIf="calculatedValue || (damageCalculation?.lowValue && damageCalculation?.midValue)">
+                    <!-- Value Range Visual Bar -->
+                    <div class="value-range-visual">
+                      <div class="range-track">
+                        <div class="range-segment low" [style.width.%]="getValueBarWidth('low')"></div>
+                        <div class="range-segment likely" [style.width.%]="getValueBarWidth('likely')"></div>
+                        <div class="range-segment high" [style.width.%]="getValueBarWidth('high')"></div>
+                        <!-- Policy Limit Marker -->
+                        <div class="policy-limit-marker" *ngIf="caseValueForm.get('policyLimit')?.value"
+                             [style.left.%]="getPolicyLimitPosition()"
+                             [class.exceeds-value]="getPolicyLimitPosition() < 100">
+                          <div class="marker-line"></div>
+                          <div class="marker-label">Policy: {{ formatCompactCurrency(caseValueForm.get('policyLimit')?.value) }}</div>
                         </div>
-                        <div class="panel-body">
-                          <form [formGroup]="caseValueForm">
-                            <!-- Step 1: Injury Details -->
-                            <div class="form-section">
-                              <div class="section-header" (click)="toggleSection('injury')">
-                                <span class="step-number">1</span>
-                                <span class="step-title">Injury Details</span>
-                                <i class="ri-arrow-down-s-line step-icon" [class.collapsed]="collapsedSections.injury"></i>
-                              </div>
-                              <div class="section-content" [class.collapsed]="collapsedSections.injury">
-                                <div class="row g-3">
-                                  <div class="col-12">
-                                    <label class="form-label">Type of Injury</label>
-                                    <select class="form-select" formControlName="injuryType">
-                                      <option *ngFor="let type of injuryTypes" [value]="type.value">
-                                        {{ type.label }}
-                                      </option>
-                                    </select>
-                                    <small class="form-text">Selected multiplier: <strong>{{ getMultiplier() }}x</strong></small>
-                                  </div>
-                                  <div class="col-12">
-                                    <label class="form-label">Injury Description</label>
-                                    <textarea class="form-control" formControlName="injuryDescription" rows="3"
-                                              placeholder="Describe the injuries sustained, treatment received, and impact on daily life..."></textarea>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <!-- Step 2: Economic Damages -->
-                            <div class="form-section">
-                              <div class="section-header" (click)="toggleSection('economic')">
-                                <span class="step-number">2</span>
-                                <span class="step-title">Economic Damages</span>
-                                <i class="ri-arrow-down-s-line step-icon" [class.collapsed]="collapsedSections.economic"></i>
-                              </div>
-                              <div class="section-content" [class.collapsed]="collapsedSections.economic">
-                                <div class="row g-3">
-                                  <div class="col-md-4">
-                                    <label class="form-label">Medical Expenses</label>
-                                    <div class="input-group">
-                                      <span class="input-group-text">$</span>
-                                      <input type="number" class="form-control" formControlName="medicalExpenses" placeholder="0">
-                                    </div>
-                                  </div>
-                                  <div class="col-md-4">
-                                    <label class="form-label">Lost Wages</label>
-                                    <div class="input-group">
-                                      <span class="input-group-text">$</span>
-                                      <input type="number" class="form-control" formControlName="lostWages" placeholder="0">
-                                    </div>
-                                  </div>
-                                  <div class="col-md-4">
-                                    <label class="form-label">Future Medical</label>
-                                    <div class="input-group">
-                                      <span class="input-group-text">$</span>
-                                      <input type="number" class="form-control" formControlName="futureMedical" placeholder="0">
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <!-- Step 3: Multiplier -->
-                            <div class="form-section">
-                              <div class="section-header" (click)="toggleSection('multiplier')">
-                                <span class="step-number">3</span>
-                                <span class="step-title">Pain & Suffering Multiplier</span>
-                                <i class="ri-arrow-down-s-line step-icon" [class.collapsed]="collapsedSections.multiplier"></i>
-                              </div>
-                              <div class="section-content" [class.collapsed]="collapsedSections.multiplier">
-                                <div class="multiplier-slider-wrapper">
-                                  <div class="slider-header">
-                                    <label>Multiplier Value</label>
-                                    <span class="current-value">{{ getMultiplier() }}x</span>
-                                  </div>
-                                  <div class="slider-track">
-                                    <div class="slider-fill" [style.width.%]="getSliderFillPercent()"></div>
-                                  </div>
-                                  <input type="range" min="1" max="5" step="0.5"
-                                         [value]="getMultiplier()"
-                                         (input)="onMultiplierSliderChange($event)">
-                                  <div class="slider-labels">
-                                    <span>1.0x</span>
-                                    <span>2.5x</span>
-                                    <span>5.0x</span>
-                                  </div>
-                                </div>
-                                <small class="form-text">
-                                  <i class="ri-information-line me-1"></i>
-                                  Default multiplier based on injury type. Adjust manually if needed.
-                                </small>
-                              </div>
-                            </div>
-
-                            <!-- Step 4: Liability -->
-                            <div class="form-section">
-                              <div class="section-header" (click)="toggleSection('liability')">
-                                <span class="step-number">4</span>
-                                <span class="step-title">Liability Assessment</span>
-                                <i class="ri-arrow-down-s-line step-icon" [class.collapsed]="collapsedSections.liability"></i>
-                              </div>
-                              <div class="section-content" [class.collapsed]="collapsedSections.liability">
-                                <div class="row g-3">
-                                  <div class="col-md-6">
-                                    <label class="form-label">Liability Status</label>
-                                    <select class="form-select" formControlName="liabilityAssessment">
-                                      <option *ngFor="let option of liabilityOptions" [value]="option.value">
-                                        {{ option.label }}
-                                      </option>
-                                    </select>
-                                  </div>
-                                  <div class="col-md-6" *ngIf="caseValueForm.get('liabilityAssessment')?.value === 'COMPARATIVE'">
-                                    <label class="form-label">Client's Negligence %</label>
-                                    <div class="input-group">
-                                      <input type="number" class="form-control" formControlName="comparativeNegligence"
-                                             min="0" max="100" placeholder="0">
-                                      <span class="input-group-text">%</span>
-                                    </div>
-                                    <small class="form-text">MA follows modified comparative negligence (51% bar)</small>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <!-- Calculate Button -->
-                            <div class="mt-4">
-                              <button type="button" class="btn btn-primary w-100" (click)="calculateCaseValue()"
-                                      [disabled]="caseValueForm.invalid || isCalculating">
-                                <span *ngIf="!isCalculating">
-                                  <i class="ri-calculator-line me-1"></i> Calculate Case Value
-                                </span>
-                                <span *ngIf="isCalculating">
-                                  <span class="spinner-border spinner-border-sm me-2"></span>Analyzing...
-                                </span>
-                              </button>
-                            </div>
-                          </form>
+                      </div>
+                      <div class="range-labels">
+                        <div class="range-label low">
+                          <span class="label-text">LOW</span>
+                          <span class="label-value">{{ formatCurrency(damageCalculation?.lowValue || calculatedValue?.settlementRangeLow || 0) }}</span>
+                        </div>
+                        <div class="range-label likely">
+                          <span class="label-text">LIKELY</span>
+                          <span class="label-value">{{ formatCurrency(damageCalculation?.midValue || calculatedValue?.realisticRecovery || 0) }}</span>
+                        </div>
+                        <div class="range-label high">
+                          <span class="label-text">HIGH</span>
+                          <span class="label-value">{{ formatCurrency(damageCalculation?.highValue || calculatedValue?.settlementRangeHigh || 0) }}</span>
                         </div>
                       </div>
                     </div>
 
-                    <!-- Results Panel -->
-                    <div class="results-panel">
-                      <div class="panel-card">
+                    <!-- Key Metrics Row -->
+                    <div class="key-metrics-grid">
+                      <!-- Case Strength Ring -->
+                      <div class="metric-card strength-card" *ngIf="calculatedValue?.caseStrength">
+                        <div class="case-strength-ring" [class]="getStrengthClass(calculatedValue.caseStrength)">
+                          <svg viewBox="0 0 36 36" class="strength-svg">
+                            <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                            <path class="ring-fill" [attr.stroke-dasharray]="(calculatedValue.caseStrength * 10) + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                            <text x="18" y="20.35" class="strength-text">{{ calculatedValue.caseStrength }}</text>
+                          </svg>
+                        </div>
+                        <div class="metric-info">
+                          <span class="metric-value">{{ calculatedValue.caseStrength }}/10</span>
+                          <span class="metric-label">CASE STRENGTH</span>
+                        </div>
+                      </div>
+                      <!-- Fallback when no case strength -->
+                      <div class="metric-card strength-card" *ngIf="!calculatedValue?.caseStrength">
+                        <div class="metric-icon"><i class="ri-bar-chart-2-line"></i></div>
+                        <div class="metric-info">
+                          <span class="metric-value">--</span>
+                          <span class="metric-label">CASE STRENGTH</span>
+                        </div>
+                      </div>
+
+                      <!-- Economic Damages -->
+                      <div class="metric-card economic-card">
+                        <div class="metric-icon"><i class="ri-money-dollar-circle-line"></i></div>
+                        <div class="metric-info">
+                          <span class="metric-value">{{ formatCompactCurrency(damageCalculation?.economicDamagesTotal || calculatedValue?.economicDamages || getEconomicDamagesFromElements()) }}</span>
+                          <span class="metric-label">ECONOMIC</span>
+                        </div>
+                      </div>
+
+                      <!-- Non-Economic Damages -->
+                      <div class="metric-card noneconomic-card">
+                        <div class="metric-icon"><i class="ri-heart-pulse-line"></i></div>
+                        <div class="metric-info">
+                          <span class="metric-value">{{ formatCompactCurrency(damageCalculation?.nonEconomicDamagesTotal || calculatedValue?.nonEconomicDamages || getNonEconomicDamagesFromElements()) }}</span>
+                          <span class="metric-label">NON-ECONOMIC</span>
+                        </div>
+                      </div>
+
+                      <!-- Multiplier -->
+                      <div class="metric-card multiplier-card">
+                        <div class="metric-icon"><i class="ri-scales-3-line"></i></div>
+                        <div class="metric-info">
+                          <span class="metric-value">{{ calculatedValue?.multiplier || getMultiplier() }}x</span>
+                          <span class="metric-label">MULTIPLIER</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Strategy Banner -->
+                    <div class="strategy-banner" *ngIf="calculatedValue?.recommendations">
+                      <i class="ri-lightbulb-flash-line"></i>
+                      <span class="strategy-text">{{ calculatedValue.recommendations }}</span>
+                    </div>
+
+                    <!-- Underinsured Warning -->
+                    <div class="underinsured-warning" *ngIf="calculatedValue?.isUnderinsured || (caseValueForm.get('policyLimit')?.value && (calculatedValue?.medicalExpenses || 0) > (caseValueForm.get('policyLimit')?.value * 0.6))">
+                      <i class="ri-alarm-warning-line"></i>
+                      <div class="warning-content">
+                        <strong>Underinsured Case</strong>
+                        <span>Medical expenses exceed 60% of policy limit. Consider policy limits demand strategy.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Two Column Layout -->
+                  <div class="row g-4">
+                    <!-- Left Column: Add Element + Case Context -->
+                    <div class="col-lg-4">
+                      <!-- Add Damage Element Card -->
+                      <div class="panel-card mb-3">
                         <div class="panel-header">
-                          <h6 class="mb-0"><i class="ri-funds-line me-2 text-success"></i>Estimated Value</h6>
+                          <h6 class="mb-0"><i class="ri-add-line me-2 text-primary"></i>Add Damage Element</h6>
                         </div>
                         <div class="panel-body">
-                          <!-- Results Display -->
-                          <div *ngIf="calculatedValue">
-                            <!-- Hero Value -->
-                            <div class="value-hero">
-                              <div class="value-label">Estimated Case Value</div>
-                              <div class="value-amount">{{ formatCurrency(calculatedValue.adjustedCaseValue) }}</div>
-                              <div class="value-subtext" *ngIf="calculatedValue.comparativeNegligence > 0">
-                                After {{ calculatedValue.comparativeNegligence }}% adjustment
+                          <div class="mb-3">
+                            <label class="form-label">Type</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="newDamageElement.elementType">
+                              <option *ngFor="let type of damageElementTypes" [value]="type.value">{{ type.label }}</option>
+                            </select>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">Description *</label>
+                            <input type="text" class="form-control form-control-sm" [(ngModel)]="newDamageElement.elementName" placeholder="e.g., Boston Medical ER">
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <div class="input-group input-group-sm">
+                              <span class="input-group-text">$</span>
+                              <input type="number" class="form-control" [(ngModel)]="newDamageElement.baseAmount">
+                            </div>
+                          </div>
+                          <div class="row mb-3">
+                            <div class="col-6">
+                              <label class="form-label">Method</label>
+                              <select class="form-select form-select-sm" [(ngModel)]="newDamageElement.calculationMethod">
+                                <option *ngFor="let method of calculationMethods" [value]="method.value">{{ method.label }}</option>
+                              </select>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label">Confidence</label>
+                              <select class="form-select form-select-sm" [(ngModel)]="newDamageElement.confidenceLevel">
+                                <option *ngFor="let level of confidenceLevels" [value]="level.value">{{ level.label }}</option>
+                              </select>
+                            </div>
+                          </div>
+                          <button class="btn btn-primary btn-sm w-100" (click)="addDamageElement()" [disabled]="!newDamageElement.elementName || !linkedCase">
+                            <i class="ri-add-line me-1"></i> Add Element
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Case Context Card -->
+                      <div class="panel-card mb-3">
+                        <div class="panel-header">
+                          <h6 class="mb-0"><i class="ri-information-line me-2 text-info"></i>Case Context</h6>
+                        </div>
+                        <div class="panel-body">
+                          <form [formGroup]="caseValueForm">
+                            <div class="mb-3">
+                              <label class="form-label">Injury Type</label>
+                              <select class="form-select form-select-sm" formControlName="injuryType">
+                                <option *ngFor="let type of injuryTypes" [value]="type.value">{{ type.label }}</option>
+                              </select>
+                              <small class="form-text">Multiplier: <strong>{{ getMultiplier() }}x</strong></small>
+                            </div>
+                            <div class="mb-3">
+                              <label class="form-label">Liability</label>
+                              <select class="form-select form-select-sm" formControlName="liabilityAssessment">
+                                <option *ngFor="let option of liabilityOptions" [value]="option.value">{{ option.label }}</option>
+                              </select>
+                            </div>
+                            <div class="mb-3" *ngIf="caseValueForm.get('liabilityAssessment')?.value === 'COMPARATIVE'">
+                              <label class="form-label">Comparative Negligence</label>
+                              <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" formControlName="comparativeNegligence" min="0" max="100">
+                                <span class="input-group-text">%</span>
                               </div>
                             </div>
-
-                            <!-- Chart Section -->
-                            <div class="chart-container">
-                              <div class="chart-title">Damages Breakdown</div>
-                              <div class="chart-wrapper">
-                                <canvas #damageChart></canvas>
-                              </div>
-                              <div class="chart-legend">
-                                <div class="legend-item">
-                                  <span class="legend-color economic"></span>
-                                  <span class="legend-label">Economic ({{ getEconomicPercent() }}%)</span>
-                                </div>
-                                <div class="legend-item">
-                                  <span class="legend-color non-economic"></span>
-                                  <span class="legend-label">Non-Economic ({{ getNonEconomicPercent() }}%)</span>
-                                </div>
+                            <div class="mb-3">
+                              <label class="form-label">Policy Limit</label>
+                              <div class="input-group input-group-sm">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" formControlName="policyLimit" placeholder="e.g., 100000">
                               </div>
                             </div>
+                            <div class="mb-3">
+                              <label class="form-label">Injury Description</label>
+                              <textarea class="form-control form-control-sm" formControlName="injuryDescription" rows="2" placeholder="Brief description..."></textarea>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
 
-                            <!-- Breakdown -->
-                            <div class="breakdown-section">
-                              <div class="breakdown-header">Calculation Breakdown</div>
-                              <div class="breakdown-table">
-                                <div class="breakdown-row">
-                                  <span class="row-label">Medical Expenses</span>
-                                  <span class="row-value">{{ formatCurrency(calculatedValue.medicalExpenses) }}</span>
-                                </div>
-                                <div class="breakdown-row">
-                                  <span class="row-label">Lost Wages</span>
-                                  <span class="row-value">{{ formatCurrency(calculatedValue.lostWages) }}</span>
-                                </div>
-                                <div class="breakdown-row">
-                                  <span class="row-label">Future Medical</span>
-                                  <span class="row-value">{{ formatCurrency(calculatedValue.futureMedical) }}</span>
-                                </div>
-                                <div class="breakdown-row subtotal">
-                                  <span class="row-label">Economic Subtotal</span>
-                                  <span class="row-value">{{ formatCurrency(calculatedValue.economicDamages) }}</span>
-                                </div>
-                                <div class="breakdown-row multiplier">
-                                  <span class="row-label">Pain & Suffering <span class="multiplier-badge">{{ calculatedValue.multiplier }}x</span></span>
-                                  <span class="row-value">{{ formatCurrency(calculatedValue.nonEconomicDamages) }}</span>
-                                </div>
-                                <div class="breakdown-row total">
-                                  <span class="row-label">Total Case Value</span>
-                                  <span class="row-value">{{ formatCurrency(calculatedValue.adjustedCaseValue) }}</span>
-                                </div>
+                    </div>
+
+                    <!-- Right Column: AI Analysis + Damage Elements -->
+                    <div class="col-lg-8">
+                      <!-- AI SETTLEMENT ANALYSIS (Moved above damage elements for prominence) -->
+                      <div class="ai-settlement-analysis" *ngIf="calculatedValue?.settlementRangeLow || damageCalculation?.comparableAnalysis || calculatedValue?.keyFactors?.length">
+                        <div class="analysis-header">
+                          <h6 class="mb-0"><i class="ri-robot-line me-2"></i>AI Settlement Analysis</h6>
+                          <button class="btn btn-soft-primary btn-sm" (click)="calculateComprehensiveDamages()" [disabled]="!linkedCase || isCalculatingDamages">
+                            <i class="ri-refresh-line me-1"></i> Refresh Analysis
+                          </button>
+                        </div>
+
+                        <div class="analysis-cards-row">
+                          <!-- Settlement Range Card -->
+                          <div class="settlement-range-card" *ngIf="calculatedValue?.settlementRangeLow || damageCalculation?.lowValue">
+                            <div class="card-title"><i class="ri-funds-box-line me-2"></i>Settlement Range</div>
+                            <div class="range-values">
+                              <div class="range-item">
+                                <span class="percentile">25th</span>
+                                <span class="amount">{{ formatCurrency(damageCalculation?.lowValue || calculatedValue?.settlementRangeLow || 0) }}</span>
                               </div>
-                            </div>
-
-                            <!-- Liability Adjustment Alert -->
-                            <div class="adjustment-alert" *ngIf="calculatedValue.comparativeNegligence > 0">
-                              <i class="ri-alert-line alert-icon"></i>
-                              <div class="alert-content">
-                                <div class="alert-title">Comparative Negligence Applied</div>
-                                <p class="alert-text">Value reduced by {{ calculatedValue.comparativeNegligence }}% due to client's comparative fault.</p>
+                              <div class="range-item median">
+                                <span class="percentile">Median</span>
+                                <span class="amount">{{ formatCurrency(damageCalculation?.midValue || calculatedValue?.realisticRecovery || 0) }}</span>
                               </div>
-                            </div>
-
-                            <!-- Action Buttons -->
-                            <div class="panel-actions">
-                              <button class="btn btn-outline-primary" (click)="requestAIAnalysis()">
-                                <i class="ri-robot-line"></i> AI Analysis
-                              </button>
-                              <button class="btn btn-outline-secondary" (click)="exportResults()">
-                                <i class="ri-download-line"></i> Export
-                              </button>
-                            </div>
-
-                            <!-- Save to Case Button -->
-                            <div class="save-to-case-section" *ngIf="linkedCase">
-                              <button class="btn btn-success w-100" (click)="saveCaseValueToCase()">
-                                <i class="ri-save-line me-2"></i> Save to Case: {{ linkedCase.caseNumber }}
-                              </button>
-                              <small class="text-muted d-block text-center mt-2">
-                                Updates injury details, damages, and multiplier in the linked case
-                              </small>
+                              <div class="range-item">
+                                <span class="percentile">75th</span>
+                                <span class="amount">{{ formatCurrency(damageCalculation?.highValue || calculatedValue?.settlementRangeHigh || 0) }}</span>
+                              </div>
                             </div>
                           </div>
 
-                          <!-- Empty State -->
-                          <div class="results-empty" *ngIf="!calculatedValue">
-                            <div class="empty-state-illustration">
-                              <div class="empty-state-icon-lg">
-                                <i class="ri-calculator-line"></i>
+                          <!-- Value Factors Card -->
+                          <div class="value-factors-card" *ngIf="calculatedValue?.keyFactors?.length">
+                            <div class="card-title"><i class="ri-scales-3-line me-2"></i>Value Factors</div>
+                            <div class="factors-columns">
+                              <div class="factors-column strengthens">
+                                <div class="column-header"><i class="ri-arrow-up-circle-fill"></i> Strengthens</div>
+                                <div class="factor-list">
+                                  <div class="factor-item" *ngFor="let factor of getPositiveFactors()">
+                                    <i class="ri-check-line"></i>
+                                    <span>{{ factor }}</span>
+                                  </div>
+                                  <div class="factor-item empty" *ngIf="getPositiveFactors().length === 0">
+                                    <span class="text-muted">No strengthening factors identified</span>
+                                  </div>
+                                </div>
                               </div>
-                              <div class="empty-state-circles">
-                                <span></span><span></span><span></span>
+                              <div class="factors-column weakens">
+                                <div class="column-header"><i class="ri-arrow-down-circle-fill"></i> Weakens</div>
+                                <div class="factor-list">
+                                  <div class="factor-item" *ngFor="let factor of getNegativeFactors()">
+                                    <i class="ri-close-line"></i>
+                                    <span>{{ factor }}</span>
+                                  </div>
+                                  <div class="factor-item empty" *ngIf="getNegativeFactors().length === 0">
+                                    <span class="text-muted">No weakening factors identified</span>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                            <h6 class="fw-semibold mb-2">No Calculation Yet</h6>
-                            <p class="text-muted mb-0">Fill in the injury details and damages to calculate the estimated case value.</p>
                           </div>
                         </div>
+
+                        <!-- Comparable Analysis Section (Expandable, no max-height) -->
+                        <div class="comparable-analysis-section" *ngIf="damageCalculation?.comparableAnalysis?.analysis">
+                          <div class="comparable-header" (click)="comparableAnalysisExpanded = !comparableAnalysisExpanded">
+                            <i class="ri-file-search-line me-2"></i>
+                            <span>Comparable Cases Analysis</span>
+                            <i class="expand-icon" [class.ri-arrow-down-s-line]="!comparableAnalysisExpanded" [class.ri-arrow-up-s-line]="comparableAnalysisExpanded"></i>
+                          </div>
+                          <div class="comparable-content" [class.expanded]="comparableAnalysisExpanded">
+                            <div [innerHTML]="damageCalculation.comparableAnalysis.analysis | aiResponseFormatter"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Grouped Damage Elements -->
+                      <div class="damage-elements-grouped" *ngIf="damageElements.length > 0">
+                        <!-- Past Medical Group -->
+                        <div class="damage-group" *ngIf="getDamageElementsByCategory('PAST_MEDICAL').length > 0">
+                          <div class="group-header" (click)="toggleDamageGroup('PAST_MEDICAL')">
+                            <i class="ri-arrow-down-s-line group-toggle" [class.collapsed]="collapsedDamageGroups['PAST_MEDICAL']"></i>
+                            <i class="ri-hospital-line group-icon text-danger"></i>
+                            <span class="group-title">Past Medical</span>
+                            <span class="group-total">({{ formatCurrency(getDamageCategoryTotal('PAST_MEDICAL')) }})</span>
+                          </div>
+                          <div class="group-items" [class.collapsed]="collapsedDamageGroups['PAST_MEDICAL']">
+                            <div class="damage-element-item" *ngFor="let element of getDamageElementsByCategory('PAST_MEDICAL')">
+                              <span class="element-name">{{ element.elementName }}</span>
+                              <span class="element-amount">{{ formatCurrency(element.calculatedAmount || element.baseAmount || 0) }}</span>
+                              <span class="confidence-badge" [class]="'confidence-' + (element.confidenceLevel || 'MEDIUM').toLowerCase()">{{ element.confidenceLevel }}</span>
+                              <button class="btn-delete" (click)="deleteDamageElement(element)"><i class="ri-close-line"></i></button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Lost Wages Group -->
+                        <div class="damage-group" *ngIf="getDamageElementsByCategory('LOST_WAGES').length > 0">
+                          <div class="group-header" (click)="toggleDamageGroup('LOST_WAGES')">
+                            <i class="ri-arrow-down-s-line group-toggle" [class.collapsed]="collapsedDamageGroups['LOST_WAGES']"></i>
+                            <i class="ri-briefcase-line group-icon text-warning"></i>
+                            <span class="group-title">Lost Wages</span>
+                            <span class="group-total">({{ formatCurrency(getDamageCategoryTotal('LOST_WAGES')) }})</span>
+                          </div>
+                          <div class="group-items" [class.collapsed]="collapsedDamageGroups['LOST_WAGES']">
+                            <div class="damage-element-item" *ngFor="let element of getDamageElementsByCategory('LOST_WAGES')">
+                              <span class="element-name">{{ element.elementName }}</span>
+                              <span class="element-amount">{{ formatCurrency(element.calculatedAmount || element.baseAmount || 0) }}</span>
+                              <span class="confidence-badge" [class]="'confidence-' + (element.confidenceLevel || 'MEDIUM').toLowerCase()">{{ element.confidenceLevel }}</span>
+                              <button class="btn-delete" (click)="deleteDamageElement(element)"><i class="ri-close-line"></i></button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Future Medical Group -->
+                        <div class="damage-group" *ngIf="getDamageElementsByCategory('FUTURE_MEDICAL').length > 0">
+                          <div class="group-header" (click)="toggleDamageGroup('FUTURE_MEDICAL')">
+                            <i class="ri-arrow-down-s-line group-toggle" [class.collapsed]="collapsedDamageGroups['FUTURE_MEDICAL']"></i>
+                            <i class="ri-calendar-check-line group-icon text-info"></i>
+                            <span class="group-title">Future Medical</span>
+                            <span class="group-total">({{ formatCurrency(getDamageCategoryTotal('FUTURE_MEDICAL')) }})</span>
+                          </div>
+                          <div class="group-items" [class.collapsed]="collapsedDamageGroups['FUTURE_MEDICAL']">
+                            <div class="damage-element-item" *ngFor="let element of getDamageElementsByCategory('FUTURE_MEDICAL')">
+                              <span class="element-name">{{ element.elementName }}</span>
+                              <span class="element-amount">{{ formatCurrency(element.calculatedAmount || element.baseAmount || 0) }}</span>
+                              <span class="confidence-badge" [class]="'confidence-' + (element.confidenceLevel || 'MEDIUM').toLowerCase()">{{ element.confidenceLevel }}</span>
+                              <button class="btn-delete" (click)="deleteDamageElement(element)"><i class="ri-close-line"></i></button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Pain & Suffering Group -->
+                        <div class="damage-group" *ngIf="getDamageElementsByCategory('PAIN_SUFFERING').length > 0">
+                          <div class="group-header" (click)="toggleDamageGroup('PAIN_SUFFERING')">
+                            <i class="ri-arrow-down-s-line group-toggle" [class.collapsed]="collapsedDamageGroups['PAIN_SUFFERING']"></i>
+                            <i class="ri-heart-pulse-line group-icon text-danger"></i>
+                            <span class="group-title">Pain & Suffering</span>
+                            <span class="group-total">({{ formatCurrency(getDamageCategoryTotal('PAIN_SUFFERING')) }})</span>
+                          </div>
+                          <div class="group-items" [class.collapsed]="collapsedDamageGroups['PAIN_SUFFERING']">
+                            <div class="damage-element-item" *ngFor="let element of getDamageElementsByCategory('PAIN_SUFFERING')">
+                              <span class="element-name">{{ element.elementName }}</span>
+                              <span class="element-amount">{{ formatCurrency(element.calculatedAmount || element.baseAmount || 0) }}</span>
+                              <span class="confidence-badge" [class]="'confidence-' + (element.confidenceLevel || 'MEDIUM').toLowerCase()">{{ element.confidenceLevel }}</span>
+                              <button class="btn-delete" (click)="deleteDamageElement(element)"><i class="ri-close-line"></i></button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Other Damages Group -->
+                        <div class="damage-group" *ngIf="getOtherDamageElements().length > 0">
+                          <div class="group-header" (click)="toggleDamageGroup('OTHER')">
+                            <i class="ri-arrow-down-s-line group-toggle" [class.collapsed]="collapsedDamageGroups['OTHER']"></i>
+                            <i class="ri-file-list-line group-icon text-secondary"></i>
+                            <span class="group-title">Other Damages</span>
+                            <span class="group-total">({{ formatCurrency(getOtherDamagesTotal()) }})</span>
+                          </div>
+                          <div class="group-items" [class.collapsed]="collapsedDamageGroups['OTHER']">
+                            <div class="damage-element-item" *ngFor="let element of getOtherDamageElements()">
+                              <span class="element-type-badge">{{ getDamageTypeLabel(element.elementType) }}</span>
+                              <span class="element-name">{{ element.elementName }}</span>
+                              <span class="element-amount">{{ formatCurrency(element.calculatedAmount || element.baseAmount || 0) }}</span>
+                              <span class="confidence-badge" [class]="'confidence-' + (element.confidenceLevel || 'MEDIUM').toLowerCase()">{{ element.confidenceLevel }}</span>
+                              <button class="btn-delete" (click)="deleteDamageElement(element)"><i class="ri-close-line"></i></button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Empty State for Damage Elements -->
+                      <div class="damage-elements-empty" *ngIf="damageElements.length === 0 && linkedCase && !isLoadingDamages">
+                        <div class="empty-state-illustration">
+                          <div class="empty-state-icon-lg">
+                            <i class="ri-bar-chart-grouped-line"></i>
+                          </div>
+                          <div class="empty-state-circles">
+                            <span></span><span></span><span></span>
+                          </div>
+                        </div>
+                        <h6 class="fw-semibold mb-2">No Damage Elements</h6>
+                        <p class="text-muted mb-3">Add damage elements using the form or sync from medical records.</p>
+                        <button class="btn btn-soft-success btn-sm" (click)="syncMedicalExpenses()">
+                          <i class="ri-refresh-line me-1"></i> Sync from Medical Records
+                        </button>
+                      </div>
+
+                      <!-- No Case Linked -->
+                      <div class="alert alert-info d-flex align-items-center" *ngIf="!linkedCase">
+                        <i class="ri-information-line fs-4 me-3"></i>
+                        <div>
+                          <strong>Link a Case</strong>
+                          <p class="mb-0">Use the case selector above to link a PI case for full damage tracking and AI analysis.</p>
+                        </div>
+                      </div>
+
+                      <!-- Consolidated Action Buttons (3 buttons only) -->
+                      <div class="valuation-actions mt-3" *ngIf="linkedCase">
+                        <button class="btn btn-success" (click)="saveCaseValueToCase()" [disabled]="!calculatedValue">
+                          <i class="ri-save-line me-1"></i> Save to Case
+                        </button>
+                        <button class="btn btn-outline-secondary" (click)="exportResults()">
+                          <i class="ri-download-line me-1"></i> Export
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -610,7 +750,9 @@
               <a ngbNavLink class="d-flex align-items-center gap-2">
                 <i class="ri-file-text-line fs-16"></i>
                 <span>Demand Letter</span>
-                <span class="badge bg-info-subtle text-info ms-1" *ngIf="generatedDemand">Draft</span>
+                <span class="badge bg-warning-subtle text-warning ms-1" *ngIf="isEditingDemand && hasUnsavedDemandChanges">Editing</span>
+                <span class="badge bg-success-subtle text-success ms-1" *ngIf="isEditingDemand && !hasUnsavedDemandChanges">Saved</span>
+                <span class="badge bg-info-subtle text-info ms-1" *ngIf="generatedDemand && !isEditingDemand">Draft</span>
               </a>
               <ng-template ngbNavContent>
                 <!-- Demand Letter Tab Content -->
@@ -619,19 +761,6 @@
                     <div>
                       <h5 class="mb-1 fw-semibold">Demand Letter Generator</h5>
                       <p class="text-muted mb-0 fs-13">Generate professional demand packages with AI assistance</p>
-                    </div>
-                    <div class="d-flex gap-2">
-                      <div class="mode-toggle">
-                        <button class="mode-btn" [class.active]="demandMode === 'express'" (click)="setDemandMode('express')">
-                          <i class="ri-flashlight-line"></i> Express
-                        </button>
-                        <button class="mode-btn" [class.active]="demandMode === 'detailed'" (click)="setDemandMode('detailed')">
-                          <i class="ri-file-list-3-line"></i> Detailed
-                        </button>
-                      </div>
-                      <button class="btn btn-soft-secondary" (click)="loadDemandSample()">
-                        <i class="ri-file-copy-line me-1"></i> Sample
-                      </button>
                     </div>
                   </div>
 
@@ -781,12 +910,15 @@
                       </div>
                     </div>
 
-                    <!-- Preview Panel -->
-                    <div class="results-panel">
+                    <!-- Preview Panel (when NOT editing) -->
+                    <div class="results-panel" *ngIf="!isEditingDemand">
                       <div class="panel-card">
                         <div class="panel-header d-flex justify-content-between align-items-center">
                           <h6 class="mb-0"><i class="ri-file-paper-2-line me-2 text-info"></i>Document Preview</h6>
                           <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-soft-info" *ngIf="demandConversationId" (click)="openInAIWorkspace()">
+                              <i class="ri-edit-box-line me-1"></i> Edit in AI Workspace
+                            </button>
                             <button class="btn btn-sm btn-success" *ngIf="linkedCase && generatedDemand" (click)="saveDemandDataToCase()">
                               <i class="ri-save-line me-1"></i> Save to Case
                             </button>
@@ -816,6 +948,119 @@
                               <h6 class="fw-semibold mb-2">No Letter Generated</h6>
                               <p class="text-muted mb-0">Fill in the form and click "Generate Letter" to create your demand letter.</p>
                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Document Editor (when editing) -->
+                    <div class="results-panel demand-editor-panel" *ngIf="isEditingDemand && demandDocumentId">
+                      <div class="panel-card h-100 d-flex flex-column">
+                        <!-- Editor Header with Tools -->
+                        <div class="editor-header border-bottom p-3">
+                          <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                              <h6 class="mb-0"><i class="ri-edit-2-line me-2 text-info"></i>Demand Letter</h6>
+                              <span class="badge bg-warning-subtle text-warning" *ngIf="hasUnsavedDemandChanges">Unsaved</span>
+                              <span class="badge bg-success-subtle text-success" *ngIf="!hasUnsavedDemandChanges && demandDocumentId">Saved</span>
+                            </div>
+                            <div class="d-flex gap-2">
+                              <!-- AI Refine Dropdown -->
+                              <div ngbDropdown>
+                                <button class="btn btn-sm btn-soft-info" ngbDropdownToggle [disabled]="isTransformingDemand">
+                                  <span *ngIf="!isTransformingDemand"><i class="ri-magic-line me-1"></i> Refine</span>
+                                  <span *ngIf="isTransformingDemand"><span class="spinner-border spinner-border-sm me-1"></span> Refining...</span>
+                                </button>
+                                <div ngbDropdownMenu class="dropdown-menu-end">
+                                  <button ngbDropdownItem (click)="transformDemand('SIMPLIFY')">
+                                    <i class="ri-subtract-line me-2 text-primary"></i> Simplify Language
+                                  </button>
+                                  <button ngbDropdownItem (click)="transformDemand('CONDENSE')">
+                                    <i class="ri-compress-line me-2 text-info"></i> Condense
+                                  </button>
+                                  <button ngbDropdownItem (click)="transformDemand('EXPAND')">
+                                    <i class="ri-expand-line me-2 text-success"></i> Expand Details
+                                  </button>
+                                  <div class="dropdown-divider"></div>
+                                  <button ngbDropdownItem (click)="transformDemand('MAKE_FORMAL')">
+                                    <i class="ri-briefcase-line me-2 text-secondary"></i> Make More Formal
+                                  </button>
+                                  <button ngbDropdownItem (click)="transformDemand('MAKE_PERSUASIVE')">
+                                    <i class="ri-award-line me-2 text-warning"></i> Make More Persuasive
+                                  </button>
+                                </div>
+                              </div>
+                              <!-- Version History -->
+                              <button class="btn btn-sm btn-soft-secondary" (click)="toggleDemandVersionHistory()"
+                                      [class.active]="showDemandVersionHistory" title="Version History">
+                                <i class="ri-history-line"></i>
+                              </button>
+                              <!-- Save -->
+                              <button class="btn btn-sm btn-success" (click)="saveDemandDocument()"
+                                      [disabled]="isSavingDemand || !hasUnsavedDemandChanges">
+                                <span *ngIf="!isSavingDemand"><i class="ri-save-line me-1"></i>Save</span>
+                                <span *ngIf="isSavingDemand"><span class="spinner-border spinner-border-sm me-1"></span>Saving...</span>
+                              </button>
+                              <!-- Export Dropdown -->
+                              <div ngbDropdown>
+                                <button class="btn btn-sm btn-primary" ngbDropdownToggle>
+                                  <i class="ri-download-line me-1"></i> Export
+                                </button>
+                                <div ngbDropdownMenu class="dropdown-menu-end">
+                                  <button ngbDropdownItem (click)="exportDemand('pdf')">
+                                    <i class="ri-file-pdf-line me-2 text-danger"></i> PDF
+                                  </button>
+                                  <button ngbDropdownItem (click)="exportDemand('docx')">
+                                    <i class="ri-file-word-line me-2 text-primary"></i> Word
+                                  </button>
+                                </div>
+                              </div>
+                              <!-- New Letter Button -->
+                              <button class="btn btn-sm btn-soft-secondary" (click)="resetDemandEditor()" title="Start New Letter">
+                                <i class="ri-refresh-line"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Quill Editor -->
+                        <div class="editor-body flex-grow-1">
+                          <app-document-editor
+                            [(content)]="demandDocumentContent"
+                            (contentChange)="onDemandContentChange($event)"
+                            [readOnly]="isTransformingDemand"
+                            placeholder="Your demand letter content...">
+                          </app-document-editor>
+                        </div>
+                      </div>
+
+                      <!-- Version History Sidebar -->
+                      <div class="version-history-sidebar" *ngIf="showDemandVersionHistory" [@fadeSlide]>
+                        <div class="sidebar-header">
+                          <h6 class="mb-0"><i class="ri-history-line me-2"></i>Version History</h6>
+                          <button class="btn btn-sm btn-close" (click)="showDemandVersionHistory = false"></button>
+                        </div>
+                        <div class="sidebar-body">
+                          <div class="version-list" *ngIf="demandVersions.length > 0">
+                            <div class="version-item" *ngFor="let version of demandVersions"
+                                 (click)="restoreDemandVersion(version)">
+                              <div class="version-number">v{{ version.versionNumber }}</div>
+                              <div class="version-info">
+                                <div class="version-type">{{ version.transformationType | titlecase }}</div>
+                                <div class="version-meta">
+                                  <span>{{ version.wordCount }} words</span>
+                                  <span class="mx-1">•</span>
+                                  <span>{{ version.createdAt | date:'short' }}</span>
+                                </div>
+                              </div>
+                              <div class="version-action">
+                                <i class="ri-arrow-go-back-line"></i>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="version-empty" *ngIf="demandVersions.length === 0">
+                            <i class="ri-file-history-line fs-2 text-muted mb-2"></i>
+                            <p class="text-muted mb-0">No version history yet</p>
                           </div>
                         </div>
                       </div>
@@ -1398,186 +1643,6 @@
                           <div class="empty-state">
                             <i class="ri-calendar-todo-line"></i>
                             <p>Click "Regenerate" to generate treatment chronology</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </ng-template>
-            </li>
-
-            <!-- Damage Analysis Tab -->
-            <li ngbNavItem="damage-analysis">
-              <a ngbNavLink>
-                <i class="ri-bar-chart-grouped-line me-2"></i> Damage Analysis
-              </a>
-              <ng-template ngbNavContent>
-                <div class="professional-tool-content" (click)="loadDamageElements()">
-                  <!-- Header -->
-                  <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                      <h5 class="mb-1">Comprehensive Damage Analysis</h5>
-                      <p class="text-muted mb-0">Full damage breakdown with AI comparable case analysis</p>
-                    </div>
-                    <div class="d-flex gap-2">
-                      <button class="btn btn-soft-success" (click)="syncMedicalExpenses()" [disabled]="!linkedCase" title="Sync from medical records">
-                        <i class="ri-refresh-line me-1"></i> Sync Medical
-                      </button>
-                      <button class="btn btn-primary" (click)="calculateComprehensiveDamages()" [disabled]="!linkedCase || isCalculatingDamages">
-                        <span *ngIf="!isCalculatingDamages"><i class="ri-calculator-line me-1"></i> Calculate with AI</span>
-                        <span *ngIf="isCalculatingDamages"><span class="spinner-border spinner-border-sm me-1"></span> Calculating...</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- No Case Linked Warning -->
-                  <div class="alert alert-warning d-flex align-items-center" *ngIf="!linkedCase">
-                    <i class="ri-information-line fs-4 me-3"></i>
-                    <div>
-                      <strong>Link a Case</strong>
-                      <p class="mb-0">Use the case selector above to link a PI case for comprehensive damage analysis.</p>
-                    </div>
-                  </div>
-
-                  <!-- Damage Analysis Content -->
-                  <div class="row" *ngIf="linkedCase">
-                    <!-- Left: Add Damage Element -->
-                    <div class="col-lg-4">
-                      <div class="card mb-3">
-                        <div class="card-header"><h6 class="mb-0">Add Damage Element</h6></div>
-                        <div class="card-body">
-                          <div class="mb-3">
-                            <label class="form-label">Type</label>
-                            <select class="form-select" [(ngModel)]="newDamageElement.elementType">
-                              <option *ngFor="let type of damageElementTypes" [value]="type.value">{{ type.label }}</option>
-                            </select>
-                          </div>
-                          <div class="mb-3">
-                            <label class="form-label">Description *</label>
-                            <input type="text" class="form-control" [(ngModel)]="newDamageElement.elementName" placeholder="e.g., Boston Medical ER">
-                          </div>
-                          <div class="mb-3">
-                            <label class="form-label">Amount</label>
-                            <div class="input-group">
-                              <span class="input-group-text">$</span>
-                              <input type="number" class="form-control" [(ngModel)]="newDamageElement.baseAmount">
-                            </div>
-                          </div>
-                          <div class="row mb-3">
-                            <div class="col-6">
-                              <label class="form-label">Method</label>
-                              <select class="form-select" [(ngModel)]="newDamageElement.calculationMethod">
-                                <option *ngFor="let method of calculationMethods" [value]="method.value">{{ method.label }}</option>
-                              </select>
-                            </div>
-                            <div class="col-6">
-                              <label class="form-label">Confidence</label>
-                              <select class="form-select" [(ngModel)]="newDamageElement.confidenceLevel">
-                                <option *ngFor="let level of confidenceLevels" [value]="level.value">{{ level.label }}</option>
-                              </select>
-                            </div>
-                          </div>
-                          <div class="mb-3">
-                            <label class="form-label">Notes</label>
-                            <textarea class="form-control" [(ngModel)]="newDamageElement.notes" rows="2"></textarea>
-                          </div>
-                          <button class="btn btn-primary w-100" (click)="addDamageElement()" [disabled]="!newDamageElement.elementName">
-                            <i class="ri-add-line me-1"></i> Add Element
-                          </button>
-                        </div>
-                      </div>
-
-                      <!-- Quick Calculators -->
-                      <div class="card">
-                        <div class="card-header"><h6 class="mb-0">Quick Calculators</h6></div>
-                        <div class="card-body">
-                          <p class="text-muted small mb-2">IRS Mileage Rate: ${{ irsMileageRate }}/mile</p>
-                          <div class="d-grid gap-2">
-                            <button class="btn btn-soft-primary btn-sm" disabled>
-                              <i class="ri-car-line me-1"></i> Calculate Mileage
-                            </button>
-                            <button class="btn btn-soft-primary btn-sm" disabled>
-                              <i class="ri-home-line me-1"></i> Household Services
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Right: Damage Summary & Elements -->
-                    <div class="col-lg-8">
-                      <!-- Damage Summary -->
-                      <div class="card mb-3" *ngIf="damageCalculation">
-                        <div class="card-header bg-primary-subtle">
-                          <h6 class="mb-0 text-primary">
-                            <i class="ri-funds-line me-1"></i> Case Value Range
-                          </h6>
-                        </div>
-                        <div class="card-body">
-                          <div class="row text-center">
-                            <div class="col-4">
-                              <div class="text-muted small">LOW</div>
-                              <div class="fs-5 fw-semibold">{{ formatCurrency(damageCalculation.lowValue || 0) }}</div>
-                            </div>
-                            <div class="col-4 border-start border-end">
-                              <div class="text-muted small">LIKELY</div>
-                              <div class="fs-4 fw-bold text-primary">{{ formatCurrency(damageCalculation.midValue || 0) }}</div>
-                            </div>
-                            <div class="col-4">
-                              <div class="text-muted small">HIGH</div>
-                              <div class="fs-5 fw-semibold">{{ formatCurrency(damageCalculation.highValue || 0) }}</div>
-                            </div>
-                          </div>
-                          <hr>
-                          <div class="row">
-                            <div class="col-6">
-                              <div class="d-flex justify-content-between">
-                                <span class="text-muted">Economic Damages</span>
-                                <span class="fw-medium">{{ formatCurrency(damageCalculation.economicDamagesTotal || 0) }}</span>
-                              </div>
-                            </div>
-                            <div class="col-6">
-                              <div class="d-flex justify-content-between">
-                                <span class="text-muted">Non-Economic</span>
-                                <span class="fw-medium">{{ formatCurrency(damageCalculation.nonEconomicDamagesTotal || 0) }}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Damage Elements List -->
-                      <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                          <h6 class="mb-0">Damage Elements ({{ damageElements.length }})</h6>
-                        </div>
-                        <div class="card-body p-0">
-                          <div class="list-group list-group-flush" *ngIf="damageElements.length > 0">
-                            <div class="list-group-item d-flex align-items-center" *ngFor="let element of damageElements">
-                              <div class="avatar-sm me-3">
-                                <span class="avatar-title bg-primary-subtle text-primary rounded">
-                                  <i [class]="getDamageTypeIcon(element.elementType)"></i>
-                                </span>
-                              </div>
-                              <div class="flex-grow-1">
-                                <h6 class="mb-0">{{ element.elementName }}</h6>
-                                <small class="text-muted">{{ getDamageTypeLabel(element.elementType) }}</small>
-                              </div>
-                              <div class="text-end me-3">
-                                <div class="fw-semibold">{{ formatCurrency(element.calculatedAmount || 0) }}</div>
-                                <span class="badge bg-{{ getConfidenceColor(element.confidenceLevel || 'MEDIUM') }}-subtle text-{{ getConfidenceColor(element.confidenceLevel || 'MEDIUM') }}">
-                                  {{ element.confidenceLevel }}
-                                </span>
-                              </div>
-                              <button class="btn btn-sm btn-soft-danger" (click)="deleteDamageElement(element)">
-                                <i class="ri-delete-bin-line"></i>
-                              </button>
-                            </div>
-                          </div>
-                          <div class="text-center py-4" *ngIf="damageElements.length === 0 && !isLoadingDamages">
-                            <i class="ri-bar-chart-grouped-line fs-1 text-muted"></i>
-                            <p class="text-muted mt-2 mb-0">No damage elements yet. Add elements using the form or sync from medical records.</p>
                           </div>
                         </div>
                       </div>

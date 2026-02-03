@@ -87,6 +87,24 @@ export interface PIDamageCalculation {
     error?: string;
   };
 
+  // AI Settlement Analysis (from case value calculation)
+  settlementAnalysis?: {
+    economicDamages?: number;
+    nonEconomicDamages?: number;
+    totalCaseValue?: number;
+    realisticRecovery?: number;
+    settlementRangeLow?: number;
+    settlementRangeHigh?: number;
+    caseStrength?: number;
+    recommendedMultiplier?: number;
+    multiplierReasoning?: string;
+    keyFactors?: string[];
+    recommendations?: string;
+    medicalToLimitRatio?: number;
+    isUnderinsured?: boolean;
+    generatedAt?: string;
+  };
+
   // Calculation Info
   calculatedAt?: string;
   calculationNotes?: string;

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewInit, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subject, BehaviorSubject, Observable, of } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, switchMap, catchError, map } from 'rxjs/operators';
@@ -64,8 +64,22 @@ import {
   TreatmentGap
 } from '../../shared/models/pi-medical-summary.model';
 
+// AI Workspace Document Editor and Services
+import { DocumentEditorComponent } from '../../ai-workspace/document-editor/document-editor.component';
+import { DocumentGenerationService, DocumentTransformRequest } from '../../../../services/document-generation.service';
+import { UserService } from '../../../../../../service/user.service';
+
 // Register Chart.js components
 Chart.register(...registerables);
+
+interface DemandLetterVersion {
+  id: number;
+  versionNumber: number;
+  content: string;
+  wordCount: number;
+  transformationType: string;
+  createdAt: string;
+}
 
 interface MedicalProvider {
   id: string;
@@ -85,6 +99,17 @@ interface CaseValueCalculation {
   totalCaseValue: number;
   comparativeNegligence: number;
   adjustedCaseValue: number;
+  policyLimit: number | null;
+  realisticRecovery: number;
+  // AI-calculated fields
+  settlementRangeLow?: number;
+  settlementRangeHigh?: number;
+  caseStrength?: number;
+  keyFactors?: string[];
+  multiplierReasoning?: string;
+  recommendations?: string;
+  medicalToLimitRatio?: number;
+  isUnderinsured?: boolean;
 }
 
 interface ActivityItem {
@@ -106,7 +131,8 @@ interface ActivityItem {
     NgbNavModule,
     NgbDropdownModule,
     AiResponseFormatterPipe,
-    BulkRequestWizardComponent
+    BulkRequestWizardComponent,
+    DocumentEditorComponent
   ],
   templateUrl: './personal-injury.component.html',
   styleUrls: ['./personal-injury.component.scss']
@@ -116,6 +142,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   private damageChart: Chart<'doughnut'> | null = null;
 
   private destroy$ = new Subject<void>();
+  private caseSwitch$ = new Subject<void>();  // Cancels case-specific subscriptions on case switch
 
   // View State Management (Tab-based)
   activeTab: string = 'dashboard';
@@ -150,11 +177,24 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     liability: false
   };
 
+  // Collapsible Damage Groups State (for consolidated Case Valuation tab)
+  collapsedDamageGroups: { [key: string]: boolean } = {};
+
   // Demand Letter Generator
   demandForm: FormGroup;
   generatedDemand: string = '';
   isGeneratingDemand: boolean = false;
-  demandMode: 'express' | 'detailed' = 'express';
+
+  // Demand Letter Document State (AI Workspace Integration)
+  demandDocumentId: number | null = null;
+  demandConversationId: number | null = null;
+  demandDocumentContent: string = '';
+  isEditingDemand: boolean = false;
+  hasUnsavedDemandChanges: boolean = false;
+  isSavingDemand: boolean = false;
+  demandVersions: DemandLetterVersion[] = [];
+  showDemandVersionHistory: boolean = false;
+  isTransformingDemand: boolean = false;
 
   // Medical Providers Tracker
   medicalProviders: MedicalProvider[] = [];
@@ -222,6 +262,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   // Medical Summary
   medicalSummary: PIMedicalSummary | null = null;
   isGeneratingSummary: boolean = false;
+  isLoadingMedicalSummary: boolean = false;
   summaryExists: boolean = false;
 
   // Document Checklist
@@ -408,6 +449,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     private http: HttpClient,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
+    private router: Router,
     private aiModalService: AiResponseModalService,
     private workspaceState: WorkspaceStateService,
     private caseService: CaseService,
@@ -417,7 +459,9 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     private medicalSummaryService: PIMedicalSummaryService,
     private documentRequestService: PIDocumentRequestService,
     public providerDirectoryService: PIProviderDirectoryService,
-    private modalService: NgbModal
+    private modalService: NgbModal,
+    private documentGenerationService: DocumentGenerationService,
+    private userService: UserService
   ) {
     super();
 
@@ -430,7 +474,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       futureMedical: [0, [Validators.min(0)]],
       customMultiplier: [null],
       liabilityAssessment: ['CLEAR', Validators.required],
-      comparativeNegligence: [0, [Validators.min(0), Validators.max(100)]]
+      comparativeNegligence: [0, [Validators.min(0), Validators.max(100)]],
+      policyLimit: [null, [Validators.min(0)]]
     });
 
     // Initialize Demand Letter Form
@@ -487,12 +532,14 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.loadProviders();
 
     // Update multiplier when injury type changes
-    this.caseValueForm.get('injuryType')?.valueChanges.subscribe(injuryType => {
-      // Clear custom multiplier when injury type changes
-      if (!this.caseValueForm.get('customMultiplier')?.value) {
-        this.cdr.detectChanges();
-      }
-    });
+    this.caseValueForm.get('injuryType')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(injuryType => {
+        // Clear custom multiplier when injury type changes
+        if (!this.caseValueForm.get('customMultiplier')?.value) {
+          this.cdr.detectChanges();
+        }
+      });
 
     // Set up case search with debounce
     this.caseSearchTerm$.pipe(
@@ -533,9 +580,94 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.caseSwitch$.next();
+    this.caseSwitch$.complete();
     if (this.damageChart) {
       this.damageChart.destroy();
     }
+  }
+
+  /**
+   * Reset all case-specific data when switching between cases.
+   * This prevents stale data from the previous case from persisting.
+   */
+  private resetCaseData(): void {
+    // Clear data arrays
+    this.medicalRecords = [];
+    this.documentChecklist = [];
+    this.groupedDocuments = [];
+    this.damageElements = [];
+    this.requestHistory = [];
+
+    // Clear calculations
+    this.calculatedValue = null;
+    this.damageCalculation = null;
+    this.medicalSummary = null;
+    this.documentCompleteness = null;
+
+    // Clear editor states
+    this.editingMedicalRecord = null;
+    this.selectedChecklistItem = null;
+    this.resolvedRecipient = null;
+    this.selectedTemplate = null;
+    this.requestTemplates = [];
+    this.scanResult = null;
+
+    // Clear UI states
+    this.comparableAnalysisExpanded = false;
+    this.collapsedDamageGroups = {};
+    this.summaryExists = false;
+
+    // Clear bulk selection
+    this.bulkSelectMode = false;
+    this.selectedForBulk.clear();
+    this.showBulkWizard = false;
+    this.bulkWizardItemIds = [];
+
+    // Reset forms to defaults (not just patch)
+    this.caseValueForm.reset({
+      injuryType: 'soft_tissue',
+      injuryDescription: '',
+      medicalExpenses: 0,
+      lostWages: 0,
+      futureMedical: 0,
+      customMultiplier: null,
+      liabilityAssessment: 'CLEAR',
+      comparativeNegligence: 0,
+      policyLimit: null
+    });
+
+    this.demandForm.reset();
+    this.settlementForm.reset();
+    this.medicalRecordForm.reset({
+      recordType: 'FOLLOW_UP',
+      billedAmount: 0,
+      adjustedAmount: 0,
+      paidAmount: 0
+    });
+
+    // Reset new damage element form
+    this.resetNewDamageElement();
+
+    // Clear flags
+    this.prefilledFromCase = false;
+    this.runAnalysisAfterCalculation = false;
+
+    // Reset latest case value for this session (not localStorage)
+    this.latestCaseValue = 0;
+
+    // Reset demand letter document state
+    this.demandDocumentId = null;
+    this.demandConversationId = null;
+    this.demandDocumentContent = '';
+    this.isEditingDemand = false;
+    this.hasUnsavedDemandChanges = false;
+    this.demandVersions = [];
+    this.showDemandVersionHistory = false;
+    this.generatedDemand = '';
+
+    // Trigger change detection
+    this.cdr.detectChanges();
   }
 
   loadSavedData(): void {
@@ -591,6 +723,38 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     if (toolId === 'case-value' && this.calculatedValue) {
       setTimeout(() => this.createDamageChart(), 100);
     }
+
+    // Load existing demand letter if opening demand-letter tab with a linked case
+    if (toolId === 'demand-letter' && this.linkedCase?.id && !this.generatedDemand) {
+      this.loadExistingDemandLetter();
+    }
+  }
+
+  /**
+   * Load existing demand letter for the linked case
+   */
+  private loadExistingDemandLetter(): void {
+    if (!this.linkedCase?.id) return;
+
+    const userId = this.userService.getCurrentUserId();
+    this.http.get<any>(`${environment.apiUrl}/api/ai/personal-injury/demand-letter/case/${this.linkedCase.id}?userId=${userId}`)
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (response) => {
+          if (response.success && response.demandLetter) {
+            this.generatedDemand = response.demandLetter;
+            this.demandDocumentId = response.documentId || null;
+            this.demandConversationId = response.conversationId || null;
+            this.demandDocumentContent = this.formatTablesForQuill(response.demandLetter);
+            console.log('Loaded existing demand letter for case', this.linkedCase?.id);
+            this.cdr.detectChanges();
+          }
+        },
+        error: (error) => {
+          // No existing demand letter or error - that's okay, user can generate a new one
+          console.log('No existing demand letter found for case:', this.linkedCase?.id);
+        }
+      });
   }
 
   backToDashboard(): void {
@@ -652,10 +816,100 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       return;
     }
 
+    // Auto-sync damage values from system data before calculating
+    this.autoSyncDamageValues();
+
     this.isCalculating = true;
     const formData = this.caseValueForm.value;
 
-    // Calculate locally first for immediate feedback
+    // Call AI to calculate case value
+    this.http.post<any>(`${environment.apiUrl}/api/ai/personal-injury/calculate-case-value`, {
+      injuryType: formData.injuryType,
+      injuryDescription: formData.injuryDescription,
+      liabilityAssessment: formData.liabilityAssessment,
+      comparativeNegligence: formData.comparativeNegligence || 0,
+      medicalExpenses: formData.medicalExpenses || 0,
+      lostWages: formData.lostWages || 0,
+      futureMedical: formData.futureMedical || 0,
+      policyLimit: formData.policyLimit || null
+    }).subscribe({
+      next: (response) => {
+        if (response.success && response.calculation) {
+          const calc = response.calculation;
+          const policyLimit = formData.policyLimit || null;
+
+          this.calculatedValue = {
+            medicalExpenses: formData.medicalExpenses || 0,
+            lostWages: formData.lostWages || 0,
+            futureMedical: formData.futureMedical || 0,
+            economicDamages: calc.economicDamages || 0,
+            multiplier: calc.recommendedMultiplier || 2,
+            nonEconomicDamages: calc.nonEconomicDamages || 0,
+            totalCaseValue: calc.totalCaseValue || 0,
+            comparativeNegligence: formData.comparativeNegligence || 0,
+            adjustedCaseValue: calc.totalCaseValue || 0,
+            policyLimit: policyLimit,
+            realisticRecovery: calc.realisticRecovery || 0,
+            // AI-specific fields
+            settlementRangeLow: calc.settlementRangeLow,
+            settlementRangeHigh: calc.settlementRangeHigh,
+            caseStrength: calc.caseStrength,
+            keyFactors: calc.keyFactors,
+            multiplierReasoning: calc.multiplierReasoning,
+            recommendations: calc.recommendations,
+            medicalToLimitRatio: calc.medicalToLimitRatio,
+            isUnderinsured: calc.isUnderinsured
+          };
+
+          // Update latest case value
+          this.latestCaseValue = calc.realisticRecovery || calc.totalCaseValue || 0;
+          localStorage.setItem('pi_latest_case_value', this.latestCaseValue.toString());
+
+          // Add to activity
+          this.addActivity('case-value', `${this.formatCompactCurrency(this.latestCaseValue)} Case Value (AI)`);
+
+          // Save settlement analysis to database if we have a linked case
+          if (this.linkedCase?.id) {
+            this.damageCalculationService.saveSettlementAnalysis(Number(this.linkedCase.id), {
+              ...calc,
+              generatedAt: new Date().toISOString()
+            }).subscribe({
+              next: (savedCalc) => {
+                // Update local damageCalculation with saved values
+                if (savedCalc) {
+                  this.damageCalculation = savedCalc;
+                }
+              },
+              error: (err) => console.error('Error saving settlement analysis:', err)
+            });
+          }
+
+          // Create chart
+          setTimeout(() => this.createDamageChart(), 100);
+
+          this.isCalculating = false;
+          this.cdr.detectChanges();
+
+          // Run comprehensive analysis if flag is set
+          if (this.runAnalysisAfterCalculation && this.linkedCase) {
+            this.runAnalysisAfterCalculation = false;
+            this.calculateComprehensiveDamages();
+          }
+        } else {
+          // Fallback to local calculation if AI fails
+          this.calculateCaseValueLocal();
+        }
+      },
+      error: (err) => {
+        console.error('AI calculation failed, using local:', err);
+        this.calculateCaseValueLocal();
+      }
+    });
+  }
+
+  // Fallback local calculation
+  calculateCaseValueLocal(): void {
+    const formData = this.caseValueForm.value;
     const medicalExpenses = formData.medicalExpenses || 0;
     const lostWages = formData.lostWages || 0;
     const futureMedical = formData.futureMedical || 0;
@@ -665,6 +919,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     const totalCaseValue = economicDamages + nonEconomicDamages;
     const comparativeNegligence = formData.comparativeNegligence || 0;
     const adjustedCaseValue = totalCaseValue * (1 - comparativeNegligence / 100);
+    const policyLimit = formData.policyLimit || null;
+    const realisticRecovery = policyLimit ? Math.min(adjustedCaseValue, policyLimit) : adjustedCaseValue;
 
     this.calculatedValue = {
       medicalExpenses,
@@ -675,57 +931,23 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       nonEconomicDamages,
       totalCaseValue,
       comparativeNegligence,
-      adjustedCaseValue
+      adjustedCaseValue,
+      policyLimit,
+      realisticRecovery
     };
 
-    // Update latest case value
-    this.latestCaseValue = adjustedCaseValue;
-    localStorage.setItem('pi_latest_case_value', adjustedCaseValue.toString());
-
-    // Add to activity
-    this.addActivity('case-value', `${this.formatCompactCurrency(adjustedCaseValue)} Case Value`);
-
-    // Create chart
+    this.latestCaseValue = realisticRecovery;
+    localStorage.setItem('pi_latest_case_value', realisticRecovery.toString());
+    this.addActivity('case-value', `${this.formatCompactCurrency(realisticRecovery)} Case Value`);
     setTimeout(() => this.createDamageChart(), 100);
+    this.isCalculating = false;
+    this.cdr.detectChanges();
 
-    // Build case context for AI (if case is linked)
-    const caseContext = this.linkedCase ? {
-      caseNumber: this.linkedCase.caseNumber,
-      clientName: this.linkedCase.clientName,
-      caseType: this.linkedCase.type,
-      status: this.linkedCase.status,
-      description: this.linkedCase.description,
-      filingDate: this.linkedCase.importantDates?.filingDate,
-      courtInfo: this.linkedCase.courtInfo ?
-        `${this.linkedCase.courtInfo.countyName || ''} - ${this.linkedCase.courtInfo.judgeName || ''}` : null
-    } : null;
-
-    // Call AI for detailed analysis
-    this.http.post<any>(`${environment.apiUrl}/api/ai/personal-injury/analyze-case-value`, {
-      ...formData,
-      calculatedValue: this.calculatedValue,
-      caseContext
-    }).subscribe({
-      next: (response) => {
-        if (response.success && response.analysis) {
-          const contextInfo = {
-            'Injury Type': this.injuryTypes.find(i => i.value === formData.injuryType)?.label || formData.injuryType,
-            'Medical Expenses': `$${medicalExpenses.toLocaleString()}`,
-            'Lost Wages': `$${lostWages.toLocaleString()}`,
-            'Future Medical': `$${futureMedical.toLocaleString()}`,
-            'Multiplier': `${multiplier}x`,
-            'Estimated Case Value': `$${adjustedCaseValue.toLocaleString()}`
-          };
-          this.aiModalService.openCaseValueAnalysis(response.analysis, contextInfo);
-        }
-        this.isCalculating = false;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.isCalculating = false;
-        this.cdr.detectChanges();
-      }
-    });
+    // Run comprehensive analysis if flag is set
+    if (this.runAnalysisAfterCalculation && this.linkedCase) {
+      this.runAnalysisAfterCalculation = false;
+      this.calculateComprehensiveDamages();
+    }
   }
 
   createDamageChart(): void {
@@ -813,10 +1035,6 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   // Demand Letter Generator Methods
   // ==========================================
 
-  setDemandMode(mode: 'express' | 'detailed'): void {
-    this.demandMode = mode;
-  }
-
   calculateDemandTotal(): number {
     const medical = this.demandForm.get('medicalExpenses')?.value || 0;
     const wages = this.demandForm.get('lostWages')?.value || 0;
@@ -836,6 +1054,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.isGeneratingDemand = true;
     const formData = this.demandForm.value;
     const totalDemand = this.calculateDemandTotal();
+    const userId = this.userService.getCurrentUserId();
 
     // Build case context for AI (if case is linked)
     const caseContext = this.linkedCase ? {
@@ -852,30 +1071,44 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     const requestData = {
       ...formData,
       totalDemand,
-      mode: this.demandMode,
+      mode: 'detailed',  // Always use thorough detailed mode
       painSufferingAmount: (formData.medicalExpenses + formData.lostWages + formData.futureMedical) * formData.painSufferingMultiplier,
-      caseContext
+      caseContext,
+      // Request workspace save for editing
+      saveToWorkspace: true,
+      caseId: this.linkedCase?.id ? Number(this.linkedCase.id) : null
     };
 
-    this.http.post<any>(`${environment.apiUrl}/api/ai/personal-injury/generate-demand-letter`, requestData)
+    this.http.post<any>(`${environment.apiUrl}/api/ai/personal-injury/generate-demand-letter?userId=${userId}`, requestData)
+      .pipe(takeUntil(this.caseSwitch$))
       .subscribe({
         next: (response) => {
           if (response.success && response.demandLetter) {
             this.generatedDemand = response.demandLetter;
 
+            // Store document ID and conversation ID for workspace integration
+            // Keep isEditingDemand = false to show preview panel (not inline Quill editor)
+            // User can click "Edit in AI Workspace" button to open full editor
+            if (response.documentId) {
+              this.demandDocumentId = response.documentId;
+              this.demandConversationId = response.conversationId || null;
+              this.demandDocumentContent = this.formatTablesForQuill(response.demandLetter);
+              // Don't set isEditingDemand = true - show preview instead
+              this.hasUnsavedDemandChanges = false;
+            }
+
             // Add to activity
             this.addActivity('demand-letter', `${formData.clientName} v. ${formData.defendantName}`);
 
-            const contextInfo = {
-              'Client': formData.clientName,
-              'Defendant': formData.defendantName,
-              'Insurance Company': formData.insuranceCompany,
-              'Accident Date': formData.accidentDate,
-              'Total Demand': `$${totalDemand.toLocaleString()}`
-            };
-            this.aiModalService.openDemandLetter(response.demandLetter, contextInfo);
+            // Don't open modal - show inline editor instead
           } else {
             this.generatedDemand = 'Error generating demand letter. Please try again.';
+            Swal.fire({
+              icon: 'error',
+              title: 'Generation Failed',
+              text: 'Could not generate demand letter. Please try again.',
+              customClass: { confirmButton: 'btn btn-primary' }
+            });
           }
           this.isGeneratingDemand = false;
           this.cdr.detectChanges();
@@ -885,18 +1118,316 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           this.generatedDemand = 'Error connecting to AI service. Please try again later.';
           this.isGeneratingDemand = false;
           this.cdr.detectChanges();
+          Swal.fire({
+            icon: 'error',
+            title: 'Connection Error',
+            text: 'Could not connect to AI service. Please try again later.',
+            customClass: { confirmButton: 'btn btn-primary' }
+          });
         }
       });
   }
 
-  exportDemandLetter(): void {
-    // TODO: Implement export functionality
-    Swal.fire({
-      icon: 'info',
-      title: 'Export',
-      text: 'Export functionality coming soon!',
-      customClass: { confirmButton: 'btn btn-primary' }
+  // ==========================================
+  // Demand Letter Editor Methods
+  // ==========================================
+
+  /**
+   * Open the demand letter in AI Workspace for advanced editing
+   */
+  openInAIWorkspace(): void {
+    if (!this.demandConversationId) {
+      console.error('No conversation ID available');
+      return;
+    }
+    // Navigate to AI Workspace with the conversation ID
+    // Use the query params that AI Workspace expects
+    this.router.navigate(['/legal/ai-assistant/ai-workspace'], {
+      queryParams: {
+        openConversation: this.demandConversationId,
+        taskType: 'draft',
+        backendId: this.demandConversationId
+      }
     });
+  }
+
+  /**
+   * Called when editor content changes
+   */
+  onDemandContentChange(content: string): void {
+    this.demandDocumentContent = content;
+    this.hasUnsavedDemandChanges = true;
+  }
+
+  /**
+   * Save document to backend
+   */
+  saveDemandDocument(): void {
+    if (!this.demandDocumentId) return;
+
+    this.isSavingDemand = true;
+    const title = `Demand Letter - ${this.linkedCase?.clientName || 'Draft'}`;
+
+    this.documentGenerationService.saveDocument(
+      this.demandDocumentId,
+      this.demandDocumentContent,
+      title
+    ).pipe(takeUntil(this.caseSwitch$))
+    .subscribe({
+      next: () => {
+        this.hasUnsavedDemandChanges = false;
+        this.isSavingDemand = false;
+        this.generatedDemand = this.demandDocumentContent; // Sync
+        this.loadDemandVersions();
+        Swal.fire({
+          icon: 'success',
+          title: 'Saved',
+          timer: 1500,
+          showConfirmButton: false,
+          customClass: { popup: 'swal-toast' }
+        });
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.isSavingDemand = false;
+        console.error('Error saving demand letter:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Save Failed',
+          text: 'Please try again',
+          customClass: { confirmButton: 'btn btn-primary' }
+        });
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
+   * Transform document with AI
+   */
+  transformDemand(transformationType: string): void {
+    if (!this.demandDocumentId) return;
+
+    this.isTransformingDemand = true;
+    const request: DocumentTransformRequest = {
+      documentId: this.demandDocumentId,
+      transformationType: transformationType,
+      transformationScope: 'FULL_DOCUMENT',
+      fullDocumentContent: this.demandDocumentContent,
+      jurisdiction: 'Massachusetts',
+      documentType: 'demand_letter',
+      caseId: this.linkedCase?.id ? Number(this.linkedCase.id) : undefined
+    };
+
+    this.documentGenerationService.transformDocument(request)
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (response) => {
+          this.demandDocumentContent = this.formatTablesForQuill(response.transformedContent);
+          this.hasUnsavedDemandChanges = true;
+          this.isTransformingDemand = false;
+          Swal.fire({
+            icon: 'success',
+            title: 'Transformation Applied',
+            text: response.explanation || `${transformationType} completed`,
+            timer: 2000,
+            showConfirmButton: false,
+            customClass: { popup: 'swal-toast' }
+          });
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isTransformingDemand = false;
+          console.error('Error transforming demand letter:', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Transformation Failed',
+            text: 'Could not apply transformation. Please try again.',
+            customClass: { confirmButton: 'btn btn-primary' }
+          });
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Export to PDF/DOCX
+   */
+  exportDemand(format: 'pdf' | 'docx'): void {
+    if (!this.demandDocumentId) {
+      // If no document ID, export raw content
+      this.exportDemandContent(format);
+      return;
+    }
+
+    const userId = this.userService.getCurrentUserId();
+    this.documentGenerationService.exportDocument(this.demandDocumentId, format)
+      .subscribe({
+        next: (response) => {
+          const blob = response.body;
+          if (blob) {
+            // Extract filename from Content-Disposition header or use default
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = `Demand_Letter.${format}`;
+            if (contentDisposition) {
+              const matches = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+              if (matches && matches[1]) {
+                filename = matches[1].replace(/['"]/g, '');
+              }
+            }
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+          }
+        },
+        error: (err) => {
+          console.error('Export failed:', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Export Failed',
+            text: 'Could not export document. Please try again.',
+            customClass: { confirmButton: 'btn btn-primary' }
+          });
+        }
+      });
+  }
+
+  /**
+   * Export raw content (when document hasn't been saved to workspace)
+   */
+  private exportDemandContent(format: 'pdf' | 'docx'): void {
+    const title = `Demand Letter - ${this.linkedCase?.clientName || 'Draft'}`;
+    const content = this.demandDocumentContent || this.generatedDemand;
+
+    const exportFn = format === 'pdf'
+      ? this.documentGenerationService.exportContentToPDF(content, title)
+      : this.documentGenerationService.exportContentToWord(content, title);
+
+    exportFn.subscribe({
+      next: (response) => {
+        const blob = response.body;
+        if (blob) {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Demand_Letter.${format}`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+        }
+      },
+      error: (err) => {
+        console.error('Export failed:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Export Failed',
+          text: 'Could not export document.',
+          customClass: { confirmButton: 'btn btn-primary' }
+        });
+      }
+    });
+  }
+
+  /**
+   * Load version history
+   */
+  loadDemandVersions(): void {
+    if (!this.demandDocumentId) return;
+
+    const userId = this.userService.getCurrentUserId();
+    this.documentGenerationService.getDocumentVersions(this.demandDocumentId, userId)
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (versions) => {
+          this.demandVersions = versions;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading versions:', err);
+        }
+      });
+  }
+
+  /**
+   * Toggle version history sidebar
+   */
+  toggleDemandVersionHistory(): void {
+    this.showDemandVersionHistory = !this.showDemandVersionHistory;
+    if (this.showDemandVersionHistory) {
+      this.loadDemandVersions();
+    }
+  }
+
+  /**
+   * Restore a previous version
+   */
+  restoreDemandVersion(version: DemandLetterVersion): void {
+    Swal.fire({
+      title: 'Restore Version?',
+      text: `This will replace current content with version ${version.versionNumber}`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Restore',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        confirmButton: 'btn btn-primary',
+        cancelButton: 'btn btn-soft-secondary ms-2'
+      },
+      buttonsStyling: false
+    }).then(result => {
+      if (result.isConfirmed) {
+        this.demandDocumentContent = this.formatTablesForQuill(version.content);
+        this.hasUnsavedDemandChanges = true;
+        this.showDemandVersionHistory = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
+   * Reset to form view (discard current edit)
+   */
+  resetDemandEditor(): void {
+    if (this.hasUnsavedDemandChanges) {
+      Swal.fire({
+        title: 'Discard Changes?',
+        text: 'You have unsaved changes. Are you sure you want to start over?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Discard',
+        cancelButtonText: 'Keep Editing',
+        customClass: {
+          confirmButton: 'btn btn-danger',
+          cancelButton: 'btn btn-soft-secondary ms-2'
+        },
+        buttonsStyling: false
+      }).then(result => {
+        if (result.isConfirmed) {
+          this.clearDemandEditorState();
+        }
+      });
+    } else {
+      this.clearDemandEditorState();
+    }
+  }
+
+  private clearDemandEditorState(): void {
+    this.demandDocumentId = null;
+    this.demandConversationId = null;
+    this.demandDocumentContent = '';
+    this.isEditingDemand = false;
+    this.hasUnsavedDemandChanges = false;
+    this.demandVersions = [];
+    this.showDemandVersionHistory = false;
+    this.generatedDemand = '';
+    this.cdr.detectChanges();
+  }
+
+  exportDemandLetter(): void {
+    // Legacy export - redirect to new export
+    this.exportDemand('pdf');
   }
 
   // ==========================================
@@ -978,6 +1509,54 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
   getTotalMedicalOutstanding(): number {
     return this.getTotalMedicalBills() - this.getTotalMedicalPaid();
+  }
+
+  getTotalLostWages(): number {
+    // Only use damage elements with type LOST_WAGES
+    // Do NOT fallback to case record - values should only come from explicit damage elements
+    return this.damageElements
+      .filter(e => e.elementType === 'LOST_WAGES')
+      .reduce((sum, e) => sum + (e.calculatedAmount || e.baseAmount || 0), 0);
+  }
+
+  getTotalFutureMedical(): number {
+    // Only use damage elements with type FUTURE_MEDICAL
+    // Do NOT fallback to case record - values should only come from explicit damage elements
+    return this.damageElements
+      .filter(e => e.elementType === 'FUTURE_MEDICAL')
+      .reduce((sum, e) => sum + (e.calculatedAmount || e.baseAmount || 0), 0);
+  }
+
+  autoSyncDamageValues(): void {
+    // Auto-sync medical expenses from system data
+    const medicalExpenses = this.getTotalMedicalBills();
+
+    // Only get lost wages and future medical if they have actual values
+    // Don't populate with 0 unless user explicitly added them
+    const lostWages = this.getTotalLostWages();
+    const futureMedical = this.getTotalFutureMedical();
+
+    // Build patch object - only include values that are > 0 or were explicitly set
+    const caseValuePatch: any = { medicalExpenses };
+    const demandPatch: any = { medicalExpenses };
+
+    // Only update lost wages if there's actual data (from damage elements or case)
+    if (lostWages > 0) {
+      caseValuePatch.lostWages = lostWages;
+      demandPatch.lostWages = lostWages;
+    }
+
+    // Only update future medical if there's actual data
+    if (futureMedical > 0) {
+      caseValuePatch.futureMedical = futureMedical;
+      demandPatch.futureMedical = futureMedical;
+    }
+
+    // Update Case Value Calculator form
+    this.caseValueForm.patchValue(caseValuePatch);
+
+    // Update Demand Letter form
+    this.demandForm.patchValue(demandPatch);
   }
 
   getUniqueProviderCount(): number {
@@ -1547,6 +2126,12 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   selectCase(caseItem: LegalCase): void {
+    // Cancel any pending case-specific subscriptions
+    this.caseSwitch$.next();
+
+    // Reset all case data before loading new case
+    this.resetCaseData();
+
     this.linkedCase = caseItem;
     this.caseSearchInput = '';
     this.searchResults = [];
@@ -1558,13 +2143,20 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   unlinkCase(): void {
+    // Cancel any pending case-specific subscriptions
+    this.caseSwitch$.next();
+
+    // Reset all case data
+    this.resetCaseData();
+
     this.linkedCase = null;
-    this.prefilledFromCase = false;
     this.workspaceState.setLinkedCase(null);
+    this.cdr.detectChanges();
+
     Swal.fire({
       icon: 'info',
       title: 'Case Unlinked',
-      text: 'The case has been unlinked. Form data is preserved.',
+      text: 'The case has been unlinked and all case data cleared.',
       timer: 2000,
       showConfirmButton: false,
       customClass: { popup: 'swal2-sm' }
@@ -1586,6 +2178,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           this.loadDocumentChecklist();
           this.loadDamageElements();
           this.loadMedicalSummary();
+          this.loadExistingDemandLetter(); // Load any previously generated demand letter
 
           Swal.fire({
             icon: 'success',
@@ -1609,20 +2202,108 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     });
   }
 
+  /**
+   * Builds a liability narrative from existing case fields for auto-populating the demand letter form.
+   */
+  private buildLiabilityNarrative(caseData: LegalCase): string {
+    if (!caseData) return '';
+
+    const parts: string[] = [];
+
+    // Accident description with date and location
+    if (caseData.accidentLocation && caseData.injuryDate) {
+      const dateStr = this.formatReadableDate(caseData.injuryDate);
+      parts.push(`On ${dateStr}, the accident occurred at ${caseData.accidentLocation}.`);
+    } else if (caseData.injuryDate) {
+      const dateStr = this.formatReadableDate(caseData.injuryDate);
+      parts.push(`On ${dateStr}, the accident occurred.`);
+    }
+
+    // Defendant fault statement
+    if (caseData.defendantName) {
+      parts.push(`${caseData.defendantName} was negligent and at fault for causing this collision.`);
+    }
+
+    // Liability assessment explanation
+    const assessment = caseData.liabilityAssessment || 'CLEAR';
+    if (assessment === 'CLEAR') {
+      parts.push('Liability is clear and undisputed.');
+    } else if (assessment === 'COMPARATIVE') {
+      const percent = caseData.comparativeNegligencePercent || 0;
+      parts.push(`Comparative negligence may apply at ${percent}%.`);
+    } else if (assessment === 'DISPUTED') {
+      parts.push('Liability is disputed by the defendant.');
+    }
+
+    return parts.join(' ');
+  }
+
+  /**
+   * Formats a date as a readable string (e.g., "October 14, 2025")
+   */
+  private formatReadableDate(date: Date | string): string {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  /**
+   * Formats table content for better display in Quill editor.
+   * Converts paragraphs containing markdown table syntax to <pre> (code-block) format.
+   * Quill natively supports <pre> tags with monospace styling.
+   */
+  private formatTablesForQuill(html: string): string {
+    if (!html) return html;
+
+    // Match <p> tags and check if their content contains pipe characters (table rows)
+    return html.replace(/<p([^>]*)>([\s\S]*?)<\/p>/gi, (match, attrs, content) => {
+      // Strip HTML tags to check for pipes
+      const textOnly = content.replace(/<[^>]*>/g, '').trim();
+
+      // Check if this looks like a table row (has pipes and multiple cells)
+      if (textOnly.includes('|') && textOnly.split('|').length >= 2) {
+        // Convert to <pre> tag (code-block) which Quill renders with monospace font
+        // Use the plain text content to avoid nested HTML issues
+        return `<pre class="ql-syntax">${textOnly}</pre>`;
+      }
+
+      // Not a table row, return unchanged
+      return match;
+    });
+  }
+
   prefillFormsFromCase(caseData: LegalCase): void {
-    // Pre-fill Case Value Calculator form
+    // RESET forms first to clear any stale values from previous case
+    this.caseValueForm.reset({
+      injuryType: 'soft_tissue',
+      injuryDescription: '',
+      medicalExpenses: 0,
+      lostWages: 0,
+      futureMedical: 0,
+      customMultiplier: null,
+      liabilityAssessment: 'CLEAR',
+      comparativeNegligence: 0,
+      policyLimit: null
+    });
+
+    // THEN patch with new case data
+    // NOTE: lostWages and futureMedical are NOT pre-filled from case record
+    // They should only come from explicit damage elements (via autoSyncDamageValues)
     this.caseValueForm.patchValue({
       injuryType: caseData.injuryType || 'soft_tissue',
       injuryDescription: caseData.injuryDescription || '',
       medicalExpenses: caseData.medicalExpensesTotal || 0,
-      lostWages: caseData.lostWages || 0,
-      futureMedical: caseData.futureMedicalEstimate || 0,
+      lostWages: 0,  // Will be populated from damage elements if they exist
+      futureMedical: 0,  // Will be populated from damage elements if they exist
       customMultiplier: caseData.painSufferingMultiplier || null,
       liabilityAssessment: caseData.liabilityAssessment || 'CLEAR',
-      comparativeNegligence: caseData.comparativeNegligencePercent || 0
+      comparativeNegligence: caseData.comparativeNegligencePercent || 0,
+      policyLimit: caseData.insurancePolicyLimit || null
     });
 
-    // Pre-fill Demand Letter form
+    // Reset and patch demand form
+    // NOTE: lostWages and futureMedical are NOT pre-filled from case record
+    this.demandForm.reset();
     this.demandForm.patchValue({
       clientName: caseData.clientName || '',
       defendantName: caseData.defendantName || '',
@@ -1632,17 +2313,22 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       accidentLocation: caseData.accidentLocation || '',
       injuryType: caseData.injuryType || '',
       injuryDescription: caseData.injuryDescription || '',
+      liabilityDetails: this.buildLiabilityNarrative(caseData),
       medicalExpenses: caseData.medicalExpensesTotal || 0,
-      lostWages: caseData.lostWages || 0,
-      futureMedical: caseData.futureMedicalEstimate || 0,
+      lostWages: 0,  // Will be populated from damage elements if they exist
+      futureMedical: 0,  // Will be populated from damage elements if they exist
       policyLimit: caseData.insurancePolicyLimit || null,
       painSufferingMultiplier: caseData.painSufferingMultiplier || 2.5
     });
 
-    // Pre-fill Settlement form
+    // Reset and patch settlement form
+    this.settlementForm.reset();
     this.settlementForm.patchValue({
       demandAmount: caseData.settlementDemandAmount || 0,
-      offerAmount: caseData.settlementOfferAmount || 0
+      offerAmount: caseData.settlementOfferAmount || 0,
+      offerDate: '',
+      counterAmount: 0,
+      notes: ''
     });
 
     // Load medical providers from case data (if JSON string)
@@ -1837,18 +2523,20 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     if (!this.linkedCase?.id) return;
 
     this.isLoadingMedicalRecords = true;
-    this.medicalRecordService.getRecordsByCaseId(Number(this.linkedCase.id)).subscribe({
-      next: (records) => {
-        this.medicalRecords = records;
-        this.isLoadingMedicalRecords = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error loading medical records:', err);
-        this.isLoadingMedicalRecords = false;
-        this.cdr.detectChanges();
-      }
-    });
+    this.medicalRecordService.getRecordsByCaseId(Number(this.linkedCase.id))
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (records) => {
+          this.medicalRecords = records;
+          this.isLoadingMedicalRecords = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading medical records:', err);
+          this.isLoadingMedicalRecords = false;
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   scanCaseDocuments(): void {
@@ -2044,16 +2732,22 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   loadMedicalSummary(): void {
     if (!this.linkedCase?.id) return;
 
-    this.medicalSummaryService.getMedicalSummary(Number(this.linkedCase.id)).subscribe({
-      next: (result) => {
-        this.medicalSummary = result.summary;
-        this.summaryExists = result.exists;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error loading medical summary:', err);
-      }
-    });
+    this.isLoadingMedicalSummary = true;
+    this.medicalSummaryService.getMedicalSummary(Number(this.linkedCase.id))
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (result) => {
+          this.medicalSummary = result.summary;
+          this.summaryExists = result.exists;
+          this.isLoadingMedicalSummary = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading medical summary:', err);
+          this.isLoadingMedicalSummary = false;
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   generateMedicalSummary(): void {
@@ -2093,21 +2787,23 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     if (!this.linkedCase?.id) return;
 
     this.isLoadingChecklist = true;
-    this.documentChecklistService.getChecklistByCaseId(Number(this.linkedCase.id)).subscribe({
-      next: (checklist) => {
-        // Sort by ID to maintain stable order
-        this.documentChecklist = checklist.sort((a, b) => (a.id || 0) - (b.id || 0));
-        this.updateGroupedDocuments();
-        this.isLoadingChecklist = false;
-        this.loadDocumentCompleteness();
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error loading checklist:', err);
-        this.isLoadingChecklist = false;
-        this.cdr.detectChanges();
-      }
-    });
+    this.documentChecklistService.getChecklistByCaseId(Number(this.linkedCase.id))
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (checklist) => {
+          // Sort by ID to maintain stable order
+          this.documentChecklist = checklist.sort((a, b) => (a.id || 0) - (b.id || 0));
+          this.updateGroupedDocuments();
+          this.isLoadingChecklist = false;
+          this.loadDocumentCompleteness();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading checklist:', err);
+          this.isLoadingChecklist = false;
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   initializeDocumentChecklist(): void {
@@ -2139,15 +2835,17 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   loadDocumentCompleteness(): void {
     if (!this.linkedCase?.id) return;
 
-    this.documentChecklistService.getCompletenessScore(Number(this.linkedCase.id)).subscribe({
-      next: (completeness) => {
-        this.documentCompleteness = completeness;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error loading completeness:', err);
-      }
-    });
+    this.documentChecklistService.getCompletenessScore(Number(this.linkedCase.id))
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (completeness) => {
+          this.documentCompleteness = completeness;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading completeness:', err);
+        }
+      });
   }
 
   markDocumentReceived(item: PIDocumentChecklist): void {
@@ -2716,33 +3414,37 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     if (!this.linkedCase?.id) return;
 
     this.isLoadingDamages = true;
-    this.damageCalculationService.getDamageElements(Number(this.linkedCase.id)).subscribe({
-      next: (elements) => {
-        this.damageElements = elements;
-        this.isLoadingDamages = false;
-        this.loadDamageCalculation();
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error loading damage elements:', err);
-        this.isLoadingDamages = false;
-        this.cdr.detectChanges();
-      }
-    });
+    this.damageCalculationService.getDamageElements(Number(this.linkedCase.id))
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (elements) => {
+          this.damageElements = elements;
+          this.isLoadingDamages = false;
+          this.loadDamageCalculation();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading damage elements:', err);
+          this.isLoadingDamages = false;
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   loadDamageCalculation(): void {
     if (!this.linkedCase?.id) return;
 
-    this.damageCalculationService.getDamageCalculation(Number(this.linkedCase.id)).subscribe({
-      next: (calculation) => {
-        this.damageCalculation = calculation;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error loading damage calculation:', err);
-      }
-    });
+    this.damageCalculationService.getDamageCalculation(Number(this.linkedCase.id))
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (calculation) => {
+          this.damageCalculation = calculation;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading damage calculation:', err);
+        }
+      });
   }
 
   addDamageElement(): void {
@@ -2835,30 +3537,18 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       next: (calculation) => {
         this.damageCalculation = calculation;
         this.isCalculatingDamages = false;
-        this.cdr.detectChanges();
 
-        // Show AI analysis in modal if available
+        // Auto-expand comparable analysis if available
         if (calculation.comparableAnalysis?.success && calculation.comparableAnalysis.analysis) {
-          this.aiModalService.openCaseValueAnalysis(
-            calculation.comparableAnalysis.analysis,
-            {
-              'Total Damages': this.formatCurrency(calculation.adjustedDamagesTotal || 0),
-              'Economic': this.formatCurrency(calculation.economicDamagesTotal || 0),
-              'Non-Economic': this.formatCurrency(calculation.nonEconomicDamagesTotal || 0),
-              'Value Range': `${this.formatCurrency(calculation.lowValue || 0)} - ${this.formatCurrency(calculation.highValue || 0)}`
-            }
-          );
+          this.comparableAnalysisExpanded = true;
         }
+
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error calculating damages:', err);
         this.isCalculatingDamages = false;
         this.cdr.detectChanges();
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Failed to calculate damages'
-        });
       }
     });
   }
@@ -2907,6 +3597,187 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   getDamageTypeLabel(type: string): string {
     const found = this.damageElementTypes.find(t => t.value === type);
     return found?.label || type;
+  }
+
+  // ==========================================
+  // Grouped Damage Elements Methods (for consolidated Case Valuation tab)
+  // ==========================================
+
+  /**
+   * Toggle collapse state for a damage group
+   */
+  toggleDamageGroup(groupKey: string): void {
+    this.collapsedDamageGroups[groupKey] = !this.collapsedDamageGroups[groupKey];
+  }
+
+  /**
+   * Get damage elements filtered by category/type
+   */
+  getDamageElementsByCategory(category: string): PIDamageElement[] {
+    return this.damageElements.filter(e => e.elementType === category);
+  }
+
+  /**
+   * Get total for a damage category
+   */
+  getDamageCategoryTotal(category: string): number {
+    return this.getDamageElementsByCategory(category)
+      .reduce((sum, e) => sum + (e.calculatedAmount || e.baseAmount || 0), 0);
+  }
+
+  /**
+   * Get damage elements that don't fit main categories
+   */
+  getOtherDamageElements(): PIDamageElement[] {
+    const mainCategories = ['PAST_MEDICAL', 'LOST_WAGES', 'FUTURE_MEDICAL', 'PAIN_SUFFERING'];
+    return this.damageElements.filter(e => !mainCategories.includes(e.elementType));
+  }
+
+  /**
+   * Get total for "other" damage elements
+   */
+  getOtherDamagesTotal(): number {
+    return this.getOtherDamageElements()
+      .reduce((sum, e) => sum + (e.calculatedAmount || e.baseAmount || 0), 0);
+  }
+
+  /**
+   * Calculate economic damages from elements (for summary bar)
+   */
+  getEconomicDamagesFromElements(): number {
+    const economicTypes = ['PAST_MEDICAL', 'FUTURE_MEDICAL', 'LOST_WAGES', 'FUTURE_LOST_WAGES', 'PROPERTY_DAMAGE', 'OUT_OF_POCKET'];
+    return this.damageElements
+      .filter(e => economicTypes.includes(e.elementType))
+      .reduce((sum, e) => sum + (e.calculatedAmount || e.baseAmount || 0), 0);
+  }
+
+  /**
+   * Calculate non-economic damages from elements (for summary bar)
+   */
+  getNonEconomicDamagesFromElements(): number {
+    const nonEconomicTypes = ['PAIN_SUFFERING', 'EMOTIONAL_DISTRESS', 'LOSS_CONSORTIUM', 'LOSS_ENJOYMENT'];
+    return this.damageElements
+      .filter(e => nonEconomicTypes.includes(e.elementType))
+      .reduce((sum, e) => sum + (e.calculatedAmount || e.baseAmount || 0), 0);
+  }
+
+  // ==========================================
+  // Executive Panel Helper Methods
+  // ==========================================
+
+  /**
+   * Toggle for comparable analysis expandable section
+   */
+  comparableAnalysisExpanded: boolean = false;
+
+  /**
+   * Get CSS class for case strength ring based on score
+   */
+  getStrengthClass(strength: number): string {
+    if (strength >= 7) return 'strength-high';
+    if (strength >= 4) return 'strength-medium';
+    return 'strength-low';
+  }
+
+  /**
+   * Calculate the position of the policy limit marker on the value range bar
+   * Returns percentage (0-100) based on where policy limit falls within the value range
+   */
+  getPolicyLimitPosition(): number {
+    const policyLimit = this.caseValueForm.get('policyLimit')?.value || 0;
+    if (policyLimit <= 0) return 0;
+
+    const high = this.damageCalculation?.highValue || this.calculatedValue?.settlementRangeHigh || 0;
+    if (high <= 0) return 100;
+
+    const position = (policyLimit / high) * 100;
+    return Math.min(Math.max(position, 0), 100);
+  }
+
+  /**
+   * Calculate width percentages for the value range bar segments
+   */
+  getValueBarWidth(segment: 'low' | 'likely' | 'high'): number {
+    const low = this.damageCalculation?.lowValue || this.calculatedValue?.settlementRangeLow || 0;
+    const likely = this.damageCalculation?.midValue || this.calculatedValue?.realisticRecovery || 0;
+    const high = this.damageCalculation?.highValue || this.calculatedValue?.settlementRangeHigh || 0;
+
+    if (high <= 0) return segment === 'low' ? 33 : segment === 'likely' ? 34 : 33;
+
+    switch (segment) {
+      case 'low':
+        return (low / high) * 100;
+      case 'likely':
+        return ((likely - low) / high) * 100;
+      case 'high':
+        return ((high - likely) / high) * 100;
+      default:
+        return 33;
+    }
+  }
+
+  /**
+   * Get positive/strengthening factors from key factors
+   */
+  getPositiveFactors(): string[] {
+    if (!this.calculatedValue?.keyFactors) return [];
+    // Filter for positive indicators (usually first half of factors are positive)
+    // This is a heuristic - could be improved with backend tagging
+    const factors = this.calculatedValue.keyFactors;
+    return factors.filter(f =>
+      f.toLowerCase().includes('clear liability') ||
+      f.toLowerCase().includes('documented') ||
+      f.toLowerCase().includes('consistent') ||
+      f.toLowerCase().includes('supported') ||
+      f.toLowerCase().includes('strong') ||
+      f.toLowerCase().includes('significant') ||
+      f.toLowerCase().includes('favorable') ||
+      !f.toLowerCase().includes('gap') &&
+      !f.toLowerCase().includes('weak') &&
+      !f.toLowerCase().includes('disputed') &&
+      !f.toLowerCase().includes('concern')
+    ).slice(0, 3);
+  }
+
+  /**
+   * Get negative/weakening factors from key factors
+   */
+  getNegativeFactors(): string[] {
+    if (!this.calculatedValue?.keyFactors) return [];
+    const factors = this.calculatedValue.keyFactors;
+    return factors.filter(f =>
+      f.toLowerCase().includes('gap') ||
+      f.toLowerCase().includes('weak') ||
+      f.toLowerCase().includes('disputed') ||
+      f.toLowerCase().includes('concern') ||
+      f.toLowerCase().includes('limited') ||
+      f.toLowerCase().includes('pre-existing') ||
+      f.toLowerCase().includes('comparative')
+    ).slice(0, 3);
+  }
+
+  /**
+   * Flag to indicate we should run comprehensive analysis after calculation
+   */
+  private runAnalysisAfterCalculation: boolean = false;
+
+  /**
+   * Combined calculate and analyze - runs both calculation and AI analysis
+   */
+  calculateAndAnalyze(): void {
+    // Validate form first - if invalid, don't proceed
+    if (this.caseValueForm.invalid) {
+      this.markFormGroupTouched(this.caseValueForm);
+      return;
+    }
+
+    // Set flag to run comprehensive analysis after calculation completes
+    if (this.linkedCase) {
+      this.runAnalysisAfterCalculation = true;
+    }
+
+    // Run the case value calculation (will trigger comprehensive analysis via flag)
+    this.calculateCaseValue();
   }
 
   getStatusColor(status: string): string {
@@ -3098,75 +3969,6 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     modalRef.componentInstance.fieldName = '';
     modalRef.componentInstance.fieldValue = '';
     modalRef.componentInstance.citation = null;
-  }
-
-  // ==========================================
-  // Sample Data Loaders
-  // ==========================================
-
-  loadCaseValueSample(): void {
-    this.caseValueForm.patchValue({
-      injuryType: 'disc_injury',
-      injuryDescription: 'L4-L5 disc herniation with radiculopathy following rear-end motor vehicle collision. Client underwent 6 months of physical therapy and received epidural steroid injections. Ongoing pain affecting daily activities and work capacity.',
-      medicalExpenses: 45000,
-      lostWages: 18000,
-      futureMedical: 25000,
-      liabilityAssessment: 'CLEAR',
-      comparativeNegligence: 0
-    });
-  }
-
-  loadDemandSample(): void {
-    this.demandForm.patchValue({
-      clientName: 'John Smith',
-      defendantName: 'Jane Doe',
-      insuranceCompany: 'ABC Insurance Company',
-      adjusterName: 'Michael Johnson',
-      claimNumber: 'CLM-2024-123456',
-      accidentDate: '2024-06-15',
-      accidentLocation: 'Intersection of Main Street and Oak Avenue, Boston, MA',
-      injuryType: 'disc_injury',
-      injuryDescription: 'L4-L5 disc herniation with radiculopathy. Client experienced immediate neck and back pain following the collision. MRI confirmed disc herniation at L4-L5 level with nerve root impingement.',
-      liabilityDetails: 'Defendant failed to stop at red light and struck client vehicle from behind while client was lawfully stopped. Police report confirms defendant at fault. No contributing factors from client.',
-      medicalExpenses: 45000,
-      lostWages: 18000,
-      futureMedical: 25000,
-      policyLimit: 100000,
-      painSufferingMultiplier: 3.0
-    });
-
-    // Also load sample medical providers
-    this.medicalProviders = [
-      {
-        id: '1',
-        name: 'Boston Medical Center ER',
-        specialty: 'Emergency Medicine',
-        treatmentDates: '2024-06-15',
-        totalBills: 8500
-      },
-      {
-        id: '2',
-        name: 'Dr. Sarah Wilson',
-        specialty: 'Orthopedics',
-        treatmentDates: '2024-06-20 - 2024-12-15',
-        totalBills: 12000
-      },
-      {
-        id: '3',
-        name: 'Boston Physical Therapy',
-        specialty: 'Physical Therapy',
-        treatmentDates: '2024-07-01 - 2024-12-31',
-        totalBills: 18000
-      },
-      {
-        id: '4',
-        name: 'Advanced Imaging Center',
-        specialty: 'Radiology',
-        treatmentDates: '2024-06-18, 2024-09-15',
-        totalBills: 6500
-      }
-    ];
-    localStorage.setItem('pi_medical_providers', JSON.stringify(this.medicalProviders));
   }
 
   // ==========================================
