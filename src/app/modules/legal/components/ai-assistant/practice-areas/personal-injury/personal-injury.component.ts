@@ -2812,7 +2812,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.isLoadingChecklist = true;
     this.documentChecklistService.initializeDefaultChecklist(Number(this.linkedCase.id)).subscribe({
       next: (checklist) => {
-        this.documentChecklist = checklist;
+        this.documentChecklist = checklist.sort((a, b) => (a.id || 0) - (b.id || 0));
+        this.updateGroupedDocuments();
         this.isLoadingChecklist = false;
         this.loadDocumentCompleteness();
         this.cdr.detectChanges();
