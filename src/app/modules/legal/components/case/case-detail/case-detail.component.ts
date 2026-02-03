@@ -81,10 +81,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   caseStatuses = Object.values(CaseStatus);
   casePriorities = Object.values(CasePriority);
   paymentStatuses = Object.values(PaymentStatus);
-  
-  // Case types
-  caseTypes = ['CIVIL', 'CRIMINAL', 'FAMILY', 'BUSINESS', 'REAL_ESTATE', 'IMMIGRATION', 'INTELLECTUAL_PROPERTY', 'OTHER'];
-  
+
   private flatpickrInstances: any[] = [];
 
   // Add role checking properties

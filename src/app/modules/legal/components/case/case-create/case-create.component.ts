@@ -43,9 +43,6 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   CasePriority = CasePriority;
   PaymentStatus = PaymentStatus;
 
-  // Case types array for dropdown
-  caseTypes = ['CIVIL', 'CRIMINAL', 'FAMILY', 'BUSINESS', 'REAL_ESTATE', 'IMMIGRATION', 'INTELLECTUAL_PROPERTY', 'OTHER'];
-
   // Practice areas array for dropdown (only areas with specific fields)
   practiceAreas = [
     'Personal Injury',
@@ -68,6 +65,22 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Flatpickr instances for practice area date fields
   private practiceAreaDatePickers: any[] = [];
+
+  // Mapping from practice area to legacy case type for backend compatibility
+  private practiceAreaToTypeMap: { [key: string]: string } = {
+    'Personal Injury': 'CIVIL',
+    'Criminal Defense': 'CRIMINAL',
+    'Family Law': 'FAMILY',
+    'Immigration Law': 'IMMIGRATION',
+    'Real Estate Law': 'REAL_ESTATE',
+    'Intellectual Property': 'INTELLECTUAL_PROPERTY',
+    'Business Law': 'BUSINESS',
+    'Estate Planning': 'CIVIL',
+    'Employment Law': 'CIVIL',
+    'Bankruptcy': 'CIVIL',
+    'Civil Litigation': 'CIVIL',
+    'Other': 'OTHER'
+  };
 
   // Billing types array for dropdown
   billingTypes = [
@@ -92,7 +105,6 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       title: ['', [Validators.required]],
       status: [CaseStatus.OPEN, [Validators.required]],
       priority: [CasePriority.MEDIUM, [Validators.required]],
-      type: ['CIVIL', [Validators.required]],
       practiceArea: ['', [Validators.required]],
       description: ['', [Validators.required]],
 
@@ -293,7 +305,7 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       clientAddress: this.caseForm.value.clientAddress || '',
       status: this.caseForm.value.status,
       priority: this.caseForm.value.priority,
-      type: this.caseForm.value.type,
+      type: this.practiceAreaToTypeMap[this.caseForm.value.practiceArea] || 'OTHER',
       practiceArea: this.caseForm.value.practiceArea,
       description: this.caseForm.value.description,
 

@@ -129,20 +129,6 @@
                         </div>
                         <div class="col-md-6">
                           <div class="mb-3">
-                            <label for="type" class="form-label">Case Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="type" formControlName="type"
-                              [ngClass]="{'is-invalid': hasError('type')}">
-                              <option *ngFor="let type of caseTypes" [value]="type">
-                                {{type.replace('_', ' ')}}
-                              </option>
-                            </select>
-                            <div class="invalid-feedback" *ngIf="hasError('type')">
-                              {{ getErrorMessage('type') }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6">
-                          <div class="mb-3">
                             <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
                             <select class="form-select" id="status" formControlName="status"
                               [ngClass]="{'is-invalid': hasError('status')}">
