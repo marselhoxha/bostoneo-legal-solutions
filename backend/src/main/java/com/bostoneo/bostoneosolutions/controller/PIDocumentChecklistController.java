@@ -164,6 +164,27 @@ public class PIDocumentChecklistController {
     }
 
     /**
+     * Reset checklist - delete all items and reinitialize with defaults
+     */
+    @PostMapping("/reset")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> resetChecklist(@PathVariable("caseId") Long caseId) {
+
+        log.info("Resetting checklist for case: {}", caseId);
+
+        List<PIDocumentChecklistDTO> checklist = checklistService.resetChecklist(caseId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("checklist", checklist))
+                        .message("Checklist reset successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
      * Get missing documents for a case
      */
     @GetMapping("/missing")

@@ -70,6 +70,15 @@ export class PIDocumentChecklistService {
   }
 
   /**
+   * Reset checklist - delete all items and reinitialize with defaults
+   */
+  resetChecklist(caseId: number): Observable<PIDocumentChecklist[]> {
+    return this.http.post<any>(`${this.baseUrl}/${caseId}/document-checklist/reset`, {}).pipe(
+      map(response => response.data?.checklist || [])
+    );
+  }
+
+  /**
    * Get missing documents
    */
   getMissingDocuments(caseId: number): Observable<PIDocumentChecklist[]> {

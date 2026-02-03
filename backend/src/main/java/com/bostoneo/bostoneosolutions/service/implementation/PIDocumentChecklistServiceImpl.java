@@ -197,6 +197,40 @@ public class PIDocumentChecklistServiceImpl implements PIDocumentChecklistServic
     }
 
     @Override
+    public List<PIDocumentChecklistDTO> resetChecklist(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        log.info("Resetting checklist for case: {} in org: {}", caseId, orgId);
+
+        // Delete all existing checklist items for this case
+        List<PIDocumentChecklist> existing = repository.findByCaseIdAndOrganizationIdOrderByDocumentType(caseId, orgId);
+        if (!existing.isEmpty()) {
+            repository.deleteAll(existing);
+            log.info("Deleted {} existing checklist items", existing.size());
+        }
+
+        // Create new default checklist items
+        List<PIDocumentChecklist> items = new ArrayList<>();
+        for (Map<String, Object> docType : DEFAULT_DOCUMENT_TYPES) {
+            PIDocumentChecklist item = PIDocumentChecklist.builder()
+                    .caseId(caseId)
+                    .organizationId(orgId)
+                    .documentType((String) docType.get("type"))
+                    .documentSubtype((String) docType.get("subtype"))
+                    .required((Boolean) docType.get("required"))
+                    .received(false)
+                    .status("MISSING")
+                    .followUpCount(0)
+                    .build();
+            items.add(item);
+        }
+
+        List<PIDocumentChecklist> saved = repository.saveAll(items);
+        log.info("Created {} new checklist items after reset", saved.size());
+
+        return saved.stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
+    @Override
     public Map<String, Object> getCompletenessScore(Long caseId) {
         Long orgId = getRequiredOrganizationId();
 

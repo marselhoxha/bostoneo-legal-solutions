@@ -63,6 +63,11 @@ public interface PIDocumentChecklistService {
     List<PIDocumentChecklistDTO> initializeDefaultChecklist(Long caseId);
 
     /**
+     * Reset checklist - delete all existing items and reinitialize with defaults
+     */
+    List<PIDocumentChecklistDTO> resetChecklist(Long caseId);
+
+    /**
      * Get completeness score for a case
      */
     Map<String, Object> getCompletenessScore(Long caseId);

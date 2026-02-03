@@ -2833,6 +2833,51 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     });
   }
 
+  resetDocumentChecklist(): void {
+    if (!this.linkedCase?.id) return;
+
+    Swal.fire({
+      title: 'Reset Checklist?',
+      text: 'This will delete all checklist items and their status, then create a fresh default checklist. This cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f06548',
+      cancelButtonColor: '#878a99',
+      confirmButtonText: 'Yes, Reset',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.isLoadingChecklist = true;
+        this.documentChecklistService.resetChecklist(Number(this.linkedCase.id)).subscribe({
+          next: (checklist) => {
+            this.documentChecklist = checklist.sort((a, b) => (a.id || 0) - (b.id || 0));
+            this.updateGroupedDocuments();
+            this.isLoadingChecklist = false;
+            this.loadDocumentCompleteness();
+            this.cdr.detectChanges();
+            Swal.fire({
+              icon: 'success',
+              title: 'Checklist Reset',
+              text: `${checklist.length} document items created`,
+              timer: 2500,
+              showConfirmButton: false
+            });
+          },
+          error: (err) => {
+            console.error('Error resetting checklist:', err);
+            this.isLoadingChecklist = false;
+            this.cdr.detectChanges();
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Failed to reset checklist'
+            });
+          }
+        });
+      }
+    });
+  }
+
   loadDocumentCompleteness(): void {
     if (!this.linkedCase?.id) return;
 
