@@ -288,7 +288,7 @@ export interface UpdateOrganization {
   maxStorageBytes?: number;
 }
 
-// Announcement
+// Announcement (for creating/sending)
 export interface Announcement {
   title: string;
   message: string;
@@ -298,4 +298,82 @@ export interface Announcement {
   targetUserIds?: number[];
   sendImmediately?: boolean;
   scheduledAt?: string;
+}
+
+// Announcement Summary (for listing)
+export interface AnnouncementSummary {
+  id: number;
+  title: string;
+  message: string;
+  type: 'INFO' | 'WARNING' | 'MAINTENANCE' | 'UPDATE';
+  sendToAll: boolean;
+  targetOrganizationIds?: number[];
+  targetUserIds?: number[];
+  recipientsCount: number;
+  scheduledAt?: string;
+  sentAt?: string;
+  createdBy?: number;
+  createdByName?: string;
+  createdAt: string;
+}
+
+// Integration Status (for Phase 1.2)
+export interface IntegrationStatus {
+  organizationId: number;
+  organizationName: string;
+  twilioEnabled: boolean;
+  twilioPhoneNumber?: string;
+  twilioLastActivity?: string;
+  boldSignEnabled: boolean;
+  boldSignApiConfigured: boolean;
+  smsEnabled: boolean;
+  whatsappEnabled: boolean;
+  emailEnabled: boolean;
+  hasIssues: boolean;
+  issueDescription?: string;
+}
+
+// Security Overview (for Phase 1.3)
+export interface SecurityOverview {
+  failedLoginsLast24h: number;
+  failedLoginsLast7d: number;
+  failedLoginsLast30d: number;
+  accountLockouts: number;
+  suspiciousActivityCount: number;
+  recentSecurityEvents: SecurityEvent[];
+}
+
+export interface SecurityEvent {
+  id: number;
+  eventType: 'FAILED_LOGIN' | 'ACCOUNT_LOCKOUT' | 'SUSPICIOUS_ACTIVITY' | 'PASSWORD_RESET';
+  userEmail?: string;
+  organizationName?: string;
+  ipAddress?: string;
+  description: string;
+  timestamp: string;
+}
+
+export interface FailedLogin {
+  id: number;
+  userEmail: string;
+  organizationName?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  failureReason?: string;
+  attemptCount: number;
+  timestamp: string;
+}
+
+// Organization Features (for Phase 1.4)
+export interface OrganizationFeatures {
+  organizationId: number;
+  smsEnabled: boolean;
+  whatsappEnabled: boolean;
+  emailEnabled: boolean;
+  twilioEnabled: boolean;
+  boldSignEnabled: boolean;
+  maxUsers: number;
+  maxCases: number;
+  maxStorageBytes: number;
+  planType: string;
 }

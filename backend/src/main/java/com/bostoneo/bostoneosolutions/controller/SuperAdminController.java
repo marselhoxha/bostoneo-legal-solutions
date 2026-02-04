@@ -531,4 +531,180 @@ public class SuperAdminController {
                 .build()
         );
     }
+
+    /**
+     * Get all announcements (paginated)
+     */
+    @GetMapping("/announcements")
+    @AuditLog(action = "VIEW", entityType = "ANNOUNCEMENT", description = "Viewed announcements")
+    public ResponseEntity<HttpResponse> getAnnouncements(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        log.info("SUPERADMIN: Fetching announcements - page={}, size={}", page, size);
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<AnnouncementSummaryDTO> announcements = superAdminService.getAnnouncements(pageable);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of(
+                    "announcements", announcements.getContent(),
+                    "page", Map.of(
+                        "number", announcements.getNumber(),
+                        "size", announcements.getSize(),
+                        "totalElements", announcements.getTotalElements(),
+                        "totalPages", announcements.getTotalPages()
+                    )
+                ))
+                .message("Announcements retrieved successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
+     * Delete an announcement
+     */
+    @DeleteMapping("/announcements/{id}")
+    @AuditLog(action = "DELETE", entityType = "ANNOUNCEMENT", description = "Deleted announcement")
+    public ResponseEntity<HttpResponse> deleteAnnouncement(@PathVariable Long id) {
+        log.info("SUPERADMIN: Deleting announcement ID: {}", id);
+
+        superAdminService.deleteAnnouncement(id);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .message("Announcement deleted successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // ==================== INTEGRATIONS ====================
+
+    /**
+     * Get integration status for all organizations
+     */
+    @GetMapping("/integrations/status")
+    @AuditLog(action = "VIEW", entityType = "INTEGRATION", description = "Viewed integration status")
+    public ResponseEntity<HttpResponse> getIntegrationStatus() {
+        log.info("SUPERADMIN: Fetching integration status");
+
+        var integrations = superAdminService.getIntegrationStatus();
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("integrations", integrations))
+                .message("Integration status retrieved successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // ==================== SECURITY ====================
+
+    /**
+     * Get security overview
+     */
+    @GetMapping("/security/overview")
+    @AuditLog(action = "VIEW", entityType = "SECURITY", description = "Viewed security overview")
+    public ResponseEntity<HttpResponse> getSecurityOverview() {
+        log.info("SUPERADMIN: Fetching security overview");
+
+        var security = superAdminService.getSecurityOverview();
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("security", security))
+                .message("Security overview retrieved successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
+     * Get failed logins (paginated)
+     */
+    @GetMapping("/security/failed-logins")
+    @AuditLog(action = "VIEW", entityType = "SECURITY", description = "Viewed failed logins")
+    public ResponseEntity<HttpResponse> getFailedLogins(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        log.info("SUPERADMIN: Fetching failed logins - page={}, size={}", page, size);
+
+        Pageable pageable = PageRequest.of(page, size);
+        var logins = superAdminService.getFailedLogins(pageable);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of(
+                    "logins", logins.getContent(),
+                    "page", Map.of(
+                        "number", logins.getNumber(),
+                        "size", logins.getSize(),
+                        "totalElements", logins.getTotalElements(),
+                        "totalPages", logins.getTotalPages()
+                    )
+                ))
+                .message("Failed logins retrieved successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // ==================== ORGANIZATION FEATURES ====================
+
+    /**
+     * Get organization features
+     */
+    @GetMapping("/organizations/{id}/features")
+    @AuditLog(action = "VIEW", entityType = "ORGANIZATION", description = "Viewed organization features")
+    public ResponseEntity<HttpResponse> getOrganizationFeatures(@PathVariable Long id) {
+        log.info("SUPERADMIN: Fetching features for organization ID: {}", id);
+
+        var features = superAdminService.getOrganizationFeatures(id);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("features", features))
+                .message("Organization features retrieved successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
+     * Update organization features
+     */
+    @PutMapping("/organizations/{id}/features")
+    @AuditLog(action = "UPDATE", entityType = "ORGANIZATION", description = "Updated organization features")
+    public ResponseEntity<HttpResponse> updateOrganizationFeatures(
+            @PathVariable Long id,
+            @RequestBody OrganizationFeaturesDTO features) {
+        log.info("SUPERADMIN: Updating features for organization ID: {}", id);
+
+        var updatedFeatures = superAdminService.updateOrganizationFeatures(id, features);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("features", updatedFeatures))
+                .message("Organization features updated successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
 }

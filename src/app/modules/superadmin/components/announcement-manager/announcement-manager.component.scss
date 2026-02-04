@@ -1,0 +1,54 @@
+// Announcement Manager Component Styles
+
+.card-animate {
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.form-check-input:checked {
+  background-color: #405189;
+  border-color: #405189;
+}
+
+.btn-soft-danger {
+  background-color: rgba(240, 101, 72, 0.1);
+  color: #f06548;
+  border: none;
+
+  &:hover {
+    background-color: #f06548;
+    color: #fff;
+  }
+}
+
+.page-link {
+  cursor: pointer;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Table styling
+.table {
+  th {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+// Organization selection list
+.border.rounded {
+  background-color: #f8f9fa;
+
+  .form-check {
+    margin-bottom: 0.25rem;
+  }
+}

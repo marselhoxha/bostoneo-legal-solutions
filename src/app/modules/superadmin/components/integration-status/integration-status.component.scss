@@ -1,0 +1,42 @@
+// Integration Status Component Styles
+
+.card-animate {
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.search-box {
+  position: relative;
+
+  .search-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #878a99;
+  }
+
+  input {
+    padding-right: 35px;
+  }
+}
+
+.table {
+  th {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.table-warning {
+  background-color: rgba(247, 184, 75, 0.1) !important;
+}
+
+.fs-5 {
+  font-size: 1.25rem !important;
+}

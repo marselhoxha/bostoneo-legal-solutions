@@ -311,6 +311,18 @@ public class PIDamageCalculationController {
 
         PIDamageElementDTO element = damageService.syncMedicalExpenses(caseId);
 
+        // If element is null, it means there were no medical records to sync ($0)
+        if (element == null) {
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(of("totalSynced", 0))
+                            .message("No medical expenses to sync - no medical records found")
+                            .status(OK)
+                            .statusCode(OK.value())
+                            .build());
+        }
+
         return ResponseEntity.ok(
                 HttpResponse.builder()
                         .timeStamp(now().toString())

@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SuperAdminService } from '../../services/superadmin.service';
-import { OrganizationDetail, UserSummary } from '../../models/superadmin.models';
+import { OrganizationDetail, UserSummary, OrganizationFeatures } from '../../models/superadmin.models';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -18,9 +18,12 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
   organizationId!: number;
   organization: OrganizationDetail | null = null;
   users: UserSummary[] = [];
+  features: OrganizationFeatures | null = null;
 
   isLoading = true;
   isLoadingUsers = false;
+  isLoadingFeatures = false;
+  isSavingFeatures = false;
   error: string | null = null;
 
   // Users pagination
@@ -30,6 +33,9 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
   usersTotalPages = 0;
 
   activeTab = 'overview';
+
+  // Plan types for dropdown
+  planTypes = ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'];
 
   constructor(
     private route: ActivatedRoute,
@@ -99,6 +105,66 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
     if (tab === 'users' && this.users.length === 0) {
       this.loadUsers();
     }
+    if (tab === 'features' && !this.features) {
+      this.loadFeatures();
+    }
+  }
+
+  loadFeatures(): void {
+    this.isLoadingFeatures = true;
+    this.cdr.markForCheck();
+
+    this.superAdminService.getOrganizationFeatures(this.organizationId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (features) => {
+          this.features = features;
+          this.isLoadingFeatures = false;
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          console.error('Load features error:', err);
+          this.isLoadingFeatures = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  async saveFeatures(): Promise<void> {
+    if (!this.features) return;
+
+    this.isSavingFeatures = true;
+    this.cdr.markForCheck();
+
+    this.superAdminService.updateOrganizationFeatures(this.organizationId, this.features)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updatedFeatures) => {
+          this.features = updatedFeatures;
+          this.isSavingFeatures = false;
+          this.cdr.markForCheck();
+          Swal.fire({
+            icon: 'success',
+            title: 'Saved!',
+            text: 'Features updated successfully.',
+            timer: 2000,
+            showConfirmButton: false
+          });
+          // Reload organization to get updated data
+          this.loadOrganization();
+        },
+        error: (err) => {
+          console.error('Save features error:', err);
+          this.isSavingFeatures = false;
+          this.cdr.markForCheck();
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to update features. Please try again.',
+            confirmButtonColor: '#405189'
+          });
+        }
+      });
   }
 
   goToUsersPage(page: number): void {

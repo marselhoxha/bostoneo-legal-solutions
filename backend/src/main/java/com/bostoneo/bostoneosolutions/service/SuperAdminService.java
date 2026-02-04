@@ -119,4 +119,45 @@ public interface SuperAdminService {
      * Send platform announcement
      */
     void sendAnnouncement(AnnouncementDTO announcement);
+
+    /**
+     * Get all announcements (paginated)
+     */
+    Page<AnnouncementSummaryDTO> getAnnouncements(Pageable pageable);
+
+    /**
+     * Delete an announcement
+     */
+    void deleteAnnouncement(Long announcementId);
+
+    // ==================== INTEGRATIONS ====================
+
+    /**
+     * Get integration status for all organizations
+     */
+    java.util.List<IntegrationStatusDTO> getIntegrationStatus();
+
+    // ==================== SECURITY ====================
+
+    /**
+     * Get security overview
+     */
+    SecurityOverviewDTO getSecurityOverview();
+
+    /**
+     * Get failed logins (paginated)
+     */
+    Page<FailedLoginDTO> getFailedLogins(Pageable pageable);
+
+    // ==================== ORGANIZATION FEATURES ====================
+
+    /**
+     * Get organization features
+     */
+    OrganizationFeaturesDTO getOrganizationFeatures(Long organizationId);
+
+    /**
+     * Update organization features
+     */
+    OrganizationFeaturesDTO updateOrganizationFeatures(Long organizationId, OrganizationFeaturesDTO features);
 }

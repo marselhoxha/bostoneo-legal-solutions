@@ -342,9 +342,20 @@ public class PIDamageCalculationServiceImpl implements PIDamageCalculationServic
         BigDecimal totalBilled = medicalRecordRepository.sumBilledAmountByCaseId(caseId, orgId);
         if (totalBilled == null) totalBilled = BigDecimal.ZERO;
 
-        // Find or create past medical element
+        // Find existing past medical element
         List<PIDamageElement> existingMedical = elementRepository
                 .findByCaseIdAndOrganizationIdAndElementType(caseId, orgId, "PAST_MEDICAL");
+
+        // If totalBilled is $0, don't create a damage element (and delete existing one if it exists)
+        if (totalBilled.compareTo(BigDecimal.ZERO) == 0) {
+            if (!existingMedical.isEmpty()) {
+                // Delete the existing $0 element
+                elementRepository.delete(existingMedical.get(0));
+                log.info("Deleted PAST_MEDICAL element with $0 value for case: {}", caseId);
+            }
+            // Return null to indicate no element was created/exists
+            return null;
+        }
 
         PIDamageElement medicalElement;
         if (!existingMedical.isEmpty()) {

@@ -1,0 +1,262 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Announcements</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/superadmin/dashboard">SUPERADMIN</a></li>
+            <li class="breadcrumb-item active">Announcements</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="row mb-3">
+    <div class="col-md-3">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-medium text-muted mb-0">Total Sent</p>
+              <h4 class="fs-22 fw-semibold mb-0">{{ totalElements }}</h4>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-primary-subtle text-primary rounded fs-3">
+                <i class="ri-megaphone-line"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-9">
+      <div class="card">
+        <div class="card-body py-3">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <h6 class="mb-1">Send New Announcement</h6>
+              <p class="text-muted mb-0 small">Notify users about updates, maintenance, or important information</p>
+            </div>
+            <button class="btn btn-primary" (click)="toggleCreateForm()">
+              <i class="ri-add-line me-1"></i>
+              {{ showCreateForm ? 'Cancel' : 'Create Announcement' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Announcement Form -->
+  <div class="row mb-3" *ngIf="showCreateForm">
+    <div class="col-12">
+      <div class="card border-primary">
+        <div class="card-header bg-primary-subtle">
+          <h5 class="card-title mb-0 text-primary">
+            <i class="ri-edit-line me-2"></i>New Announcement
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <!-- Title -->
+            <div class="col-md-8">
+              <label class="form-label">Title <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" [(ngModel)]="newAnnouncement.title"
+                     placeholder="Announcement title" maxlength="255">
+            </div>
+
+            <!-- Type -->
+            <div class="col-md-4">
+              <label class="form-label">Type</label>
+              <select class="form-select" [(ngModel)]="newAnnouncement.type">
+                <option *ngFor="let type of announcementTypes" [value]="type.value">
+                  {{ type.label }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Message -->
+            <div class="col-12">
+              <label class="form-label">Message <span class="text-danger">*</span></label>
+              <textarea class="form-control" [(ngModel)]="newAnnouncement.message"
+                        rows="4" placeholder="Announcement message..."></textarea>
+            </div>
+
+            <!-- Target -->
+            <div class="col-12">
+              <label class="form-label">Target Audience</label>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="target" id="targetAll"
+                       [checked]="newAnnouncement.sendToAll"
+                       (change)="newAnnouncement.sendToAll = true">
+                <label class="form-check-label" for="targetAll">All Users</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="target" id="targetOrgs"
+                       [checked]="!newAnnouncement.sendToAll"
+                       (change)="newAnnouncement.sendToAll = false">
+                <label class="form-check-label" for="targetOrgs">Specific Organizations</label>
+              </div>
+            </div>
+
+            <!-- Organization Selection -->
+            <div class="col-12" *ngIf="!newAnnouncement.sendToAll">
+              <label class="form-label">Select Organizations</label>
+              <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                <div class="row">
+                  <div class="col-md-4" *ngFor="let org of organizations">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox"
+                             [id]="'org-' + org.id"
+                             [checked]="isOrgSelected(org.id)"
+                             (change)="onTargetOrgChange(org.id, $event)">
+                      <label class="form-check-label" [for]="'org-' + org.id">
+                        {{ org.name }}
+                        <small class="text-muted">({{ org.userCount }} users)</small>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div *ngIf="organizations.length === 0" class="text-muted text-center py-3">
+                  No organizations available
+                </div>
+              </div>
+              <small class="text-muted" *ngIf="newAnnouncement.targetOrganizationIds?.length">
+                {{ newAnnouncement.targetOrganizationIds.length }} organization(s) selected
+              </small>
+            </div>
+
+            <!-- Actions -->
+            <div class="col-12">
+              <hr class="my-2">
+              <div class="d-flex justify-content-end gap-2">
+                <button class="btn btn-light" (click)="toggleCreateForm()">Cancel</button>
+                <button class="btn btn-primary" (click)="sendAnnouncement()"
+                        [disabled]="isSending || !newAnnouncement.title || !newAnnouncement.message">
+                  <span *ngIf="isSending" class="spinner-border spinner-border-sm me-1"></span>
+                  <i *ngIf="!isSending" class="ri-send-plane-line me-1"></i>
+                  {{ isSending ? 'Sending...' : 'Send Announcement' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Announcements List -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="ri-history-line me-2"></i>
+            Announcement History
+          </h5>
+        </div>
+        <div class="card-body">
+          <!-- Loading -->
+          <div *ngIf="isLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Loading announcements...</p>
+          </div>
+
+          <!-- Error -->
+          <div *ngIf="error && !isLoading" class="alert alert-danger">
+            {{ error }}
+            <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadAnnouncements()">Retry</button>
+          </div>
+
+          <!-- Table -->
+          <div *ngIf="!isLoading && !error" class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Type</th>
+                  <th>Title</th>
+                  <th>Target</th>
+                  <th>Recipients</th>
+                  <th>Sent At</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let announcement of announcements">
+                  <td>
+                    <span class="badge" [ngClass]="getTypeBadge(announcement.type).class">
+                      <i [class]="getTypeBadge(announcement.type).icon + ' me-1'"></i>
+                      {{ announcement.type }}
+                    </span>
+                  </td>
+                  <td>
+                    <strong>{{ announcement.title }}</strong>
+                    <p class="text-muted mb-0 small text-truncate" style="max-width: 300px;">
+                      {{ announcement.message }}
+                    </p>
+                  </td>
+                  <td>
+                    <span *ngIf="announcement.sendToAll" class="badge bg-success-subtle text-success">
+                      All Users
+                    </span>
+                    <span *ngIf="!announcement.sendToAll && announcement.targetOrganizationIds?.length"
+                          class="badge bg-info-subtle text-info">
+                      {{ announcement.targetOrganizationIds.length }} Org(s)
+                    </span>
+                  </td>
+                  <td>
+                    <span class="fw-semibold">{{ announcement.recipientsCount }}</span>
+                    <small class="text-muted"> users</small>
+                  </td>
+                  <td>
+                    <small>{{ formatDate(announcement.sentAt || announcement.createdAt) }}</small>
+                    <small *ngIf="announcement.createdByName" class="text-muted d-block">
+                      by {{ announcement.createdByName }}
+                    </small>
+                  </td>
+                  <td class="text-end">
+                    <button class="btn btn-sm btn-soft-danger"
+                            (click)="deleteAnnouncement(announcement)"
+                            title="Delete">
+                      <i class="ri-delete-bin-line"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="announcements.length === 0">
+                  <td colspan="6" class="text-center py-4 text-muted">
+                    <i class="ri-megaphone-line fs-1 d-block mb-2"></i>
+                    No announcements sent yet
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div *ngIf="!isLoading && totalPages > 1" class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted small">
+              Page {{ currentPage + 1 }} of {{ totalPages }} ({{ totalElements }} total)
+            </div>
+            <nav>
+              <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" [class.disabled]="currentPage === 0">
+                  <a class="page-link" (click)="goToPage(currentPage - 1)">Prev</a>
+                </li>
+                <li *ngFor="let page of pageNumbers" class="page-item" [class.active]="page === currentPage">
+                  <a class="page-link" (click)="goToPage(page)">{{ page + 1 }}</a>
+                </li>
+                <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
+                  <a class="page-link" (click)="goToPage(currentPage + 1)">Next</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

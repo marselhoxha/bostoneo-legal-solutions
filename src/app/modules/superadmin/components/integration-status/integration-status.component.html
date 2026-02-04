@@ -1,0 +1,234 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">Integration Status</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/superadmin/dashboard">SUPERADMIN</a></li>
+            <li class="breadcrumb-item active">Integrations</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="row mb-3">
+    <div class="col-md-3">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-medium text-muted mb-0">Total Organizations</p>
+              <h4 class="fs-22 fw-semibold mb-0">{{ totalOrgs }}</h4>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-primary-subtle text-primary rounded fs-3">
+                <i class="ri-building-2-line"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-medium text-muted mb-0">Twilio Enabled</p>
+              <h4 class="fs-22 fw-semibold mb-0">{{ orgsWithTwilio }}</h4>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-info-subtle text-info rounded fs-3">
+                <i class="ri-phone-line"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card card-animate">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-medium text-muted mb-0">BoldSign Enabled</p>
+              <h4 class="fs-22 fw-semibold mb-0">{{ orgsWithBoldSign }}</h4>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title bg-success-subtle text-success rounded fs-3">
+                <i class="ri-quill-pen-line"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card card-animate" [class.border-danger]="orgsWithIssues > 0">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <p class="text-uppercase fw-medium text-muted mb-0">With Issues</p>
+              <h4 class="fs-22 fw-semibold mb-0" [class.text-danger]="orgsWithIssues > 0">
+                {{ orgsWithIssues }}
+              </h4>
+            </div>
+            <div class="avatar-sm flex-shrink-0">
+              <span class="avatar-title rounded fs-3"
+                    [ngClass]="orgsWithIssues > 0 ? 'bg-danger-subtle text-danger' : 'bg-secondary-subtle text-secondary'">
+                <i class="ri-alert-line"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body py-3">
+          <div class="row align-items-center">
+            <div class="col-md-4">
+              <div class="search-box">
+                <input type="text" class="form-control" placeholder="Search organizations..."
+                       [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()">
+                <i class="ri-search-line search-icon"></i>
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="d-flex gap-2 justify-content-end flex-wrap">
+                <button class="btn btn-sm"
+                        [ngClass]="filterIssuesOnly ? 'btn-danger' : 'btn-outline-danger'"
+                        (click)="toggleIssuesFilter()">
+                  <i class="ri-alert-line me-1"></i>
+                  With Issues ({{ orgsWithIssues }})
+                </button>
+                <button class="btn btn-sm"
+                        [ngClass]="filterNoIntegrations ? 'btn-secondary' : 'btn-outline-secondary'"
+                        (click)="toggleNoIntegrationsFilter()">
+                  <i class="ri-plug-line me-1"></i>
+                  No Integrations
+                </button>
+                <button class="btn btn-sm btn-light" (click)="clearFilters()"
+                        *ngIf="filterIssuesOnly || filterNoIntegrations || searchTerm">
+                  <i class="ri-refresh-line me-1"></i>Clear
+                </button>
+                <button class="btn btn-sm btn-outline-primary" (click)="loadIntegrationStatus()">
+                  <i class="ri-refresh-line me-1"></i>Refresh
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Integration Table -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="ri-plug-line me-2"></i>
+            Organization Integrations ({{ filteredIntegrations.length }})
+          </h5>
+        </div>
+        <div class="card-body">
+          <!-- Loading -->
+          <div *ngIf="isLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Loading integration status...</p>
+          </div>
+
+          <!-- Error -->
+          <div *ngIf="error && !isLoading" class="alert alert-danger">
+            {{ error }}
+            <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadIntegrationStatus()">Retry</button>
+          </div>
+
+          <!-- Table -->
+          <div *ngIf="!isLoading && !error" class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Organization</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-center">Twilio</th>
+                  <th class="text-center">BoldSign</th>
+                  <th class="text-center">SMS</th>
+                  <th class="text-center">WhatsApp</th>
+                  <th class="text-center">Email</th>
+                  <th>Issues</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let integration of filteredIntegrations"
+                    [class.table-warning]="integration.hasIssues">
+                  <td>
+                    <a [routerLink]="['/superadmin/organizations', integration.organizationId]"
+                       class="fw-semibold text-reset">
+                      {{ integration.organizationName }}
+                    </a>
+                    <small class="text-muted d-block">{{ integration.organizationSlug }}</small>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge" [ngClass]="getStatusClass(integration.status)">
+                      {{ integration.status || 'Unknown' }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <i [class]="getIntegrationIcon(integration.twilioEnabled)" class="fs-5"></i>
+                    <small *ngIf="integration.twilioEnabled && integration.twilioPhoneNumber"
+                           class="d-block text-muted">
+                      {{ integration.twilioPhoneNumber }}
+                    </small>
+                  </td>
+                  <td class="text-center">
+                    <i [class]="getIntegrationIcon(integration.boldSignEnabled)" class="fs-5"></i>
+                    <small *ngIf="integration.boldSignEnabled" class="d-block"
+                           [class.text-success]="integration.boldSignApiConfigured"
+                           [class.text-danger]="!integration.boldSignApiConfigured">
+                      {{ integration.boldSignApiConfigured ? 'API Configured' : 'No API Key' }}
+                    </small>
+                  </td>
+                  <td class="text-center">
+                    <i [class]="getIntegrationIcon(integration.smsEnabled)" class="fs-5"></i>
+                  </td>
+                  <td class="text-center">
+                    <i [class]="getIntegrationIcon(integration.whatsappEnabled)" class="fs-5"></i>
+                  </td>
+                  <td class="text-center">
+                    <i [class]="getIntegrationIcon(integration.emailEnabled)" class="fs-5"></i>
+                  </td>
+                  <td>
+                    <span *ngIf="integration.hasIssues" class="text-danger small">
+                      <i class="ri-alert-fill me-1"></i>
+                      {{ integration.issueDescription }}
+                    </span>
+                    <span *ngIf="!integration.hasIssues" class="text-success small">
+                      <i class="ri-checkbox-circle-line me-1"></i>OK
+                    </span>
+                  </td>
+                </tr>
+                <tr *ngIf="filteredIntegrations.length === 0">
+                  <td colspan="8" class="text-center py-4 text-muted">
+                    <i class="ri-plug-line fs-1 d-block mb-2"></i>
+                    No organizations found
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -7,6 +7,7 @@ import com.bostoneo.bostoneosolutions.enumeration.InvoiceStatus;
 import com.bostoneo.bostoneosolutions.enumeration.VerificationType;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.model.*;
+import com.bostoneo.bostoneosolutions.model.PlatformAnnouncement;
 import com.bostoneo.bostoneosolutions.repository.*;
 import com.bostoneo.bostoneosolutions.rowmapper.UserRowMapper;
 import com.bostoneo.bostoneosolutions.service.EmailService;
@@ -47,6 +48,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private final ClientRepository clientRepository;
     private final InvoiceRepository invoiceRepository;
     private final AuditLogRepository auditLogRepository;
+    private final PlatformAnnouncementRepository platformAnnouncementRepository;
     private final NamedParameterJdbcTemplate jdbc;
     private final RoleRepository<Role> roleRepository;
     private final EmailService emailService;
@@ -1028,25 +1030,379 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             targetUserIds.addAll(announcement.getTargetUserIds());
         }
 
-        // Send notification to each user
+        // Save announcement to database
+        PlatformAnnouncement savedAnnouncement = PlatformAnnouncement.builder()
+            .title(announcement.getTitle())
+            .message(announcement.getMessage())
+            .type(announcement.getType() != null ? announcement.getType() : "INFO")
+            .sendToAll(announcement.isSendToAll())
+            .targetOrganizationIds(announcement.getTargetOrganizationIds() != null ?
+                announcement.getTargetOrganizationIds().stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(",")) : null)
+            .targetUserIds(announcement.getTargetUserIds() != null ?
+                announcement.getTargetUserIds().stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(",")) : null)
+            .recipientsCount(targetUserIds.size())
+            .sentAt(LocalDateTime.now())
+            .scheduledAt(announcement.getScheduledAt() != null ?
+                LocalDateTime.parse(announcement.getScheduledAt()) : null)
+            .build();
+
+        platformAnnouncementRepository.save(savedAnnouncement);
+        platformAnnouncementRepository.flush(); // Ensure it's persisted
+
+        // Send notifications - create in-app notifications directly via JDBC
+        int successCount = 0;
         for (Long userId : targetUserIds) {
             try {
-                Map<String, Object> notificationData = new HashMap<>();
-                notificationData.put("type", announcement.getType());
-                notificationData.put("announcementId", UUID.randomUUID().toString());
-
-                notificationService.sendCrmNotification(
-                    announcement.getTitle(),
-                    announcement.getMessage(),
-                    userId,
-                    "PLATFORM_ANNOUNCEMENT",
-                    notificationData
+                // Get user's organization_id
+                Long orgId = jdbc.queryForObject(
+                    "SELECT organization_id FROM users WHERE id = :userId",
+                    new MapSqlParameterSource().addValue("userId", userId),
+                    Long.class
                 );
+
+                // Create in-app notification directly via JDBC
+                jdbc.update(
+                    "INSERT INTO user_notifications (user_id, organization_id, title, message, type, priority, read, created_at) " +
+                    "VALUES (:userId, :orgId, :title, :message, 'PLATFORM_ANNOUNCEMENT', 'NORMAL', false, :createdAt)",
+                    new MapSqlParameterSource()
+                        .addValue("userId", userId)
+                        .addValue("orgId", orgId != null ? orgId : 1L)
+                        .addValue("title", announcement.getTitle())
+                        .addValue("message", announcement.getMessage())
+                        .addValue("createdAt", LocalDateTime.now())
+                );
+                successCount++;
             } catch (Exception e) {
-                log.error("Failed to send announcement to user {}: {}", userId, e.getMessage());
+                log.warn("Failed to create notification for user {}: {}", userId, e.getMessage());
             }
         }
 
-        log.info("SUPERADMIN: Announcement sent to {} users", targetUserIds.size());
+        log.info("SUPERADMIN: Announcement saved. Notifications created for {}/{} users", successCount, targetUserIds.size());
+    }
+
+    @Override
+    public Page<AnnouncementSummaryDTO> getAnnouncements(Pageable pageable) {
+        log.info("SUPERADMIN: Fetching announcements");
+
+        Page<PlatformAnnouncement> announcementsPage = platformAnnouncementRepository
+            .findAllByOrderByCreatedAtDesc(pageable);
+
+        List<AnnouncementSummaryDTO> announcements = announcementsPage.getContent().stream()
+            .map(this::mapToAnnouncementSummary)
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(announcements, pageable, announcementsPage.getTotalElements());
+    }
+
+    @Override
+    @Transactional
+    public void deleteAnnouncement(Long announcementId) {
+        log.info("SUPERADMIN: Deleting announcement ID: {}", announcementId);
+
+        if (!platformAnnouncementRepository.existsById(announcementId)) {
+            throw new ApiException("Announcement not found with ID: " + announcementId);
+        }
+
+        platformAnnouncementRepository.deleteById(announcementId);
+        log.info("SUPERADMIN: Announcement {} deleted", announcementId);
+    }
+
+    // ==================== INTEGRATIONS ====================
+
+    @Override
+    public List<IntegrationStatusDTO> getIntegrationStatus() {
+        log.info("SUPERADMIN: Fetching integration status for all organizations");
+
+        List<Organization> organizations = organizationRepository.findAll();
+
+        return organizations.stream()
+            .map(this::mapToIntegrationStatus)
+            .collect(Collectors.toList());
+    }
+
+    // ==================== SECURITY ====================
+
+    @Override
+    public SecurityOverviewDTO getSecurityOverview() {
+        log.info("SUPERADMIN: Fetching security overview");
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime last24h = now.minusDays(1);
+        LocalDateTime last7d = now.minusDays(7);
+        LocalDateTime last30d = now.minusDays(30);
+
+        // Count failed logins
+        Integer failedLast24h = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' AND ue.created_at >= :since",
+            new MapSqlParameterSource().addValue("since", last24h),
+            Integer.class
+        );
+
+        Integer failedLast7d = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' AND ue.created_at >= :since",
+            new MapSqlParameterSource().addValue("since", last7d),
+            Integer.class
+        );
+
+        Integer failedLast30d = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' AND ue.created_at >= :since",
+            new MapSqlParameterSource().addValue("since", last30d),
+            Integer.class
+        );
+
+        // Count account lockouts (users with non_locked = false)
+        Integer accountLockouts = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM users WHERE non_locked = false",
+            new MapSqlParameterSource(),
+            Integer.class
+        );
+
+        // Suspicious activity - multiple failed logins from same IP
+        Integer suspiciousCount = jdbc.queryForObject(
+            "SELECT COUNT(DISTINCT ip_address) FROM (" +
+            "  SELECT ip_address, COUNT(*) as cnt FROM user_events ue " +
+            "  JOIN events e ON ue.event_id = e.id " +
+            "  WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' AND ue.created_at >= :since " +
+            "  GROUP BY ip_address HAVING COUNT(*) >= 5" +
+            ") suspicious",
+            new MapSqlParameterSource().addValue("since", last24h),
+            Integer.class
+        );
+
+        // Recent security events
+        List<SecurityOverviewDTO.SecurityEventDTO> recentEvents = jdbc.query(
+            "SELECT ue.id, e.type, u.email, o.name as org_name, ue.ip_address, e.description, ue.created_at " +
+            "FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "LEFT JOIN users u ON ue.user_id = u.id " +
+            "LEFT JOIN organizations o ON ue.organization_id = o.id " +
+            "WHERE e.type IN ('LOGIN_ATTEMPT_FAILURE', 'PASSWORD_UPDATE', 'MFA_UPDATE') " +
+            "ORDER BY ue.created_at DESC LIMIT 20",
+            new MapSqlParameterSource(),
+            (rs, rowNum) -> SecurityOverviewDTO.SecurityEventDTO.builder()
+                .id(rs.getLong("id"))
+                .eventType(rs.getString("type"))
+                .userEmail(rs.getString("email"))
+                .organizationName(rs.getString("org_name"))
+                .ipAddress(rs.getString("ip_address"))
+                .description(rs.getString("description"))
+                .timestamp(rs.getTimestamp("created_at") != null ?
+                    rs.getTimestamp("created_at").toLocalDateTime() : null)
+                .build()
+        );
+
+        return SecurityOverviewDTO.builder()
+            .failedLoginsLast24h(failedLast24h != null ? failedLast24h : 0)
+            .failedLoginsLast7d(failedLast7d != null ? failedLast7d : 0)
+            .failedLoginsLast30d(failedLast30d != null ? failedLast30d : 0)
+            .accountLockouts(accountLockouts != null ? accountLockouts : 0)
+            .suspiciousActivityCount(suspiciousCount != null ? suspiciousCount : 0)
+            .recentSecurityEvents(recentEvents)
+            .build();
+    }
+
+    @Override
+    public Page<FailedLoginDTO> getFailedLogins(Pageable pageable) {
+        log.info("SUPERADMIN: Fetching failed logins");
+
+        int offset = (int) pageable.getOffset();
+        int pageSize = pageable.getPageSize();
+
+        List<FailedLoginDTO> logins = jdbc.query(
+            "SELECT ue.id, u.email, u.first_name, u.last_name, ue.organization_id, " +
+            "o.name as org_name, ue.ip_address, ue.device, ue.created_at " +
+            "FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "LEFT JOIN users u ON ue.user_id = u.id " +
+            "LEFT JOIN organizations o ON ue.organization_id = o.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' " +
+            "ORDER BY ue.created_at DESC LIMIT :limit OFFSET :offset",
+            new MapSqlParameterSource()
+                .addValue("limit", pageSize)
+                .addValue("offset", offset),
+            (rs, rowNum) -> {
+                String firstName = rs.getString("first_name");
+                String lastName = rs.getString("last_name");
+                String userName = firstName != null || lastName != null ?
+                    ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim() :
+                    null;
+
+                return FailedLoginDTO.builder()
+                    .id(rs.getLong("id"))
+                    .userEmail(rs.getString("email"))
+                    .userName(userName)
+                    .organizationId(rs.getLong("organization_id"))
+                    .organizationName(rs.getString("org_name"))
+                    .ipAddress(rs.getString("ip_address"))
+                    .userAgent(rs.getString("device"))
+                    .timestamp(rs.getTimestamp("created_at") != null ?
+                        rs.getTimestamp("created_at").toLocalDateTime() : null)
+                    .build();
+            }
+        );
+
+        Integer total = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_FAILURE'",
+            new MapSqlParameterSource(),
+            Integer.class
+        );
+
+        return new PageImpl<>(logins, pageable, total != null ? total : 0);
+    }
+
+    private IntegrationStatusDTO mapToIntegrationStatus(Organization org) {
+        boolean hasIssues = false;
+        StringBuilder issueDesc = new StringBuilder();
+
+        // Check for potential issues
+        if (Boolean.TRUE.equals(org.getTwilioEnabled()) &&
+            (org.getTwilioPhoneNumber() == null || org.getTwilioPhoneNumber().isEmpty())) {
+            hasIssues = true;
+            issueDesc.append("Twilio enabled but no phone number configured. ");
+        }
+
+        if (Boolean.TRUE.equals(org.getBoldsignEnabled()) &&
+            (org.getBoldsignApiKeyEncrypted() == null || org.getBoldsignApiKeyEncrypted().isEmpty())) {
+            hasIssues = true;
+            issueDesc.append("BoldSign enabled but no API key configured. ");
+        }
+
+        return IntegrationStatusDTO.builder()
+            .organizationId(org.getId())
+            .organizationName(org.getName())
+            .organizationSlug(org.getSlug())
+            .status(org.getStatus() != null ? org.getStatus().name() : null)
+            .twilioEnabled(org.getTwilioEnabled())
+            .twilioPhoneNumber(org.getTwilioPhoneNumber())
+            .boldSignEnabled(org.getBoldsignEnabled())
+            .boldSignApiConfigured(org.getBoldsignApiKeyEncrypted() != null && !org.getBoldsignApiKeyEncrypted().isEmpty())
+            .smsEnabled(org.getSmsEnabled())
+            .whatsappEnabled(org.getWhatsappEnabled())
+            .emailEnabled(org.getEmailEnabled())
+            .hasIssues(hasIssues)
+            .issueDescription(hasIssues ? issueDesc.toString().trim() : null)
+            .build();
+    }
+
+    // ==================== ORGANIZATION FEATURES ====================
+
+    @Override
+    public OrganizationFeaturesDTO getOrganizationFeatures(Long organizationId) {
+        log.info("SUPERADMIN: Fetching features for organization ID: {}", organizationId);
+
+        Organization org = organizationRepository.findById(organizationId)
+            .orElseThrow(() -> new ApiException("Organization not found with ID: " + organizationId));
+
+        return mapToOrganizationFeatures(org);
+    }
+
+    @Override
+    @Transactional
+    public OrganizationFeaturesDTO updateOrganizationFeatures(Long organizationId, OrganizationFeaturesDTO features) {
+        log.info("SUPERADMIN: Updating features for organization ID: {}", organizationId);
+
+        Organization org = organizationRepository.findById(organizationId)
+            .orElseThrow(() -> new ApiException("Organization not found with ID: " + organizationId));
+
+        // Update communication features
+        if (features.getSmsEnabled() != null) org.setSmsEnabled(features.getSmsEnabled());
+        if (features.getWhatsappEnabled() != null) org.setWhatsappEnabled(features.getWhatsappEnabled());
+        if (features.getEmailEnabled() != null) org.setEmailEnabled(features.getEmailEnabled());
+
+        // Update integration features
+        if (features.getTwilioEnabled() != null) org.setTwilioEnabled(features.getTwilioEnabled());
+        if (features.getBoldSignEnabled() != null) org.setBoldsignEnabled(features.getBoldSignEnabled());
+
+        // Update quotas
+        if (features.getMaxUsers() != null) org.setMaxUsers(features.getMaxUsers());
+        if (features.getMaxCases() != null) org.setMaxCases(features.getMaxCases());
+        if (features.getMaxStorageBytes() != null) org.setMaxStorageBytes(features.getMaxStorageBytes());
+
+        // Update plan
+        if (features.getPlanType() != null) {
+            org.setPlanType(Organization.PlanType.valueOf(features.getPlanType()));
+        }
+
+        organizationRepository.save(org);
+
+        return mapToOrganizationFeatures(org);
+    }
+
+    private OrganizationFeaturesDTO mapToOrganizationFeatures(Organization org) {
+        return OrganizationFeaturesDTO.builder()
+            .organizationId(org.getId())
+            .smsEnabled(org.getSmsEnabled())
+            .whatsappEnabled(org.getWhatsappEnabled())
+            .emailEnabled(org.getEmailEnabled())
+            .twilioEnabled(org.getTwilioEnabled())
+            .boldSignEnabled(org.getBoldsignEnabled())
+            .maxUsers(org.getMaxUsers())
+            .maxCases(org.getMaxCases())
+            .maxStorageBytes(org.getMaxStorageBytes())
+            .planType(org.getPlanType() != null ? org.getPlanType().name() : null)
+            .build();
+    }
+
+    private AnnouncementSummaryDTO mapToAnnouncementSummary(PlatformAnnouncement announcement) {
+        // Parse comma-separated IDs back to lists
+        List<Long> orgIds = null;
+        if (announcement.getTargetOrganizationIds() != null && !announcement.getTargetOrganizationIds().isEmpty()) {
+            orgIds = Arrays.stream(announcement.getTargetOrganizationIds().split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .collect(Collectors.toList());
+        }
+
+        List<Long> userIds = null;
+        if (announcement.getTargetUserIds() != null && !announcement.getTargetUserIds().isEmpty()) {
+            userIds = Arrays.stream(announcement.getTargetUserIds().split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .collect(Collectors.toList());
+        }
+
+        // Get creator name if available
+        String createdByName = null;
+        if (announcement.getCreatedBy() != null) {
+            try {
+                createdByName = jdbc.queryForObject(
+                    "SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = :id",
+                    new MapSqlParameterSource().addValue("id", announcement.getCreatedBy()),
+                    String.class
+                );
+            } catch (Exception e) {
+                createdByName = "Unknown";
+            }
+        }
+
+        return AnnouncementSummaryDTO.builder()
+            .id(announcement.getId())
+            .title(announcement.getTitle())
+            .message(announcement.getMessage())
+            .type(announcement.getType())
+            .sendToAll(announcement.getSendToAll())
+            .targetOrganizationIds(orgIds)
+            .targetUserIds(userIds)
+            .recipientsCount(announcement.getRecipientsCount())
+            .scheduledAt(announcement.getScheduledAt())
+            .sentAt(announcement.getSentAt())
+            .createdBy(announcement.getCreatedBy())
+            .createdByName(createdByName)
+            .createdAt(announcement.getCreatedAt())
+            .build();
     }
 }

@@ -32,6 +32,7 @@ import {
 } from '../../shared/services/pi-document-request.service';
 import { BulkRequestWizardComponent } from '../../shared/components/bulk-request-wizard/bulk-request-wizard.component';
 import { PIProviderDirectoryService, ProviderDirectory } from '../../shared/services/pi-provider-directory.service';
+import { PIPortfolioService, PIPortfolioStats } from '../../shared/services/pi-portfolio.service';
 
 // PI Professional Platform Models
 import {
@@ -144,8 +145,14 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   private destroy$ = new Subject<void>();
   private caseSwitch$ = new Subject<void>();  // Cancels case-specific subscriptions on case switch
 
-  // View State Management (Tab-based)
-  activeTab: string = 'dashboard';
+  // View State Management (Three-Mode Architecture: Dashboard, Workspace, Directory)
+  viewMode: 'dashboard' | 'workspace' | 'directory' = 'dashboard';
+  previousMode: 'dashboard' | 'workspace' = 'dashboard';
+  activeTab: string = 'overview';
+
+  // Sub-tab states for consolidated tabs
+  documentsSubTab: 'demand-letter' | 'checklist' = 'checklist';
+  medicalSubTab: 'records' | 'summary' = 'records';
 
   // FAB and Search
   fabExpanded: boolean = false;
@@ -159,6 +166,17 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   showCaseDropdown: boolean = false;
   caseSearchInput: string = '';
   prefilledFromCase: boolean = false;
+
+  // Portfolio Dashboard State
+  portfolioStats: PIPortfolioStats | null = null;
+  piCaseList: LegalCase[] = [];
+  isLoadingPortfolio: boolean = false;
+  isLoadingPICases: boolean = false;
+  portfolioCasesPage: number = 0;
+  portfolioCasesTotalPages: number = 0;
+  portfolioCasesTotal: number = 0;
+  portfolioSearchTerm: string = '';
+  portfolioStatusFilter: string = '';
 
   // Dashboard Metrics
   latestCaseValue: number = 0;
@@ -461,14 +479,15 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     public providerDirectoryService: PIProviderDirectoryService,
     private modalService: NgbModal,
     private documentGenerationService: DocumentGenerationService,
-    private userService: UserService
+    private userService: UserService,
+    private portfolioService: PIPortfolioService
   ) {
     super();
 
     // Initialize Case Value Calculator Form
     this.caseValueForm = this.fb.group({
       injuryType: ['soft_tissue', Validators.required],
-      injuryDescription: ['', Validators.required],
+      injuryDescription: [''],  // Optional - not required for calculation
       medicalExpenses: [0, [Validators.required, Validators.min(0)]],
       lostWages: [0, [Validators.required, Validators.min(0)]],
       futureMedical: [0, [Validators.min(0)]],
@@ -530,6 +549,10 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.loadSavedData();
     this.loadRecentActivity();
     this.loadProviders();
+
+    // Load portfolio data on init
+    this.loadPortfolioStats();
+    this.loadPICases();
 
     // Update multiplier when injury type changes
     this.caseValueForm.get('injuryType')?.valueChanges
@@ -698,6 +721,347 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     localStorage.setItem('pi_recent_activity', JSON.stringify(this.recentActivity.slice(0, 10)));
   }
 
+  // ==========================================
+  // Portfolio Dashboard Methods
+  // ==========================================
+
+  /**
+   * Load portfolio statistics for all PI cases
+   */
+  loadPortfolioStats(): void {
+    this.isLoadingPortfolio = true;
+    this.portfolioService.getPortfolioStats()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (stats) => {
+          this.portfolioStats = stats;
+          this.isLoadingPortfolio = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error loading portfolio stats:', error);
+          this.isLoadingPortfolio = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Load paginated list of PI cases
+   */
+  loadPICases(page: number = 0): void {
+    this.isLoadingPICases = true;
+    this.portfolioCasesPage = page;
+
+    const request = this.portfolioSearchTerm
+      ? this.portfolioService.searchPICases(this.portfolioSearchTerm, page, 10)
+      : this.portfolioStatusFilter
+        ? this.portfolioService.getPICasesByStatus(this.portfolioStatusFilter, page, 10)
+        : this.portfolioService.getPICases(page, 10);
+
+    request.pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.piCaseList = response.content;
+          this.portfolioCasesTotalPages = response.totalPages;
+          this.portfolioCasesTotal = response.totalElements;
+          this.isLoadingPICases = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error loading PI cases:', error);
+          this.isLoadingPICases = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Search PI cases in portfolio view
+   */
+  onPortfolioSearch(event: Event): void {
+    const term = (event.target as HTMLInputElement).value;
+    this.portfolioSearchTerm = term;
+    this.portfolioStatusFilter = '';
+    this.loadPICases(0);
+  }
+
+  /**
+   * Filter PI cases by status
+   */
+  onPortfolioStatusFilter(status: string): void {
+    this.portfolioStatusFilter = status;
+    this.portfolioSearchTerm = '';
+    this.loadPICases(0);
+  }
+
+  /**
+   * Clear portfolio filters
+   */
+  clearPortfolioFilters(): void {
+    this.portfolioSearchTerm = '';
+    this.portfolioStatusFilter = '';
+    this.loadPICases(0);
+  }
+
+  /**
+   * Select a case from the portfolio list to open in workspace
+   */
+  selectCaseForWorkspace(caseItem: LegalCase): void {
+    // Cancel any pending case-specific subscriptions
+    this.caseSwitch$.next();
+
+    // Reset all case data before loading new case
+    this.resetCaseData();
+
+    this.linkedCase = caseItem;
+    this.workspaceState.setLinkedCase(Number(caseItem.id));
+
+    // Switch to workspace mode and track previous mode
+    this.previousMode = 'dashboard';
+    this.viewMode = 'workspace';
+    this.activeTab = 'overview';
+
+    // Load full case details and all case-specific data
+    this.loadCaseData(String(caseItem.id));
+
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Return to dashboard view from workspace
+   */
+  backToDashboard(): void {
+    this.viewMode = 'dashboard';
+    this.linkedCase = null;
+    this.resetCaseData();
+
+    // Refresh dashboard data
+    this.loadPortfolioStats();
+    this.loadPICases(0);
+
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Navigate to provider directory mode
+   */
+  openProviderDirectory(): void {
+    // Track where we came from so we can navigate back
+    if (this.viewMode === 'dashboard' || this.viewMode === 'workspace') {
+      this.previousMode = this.viewMode;
+    }
+    this.viewMode = 'directory';
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Return from provider directory to previous mode
+   */
+  backFromDirectory(): void {
+    this.viewMode = this.previousMode;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Get status badge class for case list
+   */
+  getStatusBadgeClass(status: string): string {
+    const statusClasses: { [key: string]: string } = {
+      'ACTIVE': 'bg-success-subtle text-success',
+      'OPEN': 'bg-info-subtle text-info',
+      'IN_PROGRESS': 'bg-primary-subtle text-primary',
+      'PENDING': 'bg-warning-subtle text-warning',
+      'CLOSED': 'bg-secondary-subtle text-secondary',
+      'ARCHIVED': 'bg-dark-subtle text-dark'
+    };
+    return statusClasses[status] || 'bg-secondary-subtle text-secondary';
+  }
+
+  /**
+   * Get case value from damage calculation or settlement demand
+   */
+  getCaseValueDisplay(caseItem: LegalCase): number {
+    // Prefer settlement demand amount as the case value indicator
+    if (caseItem.settlementDemandAmount) {
+      return caseItem.settlementDemandAmount;
+    }
+    // Fallback to medical expenses total as a base
+    if (caseItem.medicalExpensesTotal) {
+      return caseItem.medicalExpensesTotal;
+    }
+    return 0;
+  }
+
+  /**
+   * Get completeness class based on score percentage
+   */
+  getCompletenessClass(score: number): string {
+    if (score >= 80) {
+      return 'high';
+    } else if (score >= 50) {
+      return 'medium';
+    } else {
+      return 'low';
+    }
+  }
+
+  // Expose Math for template
+  Math = Math;
+
+  /**
+   * Get client initials for avatar
+   */
+  getClientInitials(clientName: string): string {
+    if (!clientName) return '?';
+    const parts = clientName.trim().split(' ').filter(p => p.length > 0);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return clientName.substring(0, 2).toUpperCase();
+  }
+
+  /**
+   * Get injury type icon
+   */
+  getInjuryTypeIcon(injuryType: string): string {
+    const icons: { [key: string]: string } = {
+      'soft_tissue': 'ri-body-scan-line',
+      'fracture': 'ri-first-aid-kit-line',
+      'disc_injury': 'ri-spine-line',
+      'tbi': 'ri-brain-line',
+      'spinal': 'ri-accessibility-line',
+      'burn': 'ri-fire-line',
+      'amputation': 'ri-hand-heart-line',
+      'wrongful_death': 'ri-heart-pulse-line',
+      'other': 'ri-stethoscope-line'
+    };
+    return icons[injuryType] || 'ri-stethoscope-line';
+  }
+
+  /**
+   * Get injury type label
+   */
+  getInjuryTypeLabel(injuryType: string): string {
+    const injury = this.injuryTypes.find(i => i.value === injuryType);
+    if (injury) {
+      // Return shortened version
+      const label = injury.label.split('(')[0].trim();
+      return label.length > 15 ? label.substring(0, 15) + '...' : label;
+    }
+    return injuryType || 'Unknown';
+  }
+
+  /**
+   * Get status icon for enhanced status badge
+   */
+  getStatusIcon(status: string): string {
+    const icons: { [key: string]: string } = {
+      'ACTIVE': 'ri-pulse-line',
+      'OPEN': 'ri-folder-open-line',
+      'IN_PROGRESS': 'ri-loader-4-line',
+      'PENDING': 'ri-time-line',
+      'IN_SETTLEMENT': 'ri-scales-3-line',
+      'CLOSED': 'ri-checkbox-circle-line',
+      'ARCHIVED': 'ri-archive-line'
+    };
+    return icons[status] || 'ri-folder-line';
+  }
+
+  /**
+   * Format status for display
+   */
+  formatStatus(status: string): string {
+    const labels: { [key: string]: string } = {
+      'ACTIVE': 'Active',
+      'OPEN': 'Open',
+      'IN_PROGRESS': 'In Progress',
+      'PENDING': 'Pending',
+      'IN_SETTLEMENT': 'Settlement',
+      'CLOSED': 'Closed',
+      'ARCHIVED': 'Archived'
+    };
+    return labels[status] || status;
+  }
+
+  /**
+   * Calculate days since case was opened
+   */
+  getDaysOpen(caseItem: LegalCase): number {
+    if (!caseItem.createdAt) return 0;
+    const created = new Date(caseItem.createdAt);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  /**
+   * Get visible page numbers for pagination
+   */
+  getVisiblePages(): number[] {
+    const total = this.portfolioCasesTotalPages;
+    const current = this.portfolioCasesPage;
+    const pages: number[] = [];
+
+    if (total <= 7) {
+      // Show all pages if 7 or fewer
+      for (let i = 0; i < total; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(0);
+
+      if (current > 3) {
+        pages.push(-1); // Ellipsis
+      }
+
+      // Show pages around current
+      const start = Math.max(1, current - 1);
+      const end = Math.min(total - 2, current + 1);
+
+      for (let i = start; i <= end; i++) {
+        if (!pages.includes(i)) {
+          pages.push(i);
+        }
+      }
+
+      if (current < total - 4) {
+        pages.push(-1); // Ellipsis
+      }
+
+      // Always show last page
+      if (!pages.includes(total - 1)) {
+        pages.push(total - 1);
+      }
+    }
+
+    return pages;
+  }
+
+  /**
+   * Get pipeline percentage for a given status
+   */
+  getPipelinePercent(status: string): number {
+    if (!this.portfolioStats) return 0;
+    const total = this.portfolioStats.totalCases || 1;
+    switch (status) {
+      case 'active':
+        return Math.round((this.portfolioStats.activeCases / total) * 100);
+      case 'pending':
+        return Math.round((this.portfolioStats.pendingCases / total) * 100);
+      case 'settlement':
+        return Math.round((this.portfolioStats.casesInSettlement / total) * 100);
+      case 'closed':
+        return Math.round((this.portfolioStats.closedCases / total) * 100);
+      default:
+        return 0;
+    }
+  }
+
+  /**
+   * Provider Directory modal state
+   */
   addActivity(toolType: string, title: string, data?: any): void {
     const activity: ActivityItem = {
       id: Date.now().toString(),
@@ -719,12 +1083,17 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.activeTab = toolId;
     this.cdr.detectChanges();
 
-    // Create chart if opening case value and there are results
-    if (toolId === 'case-value' && this.calculatedValue) {
+    // Create chart if opening valuation tab and there are results
+    if ((toolId === 'valuation' || toolId === 'case-value') && this.calculatedValue) {
       setTimeout(() => this.createDamageChart(), 100);
     }
 
-    // Load existing demand letter if opening demand-letter tab with a linked case
+    // Load existing demand letter if opening documents tab with demand-letter sub-tab
+    if ((toolId === 'documents' && this.documentsSubTab === 'demand-letter') && this.linkedCase?.id && !this.generatedDemand) {
+      this.loadExistingDemandLetter();
+    }
+
+    // Load demand letter if directly opening demand-letter (backward compatibility)
     if (toolId === 'demand-letter' && this.linkedCase?.id && !this.generatedDemand) {
       this.loadExistingDemandLetter();
     }
@@ -757,8 +1126,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       });
   }
 
-  backToDashboard(): void {
-    this.activeTab = 'dashboard';
+  goToOverviewTab(): void {
+    this.activeTab = 'overview';
   }
 
   openActivityItem(activity: ActivityItem): void {
@@ -767,7 +1136,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   openQuickCalculator(): void {
-    this.activeTab = 'case-value';
+    this.activeTab = 'valuation';
   }
 
   toggleSection(sectionKey: string): void {
@@ -790,12 +1159,43 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
   getSliderFillPercent(): number {
     const multiplier = this.getMultiplier();
-    return ((multiplier - 1) / 4) * 100; // Maps 1-5 to 0-100%
+    const percent = ((multiplier - 1) / 4) * 100; // Maps 1-5 to 0-100%
+    // Clamp to 0-100% to handle multipliers outside 1-5 range
+    return Math.max(0, Math.min(100, percent));
   }
 
   onMultiplierSliderChange(event: Event): void {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.caseValueForm.patchValue({ customMultiplier: value });
+  }
+
+  /**
+   * Handle liability assessment change - adjust comparative negligence for consistency
+   */
+  onLiabilityChange(liability: string): void {
+    if (liability === 'CLEAR') {
+      // Clear liability means 100% defendant fault, so comparative negligence should be 0
+      this.caseValueForm.patchValue({ comparativeNegligence: 0 });
+    }
+  }
+
+  /**
+   * Check if comparative negligence is at a level that may bar recovery
+   */
+  getComparativeNegligenceWarning(): string | null {
+    const comparativeNegligence = this.caseValueForm.get('comparativeNegligence')?.value || 0;
+    const liability = this.caseValueForm.get('liabilityAssessment')?.value;
+
+    if (comparativeNegligence >= 100) {
+      return 'At 100% comparative negligence, the client cannot recover any damages.';
+    }
+    if (comparativeNegligence >= 50) {
+      return `At ${comparativeNegligence}% comparative negligence, recovery may be barred in modified comparative fault states (including Massachusetts).`;
+    }
+    if (liability === 'CLEAR' && comparativeNegligence > 0) {
+      return 'Clear liability was selected but comparative negligence is greater than 0. Consider adjusting one of these values.';
+    }
+    return null;
   }
 
   getEconomicPercent(): number {
@@ -811,16 +1211,68 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   calculateCaseValue(): void {
+    // Enhanced form validation with user feedback
     if (this.caseValueForm.invalid) {
       this.markFormGroupTouched(this.caseValueForm);
+
+      // Build list of missing/invalid fields
+      const errors: string[] = [];
+      if (this.caseValueForm.get('injuryType')?.invalid) {
+        errors.push('Injury Type is required');
+      }
+      if (this.caseValueForm.get('liabilityAssessment')?.invalid) {
+        errors.push('Liability Assessment is required');
+      }
+      if (this.caseValueForm.get('medicalExpenses')?.invalid) {
+        errors.push('Medical Expenses must be a valid amount (0 or greater)');
+      }
+      if (this.caseValueForm.get('lostWages')?.invalid) {
+        errors.push('Lost Wages must be a valid amount (0 or greater)');
+      }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Missing Required Fields',
+        html: errors.length > 0 ? errors.map(e => `• ${e}`).join('<br>') : 'Please fill in all required fields',
+        confirmButtonText: 'OK'
+      });
       return;
     }
 
     // Auto-sync damage values from system data before calculating
     this.autoSyncDamageValues();
 
-    this.isCalculating = true;
     const formData = this.caseValueForm.value;
+    const medicalExpenses = formData.medicalExpenses || 0;
+    const lostWages = formData.lostWages || 0;
+    const futureMedical = formData.futureMedical || 0;
+
+    // Also check damage elements for economic values (in case form wasn't synced)
+    const damageElementTotal = this.damageElements
+      .filter(e => ['PAST_MEDICAL', 'LOST_WAGES', 'FUTURE_MEDICAL', 'EARNING_CAPACITY', 'HOUSEHOLD_SERVICES', 'MILEAGE', 'OTHER_ECONOMIC'].includes(e.elementType || ''))
+      .reduce((sum, e) => sum + (e.calculatedAmount || e.baseAmount || 0), 0);
+
+    // Validate that at least one economic damage value is entered (either in form OR in damage elements)
+    if (medicalExpenses === 0 && lostWages === 0 && futureMedical === 0 && damageElementTotal === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Economic Damages',
+        html: 'Please enter at least one economic damage value:<br><br>' +
+              '• <b>Past Medical Expenses</b> - Medical bills incurred<br>' +
+              '• <b>Lost Wages</b> - Income lost due to injury<br>' +
+              '• <b>Future Medical</b> - Estimated future treatment costs<br><br>' +
+              'Or add damage elements in the Damage Elements section.',
+        confirmButtonText: 'Got it'
+      });
+      return;
+    }
+
+    this.isCalculating = true;
+
+    // Properly handle policyLimit = 0 (don't treat 0 as null due to falsy evaluation)
+    const policyLimitValue = formData.policyLimit !== null && formData.policyLimit !== undefined
+      ? formData.policyLimit
+      : null;
 
     // Call AI to calculate case value
     this.http.post<any>(`${environment.apiUrl}/api/ai/personal-injury/calculate-case-value`, {
@@ -831,12 +1283,11 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       medicalExpenses: formData.medicalExpenses || 0,
       lostWages: formData.lostWages || 0,
       futureMedical: formData.futureMedical || 0,
-      policyLimit: formData.policyLimit || null
+      policyLimit: policyLimitValue
     }).subscribe({
       next: (response) => {
         if (response.success && response.calculation) {
           const calc = response.calculation;
-          const policyLimit = formData.policyLimit || null;
 
           this.calculatedValue = {
             medicalExpenses: formData.medicalExpenses || 0,
@@ -848,7 +1299,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
             totalCaseValue: calc.totalCaseValue || 0,
             comparativeNegligence: formData.comparativeNegligence || 0,
             adjustedCaseValue: calc.totalCaseValue || 0,
-            policyLimit: policyLimit,
+            policyLimit: policyLimitValue,
             realisticRecovery: calc.realisticRecovery || 0,
             // AI-specific fields
             settlementRangeLow: calc.settlementRangeLow,
@@ -919,8 +1370,12 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     const totalCaseValue = economicDamages + nonEconomicDamages;
     const comparativeNegligence = formData.comparativeNegligence || 0;
     const adjustedCaseValue = totalCaseValue * (1 - comparativeNegligence / 100);
-    const policyLimit = formData.policyLimit || null;
-    const realisticRecovery = policyLimit ? Math.min(adjustedCaseValue, policyLimit) : adjustedCaseValue;
+    // Properly handle policyLimit = 0 (don't treat 0 as null due to falsy evaluation)
+    const policyLimit = formData.policyLimit !== null && formData.policyLimit !== undefined
+      ? formData.policyLimit
+      : null;
+    // If policyLimit is set (including 0), cap the recovery at that limit
+    const realisticRecovery = policyLimit !== null ? Math.min(adjustedCaseValue, policyLimit) : adjustedCaseValue;
 
     this.calculatedValue = {
       medicalExpenses,
@@ -1528,19 +1983,29 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   autoSyncDamageValues(): void {
-    // Auto-sync medical expenses from system data
-    const medicalExpenses = this.getTotalMedicalBills();
+    // Auto-sync medical expenses from BOTH medical records AND PAST_MEDICAL damage elements
+    const medicalFromRecords = this.getTotalMedicalBills();
+    const medicalFromElements = this.damageElements
+      .filter(e => e.elementType === 'PAST_MEDICAL')
+      .reduce((sum, e) => sum + (e.calculatedAmount || e.baseAmount || 0), 0);
+    // Use whichever is greater (they might have both, or just one)
+    const medicalExpenses = Math.max(medicalFromRecords, medicalFromElements);
 
-    // Only get lost wages and future medical if they have actual values
-    // Don't populate with 0 unless user explicitly added them
+    // Get lost wages and future medical from damage elements
     const lostWages = this.getTotalLostWages();
     const futureMedical = this.getTotalFutureMedical();
 
-    // Build patch object - only include values that are > 0 or were explicitly set
-    const caseValuePatch: any = { medicalExpenses };
-    const demandPatch: any = { medicalExpenses };
+    // Build patch object - include values that are > 0
+    const caseValuePatch: any = {};
+    const demandPatch: any = {};
 
-    // Only update lost wages if there's actual data (from damage elements or case)
+    // Always update medical expenses (even if 0, to clear stale values)
+    if (medicalExpenses > 0) {
+      caseValuePatch.medicalExpenses = medicalExpenses;
+      demandPatch.medicalExpenses = medicalExpenses;
+    }
+
+    // Only update lost wages if there's actual data
     if (lostWages > 0) {
       caseValuePatch.lostWages = lostWages;
       demandPatch.lostWages = lostWages;
@@ -1552,11 +2017,15 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       demandPatch.futureMedical = futureMedical;
     }
 
-    // Update Case Value Calculator form
-    this.caseValueForm.patchValue(caseValuePatch);
+    // Update Case Value Calculator form (only if we have values to patch)
+    if (Object.keys(caseValuePatch).length > 0) {
+      this.caseValueForm.patchValue(caseValuePatch);
+    }
 
-    // Update Demand Letter form
-    this.demandForm.patchValue(demandPatch);
+    // Update Demand Letter form (only if we have values to patch)
+    if (Object.keys(demandPatch).length > 0) {
+      this.demandForm.patchValue(demandPatch);
+    }
   }
 
   getUniqueProviderCount(): number {
@@ -2138,6 +2607,10 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.showCaseDropdown = false;
     this.workspaceState.setLinkedCase(Number(caseItem.id));
 
+    // Switch to workspace mode
+    this.viewMode = 'workspace';
+    this.activeTab = 'overview';
+
     // Load full case details and prefill forms
     this.loadCaseData(caseItem.id);
   }
@@ -2146,17 +2619,26 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     // Cancel any pending case-specific subscriptions
     this.caseSwitch$.next();
 
-    // Reset all case data
+    // Reset case-specific data
     this.resetCaseData();
 
     this.linkedCase = null;
+    this.prefilledFromCase = false;
     this.workspaceState.setLinkedCase(null);
+
+    // Return to dashboard view
+    this.viewMode = 'dashboard';
+
+    // Refresh dashboard stats
+    this.loadPortfolioStats();
+    this.loadPICases(0);
+
     this.cdr.detectChanges();
 
     Swal.fire({
       icon: 'info',
-      title: 'Case Unlinked',
-      text: 'The case has been unlinked and all case data cleared.',
+      title: 'Returned to Dashboard',
+      text: 'You can select another case from the dashboard.',
       timer: 2000,
       showConfirmButton: false,
       customClass: { popup: 'swal2-sm' }
@@ -2176,7 +2658,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           // Load all professional platform data for the linked case
           this.loadMedicalRecords();
           this.loadDocumentChecklist();
-          this.loadDamageElements();
+          this.loadDamageElements(true);  // Load calculation when first linking case
           this.loadMedicalSummary();
           this.loadExistingDemandLetter(); // Load any previously generated demand letter
 
@@ -2289,9 +2771,11 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     // THEN patch with new case data
     // NOTE: lostWages and futureMedical are NOT pre-filled from case record
     // They should only come from explicit damage elements (via autoSyncDamageValues)
+    // Use case description as fallback for injury description if not set
+    const injuryDesc = caseData.injuryDescription || caseData.description || '';
     this.caseValueForm.patchValue({
       injuryType: caseData.injuryType || 'soft_tissue',
-      injuryDescription: caseData.injuryDescription || '',
+      injuryDescription: injuryDesc,
       medicalExpenses: caseData.medicalExpensesTotal || 0,
       lostWages: 0,  // Will be populated from damage elements if they exist
       futureMedical: 0,  // Will be populated from damage elements if they exist
@@ -2312,7 +2796,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       accidentDate: caseData.injuryDate ? this.formatDateForInput(caseData.injuryDate) : '',
       accidentLocation: caseData.accidentLocation || '',
       injuryType: caseData.injuryType || '',
-      injuryDescription: caseData.injuryDescription || '',
+      injuryDescription: injuryDesc,  // Use same fallback as caseValueForm
       liabilityDetails: this.buildLiabilityNarrative(caseData),
       medicalExpenses: caseData.medicalExpensesTotal || 0,
       lostWages: 0,  // Will be populated from damage elements if they exist
@@ -2575,7 +3059,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           confirmButtonText: 'View Records'
         }).then(() => {
           // Navigate to Medical Records tab to show the auto-populated records
-          this.activeTab = 'medical-records';
+          this.activeTab = 'medical';
           this.cdr.detectChanges();
         });
       },
@@ -2831,6 +3315,13 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
         this.cdr.detectChanges();
       }
     });
+  }
+
+  /**
+   * Initialize checklist - wrapper method for template binding
+   */
+  initializeChecklist(): void {
+    this.initializeDocumentChecklist();
   }
 
   resetDocumentChecklist(): void {
@@ -3456,7 +3947,12 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
   // --- Damage Calculation (Professional) ---
 
-  loadDamageElements(): void {
+  /**
+   * Load damage elements for the linked case
+   * @param loadCalculation - Whether to also load the saved damage calculation (default: false)
+   *                          Set to true only when first linking a case
+   */
+  loadDamageElements(loadCalculation: boolean = false): void {
     if (!this.linkedCase?.id) return;
 
     this.isLoadingDamages = true;
@@ -3466,7 +3962,10 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
         next: (elements) => {
           this.damageElements = elements;
           this.isLoadingDamages = false;
-          this.loadDamageCalculation();
+          // Only load calculation if explicitly requested (e.g., when linking a case)
+          if (loadCalculation) {
+            this.loadDamageCalculation();
+          }
           this.cdr.detectChanges();
         },
         error: (err) => {
@@ -3603,15 +4102,26 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     if (!this.linkedCase?.id) return;
 
     this.damageCalculationService.syncMedicalExpenses(Number(this.linkedCase.id)).subscribe({
-      next: () => {
+      next: (element) => {
         this.loadDamageElements();
-        Swal.fire({
-          icon: 'success',
-          title: 'Medical Expenses Synced',
-          text: 'Past medical expenses updated from medical records',
-          timer: 2500,
-          showConfirmButton: false
-        });
+
+        // If element is null/undefined, it means there were no medical records to sync
+        if (!element) {
+          Swal.fire({
+            icon: 'info',
+            title: 'No Medical Records',
+            text: 'No medical records found to sync. Add medical records first in the Medical Records tab.',
+            confirmButtonText: 'OK'
+          });
+        } else {
+          Swal.fire({
+            icon: 'success',
+            title: 'Medical Expenses Synced',
+            html: `Past medical expenses updated: <strong>${this.formatCurrency(element.calculatedAmount || element.baseAmount || 0)}</strong>`,
+            timer: 2500,
+            showConfirmButton: false
+          });
+        }
       },
       error: (err) => {
         console.error('Error syncing medical expenses:', err);
@@ -3744,19 +4254,29 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
    * Calculate width percentages for the value range bar segments
    */
   getValueBarWidth(segment: 'low' | 'likely' | 'high'): number {
-    const low = this.damageCalculation?.lowValue || this.calculatedValue?.settlementRangeLow || 0;
-    const likely = this.damageCalculation?.midValue || this.calculatedValue?.realisticRecovery || 0;
-    const high = this.damageCalculation?.highValue || this.calculatedValue?.settlementRangeHigh || 0;
+    const rawLow = this.damageCalculation?.lowValue || this.calculatedValue?.settlementRangeLow || 0;
+    const rawLikely = this.damageCalculation?.midValue || this.calculatedValue?.realisticRecovery || 0;
+    const rawHigh = this.damageCalculation?.highValue || this.calculatedValue?.settlementRangeHigh || 0;
 
-    if (high <= 0) return segment === 'low' ? 33 : segment === 'likely' ? 34 : 33;
+    // Ensure proper ordering (AI might return out-of-order ranges)
+    const sortedLow = Math.min(rawLow, rawLikely, rawHigh);
+    const sortedHigh = Math.max(rawLow, rawLikely, rawHigh);
+    // Calculate middle value (sum of all three minus min and max)
+    const sortedLikely = rawLow + rawLikely + rawHigh - sortedLow - sortedHigh;
+
+    // Equal distribution fallback if high is 0 or negative
+    if (sortedHigh <= 0) return 33;
+
+    // Use high as 100% baseline
+    const total = sortedHigh;
 
     switch (segment) {
       case 'low':
-        return (low / high) * 100;
+        return Math.max(0, Math.min(100, (sortedLow / total) * 100));
       case 'likely':
-        return ((likely - low) / high) * 100;
+        return Math.max(0, Math.min(100, ((sortedLikely - sortedLow) / total) * 100));
       case 'high':
-        return ((high - likely) / high) * 100;
+        return Math.max(0, Math.min(100, ((sortedHigh - sortedLikely) / total) * 100));
       default:
         return 33;
     }
@@ -3767,22 +4287,22 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
    */
   getPositiveFactors(): string[] {
     if (!this.calculatedValue?.keyFactors) return [];
-    // Filter for positive indicators (usually first half of factors are positive)
-    // This is a heuristic - could be improved with backend tagging
     const factors = this.calculatedValue.keyFactors;
-    return factors.filter(f =>
-      f.toLowerCase().includes('clear liability') ||
-      f.toLowerCase().includes('documented') ||
-      f.toLowerCase().includes('consistent') ||
-      f.toLowerCase().includes('supported') ||
-      f.toLowerCase().includes('strong') ||
-      f.toLowerCase().includes('significant') ||
-      f.toLowerCase().includes('favorable') ||
-      !f.toLowerCase().includes('gap') &&
-      !f.toLowerCase().includes('weak') &&
-      !f.toLowerCase().includes('disputed') &&
-      !f.toLowerCase().includes('concern')
-    ).slice(0, 3);
+
+    // Negative keywords - if any of these are present, it's NOT a positive factor
+    const negativeKeywords = ['gap', 'weak', 'disputed', 'concern', 'limited', 'pre-existing', 'insufficient', 'lacking', 'missing', 'delay'];
+
+    // Positive keywords
+    const positiveKeywords = ['clear liability', 'clear', 'documented', 'consistent', 'supported', 'strong', 'significant', 'favorable', 'objective', 'verifiable', '0% comparative', '0% negligence'];
+
+    return factors.filter(f => {
+      const lower = f.toLowerCase();
+      // Must contain at least one positive keyword
+      const hasPositive = positiveKeywords.some(keyword => lower.includes(keyword));
+      // Must NOT contain any negative keywords
+      const hasNegative = negativeKeywords.some(keyword => lower.includes(keyword));
+      return hasPositive && !hasNegative;
+    }).slice(0, 3);
   }
 
   /**
@@ -3791,15 +4311,27 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   getNegativeFactors(): string[] {
     if (!this.calculatedValue?.keyFactors) return [];
     const factors = this.calculatedValue.keyFactors;
-    return factors.filter(f =>
-      f.toLowerCase().includes('gap') ||
-      f.toLowerCase().includes('weak') ||
-      f.toLowerCase().includes('disputed') ||
-      f.toLowerCase().includes('concern') ||
-      f.toLowerCase().includes('limited') ||
-      f.toLowerCase().includes('pre-existing') ||
-      f.toLowerCase().includes('comparative')
-    ).slice(0, 3);
+
+    // Negative keywords that indicate weakening factors
+    const negativeKeywords = ['gap', 'weak', 'disputed', 'concern', 'limited', 'pre-existing', 'insufficient', 'lacking', 'missing', 'delay', 'inconsistent', 'question', 'doubt'];
+
+    // Positive keywords - if these are present WITHOUT negative keywords, it's not a negative factor
+    const positiveKeywords = ['clear liability', 'clear', 'documented', 'consistent', 'supported', 'strong', 'significant', 'favorable', 'objective', 'verifiable', '0% comparative', '0% negligence'];
+
+    return factors.filter(f => {
+      const lower = f.toLowerCase();
+      // Must contain at least one negative keyword
+      const hasNegative = negativeKeywords.some(keyword => lower.includes(keyword));
+      // Check if it's primarily positive (shouldn't be in negative column)
+      const hasPrimaryPositive = positiveKeywords.some(keyword => lower.includes(keyword));
+
+      // Include in negative if it has negative keywords, unless it's clearly positive
+      // "Clear liability" should never appear in negative column
+      if (lower.includes('clear liability') || lower.includes('0% comparative') || lower.includes('0% negligence')) {
+        return false;
+      }
+      return hasNegative;
+    }).slice(0, 3);
   }
 
   /**
@@ -3824,6 +4356,44 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
     // Run the case value calculation (will trigger comprehensive analysis via flag)
     this.calculateCaseValue();
+  }
+
+  /**
+   * Reset/clear case value calculation and start fresh
+   */
+  resetCaseValueCalculation(): void {
+    Swal.fire({
+      title: 'Reset Calculation?',
+      text: 'This will clear the current calculation results. Form values will be preserved.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Reset',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#f06548'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.calculatedValue = null;
+        this.damageCalculation = null;
+        this.latestCaseValue = 0;
+        localStorage.removeItem('pi_latest_case_value');
+
+        // Destroy the chart if it exists
+        if (this.damageChart) {
+          this.damageChart.destroy();
+          this.damageChart = null;
+        }
+
+        this.cdr.detectChanges();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Reset Complete',
+          text: 'Calculation results have been cleared.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      }
+    });
   }
 
   getStatusColor(status: string): string {
@@ -3881,6 +4451,21 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
    */
   trackByGroupType(index: number, group: { type: string; receivedCount: number; totalCount: number }): string {
     return `${group.type}-${group.receivedCount}-${group.totalCount}`;
+  }
+
+  /**
+   * Toggle collapse state for document group (uses same collapsedDamageGroups object)
+   */
+  toggleDocumentGroup(groupType: string): void {
+    this.collapsedDamageGroups[groupType] = !this.collapsedDamageGroups[groupType];
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Update checklist item status (wrapper for changeDocumentStatus)
+   */
+  updateChecklistItemStatus(item: PIDocumentChecklist, newStatus: string): void {
+    this.changeDocumentStatus(item, newStatus);
   }
 
   /**

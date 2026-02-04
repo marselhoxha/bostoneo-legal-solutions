@@ -149,6 +149,12 @@
               <span>Activity</span>
             </a>
           </li>
+          <li [ngbNavItem]="'features'">
+            <a ngbNavLink class="d-flex align-items-center gap-2">
+              <i class="ri-settings-4-line fs-16"></i>
+              <span>Features & Quotas</span>
+            </a>
+          </li>
         </ul>
       </div>
 
@@ -416,6 +422,121 @@
           <div class="text-center py-5 text-muted" *ngIf="!organization.recentActivity || organization.recentActivity.length === 0">
             <i class="ri-history-line fs-1 d-block mb-3"></i>
             <p class="mb-0">No recent activity</p>
+          </div>
+        </div>
+
+        <!-- Features Tab -->
+        <div *ngIf="activeTab === 'features'">
+          <!-- Loading -->
+          <div class="text-center py-5" *ngIf="isLoadingFeatures">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-3 text-muted">Loading features...</p>
+          </div>
+
+          <!-- Features Form -->
+          <div *ngIf="!isLoadingFeatures && features" class="row g-4">
+            <!-- Plan & Quotas -->
+            <div class="col-lg-6">
+              <div class="info-card">
+                <h6 class="info-card-title">
+                  <i class="ri-vip-crown-line me-2 text-primary"></i>Plan & Quotas
+                </h6>
+                <div class="mb-3">
+                  <label class="form-label">Plan Type</label>
+                  <select class="form-select" [(ngModel)]="features.planType">
+                    <option *ngFor="let plan of planTypes" [value]="plan">{{ plan }}</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Max Users</label>
+                  <input type="number" class="form-control" [(ngModel)]="features.maxUsers" min="1">
+                  <small class="text-muted">Current: {{ organization.stats.userCount }} users</small>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Max Cases</label>
+                  <input type="number" class="form-control" [(ngModel)]="features.maxCases" min="1">
+                  <small class="text-muted">Current: {{ organization.stats.caseCount }} cases</small>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Max Storage (GB)</label>
+                  <input type="number" class="form-control" [(ngModel)]="features.maxStorageBytes"
+                         [ngModelOptions]="{updateOn: 'blur'}" min="1073741824" step="1073741824">
+                  <small class="text-muted">Enter in bytes (1 GB = 1073741824 bytes)</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Communication Features -->
+            <div class="col-lg-6">
+              <div class="info-card">
+                <h6 class="info-card-title">
+                  <i class="ri-message-2-line me-2 text-primary"></i>Communication Features
+                </h6>
+                <div class="mb-3">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="emailEnabled"
+                           [(ngModel)]="features.emailEnabled">
+                    <label class="form-check-label" for="emailEnabled">
+                      <i class="ri-mail-line me-1"></i>Email Notifications
+                    </label>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="smsEnabled"
+                           [(ngModel)]="features.smsEnabled">
+                    <label class="form-check-label" for="smsEnabled">
+                      <i class="ri-message-2-line me-1"></i>SMS Notifications
+                    </label>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="whatsappEnabled"
+                           [(ngModel)]="features.whatsappEnabled">
+                    <label class="form-check-label" for="whatsappEnabled">
+                      <i class="ri-whatsapp-line me-1"></i>WhatsApp Notifications
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="info-card mt-4">
+                <h6 class="info-card-title">
+                  <i class="ri-plug-line me-2 text-primary"></i>Integrations
+                </h6>
+                <div class="mb-3">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="twilioEnabled"
+                           [(ngModel)]="features.twilioEnabled">
+                    <label class="form-check-label" for="twilioEnabled">
+                      <i class="ri-phone-line me-1"></i>Twilio Integration
+                    </label>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="boldSignEnabled"
+                           [(ngModel)]="features.boldSignEnabled">
+                    <label class="form-check-label" for="boldSignEnabled">
+                      <i class="ri-quill-pen-line me-1"></i>BoldSign E-Signatures
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Save Button -->
+            <div class="col-12">
+              <hr class="my-3">
+              <div class="d-flex justify-content-end">
+                <button class="btn btn-primary" (click)="saveFeatures()" [disabled]="isSavingFeatures">
+                  <span *ngIf="isSavingFeatures" class="spinner-border spinner-border-sm me-1"></span>
+                  <i *ngIf="!isSavingFeatures" class="ri-save-line me-1"></i>
+                  {{ isSavingFeatures ? 'Saving...' : 'Save Changes' }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

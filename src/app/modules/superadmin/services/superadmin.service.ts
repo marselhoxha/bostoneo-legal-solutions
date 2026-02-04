@@ -14,7 +14,12 @@ import {
   AuditLogEntry,
   CreateOrganization,
   UpdateOrganization,
-  Announcement
+  Announcement,
+  AnnouncementSummary,
+  IntegrationStatus,
+  SecurityOverview,
+  FailedLogin,
+  OrganizationFeatures
 } from '../models/superadmin.models';
 
 interface ApiResponse<T> {
@@ -315,5 +320,92 @@ export class SuperAdminService {
     return this.http.post<ApiResponse<void>>(
       `${this.apiUrl}/announcements`, announcement
     ).pipe(map(() => void 0));
+  }
+
+  /**
+   * Get all announcements (paginated)
+   */
+  getAnnouncements(page: number = 0, size: number = 10): Observable<PageData<AnnouncementSummary>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    return this.http.get<ApiResponse<{ announcements: AnnouncementSummary[], page: any }>>(
+      `${this.apiUrl}/announcements`, { params }
+    ).pipe(
+      map(response => ({
+        content: response.data.announcements,
+        page: response.data.page
+      }))
+    );
+  }
+
+  /**
+   * Delete an announcement
+   */
+  deleteAnnouncement(id: number): Observable<void> {
+    return this.http.delete<ApiResponse<void>>(
+      `${this.apiUrl}/announcements/${id}`
+    ).pipe(map(() => void 0));
+  }
+
+  // ==================== INTEGRATIONS ====================
+
+  /**
+   * Get integration status for all organizations
+   */
+  getIntegrationStatus(): Observable<IntegrationStatus[]> {
+    return this.http.get<ApiResponse<{ integrations: IntegrationStatus[] }>>(
+      `${this.apiUrl}/integrations/status`
+    ).pipe(map(response => response.data.integrations));
+  }
+
+  // ==================== SECURITY ====================
+
+  /**
+   * Get security overview
+   */
+  getSecurityOverview(): Observable<SecurityOverview> {
+    return this.http.get<ApiResponse<{ security: SecurityOverview }>>(
+      `${this.apiUrl}/security/overview`
+    ).pipe(map(response => response.data.security));
+  }
+
+  /**
+   * Get failed logins (paginated)
+   */
+  getFailedLogins(page: number = 0, size: number = 20): Observable<PageData<FailedLogin>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    return this.http.get<ApiResponse<{ logins: FailedLogin[], page: any }>>(
+      `${this.apiUrl}/security/failed-logins`, { params }
+    ).pipe(
+      map(response => ({
+        content: response.data.logins,
+        page: response.data.page
+      }))
+    );
+  }
+
+  // ==================== ORGANIZATION FEATURES ====================
+
+  /**
+   * Get organization features
+   */
+  getOrganizationFeatures(organizationId: number): Observable<OrganizationFeatures> {
+    return this.http.get<ApiResponse<{ features: OrganizationFeatures }>>(
+      `${this.apiUrl}/organizations/${organizationId}/features`
+    ).pipe(map(response => response.data.features));
+  }
+
+  /**
+   * Update organization features
+   */
+  updateOrganizationFeatures(organizationId: number, features: Partial<OrganizationFeatures>): Observable<OrganizationFeatures> {
+    return this.http.put<ApiResponse<{ features: OrganizationFeatures }>>(
+      `${this.apiUrl}/organizations/${organizationId}/features`, features
+    ).pipe(map(response => response.data.features));
   }
 }

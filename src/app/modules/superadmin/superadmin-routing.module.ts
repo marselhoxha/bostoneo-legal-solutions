@@ -9,6 +9,9 @@ import { UserDetailComponent } from './components/user-detail/user-detail.compon
 import { PlatformAnalyticsComponent } from './components/platform-analytics/platform-analytics.component';
 import { SystemHealthComponent } from './components/system-health/system-health.component';
 import { AuditLogViewerComponent } from './components/audit-log-viewer/audit-log-viewer.component';
+import { AnnouncementManagerComponent } from './components/announcement-manager/announcement-manager.component';
+import { IntegrationStatusComponent } from './components/integration-status/integration-status.component';
+import { SecurityDashboardComponent } from './components/security-dashboard/security-dashboard.component';
 
 const routes: Routes = [
   {
@@ -59,6 +62,21 @@ const routes: Routes = [
         path: 'audit-logs',
         component: AuditLogViewerComponent,
         data: { title: 'Audit Logs' }
+      },
+      {
+        path: 'announcements',
+        component: AnnouncementManagerComponent,
+        data: { title: 'Announcements' }
+      },
+      {
+        path: 'integrations',
+        component: IntegrationStatusComponent,
+        data: { title: 'Integration Status' }
+      },
+      {
+        path: 'security',
+        component: SecurityDashboardComponent,
+        data: { title: 'Security Dashboard' }
       }
     ]
   }

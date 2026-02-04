@@ -1,281 +1,123 @@
 <div class="container-fluid" style="margin-top: 100px;">
-
-  <!-- ==================== DASHBOARD VIEW ==================== -->
-  <div *ngIf="viewMode === 'dashboard'">
-    <!-- Dashboard Header -->
-    <div class="row">
-      <div class="col-12">
-        <div class="page-header-wrapper">
-          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-            <div>
-              <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Practice Areas</div>
-              <h4 class="mb-0">Personal Injury Dashboard</h4>
+  <!-- Page Header - E-Signatures Style -->
+  <div class="row">
+    <div class="col-12">
+      <div class="page-header-wrapper">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div>
+            <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Practice Areas</div>
+            <h4 class="mb-0">Personal Injury</h4>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <!-- Case Selector -->
+            <div class="case-selector-wrapper d-none d-md-block" ngbDropdown #caseDropdown="ngbDropdown">
+              <div class="case-selector-input-wrapper">
+                <i class="ri-folder-line case-selector-icon"></i>
+                <input type="text" class="form-control case-selector-input"
+                       [value]="caseSearchInput"
+                       (input)="onCaseSearchInput($event)"
+                       (focus)="showCaseDropdown = caseSearchInput.length >= 2"
+                       (blur)="closeCaseDropdown()"
+                       placeholder="Link to case...">
+                <span class="case-selector-spinner" *ngIf="isSearchingCases">
+                  <span class="spinner-border spinner-border-sm"></span>
+                </span>
+              </div>
+              <!-- Search Results Dropdown -->
+              <div class="case-selector-dropdown" *ngIf="showCaseDropdown && searchResults.length > 0">
+                <div class="case-result-item"
+                     *ngFor="let caseItem of searchResults"
+                     (mousedown)="selectCase(caseItem)">
+                  <div class="case-result-icon">
+                    <i class="ri-folder-line"></i>
+                  </div>
+                  <div class="case-result-info">
+                    <div class="case-result-number">{{ caseItem.caseNumber }}</div>
+                    <div class="case-result-title">{{ caseItem.title }}</div>
+                    <div class="case-result-client">{{ caseItem.clientName }}</div>
+                  </div>
+                  <div class="case-result-type">
+                    <span class="badge bg-primary-subtle text-primary">{{ caseItem.type }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="case-selector-dropdown case-selector-empty" *ngIf="showCaseDropdown && searchResults.length === 0 && caseSearchInput.length >= 2 && !isSearchingCases">
+                <div class="text-center py-3 text-muted">
+                  <i class="ri-search-line fs-4 d-block mb-2"></i>
+                  <small>No PI cases found</small>
+                </div>
+              </div>
             </div>
-            <div class="d-flex align-items-center gap-2">
-              <button class="btn btn-soft-info" (click)="openProviderDirectory()">
-                <i class="ri-contacts-book-line me-1"></i> Provider Directory
+
+            <!-- Linked Case Badge -->
+            <div class="linked-case-badge" *ngIf="linkedCase">
+              <i class="ri-folder-check-line me-2"></i>
+              <span class="case-badge-number">{{ linkedCase.caseNumber }}</span>
+              <span class="case-badge-separator">-</span>
+              <span class="case-badge-client text-truncate">{{ linkedCase.clientName }}</span>
+              <button class="btn-unlink" (click)="unlinkCase()" title="Unlink case">
+                <i class="ri-close-line"></i>
               </button>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Dashboard Stats Row -->
-    <div class="stats-row mb-4">
-      <div class="stat-item">
-        <div class="stat-header">
-          <span class="stat-label">ACTIVE CASES</span>
-          <span class="stat-indicator stat-indicator-primary">
-            <i class="ri-briefcase-line"></i>
-          </span>
-        </div>
-        <div class="stat-body">
-          <i class="ri-folder-open-line stat-icon text-primary"></i>
-          <span class="stat-value">{{ portfolioStats?.activeCases || 0 }}</span>
-        </div>
-        <div class="stat-footer" *ngIf="portfolioStats?.totalCases">
-          <small class="text-muted">of {{ portfolioStats.totalCases }} total cases</small>
-        </div>
-      </div>
-
-      <div class="stat-item">
-        <div class="stat-header">
-          <span class="stat-label">PORTFOLIO VALUE</span>
-          <span class="stat-indicator stat-indicator-success">
-            <i class="ri-money-dollar-circle-line"></i>
-          </span>
-        </div>
-        <div class="stat-body">
-          <i class="ri-funds-line stat-icon text-success"></i>
-          <span class="stat-value">{{ formatCompactCurrency(portfolioStats?.totalPortfolioValue || 0) }}</span>
-        </div>
-        <div class="stat-footer">
-          <small class="text-muted">Total estimated value</small>
-        </div>
-      </div>
-
-      <div class="stat-item">
-        <div class="stat-header">
-          <span class="stat-label">IN SETTLEMENT</span>
-          <span class="stat-indicator stat-indicator-warning">
-            <i class="ri-scales-3-line"></i>
-          </span>
-        </div>
-        <div class="stat-body">
-          <i class="ri-discuss-line stat-icon text-warning"></i>
-          <span class="stat-value">{{ portfolioStats?.casesInSettlement || 0 }}</span>
-        </div>
-        <div class="stat-footer">
-          <small class="text-muted">Negotiating</small>
-        </div>
-      </div>
-
-      <div class="stat-item">
-        <div class="stat-header">
-          <span class="stat-label">AVG CASE VALUE</span>
-          <span class="stat-indicator stat-indicator-info">
-            <i class="ri-line-chart-line"></i>
-          </span>
-        </div>
-        <div class="stat-body">
-          <i class="ri-bar-chart-line stat-icon text-info"></i>
-          <span class="stat-value">{{ formatCompactCurrency(portfolioStats?.avgCaseValue || 0) }}</span>
-        </div>
-        <div class="stat-footer">
-          <small class="text-muted">Per case average</small>
-        </div>
-      </div>
-    </div>
-
-    <!-- PI Cases -->
-    <div class="row" style="margin-bottom: 60px;">
-      <div class="col-12">
-        <div class="card border-0 shadow-sm">
-          <div class="card-header bg-transparent border-bottom">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-              <div>
-                <h5 class="mb-1 fw-semibold">All Cases</h5>
-                <p class="text-muted mb-0 fs-13">Manage and track your personal injury cases</p>
-              </div>
-              <div class="d-flex align-items-center gap-2 flex-wrap">
-                <!-- Filter Chips -->
-                <div class="filter-chips">
-                  <button class="filter-chip" [class.active]="!portfolioStatusFilter && !portfolioSearchTerm" (click)="clearPortfolioFilters()">
-                    <i class="ri-list-check-2"></i> All
-                  </button>
-                  <button class="filter-chip chip-success" [class.active]="portfolioStatusFilter === 'OPEN'" (click)="onPortfolioStatusFilter('OPEN')">
-                    <i class="ri-folder-open-line"></i> Open
-                  </button>
-                  <button class="filter-chip chip-warning" [class.active]="portfolioStatusFilter === 'PENDING'" (click)="onPortfolioStatusFilter('PENDING')">
-                    <i class="ri-hourglass-line"></i> Pending
-                  </button>
-                  <button class="filter-chip chip-info" [class.active]="portfolioStatusFilter === 'IN_SETTLEMENT'" (click)="onPortfolioStatusFilter('IN_SETTLEMENT')">
-                    <i class="ri-scales-3-line"></i> Settlement
-                  </button>
-                </div>
-                <!-- Search -->
-                <div class="search-box d-none d-md-block">
-                  <input type="text" class="form-control search-input"
-                         [value]="portfolioSearchTerm"
-                         (input)="onPortfolioSearch($event)"
-                         placeholder="Search cases...">
-                  <i class="ri-search-line search-icon"></i>
-                </div>
-                <button class="btn btn-soft-secondary btn-sm btn-icon" (click)="loadPICases(0)" [disabled]="isLoadingPICases" ngbTooltip="Refresh">
-                  <i class="ri-refresh-line" [class.spin]="isLoadingPICases"></i>
-                </button>
-              </div>
+            <!-- Global Search -->
+            <div class="search-box d-none d-lg-block">
+              <input type="text" class="form-control search-input"
+                     [(ngModel)]="globalSearch"
+                     placeholder="Search tools...">
+              <i class="ri-search-line search-icon"></i>
             </div>
-          </div>
-
-          <div class="card-body">
-            <!-- Loading -->
-            <div class="text-center py-5" *ngIf="isLoadingPICases">
-              <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-              <h5 class="mt-4">Loading Cases</h5>
-              <p class="text-muted">Fetching your PI cases...</p>
-            </div>
-
-            <!-- Table -->
-            <div class="table-responsive" *ngIf="!isLoadingPICases">
-              <table class="table table-hover table-nowrap align-middle mb-0">
-                <thead class="table-light">
-                  <tr>
-                    <th scope="col" style="width: 12%;"><i class="ri-hashtag text-muted me-1"></i>Case #</th>
-                    <th scope="col" style="width: 30%;"><i class="ri-file-text-line text-muted me-1"></i>Case / Client</th>
-                    <th scope="col" style="width: 12%;"><i class="ri-flag-line text-muted me-1"></i>Status</th>
-                    <th scope="col" style="width: 14%;"><i class="ri-money-dollar-circle-line text-muted me-1"></i>Est. Value</th>
-                    <th scope="col" style="width: 14%;"><i class="ri-hospital-line text-muted me-1"></i>Medical</th>
-                    <th scope="col" style="width: 10%;"><i class="ri-calendar-line text-muted me-1"></i>Days</th>
-                    <th scope="col" style="width: 8%;"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let caseItem of piCaseList" class="cursor-pointer" (click)="selectCaseForWorkspace(caseItem)">
-                    <td>
-                      <a class="fw-semibold text-primary d-flex align-items-center gap-1">
-                        <i class="ri-folder-3-line"></i>{{ caseItem.caseNumber }}
-                      </a>
-                    </td>
-                    <td>
-                      <div class="d-flex align-items-start gap-2">
-                        <div class="avatar-xs flex-shrink-0">
-                          <span class="avatar-title rounded-circle" [ngClass]="{
-                            'bg-success-subtle text-success': caseItem.status === 'ACTIVE' || caseItem.status === 'OPEN',
-                            'bg-warning-subtle text-warning': caseItem.status === 'PENDING',
-                            'bg-info-subtle text-info': caseItem.status === 'IN_SETTLEMENT',
-                            'bg-primary-subtle text-primary': caseItem.status !== 'ACTIVE' && caseItem.status !== 'OPEN' && caseItem.status !== 'PENDING' && caseItem.status !== 'IN_SETTLEMENT'
-                          }">
-                            {{ getClientInitials(caseItem.clientName) }}
-                          </span>
-                        </div>
-                        <div class="flex-grow-1 overflow-hidden">
-                          <h6 class="mb-0 text-truncate" style="max-width: 220px;">{{ caseItem.title }}</h6>
-                          <small class="text-muted d-flex align-items-center gap-1 mt-1">
-                            <i class="ri-user-line fs-12"></i>{{ caseItem.clientName || 'No Client' }}
-                          </small>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span class="badge rounded-pill d-inline-flex align-items-center gap-1" [ngClass]="{
-                        'bg-success-subtle text-success': caseItem.status === 'ACTIVE' || caseItem.status === 'OPEN',
-                        'bg-warning-subtle text-warning': caseItem.status === 'PENDING',
-                        'bg-info-subtle text-info': caseItem.status === 'IN_SETTLEMENT',
-                        'bg-primary-subtle text-primary': caseItem.status === 'IN_PROGRESS',
-                        'bg-secondary-subtle text-secondary': caseItem.status === 'CLOSED' || caseItem.status === 'ARCHIVED'
-                      }">
-                        <i [ngClass]="{
-                          'ri-checkbox-circle-fill': caseItem.status === 'ACTIVE' || caseItem.status === 'OPEN',
-                          'ri-time-fill': caseItem.status === 'PENDING',
-                          'ri-scales-3-fill': caseItem.status === 'IN_SETTLEMENT',
-                          'ri-loader-4-fill': caseItem.status === 'IN_PROGRESS',
-                          'ri-archive-fill': caseItem.status === 'CLOSED' || caseItem.status === 'ARCHIVED'
-                        }" class="fs-10"></i>
-                        {{ formatStatus(caseItem.status) }}
-                      </span>
-                    </td>
-                    <td>
-                      <div class="d-flex align-items-center gap-1" *ngIf="getCaseValueDisplay(caseItem) > 0">
-                        <i class="ri-funds-line text-success"></i>
-                        <span class="fw-semibold text-success">{{ formatCurrency(getCaseValueDisplay(caseItem)) }}</span>
-                      </div>
-                      <span class="text-muted" *ngIf="getCaseValueDisplay(caseItem) === 0">—</span>
-                    </td>
-                    <td>
-                      <div class="d-flex align-items-center gap-1" *ngIf="caseItem.medicalExpenses > 0">
-                        <i class="ri-heart-pulse-line text-danger"></i>
-                        <span class="fw-medium">{{ formatCurrency(caseItem.medicalExpenses) }}</span>
-                      </div>
-                      <span class="text-muted" *ngIf="!caseItem.medicalExpenses">—</span>
-                    </td>
-                    <td>
-                      <span class="badge bg-light text-body d-inline-flex align-items-center gap-1">
-                        <i class="ri-timer-line"></i>{{ getDaysOpen(caseItem) }}d
-                      </span>
-                    </td>
-                    <td>
-                      <button type="button" class="btn btn-soft-primary btn-icon btn-sm"
-                              ngbTooltip="Open Workspace" (click)="selectCaseForWorkspace(caseItem); $event.stopPropagation()">
-                        <i class="ri-arrow-right-s-line fs-16"></i>
-                      </button>
-                    </td>
-                  </tr>
-
-                  <!-- Empty -->
-                  <tr *ngIf="piCaseList.length === 0">
-                    <td colspan="7" class="text-center py-5">
-                      <div class="empty-state-container">
-                        <div class="empty-state-illustration">
-                          <div class="empty-state-icon-lg">
-                            <i class="ri-briefcase-line"></i>
-                          </div>
-                          <div class="empty-state-circles">
-                            <span></span><span></span><span></span>
-                          </div>
-                        </div>
-                        <h5 class="fw-semibold mb-2">No PI Cases Found</h5>
-                        <p class="text-muted mb-4" *ngIf="!portfolioStatusFilter && !portfolioSearchTerm">Create a new case with "Personal Injury" practice area</p>
-                        <p class="text-muted mb-4" *ngIf="portfolioStatusFilter || portfolioSearchTerm">No cases match the selected filter or search</p>
-                        <button class="btn btn-soft-secondary" (click)="clearPortfolioFilters()" *ngIf="portfolioStatusFilter || portfolioSearchTerm">
-                          <i class="ri-close-line me-1"></i> Clear Filters
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Pagination -->
-            <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top"
-                 *ngIf="portfolioCasesTotalPages > 1 && !isLoadingPICases">
-              <div class="text-muted fs-13">
-                Showing {{ piCaseList.length }} of {{ portfolioCasesTotal }} cases
-              </div>
-              <nav>
-                <ul class="pagination pagination-sm mb-0">
-                  <li class="page-item" [class.disabled]="portfolioCasesPage === 0">
-                    <a class="page-link cursor-pointer" (click)="portfolioCasesPage > 0 && loadPICases(portfolioCasesPage - 1)">
-                      <i class="ri-arrow-left-s-line"></i>
-                    </a>
-                  </li>
-                  <ng-container *ngFor="let page of getVisiblePages()">
-                    <li class="page-item" *ngIf="page !== -1" [class.active]="page === portfolioCasesPage">
-                      <a class="page-link cursor-pointer" (click)="loadPICases(page)">{{ page + 1 }}</a>
-                    </li>
-                    <li class="page-item disabled" *ngIf="page === -1">
-                      <span class="page-link">...</span>
-                    </li>
-                  </ng-container>
-                  <li class="page-item" [class.disabled]="portfolioCasesPage >= portfolioCasesTotalPages - 1">
-                    <a class="page-link cursor-pointer" (click)="portfolioCasesPage < portfolioCasesTotalPages - 1 && loadPICases(portfolioCasesPage + 1)">
-                      <i class="ri-arrow-right-s-line"></i>
-                    </a>
-                  </li>
-                </ul>
-              </nav>
+            <!-- Quick Actions -->
+            <div class="btn-group">
+              <button class="btn btn-primary" (click)="openQuickCalculator()">
+                <i class="ri-calculator-line me-1"></i> Quick Calculate
+              </button>
+              <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+                      data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">Toggle Dropdown</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'case-value'">
+                    <i class="ri-calculator-line me-2 text-primary"></i> Case Value Calculator
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'demand-letter'">
+                    <i class="ri-file-text-line me-2 text-info"></i> Demand Letter
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'medical-records'" [class.disabled]="!linkedCase">
+                    <i class="ri-hospital-line me-2 text-success"></i> Medical Records
+                    <span class="badge bg-info-subtle text-info ms-auto" *ngIf="!linkedCase">Link Case</span>
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'settlement'">
+                    <i class="ri-money-dollar-circle-line me-2 text-warning"></i> Settlement Tracker
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li class="dropdown-header text-muted small">Professional Tools</li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'medical-summary'" [class.disabled]="!linkedCase">
+                    <i class="ri-article-line me-2 text-primary"></i> Medical Summary
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'document-checklist'" [class.disabled]="!linkedCase">
+                    <i class="ri-checkbox-multiple-line me-2 text-warning"></i> Document Checklist
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item" (click)="activeTab = 'provider-directory'">
+                    <i class="ri-contacts-book-line me-2 text-info"></i> Provider Directory
+                  </a>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
@@ -283,343 +125,195 @@
     </div>
   </div>
 
-  <!-- ==================== WORKSPACE VIEW ==================== -->
-  <div *ngIf="viewMode === 'workspace'">
-    <!-- Workspace Header -->
-    <div class="row">
-      <div class="col-12">
-        <div class="workspace-header">
-          <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-soft-secondary back-btn" (click)="backToDashboard()">
-              <i class="ri-arrow-left-line me-1"></i> Dashboard
-            </button>
-            <div class="workspace-case-info" *ngIf="linkedCase">
-              <span class="case-number">{{ linkedCase.caseNumber }}</span>
-              <span class="separator">|</span>
-              <span class="client-name">{{ linkedCase.clientName }}</span>
-              <span class="badge rounded-pill ms-2" [ngClass]="getStatusBadgeClass(linkedCase.status)">
-                {{ formatStatus(linkedCase.status) }}
-              </span>
-            </div>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-soft-info btn-sm" (click)="openProviderDirectory()">
-              <i class="ri-contacts-book-line"></i>
-              <span class="d-none d-md-inline ms-1">Providers</span>
-            </button>
-            <div class="btn-group">
-              <button class="btn btn-primary btn-sm" (click)="openQuickCalculator()">
-                <i class="ri-calculator-line me-1"></i> Calculate
-              </button>
-            </div>
-          </div>
-        </div>
+  <!-- Dashboard Stats Cards - Minimal Design -->
+  <div class="stats-row" *ngIf="activeTab === 'dashboard'">
+    <!-- Latest Case Value -->
+    <div class="stat-item cursor-pointer" (click)="activeTab = 'case-value'">
+      <div class="stat-header">
+        <span class="stat-label">{{ linkedCase ? 'CASE VALUE' : 'LATEST CASE VALUE' }}</span>
+        <span class="stat-indicator stat-indicator-primary">
+          <i class="ri-calculator-line"></i>
+        </span>
+      </div>
+      <div class="stat-body">
+        <i class="ri-funds-line stat-icon text-primary"></i>
+        <span class="stat-value">{{ formatCompactCurrency(linkedCase ? getLinkedCaseValue() : latestCaseValue) }}</span>
       </div>
     </div>
 
-    <!-- Workspace Stats (only when case is linked) -->
-    <div class="stats-row" *ngIf="linkedCase && activeTab !== 'provider-directory'">
-      <!-- Case Value -->
-      <div class="stat-item cursor-pointer" (click)="activeTab = 'valuation'">
-        <div class="stat-header">
-          <span class="stat-label">CASE VALUE</span>
-          <span class="stat-indicator stat-indicator-primary">
-            <i class="ri-calculator-line"></i>
-          </span>
-        </div>
-        <div class="stat-body">
-          <i class="ri-funds-line stat-icon text-primary"></i>
-          <span class="stat-value">{{ formatCompactCurrency(getLinkedCaseValue()) }}</span>
-        </div>
+    <!-- Medical Total -->
+    <div class="stat-item cursor-pointer" (click)="activeTab = 'medical-records'">
+      <div class="stat-header">
+        <span class="stat-label">MEDICAL TOTAL</span>
+        <span class="stat-indicator stat-indicator-success">
+          <i class="ri-hospital-line"></i>
+        </span>
       </div>
-
-      <!-- Medical Total -->
-      <div class="stat-item cursor-pointer" (click)="activeTab = 'medical'; medicalSubTab = 'records'">
-        <div class="stat-header">
-          <span class="stat-label">MEDICAL TOTAL</span>
-          <span class="stat-indicator stat-indicator-success">
-            <i class="ri-hospital-line"></i>
-          </span>
-        </div>
-        <div class="stat-body">
-          <i class="ri-heart-pulse-line stat-icon text-success"></i>
-          <span class="stat-value">{{ formatCompactCurrency(getLinkedCaseMedicalTotal()) }}</span>
-        </div>
-      </div>
-
-      <!-- Days Since Injury -->
-      <div class="stat-item cursor-pointer" (click)="activeTab = 'documents'; documentsSubTab = 'checklist'">
-        <div class="stat-header">
-          <span class="stat-label">{{ getDaysSinceInjury() ? 'DAYS SINCE INJURY' : 'DOCUMENTS' }}</span>
-          <span class="stat-indicator stat-indicator-info">
-            <i [class]="getDaysSinceInjury() ? 'ri-calendar-line' : 'ri-file-list-3-line'"></i>
-          </span>
-        </div>
-        <div class="stat-body">
-          <i [class]="getDaysSinceInjury() ? 'ri-time-line stat-icon text-info' : 'ri-file-list-line stat-icon text-info'"></i>
-          <span class="stat-value">{{ getDaysSinceInjury() || (documentCompleteness?.score || 0) + '%' }}</span>
-        </div>
-      </div>
-
-      <!-- Settlement -->
-      <div class="stat-item cursor-pointer" (click)="activeTab = 'settlement'">
-        <div class="stat-header">
-          <span class="stat-label">{{ linkedCase.settlementDemandAmount ? 'SETTLEMENT GAP' : 'SETTLEMENT' }}</span>
-          <span class="stat-indicator stat-indicator-warning">
-            <i class="ri-exchange-dollar-line"></i>
-          </span>
-        </div>
-        <div class="stat-body">
-          <i class="ri-money-dollar-circle-line stat-icon text-warning"></i>
-          <span class="stat-value" *ngIf="linkedCase.settlementDemandAmount">
-            {{ formatCompactCurrency((linkedCase.settlementDemandAmount || 0) - (linkedCase.settlementOfferAmount || 0)) }}
-          </span>
-          <span class="stat-value" *ngIf="!linkedCase.settlementDemandAmount">--</span>
-        </div>
+      <div class="stat-body">
+        <i class="ri-heart-pulse-line stat-icon text-success"></i>
+        <span class="stat-value">{{ formatCompactCurrency(linkedCase ? getLinkedCaseMedicalTotal() : getTotalMedicalBills()) }}</span>
       </div>
     </div>
 
-    <!-- Main Content Card with Tabs -->
-    <div class="row">
-      <div class="col-12">
-        <div class="card border-0 shadow-sm">
-          <div class="card-header bg-transparent border-bottom">
-            <ul ngbNav #nav="ngbNav" [(activeId)]="activeTab" class="nav nav-pills nav-custom-pills gap-2">
-              <!-- Summary Tab (Overview) -->
-              <li [ngbNavItem]="'overview'">
-                <a ngbNavLink class="d-flex align-items-center gap-2">
-                  <i class="ri-dashboard-line fs-16"></i>
-                  <span>Summary</span>
-                </a>
+    <!-- Days Since Injury (when case linked) / Records Count (when no case) -->
+    <div class="stat-item cursor-pointer" (click)="activeTab = linkedCase ? 'case-value' : 'medical-records'">
+      <div class="stat-header">
+        <span class="stat-label">{{ linkedCase && getDaysSinceInjury() ? 'DAYS SINCE INJURY' : 'MEDICAL RECORDS' }}</span>
+        <span class="stat-indicator stat-indicator-info">
+          <i [class]="linkedCase && getDaysSinceInjury() ? 'ri-calendar-line' : 'ri-file-medical-line'"></i>
+        </span>
+      </div>
+      <div class="stat-body">
+        <i [class]="linkedCase && getDaysSinceInjury() ? 'ri-time-line stat-icon text-info' : 'ri-file-list-line stat-icon text-info'"></i>
+        <span class="stat-value">{{ linkedCase && getDaysSinceInjury() ? getDaysSinceInjury() : medicalRecords.length }}</span>
+      </div>
+    </div>
+
+    <!-- Settlement Gap (when case linked) / Negotiations (when no case) -->
+    <div class="stat-item cursor-pointer" (click)="activeTab = 'settlement'">
+      <div class="stat-header">
+        <span class="stat-label">{{ linkedCase && linkedCase.settlementDemandAmount ? 'SETTLEMENT GAP' : 'NEGOTIATIONS' }}</span>
+        <span class="stat-indicator stat-indicator-warning">
+          <i class="ri-exchange-dollar-line"></i>
+        </span>
+      </div>
+      <div class="stat-body">
+        <i class="ri-money-dollar-circle-line stat-icon text-warning"></i>
+        <span class="stat-value" *ngIf="linkedCase && linkedCase.settlementDemandAmount">
+          {{ formatCompactCurrency((linkedCase.settlementDemandAmount || 0) - (linkedCase.settlementOfferAmount || 0)) }}
+        </span>
+        <span class="stat-value" *ngIf="!linkedCase || !linkedCase.settlementDemandAmount">{{ settlementHistory.length }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Card with Tabs -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-bottom">
+          <ul ngbNav #nav="ngbNav" [(activeId)]="activeTab" class="nav nav-pills nav-custom-pills gap-2">
+            <li [ngbNavItem]="'dashboard'">
+              <a ngbNavLink class="d-flex align-items-center gap-2">
+                <i class="ri-dashboard-line fs-16"></i>
+                <span>Dashboard</span>
+              </a>
               <ng-template ngbNavContent>
-                <!-- Summary Tab Content - Case Overview -->
+                <!-- Dashboard Tab Content -->
                 <div class="py-4">
-                  <!-- Case Overview Section (when case is linked) -->
-                  <div class="case-overview-section" *ngIf="linkedCase">
-                    <!-- Summary Header -->
-                    <div class="summary-header mb-4">
-                      <div class="d-flex align-items-start gap-3">
-                        <div class="summary-avatar">
-                          <span class="avatar-title rounded-circle bg-primary-subtle text-primary">
-                            {{ getClientInitials(linkedCase.clientName) }}
-                          </span>
+                  <!-- Featured Tools Section -->
+                  <div class="mb-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                      <h5 class="mb-0 fw-semibold"><i class="ri-tools-line text-primary me-2"></i>AI-Powered Tools</h5>
+                    </div>
+
+                    <!-- Featured Tool Card - Case Value Calculator -->
+                    <div class="featured-tool-card" (click)="activeTab = 'case-value'">
+                      <span class="featured-badge">Featured</span>
+                      <div class="tool-header">
+                        <div class="tool-icon-large">
+                          <i class="ri-calculator-line"></i>
                         </div>
-                        <div class="summary-info flex-grow-1">
-                          <div class="d-flex align-items-center gap-2 mb-1">
-                            <h5 class="mb-0 fw-semibold">{{ linkedCase.clientName || 'No Client' }}</h5>
-                            <span class="badge rounded-pill" [ngClass]="getStatusBadgeClass(linkedCase.status)">
-                              {{ formatStatus(linkedCase.status) }}
-                            </span>
-                          </div>
-                          <div class="d-flex align-items-center gap-3 text-muted fs-13">
-                            <span><i class="ri-hashtag me-1"></i>{{ linkedCase.caseNumber }}</span>
-                            <span *ngIf="linkedCase.injuryDate"><i class="ri-calendar-event-line me-1"></i>Injury: {{ linkedCase.injuryDate | date:'mediumDate' }}</span>
-                            <span><i class="ri-time-line me-1"></i>{{ getDaysOpen(linkedCase) }} days open</span>
-                          </div>
+                        <div class="tool-info">
+                          <h4>Case Value Calculator</h4>
+                          <p>Estimate total case value with AI-powered analysis, pain & suffering multipliers, and comparative negligence adjustments.</p>
                         </div>
+                      </div>
+                      <div class="tool-footer">
+                        <span class="tool-action">Open Calculator <i class="ri-arrow-right-line"></i></span>
+                        <span class="tool-stat" *ngIf="latestCaseValue > 0">Last calc: {{ formatCompactCurrency(latestCaseValue) }}</span>
                       </div>
                     </div>
 
-                    <!-- Stats Cards Row -->
-                    <div class="row g-3 mb-4">
-                      <div class="col-6 col-lg-3">
-                        <div class="summary-stat-card primary" (click)="activeTab = 'valuation'">
-                          <div class="ssc-icon"><i class="ri-funds-line"></i></div>
-                          <div class="ssc-content">
-                            <div class="ssc-value">{{ formatCompactCurrency(getLinkedCaseValue()) }}</div>
-                            <div class="ssc-label">Case Value</div>
+                    <!-- Secondary Tool Cards -->
+                    <div class="row g-3 mt-2">
+                      <!-- Demand Letter Generator -->
+                      <div class="col-xl-4 col-md-6">
+                        <div class="secondary-tool-card h-100" (click)="activeTab = 'demand-letter'">
+                          <div class="tool-icon-wrapper demand-letter">
+                            <i class="ri-file-text-line"></i>
                           </div>
-                          <div class="ssc-action"><i class="ri-arrow-right-s-line"></i></div>
-                        </div>
-                      </div>
-                      <div class="col-6 col-lg-3">
-                        <div class="summary-stat-card success" (click)="activeTab = 'medical'; medicalSubTab = 'records'">
-                          <div class="ssc-icon"><i class="ri-heart-pulse-line"></i></div>
-                          <div class="ssc-content">
-                            <div class="ssc-value">{{ formatCompactCurrency(getLinkedCaseMedicalTotal()) }}</div>
-                            <div class="ssc-label">Medical Bills</div>
-                          </div>
-                          <div class="ssc-action"><i class="ri-arrow-right-s-line"></i></div>
-                        </div>
-                      </div>
-                      <div class="col-6 col-lg-3">
-                        <div class="summary-stat-card info" (click)="activeTab = 'documents'; documentsSubTab = 'checklist'">
-                          <div class="ssc-icon"><i class="ri-file-list-3-line"></i></div>
-                          <div class="ssc-content">
-                            <div class="ssc-value">{{ documentCompleteness?.score || 0 }}<span class="ssc-unit">%</span></div>
-                            <div class="ssc-label">Documents</div>
-                          </div>
-                          <div class="ssc-action"><i class="ri-arrow-right-s-line"></i></div>
-                        </div>
-                      </div>
-                      <div class="col-6 col-lg-3">
-                        <div class="summary-stat-card warning" (click)="activeTab = 'settlement'">
-                          <div class="ssc-icon"><i class="ri-scales-3-line"></i></div>
-                          <div class="ssc-content">
-                            <div class="ssc-value">{{ linkedCase.settlementDemandAmount ? formatCompactCurrency(linkedCase.settlementDemandAmount) : '--' }}</div>
-                            <div class="ssc-label">Demand</div>
-                          </div>
-                          <div class="ssc-action"><i class="ri-arrow-right-s-line"></i></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Main Content Grid -->
-                    <div class="row g-3">
-                      <!-- Left Column - Case Details -->
-                      <div class="col-lg-5">
-                        <div class="card border-0 shadow-sm h-100">
-                          <div class="card-header bg-transparent border-bottom py-3">
-                            <h6 class="mb-0 fw-semibold d-flex align-items-center">
-                              <i class="ri-file-info-line text-primary me-2"></i>Case Details
-                            </h6>
-                          </div>
-                          <div class="card-body p-0">
-                            <div class="summary-detail-list">
-                              <div class="sdl-item">
-                                <div class="sdl-icon bg-primary-subtle"><i class="ri-user-line text-primary"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Client Name</div>
-                                  <div class="sdl-value">{{ linkedCase.clientName || 'Not specified' }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item" *ngIf="linkedCase.defendantName">
-                                <div class="sdl-icon bg-danger-subtle"><i class="ri-user-unfollow-line text-danger"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Defendant</div>
-                                  <div class="sdl-value">{{ linkedCase.defendantName }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item" *ngIf="linkedCase.insuranceCompany">
-                                <div class="sdl-icon bg-info-subtle"><i class="ri-shield-check-line text-info"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Insurance Company</div>
-                                  <div class="sdl-value">{{ linkedCase.insuranceCompany }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item" *ngIf="linkedCase.policyLimit">
-                                <div class="sdl-icon bg-success-subtle"><i class="ri-money-dollar-circle-line text-success"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Policy Limit</div>
-                                  <div class="sdl-value">{{ formatCurrency(linkedCase.policyLimit) }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item" *ngIf="linkedCase.accidentLocation">
-                                <div class="sdl-icon bg-warning-subtle"><i class="ri-map-pin-line text-warning"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Accident Location</div>
-                                  <div class="sdl-value">{{ linkedCase.accidentLocation }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item" *ngIf="linkedCase.injuryType">
-                                <div class="sdl-icon bg-danger-subtle"><i class="ri-first-aid-kit-line text-danger"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Injury Type</div>
-                                  <div class="sdl-value">{{ getInjuryTypeLabel(linkedCase.injuryType) }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item">
-                                <div class="sdl-icon bg-secondary-subtle"><i class="ri-calendar-line text-secondary"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Case Opened</div>
-                                  <div class="sdl-value">{{ linkedCase.createdAt | date:'mediumDate' }}</div>
-                                </div>
-                              </div>
-                            </div>
+                          <div class="tool-name">Demand Letter Generator</div>
+                          <div class="tool-description">Generate professional demand packages with AI assistance.</div>
+                          <div class="tool-meta">
+                            <span class="open-link">Open <i class="ri-arrow-right-s-line"></i></span>
+                            <span class="stat" *ngIf="generatedDemand">1 draft</span>
                           </div>
                         </div>
                       </div>
 
-                      <!-- Right Column - Quick Actions -->
-                      <div class="col-lg-7">
-                        <div class="card border-0 shadow-sm h-100">
-                          <div class="card-header bg-transparent border-bottom py-3">
-                            <h6 class="mb-0 fw-semibold d-flex align-items-center">
-                              <i class="ri-apps-2-line text-primary me-2"></i>Quick Actions
-                            </h6>
+                      <!-- Medical Records -->
+                      <div class="col-xl-4 col-md-6">
+                        <div class="secondary-tool-card h-100" (click)="activeTab = 'medical-records'">
+                          <div class="tool-icon-wrapper medical-tracker">
+                            <i class="ri-hospital-line"></i>
                           </div>
-                          <div class="card-body">
-                            <div class="summary-actions-grid">
-                              <button class="summary-action-btn" (click)="activeTab = 'valuation'">
-                                <div class="sab-icon bg-primary-subtle"><i class="ri-calculator-line text-primary"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Calculate Value</div>
-                                  <div class="sab-desc">AI-powered case valuation</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                              <button class="summary-action-btn" (click)="activeTab = 'documents'; documentsSubTab = 'demand-letter'">
-                                <div class="sab-icon bg-info-subtle"><i class="ri-file-text-line text-info"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Demand Letter</div>
-                                  <div class="sab-desc">Generate demand package</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                              <button class="summary-action-btn" (click)="activeTab = 'medical'; medicalSubTab = 'records'">
-                                <div class="sab-icon bg-success-subtle"><i class="ri-hospital-line text-success"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Medical Records</div>
-                                  <div class="sab-desc">{{ medicalRecords.length }} records on file</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                              <button class="summary-action-btn" (click)="activeTab = 'medical'; medicalSubTab = 'summary'">
-                                <div class="sab-icon bg-warning-subtle"><i class="ri-article-line text-warning"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Medical Summary</div>
-                                  <div class="sab-desc">{{ medicalSummary ? 'Summary available' : 'Generate summary' }}</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                              <button class="summary-action-btn" (click)="activeTab = 'documents'; documentsSubTab = 'checklist'">
-                                <div class="sab-icon bg-secondary-subtle"><i class="ri-checkbox-multiple-line text-secondary"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Document Checklist</div>
-                                  <div class="sab-desc">{{ documentCompleteness?.received || 0 }}/{{ documentCompleteness?.total || 0 }} received</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                              <button class="summary-action-btn" (click)="activeTab = 'settlement'">
-                                <div class="sab-icon bg-danger-subtle"><i class="ri-money-dollar-circle-line text-danger"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Settlement Tracker</div>
-                                  <div class="sab-desc">{{ settlementHistory.length }} events logged</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                            </div>
+                          <div class="tool-name">Medical Records</div>
+                          <div class="tool-description">Track all providers, treatment dates, and billing.</div>
+                          <div class="tool-meta">
+                            <span class="open-link">Open <i class="ri-arrow-right-s-line"></i></span>
+                            <span class="stat" *ngIf="medicalRecords.length > 0">{{ medicalRecords.length }} records</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Settlement Tracker -->
+                      <div class="col-xl-4 col-md-6">
+                        <div class="secondary-tool-card h-100" (click)="activeTab = 'settlement'">
+                          <div class="tool-icon-wrapper settlement">
+                            <i class="ri-money-dollar-circle-line"></i>
+                          </div>
+                          <div class="tool-name">Settlement Tracker</div>
+                          <div class="tool-description">Track negotiations, offers, and counter-offers.</div>
+                          <div class="tool-meta">
+                            <span class="open-link">Open <i class="ri-arrow-right-s-line"></i></span>
+                            <span class="stat" *ngIf="settlementHistory.length > 0">{{ settlementHistory.length }} events</span>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <!-- No Case Linked State -->
-                  <div class="no-case-state text-center py-5" *ngIf="!linkedCase">
-                    <div class="empty-state-illustration mb-4">
-                      <div class="empty-state-icon-lg">
-                        <i class="ri-folder-open-line"></i>
+                  <!-- Recent Activity Section -->
+                  <div class="mt-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                      <h5 class="mb-0 fw-semibold"><i class="ri-time-line text-primary me-2"></i>Recent Activity</h5>
+                    </div>
+                    <div class="activity-card">
+                      <div class="activity-list" *ngIf="recentActivity.length > 0">
+                        <div class="activity-item" *ngFor="let activity of recentActivity" (click)="openActivityItem(activity)">
+                          <div class="activity-icon" [ngClass]="activity.toolType">
+                            <i [class]="getToolIcon(activity.toolType)"></i>
+                          </div>
+                          <div class="activity-content">
+                            <div class="activity-title">{{ activity.title }}</div>
+                            <div class="activity-meta">{{ getToolName(activity.toolType) }}</div>
+                          </div>
+                          <div class="activity-time">{{ formatActivityTime(activity.timestamp) }}</div>
+                        </div>
                       </div>
-                      <div class="empty-state-circles">
-                        <span></span><span></span><span></span>
+                      <div class="activity-empty" *ngIf="recentActivity.length === 0">
+                        <div class="empty-state-illustration">
+                          <div class="empty-state-icon-lg">
+                            <i class="ri-folder-history-line"></i>
+                          </div>
+                          <div class="empty-state-circles">
+                            <span></span><span></span><span></span>
+                          </div>
+                        </div>
+                        <h6 class="fw-semibold mb-2">No Recent Activity</h6>
+                        <p class="text-muted mb-0">Start using the tools above to track your work.</p>
                       </div>
                     </div>
-                    <h5 class="fw-semibold mb-2">No Case Selected</h5>
-                    <p class="text-muted fs-13 mb-4">Select a case from the dashboard to view details and work on it.</p>
-                    <button class="btn btn-primary" (click)="backToDashboard()">
-                      <i class="ri-arrow-left-line me-1"></i> Go to Dashboard
-                    </button>
                   </div>
                 </div>
               </ng-template>
             </li>
 
-            <!-- Valuation Tab -->
-            <li [ngbNavItem]="'valuation'">
+            <li [ngbNavItem]="'case-value'">
               <a ngbNavLink class="d-flex align-items-center gap-2">
                 <i class="ri-funds-line fs-16"></i>
-                <span>Valuation</span>
+                <span>Case Valuation</span>
                 <span class="badge bg-primary-subtle text-primary ms-1" *ngIf="latestCaseValue > 0">{{ formatCompactCurrency(latestCaseValue) }}</span>
               </a>
               <ng-template ngbNavContent>
@@ -1052,42 +746,23 @@
               </ng-template>
             </li>
 
-            <!-- Documents Tab (Checklist + Demand Letter) -->
-            <li [ngbNavItem]="'documents'">
+            <li [ngbNavItem]="'demand-letter'">
               <a ngbNavLink class="d-flex align-items-center gap-2">
-                <i class="ri-file-list-3-line fs-16"></i>
-                <span>Documents</span>
-                <span class="badge bg-success-subtle text-success ms-1" *ngIf="documentCompleteness?.score >= 80">{{ documentCompleteness?.score }}%</span>
-                <span class="badge bg-warning-subtle text-warning ms-1" *ngIf="documentCompleteness?.score >= 50 && documentCompleteness?.score < 80">{{ documentCompleteness?.score }}%</span>
-                <span class="badge bg-danger-subtle text-danger ms-1" *ngIf="documentCompleteness?.score > 0 && documentCompleteness?.score < 50">{{ documentCompleteness?.score }}%</span>
+                <i class="ri-file-text-line fs-16"></i>
+                <span>Demand Letter</span>
+                <span class="badge bg-warning-subtle text-warning ms-1" *ngIf="isEditingDemand && hasUnsavedDemandChanges">Editing</span>
+                <span class="badge bg-success-subtle text-success ms-1" *ngIf="isEditingDemand && !hasUnsavedDemandChanges">Saved</span>
+                <span class="badge bg-info-subtle text-info ms-1" *ngIf="generatedDemand && !isEditingDemand">Draft</span>
               </a>
               <ng-template ngbNavContent>
-                <!-- Documents Tab Content with Sub-tabs -->
-                <div class="py-3">
-                  <!-- Sub-tab Navigation -->
-                  <div class="documents-subtabs mb-4">
-                    <button class="subtab-btn" [class.active]="documentsSubTab === 'checklist'"
-                            (click)="documentsSubTab = 'checklist'">
-                      <i class="ri-checkbox-multiple-line me-1"></i> Document Checklist
-                      <span class="subtab-badge" *ngIf="documentCompleteness">{{ documentCompleteness.received }}/{{ documentCompleteness.total }}</span>
-                    </button>
-                    <button class="subtab-btn" [class.active]="documentsSubTab === 'demand-letter'"
-                            (click)="documentsSubTab = 'demand-letter'">
-                      <i class="ri-file-text-line me-1"></i> Demand Letter
-                      <span class="subtab-indicator editing" *ngIf="isEditingDemand && hasUnsavedDemandChanges"></span>
-                      <span class="subtab-indicator saved" *ngIf="isEditingDemand && !hasUnsavedDemandChanges"></span>
-                      <span class="subtab-indicator draft" *ngIf="generatedDemand && !isEditingDemand"></span>
-                    </button>
-                  </div>
-
-                  <!-- Demand Letter Sub-tab Content -->
-                  <div *ngIf="documentsSubTab === 'demand-letter'">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
-                      <div>
-                        <h5 class="mb-1 fw-semibold">Demand Letter Generator</h5>
-                        <p class="text-muted mb-0 fs-13">Generate professional demand packages with AI assistance</p>
-                      </div>
+                <!-- Demand Letter Tab Content -->
+                <div class="py-4">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                    <div>
+                      <h5 class="mb-1 fw-semibold">Demand Letter Generator</h5>
+                      <p class="text-muted mb-0 fs-13">Generate professional demand packages with AI assistance</p>
                     </div>
+                  </div>
 
                   <div class="tool-layout">
                     <!-- Input Panel -->
@@ -1391,234 +1066,10 @@
                       </div>
                     </div>
                   </div>
-                  </div><!-- End Demand Letter Sub-tab -->
-
-                  <!-- Document Checklist Sub-tab Content -->
-                  <div *ngIf="documentsSubTab === 'checklist'">
-                    <div class="professional-tool-content document-checklist-content">
-                      <!-- Header -->
-                      <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div>
-                          <h5 class="mb-1">Document Checklist</h5>
-                          <p class="text-muted mb-0">Track required documents and send requests via Email/SMS</p>
-                        </div>
-                        <div class="d-flex gap-2" *ngIf="linkedCase && documentChecklist.length > 0">
-                          <button class="btn btn-sm"
-                                  [class.btn-primary]="bulkSelectMode"
-                                  [class.btn-soft-secondary]="!bulkSelectMode"
-                                  (click)="toggleBulkSelectMode()">
-                            <i class="ri-checkbox-multiple-line me-1"></i>
-                            {{ bulkSelectMode ? 'Cancel' : 'Bulk Select' }}
-                          </button>
-                          <button class="btn btn-success btn-sm"
-                                  *ngIf="bulkSelectMode && selectedForBulk.size > 0"
-                                  (click)="sendBulkRequests()">
-                            <i class="ri-send-plane-line me-1"></i>
-                            Request Selected ({{ selectedForBulk.size }})
-                          </button>
-                          <button class="btn btn-soft-warning btn-sm" (click)="resetDocumentChecklist()">
-                            <i class="ri-refresh-line me-1"></i> Reset
-                          </button>
-                        </div>
-                      </div>
-
-                      <!-- No Case Linked Warning -->
-                      <div class="alert alert-warning d-flex align-items-center" *ngIf="!linkedCase">
-                        <i class="ri-information-line fs-4 me-3"></i>
-                        <div>
-                          <strong>Link a Case</strong>
-                          <p class="mb-0">Use the case selector above to link a PI case and track required documents.</p>
-                        </div>
-                      </div>
-
-                      <!-- Loading State -->
-                      <div class="text-center py-5" *ngIf="linkedCase && isLoadingChecklist">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <p class="text-muted mt-2 mb-0">Loading checklist...</p>
-                      </div>
-
-                      <!-- Document Checklist Content -->
-                      <div class="row" *ngIf="linkedCase && !isLoadingChecklist">
-                        <!-- Left Sidebar: Stats -->
-                        <div class="col-lg-3">
-                          <!-- Completeness Ring -->
-                          <div class="completeness-card mb-3" *ngIf="documentCompleteness">
-                            <div class="completeness-ring-wrapper">
-                              <svg class="completeness-ring" viewBox="0 0 100 100">
-                                <circle class="ring-bg" cx="50" cy="50" r="42" />
-                                <circle class="ring-fill"
-                                        [class.ring-success]="getCompletenessPercent() >= 80"
-                                        [class.ring-warning]="getCompletenessPercent() >= 50 && getCompletenessPercent() < 80"
-                                        [class.ring-danger]="getCompletenessPercent() < 50"
-                                        cx="50" cy="50" r="42"
-                                        [style.stroke-dasharray]="(getCompletenessPercent() * 2.64) + ', 264'" />
-                              </svg>
-                              <div class="completeness-value">
-                                <span class="percent">{{ getCompletenessPercent() }}</span>
-                                <span class="symbol">%</span>
-                              </div>
-                            </div>
-                            <div class="completeness-label">Document Completeness</div>
-                            <div class="completeness-detail">
-                              {{ documentCompleteness.receivedCount }} of {{ documentCompleteness.totalCount || documentChecklist.length }} received
-                            </div>
-                          </div>
-
-                          <!-- Quick Stats -->
-                          <div class="checklist-stats">
-                            <div class="stat-item stat-received">
-                              <i class="ri-checkbox-circle-fill"></i>
-                              <div class="stat-info">
-                                <span class="stat-value">{{ getDocumentCountByStatus('RECEIVED') }}</span>
-                                <span class="stat-label">Received</span>
-                              </div>
-                            </div>
-                            <div class="stat-item stat-missing">
-                              <i class="ri-close-circle-fill"></i>
-                              <div class="stat-info">
-                                <span class="stat-value">{{ getMissingDocuments().length }}</span>
-                                <span class="stat-label">Missing</span>
-                              </div>
-                            </div>
-                            <div class="stat-item stat-requested">
-                              <i class="ri-time-fill"></i>
-                              <div class="stat-info">
-                                <span class="stat-value">{{ getDocumentCountByStatus('REQUESTED') }}</span>
-                                <span class="stat-label">Requested</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <!-- Missing Documents Alert -->
-                          <div class="missing-docs-card" *ngIf="getMissingDocuments().length > 0">
-                            <div class="missing-header">
-                              <i class="ri-alert-fill"></i>
-                              <span>Missing ({{ getMissingDocuments().length }})</span>
-                            </div>
-                            <div class="missing-list">
-                              <div class="missing-item" *ngFor="let doc of getMissingDocuments()">
-                                <i [class]="getDocumentTypeIcon(doc.documentType)"></i>
-                                <span>{{ doc.documentSubtype || getDocumentTypeLabel(doc.documentType) }}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Right: Document Groups -->
-                        <div class="col-lg-9">
-                          <div class="document-groups-container" *ngIf="documentChecklist.length > 0">
-                            <!-- Document Group -->
-                            <div class="document-group" *ngFor="let group of groupedDocuments; trackBy: trackByGroupType"
-                                 [class]="getGroupStatusClass(group)">
-                              <!-- Group Header -->
-                              <div class="group-header">
-                                <div class="group-title">
-                                  <i [class]="group.icon"></i>
-                                  <span>{{ group.label }}</span>
-                                </div>
-                                <div class="group-stats">
-                                  <span class="group-count" [class.all-received]="group.receivedCount === group.totalCount">
-                                    {{ group.receivedCount }}/{{ group.totalCount }}
-                                  </span>
-                                  <i class="ri-checkbox-circle-fill text-success" *ngIf="group.receivedCount === group.totalCount"></i>
-                                </div>
-                              </div>
-
-                              <!-- Group Items -->
-                              <div class="group-items">
-                                <div class="document-item" *ngFor="let item of group.items; trackBy: trackByDocId"
-                                     [class.item-received]="item.status === 'RECEIVED'"
-                                     [class.item-missing]="item.status === 'MISSING'"
-                                     [class.item-requested]="item.status === 'REQUESTED'"
-                                     [class.item-selected]="bulkSelectMode && isSelectedForBulk(item.id!)">
-                                  <!-- Bulk Selection Checkbox -->
-                                  <div class="item-checkbox" *ngIf="bulkSelectMode && item.status !== 'RECEIVED'">
-                                    <input type="checkbox" class="form-check-input"
-                                           [checked]="isSelectedForBulk(item.id!)"
-                                           (click)="toggleBulkSelection(item, $event)">
-                                  </div>
-                                  <!-- Item Info -->
-                                  <div class="item-info">
-                                    <span class="item-name">{{ item.documentSubtype || 'General' }}</span>
-                                    <span class="item-meta" *ngIf="item.requestCount && item.requestCount > 0">
-                                      <i class="ri-mail-send-line"></i> {{ item.requestCount }}x requested
-                                    </span>
-                                  </div>
-                                  <!-- Status -->
-                                  <div class="item-status">
-                                    <span class="status-badge"
-                                          [class.status-received]="item.status === 'RECEIVED'"
-                                          [class.status-missing]="item.status === 'MISSING'"
-                                          [class.status-requested]="item.status === 'REQUESTED'"
-                                          [class.status-pending]="item.status === 'PENDING'"
-                                          [class.status-na]="item.status === 'NOT_APPLICABLE'">
-                                      {{ getStatusLabel(item.status) }}
-                                    </span>
-                                  </div>
-                                  <!-- Actions -->
-                                  <div class="item-actions">
-                                    <button class="action-btn action-receive"
-                                            *ngIf="item.status !== 'RECEIVED'"
-                                            (click)="markDocumentReceived(item)"
-                                            title="Mark as Received">
-                                      <i class="ri-checkbox-circle-line"></i>
-                                    </button>
-                                    <button class="action-btn action-request"
-                                            *ngIf="item.status !== 'RECEIVED'"
-                                            (click)="requestDocument(item)"
-                                            title="Send Request">
-                                      <i class="ri-send-plane-line"></i>
-                                    </button>
-                                    <!-- Status Change Dropdown -->
-                                    <div class="action-dropdown" ngbDropdown container="body" placement="bottom-right">
-                                      <button class="action-btn action-status" ngbDropdownToggle title="Change Status">
-                                        <i class="ri-exchange-line"></i>
-                                      </button>
-                                      <div ngbDropdownMenu class="status-dropdown-menu">
-                                        <div class="dropdown-header">Change Status</div>
-                                        <button ngbDropdownItem *ngFor="let status of documentStatuses"
-                                                [class.active]="item.status === status.value"
-                                                (click)="changeDocumentStatus(item, status.value)">
-                                          <span class="status-dot" [class]="'dot-' + status.color"></span>
-                                          {{ status.label }}
-                                        </button>
-                                      </div>
-                                    </div>
-                                    <button class="action-btn action-delete"
-                                            (click)="deleteDocumentChecklistItem(item)"
-                                            title="Remove">
-                                      <i class="ri-delete-bin-line"></i>
-                                    </button>
-                                    <div class="received-check" *ngIf="item.status === 'RECEIVED'">
-                                      <i class="ri-check-double-line"></i>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <!-- Empty State -->
-                          <div class="empty-checklist" *ngIf="documentChecklist.length === 0 && !isLoadingChecklist">
-                            <div class="empty-icon">
-                              <i class="ri-checkbox-multiple-line"></i>
-                            </div>
-                            <h6>No Document Checklist</h6>
-                            <p>Initialize a checklist to track required documents for this case.</p>
-                            <button class="btn btn-primary" (click)="initializeDocumentChecklist()">
-                              <i class="ri-file-add-line me-1"></i> Initialize Checklist
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div><!-- End Document Checklist Sub-tab -->
-
-                </div><!-- End Documents Tab py-3 -->
+                </div>
               </ng-template>
             </li>
 
-            <!-- Settlement Tab -->
             <li [ngbNavItem]="'settlement'">
               <a ngbNavLink class="d-flex align-items-center gap-2">
                 <i class="ri-money-dollar-circle-line fs-16"></i>
@@ -1770,52 +1221,35 @@
               </ng-template>
             </li>
 
-            <!-- Medical Tab (Records + Summary) -->
-            <li ngbNavItem="medical">
+            <!-- Medical Records Tab -->
+            <li ngbNavItem="medical-records">
               <a ngbNavLink class="d-flex align-items-center gap-2">
                 <i class="ri-hospital-line fs-16"></i>
-                <span>Medical</span>
+                <span>Medical Records</span>
                 <span class="badge bg-success-subtle text-success ms-1" *ngIf="medicalRecords.length > 0">{{ medicalRecords.length }}</span>
               </a>
               <ng-template ngbNavContent>
-                <!-- Medical Tab Content with Sub-tabs -->
-                <div class="py-3">
-                  <!-- Sub-tab Navigation -->
-                  <div class="medical-subtabs mb-4">
-                    <button class="subtab-btn" [class.active]="medicalSubTab === 'records'"
-                            (click)="medicalSubTab = 'records'">
-                      <i class="ri-file-list-3-line me-1"></i> Medical Records
-                      <span class="subtab-badge" *ngIf="medicalRecords.length > 0">{{ medicalRecords.length }}</span>
-                    </button>
-                    <button class="subtab-btn" [class.active]="medicalSubTab === 'summary'"
-                            (click)="medicalSubTab = 'summary'">
-                      <i class="ri-article-line me-1"></i> Medical Summary
-                      <span class="subtab-indicator exists" *ngIf="medicalSummary"></span>
-                    </button>
+                <!-- Medical Records Tab Content -->
+                <div class="medical-records-container py-4">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                    <div>
+                      <h5 class="mb-1 fw-semibold">Medical Records</h5>
+                      <p class="text-muted mb-0 fs-13">Track all providers, treatment dates, and billing</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-primary" (click)="openQuickAddModal()" [disabled]="!linkedCase">
+                        <i class="ri-add-line me-1"></i> Quick Add
+                      </button>
+                      <button class="btn btn-soft-info" (click)="scanCaseDocuments()" [disabled]="!linkedCase || isScanningDocuments">
+                        <span *ngIf="!isScanningDocuments">
+                          <i class="ri-robot-line me-1"></i> Scan
+                        </span>
+                        <span *ngIf="isScanningDocuments">
+                          <span class="spinner-border spinner-border-sm me-1"></span>
+                        </span>
+                      </button>
+                    </div>
                   </div>
-
-                  <!-- Medical Records Sub-tab -->
-                  <div *ngIf="medicalSubTab === 'records'">
-                    <div class="medical-records-container">
-                      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
-                        <div>
-                          <h5 class="mb-1 fw-semibold">Medical Records</h5>
-                          <p class="text-muted mb-0 fs-13">Track all providers, treatment dates, and billing</p>
-                        </div>
-                        <div class="d-flex gap-2">
-                          <button class="btn btn-primary" (click)="openQuickAddModal()" [disabled]="!linkedCase">
-                            <i class="ri-add-line me-1"></i> Quick Add
-                          </button>
-                          <button class="btn btn-soft-info" (click)="scanCaseDocuments()" [disabled]="!linkedCase || isScanningDocuments">
-                            <span *ngIf="!isScanningDocuments">
-                              <i class="ri-robot-line me-1"></i> Scan
-                            </span>
-                            <span *ngIf="isScanningDocuments">
-                              <span class="spinner-border spinner-border-sm me-1"></span>
-                            </span>
-                          </button>
-                        </div>
-                      </div>
 
                   <!-- Scan Result Alert -->
                   <div class="alert alert-success d-flex align-items-center mb-3" *ngIf="scanResult && scanResult.recordsCreated > 0">
@@ -1946,312 +1380,13 @@
                         </div>
                       </div>
                     </div>
-                  </div><!-- End row -->
-                    </div><!-- End medical-records-container -->
-                  </div><!-- End Medical Records Sub-tab -->
-
-                  <!-- Medical Summary Sub-tab -->
-                  <div *ngIf="medicalSubTab === 'summary'">
-                    <div class="medical-summary-container">
-                      <!-- No Case Linked Warning -->
-                      <div class="alert alert-warning d-flex align-items-center" *ngIf="!linkedCase">
-                        <i class="ri-information-line fs-4 me-3"></i>
-                        <div>
-                          <strong>Link a Case</strong>
-                          <p class="mb-0">Use the case selector above to link a PI case and generate a medical summary.</p>
-                        </div>
-                      </div>
-
-                      <!-- Loading State -->
-                      <div class="text-center py-5" *ngIf="linkedCase && isLoadingMedicalSummary">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <p class="text-muted mt-2 mb-0">Loading summary...</p>
-                      </div>
-
-                      <!-- Medical Summary Content -->
-                      <div *ngIf="linkedCase && !isLoadingMedicalSummary">
-                        <!-- Summary Not Generated Yet -->
-                        <div class="empty-summary-state" *ngIf="!medicalSummary && !isGeneratingSummary && medicalRecords.length > 0">
-                          <div class="empty-state-icon">
-                            <i class="ri-file-chart-line"></i>
-                          </div>
-                          <h4>No Medical Summary Generated</h4>
-                          <p class="text-muted">Generate an AI-powered comprehensive medical summary based on your medical records.</p>
-                          <button class="btn btn-primary btn-lg" (click)="generateMedicalSummary()">
-                            <i class="ri-magic-line me-2"></i> Generate Medical Summary
-                          </button>
-                        </div>
-
-                        <!-- No Records State -->
-                        <div class="empty-summary-state" *ngIf="medicalRecords.length === 0">
-                          <div class="empty-state-icon">
-                            <i class="ri-file-list-3-line"></i>
-                          </div>
-                          <h4>No Medical Records</h4>
-                          <p class="text-muted">Add medical records first to generate a summary.</p>
-                          <button class="btn btn-primary" (click)="medicalSubTab = 'records'">
-                            <i class="ri-add-line me-1"></i> Add Medical Records
-                          </button>
-                        </div>
-
-                        <!-- Summary Display -->
-                        <div *ngIf="medicalSummary">
-                          <!-- Hero Stats Row -->
-                          <div class="summary-hero-stats mb-4">
-                            <div class="hero-stat-card completeness">
-                              <div class="stat-icon">
-                                <svg viewBox="0 0 36 36" class="circular-chart">
-                                  <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-                                  <path class="circle" [attr.stroke-dasharray]="(medicalSummary.completenessScore || 0) + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-                                  <text x="18" y="20.35" class="percentage">{{ medicalSummary.completenessScore || 0 }}%</text>
-                                </svg>
-                              </div>
-                              <div class="stat-content">
-                                <span class="stat-label">Completeness</span>
-                                <span class="stat-status" [class.text-success]="(medicalSummary.completenessScore || 0) >= 80" [class.text-warning]="(medicalSummary.completenessScore || 0) >= 50 && (medicalSummary.completenessScore || 0) < 80" [class.text-danger]="(medicalSummary.completenessScore || 0) < 50">
-                                  {{ (medicalSummary.completenessScore || 0) >= 80 ? 'Excellent' : (medicalSummary.completenessScore || 0) >= 50 ? 'Good' : 'Needs Work' }}
-                                </span>
-                              </div>
-                            </div>
-                            <div class="hero-stat-card providers">
-                              <div class="stat-icon"><i class="ri-hospital-line"></i></div>
-                              <div class="stat-content">
-                                <span class="stat-value">{{ medicalSummary.totalProviders || medicalRecords.length }}</span>
-                                <span class="stat-label">Providers</span>
-                              </div>
-                            </div>
-                            <div class="hero-stat-card visits">
-                              <div class="stat-icon"><i class="ri-calendar-check-line"></i></div>
-                              <div class="stat-content">
-                                <span class="stat-value">{{ medicalSummary.totalVisits || medicalRecords.length }}</span>
-                                <span class="stat-label">Visits</span>
-                              </div>
-                            </div>
-                            <div class="hero-stat-card billing">
-                              <div class="stat-icon"><i class="ri-money-dollar-circle-line"></i></div>
-                              <div class="stat-content">
-                                <span class="stat-value text-success">{{ formatCurrency(medicalSummary.totalBilled || getLinkedCaseMedicalTotal()) }}</span>
-                                <span class="stat-label">Total Billed</span>
-                              </div>
-                            </div>
-                            <div class="hero-stat-card duration">
-                              <div class="stat-icon"><i class="ri-time-line"></i></div>
-                              <div class="stat-content">
-                                <span class="stat-value">{{ medicalSummary.treatmentDurationDays || 0 }}</span>
-                                <span class="stat-label">Days in Treatment</span>
-                              </div>
-                            </div>
-                            <div class="hero-stat-card action">
-                              <button class="btn btn-primary" (click)="generateMedicalSummary()" [disabled]="isGeneratingSummary">
-                                <span *ngIf="!isGeneratingSummary"><i class="ri-refresh-line me-1"></i> Regenerate</span>
-                                <span *ngIf="isGeneratingSummary"><span class="spinner-border spinner-border-sm me-1"></span> Generating...</span>
-                              </button>
-                              <small class="text-muted d-block mt-1" *ngIf="medicalSummary.generatedAt">
-                                Last updated {{ medicalSummary.generatedAt | date:'short' }}
-                              </small>
-                            </div>
-                          </div>
-
-                          <!-- Main Content Grid -->
-                          <div class="row g-4">
-                            <!-- Left Column - Diagnoses -->
-                            <div class="col-lg-4">
-                              <!-- Diagnoses Card -->
-                              <div class="summary-card diagnoses-card" *ngIf="medicalSummary.diagnosisList && medicalSummary.diagnosisList.length > 0">
-                                <div class="card-icon"><i class="ri-stethoscope-line"></i></div>
-                                <h6 class="card-title">Diagnoses (ICD-10)</h6>
-                                <div class="diagnoses-list">
-                                  <div class="diagnosis-chip" *ngFor="let diag of medicalSummary.diagnosisList" [class.primary]="diag.primary">
-                                    <span class="icd-code">{{ diag.icd_code }}</span>
-                                    <span class="diagnosis-desc">{{ diag.description }}</span>
-                                    <span class="primary-badge" *ngIf="diag.primary">Primary</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <!-- Simple Diagnoses if no ICD list -->
-                              <div class="summary-card diagnoses-card" *ngIf="(!medicalSummary.diagnosisList || medicalSummary.diagnosisList.length === 0) && medicalSummary.diagnoses?.length > 0">
-                                <div class="card-icon"><i class="ri-stethoscope-line"></i></div>
-                                <h6 class="card-title">Key Diagnoses</h6>
-                                <div class="diagnoses-list">
-                                  <div class="diagnosis-chip" *ngFor="let diagnosis of medicalSummary.diagnoses">
-                                    <span class="diagnosis-desc">{{ diagnosis.name }}</span>
-                                    <span class="diagnosis-date" *ngIf="diagnosis.date">{{ diagnosis.date | date:'mediumDate' }}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <!-- Right Column - Highlights & Content -->
-                            <div class="col-lg-8">
-                              <!-- Key Highlights -->
-                              <div class="summary-card highlights-card" *ngIf="medicalSummary.keyHighlights">
-                                <div class="card-header-row">
-                                  <div class="card-icon primary"><i class="ri-lightbulb-flash-line"></i></div>
-                                  <h6 class="card-title">Key Highlights</h6>
-                                </div>
-                                <div class="card-content highlights-content" [innerHTML]="medicalSummary.keyHighlights | aiResponseFormatter"></div>
-                              </div>
-
-                              <!-- Overall Summary -->
-                              <div class="summary-card highlights-card" *ngIf="medicalSummary.overallSummary && !medicalSummary.keyHighlights">
-                                <div class="card-header-row">
-                                  <div class="card-icon primary"><i class="ri-information-line"></i></div>
-                                  <h6 class="card-title">Summary</h6>
-                                </div>
-                                <div class="card-content">
-                                  <p class="mb-0">{{ medicalSummary.overallSummary }}</p>
-                                </div>
-                              </div>
-
-                              <!-- Treatment Timeline -->
-                              <div class="summary-card prognosis-card" *ngIf="medicalSummary.treatmentTimeline?.length > 0">
-                                <div class="card-header-row">
-                                  <div class="card-icon info"><i class="ri-time-line"></i></div>
-                                  <h6 class="card-title">Treatment Timeline</h6>
-                                </div>
-                                <div class="card-content">
-                                  <div class="timeline-list">
-                                    <div class="timeline-item" *ngFor="let event of medicalSummary.treatmentTimeline">
-                                      <div class="timeline-date">{{ event.date | date:'mediumDate' }}</div>
-                                      <div class="timeline-content">{{ event.description }}</div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <!-- Prognosis Assessment -->
-                              <div class="summary-card prognosis-card" *ngIf="medicalSummary.prognosisAssessment">
-                                <div class="card-header-row">
-                                  <div class="card-icon info"><i class="ri-heart-pulse-line"></i></div>
-                                  <h6 class="card-title">Prognosis Assessment</h6>
-                                </div>
-                                <div class="card-content prognosis-content" [innerHTML]="medicalSummary.prognosisAssessment | aiResponseFormatter"></div>
-                              </div>
-                            </div>
-
-                            <!-- Full Width - Red Flags -->
-                            <div class="col-12" *ngIf="medicalSummary.redFlags && medicalSummary.redFlags.length > 0">
-                              <div class="summary-card red-flags-card full-width">
-                                <div class="card-header-row">
-                                  <div class="card-icon danger"><i class="ri-alert-line"></i></div>
-                                  <h6 class="card-title text-danger">Red Flags ({{ medicalSummary.redFlags.length }})</h6>
-                                </div>
-                                <div class="card-content">
-                                  <div class="red-flag-list">
-                                    <div class="red-flag-item" *ngFor="let flag of medicalSummary.redFlags">
-                                      <i class="ri-error-warning-line"></i>
-                                      <span>{{ flag.description }}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <!-- Full Width: Treatment Chronology Section -->
-                            <div class="col-12" *ngIf="medicalRecords.length > 0">
-                              <div class="chronology-section mt-4">
-                                <!-- Treatment Gaps & Documentation Status - Above Table -->
-                                <div class="info-row" *ngIf="(medicalSummary.treatmentGapDays && medicalSummary.treatmentGapDays > 0) || medicalSummary.completenessNotes">
-                                  <!-- Treatment Gaps -->
-                                  <div class="info-card gaps-info" *ngIf="medicalSummary.treatmentGapDays && medicalSummary.treatmentGapDays > 0">
-                                    <div class="info-icon warning">
-                                      <i class="ri-timer-flash-line"></i>
-                                    </div>
-                                    <div class="info-content">
-                                      <span class="info-label">Treatment Gaps Detected</span>
-                                      <div class="info-value">
-                                        <span class="gap-number">{{ medicalSummary.treatmentGapDays }}</span>
-                                        <span class="gap-unit">days</span>
-                                      </div>
-                                      <span class="info-note">Gaps longer than 30 days may affect case value</span>
-                                    </div>
-                                  </div>
-
-                                  <!-- Documentation Status -->
-                                  <div class="info-card docs-info" *ngIf="medicalSummary.completenessNotes">
-                                    <div class="info-icon" [class.success]="(medicalSummary.completenessScore || 0) >= 80" [class.warning]="(medicalSummary.completenessScore || 0) >= 50 && (medicalSummary.completenessScore || 0) < 80" [class.danger]="(medicalSummary.completenessScore || 0) < 50">
-                                      <i class="ri-file-list-3-line"></i>
-                                    </div>
-                                    <div class="info-content">
-                                      <span class="info-label">Documentation Status</span>
-                                      <p class="info-text">{{ medicalSummary.completenessNotes }}</p>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <!-- Treatment Chronology Table -->
-                                <div class="chronology-card-wrapper">
-                                  <div class="chronology-header">
-                                    <div class="header-left">
-                                      <i class="ri-calendar-check-line"></i>
-                                      <span class="header-title">Treatment Chronology</span>
-                                    </div>
-                                    <div class="header-right">
-                                      <span class="stat-pill visits"><i class="ri-hospital-line"></i> {{ medicalSummary.totalVisits || medicalRecords.length }} visits</span>
-                                      <span class="stat-pill duration" *ngIf="medicalSummary.treatmentDurationDays"><i class="ri-time-line"></i> {{ medicalSummary.treatmentDurationDays }} days</span>
-                                    </div>
-                                  </div>
-                                  <div class="chronology-table-container">
-                                    <table class="treatment-table">
-                                      <thead>
-                                        <tr>
-                                          <th class="col-date">Date</th>
-                                          <th class="col-provider">Provider</th>
-                                          <th class="col-type">Type</th>
-                                          <th class="col-findings">Key Findings</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        <tr *ngFor="let record of medicalRecords" class="treatment-row">
-                                          <td class="col-date"
-                                              [class.has-citation]="hasCitation(record, 'treatmentDate')"
-                                              (click)="openCitation(record, 'treatmentDate')"
-                                              [title]="hasCitation(record, 'treatmentDate') ? 'Click to view source' : ''">
-                                            <span class="date-value">{{ record.treatmentDate | date:'MMM d, yyyy' }}</span>
-                                            <i class="ri-link citation-indicator" *ngIf="hasCitation(record, 'treatmentDate')"></i>
-                                          </td>
-                                          <td class="col-provider"
-                                              [class.has-citation]="hasCitation(record, 'providerName')"
-                                              (click)="openCitation(record, 'providerName')"
-                                              [title]="hasCitation(record, 'providerName') ? 'Click to view source' : ''">
-                                            <span class="provider-name">{{ record.providerName }}</span>
-                                            <i class="ri-link citation-indicator" *ngIf="hasCitation(record, 'providerName')"></i>
-                                          </td>
-                                          <td class="col-type"
-                                              [class.has-citation]="hasCitation(record, 'recordType')"
-                                              (click)="openCitation(record, 'recordType')"
-                                              [title]="hasCitation(record, 'recordType') ? 'Click to view source' : ''">
-                                            <span class="type-badge" [attr.data-type]="record.recordType">
-                                              {{ record.recordType }}
-                                            </span>
-                                            <i class="ri-link citation-indicator" *ngIf="hasCitation(record, 'recordType')"></i>
-                                          </td>
-                                          <td class="col-findings"
-                                              [class.has-citation]="hasCitation(record, 'keyFindings')"
-                                              (click)="openCitation(record, 'keyFindings')"
-                                              [title]="hasCitation(record, 'keyFindings') ? 'Click to view source' : ''">
-                                            <span class="findings-text">{{ record.keyFindings || '-' }}</span>
-                                            <i class="ri-link citation-indicator" *ngIf="hasCitation(record, 'keyFindings')"></i>
-                                          </td>
-                                        </tr>
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div><!-- End Medical Summary Sub-tab -->
-
-                </div><!-- End Medical Tab py-3 -->
+                  </div>
+                </div>
               </ng-template>
             </li>
 
-            <!-- OLD Medical Summary Tab - HIDDEN (content moved to Medical sub-tab) -->
-            <li ngbNavItem="medical-summary" [hidden]="true">
+            <!-- Medical Summary Tab -->
+            <li ngbNavItem="medical-summary">
               <a ngbNavLink>
                 <i class="ri-article-line me-2"></i> Medical Summary
               </a>
@@ -2517,8 +1652,8 @@
               </ng-template>
             </li>
 
-            <!-- OLD Document Checklist Tab - HIDDEN (content moved to Documents sub-tab) -->
-            <li ngbNavItem="document-checklist" [hidden]="true">
+            <!-- Document Checklist Tab -->
+            <li ngbNavItem="document-checklist">
               <a ngbNavLink>
                 <i class="ri-checkbox-multiple-line me-2"></i> Document Checklist
               </a>
@@ -2652,7 +1787,6 @@
                                  [class.item-received]="item.status === 'RECEIVED'"
                                  [class.item-missing]="item.status === 'MISSING'"
                                  [class.item-requested]="item.status === 'REQUESTED'"
-                                 [class.item-pending]="item.status === 'PENDING'"
                                  [class.item-selected]="bulkSelectMode && isSelectedForBulk(item.id!)">
                               <!-- Bulk Selection Checkbox -->
                               <div class="item-checkbox" *ngIf="bulkSelectMode && item.status !== 'RECEIVED'">
@@ -2737,6 +1871,257 @@
                 </div>
               </ng-template>
             </li>
+
+            <!-- Provider Directory Tab -->
+            <li ngbNavItem="provider-directory">
+              <a ngbNavLink>
+                <i class="ri-contacts-book-line me-2"></i> Provider Directory
+                <span class="badge bg-info-subtle text-info ms-1" *ngIf="providers.length > 0">{{ providers.length }}</span>
+              </a>
+              <ng-template ngbNavContent>
+                <div class="professional-tool-content">
+                  <!-- Header -->
+                  <div class="provider-header">
+                    <div class="provider-header-text">
+                      <h5 class="mb-1">Provider Directory</h5>
+                      <p class="text-muted mb-0 d-none d-sm-block">Contact information and fee schedules for medical providers</p>
+                    </div>
+                    <button class="btn btn-primary add-provider-btn" (click)="showAddProviderModal()">
+                      <i class="ri-add-line"></i>
+                      <span class="btn-text">Add Provider</span>
+                    </button>
+                  </div>
+
+                  <!-- Provider Toolbar - Type Filter & Search -->
+                  <div class="provider-toolbar">
+                    <div class="toolbar-left">
+                      <span class="provider-count">
+                        <i class="ri-contacts-book-2-line"></i>
+                        <strong>{{ filteredProviders.length }}</strong>
+                        <span class="count-label">{{ filteredProviders.length === 1 ? 'Provider' : 'Providers' }}</span>
+                      </span>
+                      <div class="type-breakdown" *ngIf="providers.length > 0">
+                        <button *ngFor="let item of getProviderTypeCounts()"
+                                class="type-chip"
+                                [class.active]="providerTypeFilter === item.type"
+                                [style.--chip-color]="item.color"
+                                (click)="providerTypeFilter = providerTypeFilter === item.type ? '' : item.type; filterProviders()">
+                          <i [class]="item.icon"></i>
+                          <span class="chip-label">{{ item.label }}</span>
+                          <span class="chip-count">{{ item.count }}</span>
+                        </button>
+                        <button class="type-chip clear" *ngIf="providerTypeFilter"
+                                (click)="providerTypeFilter = ''; filterProviders()">
+                          <i class="ri-close-line"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="search-filter-group">
+                      <div class="search-input-enhanced">
+                        <i class="ri-search-line"></i>
+                        <input type="text" placeholder="Search providers..."
+                               [(ngModel)]="providerSearchTerm"
+                               (ngModelChange)="filterProviders()">
+                        <button class="search-clear" *ngIf="providerSearchTerm" (click)="providerSearchTerm = ''; filterProviders()">
+                          <i class="ri-close-line"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Provider Cards - Full Width -->
+                  <div class="provider-content">
+                      <!-- Loading -->
+                      <div *ngIf="isLoadingProviders" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                          <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-2">Loading providers...</p>
+                      </div>
+
+                      <!-- Provider Cards Grid -->
+                      <div class="provider-cards-grid" *ngIf="!isLoadingProviders && filteredProviders.length > 0">
+                        <div class="provider-card-enhanced" *ngFor="let provider of filteredProviders"
+                             [attr.data-type]="provider.providerType"
+                             [class.selected]="selectedProvider?.id === provider.id"
+                             (click)="selectProvider(provider)">
+                          <!-- Card Header -->
+                          <div class="pce-header">
+                            <div class="pce-icon"
+                                 [class.icon-hospital]="provider.providerType === 'HOSPITAL'"
+                                 [class.icon-clinic]="provider.providerType === 'CLINIC'"
+                                 [class.icon-imaging]="provider.providerType === 'IMAGING'"
+                                 [class.icon-therapy]="provider.providerType === 'PHYSICAL_THERAPY'"
+                                 [class.icon-chiro]="provider.providerType === 'CHIROPRACTIC'"
+                                 [class.icon-pharmacy]="provider.providerType === 'PHARMACY'"
+                                 [class.icon-lab]="provider.providerType === 'LABORATORY'"
+                                 [class.icon-urgent]="provider.providerType === 'URGENT_CARE'">
+                              <i [class]="getProviderIcon(provider.providerType)"></i>
+                            </div>
+                          </div>
+
+                          <!-- Card Body -->
+                          <div class="pce-body">
+                            <h6 class="pce-name">{{ provider.providerName }}</h6>
+                            <div class="pce-location" *ngIf="provider.city || provider.address">
+                              <i class="ri-map-pin-2-line"></i>
+                              <span>{{ provider.city }}{{ provider.state ? ', ' + provider.state : '' }}</span>
+                            </div>
+                          </div>
+
+                          <!-- Provider Type Badge -->
+                          <div class="pce-footer">
+                            <div class="pce-type-badge" [attr.data-type]="provider.providerType">
+                              <i [class]="getProviderIcon(provider.providerType)"></i>
+                              {{ providerDirectoryService.getProviderTypeLabel(provider.providerType || 'OTHER') }}
+                            </div>
+                          </div>
+
+                          <!-- Quick Actions -->
+                          <div class="pce-actions" (click)="$event.stopPropagation()">
+                            <button class="pce-action-btn" (click)="selectProvider(provider)" title="View Details">
+                              <i class="ri-eye-line"></i>
+                            </button>
+                            <button class="pce-action-btn" (click)="editProvider(provider)" title="Edit">
+                              <i class="ri-pencil-line"></i>
+                            </button>
+                            <button class="pce-action-btn delete" (click)="deleteProvider(provider)" title="Delete">
+                              <i class="ri-delete-bin-line"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Detail Panel (shows when provider selected) -->
+                      <div class="provider-detail-panel" *ngIf="selectedProvider">
+                        <div class="pdp-header">
+                          <div class="pdp-title">
+                            <i [class]="getProviderIcon(selectedProvider.providerType)"></i>
+                            <span>{{ selectedProvider.providerName }}</span>
+                          </div>
+                          <button class="pdp-close" (click)="selectedProvider = null">
+                            <i class="ri-close-line"></i>
+                          </button>
+                        </div>
+                        <div class="pdp-body">
+                          <!-- Location -->
+                          <div class="pdp-section" *ngIf="selectedProvider.address || selectedProvider.city">
+                            <div class="pdp-section-title"><i class="ri-map-pin-line"></i> Address</div>
+                            <div class="pdp-address">
+                              <span *ngIf="selectedProvider.address">{{ selectedProvider.address }}</span>
+                              <span>{{ selectedProvider.city }}{{ selectedProvider.state ? ', ' + selectedProvider.state : '' }} {{ selectedProvider.zip }}</span>
+                            </div>
+                          </div>
+
+                          <!-- Records Department -->
+                          <div class="pdp-section" *ngIf="selectedProvider.recordsEmail || selectedProvider.recordsPhone || selectedProvider.recordsFax">
+                            <div class="pdp-section-title"><i class="ri-folder-received-line"></i> Records Department</div>
+                            <div class="pdp-contact-list">
+                              <div class="pdp-contact" *ngIf="selectedProvider.recordsContactName">
+                                <i class="ri-user-line"></i>
+                                <span>{{ selectedProvider.recordsContactName }}</span>
+                              </div>
+                              <div class="pdp-contact copyable" *ngIf="selectedProvider.recordsEmail" (click)="copyToClipboard(selectedProvider.recordsEmail, 'Email')">
+                                <i class="ri-mail-line"></i>
+                                <span>{{ selectedProvider.recordsEmail }}</span>
+                                <i class="ri-file-copy-line copy-hint"></i>
+                              </div>
+                              <div class="pdp-contact copyable" *ngIf="selectedProvider.recordsPhone" (click)="copyToClipboard(selectedProvider.recordsPhone, 'Phone')">
+                                <i class="ri-phone-line"></i>
+                                <span>{{ providerDirectoryService.formatPhone(selectedProvider.recordsPhone) }}</span>
+                                <i class="ri-file-copy-line copy-hint"></i>
+                              </div>
+                              <div class="pdp-contact copyable" *ngIf="selectedProvider.recordsFax" (click)="copyToClipboard(selectedProvider.recordsFax, 'Fax')">
+                                <i class="ri-printer-line"></i>
+                                <span>{{ providerDirectoryService.formatPhone(selectedProvider.recordsFax) }}</span>
+                                <i class="ri-file-copy-line copy-hint"></i>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Billing Department -->
+                          <div class="pdp-section" *ngIf="selectedProvider.billingEmail || selectedProvider.billingPhone">
+                            <div class="pdp-section-title"><i class="ri-money-dollar-circle-line"></i> Billing Department</div>
+                            <div class="pdp-contact-list">
+                              <div class="pdp-contact" *ngIf="selectedProvider.billingContactName">
+                                <i class="ri-user-line"></i>
+                                <span>{{ selectedProvider.billingContactName }}</span>
+                              </div>
+                              <div class="pdp-contact copyable" *ngIf="selectedProvider.billingEmail" (click)="copyToClipboard(selectedProvider.billingEmail, 'Email')">
+                                <i class="ri-mail-line"></i>
+                                <span>{{ selectedProvider.billingEmail }}</span>
+                                <i class="ri-file-copy-line copy-hint"></i>
+                              </div>
+                              <div class="pdp-contact copyable" *ngIf="selectedProvider.billingPhone" (click)="copyToClipboard(selectedProvider.billingPhone, 'Phone')">
+                                <i class="ri-phone-line"></i>
+                                <span>{{ providerDirectoryService.formatPhone(selectedProvider.billingPhone) }}</span>
+                                <i class="ri-file-copy-line copy-hint"></i>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Fees -->
+                          <div class="pdp-section" *ngIf="selectedProvider.baseFee || selectedProvider.perPageFee || selectedProvider.rushFee">
+                            <div class="pdp-section-title"><i class="ri-price-tag-3-line"></i> Fee Schedule</div>
+                            <div class="pdp-fees">
+                              <div class="pdp-fee" *ngIf="selectedProvider.baseFee">
+                                <span class="fee-label">Base Fee</span>
+                                <span class="fee-amount">${{ selectedProvider.baseFee | number:'1.2-2' }}</span>
+                              </div>
+                              <div class="pdp-fee" *ngIf="selectedProvider.perPageFee">
+                                <span class="fee-label">Per Page</span>
+                                <span class="fee-amount">${{ selectedProvider.perPageFee | number:'1.2-2' }}</span>
+                              </div>
+                              <div class="pdp-fee rush" *ngIf="selectedProvider.rushFee">
+                                <span class="fee-label">Rush Fee</span>
+                                <span class="fee-amount">${{ selectedProvider.rushFee | number:'1.2-2' }}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Notes -->
+                          <div class="pdp-section" *ngIf="selectedProvider.notes">
+                            <div class="pdp-section-title"><i class="ri-sticky-note-line"></i> Notes</div>
+                            <div class="pdp-notes">{{ selectedProvider.notes }}</div>
+                          </div>
+                        </div>
+                        <div class="pdp-footer">
+                          <button class="btn btn-soft-primary" (click)="editProvider(selectedProvider)">
+                            <i class="ri-pencil-line me-1"></i> Edit Provider
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Empty State -->
+                      <div *ngIf="!isLoadingProviders && filteredProviders.length === 0" class="providers-empty">
+                        <div class="empty-state-illustration">
+                          <div class="empty-state-icon-lg">
+                            <i class="ri-contacts-book-line"></i>
+                          </div>
+                          <div class="empty-state-circles">
+                            <span></span><span></span><span></span>
+                          </div>
+                        </div>
+                        <h6 class="fw-semibold mb-2" *ngIf="!providerSearchTerm && !providerTypeFilter">No Providers Added</h6>
+                        <h6 class="fw-semibold mb-2" *ngIf="providerSearchTerm || providerTypeFilter">No Matches Found</h6>
+                        <p class="text-muted mb-3" *ngIf="!providerSearchTerm && !providerTypeFilter">
+                          Add medical providers to quickly access their contact info when requesting records.
+                        </p>
+                        <p class="text-muted mb-3" *ngIf="providerSearchTerm || providerTypeFilter">
+                          Try adjusting your search or filter criteria.
+                        </p>
+                        <button *ngIf="!providerSearchTerm && !providerTypeFilter" class="btn btn-primary" (click)="showAddProviderModal()">
+                          <i class="ri-add-line me-1"></i> Add Provider
+                        </button>
+                        <button *ngIf="providerSearchTerm || providerTypeFilter" class="btn btn-outline-secondary"
+                                (click)="providerSearchTerm = ''; providerTypeFilter = ''; filterProviders()">
+                          <i class="ri-refresh-line me-1"></i> Clear Filters
+                        </button>
+                      </div>
+                  </div>
+                </div>
+              </ng-template>
+            </li>
           </ul>
         </div>
         <div class="card-body pt-0">
@@ -2745,283 +2130,25 @@
       </div>
     </div>
   </div>
-  </div><!-- End Workspace View -->
+</div>
 
-  <!-- ==================== PROVIDER DIRECTORY VIEW ==================== -->
-  <div *ngIf="viewMode === 'directory'">
-    <!-- Directory Header -->
-    <div class="row">
-      <div class="col-12">
-        <div class="page-header-wrapper">
-          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-            <div class="d-flex align-items-center gap-3">
-              <button class="btn btn-soft-secondary back-btn" (click)="backFromDirectory()">
-                <i class="ri-arrow-left-line me-1"></i> Back
-              </button>
-              <div>
-                <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Personal Injury</div>
-                <h4 class="mb-0">Provider Directory</h4>
-              </div>
-            </div>
-            <button class="btn btn-primary" (click)="showAddProviderModal()">
-              <i class="ri-add-line me-1"></i> Add Provider
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Provider Directory Content Card -->
-    <div class="card border-0 shadow-sm mt-3">
-      <div class="card-header bg-transparent py-3">
-        <!-- Provider Toolbar - Type Filter & Search -->
-        <div class="provider-toolbar">
-          <div class="toolbar-left">
-            <span class="provider-count">
-              <i class="ri-contacts-book-2-line"></i>
-              <strong>{{ filteredProviders.length }}</strong>
-              <span class="count-label">{{ filteredProviders.length === 1 ? 'Provider' : 'Providers' }}</span>
-            </span>
-            <div class="type-breakdown" *ngIf="providers.length > 0">
-              <button *ngFor="let item of getProviderTypeCounts()"
-                      class="type-chip"
-                      [class.active]="providerTypeFilter === item.type"
-                      [style.--chip-color]="item.color"
-                      (click)="providerTypeFilter = providerTypeFilter === item.type ? '' : item.type; filterProviders()">
-                <i [class]="item.icon"></i>
-                <span class="chip-label">{{ item.label }}</span>
-                <span class="chip-count">{{ item.count }}</span>
-              </button>
-              <button class="type-chip clear" *ngIf="providerTypeFilter"
-                      (click)="providerTypeFilter = ''; filterProviders()">
-                <i class="ri-close-line"></i>
-              </button>
-            </div>
-          </div>
-          <div class="search-filter-group">
-            <div class="search-input-enhanced">
-              <i class="ri-search-line"></i>
-              <input type="text" placeholder="Search providers..."
-                     [(ngModel)]="providerSearchTerm"
-                     (ngModelChange)="filterProviders()">
-              <button class="search-clear" *ngIf="providerSearchTerm" (click)="providerSearchTerm = ''; filterProviders()">
-                <i class="ri-close-line"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="card-body">
-        <!-- Loading -->
-        <div *ngIf="isLoadingProviders" class="text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <p class="text-muted mt-2">Loading providers...</p>
-        </div>
-
-        <!-- Provider Cards Grid -->
-        <div class="provider-cards-grid" *ngIf="!isLoadingProviders && filteredProviders.length > 0">
-          <div class="provider-card-enhanced" *ngFor="let provider of filteredProviders"
-               [attr.data-type]="provider.providerType"
-               [class.selected]="selectedProvider?.id === provider.id"
-               (click)="selectProvider(provider)">
-            <!-- Card Header -->
-            <div class="pce-header">
-              <div class="pce-icon"
-                   [class.icon-hospital]="provider.providerType === 'HOSPITAL'"
-                   [class.icon-clinic]="provider.providerType === 'CLINIC'"
-                   [class.icon-imaging]="provider.providerType === 'IMAGING'"
-                   [class.icon-therapy]="provider.providerType === 'PHYSICAL_THERAPY'"
-                   [class.icon-chiro]="provider.providerType === 'CHIROPRACTIC'"
-                   [class.icon-pharmacy]="provider.providerType === 'PHARMACY'"
-                   [class.icon-lab]="provider.providerType === 'LABORATORY'"
-                   [class.icon-urgent]="provider.providerType === 'URGENT_CARE'">
-                <i [class]="getProviderIcon(provider.providerType)"></i>
-              </div>
-            </div>
-
-            <!-- Card Body -->
-            <div class="pce-body">
-              <h6 class="pce-name">{{ provider.providerName }}</h6>
-              <div class="pce-location" *ngIf="provider.city || provider.address">
-                <i class="ri-map-pin-2-line"></i>
-                <span>{{ provider.city }}{{ provider.state ? ', ' + provider.state : '' }}</span>
-              </div>
-            </div>
-
-            <!-- Provider Type Badge -->
-            <div class="pce-footer">
-              <div class="pce-type-badge" [attr.data-type]="provider.providerType">
-                <i [class]="getProviderIcon(provider.providerType)"></i>
-                {{ providerDirectoryService.getProviderTypeLabel(provider.providerType || 'OTHER') }}
-              </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="pce-actions" (click)="$event.stopPropagation()">
-              <button class="pce-action-btn" (click)="selectProvider(provider)" title="View Details">
-                <i class="ri-eye-line"></i>
-              </button>
-              <button class="pce-action-btn" (click)="editProvider(provider)" title="Edit">
-                <i class="ri-pencil-line"></i>
-              </button>
-              <button class="pce-action-btn delete" (click)="deleteProvider(provider)" title="Delete">
-                <i class="ri-delete-bin-line"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Detail Panel (shows when provider selected) -->
-        <div class="provider-detail-panel" *ngIf="selectedProvider">
-          <div class="pdp-header">
-            <div class="pdp-title">
-              <i [class]="getProviderIcon(selectedProvider.providerType)"></i>
-              <span>{{ selectedProvider.providerName }}</span>
-            </div>
-            <button class="pdp-close" (click)="selectedProvider = null">
-              <i class="ri-close-line"></i>
-            </button>
-          </div>
-          <div class="pdp-body">
-            <!-- Location -->
-            <div class="pdp-section" *ngIf="selectedProvider.address || selectedProvider.city">
-              <div class="pdp-section-title"><i class="ri-map-pin-line"></i> Address</div>
-              <div class="pdp-address">
-                <span *ngIf="selectedProvider.address">{{ selectedProvider.address }}</span>
-                <span>{{ selectedProvider.city }}{{ selectedProvider.state ? ', ' + selectedProvider.state : '' }} {{ selectedProvider.zip }}</span>
-              </div>
-            </div>
-
-            <!-- Records Department -->
-            <div class="pdp-section" *ngIf="selectedProvider.recordsEmail || selectedProvider.recordsPhone || selectedProvider.recordsFax">
-              <div class="pdp-section-title"><i class="ri-folder-received-line"></i> Records Department</div>
-              <div class="pdp-contact-list">
-                <div class="pdp-contact" *ngIf="selectedProvider.recordsContactName">
-                  <i class="ri-user-line"></i>
-                  <span>{{ selectedProvider.recordsContactName }}</span>
-                </div>
-                <div class="pdp-contact copyable" *ngIf="selectedProvider.recordsEmail" (click)="copyToClipboard(selectedProvider.recordsEmail, 'Email')">
-                  <i class="ri-mail-line"></i>
-                  <span>{{ selectedProvider.recordsEmail }}</span>
-                  <i class="ri-file-copy-line copy-hint"></i>
-                </div>
-                <div class="pdp-contact copyable" *ngIf="selectedProvider.recordsPhone" (click)="copyToClipboard(selectedProvider.recordsPhone, 'Phone')">
-                  <i class="ri-phone-line"></i>
-                  <span>{{ providerDirectoryService.formatPhone(selectedProvider.recordsPhone) }}</span>
-                  <i class="ri-file-copy-line copy-hint"></i>
-                </div>
-                <div class="pdp-contact copyable" *ngIf="selectedProvider.recordsFax" (click)="copyToClipboard(selectedProvider.recordsFax, 'Fax')">
-                  <i class="ri-printer-line"></i>
-                  <span>{{ providerDirectoryService.formatPhone(selectedProvider.recordsFax) }}</span>
-                  <i class="ri-file-copy-line copy-hint"></i>
-                </div>
-              </div>
-            </div>
-
-            <!-- Billing Department -->
-            <div class="pdp-section" *ngIf="selectedProvider.billingEmail || selectedProvider.billingPhone">
-              <div class="pdp-section-title"><i class="ri-money-dollar-circle-line"></i> Billing Department</div>
-              <div class="pdp-contact-list">
-                <div class="pdp-contact" *ngIf="selectedProvider.billingContactName">
-                  <i class="ri-user-line"></i>
-                  <span>{{ selectedProvider.billingContactName }}</span>
-                </div>
-                <div class="pdp-contact copyable" *ngIf="selectedProvider.billingEmail" (click)="copyToClipboard(selectedProvider.billingEmail, 'Email')">
-                  <i class="ri-mail-line"></i>
-                  <span>{{ selectedProvider.billingEmail }}</span>
-                  <i class="ri-file-copy-line copy-hint"></i>
-                </div>
-                <div class="pdp-contact copyable" *ngIf="selectedProvider.billingPhone" (click)="copyToClipboard(selectedProvider.billingPhone, 'Phone')">
-                  <i class="ri-phone-line"></i>
-                  <span>{{ providerDirectoryService.formatPhone(selectedProvider.billingPhone) }}</span>
-                  <i class="ri-file-copy-line copy-hint"></i>
-                </div>
-              </div>
-            </div>
-
-            <!-- Fees -->
-            <div class="pdp-section" *ngIf="selectedProvider.baseFee || selectedProvider.perPageFee || selectedProvider.rushFee">
-              <div class="pdp-section-title"><i class="ri-price-tag-3-line"></i> Fee Schedule</div>
-              <div class="pdp-fees">
-                <div class="pdp-fee" *ngIf="selectedProvider.baseFee">
-                  <span class="fee-label">Base Fee</span>
-                  <span class="fee-amount">${{ selectedProvider.baseFee | number:'1.2-2' }}</span>
-                </div>
-                <div class="pdp-fee" *ngIf="selectedProvider.perPageFee">
-                  <span class="fee-label">Per Page</span>
-                  <span class="fee-amount">${{ selectedProvider.perPageFee | number:'1.2-2' }}</span>
-                </div>
-                <div class="pdp-fee rush" *ngIf="selectedProvider.rushFee">
-                  <span class="fee-label">Rush Fee</span>
-                  <span class="fee-amount">${{ selectedProvider.rushFee | number:'1.2-2' }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Notes -->
-            <div class="pdp-section" *ngIf="selectedProvider.notes">
-              <div class="pdp-section-title"><i class="ri-sticky-note-line"></i> Notes</div>
-              <div class="pdp-notes">{{ selectedProvider.notes }}</div>
-            </div>
-          </div>
-          <div class="pdp-footer">
-            <button class="btn btn-soft-primary" (click)="editProvider(selectedProvider)">
-              <i class="ri-pencil-line me-1"></i> Edit Provider
-            </button>
-          </div>
-        </div>
-
-        <!-- Empty State -->
-        <div *ngIf="!isLoadingProviders && filteredProviders.length === 0" class="providers-empty">
-          <div class="empty-state-illustration">
-            <div class="empty-state-icon-lg">
-              <i class="ri-contacts-book-line"></i>
-            </div>
-            <div class="empty-state-circles">
-              <span></span><span></span><span></span>
-            </div>
-          </div>
-          <h6 class="fw-semibold mb-2" *ngIf="!providerSearchTerm && !providerTypeFilter">No Providers Added</h6>
-          <h6 class="fw-semibold mb-2" *ngIf="providerSearchTerm || providerTypeFilter">No Matches Found</h6>
-          <p class="text-muted mb-3" *ngIf="!providerSearchTerm && !providerTypeFilter">
-            Add medical providers to quickly access their contact info when requesting records.
-          </p>
-          <p class="text-muted mb-3" *ngIf="providerSearchTerm || providerTypeFilter">
-            Try adjusting your search or filter criteria.
-          </p>
-          <button *ngIf="!providerSearchTerm && !providerTypeFilter" class="btn btn-primary" (click)="showAddProviderModal()">
-            <i class="ri-add-line me-1"></i> Add Provider
-          </button>
-          <button *ngIf="providerSearchTerm || providerTypeFilter" class="btn btn-outline-secondary"
-                  (click)="providerSearchTerm = ''; providerTypeFilter = ''; filterProviders()">
-            <i class="ri-refresh-line me-1"></i> Clear Filters
-          </button>
-        </div>
-      </div>
-    </div>
-  </div><!-- End Provider Directory View -->
-
-</div><!-- End container-fluid -->
-
-<!-- Floating Action Button (only in workspace view) -->
-<div class="fab-container" [class.fab-expanded]="fabExpanded" *ngIf="viewMode === 'workspace'">
+<!-- Floating Action Button -->
+<div class="fab-container" [class.fab-expanded]="fabExpanded">
   <button class="fab-main btn btn-primary" (click)="fabExpanded = !fabExpanded" title="Quick Actions">
     <i class="ri-add-line" [class.rotate-45]="fabExpanded"></i>
   </button>
   <div class="fab-actions" *ngIf="fabExpanded">
-    <button class="fab-action btn btn-primary" (click)="activeTab = 'valuation'; fabExpanded = false" title="Calculate Case Value">
+    <button class="fab-action btn btn-primary" (click)="activeTab = 'case-value'; fabExpanded = false" title="Calculate Case Value">
       <i class="ri-calculator-line"></i>
-      <span>Valuation</span>
+      <span>Case Value</span>
     </button>
-    <button class="fab-action btn btn-info" (click)="activeTab = 'documents'; documentsSubTab = 'demand-letter'; fabExpanded = false" title="Demand Letter">
+    <button class="fab-action btn btn-info" (click)="activeTab = 'demand-letter'; fabExpanded = false" title="Generate Demand Letter">
       <i class="ri-file-text-line"></i>
       <span>Demand Letter</span>
     </button>
-    <button class="fab-action btn btn-success" (click)="activeTab = 'medical'; medicalSubTab = 'records'; fabExpanded = false" title="Medical Records">
+    <button class="fab-action btn btn-success" (click)="activeTab = 'medical-tracker'; fabExpanded = false" title="Medical Tracker">
       <i class="ri-hospital-line"></i>
-      <span>Medical</span>
+      <span>Medical Tracker</span>
     </button>
     <button class="fab-action btn btn-warning" (click)="activeTab = 'settlement'; fabExpanded = false" title="Settlement Tracker">
       <i class="ri-money-dollar-circle-line"></i>

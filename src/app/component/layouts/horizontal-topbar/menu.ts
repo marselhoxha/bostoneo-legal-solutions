@@ -481,6 +481,24 @@ export const SUPERADMIN_MENU: MenuItem[] = [
     link: '/superadmin/users'
   },
   {
+    id: 'sa-announcements',
+    label: 'Announcements',
+    icon: 'ri-megaphone-line',
+    link: '/superadmin/announcements'
+  },
+  {
+    id: 'sa-security',
+    label: 'Security',
+    icon: 'ri-shield-check-line',
+    link: '/superadmin/security'
+  },
+  {
+    id: 'sa-integrations',
+    label: 'Integrations',
+    icon: 'ri-plug-line',
+    link: '/superadmin/integrations'
+  },
+  {
     id: 'sa-analytics',
     label: 'Analytics',
     icon: 'ri-bar-chart-box-line',
