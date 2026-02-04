@@ -33,6 +33,7 @@ import {
 import { BulkRequestWizardComponent } from '../../shared/components/bulk-request-wizard/bulk-request-wizard.component';
 import { PIProviderDirectoryService, ProviderDirectory } from '../../shared/services/pi-provider-directory.service';
 import { PIPortfolioService, PIPortfolioStats } from '../../shared/services/pi-portfolio.service';
+import { PISettlementService, PISettlementEvent } from '../../shared/services/pi-settlement.service';
 
 // PI Professional Platform Models
 import {
@@ -480,7 +481,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     private modalService: NgbModal,
     private documentGenerationService: DocumentGenerationService,
     private userService: UserService,
-    private portfolioService: PIPortfolioService
+    private portfolioService: PIPortfolioService,
+    private settlementService: PISettlementService
   ) {
     super();
 
@@ -621,6 +623,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.groupedDocuments = [];
     this.damageElements = [];
     this.requestHistory = [];
+    this.settlementHistory = [];
 
     // Clear calculations
     this.calculatedValue = null;
@@ -699,10 +702,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       this.medicalProviders = JSON.parse(savedProviders);
     }
 
-    const savedHistory = localStorage.getItem('pi_settlement_history');
-    if (savedHistory) {
-      this.settlementHistory = JSON.parse(savedHistory);
-    }
+    // Settlement history is now loaded per-case from the API via loadSettlementHistory()
 
     const savedCaseValue = localStorage.getItem('pi_latest_case_value');
     if (savedCaseValue) {
@@ -826,6 +826,9 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.loadCaseData(String(caseItem.id));
 
     this.cdr.detectChanges();
+
+    // Scroll to top of page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   /**
@@ -841,6 +844,9 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.loadPICases(0);
 
     this.cdr.detectChanges();
+
+    // Scroll to top of page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   /**
@@ -853,6 +859,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     }
     this.viewMode = 'directory';
     this.cdr.detectChanges();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   /**
@@ -861,6 +868,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   backFromDirectory(): void {
     this.viewMode = this.previousMode;
     this.cdr.detectChanges();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   /**
@@ -919,6 +927,37 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
     return clientName.substring(0, 2).toUpperCase();
+  }
+
+  /**
+   * Get the opposing party name (insurance company, defendant, or extracted from title)
+   */
+  getOpposingPartyName(caseItem: LegalCase): string {
+    // 1. Try insurance company first (most common for PI cases)
+    if (caseItem.insuranceCompany && caseItem.insuranceCompany.trim()) {
+      return caseItem.insuranceCompany.trim();
+    }
+
+    // 2. Try defendant name
+    if (caseItem.defendantName && caseItem.defendantName.trim()) {
+      return caseItem.defendantName.trim();
+    }
+
+    // 3. Try to extract from title (format: "Client v. Defendant" or "Client vs. Defendant")
+    if (caseItem.title) {
+      const title = caseItem.title.trim();
+      // Match both " v. " and " vs. " patterns (case insensitive)
+      const vsMatch = title.match(/\s+v\.?\s+/i);
+      if (vsMatch) {
+        const parts = title.split(vsMatch[0]);
+        if (parts.length >= 2 && parts[1].trim()) {
+          return parts[1].trim();
+        }
+      }
+    }
+
+    // 4. Fallback: return the full title if nothing else works
+    return caseItem.title || 'Unknown';
   }
 
   /**
@@ -2514,28 +2553,134 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   // Settlement Tracker Methods
   // ==========================================
 
-  addSettlementEvent(): void {
-    if (this.settlementForm.invalid) {
+  /**
+   * Load settlement history from the API for the current case
+   */
+  loadSettlementHistory(): void {
+    if (!this.linkedCase?.id) {
+      this.settlementHistory = [];
       return;
     }
 
-    const event = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      ...this.settlementForm.value
+    this.settlementService.getEvents(Number(this.linkedCase.id))
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (events) => {
+          this.settlementHistory = events.map(e => ({
+            id: e.id,
+            date: e.eventDate || e.createdAt,
+            demandAmount: e.demandAmount,
+            offerAmount: e.offerAmount,
+            offerDate: e.offerDate,
+            counterAmount: e.counterAmount,
+            notes: e.notes
+          }));
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error loading settlement history:', err);
+          this.settlementHistory = [];
+        }
+      });
+  }
+
+  addSettlementEvent(): void {
+    if (this.settlementForm.invalid || !this.linkedCase?.id) {
+      if (!this.linkedCase?.id) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'No Case Linked',
+          text: 'Please link a case before adding settlement events.',
+          customClass: { confirmButton: 'btn btn-primary' }
+        });
+      }
+      return;
+    }
+
+    const event: PISettlementEvent = {
+      demandAmount: this.settlementForm.value.demandAmount,
+      offerAmount: this.settlementForm.value.offerAmount || null,
+      offerDate: this.settlementForm.value.offerDate || null,
+      counterAmount: this.settlementForm.value.counterAmount || null,
+      notes: this.settlementForm.value.notes || null
     };
 
-    this.settlementHistory.push(event);
-    localStorage.setItem('pi_settlement_history', JSON.stringify(this.settlementHistory));
+    this.settlementService.createEvent(Number(this.linkedCase.id), event)
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (created) => {
+          // Add to local history
+          this.settlementHistory.push({
+            id: created.id,
+            date: created.eventDate || created.createdAt,
+            demandAmount: created.demandAmount,
+            offerAmount: created.offerAmount,
+            offerDate: created.offerDate,
+            counterAmount: created.counterAmount,
+            notes: created.notes
+          });
 
-    // Add to activity
-    this.addActivity('settlement', `${this.formatCompactCurrency(this.settlementForm.value.demandAmount)} Settlement Event`);
+          // Add to activity
+          this.addActivity('settlement', `${this.formatCompactCurrency(event.demandAmount)} Settlement Event`);
 
-    // Reset form
-    this.settlementForm.reset();
+          // Reset form
+          this.settlementForm.reset();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error creating settlement event:', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to save settlement event. Please try again.',
+            customClass: { confirmButton: 'btn btn-primary' }
+          });
+        }
+      });
+  }
+
+  /**
+   * Delete a single settlement event
+   */
+  deleteSettlementEvent(eventId: number, index: number): void {
+    Swal.fire({
+      title: 'Delete Event?',
+      text: 'Are you sure you want to delete this settlement event?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        confirmButton: 'btn btn-danger me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.settlementService.deleteEvent(eventId)
+          .pipe(takeUntil(this.caseSwitch$))
+          .subscribe({
+            next: () => {
+              this.settlementHistory.splice(index, 1);
+              this.cdr.detectChanges();
+            },
+            error: (err) => {
+              console.error('Error deleting settlement event:', err);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to delete settlement event. Please try again.',
+                customClass: { confirmButton: 'btn btn-primary' }
+              });
+            }
+          });
+      }
+    });
   }
 
   confirmClearHistory(): void {
+    if (!this.linkedCase?.id) return;
+
     Swal.fire({
       title: 'Clear Settlement History?',
       text: 'Are you sure you want to clear all settlement history? This cannot be undone.',
@@ -2556,8 +2701,28 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   clearSettlementHistory(): void {
-    this.settlementHistory = [];
-    localStorage.removeItem('pi_settlement_history');
+    if (!this.linkedCase?.id) {
+      this.settlementHistory = [];
+      return;
+    }
+
+    this.settlementService.clearAllEvents(Number(this.linkedCase.id))
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: () => {
+          this.settlementHistory = [];
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error clearing settlement history:', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to clear settlement history. Please try again.',
+            customClass: { confirmButton: 'btn btn-primary' }
+          });
+        }
+      });
   }
 
   getLatestDemand(): number {
@@ -2661,6 +2826,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           this.loadDamageElements(true);  // Load calculation when first linking case
           this.loadMedicalSummary();
           this.loadExistingDemandLetter(); // Load any previously generated demand letter
+          this.loadSettlementHistory(); // Load settlement negotiation history
 
           Swal.fire({
             icon: 'success',
@@ -2769,14 +2935,16 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     });
 
     // THEN patch with new case data
-    // NOTE: lostWages and futureMedical are NOT pre-filled from case record
-    // They should only come from explicit damage elements (via autoSyncDamageValues)
-    // Use case description as fallback for injury description if not set
+    // NOTE: Economic values (medicalExpenses, lostWages, futureMedical) are NOT pre-filled from case record
+    // They should only come from actual data sources:
+    // - Medical records (billedAmount) via autoSyncDamageValues()
+    // - Damage elements via autoSyncDamageValues()
+    // This prevents stale/orphan values from showing when there's no actual supporting data
     const injuryDesc = caseData.injuryDescription || caseData.description || '';
     this.caseValueForm.patchValue({
       injuryType: caseData.injuryType || 'soft_tissue',
       injuryDescription: injuryDesc,
-      medicalExpenses: caseData.medicalExpensesTotal || 0,
+      medicalExpenses: 0,  // Will be populated from medical records/damage elements if they exist
       lostWages: 0,  // Will be populated from damage elements if they exist
       futureMedical: 0,  // Will be populated from damage elements if they exist
       customMultiplier: caseData.painSufferingMultiplier || null,
@@ -2786,7 +2954,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     });
 
     // Reset and patch demand form
-    // NOTE: lostWages and futureMedical are NOT pre-filled from case record
+    // NOTE: Economic values are NOT pre-filled from case record (same reason as above)
     this.demandForm.reset();
     this.demandForm.patchValue({
       clientName: caseData.clientName || '',
@@ -2798,7 +2966,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       injuryType: caseData.injuryType || '',
       injuryDescription: injuryDesc,  // Use same fallback as caseValueForm
       liabilityDetails: this.buildLiabilityNarrative(caseData),
-      medicalExpenses: caseData.medicalExpensesTotal || 0,
+      medicalExpenses: 0,  // Will be populated from medical records/damage elements if they exist
       lostWages: 0,  // Will be populated from damage elements if they exist
       futureMedical: 0,  // Will be populated from damage elements if they exist
       policyLimit: caseData.insurancePolicyLimit || null,
@@ -3013,6 +3181,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
         next: (records) => {
           this.medicalRecords = records;
           this.isLoadingMedicalRecords = false;
+          // Auto-sync medical expenses to form from actual records
+          this.autoSyncDamageValues();
           this.cdr.detectChanges();
         },
         error: (err) => {
@@ -3966,6 +4136,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           if (loadCalculation) {
             this.loadDamageCalculation();
           }
+          // Auto-sync damage values to form from actual elements
+          this.autoSyncDamageValues();
           this.cdr.detectChanges();
         },
         error: (err) => {
@@ -4215,6 +4387,18 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     return this.damageElements
       .filter(e => nonEconomicTypes.includes(e.elementType))
       .reduce((sum, e) => sum + (e.calculatedAmount || e.baseAmount || 0), 0);
+  }
+
+  /**
+   * Check if there's actual damage data (medical records or damage elements with values)
+   * Used to prevent showing stale saved calculations when there's no supporting data
+   */
+  hasActualDamageData(): boolean {
+    // Check for medical records with billed amounts
+    const hasMedicalRecords = this.medicalRecords.some(r => (r.billedAmount || 0) > 0);
+    // Check for damage elements with values
+    const hasDamageElements = this.damageElements.some(e => (e.calculatedAmount || e.baseAmount || 0) > 0);
+    return hasMedicalRecords || hasDamageElements;
   }
 
   // ==========================================

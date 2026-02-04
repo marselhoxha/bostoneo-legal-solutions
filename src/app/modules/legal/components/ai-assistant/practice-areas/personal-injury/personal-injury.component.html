@@ -9,7 +9,7 @@
           <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
             <div>
               <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Practice Areas</div>
-              <h4 class="mb-0">Personal Injury Dashboard</h4>
+              <h4 class="mb-0">Personal Injury Portfolio</h4>
             </div>
             <div class="d-flex align-items-center gap-2">
               <button class="btn btn-soft-info" (click)="openProviderDirectory()">
@@ -57,17 +57,17 @@
 
       <div class="stat-item">
         <div class="stat-header">
-          <span class="stat-label">IN SETTLEMENT</span>
+          <span class="stat-label">PENDING DEMANDS</span>
           <span class="stat-indicator stat-indicator-warning">
-            <i class="ri-scales-3-line"></i>
+            <i class="ri-mail-send-line"></i>
           </span>
         </div>
         <div class="stat-body">
-          <i class="ri-discuss-line stat-icon text-warning"></i>
-          <span class="stat-value">{{ portfolioStats?.casesInSettlement || 0 }}</span>
+          <i class="ri-time-line stat-icon text-warning"></i>
+          <span class="stat-value">{{ portfolioStats?.pendingDemands || 0 }}</span>
         </div>
         <div class="stat-footer">
-          <small class="text-muted">Negotiating</small>
+          <small class="text-muted">Awaiting response</small>
         </div>
       </div>
 
@@ -294,9 +294,7 @@
               <i class="ri-arrow-left-line me-1"></i> Dashboard
             </button>
             <div class="workspace-case-info" *ngIf="linkedCase">
-              <span class="case-number">{{ linkedCase.caseNumber }}</span>
-              <span class="separator">|</span>
-              <span class="client-name">{{ linkedCase.clientName }}</span>
+              <span class="case-title">{{ linkedCase.title }}</span>
               <span class="badge rounded-pill ms-2" [ngClass]="getStatusBadgeClass(linkedCase.status)">
                 {{ formatStatus(linkedCase.status) }}
               </span>
@@ -307,11 +305,6 @@
               <i class="ri-contacts-book-line"></i>
               <span class="d-none d-md-inline ms-1">Providers</span>
             </button>
-            <div class="btn-group">
-              <button class="btn btn-primary btn-sm" (click)="openQuickCalculator()">
-                <i class="ri-calculator-line me-1"></i> Calculate
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -405,13 +398,13 @@
                           </span>
                         </div>
                         <div class="summary-info flex-grow-1">
-                          <div class="d-flex align-items-center gap-2 mb-1">
-                            <h5 class="mb-0 fw-semibold">{{ linkedCase.clientName || 'No Client' }}</h5>
+                          <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <h5 class="mb-0 fw-semibold case-title-full">{{ linkedCase.title }}</h5>
                             <span class="badge rounded-pill" [ngClass]="getStatusBadgeClass(linkedCase.status)">
                               {{ formatStatus(linkedCase.status) }}
                             </span>
                           </div>
-                          <div class="d-flex align-items-center gap-3 text-muted fs-13">
+                          <div class="d-flex align-items-center gap-3 text-muted fs-13 flex-wrap">
                             <span><i class="ri-hashtag me-1"></i>{{ linkedCase.caseNumber }}</span>
                             <span *ngIf="linkedCase.injuryDate"><i class="ri-calendar-event-line me-1"></i>Injury: {{ linkedCase.injuryDate | date:'mediumDate' }}</span>
                             <span><i class="ri-time-line me-1"></i>{{ getDaysOpen(linkedCase) }} days open</span>
@@ -464,131 +457,87 @@
                       </div>
                     </div>
 
-                    <!-- Main Content Grid -->
-                    <div class="row g-3">
-                      <!-- Left Column - Case Details -->
-                      <div class="col-lg-5">
-                        <div class="card border-0 shadow-sm h-100">
-                          <div class="card-header bg-transparent border-bottom py-3">
-                            <h6 class="mb-0 fw-semibold d-flex align-items-center">
-                              <i class="ri-file-info-line text-primary me-2"></i>Case Details
-                            </h6>
+                    <!-- Case Details - Medical Summary Style -->
+                    <div class="case-info-section">
+                      <div class="case-info-header">
+                        <i class="ri-information-line"></i>
+                        <span>Case Information</span>
+                      </div>
+                      <div class="case-info-grid">
+                        <!-- Client -->
+                        <div class="case-info-item client">
+                          <div class="info-icon">
+                            <i class="ri-user-3-line"></i>
                           </div>
-                          <div class="card-body p-0">
-                            <div class="summary-detail-list">
-                              <div class="sdl-item">
-                                <div class="sdl-icon bg-primary-subtle"><i class="ri-user-line text-primary"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Client Name</div>
-                                  <div class="sdl-value">{{ linkedCase.clientName || 'Not specified' }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item" *ngIf="linkedCase.defendantName">
-                                <div class="sdl-icon bg-danger-subtle"><i class="ri-user-unfollow-line text-danger"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Defendant</div>
-                                  <div class="sdl-value">{{ linkedCase.defendantName }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item" *ngIf="linkedCase.insuranceCompany">
-                                <div class="sdl-icon bg-info-subtle"><i class="ri-shield-check-line text-info"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Insurance Company</div>
-                                  <div class="sdl-value">{{ linkedCase.insuranceCompany }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item" *ngIf="linkedCase.policyLimit">
-                                <div class="sdl-icon bg-success-subtle"><i class="ri-money-dollar-circle-line text-success"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Policy Limit</div>
-                                  <div class="sdl-value">{{ formatCurrency(linkedCase.policyLimit) }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item" *ngIf="linkedCase.accidentLocation">
-                                <div class="sdl-icon bg-warning-subtle"><i class="ri-map-pin-line text-warning"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Accident Location</div>
-                                  <div class="sdl-value">{{ linkedCase.accidentLocation }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item" *ngIf="linkedCase.injuryType">
-                                <div class="sdl-icon bg-danger-subtle"><i class="ri-first-aid-kit-line text-danger"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Injury Type</div>
-                                  <div class="sdl-value">{{ getInjuryTypeLabel(linkedCase.injuryType) }}</div>
-                                </div>
-                              </div>
-                              <div class="sdl-item">
-                                <div class="sdl-icon bg-secondary-subtle"><i class="ri-calendar-line text-secondary"></i></div>
-                                <div class="sdl-content">
-                                  <div class="sdl-label">Case Opened</div>
-                                  <div class="sdl-value">{{ linkedCase.createdAt | date:'mediumDate' }}</div>
-                                </div>
-                              </div>
-                            </div>
+                          <div class="info-content">
+                            <span class="info-value">{{ linkedCase.clientName || 'Not specified' }}</span>
+                            <span class="info-label">Client</span>
                           </div>
                         </div>
-                      </div>
 
-                      <!-- Right Column - Quick Actions -->
-                      <div class="col-lg-7">
-                        <div class="card border-0 shadow-sm h-100">
-                          <div class="card-header bg-transparent border-bottom py-3">
-                            <h6 class="mb-0 fw-semibold d-flex align-items-center">
-                              <i class="ri-apps-2-line text-primary me-2"></i>Quick Actions
-                            </h6>
+                        <!-- Defendant -->
+                        <div class="case-info-item defendant" *ngIf="linkedCase.defendantName">
+                          <div class="info-icon">
+                            <i class="ri-user-unfollow-line"></i>
                           </div>
-                          <div class="card-body">
-                            <div class="summary-actions-grid">
-                              <button class="summary-action-btn" (click)="activeTab = 'valuation'">
-                                <div class="sab-icon bg-primary-subtle"><i class="ri-calculator-line text-primary"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Calculate Value</div>
-                                  <div class="sab-desc">AI-powered case valuation</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                              <button class="summary-action-btn" (click)="activeTab = 'documents'; documentsSubTab = 'demand-letter'">
-                                <div class="sab-icon bg-info-subtle"><i class="ri-file-text-line text-info"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Demand Letter</div>
-                                  <div class="sab-desc">Generate demand package</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                              <button class="summary-action-btn" (click)="activeTab = 'medical'; medicalSubTab = 'records'">
-                                <div class="sab-icon bg-success-subtle"><i class="ri-hospital-line text-success"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Medical Records</div>
-                                  <div class="sab-desc">{{ medicalRecords.length }} records on file</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                              <button class="summary-action-btn" (click)="activeTab = 'medical'; medicalSubTab = 'summary'">
-                                <div class="sab-icon bg-warning-subtle"><i class="ri-article-line text-warning"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Medical Summary</div>
-                                  <div class="sab-desc">{{ medicalSummary ? 'Summary available' : 'Generate summary' }}</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                              <button class="summary-action-btn" (click)="activeTab = 'documents'; documentsSubTab = 'checklist'">
-                                <div class="sab-icon bg-secondary-subtle"><i class="ri-checkbox-multiple-line text-secondary"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Document Checklist</div>
-                                  <div class="sab-desc">{{ documentCompleteness?.received || 0 }}/{{ documentCompleteness?.total || 0 }} received</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                              <button class="summary-action-btn" (click)="activeTab = 'settlement'">
-                                <div class="sab-icon bg-danger-subtle"><i class="ri-money-dollar-circle-line text-danger"></i></div>
-                                <div class="sab-content">
-                                  <div class="sab-title">Settlement Tracker</div>
-                                  <div class="sab-desc">{{ settlementHistory.length }} events logged</div>
-                                </div>
-                                <i class="ri-arrow-right-s-line sab-arrow"></i>
-                              </button>
-                            </div>
+                          <div class="info-content">
+                            <span class="info-value">{{ linkedCase.defendantName }}</span>
+                            <span class="info-label">Defendant</span>
+                          </div>
+                        </div>
+
+                        <!-- Insurance -->
+                        <div class="case-info-item insurance" *ngIf="linkedCase.insuranceCompany">
+                          <div class="info-icon">
+                            <i class="ri-shield-check-line"></i>
+                          </div>
+                          <div class="info-content">
+                            <span class="info-value">{{ linkedCase.insuranceCompany }}</span>
+                            <span class="info-label">Insurance Carrier</span>
+                          </div>
+                        </div>
+
+                        <!-- Policy Limit -->
+                        <div class="case-info-item policy" *ngIf="linkedCase.policyLimit">
+                          <div class="info-icon">
+                            <i class="ri-money-dollar-circle-line"></i>
+                          </div>
+                          <div class="info-content">
+                            <span class="info-value text-success">{{ formatCurrency(linkedCase.policyLimit) }}</span>
+                            <span class="info-label">Policy Limit</span>
+                          </div>
+                        </div>
+
+                        <!-- Accident Location -->
+                        <div class="case-info-item location" *ngIf="linkedCase.accidentLocation">
+                          <div class="info-icon">
+                            <i class="ri-map-pin-2-line"></i>
+                          </div>
+                          <div class="info-content">
+                            <span class="info-value">{{ linkedCase.accidentLocation }}</span>
+                            <span class="info-label">Accident Location</span>
+                          </div>
+                        </div>
+
+                        <!-- Injury Type -->
+                        <div class="case-info-item injury" *ngIf="linkedCase.injuryType">
+                          <div class="info-icon">
+                            <i class="ri-heart-pulse-line"></i>
+                          </div>
+                          <div class="info-content">
+                            <span class="info-value">{{ getInjuryTypeLabel(linkedCase.injuryType) }}</span>
+                            <span class="info-label">Injury Type</span>
+                          </div>
+                        </div>
+
+                        <!-- Case Opened -->
+                        <div class="case-info-item date">
+                          <div class="info-icon">
+                            <i class="ri-calendar-check-line"></i>
+                          </div>
+                          <div class="info-content">
+                            <span class="info-value">{{ linkedCase.createdAt | date:'MMM d, yyyy' }}</span>
+                            <span class="info-label">Case Opened</span>
                           </div>
                         </div>
                       </div>
@@ -649,8 +598,8 @@
                     </div>
                   </div>
 
-                  <!-- EXECUTIVE DECISION PANEL (Shows when we have calculation data or saved damage calculation) -->
-                  <div class="executive-decision-panel" *ngIf="calculatedValue || (damageCalculation?.lowValue && damageCalculation?.midValue)">
+                  <!-- EXECUTIVE DECISION PANEL (Shows when we have calculation data or saved damage calculation WITH actual supporting data) -->
+                  <div class="executive-decision-panel" *ngIf="calculatedValue || (damageCalculation?.lowValue && damageCalculation?.midValue && hasActualDamageData())">
                     <!-- Value Range Visual Bar -->
                     <div class="value-range-visual">
                       <div class="range-track">
@@ -1720,47 +1669,82 @@
                     <div class="col-lg-6">
                       <div class="settlement-timeline-card">
                         <div class="timeline-header">
-                          <h6 class="mb-0">Settlement History</h6>
+                          <div class="d-flex align-items-center gap-2">
+                            <div class="timeline-icon">
+                              <i class="ri-history-line"></i>
+                            </div>
+                            <div>
+                              <h6 class="mb-0">Negotiation Timeline</h6>
+                              <small class="text-muted" *ngIf="settlementHistory.length > 0">{{ settlementHistory.length }} event{{ settlementHistory.length !== 1 ? 's' : '' }} recorded</small>
+                            </div>
+                          </div>
                           <button class="clear-btn" *ngIf="settlementHistory.length > 0" (click)="confirmClearHistory()">
-                            <i class="ri-delete-bin-line"></i> Clear
+                            <i class="ri-delete-bin-line"></i> Clear All
                           </button>
                         </div>
                         <div class="timeline-body">
-                          <div class="settlement-timeline" *ngIf="settlementHistory.length > 0">
-                            <div class="timeline-event" *ngFor="let event of settlementHistory; let i = index">
-                              <div class="event-marker"></div>
-                              <div class="event-card">
-                                <div class="event-date">{{ event.date | date:'MMM d, yyyy' }}</div>
-                                <div class="event-amounts">
-                                  <div class="amount-item" *ngIf="event.demandAmount">
-                                    <div class="amount-label">Demand</div>
-                                    <div class="amount-value demand">{{ formatCurrency(event.demandAmount) }}</div>
+                          <div class="settlement-timeline-v2" *ngIf="settlementHistory.length > 0">
+                            <div class="timeline-event-v2" *ngFor="let event of settlementHistory; let i = index; let first = first; let last = last">
+                              <div class="event-connector" [class.first]="first" [class.last]="last">
+                                <div class="connector-line top" *ngIf="!first"></div>
+                                <div class="connector-dot" [class.has-offer]="event.offerAmount" [class.has-counter]="event.counterAmount">
+                                  <i class="ri-checkbox-blank-circle-fill" *ngIf="!event.offerAmount && !event.counterAmount"></i>
+                                  <i class="ri-arrow-left-right-line" *ngIf="event.offerAmount && !event.counterAmount"></i>
+                                  <i class="ri-refresh-line" *ngIf="event.counterAmount"></i>
+                                </div>
+                                <div class="connector-line bottom" *ngIf="!last"></div>
+                              </div>
+                              <div class="event-content">
+                                <div class="event-card-v2">
+                                  <div class="event-card-header">
+                                    <div class="event-date-badge">
+                                      <i class="ri-calendar-line"></i>
+                                      {{ event.date | date:'MMM d, yyyy' }}
+                                    </div>
+                                    <button class="event-delete-btn" (click)="deleteSettlementEvent(event.id, i)" title="Delete event">
+                                      <i class="ri-delete-bin-6-line"></i>
+                                    </button>
                                   </div>
-                                  <div class="amount-item" *ngIf="event.offerAmount">
-                                    <div class="amount-label">Offer</div>
-                                    <div class="amount-value offer">{{ formatCurrency(event.offerAmount) }}</div>
+                                  <div class="event-amounts-v2">
+                                    <div class="amount-pill demand" *ngIf="event.demandAmount">
+                                      <div class="pill-icon"><i class="ri-arrow-up-line"></i></div>
+                                      <div class="pill-content">
+                                        <span class="pill-label">Demand</span>
+                                        <span class="pill-value">{{ formatCurrency(event.demandAmount) }}</span>
+                                      </div>
+                                    </div>
+                                    <div class="amount-pill offer" *ngIf="event.offerAmount">
+                                      <div class="pill-icon"><i class="ri-arrow-down-line"></i></div>
+                                      <div class="pill-content">
+                                        <span class="pill-label">Offer</span>
+                                        <span class="pill-value">{{ formatCurrency(event.offerAmount) }}</span>
+                                      </div>
+                                    </div>
+                                    <div class="amount-pill counter" *ngIf="event.counterAmount">
+                                      <div class="pill-icon"><i class="ri-reply-line"></i></div>
+                                      <div class="pill-content">
+                                        <span class="pill-label">Counter</span>
+                                        <span class="pill-value">{{ formatCurrency(event.counterAmount) }}</span>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div class="amount-item" *ngIf="event.counterAmount">
-                                    <div class="amount-label">Counter</div>
-                                    <div class="amount-value counter">{{ formatCurrency(event.counterAmount) }}</div>
+                                  <div class="event-notes-v2" *ngIf="event.notes">
+                                    <i class="ri-chat-quote-line"></i>
+                                    <span>{{ event.notes }}</span>
                                   </div>
                                 </div>
-                                <p class="event-notes" *ngIf="event.notes">{{ event.notes }}</p>
                               </div>
                             </div>
                           </div>
 
-                          <div class="settlement-empty" *ngIf="settlementHistory.length === 0">
-                            <div class="empty-state-illustration">
-                              <div class="empty-state-icon-lg">
+                          <div class="settlement-empty-v2" *ngIf="settlementHistory.length === 0">
+                            <div class="empty-illustration">
+                              <div class="empty-icon-wrapper">
                                 <i class="ri-exchange-dollar-line"></i>
                               </div>
-                              <div class="empty-state-circles">
-                                <span></span><span></span><span></span>
-                              </div>
                             </div>
-                            <h6 class="fw-semibold mb-2">No Events Logged</h6>
-                            <p class="text-muted mb-0">Log settlement events using the form to track your negotiation history.</p>
+                            <h6 class="fw-semibold mb-2">No Negotiation History</h6>
+                            <p class="text-muted mb-0 fs-13">Use the form to log demands, offers, and counter-offers as your settlement negotiations progress.</p>
                           </div>
                         </div>
                       </div>
