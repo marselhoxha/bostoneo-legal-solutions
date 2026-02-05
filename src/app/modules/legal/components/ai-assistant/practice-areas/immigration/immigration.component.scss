@@ -8,6 +8,17 @@
   white-space: pre-wrap;
   max-height: 500px;
   overflow-y: auto;
+
+  // Responsive max-height
+  @media (max-width: 767.98px) {
+    max-height: 60vh;
+    padding: 1rem;
+    font-size: 12px;
+  }
+
+  @media (max-width: 575.98px) {
+    max-height: 50vh;
+  }
 }
 
 .nav-tabs-custom {
@@ -192,4 +203,53 @@
 
 .bg-info-subtle {
   background-color: rgba(41, 156, 219, 0.1) !important;
+}
+
+// ==================== Responsive Styles ====================
+@media (max-width: 767.98px) {
+  .nav-tabs-custom {
+    .nav-link {
+      padding: 10px 12px;
+      font-size: 0.875rem;
+    }
+  }
+
+  .timeline {
+    padding-left: 20px;
+
+    &::before {
+      left: 5px;
+    }
+
+    .timeline-item {
+      .timeline-marker {
+        left: -18px;
+        width: 16px;
+        height: 16px;
+      }
+
+      .timeline-content {
+        padding: 8px 12px;
+      }
+    }
+  }
+}
+
+@media (max-width: 575.98px) {
+  .nav-tabs-custom {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    .nav-link {
+      white-space: nowrap;
+      padding: 8px 10px;
+      font-size: 0.8125rem;
+    }
+  }
 }

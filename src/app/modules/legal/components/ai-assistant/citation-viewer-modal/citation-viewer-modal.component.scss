@@ -4,6 +4,17 @@
   max-height: 700px;
   position: relative;
   background: transparent;
+
+  // Responsive heights
+  @media (max-width: 767.98px) {
+    height: 80vh;
+    max-height: 80vh;
+  }
+
+  @media (max-width: 575.98px) {
+    height: 100vh;
+    max-height: 100vh;
+  }
 }
 
 .btn-close-float {
@@ -81,5 +92,31 @@
 
   .highlight.selected {
     background-color: rgba(255, 160, 0, 0.7) !important;
+  }
+}
+
+// ==================== Responsive Styles ====================
+@media (max-width: 767.98px) {
+  .btn-close-float {
+    top: 8px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+
+    i {
+      font-size: 1.25rem;
+    }
+  }
+}
+
+@media (max-width: 575.98px) {
+  .btn-close-float {
+    top: 4px;
+    right: 8px;
+  }
+
+  .loading-state,
+  .error-state {
+    padding: 1rem;
   }
 }

@@ -186,6 +186,12 @@
             <div>{{ error }}</div>
           </div>
 
+          <!-- Swipe Hint (mobile only) -->
+          <div class="swipe-hint d-md-none" *ngIf="!isLoading && !error">
+            <i class="ri-arrow-left-right-line"></i>
+            <span>Swipe left/right to see all columns</span>
+          </div>
+
           <!-- Cases Table -->
           <div class="table-responsive" *ngIf="!isLoading && !error">
             <table class="table table-hover table-nowrap align-middle mb-0">

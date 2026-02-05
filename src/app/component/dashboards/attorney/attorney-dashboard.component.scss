@@ -657,7 +657,9 @@
   }
 }
 
-// Responsive adjustments
+// ==================== Responsive Styles ====================
+
+// Tablet
 @media (max-width: 1199.98px) {
   .crm-widget {
     .col {
@@ -669,9 +671,66 @@
       }
     }
   }
+
+  .activity-urgent-card {
+    min-height: 360px;
+  }
+
+  .activity-feed {
+    height: 320px;
+  }
 }
 
+// Tablet (Portrait)
+@media (max-width: 991.98px) {
+  .activity-urgent-card {
+    min-height: auto;
+  }
+
+  .activity-feed {
+    height: auto;
+    max-height: 400px;
+  }
+
+  // Stack card header buttons on smaller tablets
+  .card-header {
+    .flex-shrink-0 {
+      &.d-flex.gap-2 {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+
+        .btn {
+          font-size: 0.75rem;
+          padding: 0.375rem 0.625rem;
+        }
+      }
+    }
+  }
+}
+
+// Mobile
 @media (max-width: 767.98px) {
+  .dashboard-greeting {
+    padding: 1rem 0 1.5rem;
+    padding-left: 1rem;
+    margin-bottom: 1rem;
+
+    &::before {
+      top: 1rem;
+      bottom: 1.5rem;
+    }
+
+    .greeting-title {
+      font-size: 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .greeting-briefing p {
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+  }
+
   .schedule-date-badge {
     width: 48px;
     height: 48px;
@@ -683,6 +742,317 @@
     .month {
       font-size: 0.6rem;
     }
+  }
+
+  // Card headers - stack title and buttons
+  .card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem;
+
+    .flex-grow-1 {
+      width: 100%;
+    }
+
+    .flex-shrink-0 {
+      width: 100%;
+
+      &.d-flex.gap-2 {
+        width: 100%;
+        justify-content: flex-start;
+
+        .btn {
+          flex: 1;
+          text-align: center;
+        }
+      }
+    }
+
+    // Schedule header special handling
+    .schedule-date-badge + .flex-grow-1 {
+      .d-flex.align-items-center.gap-3 {
+        flex-wrap: wrap;
+        gap: 0.5rem !important;
+      }
+    }
+  }
+
+  // Case cards
+  .case-card-minimal {
+    min-height: 160px;
+    padding: 0.875rem !important;
+
+    .avatar-md {
+      width: 40px;
+      height: 40px;
+
+      .avatar-title {
+        font-size: 14px;
+      }
+    }
+
+    .case-card-arrow {
+      width: 32px;
+      height: 32px;
+    }
+
+    h5 {
+      font-size: 0.9375rem !important;
+    }
+
+    p {
+      font-size: 0.8125rem !important;
+      margin-bottom: 0.625rem !important;
+    }
+
+    .case-badge {
+      padding: 4px 8px;
+      font-size: 10px;
+    }
+  }
+
+  // Schedule event cards
+  .schedule-event-card {
+    .event-time-header {
+      font-size: 12px;
+      padding: 0.5rem 0.75rem !important;
+    }
+
+    .p-3 {
+      padding: 0.75rem !important;
+    }
+
+    h5 {
+      font-size: 0.9375rem;
+    }
+
+    p {
+      font-size: 0.8125rem;
+    }
+
+    .avatar-sm {
+      width: 36px;
+      height: 36px;
+    }
+
+    .border-top {
+      margin-top: 0.625rem !important;
+      padding-top: 0.625rem !important;
+    }
+  }
+
+  // Activity feed
+  .activity-feed {
+    height: auto;
+    max-height: 350px;
+    padding-left: 0;
+
+    &::before {
+      left: 21px;
+    }
+
+    .activity-feed-item {
+      padding: 12px;
+      margin: 0 -12px 10px;
+
+      .activity-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+      }
+
+      .activity-title {
+        font-size: 13px;
+      }
+
+      .activity-desc {
+        font-size: 12px;
+        -webkit-line-clamp: 2;
+      }
+
+      .activity-meta {
+        font-size: 11px;
+        gap: 10px;
+      }
+    }
+  }
+
+  // Urgent items
+  .urgent-items-list {
+    .urgent-item {
+      padding: 0.75rem !important;
+
+      .avatar-sm {
+        width: 36px;
+        height: 36px;
+
+        .avatar-title {
+          font-size: 16px;
+        }
+      }
+
+      h6 {
+        font-size: 13px;
+      }
+
+      p {
+        font-size: 11px;
+      }
+
+      .badge {
+        font-size: 10px;
+        padding: 0.25rem 0.5rem;
+      }
+    }
+  }
+
+  // Pending appointments/reschedule cards
+  .border.rounded-3.p-3 {
+    padding: 0.75rem !important;
+
+    h6 {
+      font-size: 0.9375rem;
+    }
+
+    .fs-12 {
+      font-size: 0.6875rem !important;
+    }
+
+    .fs-13 {
+      font-size: 0.75rem !important;
+    }
+
+    .btn-sm {
+      padding: 0.375rem 0.625rem;
+      font-size: 0.75rem;
+    }
+  }
+}
+
+// Small mobile
+@media (max-width: 575.98px) {
+  .dashboard-greeting {
+    padding-left: 0.875rem;
+
+    &::before {
+      width: 2px;
+    }
+
+    .greeting-date {
+      font-size: 0.625rem;
+    }
+
+    .greeting-title {
+      font-size: 1.125rem;
+    }
+
+    .greeting-briefing p {
+      font-size: 0.9375rem;
+    }
+  }
+
+  // Stack card header badges
+  .card-header {
+    .flex-grow-1 {
+      .d-flex.align-items-center.gap-3 {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.375rem !important;
+      }
+    }
+
+    // Full width buttons stacked
+    .flex-shrink-0.d-flex.gap-2 {
+      flex-direction: column;
+      gap: 0.5rem !important;
+
+      .btn {
+        width: 100%;
+      }
+    }
+  }
+
+  // Schedule date badge in header
+  .card-header .flex-shrink-0.me-3 {
+    margin-right: 0.75rem !important;
+  }
+
+  .schedule-date-badge {
+    width: 44px;
+    height: 44px;
+
+    .day {
+      font-size: 1.125rem;
+    }
+
+    .month {
+      font-size: 0.55rem;
+    }
+  }
+
+  // Case cards - full width
+  .case-card-minimal {
+    min-height: 140px;
+  }
+
+  // Schedule event cards
+  .schedule-event-card {
+    &.add-event-placeholder {
+      min-height: 150px;
+    }
+  }
+
+  // Activity cards - edge to edge
+  .activity-urgent-card {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+
+    .card-header {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .card-body {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+  }
+
+  // Activity feed on smallest screens
+  .activity-feed {
+    max-height: 300px;
+
+    &::before {
+      display: none; // Hide timeline line on smallest screens
+    }
+
+    .activity-feed-item {
+      padding: 10px;
+      margin: 0 -10px 8px;
+
+      .activity-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 14px;
+        border-radius: 8px;
+      }
+
+      .activity-context {
+        font-size: 11px;
+      }
+    }
+  }
+
+  // Modals on mobile
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+
+  .modal-lg {
+    max-width: calc(100vw - 1rem);
   }
 }
 

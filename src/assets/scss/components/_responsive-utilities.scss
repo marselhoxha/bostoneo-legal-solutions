@@ -1,0 +1,381 @@
+// =============================================
+// RESPONSIVE UTILITY CLASSES
+// Apply directly to HTML elements for quick responsive fixes
+// =============================================
+
+@import '../responsive-mixins';
+
+// =============================================
+// WIDTH UTILITIES
+// =============================================
+
+// Full width on mobile
+.w-full-mobile {
+  @include mobile-only {
+    width: 100% !important;
+  }
+}
+
+// Full width on tablet and below
+.w-full-tablet {
+  @include tablet-down {
+    width: 100% !important;
+  }
+}
+
+// Auto width on mobile (resets fixed widths)
+.w-auto-mobile {
+  @include mobile-only {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+
+// =============================================
+// FLEXBOX UTILITIES
+// =============================================
+
+// Column direction on mobile
+.flex-col-mobile {
+  @include mobile-only {
+    flex-direction: column !important;
+  }
+}
+
+// Column direction on tablet
+.flex-col-tablet {
+  @include tablet-down {
+    flex-direction: column !important;
+  }
+}
+
+// Wrap on mobile
+.flex-wrap-mobile {
+  @include mobile-only {
+    flex-wrap: wrap !important;
+  }
+}
+
+// Gap adjustments
+.gap-sm-mobile {
+  @include mobile-only {
+    gap: 0.5rem !important;
+  }
+}
+
+// =============================================
+// MAX-HEIGHT UTILITIES
+// =============================================
+
+// Responsive max-heights
+.max-h-responsive {
+  @include max-height-responsive(700px, 60vh, 50vh);
+}
+
+.max-h-responsive-sm {
+  @include max-height-responsive(400px, 40vh, 35vh);
+}
+
+.max-h-responsive-lg {
+  @include max-height-responsive(800px, 70vh, 60vh);
+}
+
+// Full viewport height on mobile
+.max-h-screen-mobile {
+  @include mobile-only {
+    max-height: 100vh !important;
+  }
+}
+
+// =============================================
+// OVERFLOW UTILITIES
+// =============================================
+
+// Scrollable container for tables
+.table-scroll-wrapper {
+  @include table-responsive;
+}
+
+// Horizontal scroll on mobile
+.overflow-x-mobile {
+  @include mobile-only {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+// =============================================
+// DISPLAY UTILITIES
+// =============================================
+
+// Hide on mobile
+.hide-mobile {
+  @include mobile-only {
+    display: none !important;
+  }
+}
+
+// Hide on tablet
+.hide-tablet {
+  @include tablet-only {
+    display: none !important;
+  }
+}
+
+// Hide on tablet and below
+.hide-tablet-down {
+  @include tablet-down {
+    display: none !important;
+  }
+}
+
+// Show only on mobile
+.show-mobile-only {
+  display: none !important;
+  @include mobile-only {
+    display: block !important;
+  }
+}
+
+// Show only on tablet
+.show-tablet-only {
+  display: none !important;
+  @include tablet-only {
+    display: block !important;
+  }
+}
+
+// Inline-flex variant
+.show-mobile-only-flex {
+  display: none !important;
+  @include mobile-only {
+    display: inline-flex !important;
+  }
+}
+
+// =============================================
+// POSITIONING UTILITIES
+// =============================================
+
+// Static on mobile (resets fixed/absolute)
+.position-static-mobile {
+  @include mobile-only {
+    position: static !important;
+  }
+}
+
+// Sticky on mobile (replaces fixed)
+.position-sticky-mobile {
+  @include mobile-only {
+    position: sticky !important;
+    top: 0;
+    z-index: 100;
+  }
+}
+
+// =============================================
+// SPACING UTILITIES
+// =============================================
+
+// Smaller padding on mobile
+.p-sm-mobile {
+  @include mobile-only {
+    padding: 0.75rem !important;
+  }
+}
+
+.px-sm-mobile {
+  @include mobile-only {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+}
+
+.py-sm-mobile {
+  @include mobile-only {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+}
+
+// No padding on mobile
+.p-0-mobile {
+  @include mobile-only {
+    padding: 0 !important;
+  }
+}
+
+// Smaller margin on mobile
+.m-sm-mobile {
+  @include mobile-only {
+    margin: 0.5rem !important;
+  }
+}
+
+// No margin on mobile
+.m-0-mobile {
+  @include mobile-only {
+    margin: 0 !important;
+  }
+}
+
+// =============================================
+// TEXT UTILITIES
+// =============================================
+
+// Smaller text on mobile
+.text-sm-mobile {
+  @include mobile-only {
+    font-size: 0.8125rem !important;
+  }
+}
+
+// Truncate on mobile
+.text-truncate-mobile {
+  @include mobile-only {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// Center text on mobile
+.text-center-mobile {
+  @include mobile-only {
+    text-align: center !important;
+  }
+}
+
+// =============================================
+// SIDEBAR UTILITIES
+// =============================================
+
+// Responsive sidebar pattern
+.sidebar-responsive {
+  @include sidebar-responsive(280px);
+}
+
+.sidebar-responsive-sm {
+  @include sidebar-responsive(240px);
+}
+
+.sidebar-responsive-lg {
+  @include sidebar-responsive(320px);
+}
+
+// Sidebar overlay (backdrop for mobile sidebar)
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1045;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+
+  &.show {
+    display: block;
+    opacity: 1;
+  }
+}
+
+// =============================================
+// TOUCH TARGETS
+// =============================================
+
+// Ensure minimum touch target size
+.touch-target {
+  @include touch-target(44px);
+}
+
+.touch-target-sm {
+  @include touch-target(36px);
+}
+
+// =============================================
+// RESPONSIVE DROPDOWN
+// =============================================
+
+.dropdown-responsive {
+  @include dropdown-responsive(360px);
+}
+
+.dropdown-responsive-sm {
+  @include dropdown-responsive(300px);
+}
+
+.dropdown-responsive-lg {
+  @include dropdown-responsive(420px);
+}
+
+// =============================================
+// MODAL UTILITIES
+// =============================================
+
+// Full screen modal on mobile
+.modal-fullscreen-mobile {
+  @include modal-fullscreen-mobile;
+}
+
+// =============================================
+// GRID UTILITIES
+// =============================================
+
+// Single column on mobile
+.grid-1-col-mobile {
+  @include mobile-only {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+// Two columns on tablet, one on mobile
+.grid-responsive {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+
+  @include mobile-only {
+    grid-template-columns: 1fr;
+  }
+}
+
+// =============================================
+// CARD UTILITIES
+// =============================================
+
+// Card with no border-radius on mobile (edge-to-edge)
+.card-edge-mobile {
+  @include mobile-only {
+    border-radius: 0 !important;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    width: calc(100% + 2rem);
+  }
+}
+
+// =============================================
+// FORM UTILITIES
+// =============================================
+
+// Full width inputs on mobile
+.form-control-full-mobile {
+  @include mobile-only {
+    width: 100% !important;
+  }
+}
+
+// Stack form groups on mobile
+.form-row-stack-mobile {
+  @include mobile-only {
+    flex-direction: column;
+
+    > * {
+      width: 100%;
+      margin-bottom: 0.75rem;
+    }
+  }
+}

@@ -392,6 +392,17 @@
   z-index: 1000 !important;
   overflow: hidden;
   will-change: transform, opacity;
+
+  // Responsive dropdown - full width on mobile
+  @media (max-width: 575.98px) {
+    width: calc(100vw - 2rem) !important;
+    max-width: calc(100vw - 2rem) !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
   
   // Pseudo-element for dropdown arrow
   &::before {
@@ -582,6 +593,21 @@
 .custom-notification-dropdown {
   max-width: 500px !important;
   min-width: 480px !important;
+
+  // Responsive - adjust for smaller screens
+  @media (max-width: 767.98px) {
+    min-width: auto !important;
+    max-width: calc(100vw - 2rem) !important;
+  }
+
+  @media (max-width: 575.98px) {
+    width: calc(100vw - 2rem) !important;
+    min-width: auto !important;
+    max-width: calc(100vw - 2rem) !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+  }
 }
 
 // Task Assignment Details styling
@@ -699,6 +725,15 @@
   border: 1px solid var(--vz-border-color);
   z-index: 1050 !important;
   animation: dropdown-fade-in 0.15s ease-out;
+
+  // Responsive - full width on mobile
+  @media (max-width: 575.98px) {
+    width: calc(100vw - 2rem) !important;
+    max-width: calc(100vw - 2rem) !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+  }
 
   // Arrow pointing to the icon
   &::before {
@@ -868,6 +903,16 @@
   z-index: 1050 !important;
   animation: dropdown-slide-in 0.2s ease-out;
   overflow: hidden;
+
+  // Responsive - full width on mobile
+  @media (max-width: 575.98px) {
+    width: calc(100vw - 2rem) !important;
+    max-width: calc(100vw - 2rem) !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    border-radius: 8px !important;
+  }
 }
 
 @keyframes dropdown-slide-in {

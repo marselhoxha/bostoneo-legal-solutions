@@ -1,15 +1,6 @@
 <!-- Role-Based Dashboard Container -->
 <div class="page-content">
   <div class="container-fluid">
-    
-    <!-- Debug Info (remove in production) -->
-    <div class="row mb-2" *ngIf="userRole">
-        <div class="col-12">
-        <div class="alert alert-info">
-          <small>Current Role: {{ userRole }} | User: {{ currentUser?.firstName || 'Unknown' }} {{ currentUser?.lastName || '' }} | Theme: {{ isDarkMode ? 'Dark' : 'Light' }}</small>
-                        </div>
-              </div>
-            </div>
 
     <!-- Role-Based Dashboard Selection -->
     <div [ngSwitch]="userRole">

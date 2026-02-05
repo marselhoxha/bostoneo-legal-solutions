@@ -523,7 +523,7 @@ export interface CaseTimeline {
       }
     }
 
-    /* Responsive */
+    /* Responsive - Tablet */
     @media (max-width: 768px) {
       .phase-header {
         flex-wrap: wrap;
@@ -543,6 +543,91 @@ export interface CaseTimeline {
       .header-actions {
         width: 100%;
         justify-content: space-between;
+      }
+    }
+
+    /* Responsive - Mobile */
+    @media (max-width: 575.98px) {
+      .case-progress-manager {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        margin-left: -0.75rem;
+        margin-right: -0.75rem;
+      }
+
+      .progress-manager-header {
+        padding: 0.875rem 1rem;
+      }
+
+      .header-title {
+        font-size: 0.9375rem;
+      }
+
+      .timeline-content {
+        padding: 1rem;
+      }
+
+      .phase-item {
+        gap: 0.75rem;
+        padding: 0.875rem 0;
+      }
+
+      .phase-indicator {
+        width: 32px;
+
+        .indicator-circle {
+          width: 28px;
+          height: 28px;
+          font-size: 0.75rem;
+
+          i {
+            font-size: 0.875rem;
+          }
+        }
+      }
+
+      .phase-icon {
+        width: 32px;
+        height: 32px;
+
+        i {
+          font-size: 1rem;
+        }
+      }
+
+      .phase-name {
+        font-size: 0.875rem;
+      }
+
+      .phase-description {
+        font-size: 0.75rem;
+        line-height: 1.5;
+      }
+
+      .phase-meta {
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+
+        .meta-item {
+          font-size: 0.6875rem;
+        }
+      }
+
+      .phase-actions {
+        .btn {
+          font-size: 0.75rem;
+          padding: 0.375rem 0.625rem;
+        }
+      }
+
+      .phase-status-badge .badge {
+        font-size: 0.6875rem;
+        padding: 0.25rem 0.5rem;
+      }
+
+      .progress-bar-section .progress-labels {
+        font-size: 0.6875rem;
       }
     }
   `]

@@ -39,8 +39,8 @@
               </div>
 
               <!-- New Conversation Button -->
-              <button type="button" class="btn btn-soft-primary rounded-pill waves-effect waves-light" (click)="createNewConversation()">
-                <i class="ri-add-line fs-16 me-2"></i>New Conversation
+              <button type="button" class="btn btn-soft-primary rounded-pill waves-effect waves-light new-conversation-btn" (click)="createNewConversation()">
+                <i class="ri-add-line fs-16 me-2"></i><span class="btn-text">New Conversation</span>
               </button>
             </div>
           </div>
@@ -365,12 +365,12 @@
 
                 <!-- AI Activity Thinking State (during conversation) -->
                 <li class="chat-list left mb-3" *ngIf="aiThinking && showChat && chatMessages[chatMessages.length - 1]?.role === 'user'">
-                  <div class="conversation-list">
-                    <div class="chat-avatar">
-                      <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
-                    </div>
-                    <div class="user-chat-content">
-                      <div class="message-bubble ai-message">
+                  <div class="ai-message-container">
+                    <div class="d-flex align-items-start gap-3">
+                      <div class="chat-avatar flex-shrink-0">
+                        <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
+                      </div>
+                      <div class="message-bubble ai-message flex-grow-1">
                         <!-- AI Activity Loading (Perplexity Style) -->
                         <div class="ai-activity-loader">
                           <!-- Header -->

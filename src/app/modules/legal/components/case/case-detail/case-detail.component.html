@@ -47,43 +47,42 @@
 
             <!-- Title & Meta Information -->
             <div class="flex-grow-1">
-              <h1 class="header-title mb-3">{{ case.title }}</h1>
+              <h1 class="header-title mb-2">{{ case.title }}</h1>
 
-              <!-- Metadata Row with Status & Priority First -->
-              <div class="d-flex flex-wrap gap-2 align-items-center">
-                <!-- Status Badge -->
-                <div class="status-pill"
-                  [ngClass]="{
-                    'status-open': case.status === 'OPEN',
-                    'status-in-progress': case.status === 'IN_PROGRESS',
-                    'status-pending': case.status === 'PENDING',
-                    'status-closed': case.status === 'CLOSED',
-                    'status-archived': case.status === 'ARCHIVED'
-                  }">
-                  <span class="pill-dot"></span>
-                  <span class="pill-text">{{ case.status.replace('_', ' ') }}</span>
+              <!-- Metadata Row - Compact Layout -->
+              <div class="case-meta-container">
+                <!-- Row 1: Status Badges -->
+                <div class="case-meta-badges">
+                  <div class="status-pill"
+                    [ngClass]="{
+                      'status-open': case.status === 'OPEN',
+                      'status-in-progress': case.status === 'IN_PROGRESS',
+                      'status-pending': case.status === 'PENDING',
+                      'status-closed': case.status === 'CLOSED',
+                      'status-archived': case.status === 'ARCHIVED'
+                    }">
+                    <span class="pill-dot"></span>
+                    <span class="pill-text">{{ case.status.replace('_', ' ') }}</span>
+                  </div>
+                  <div class="priority-pill"
+                    [ngClass]="{
+                      'priority-low': case.priority === 'LOW',
+                      'priority-medium': case.priority === 'MEDIUM',
+                      'priority-high': case.priority === 'HIGH' || case.priority === 'URGENT'
+                    }">
+                    <i class="ri-fire-fill"></i>
+                    <span class="pill-text">{{ case.priority }}</span>
+                  </div>
                 </div>
-
-                <!-- Priority Badge -->
-                <div class="priority-pill"
-                  [ngClass]="{
-                    'priority-low': case.priority === 'LOW',
-                    'priority-medium': case.priority === 'MEDIUM',
-                    'priority-high': case.priority === 'HIGH' || case.priority === 'URGENT'
-                  }">
-                  <i class="ri-fire-fill"></i>
-                  <span class="pill-text">{{ case.priority }}</span>
-                </div>
-
-                <div class="meta-divider"></div>
-                <div class="meta-item">
-                  <i class="ri-hashtag"></i>
-                  <span>{{ case.caseNumber }}</span>
-                </div>
-                <div class="meta-divider"></div>
-                <div class="meta-item">
-                  <i class="ri-calendar-line"></i>
-                  <span>Filed: {{ case.filingDate | date:'MMM dd, yyyy' }}</span>
+                <!-- Row 2: Case Info -->
+                <div class="case-meta-info">
+                  <span class="meta-item-inline">
+                    <i class="ri-hashtag"></i>{{ case.caseNumber }}
+                  </span>
+                  <span class="meta-separator">•</span>
+                  <span class="meta-item-inline">
+                    <i class="ri-calendar-line"></i>{{ case.filingDate | date:'MMM dd, yyyy' }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -91,14 +90,14 @@
         </div>
 
         <!-- Right: Action Buttons -->
-        <div class="col-lg-3 d-flex justify-content-end align-items-start">
-          <div class="d-flex gap-2">
-            <button class="btn btn-soft-primary d-flex align-items-center gap-2 px-3" (click)="toggleEdit()">
+        <div class="col-lg-3 d-flex justify-content-end align-items-start case-header-actions-col">
+          <div class="d-flex gap-2 case-header-buttons" style="flex-direction: row !important; flex-wrap: nowrap !important;">
+            <button class="btn btn-soft-primary d-flex align-items-center gap-2 px-3" (click)="toggleEdit()" style="flex: 1 1 auto;">
               <i [class]="isEditing ? 'ri-close-line' : 'ri-pencil-line'"></i>
               <span>{{ isEditing ? 'Cancel' : 'Edit Case' }}</span>
             </button>
             <button class="btn btn-soft-danger d-flex align-items-center justify-content-center"
-                    style="width: 38px; height: 38px; padding: 0;"
+                    style="width: 38px; height: 38px; padding: 0; flex: 0 0 38px;"
                     (click)="deleteCase()">
               <i class="ri-delete-bin-line"></i>
             </button>
@@ -1175,11 +1174,11 @@
               </div>
 
               <!-- Quick Actions -->
-              <div class="d-flex align-items-center justify-content-between mb-4">
-                <h5 class="mb-0">
+              <div class="team-header-section mb-4">
+                <h5 class="team-header-title mb-3">
                   <i class="ri-team-line me-2 text-primary"></i>Team & Task Assignments
                 </h5>
-                <div class="d-flex gap-2 flex-wrap">
+                <div class="team-action-buttons">
                   <button class="btn btn-primary btn-sm" (click)="openQuickTaskModal()">
                     <i class="ri-add-line me-1"></i>Create Task
                   </button>
@@ -1189,7 +1188,7 @@
                   <button class="btn btn-soft-warning btn-sm" (click)="openWorkloadBalancingModal()">
                     <i class="ri-scales-line me-1"></i>Balance Workload
                   </button>
-                  <button class="btn btn-soft-secondary btn-sm" 
+                  <button class="btn btn-soft-secondary btn-sm"
                           [routerLink]="['/case-management/tasks', caseId]">
                     <i class="ri-kanban-view me-1"></i>Full Task View
                   </button>

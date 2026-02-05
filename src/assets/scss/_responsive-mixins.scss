@@ -1,0 +1,236 @@
+// =============================================
+// RESPONSIVE MIXINS
+// Standard breakpoints matching Bootstrap 5
+// =============================================
+
+// Breakpoint values (Bootstrap 5)
+$breakpoint-xs: 0;
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px;
+$breakpoint-xxl: 1400px;
+
+// Max-width values (for down mixins)
+$breakpoint-xs-max: 575.98px;
+$breakpoint-sm-max: 767.98px;
+$breakpoint-md-max: 991.98px;
+$breakpoint-lg-max: 1199.98px;
+$breakpoint-xl-max: 1399.98px;
+
+// =============================================
+// RESPOND UP (min-width)
+// Styles apply from breakpoint and up
+// =============================================
+
+@mixin respond-up($breakpoint) {
+  @if $breakpoint == xs {
+    @content;
+  } @else if $breakpoint == sm {
+    @media (min-width: $breakpoint-sm) { @content; }
+  } @else if $breakpoint == md {
+    @media (min-width: $breakpoint-md) { @content; }
+  } @else if $breakpoint == lg {
+    @media (min-width: $breakpoint-lg) { @content; }
+  } @else if $breakpoint == xl {
+    @media (min-width: $breakpoint-xl) { @content; }
+  } @else if $breakpoint == xxl {
+    @media (min-width: $breakpoint-xxl) { @content; }
+  }
+}
+
+// =============================================
+// RESPOND DOWN (max-width)
+// Styles apply from breakpoint and down
+// =============================================
+
+@mixin respond-down($breakpoint) {
+  @if $breakpoint == xs {
+    @media (max-width: $breakpoint-xs-max) { @content; }
+  } @else if $breakpoint == sm {
+    @media (max-width: $breakpoint-sm-max) { @content; }
+  } @else if $breakpoint == md {
+    @media (max-width: $breakpoint-md-max) { @content; }
+  } @else if $breakpoint == lg {
+    @media (max-width: $breakpoint-lg-max) { @content; }
+  } @else if $breakpoint == xl {
+    @media (max-width: $breakpoint-xl-max) { @content; }
+  } @else if $breakpoint == xxl {
+    @media (max-width: 9999px) { @content; }
+  }
+}
+
+// =============================================
+// SHORTHAND MIXINS
+// =============================================
+
+// Mobile only (xs)
+@mixin mobile-only {
+  @media (max-width: $breakpoint-xs-max) { @content; }
+}
+
+// Mobile and small devices (xs + sm)
+@mixin mobile {
+  @media (max-width: $breakpoint-sm-max) { @content; }
+}
+
+// Tablet only (md)
+@mixin tablet-only {
+  @media (min-width: $breakpoint-md) and (max-width: $breakpoint-md-max) { @content; }
+}
+
+// Tablet and below (xs + sm + md)
+@mixin tablet-down {
+  @media (max-width: $breakpoint-md-max) { @content; }
+}
+
+// Tablet and up (md + lg + xl + xxl)
+@mixin tablet-up {
+  @media (min-width: $breakpoint-md) { @content; }
+}
+
+// Desktop only (lg)
+@mixin desktop-only {
+  @media (min-width: $breakpoint-lg) and (max-width: $breakpoint-lg-max) { @content; }
+}
+
+// Desktop and below (xs + sm + md + lg)
+@mixin desktop-down {
+  @media (max-width: $breakpoint-lg-max) { @content; }
+}
+
+// Desktop and up (lg + xl + xxl)
+@mixin desktop-up {
+  @media (min-width: $breakpoint-lg) { @content; }
+}
+
+// Large desktop (xl + xxl)
+@mixin large-desktop {
+  @media (min-width: $breakpoint-xl) { @content; }
+}
+
+// =============================================
+// PATTERN MIXINS
+// Common responsive patterns
+// =============================================
+
+// Responsive sidebar - slides in from left on mobile/tablet
+@mixin sidebar-responsive($width: 280px) {
+  width: $width;
+  flex-shrink: 0;
+
+  @include tablet-down {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    height: 100vh;
+    z-index: 1050;
+    background: var(--vz-card-bg, #fff);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+    transition: left 0.3s ease;
+
+    &.show {
+      left: 0;
+    }
+  }
+}
+
+// Responsive dropdown - full width on mobile
+@mixin dropdown-responsive($max-width: 360px) {
+  width: 100%;
+  max-width: $max-width;
+
+  @include mobile-only {
+    width: calc(100vw - 2rem);
+    max-width: none;
+    left: 50% !important;
+    transform: translateX(-50%);
+  }
+}
+
+// Responsive max-height - reduces on smaller screens
+@mixin max-height-responsive($desktop: 700px, $tablet: 60vh, $mobile: 50vh) {
+  max-height: $desktop;
+
+  @include tablet-down {
+    max-height: $tablet;
+  }
+
+  @include mobile-only {
+    max-height: $mobile;
+  }
+}
+
+// Responsive fixed element - becomes sticky or relative on mobile
+@mixin fixed-to-sticky {
+  position: fixed;
+
+  @include tablet-down {
+    position: sticky;
+  }
+}
+
+// Stack flex children on mobile
+@mixin flex-stack-mobile {
+  display: flex;
+
+  @include mobile {
+    flex-direction: column;
+  }
+}
+
+// Hide on specific breakpoints
+@mixin hide-mobile {
+  @include mobile-only {
+    display: none !important;
+  }
+}
+
+@mixin hide-tablet {
+  @include tablet-only {
+    display: none !important;
+  }
+}
+
+@mixin show-mobile-only {
+  display: none !important;
+
+  @include mobile-only {
+    display: block !important;
+  }
+}
+
+// Responsive table wrapper
+@mixin table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  table {
+    min-width: 600px; // Prevents table from being too squished
+  }
+}
+
+// Touch-friendly minimum size
+@mixin touch-target($min-size: 44px) {
+  min-height: $min-size;
+  min-width: $min-size;
+}
+
+// Full screen modal on mobile
+@mixin modal-fullscreen-mobile {
+  @include mobile-only {
+    .modal-dialog {
+      margin: 0;
+      width: 100%;
+      max-width: 100%;
+      height: 100%;
+      max-height: 100%;
+    }
+
+    .modal-content {
+      height: 100%;
+      border: none;
+      border-radius: 0;
+    }
+  }
+}
