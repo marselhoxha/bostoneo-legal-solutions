@@ -14,6 +14,7 @@ import { DocumentCollectionService, DocumentCollection } from '../../../services
 import { DocumentTypeConfig } from '../../../models/document-type-config';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { UserService } from '../../../../../service/user.service';
 import { environment } from '@environments/environment';
 import { QuillModule } from 'ngx-quill';
@@ -545,6 +546,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // UI Controls
   editorTextSize: number = 14; // Default font size in px
   isFullscreen = false;
+  showDocumentPreviewModal = false; // PDF preview modal state
+  previewPdfUrl: string | null = null; // Blob URL for PDF preview
+  sanitizedPreviewUrl: SafeResourceUrl | null = null; // Sanitized URL for iframe binding
+  isLoadingPreview = false; // Loading state for PDF generation
 
   // Mobile sidebar state (migrated to observable from StateService)
   sidebarOpen$ = this.stateService.sidebarOpen$;
@@ -941,7 +946,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private transformationService: DocumentTransformationService,
     private route: ActivatedRoute,
     public caseWorkflowService: CaseWorkflowService,
-    private backgroundTaskService: BackgroundTaskService
+    private backgroundTaskService: BackgroundTaskService,
+    private sanitizer: DomSanitizer
   ) {}
 
   /**
@@ -3163,85 +3169,51 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   /**
    * Export document to PDF
-   * Calls backend API to generate PDF from latest saved version
-   * For workflow drafts (no document ID), exports content directly from editor
+   * Saves first then exports via document ID for proper conversion
    */
   exportToPDF(): void {
     this.notificationService.loading('Preparing PDF', 'Please wait...');
 
-    // Check if we have a document ID (saved document) or need to export from editor content
-    if (this.currentDocumentId && this.currentUser) {
-      // Export using document ID - standard flow
-      this.documentGenerationService.exportToPDF(
-        this.currentDocumentId as number,
-        this.currentUser.id
-      ).subscribe({
+    const htmlContent = this.getEditorContent();
+    if (!htmlContent) {
+      this.notificationService.error('Error', 'No content to export');
+      return;
+    }
+
+    // Clean the HTML for PDF generation (backend uses iText which expects HTML)
+    const cleanHtml = this.documentGenerationService.cleanHtmlForExport(htmlContent);
+
+    // Use content export with clean HTML - backend converts HTML to PDF
+    this.documentGenerationService.exportContentToPDF(cleanHtml, this.activeDocumentTitle)
+      .subscribe({
         next: (response) => this.handleExportResponse(response, 'pdf'),
         error: (error) => {
           console.error('Error exporting PDF:', error);
-          this.notificationService.error('Error', 'Failed to export PDF. Please ensure the backend service is running.');
+          this.notificationService.error('Error', 'Failed to export PDF.');
         }
       });
-    } else {
-      // Export from editor content - workflow drafts without document ID
-      const htmlContent = this.getEditorContent();
-      if (!htmlContent) {
-        this.notificationService.error('Error', 'No content to export');
-        return;
-      }
-
-      // Convert HTML to Markdown for backend PDF generation
-      const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
-      this.documentGenerationService.exportContentToPDF(markdownContent, this.activeDocumentTitle)
-        .subscribe({
-          next: (response) => this.handleExportResponse(response, 'pdf'),
-          error: (error) => {
-            console.error('Error exporting PDF from content:', error);
-            this.notificationService.error('Error', 'Failed to export PDF.');
-          }
-        });
-    }
   }
 
   /**
    * Export document to Word (DOCX)
-   * Calls backend API to generate Word document from latest saved version
-   * For workflow drafts (no document ID), exports content directly from editor
+   * Uses frontend docx.js library for proper formatting support
    */
-  exportToWord(): void {
+  async exportToWord(): Promise<void> {
     this.notificationService.loading('Preparing Word document', 'Please wait...');
 
-    // Check if we have a document ID (saved document) or need to export from editor content
-    if (this.currentDocumentId && this.currentUser) {
-      // Export using document ID - standard flow
-      this.documentGenerationService.exportToWord(
-        this.currentDocumentId as number,
-        this.currentUser.id
-      ).subscribe({
-        next: (response) => this.handleExportResponse(response, 'docx'),
-        error: (err) => {
-          console.error('Error exporting to Word:', err);
-          this.notificationService.error('Error', 'Failed to export Word document. Please ensure the backend service is running.');
-        }
-      });
-    } else {
-      // Export from editor content - workflow drafts without document ID
-      const htmlContent = this.getEditorContent();
-      if (!htmlContent) {
-        this.notificationService.error('Error', 'No content to export');
-        return;
-      }
+    const htmlContent = this.getEditorContent();
+    if (!htmlContent) {
+      this.notificationService.error('Error', 'No content to export');
+      return;
+    }
 
-      // Convert HTML to Markdown for backend Word generation
-      const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
-      this.documentGenerationService.exportContentToWord(markdownContent, this.activeDocumentTitle)
-        .subscribe({
-          next: (response) => this.handleExportResponse(response, 'docx'),
-          error: (error) => {
-            console.error('Error exporting Word from content:', error);
-            this.notificationService.error('Error', 'Failed to export Word document.');
-          }
-        });
+    try {
+      // Use frontend Word generation with proper formatting
+      await this.documentGenerationService.generateWordFromHtml(htmlContent, this.activeDocumentTitle);
+      this.notificationService.success('Word Document Exported', `${this.activeDocumentTitle}.docx downloaded successfully`);
+    } catch (error) {
+      console.error('Error exporting Word:', error);
+      this.notificationService.error('Error', 'Failed to export Word document.');
     }
   }
 
@@ -3273,48 +3245,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get content from Quill editor as markdown
+   * Get raw HTML content from Quill editor
+   * Returns raw HTML for proper conversion by documentGenerationService.convertHtmlToMarkdown()
    */
   private getEditorContent(): string | null {
     if (this.quillEditorInstance) {
-      // Get HTML from Quill and convert to markdown-like format
-      const html = this.quillEditorInstance.root.innerHTML;
-      // Convert HTML to plain text with basic markdown
-      return this.htmlToMarkdown(html);
+      // Return raw HTML from Quill - conversion will be done by caller
+      return this.quillEditorInstance.root.innerHTML;
     }
     return this.pendingDocumentContent || null;
-  }
-
-  /**
-   * Convert HTML to basic markdown
-   */
-  private htmlToMarkdown(html: string): string {
-    let text = html;
-    // Convert headers
-    text = text.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
-    text = text.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
-    text = text.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
-    // Convert bold
-    text = text.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
-    text = text.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
-    // Convert italic
-    text = text.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
-    text = text.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
-    // Convert paragraphs
-    text = text.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
-    // Convert line breaks
-    text = text.replace(/<br\s*\/?>/gi, '\n');
-    // Convert list items
-    text = text.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
-    // Remove remaining HTML tags
-    text = text.replace(/<[^>]+>/g, '');
-    // Decode HTML entities
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = text;
-    text = textarea.value;
-    // Clean up extra whitespace
-    text = text.replace(/\n{3,}/g, '\n\n').trim();
-    return text;
   }
 
   /**
@@ -6856,11 +6795,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    
+    // Convert HTML content to markdown before saving
+    const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(this.activeDocumentContent);
+
     // Call backend to save document
     this.documentGenerationService.saveDocument(
       this.currentDocumentId,
-      this.activeDocumentContent,
+      markdownContent,
       this.activeDocumentTitle
     )
     .pipe(takeUntil(this.destroy$))
@@ -7616,14 +7557,15 @@ You can:
       if (note !== null) {
         const versionNote = note || 'Manual edit';
 
-        // Get current content from Quill editor
-        const content = this.quillEditorInstance.root.innerHTML;
+        // Get current content from Quill editor and convert to markdown
+        const htmlContent = this.quillEditorInstance.root.innerHTML;
+        const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
 
         // Call service to save manual version
         this.documentGenerationService.saveManualVersion(
           this.currentDocumentId as number,
           this.currentUser.id,
-          content,
+          markdownContent,
           versionNote
         )
         .pipe(takeUntil(this.destroy$))
@@ -7903,9 +7845,11 @@ You can:
       return;
     }
 
-    const content = this.quillEditorInstance.root.innerHTML;
+    // Get content from Quill and convert to markdown
+    const htmlContent = this.quillEditorInstance.root.innerHTML;
+    const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
 
-    this.documentGenerationService.saveDocument(this.currentDocumentId, content, this.activeDocumentTitle)
+    this.documentGenerationService.saveDocument(this.currentDocumentId, markdownContent, this.activeDocumentTitle)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -7997,6 +7941,111 @@ You can:
   }
 
   /**
+   * Open document preview modal - generates actual PDF and displays it
+   */
+  openDocumentPreviewModal(): void {
+    this.showDocumentPreviewModal = true;
+    this.isLoadingPreview = true;
+    document.body.classList.add('modal-open');
+
+    // Trigger change detection to ensure modal shows immediately
+    this.cdr.detectChanges();
+
+    // Generate the actual PDF for preview after a small delay to ensure modal is rendered
+    setTimeout(() => {
+      this.generatePdfForPreview();
+    }, 100);
+  }
+
+  /**
+   * Generate PDF and create blob URL for preview
+   * Sends clean HTML to backend for PDF generation (iText expects HTML)
+   */
+  generatePdfForPreview(): void {
+    this.isLoadingPreview = true;
+    this.cdr.detectChanges();
+
+    const htmlContent = this.getEditorContent();
+    if (!htmlContent) {
+      this.isLoadingPreview = false;
+      this.cdr.detectChanges();
+      this.notificationService.error('Error', 'No content to preview');
+      return;
+    }
+
+    // Clean the HTML for PDF generation (backend uses iText which expects HTML)
+    const cleanHtml = this.documentGenerationService.cleanHtmlForExport(htmlContent);
+
+    // Use content export with clean HTML - backend converts HTML to PDF
+    this.documentGenerationService.exportContentToPDF(cleanHtml, this.activeDocumentTitle)
+      .subscribe({
+        next: (response) => this.handlePreviewResponse(response),
+        error: (error) => {
+          console.error('Error generating PDF preview:', error);
+          this.isLoadingPreview = false;
+          this.cdr.detectChanges();
+          this.notificationService.error('Error', 'Failed to generate PDF preview.');
+        }
+      });
+  }
+
+  /**
+   * Handle PDF response for preview - create blob URL
+   */
+  private handlePreviewResponse(response: any): void {
+    const blob = response.body;
+    if (!blob) {
+      console.error('No blob in response body');
+      this.isLoadingPreview = false;
+      this.cdr.detectChanges();
+      this.notificationService.error('Error', 'Failed to generate PDF preview.');
+      return;
+    }
+
+    // Revoke previous URL if exists
+    if (this.previewPdfUrl) {
+      URL.revokeObjectURL(this.previewPdfUrl);
+    }
+
+    // Create blob URL for iframe
+    this.previewPdfUrl = URL.createObjectURL(blob);
+    // Sanitize URL for iframe binding (bypass Angular security)
+    this.sanitizedPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.previewPdfUrl);
+    this.isLoadingPreview = false;
+    // Force change detection to update the view immediately
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Close document preview modal
+   */
+  closeDocumentPreviewModal(): void {
+    this.showDocumentPreviewModal = false;
+    this.isLoadingPreview = false;
+
+    // Clean up blob URL
+    if (this.previewPdfUrl) {
+      URL.revokeObjectURL(this.previewPdfUrl);
+      this.previewPdfUrl = null;
+      this.sanitizedPreviewUrl = null;
+    }
+
+    document.body.classList.remove('modal-open');
+  }
+
+  /**
+   * Download the previewed PDF
+   */
+  downloadPreviewedPdf(): void {
+    if (this.previewPdfUrl) {
+      const link = document.createElement('a');
+      link.href = this.previewPdfUrl;
+      link.download = this.sanitizeFilename(this.activeDocumentTitle) + '.pdf';
+      link.click();
+    }
+  }
+
+  /**
    * Toggle conversation panel visibility
    */
   toggleChatPanel(): void {
@@ -8019,32 +8068,25 @@ You can:
 
   /**
    * Save document to File Manager
-   * For workflow drafts (no document ID), exports content directly from editor
+   * Always exports from current editor content to ensure proper formatting
    */
   async saveToFileManager(): Promise<void> {
     try {
       // Show loading
       this.notificationService.loading('Saving to File Manager', 'Generating document...');
 
-      let response;
-
-      // Check if we have a document ID (saved document) or need to export from editor content
-      if (this.currentDocumentId && this.currentUser) {
-        // Export using document ID - standard flow
-        response = await lastValueFrom(
-          this.documentGenerationService.exportToWord(this.currentDocumentId as number, this.currentUser.id)
-        );
-      } else {
-        // Export from editor content - workflow drafts without document ID
-        const content = this.getEditorContent();
-        if (!content) {
-          this.notificationService.error('Error', 'No content to save');
-          return;
-        }
-        response = await lastValueFrom(
-          this.documentGenerationService.exportContentToWord(content, this.activeDocumentTitle)
-        );
+      // Get raw HTML from editor
+      const htmlContent = this.getEditorContent();
+      if (!htmlContent) {
+        this.notificationService.error('Error', 'No content to save');
+        return;
       }
+
+      // Clean HTML for proper Word generation
+      const cleanHtml = this.documentGenerationService.cleanHtmlForExport(htmlContent);
+      const response = await lastValueFrom(
+        this.documentGenerationService.exportContentToWord(cleanHtml, this.activeDocumentTitle)
+      );
 
       // Extract blob from response
       const blob = response.body;

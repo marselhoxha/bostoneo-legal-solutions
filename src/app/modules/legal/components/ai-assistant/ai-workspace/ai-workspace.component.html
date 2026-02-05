@@ -1400,7 +1400,7 @@
     </div>
 
     <!-- Split View Container (when document is generated) -->
-    <div class="split-view-container" *ngIf="draftingMode$ | async">
+    <div class="split-view-container" *ngIf="draftingMode$ | async" [class.chat-closed]="!(showChat$ | async)">
       <!-- Document Preview Panel (60%) -->
       <div class="document-preview-panel">
         <div class="document-preview-header">
@@ -1508,6 +1508,9 @@
             </button>
             <button class="btn-icon" (click)="toggleFullscreen()" [title]="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
               <i [class]="isFullscreen ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line'"></i>
+            </button>
+            <button class="btn-icon" (click)="openDocumentPreviewModal()" title="Preview document">
+              <i class="ri-eye-line"></i>
             </button>
             <button class="btn-icon" *ngIf="!(showChat$ | async)" (click)="reopenChatPanel()" title="Open conversation">
               <i class="ri-chat-3-line"></i>
@@ -2469,6 +2472,76 @@
             <span class="spinner-border spinner-border-sm me-1" role="status"></span>
             Starting...
           </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Document Preview Modal (Actual PDF Preview) -->
+<div class="document-preview-modal-backdrop" *ngIf="showDocumentPreviewModal" (click)="closeDocumentPreviewModal()">
+  <div class="document-preview-modal" (click)="$event.stopPropagation()">
+    <!-- Modal Header - PDF Reader Toolbar -->
+    <div class="preview-modal-header">
+      <div class="header-left">
+        <div class="pdf-icon-badge">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M5 4H15V8H19V20H5V4ZM3.9985 2C3.44749 2 3 2.44405 3 2.9918V21.0082C3 21.5447 3.44476 22 3.9934 22H20.0066C20.5551 22 21 21.5489 21 20.9925L20.9997 7L16 2H3.9985ZM10.4999 7.5C10.4999 9.07749 10.0442 10.9373 9.27493 12.6534C8.50287 14.3757 7.46143 15.8502 6.37524 16.7191L7.55464 18.3321C10.4821 16.3804 13.7233 15.0421 16.8585 15.49L17.3162 13.5513C14.6435 12.6604 12.4999 9.98994 12.4999 7.5H10.4999ZM11.0999 13.4716C11.3673 12.8752 11.6042 12.2563 11.8037 11.6285C12.2753 12.3531 12.8553 13.0182 13.5101 13.5953C12.5283 13.7711 11.5665 14.0596 10.6352 14.4276C10.7999 14.1143 10.9551 13.7948 11.0999 13.4716Z"></path>
+          </svg>
+        </div>
+        <div class="header-title-section">
+          <h5>{{ activeDocumentTitle || 'Document Preview' }}.pdf</h5>
+          <div class="header-subtitle">
+            <span class="meta-item">PDF Preview</span>
+            <span class="meta-divider">•</span>
+            <span class="meta-item" *ngIf="!isLoadingPreview && previewPdfUrl">Ready to download</span>
+            <span class="meta-item" *ngIf="isLoadingPreview">Generating PDF...</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-action btn-download" (click)="downloadPreviewedPdf()" [disabled]="isLoadingPreview || !previewPdfUrl">
+          <i class="ri-download-2-line"></i>
+          <span>Download PDF</span>
+        </button>
+        <button class="btn-action btn-word" (click)="exportToWord(); closeDocumentPreviewModal()">
+          <i class="ri-file-word-line"></i>
+          <span>Download Word</span>
+        </button>
+        <button type="button" class="btn-close-preview" (click)="closeDocumentPreviewModal()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Body - Actual PDF in iframe -->
+    <div class="preview-modal-body">
+      <!-- Loading State -->
+      <div class="pdf-loading-state" *ngIf="isLoadingPreview">
+        <div class="loading-spinner">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+        <p class="loading-text">Generating PDF...</p>
+        <p class="loading-subtext">Please wait</p>
+      </div>
+
+      <!-- PDF iframe -->
+      <iframe
+        *ngIf="sanitizedPreviewUrl && !isLoadingPreview"
+        [src]="sanitizedPreviewUrl"
+        class="pdf-preview-iframe"
+        frameborder="0">
+      </iframe>
+
+      <!-- Error/Empty State -->
+      <div class="pdf-empty-state" *ngIf="!sanitizedPreviewUrl && !isLoadingPreview">
+        <i class="ri-file-damage-line"></i>
+        <p>Failed to generate PDF preview</p>
+        <button class="btn btn-soft-primary" (click)="generatePdfForPreview()">
+          <i class="ri-refresh-line me-1"></i>
+          Try Again
         </button>
       </div>
     </div>
