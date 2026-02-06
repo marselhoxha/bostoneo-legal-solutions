@@ -106,9 +106,9 @@ jobs:
       - name: Generate Environment Files
         run: |
           mkdir -p src/environments
-          echo '${{ secrets.ENV_TS }}' > src/environments/environment.ts
-          echo '${{ secrets.ENV_PROD_TS }}' > src/environments/environment.prod.ts
-          echo '${{ secrets.ENV_STAGING_TS }}' > src/environments/environment.staging.ts
+          echo "${{ secrets.ENV_TS }}" | base64 -d > src/environments/environment.ts
+          echo "${{ secrets.ENV_PROD_TS }}" | base64 -d > src/environments/environment.prod.ts
+          echo "${{ secrets.ENV_STAGING_TS }}" | base64 -d > src/environments/environment.staging.ts
 
       - name: Build
         run: npm run build -- --configuration=production
@@ -229,9 +229,9 @@ jobs:
       - name: Generate Environment Files
         run: |
           mkdir -p src/environments
-          echo '${{ secrets.ENV_TS }}' > src/environments/environment.ts
-          echo '${{ secrets.ENV_PROD_TS }}' > src/environments/environment.prod.ts
-          echo '${{ secrets.ENV_STAGING_TS }}' > src/environments/environment.staging.ts
+          echo "${{ secrets.ENV_TS }}" | base64 -d > src/environments/environment.ts
+          echo "${{ secrets.ENV_PROD_TS }}" | base64 -d > src/environments/environment.prod.ts
+          echo "${{ secrets.ENV_STAGING_TS }}" | base64 -d > src/environments/environment.staging.ts
 
       - name: Build
         run: |
