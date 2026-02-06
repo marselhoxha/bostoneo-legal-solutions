@@ -310,6 +310,8 @@ jobs:
           app:
             cors:
               allowed-origins: ${CORS_ALLOWED_ORIGINS:https://app-staging.legience.com}
+            profile-image:
+              path: /app/uploads/images
           APPYML
 
       - name: Build JAR
