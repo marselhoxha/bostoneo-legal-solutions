@@ -182,6 +182,12 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Generate Firebase Service Account
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printenv FIREBASE_SERVICE_ACCOUNT > backend/src/main/resources/firebase-service-account.json
+
       - name: Generate Backend Config
         run: |
           cat > backend/src/main/resources/application.yml << 'APPYML'
@@ -416,7 +422,7 @@ jobs:
           aws ecs wait services-stable --cluster $CLUSTER --services $SERVICE
 
       - name: Notify Slack
-        if: always()
+        if: always() && secrets.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
