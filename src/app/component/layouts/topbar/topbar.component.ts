@@ -154,14 +154,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Subscribe to router events to refresh user data (but avoid reloading notifications on every route change)
-    this.router.events.pipe(takeUntil(this.destroy$)).subscribe((event) => {
-      if (event instanceof NavigationEnd) {
-        // Only refresh user data but don't trigger notification reload on every route change
-        // The notification loading should only happen on initial login or when explicitly needed
-        this.userService.refreshUserData();
-      }
-    });
+    // Note: Removed refreshUserData() on every NavigationEnd to reduce API calls.
+    // Profile is loaded once in loadUserData() and kept in sync via userData$.
 
     // Initialize push notifications
     this.initializePushNotifications();
@@ -1229,11 +1223,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
     // Use force=true to bypass debounce and ensure data loads immediately on component init
     this.messagingStateService.refreshThreads(true);
 
-    // Also refresh after a short delay to catch any timing issues with service initialization
-    setTimeout(() => {
-      this.messagingStateService.refreshThreads(true);
-      this.cdr.markForCheck();
-    }, 500);
+    // Removed duplicate 500ms delayed refreshThreads call - the initial call above is sufficient.
   }
 
   /**

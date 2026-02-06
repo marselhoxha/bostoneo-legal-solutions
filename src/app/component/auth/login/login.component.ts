@@ -62,8 +62,6 @@ export class LoginComponent implements OnInit{
             };
           } else {
             this.notificationService.onSuccess(response.message)
-            localStorage.setItem(Key.TOKEN, response.data.access_token);
-            localStorage.setItem(Key.REFRESH_TOKEN, response.data.refresh_token);
             this.router.navigate(['/']);
             return { dataState: DataState.LOADED, loginSuccess: true };
           }
