@@ -21,7 +21,6 @@ import java.util.concurrent.CompletableFuture;
 @RequestMapping("/api/ai/documents")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class AIDocumentController {
 
     private final ClaudeSonnet4Service claudeService;

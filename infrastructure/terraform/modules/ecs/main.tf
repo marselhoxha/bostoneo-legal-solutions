@@ -278,7 +278,7 @@ resource "aws_ecs_task_definition" "api" {
         }
       ]
 
-      environment = [
+      environment = concat([
         {
           name  = "SPRING_PROFILES_ACTIVE"
           value = var.environment
@@ -291,7 +291,7 @@ resource "aws_ecs_task_definition" "api" {
           name  = "JAVA_OPTS"
           value = "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
         }
-      ]
+      ], var.container_environment)
 
       secrets = [
         for secret in var.container_secrets : {

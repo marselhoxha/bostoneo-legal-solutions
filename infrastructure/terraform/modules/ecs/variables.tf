@@ -104,6 +104,15 @@ variable "container_secrets" {
   default = []
 }
 
+variable "container_environment" {
+  description = "Additional environment variables to inject into container"
+  type = list(object({
+    name  = string
+    value = string
+  }))
+  default = []
+}
+
 variable "log_retention_days" {
   description = "CloudWatch log retention in days"
   type        = number

@@ -24,7 +24,6 @@ import static org.springframework.http.HttpStatus.*;
 @RequestMapping("/api/pi/cases/{caseId}/document-checklist")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:8085"}, allowCredentials = "true")
 public class PIDocumentChecklistController {
 
     private final PIDocumentChecklistService checklistService;

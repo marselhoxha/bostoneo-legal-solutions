@@ -17,7 +17,6 @@ import java.util.Map;
 @RequestMapping("/api/admin/research")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class ResearchAdminController {
 
     private final CacheManagementService cacheManagementService;

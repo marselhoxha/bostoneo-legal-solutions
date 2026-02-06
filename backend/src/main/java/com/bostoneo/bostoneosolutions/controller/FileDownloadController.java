@@ -28,7 +28,6 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/files")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @RequiredArgsConstructor
 @Slf4j
 public class FileDownloadController {
@@ -38,6 +37,9 @@ public class FileDownloadController {
 
     @Value("${app.documents.output-path:uploads/documents}")
     private String documentsOutputPath;
+
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOrigins;
 
     @GetMapping("/download")
     public ResponseEntity<Resource> downloadFile(@RequestParam String path) {
@@ -154,13 +156,14 @@ public class FileDownloadController {
             }
             log.info("Serving file {} with content-type: {}", filename, contentType);
 
+            String primaryOrigin = allowedOrigins.split(",")[0].trim();
+            String frameAncestors = String.join(" ", allowedOrigins.split(","));
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
-                    // Allow iframe embedding from localhost:4200
-                    .header("X-Frame-Options", "ALLOW-FROM http://localhost:4200")
-                    .header("Content-Security-Policy", "frame-ancestors 'self' http://localhost:4200")
-                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:4200")
+                    .header("X-Frame-Options", "ALLOW-FROM " + primaryOrigin)
+                    .header("Content-Security-Policy", "frame-ancestors 'self' " + frameAncestors)
+                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, primaryOrigin)
                     .header(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true")
                     .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
                     .body(resource);

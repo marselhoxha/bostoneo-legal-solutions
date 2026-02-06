@@ -18,7 +18,6 @@ import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/notification-preferences")
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:8085"})
 @Slf4j
 public class UserNotificationPreferenceController {
     

@@ -17,7 +17,6 @@ import java.util.List;
 @RequestMapping("/api/ai/document-analysis")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class ActionItemController {
 
     private final ActionItemRepository actionItemRepository;

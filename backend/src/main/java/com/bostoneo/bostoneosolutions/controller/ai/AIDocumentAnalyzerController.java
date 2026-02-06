@@ -38,7 +38,6 @@ import java.util.Optional;
 @RequestMapping("/api/ai/document-analyzer")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class AIDocumentAnalyzerController {
 
     private final AIDocumentAnalysisService documentAnalysisService;

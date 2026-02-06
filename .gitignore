@@ -43,6 +43,7 @@ firebase-adminsdk-*.json
 backend/src/main/resources/firebase-service-account.json
 src/environments/environment.ts
 src/environments/environment.prod.ts
+src/environments/environment.staging.ts
 
 # SQL Scripts
 *.sql

@@ -12,7 +12,6 @@ import java.util.Map;
 @RequestMapping("/api/ai/pdf-storage")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class PDFStorageController {
 
     private final PDFStorageService pdfStorageService;

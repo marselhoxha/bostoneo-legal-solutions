@@ -5,6 +5,7 @@ import com.bostoneo.bostoneosolutions.handler.CustomAccessDeniedHandler;
 import com.bostoneo.bostoneosolutions.handler.CustomAuthenticationEntryPoint;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -36,6 +37,9 @@ public class EnhancedSecurityConfig {
     private final CustomAuthorizationFilter customAuthorizationFilter;
     private final BCryptPasswordEncoder passwordEncoder;
     private final UserDetailsService userDetailsService;
+
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOrigins;
     
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -47,15 +51,9 @@ public class EnhancedSecurityConfig {
                 .maxAgeInSeconds(31536000)
                 .preload(true)
             )
-            // Content Security Policy - allow framing from localhost:4200 for PDF preview
+            // Content Security Policy - allow framing from configured origins for PDF preview
             .contentSecurityPolicy(csp -> csp
-                .policyDirectives("default-src 'self'; " +
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; " +
-                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-                    "font-src 'self' https://fonts.gstatic.com; " +
-                    "img-src 'self' data: https:; " +
-                    "connect-src 'self' http://localhost:* ws://localhost:*; " +
-                    "frame-ancestors 'self' http://localhost:4200")
+                .policyDirectives(buildCspPolicy())
             )
             // Frame Options - disable to allow PDF iframe embedding (CSP frame-ancestors handles security)
             .frameOptions(frame -> frame.disable())
@@ -90,7 +88,7 @@ public class EnhancedSecurityConfig {
         // CORS Configuration
         http.cors(cors -> cors.configurationSource(request -> {
             var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-            corsConfig.setAllowedOrigins(java.util.List.of("http://localhost:4200", "http://localhost:8085"));
+            corsConfig.setAllowedOrigins(java.util.Arrays.asList(allowedOrigins.split(",")));
             corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
             corsConfig.setAllowedHeaders(java.util.List.of("*"));
             corsConfig.setExposedHeaders(java.util.List.of("Content-Disposition", "Authorization", "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
@@ -141,5 +139,33 @@ public class EnhancedSecurityConfig {
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder);
         return new ProviderManager(authProvider);
+    }
+
+    private String buildCspPolicy() {
+        String[] origins = allowedOrigins.split(",");
+        String connectSrc = String.join(" ", origins);
+        // Build ws:// and wss:// variants for WebSocket connections
+        StringBuilder wsSrc = new StringBuilder();
+        for (String origin : origins) {
+            String trimmed = origin.trim();
+            if (trimmed.startsWith("https://")) {
+                wsSrc.append(" wss://").append(trimmed.substring(8));
+            } else if (trimmed.startsWith("http://")) {
+                wsSrc.append(" ws://").append(trimmed.substring(7));
+            }
+        }
+        // For localhost dev, also allow wildcard localhost ports
+        String extraConnect = "";
+        if (allowedOrigins.contains("localhost")) {
+            extraConnect = " http://localhost:* ws://localhost:*";
+        }
+        String frameAncestors = String.join(" ", origins);
+        return "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; " +
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+            "font-src 'self' https://fonts.gstatic.com; " +
+            "img-src 'self' data: https:; " +
+            "connect-src 'self' " + connectSrc + wsSrc + extraConnect + "; " +
+            "frame-ancestors 'self' " + frameAncestors;
     }
 }

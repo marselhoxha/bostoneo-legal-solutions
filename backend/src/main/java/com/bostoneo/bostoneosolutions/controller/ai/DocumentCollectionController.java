@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/ai/collections")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class DocumentCollectionController {
 
     private final DocumentCollectionRepository collectionRepository;

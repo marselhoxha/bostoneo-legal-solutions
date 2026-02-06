@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -32,6 +33,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class BostoneosolutionsApplication {
 	private static final int STRENGTH = 12;
+
+	@Value("${app.cors.allowed-origins}")
+	private String allowedOrigins;
 	
 	@PostConstruct
 	public void init() {
@@ -67,8 +71,7 @@ public class BostoneosolutionsApplication {
 		UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
 		CorsConfiguration corsConfiguration = new CorsConfiguration();
 		corsConfiguration.setAllowCredentials(true);
-		corsConfiguration.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:3000", "http://bostoneosolutions.org"));
-		//corsConfiguration.setAllowedOrigins(Arrays.asList("*"));
+		corsConfiguration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
 		corsConfiguration.setAllowedHeaders(Arrays.asList("Origin", "Access-Control-Allow-Origin", "Content-Type",
 				"Accept", "Jwt-Token", "Authorization", "Origin", "Accept", "X-Requested-With",
 				"Access-Control-Request-Method", "Access-Control-Request-Headers", "Cache-Control"));

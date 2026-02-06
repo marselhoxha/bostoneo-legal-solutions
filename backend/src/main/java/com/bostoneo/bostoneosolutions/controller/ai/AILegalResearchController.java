@@ -25,7 +25,6 @@ import java.util.Map;
 @RequestMapping("/api/ai/legal-research")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class AILegalResearchController {
 
     private final AILegalResearchService legalResearchService;

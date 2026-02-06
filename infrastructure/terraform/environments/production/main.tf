@@ -227,20 +227,35 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# Note: HTTPS listener requires ACM certificate
-# Uncomment after certificate is created
-# resource "aws_lb_listener" "https" {
-#   load_balancer_arn = aws_lb.api.arn
-#   port              = 443
-#   protocol          = "HTTPS"
-#   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-#   certificate_arn   = aws_acm_certificate.main.arn
-#
-#   default_action {
-#     type             = "forward"
-#     target_group_arn = aws_lb_target_group.api.arn
-#   }
-# }
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.api.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.certificate_arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api.arn
+  }
+}
+
+# -----------------------------------------------------------------------------
+# App Secrets (API keys, JWT, encryption, etc.)
+# -----------------------------------------------------------------------------
+resource "aws_secretsmanager_secret" "app_secrets" {
+  name        = "legience/${local.environment}/app-secrets"
+  description = "Application secrets for Legience ${local.environment}"
+  kms_key_id  = module.kms.secrets_key_arn
+
+  tags = {
+    Name        = "legience-${local.environment}-app-secrets"
+    Environment = local.environment
+  }
+}
+
+# NOTE: Secret values must be populated manually via AWS Console or CLI:
+# aws secretsmanager put-secret-value --secret-id legience/production/app-secrets --secret-string '{...}'
 
 # -----------------------------------------------------------------------------
 # ECS Cluster and Services
@@ -256,7 +271,7 @@ module "ecs" {
   target_group_arn      = aws_lb_target_group.api.arn
   kms_key_id            = module.kms.logs_key_id
   kms_key_arn           = module.kms.logs_key_arn
-  secrets_arns          = [module.rds.db_credentials_secret_arn]
+  secrets_arns          = [module.rds.db_credentials_secret_arn, aws_secretsmanager_secret.app_secrets.arn]
   s3_bucket_arns        = [
     module.s3.documents_bucket_arn,
     "${module.s3.documents_bucket_arn}/*"
@@ -268,6 +283,25 @@ module "ecs" {
   api_desired_count = 3
   api_min_count     = 2
   api_max_count     = 10
+
+  container_environment = [
+    {
+      name  = "UI_APP_URL"
+      value = "https://app.legience.com"
+    },
+    {
+      name  = "CORS_ALLOWED_ORIGINS"
+      value = "https://app.legience.com"
+    },
+    {
+      name  = "REDIS_HOST"
+      value = "localhost"
+    },
+    {
+      name  = "REDIS_PORT"
+      value = "6379"
+    }
+  ]
 
   container_secrets = [
     {
@@ -281,6 +315,62 @@ module "ecs" {
     {
       name       = "DB_PASSWORD"
       value_from = "${module.rds.db_credentials_secret_arn}:password::"
+    },
+    {
+      name       = "JWT_SECRET"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:JWT_SECRET::"
+    },
+    {
+      name       = "ENCRYPTION_SECRET"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:ENCRYPTION_SECRET::"
+    },
+    {
+      name       = "ENCRYPTION_SALT"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:ENCRYPTION_SALT::"
+    },
+    {
+      name       = "OPENAI_API_KEY"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:OPENAI_API_KEY::"
+    },
+    {
+      name       = "ANTHROPIC_API_KEY"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:ANTHROPIC_API_KEY::"
+    },
+    {
+      name       = "STRIPE_API_KEY"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:STRIPE_API_KEY::"
+    },
+    {
+      name       = "STRIPE_WEBHOOK_SECRET"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:STRIPE_WEBHOOK_SECRET::"
+    },
+    {
+      name       = "TWILIO_ACCOUNT_SID"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:TWILIO_ACCOUNT_SID::"
+    },
+    {
+      name       = "TWILIO_AUTH_TOKEN"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:TWILIO_AUTH_TOKEN::"
+    },
+    {
+      name       = "TWILIO_PHONE_NUMBER"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:TWILIO_PHONE_NUMBER::"
+    },
+    {
+      name       = "BOLDSIGN_API_KEY"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:BOLDSIGN_API_KEY::"
+    },
+    {
+      name       = "COURTLISTENER_API_KEY"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:COURTLISTENER_API_KEY::"
+    },
+    {
+      name       = "EMAIL_ID"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:EMAIL_ID::"
+    },
+    {
+      name       = "EMAIL_PASSWORD"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:EMAIL_PASSWORD::"
     }
   ]
 }

@@ -22,7 +22,6 @@ import java.util.Optional;
 @RequestMapping("/api/ai/immigration")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:8085"}, allowCredentials = "true")
 public class AIImmigrationController {
 
     private final AIImmigrationService immigrationService;

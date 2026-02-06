@@ -17,7 +17,6 @@ import java.util.Map;
 @RequestMapping("/api/ai/criminal-defense")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:8085"}, allowCredentials = "true")
 public class AICriminalDefenseController {
 
     private final AICriminalDefenseService criminalDefenseService;

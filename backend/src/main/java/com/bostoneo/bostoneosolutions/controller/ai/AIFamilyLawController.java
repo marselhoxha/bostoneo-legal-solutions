@@ -15,7 +15,6 @@ import java.util.Map;
 @RequestMapping("/api/ai/family-law")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:8085"}, allowCredentials = "true")
 public class AIFamilyLawController {
 
     private final AIFamilyLawService familyLawService;

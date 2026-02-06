@@ -13,7 +13,6 @@ import java.util.Map;
 @RequestMapping("/api/ai/pdf-field-extraction")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class PDFFieldExtractionController {
 
     private final AIPDFFormService pdfFormService;

@@ -26,7 +26,6 @@ import static org.springframework.http.HttpStatus.*;
 @RequestMapping("/api/pi/cases/{caseId}/damages")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:8085"}, allowCredentials = "true")
 public class PIDamageCalculationController {
 
     private final PIDamageCalculationService damageService;

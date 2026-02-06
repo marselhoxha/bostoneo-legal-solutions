@@ -23,7 +23,6 @@ import static org.springframework.http.HttpStatus.*;
 @RequestMapping("/api/pi/cases/{caseId}/medical-summary")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:8085"}, allowCredentials = "true")
 public class PIMedicalSummaryController {
 
     private final PIMedicalSummaryService summaryService;

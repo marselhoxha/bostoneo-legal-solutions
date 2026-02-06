@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/ai/personal-injury")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:8085"}, allowCredentials = "true")
 public class AIPersonalInjuryController {
 
     private final ClaudeSonnet4Service claudeService;

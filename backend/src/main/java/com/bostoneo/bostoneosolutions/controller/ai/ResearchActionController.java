@@ -21,7 +21,6 @@ import static org.springframework.http.HttpStatus.CREATED;
 @RequestMapping("/api/ai/research/actions")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:4200")
 public class ResearchActionController {
 
     private final ResearchActionService actionService;

@@ -10,7 +10,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ai/pdf-forms")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class AIPDFFormController {
 
     private final AIPDFFormService pdfFormService;

@@ -25,3 +25,8 @@ variable "api_image" {
   type        = string
   default     = "724629565287.dkr.ecr.us-east-1.amazonaws.com/legience-api:latest"
 }
+
+variable "certificate_arn" {
+  description = "ACM certificate ARN for HTTPS"
+  type        = string
+}

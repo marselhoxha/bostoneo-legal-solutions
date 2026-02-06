@@ -15,7 +15,6 @@ import java.util.Map;
 @RequestMapping("/api/ai/real-estate")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:8085"}, allowCredentials = "true")
 public class AIRealEstateController {
 
     private final AIRealEstateService realEstateService;
