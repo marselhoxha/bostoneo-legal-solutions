@@ -17,6 +17,7 @@ import com.bostoneo.bostoneosolutions.rowmapper.UserRowMapper;
 import com.bostoneo.bostoneosolutions.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -64,6 +65,9 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     private final RoleRepository<Role> roleRepository;
     private final BCryptPasswordEncoder encoder;
     private final EmailService emailService;
+
+    @Value("${app.profile-image.path:#{systemProperties['user.home'] + '/Downloads/images/'}}")
+    private String profileImagePath;
 
     @Override
     public User create(User user) {
@@ -574,7 +578,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     }
 
     private void saveImage(String email, MultipartFile image) {
-        Path fileStorageLocation = Paths.get(System.getProperty("user.home") + "/Downloads/images/").toAbsolutePath().normalize();
+        Path fileStorageLocation = Paths.get(profileImagePath).toAbsolutePath().normalize();
         if(!Files.exists(fileStorageLocation)) {
             try {
                 Files.createDirectories(fileStorageLocation);
