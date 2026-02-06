@@ -391,6 +391,12 @@ jobs:
           fi
           aws s3 sync dist/velzon s3://$BUCKET --delete
 
+      - name: Invalidate CloudFront Cache
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+            aws cloudfront create-invalidation --distribution-id E1UWEPT9HA7VQX --paths "/*"
+          fi
+
   # -------------------------------------------------------------------------
   # Trigger ECS Deployment
   # -------------------------------------------------------------------------
