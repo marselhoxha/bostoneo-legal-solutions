@@ -104,11 +104,15 @@ jobs:
         run: npm ci
 
       - name: Generate Environment Files
+        env:
+          ENV_TS: ${{ secrets.ENV_TS }}
+          ENV_PROD_TS: ${{ secrets.ENV_PROD_TS }}
+          ENV_STAGING_TS: ${{ secrets.ENV_STAGING_TS }}
         run: |
           mkdir -p src/environments
-          echo "${{ secrets.ENV_TS }}" | base64 -d > src/environments/environment.ts
-          echo "${{ secrets.ENV_PROD_TS }}" | base64 -d > src/environments/environment.prod.ts
-          echo "${{ secrets.ENV_STAGING_TS }}" | base64 -d > src/environments/environment.staging.ts
+          printf '%s' "$ENV_TS" | base64 --decode > src/environments/environment.ts
+          printf '%s' "$ENV_PROD_TS" | base64 --decode > src/environments/environment.prod.ts
+          printf '%s' "$ENV_STAGING_TS" | base64 --decode > src/environments/environment.staging.ts
 
       - name: Build
         run: npm run build -- --configuration=production
@@ -227,11 +231,15 @@ jobs:
         run: npm ci
 
       - name: Generate Environment Files
+        env:
+          ENV_TS: ${{ secrets.ENV_TS }}
+          ENV_PROD_TS: ${{ secrets.ENV_PROD_TS }}
+          ENV_STAGING_TS: ${{ secrets.ENV_STAGING_TS }}
         run: |
           mkdir -p src/environments
-          echo "${{ secrets.ENV_TS }}" | base64 -d > src/environments/environment.ts
-          echo "${{ secrets.ENV_PROD_TS }}" | base64 -d > src/environments/environment.prod.ts
-          echo "${{ secrets.ENV_STAGING_TS }}" | base64 -d > src/environments/environment.staging.ts
+          printf '%s' "$ENV_TS" | base64 --decode > src/environments/environment.ts
+          printf '%s' "$ENV_PROD_TS" | base64 --decode > src/environments/environment.prod.ts
+          printf '%s' "$ENV_STAGING_TS" | base64 --decode > src/environments/environment.staging.ts
 
       - name: Build
         run: |
