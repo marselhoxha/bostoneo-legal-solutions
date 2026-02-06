@@ -287,6 +287,14 @@ jobs:
                     auth: true
                     starttls:
                       enable: true
+          management:
+            endpoints:
+              web:
+                exposure:
+                  include: health
+            endpoint:
+              health:
+                show-details: never
           firebase:
             config:
               path: ${FIREBASE_CONFIG_PATH:firebase-service-account.json}
