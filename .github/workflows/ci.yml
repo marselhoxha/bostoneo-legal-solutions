@@ -182,6 +182,99 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Generate Backend Config
+        run: |
+          cat > backend/src/main/resources/application.yml << 'APPYML'
+          jwt:
+            secret: ${JWT_SECRET:placeholder}
+          stripe:
+            api:
+              key: ${STRIPE_API_KEY:placeholder}
+            webhook:
+              secret: ${STRIPE_WEBHOOK_SECRET:placeholder}
+          legal:
+            research:
+              courtlistener:
+                apiKey: ${COURTLISTENER_API_KEY:}
+                baseUrl: https://www.courtlistener.com/api/rest/v4/
+          openai:
+            api:
+              key: ${OPENAI_API_KEY:placeholder}
+          twilio:
+            account-sid: ${TWILIO_ACCOUNT_SID:}
+            auth-token: ${TWILIO_AUTH_TOKEN:}
+            phone-number: ${TWILIO_PHONE_NUMBER:}
+            whatsapp-number: ${TWILIO_WHATSAPP_NUMBER:}
+            enabled: ${TWILIO_ENABLED:true}
+            multi-tenant: ${TWILIO_MULTI_TENANT:true}
+          boldsign:
+            api-key: ${BOLDSIGN_API_KEY:}
+            api-url: ${BOLDSIGN_API_URL:https://api.boldsign.com/v1}
+            webhook-secret: ${BOLDSIGN_WEBHOOK_SECRET:}
+            enabled: ${BOLDSIGN_ENABLED:true}
+            default-expiry-days: ${BOLDSIGN_DEFAULT_EXPIRY_DAYS:30}
+            reminder-days: ${BOLDSIGN_REMINDER_DAYS:7,3,1}
+          encryption:
+            secret: ${ENCRYPTION_SECRET:placeholder}
+            salt: ${ENCRYPTION_SALT:placeholder}
+          server:
+            error:
+              path: /user/error
+              whitelabel:
+                enabled: false
+            port: ${SERVER_PORT:8085}
+            tomcat:
+              connection-timeout: 120000
+              threads:
+                max: 200
+          spring:
+            profiles:
+              active: ${SPRING_PROFILES_ACTIVE:staging}
+            mvc:
+              async:
+                request-timeout: 120000
+            datasource:
+              url: ${DB_URL:jdbc:postgresql://localhost:5432/legience}
+              username: ${DB_USERNAME:legience_admin}
+              password: ${DB_PASSWORD:}
+              driver-class-name: org.postgresql.Driver
+              hikari:
+                maximum-pool-size: 20
+                minimum-idle: 5
+                connection-timeout: 30000
+                idle-timeout: 600000
+                max-lifetime: 1800000
+            jpa:
+              database-platform: org.hibernate.dialect.PostgreSQLDialect
+              generate-ddl: false
+              show-sql: false
+              hibernate:
+                ddl-auto: none
+              properties:
+                hibernate:
+                  dialect: org.hibernate.dialect.PostgreSQLDialect
+                  format_sql: true
+                  physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+                  jdbc:
+                    time_zone: UTC
+            data:
+              redis:
+                host: ${REDIS_HOST:localhost}
+                port: ${REDIS_PORT:6379}
+            cache:
+              type: redis
+            servlet:
+              multipart:
+                max-file-size: 100MB
+                max-request-size: 100MB
+            sql:
+              init:
+                continue-on-error: true
+          app:
+            cors:
+              allowed-origins: ${CORS_ALLOWED_ORIGINS:https://app-staging.legience.com}
+          APPYML
+
       - name: Build JAR
         working-directory: ./backend
         run: mvn package -DskipTests
