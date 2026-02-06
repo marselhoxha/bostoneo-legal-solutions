@@ -42,6 +42,14 @@ export class TokenInterceptor implements HttpInterceptor {
     this.userService.loginSuccess$.subscribe(() => {
       this.resetState();
     });
+
+    // Reset interceptor state on logout/session expiry
+    // When userData$ emits null, the user has logged out - clear stale failed state
+    this.userService.userData$.subscribe(user => {
+      if (!user) {
+        this.resetState();
+      }
+    });
   }
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {

@@ -647,9 +647,8 @@ export class MessagingStateService implements OnDestroy {
    * This is the primary mechanism for real-time updates since WebSocket may not always deliver
    */
   private startBackgroundPolling(): void {
-    // Use timer(0, 5000) to poll IMMEDIATELY on start, then every 5 seconds
-    // This ensures messages appear quickly even if WebSocket notifications aren't working
-    timer(0, 5000)
+    // Poll after 2s delay, then every 30s as a fallback. WebSocket handles real-time updates.
+    timer(2000, 30000)
       .pipe(
         takeUntil(this.destroy$),
         switchMap(() =>

@@ -478,7 +478,8 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     this.loadTimeEntries();
     this.loadScheduleEvents();
     this.loadUrgentItems();
-    this.loadRecentActivity();
+    // Note: loadRecentActivity() is called inside loadCases() after cases are loaded,
+    // so we don't call it here to avoid a duplicate call with empty recentCases.
   }
 
   /**
@@ -527,7 +528,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
 
   private loadCases(): void {
     this.casesLoading = true;
-    this.caseService.getCases(0, 100).pipe(
+    this.caseService.getCases(0, 10).pipe(
       takeUntil(this.destroy$),
       catchError(error => {
         console.error('Error loading cases:', error);
