@@ -110,9 +110,9 @@ jobs:
           ENV_STAGING_TS: ${{ secrets.ENV_STAGING_TS }}
         run: |
           mkdir -p src/environments
-          printf '%s' "$ENV_TS" | base64 --decode > src/environments/environment.ts
-          printf '%s' "$ENV_PROD_TS" | base64 --decode > src/environments/environment.prod.ts
-          printf '%s' "$ENV_STAGING_TS" | base64 --decode > src/environments/environment.staging.ts
+          printenv ENV_TS > src/environments/environment.ts
+          printenv ENV_PROD_TS > src/environments/environment.prod.ts
+          printenv ENV_STAGING_TS > src/environments/environment.staging.ts
 
       - name: Build
         run: npm run build -- --configuration=production
@@ -237,9 +237,9 @@ jobs:
           ENV_STAGING_TS: ${{ secrets.ENV_STAGING_TS }}
         run: |
           mkdir -p src/environments
-          printf '%s' "$ENV_TS" | base64 --decode > src/environments/environment.ts
-          printf '%s' "$ENV_PROD_TS" | base64 --decode > src/environments/environment.prod.ts
-          printf '%s' "$ENV_STAGING_TS" | base64 --decode > src/environments/environment.staging.ts
+          printenv ENV_TS > src/environments/environment.ts
+          printenv ENV_PROD_TS > src/environments/environment.prod.ts
+          printenv ENV_STAGING_TS > src/environments/environment.staging.ts
 
       - name: Build
         run: |
