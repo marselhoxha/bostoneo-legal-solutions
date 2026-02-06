@@ -235,7 +235,7 @@ jobs:
           else
             BUCKET="legience-staging-frontend-${{ secrets.AWS_ACCOUNT_ID }}"
           fi
-          aws s3 sync dist/bostoneo-solutions s3://$BUCKET --delete
+          aws s3 sync dist/velzon s3://$BUCKET --delete
 
   # -------------------------------------------------------------------------
   # Trigger ECS Deployment

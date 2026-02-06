@@ -63,7 +63,7 @@ resource "aws_ecs_cluster_capacity_providers" "main" {
 resource "aws_cloudwatch_log_group" "ecs_exec" {
   name              = "/aws/ecs/legience-${var.environment}/exec"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_id
+  kms_key_id        = var.kms_key_arn
 
   tags = {
     Name        = "legience-${var.environment}-ecs-exec-logs"
@@ -76,7 +76,7 @@ resource "aws_cloudwatch_log_group" "ecs_exec" {
 resource "aws_cloudwatch_log_group" "api" {
   name              = "/ecs/legience-${var.environment}-api"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_id
+  kms_key_id        = var.kms_key_arn
 
   tags = {
     Name        = "legience-${var.environment}-api-logs"
