@@ -674,29 +674,22 @@ export class TopbarComponent implements OnInit, OnDestroy {
     // Stop event propagation to prevent dropdown close
     event?.stopPropagation();
 
-    console.log('Notification clicked:', notification);
-
     // Mark notification as read both locally and in backend
     if (!notification.read && notification.id) {
-      console.log('Marking notification as read:', notification.id);
-
       // Extract the actual backend ID (remove 'backend_' prefix if present)
       let backendId = notification.id;
       if (notification.id.startsWith('backend_')) {
         backendId = notification.id.replace('backend_', '');
       }
-      console.log('Backend ID for API call:', backendId);
 
       // Persist to backend FIRST, then remove from local list
       this.notificationService.markAsRead(backendId).subscribe({
         next: () => {
-          console.log('Backend marked notification as read successfully');
           // Remove from the service's notification list after backend confirms
           this.notificationService.markPushNotificationAsRead(notification.id);
           this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('Failed to mark notification as read in backend:', err);
           // Still remove locally even if backend fails
           this.notificationService.markPushNotificationAsRead(notification.id);
           this.cdr.detectChanges();

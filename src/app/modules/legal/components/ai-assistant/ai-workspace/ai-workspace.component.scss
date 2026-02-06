@@ -109,6 +109,12 @@ $main-content-flex: 1;
   --sidebar-text-secondary: #495057;
   --sidebar-text-muted: #878a99;
   --sidebar-text-light: #adb5bd;
+  display: block;
+
+  // Mobile: Ensure no bottom borders and proper padding
+  @media (max-width: 768px) {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
 }
 
 // Dark mode overrides
@@ -1081,6 +1087,13 @@ button.filter-chip,
   min-height: calc(100vh - 100px);
   background: var(--vz-body-bg);
   position: relative;
+  border-bottom: none !important;
+
+  // Remove any bottom line/border on mobile
+  @media (max-width: 768px) {
+    border: none !important;
+    box-shadow: none;
+  }
 }
 
 // ===========================
@@ -2398,6 +2411,7 @@ button.filter-chip,
   margin-left: $sidebar-width;
   width: calc(100% - #{$sidebar-width});
   transition: margin-left 0.3s ease, width 0.3s ease;
+  border: none !important;
 
   // Full-width mode when sidebar is collapsed in document viewer
   &.full-width {
@@ -2411,6 +2425,13 @@ button.filter-chip,
     min-height: 0;
     height: 100%;
     overflow-y: auto;
+  }
+
+  // Mobile: full width and no borders
+  @media (max-width: 768px) {
+    margin-left: 0;
+    width: 100%;
+    border: none !important;
   }
 }
 
@@ -6539,19 +6560,17 @@ button.filter-chip,
 .mobile-menu-toggle {
   display: none;
   position: fixed;
-  left: 1rem;
-  top: 110px;
   z-index: 1000;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   background: var(--vz-primary);
   color: white;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 50%;
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0.25rem 0.75rem rgba(var(--vz-primary-rgb), 0.3);
+  box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.4);
   transition: all 0.2s ease;
 
   i {
@@ -6559,12 +6578,96 @@ button.filter-chip,
   }
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0.5rem 1rem rgba(var(--vz-primary-rgb), 0.4);
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(var(--vz-primary-rgb), 0.5);
   }
 
   &:active {
-    transform: translateY(0);
+    transform: scale(0.95);
+  }
+
+  // Mobile: Large FAB at bottom-left to open bottom sheet
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    left: 1rem;
+    bottom: 2rem;
+    top: auto;
+    width: 68px;
+    height: 68px;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, var(--vz-primary) 0%, #5a6aa8 100%);
+    box-shadow: 0 6px 20px rgba(var(--vz-primary-rgb), 0.5), 0 2px 8px rgba(0, 0, 0, 0.15);
+
+    i {
+      font-size: 1.5rem;
+    }
+
+    // Label for the FAB
+    .toggle-label {
+      font-size: 0.625rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 0;
+    }
+  }
+}
+
+// ===========================
+// MOBILE BACK BUTTON
+// Matches messages component pattern
+// ===========================
+
+.btn-back {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--vz-tertiary-bg, rgba(0, 0, 0, 0.05));
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vz-body-color);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+
+  &:hover, &:active {
+    background: rgba(var(--vz-primary-rgb), 0.1);
+    color: var(--vz-primary);
+  }
+
+  i {
+    font-size: 22px;
+  }
+}
+
+// ===========================
+// MOBILE CHAT HEADER
+// Shows back button when in conversation on mobile
+// ===========================
+
+.mobile-chat-header {
+  display: none;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--vz-card-bg);
+  border-bottom: 1px solid var(--vz-border-color);
+
+  .chat-header-title {
+    flex: 1;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--vz-body-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   @media (max-width: 768px) {
@@ -6670,20 +6773,77 @@ button.filter-chip,
     flex-direction: column;
   }
 
-  // Off-canvas sidebar for mobile
+  // ============================================
+  // BOTTOM SHEET SIDEBAR for mobile
+  // Modern mobile pattern - slides up from bottom
+  // ============================================
   .conversation-sidebar {
-    width: 360px !important;
-    height: 100vh;
+    width: 100% !important;
+    max-width: 100%;
+    height: auto;
+    max-height: 70vh;
+    min-height: 300px;
     position: fixed;
-    left: -360px;  // Hidden by default
-    top: 0;
-    z-index: 1050;  // Above everything
-    border-right: 1px solid var(--vz-border-color);
-    border-bottom: none;
-    transition: left 0.3s ease;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    z-index: 1050;
+    border-radius: 1.25rem 1.25rem 0 0;
+    border: none;
+    border-top: 1px solid var(--vz-border-color);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+    transform: translateY(calc(100% + 10px));
+    visibility: hidden;
+    opacity: 0;
+    // Closing animation - smooth slide down with delayed visibility
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.25s ease-out,
+                visibility 0s linear 0.35s;
+    overflow: hidden;
+
+    // Bottom sheet handle indicator
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 4px;
+      background: var(--vz-secondary-bg);
+      border-radius: 2px;
+      z-index: 10;
+    }
 
     &.open {
-      left: 0;  // Slide in when opened
+      transform: translateY(0);
+      visibility: visible;
+      opacity: 1;
+      // Opening animation - immediate visibility, smooth slide up
+      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
+                  opacity 0.2s ease-in,
+                  visibility 0s linear 0s;
+    }
+
+    // Add padding top for handle
+    .p-3.border-bottom {
+      padding-top: 1.5rem !important;
+    }
+
+    // Scrollable content area
+    .sidebar-scroll-container {
+      max-height: calc(70vh - 140px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
+  // Backdrop - tap to dismiss
+  .sidebar-backdrop {
+    &.show {
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(2px);
     }
   }
 
@@ -6697,33 +6857,59 @@ button.filter-chip,
     padding: 1.5rem 1rem;
 
     .welcome-header .welcome-title {
-      font-size: 2rem;
+      font-size: 1.75rem;
       letter-spacing: -0.035em;
     }
 
     .welcome-header .welcome-subtitle {
-      font-size: 1rem;
+      font-size: 0.9375rem;
     }
 
+    // ============================================
+    // MOBILE ACTION CARDS
+    // Show only "Ask a legal question" and "Analyze Document"
+    // Hide "Generate a draft" and "Case Workflow"
+    // ============================================
     .action-cards-main {
-      grid-template-columns: repeat(2, 1fr) !important;
+      grid-template-columns: 1fr !important;
       gap: 0.75rem;
+      max-width: 400px;
+
+      // Hide 2nd card (Generate a draft)
+      .action-card:nth-child(2) {
+        display: none !important;
+      }
+
+      // Hide 4th card (Case Workflow)
+      .action-card:nth-child(4) {
+        display: none !important;
+      }
 
       .action-card {
-        padding: 1.25rem 0.875rem;
-        min-height: 100px;
+        padding: 1.25rem 1rem;
+        min-height: auto;
+        flex-direction: row;
+        justify-content: flex-start;
+        text-align: left;
+        gap: 1rem;
 
         .icon-box {
-          width: 48px;
-          height: 48px;
+          width: 52px;
+          height: 52px;
+          flex-shrink: 0;
 
           i {
             font-size: 1.5rem;
           }
         }
 
-        .card-content span {
-          font-size: 0.8125rem;
+        .card-content {
+          flex: 1;
+
+          span {
+            font-size: 0.9375rem;
+            text-align: left;
+          }
         }
       }
     }
@@ -6874,22 +7060,80 @@ button.filter-chip,
     padding: 1rem 0.75rem;
 
     .welcome-header .welcome-title {
-      font-size: 1.75rem;
+      font-size: 1.5rem;
       letter-spacing: -0.03em;
     }
 
     .welcome-header .welcome-subtitle {
-      font-size: 0.9375rem;
+      font-size: 0.875rem;
     }
 
     .action-cards-main {
       grid-template-columns: 1fr !important;
       gap: 0.625rem;
+      max-width: 100%;
+
+      // Ensure cards stay hidden on small mobile too
+      .action-card:nth-child(2),
+      .action-card:nth-child(4) {
+        display: none !important;
+      }
+
+      .action-card {
+        padding: 1rem;
+
+        .icon-box {
+          width: 44px;
+          height: 44px;
+
+          i {
+            font-size: 1.25rem;
+          }
+        }
+
+        .card-content span {
+          font-size: 0.875rem;
+        }
+      }
     }
   }
 
+  // Bottom sheet - smaller on very small screens
   .conversation-sidebar {
-    max-height: 50vh;
+    max-height: 60vh;
+    min-height: 250px;
+
+    .sidebar-scroll-container {
+      max-height: calc(60vh - 130px);
+    }
+
+    // Compact list items
+    .sidebar-list-item {
+      padding: 0.625rem 0.75rem;
+
+      .item-title {
+        font-size: 0.8125rem;
+      }
+
+      .item-meta {
+        font-size: 0.6875rem;
+      }
+    }
+  }
+
+  // Move FAB slightly higher on small screens
+  .mobile-menu-toggle {
+    bottom: 1.5rem;
+    width: 64px;
+    height: 64px;
+
+    i {
+      font-size: 1.375rem;
+    }
+
+    .toggle-label {
+      font-size: 0.5625rem;
+    }
   }
 }
 

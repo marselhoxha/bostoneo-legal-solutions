@@ -259,6 +259,41 @@
             }
         }
     }
+
+}
+
+// Mobile menu styles when body has .menu class (for horizontal layout)
+// This handles the case where menu toggle adds .menu class directly to body
+@media (max-width: 1024px) {
+    [data-layout="horizontal"] body.menu .navbar-menu {
+        display: block;
+        max-height: calc(100vh - 70px);
+        overflow-y: auto;
+        padding-left: 0;
+
+        .navbar-nav {
+            flex-direction: column;
+
+            // Show dash indicators on mobile
+            .nav-sm .nav-link:before {
+                opacity: 1 !important;
+            }
+        }
+    }
+
+    [data-layout="horizontal"] body.menu .menu-dropdown {
+        position: relative;
+        min-width: 100%;
+        box-shadow: none;
+        padding-left: 28px;
+        left: 0;
+        animation: none;
+        padding-top: 0;
+
+        &.show {
+            display: block;
+        }
+    }
 }
 
 // rtl

@@ -4,273 +4,98 @@
   height: auto;
 }
 
-// Horizontal topbar optimizations for laptop screens
-.app-menu {
-  .navbar-nav {
-    // Reduce spacing between menu items
-    .nav-item {
-      margin-right: 0.25rem;
-      
-      // Compact menu links
-      .nav-link {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        white-space: nowrap;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        
-        // Icon spacing
-        .icon {
-          margin-right: 0.375rem;
-          font-size: 1rem;
-          transition: color 0.3s ease;
-        }
-        
-        // Hover effects
-        &:hover {
-          background-color: rgba(var(--bs-primary-rgb), 0.1);
-          border-radius: 0.375rem;
-          transform: translateY(-1px);
-          
+// ============================================================================
+// DESKTOP/LAPTOP STYLES (min-width: 992px)
+// These styles only apply to desktop horizontal navigation
+// ============================================================================
+@media (min-width: 992px) {
+  .app-menu {
+    .navbar-nav {
+      .nav-item {
+        margin-right: 0.25rem;
+
+        .nav-link {
+          padding: 0.5rem 0.75rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+          white-space: nowrap;
+
           .icon {
-            color: var(--bs-primary);
+            margin-right: 0.375rem;
+            font-size: 1rem;
+          }
+
+          &:hover {
+            background-color: rgba(var(--bs-primary-rgb), 0.1);
+            border-radius: 0.375rem;
           }
         }
       }
     }
-  }
-  
-  // Dropdown menu optimizations
-  .menu-dropdown {
-    min-width: 180px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    border-radius: 0.5rem;
-    padding: 0.5rem 0;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    
-    .nav-sm {
-      .nav-item {
-        .nav-link {
-          padding: 0.375rem 1rem;
-          font-size: 0.8125rem;
-          font-weight: 400;
-          color: var(--bs-gray-600);
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-          
-          // Smooth background transition
-          &::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: var(--bs-gray-50);
-            border-radius: 0.25rem;
-            opacity: 0;
-            transition: opacity 0.25s ease;
-            z-index: -1;
-          }
-          
-          &:hover {
-            color: var(--bs-primary);
-            font-weight: 500;
-            transform: translateX(4px);
-            
-            &::before {
-              opacity: 1;
-            }
-          }
-          
-          &:active, &.active {
-            color: var(--bs-primary);
-            font-weight: 500;
-          }
-        }
-      }
+
+    .menu-dropdown {
+      min-width: 180px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 0.5rem;
+      padding: 0.5rem 0;
     }
   }
 }
 
-// Responsive optimizations for laptop screens
+// Laptop-specific (smaller desktop)
 @media (min-width: 992px) and (max-width: 1366px) {
   .app-menu {
     .navbar-nav {
       .nav-item {
         margin-right: 0.125rem;
-        
+
         .nav-link {
           padding: 0.4rem 0.6rem;
           font-size: 0.8125rem;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-      }
-    }
-    
-    // Lighter submenu items for laptop screens
-    .menu-dropdown {
-      .nav-sm {
-        .nav-item {
-          .nav-link {
-            font-size: 0.75rem;
-            color: var(--bs-gray-500);
-            font-weight: 300;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            
-            &:hover {
-              color: var(--bs-primary);
-              font-weight: 400;
-              transform: translateX(3px);
-            }
-          }
         }
       }
     }
   }
 }
 
-// Icon-only mode for very compact screens
-@media (max-width: 1200px) {
-  .app-menu {
-    .navbar-nav {
-      .nav-item {
-        .nav-link {
-          min-width: 2.5rem;
-          text-align: center;
-          position: relative;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          
-          span {
-            display: none;
-          }
-          
-          .icon {
-            margin-right: 0;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-          }
-          
-          &:hover {
-            transform: translateY(-2px) scale(1.05);
-            
-            .icon {
-              color: var(--bs-primary);
-            }
-          }
-          
-          // Tooltip for icon-only mode
-          &:hover::after {
-            content: attr(data-title);
-            position: absolute;
-            bottom: -2rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--bs-dark);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            font-weight: 400;
-            white-space: nowrap;
-            z-index: 1000;
-            opacity: 0;
-            animation: tooltipFadeIn 0.3s ease-out forwards;
-          }
-        }
-      }
-    }
-  }
-}
-
-// Enhanced dropdown positioning
-.navbar-nav {
-  .nav-item {
-    &.dropdown {
-      position: relative;
-      
-      .dropdown-menu {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        z-index: 1000;
-        margin-top: 0.125rem;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-    }
-  }
-}
-
-// Enhanced smooth animations
-.nav-link, .menu-dropdown {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-// Tooltip animation keyframes
-@keyframes tooltipFadeIn {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(5px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-// Active state styling with smooth transitions
-.nav-link.active,
-.nav-link.router-link-active {
-  background-color: rgba(var(--bs-primary-rgb), 0.1);
-  color: var(--bs-primary);
-  border-radius: 0.375rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-// Mobile responsiveness
+// ============================================================================
+// MOBILE STYLES (max-width: 991.98px)
+// Let Velzon theme handle mobile navigation - minimal overrides only
+// ============================================================================
 @media (max-width: 991.98px) {
   .app-menu {
     .navbar-nav {
       flex-direction: column;
       width: 100%;
-      
+
       .nav-item {
         margin-right: 0;
-        margin-bottom: 0.25rem;
-        
-        .nav-link {
-          padding: 0.75rem 1rem;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          
-          span {
-            display: inline !important;
-          }
-          
-          &:hover {
-            transform: translateX(8px);
-            background-color: rgba(var(--bs-primary-rgb), 0.08);
-          }
+      }
+
+      // Ensure ALL menu text is visible on mobile (overrides laptop icon-only mode)
+      .nav-link {
+        span,
+        .menu-text {
+          display: inline !important;
         }
       }
     }
-    
-    // Mobile submenu styling - lighter appearance
+
+    // Submenu - rely on Velzon's native styling for dash indicators
+    // Do NOT override ::before which creates the dash indicator
     .menu-dropdown {
-      .nav-sm {
-        .nav-item {
-          .nav-link {
-            font-weight: 400;
-            color: var(--bs-gray-600);
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            
-            &:hover {
-              transform: translateX(6px);
-              color: var(--bs-primary);
-            }
-          }
-        }
-      }
+      box-shadow: none;
+      border: none;
+      border-radius: 0;
     }
   }
+}
+
+// ============================================================================
+// ACTIVE STATE (all breakpoints)
+// ============================================================================
+.nav-link.active,
+.nav-link.router-link-active {
+  color: var(--bs-primary);
 }

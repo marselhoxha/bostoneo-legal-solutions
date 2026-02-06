@@ -216,10 +216,10 @@ export const ATTORNEY_MENU: MenuItem[] = [
     icon: 'ri-briefcase-4-line',
     link: '/legal/cases',
     subItems: [
-      { id: 'att-case-cases', label: 'Cases', link: '/legal/cases', parentId: 'att-case-mgmt' },
-      { id: 'att-case-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'att-case-mgmt' },
-      { id: 'att-case-tasks', label: 'Tasks', link: '/case-management/tasks', parentId: 'att-case-mgmt' },
-      { id: 'att-case-assignments', label: 'Assignments', link: '/case-management/assignments', parentId: 'att-case-mgmt' }
+      { id: 'att-case-cases', label: 'Cases', icon: 'ri-folder-open-line', link: '/legal/cases', parentId: 'att-case-mgmt' },
+      { id: 'att-case-calendar', label: 'Calendar', icon: 'ri-calendar-line', link: '/legal/calendar', parentId: 'att-case-mgmt' },
+      { id: 'att-case-tasks', label: 'Tasks', icon: 'ri-task-line', link: '/case-management/tasks', parentId: 'att-case-mgmt' },
+      { id: 'att-case-assignments', label: 'Assignments', icon: 'ri-user-add-line', link: '/case-management/assignments', parentId: 'att-case-mgmt' }
     ]
   },
   {
@@ -228,14 +228,14 @@ export const ATTORNEY_MENU: MenuItem[] = [
     icon: 'ri-robot-line',
     link: '/legal/ai-assistant/ai-workspace',
     subItems: [
-      { id: 'att-ai-workspace', label: 'AI Workspace', link: '/legal/ai-assistant/ai-workspace', parentId: 'att-ai-tools' },
-      { id: 'att-ai-personal-injury', label: 'Personal Injury', link: '/legal/ai-assistant/practice-areas/personal-injury', parentId: 'att-ai-tools' },
-      { id: 'att-ai-family-law', label: 'Family Law', link: '/legal/ai-assistant/practice-areas/family-law', parentId: 'att-ai-tools' },
-      { id: 'att-ai-criminal', label: 'Criminal Defense', link: '/legal/ai-assistant/practice-areas/criminal-defense', parentId: 'att-ai-tools' },
-      { id: 'att-ai-immigration', label: 'Immigration', link: '/legal/ai-assistant/practice-areas/immigration', parentId: 'att-ai-tools' },
-      { id: 'att-ai-real-estate', label: 'Real Estate', link: '/legal/ai-assistant/practice-areas/real-estate', parentId: 'att-ai-tools' },
-      { id: 'att-ai-ip', label: 'Intellectual Property', link: '/legal/ai-assistant/practice-areas/intellectual-property', parentId: 'att-ai-tools' },
-      { id: 'att-ai-practice-areas', label: 'All Practice Areas', link: '/legal/ai-assistant/practice-areas', parentId: 'att-ai-tools' }
+      { id: 'att-ai-workspace', label: 'AI Workspace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/ai-workspace', parentId: 'att-ai-tools' },
+      { id: 'att-ai-personal-injury', label: 'Personal Injury', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/practice-areas/personal-injury', parentId: 'att-ai-tools' },
+      { id: 'att-ai-family-law', label: 'Family Law', icon: 'ri-parent-line', link: '/legal/ai-assistant/practice-areas/family-law', parentId: 'att-ai-tools' },
+      { id: 'att-ai-criminal', label: 'Criminal Defense', icon: 'ri-shield-user-line', link: '/legal/ai-assistant/practice-areas/criminal-defense', parentId: 'att-ai-tools' },
+      { id: 'att-ai-immigration', label: 'Immigration', icon: 'ri-passport-line', link: '/legal/ai-assistant/practice-areas/immigration', parentId: 'att-ai-tools' },
+      { id: 'att-ai-real-estate', label: 'Real Estate', icon: 'ri-building-line', link: '/legal/ai-assistant/practice-areas/real-estate', parentId: 'att-ai-tools' },
+      { id: 'att-ai-ip', label: 'Intellectual Property', icon: 'ri-lightbulb-line', link: '/legal/ai-assistant/practice-areas/intellectual-property', parentId: 'att-ai-tools' },
+      { id: 'att-ai-practice-areas', label: 'All Practice Areas', icon: 'ri-apps-line', link: '/legal/ai-assistant/practice-areas', parentId: 'att-ai-tools' }
     ]
   },
   {
@@ -250,11 +250,11 @@ export const ATTORNEY_MENU: MenuItem[] = [
     icon: 'ri-time-line',
     link: '/time-tracking/dashboard',
     subItems: [
-      { id: 'att-time-dashboard', label: 'Dashboard', link: '/time-tracking/dashboard', parentId: 'att-time-billing' },
-      { id: 'att-time-entry', label: 'Log Time', link: '/time-tracking/entry', parentId: 'att-time-billing' },
-      { id: 'att-time-timesheet', label: 'Timesheet', link: '/time-tracking/timesheet', parentId: 'att-time-billing' },
-      { id: 'att-time-approval', label: 'Approval', link: '/time-tracking/approval', parentId: 'att-time-billing' },
-      { id: 'att-time-rates', label: 'Billing Rates', link: '/time-tracking/rates', parentId: 'att-time-billing' }
+      { id: 'att-time-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/time-tracking/dashboard', parentId: 'att-time-billing' },
+      { id: 'att-time-entry', label: 'Log Time', icon: 'ri-timer-line', link: '/time-tracking/entry', parentId: 'att-time-billing' },
+      { id: 'att-time-timesheet', label: 'Timesheet', icon: 'ri-file-list-line', link: '/time-tracking/timesheet', parentId: 'att-time-billing' },
+      { id: 'att-time-approval', label: 'Approval', icon: 'ri-checkbox-circle-line', link: '/time-tracking/approval', parentId: 'att-time-billing' },
+      { id: 'att-time-rates', label: 'Billing Rates', icon: 'ri-price-tag-3-line', link: '/time-tracking/rates', parentId: 'att-time-billing' }
     ]
   },
   {
@@ -334,10 +334,10 @@ export const ADMIN_MENU: MenuItem[] = [
     icon: 'ri-briefcase-4-line',
     link: '/legal/cases',
     subItems: [
-      { id: 'admin-case-cases', label: 'Cases', link: '/legal/cases', parentId: 'admin-case-mgmt' },
-      { id: 'admin-case-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'admin-case-mgmt' },
-      { id: 'admin-case-tasks', label: 'Tasks', link: '/case-management/tasks', parentId: 'admin-case-mgmt' },
-      { id: 'admin-case-assignments', label: 'Assignments', link: '/case-management/assignments', parentId: 'admin-case-mgmt' }
+      { id: 'admin-case-cases', label: 'Cases', icon: 'ri-folder-open-line', link: '/legal/cases', parentId: 'admin-case-mgmt' },
+      { id: 'admin-case-calendar', label: 'Calendar', icon: 'ri-calendar-line', link: '/legal/calendar', parentId: 'admin-case-mgmt' },
+      { id: 'admin-case-tasks', label: 'Tasks', icon: 'ri-task-line', link: '/case-management/tasks', parentId: 'admin-case-mgmt' },
+      { id: 'admin-case-assignments', label: 'Assignments', icon: 'ri-user-add-line', link: '/case-management/assignments', parentId: 'admin-case-mgmt' }
     ]
   },
   {
@@ -346,14 +346,14 @@ export const ADMIN_MENU: MenuItem[] = [
     icon: 'ri-robot-line',
     link: '/legal/ai-assistant/ai-workspace',
     subItems: [
-      { id: 'admin-ai-workspace', label: 'AI Workspace', link: '/legal/ai-assistant/ai-workspace', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-personal-injury', label: 'Personal Injury', link: '/legal/ai-assistant/practice-areas/personal-injury', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-family-law', label: 'Family Law', link: '/legal/ai-assistant/practice-areas/family-law', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-criminal', label: 'Criminal Defense', link: '/legal/ai-assistant/practice-areas/criminal-defense', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-immigration', label: 'Immigration', link: '/legal/ai-assistant/practice-areas/immigration', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-real-estate', label: 'Real Estate', link: '/legal/ai-assistant/practice-areas/real-estate', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-ip', label: 'Intellectual Property', link: '/legal/ai-assistant/practice-areas/intellectual-property', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-practice-areas', label: 'All Practice Areas', link: '/legal/ai-assistant/practice-areas', parentId: 'admin-ai-tools' }
+      { id: 'admin-ai-workspace', label: 'AI Workspace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/ai-workspace', parentId: 'admin-ai-tools' },
+      { id: 'admin-ai-personal-injury', label: 'Personal Injury', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/practice-areas/personal-injury', parentId: 'admin-ai-tools' },
+      { id: 'admin-ai-family-law', label: 'Family Law', icon: 'ri-parent-line', link: '/legal/ai-assistant/practice-areas/family-law', parentId: 'admin-ai-tools' },
+      { id: 'admin-ai-criminal', label: 'Criminal Defense', icon: 'ri-shield-user-line', link: '/legal/ai-assistant/practice-areas/criminal-defense', parentId: 'admin-ai-tools' },
+      { id: 'admin-ai-immigration', label: 'Immigration', icon: 'ri-passport-line', link: '/legal/ai-assistant/practice-areas/immigration', parentId: 'admin-ai-tools' },
+      { id: 'admin-ai-real-estate', label: 'Real Estate', icon: 'ri-building-line', link: '/legal/ai-assistant/practice-areas/real-estate', parentId: 'admin-ai-tools' },
+      { id: 'admin-ai-ip', label: 'Intellectual Property', icon: 'ri-lightbulb-line', link: '/legal/ai-assistant/practice-areas/intellectual-property', parentId: 'admin-ai-tools' },
+      { id: 'admin-ai-practice-areas', label: 'All Practice Areas', icon: 'ri-apps-line', link: '/legal/ai-assistant/practice-areas', parentId: 'admin-ai-tools' }
     ]
   },
   {
@@ -368,14 +368,14 @@ export const ADMIN_MENU: MenuItem[] = [
     icon: 'ri-time-line',
     link: '/time-tracking/dashboard',
     subItems: [
-      { id: 'admin-time-dashboard', label: 'Dashboard', link: '/time-tracking/dashboard', parentId: 'admin-time-billing' },
-      { id: 'admin-time-entry', label: 'Log Time', link: '/time-tracking/entry', parentId: 'admin-time-billing' },
-      { id: 'admin-time-timesheet', label: 'Timesheet', link: '/time-tracking/timesheet', parentId: 'admin-time-billing' },
-      { id: 'admin-time-approval', label: 'Approval', link: '/time-tracking/approval', parentId: 'admin-time-billing' },
-      { id: 'admin-time-rates', label: 'Billing Rates', link: '/time-tracking/rates', parentId: 'admin-time-billing' },
-      { id: 'admin-time-rate-mgmt', label: 'Rate Management', link: '/time-tracking/rate-management', parentId: 'admin-time-billing' },
-      { id: 'admin-time-invoice-gen', label: 'Invoice Generation', link: '/time-tracking/billing/invoice-generation', parentId: 'admin-time-billing' },
-      { id: 'admin-time-analytics', label: 'Analytics', link: '/time-tracking/billing/analytics', parentId: 'admin-time-billing' }
+      { id: 'admin-time-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/time-tracking/dashboard', parentId: 'admin-time-billing' },
+      { id: 'admin-time-entry', label: 'Log Time', icon: 'ri-timer-line', link: '/time-tracking/entry', parentId: 'admin-time-billing' },
+      { id: 'admin-time-timesheet', label: 'Timesheet', icon: 'ri-file-list-line', link: '/time-tracking/timesheet', parentId: 'admin-time-billing' },
+      { id: 'admin-time-approval', label: 'Approval', icon: 'ri-checkbox-circle-line', link: '/time-tracking/approval', parentId: 'admin-time-billing' },
+      { id: 'admin-time-rates', label: 'Billing Rates', icon: 'ri-price-tag-3-line', link: '/time-tracking/rates', parentId: 'admin-time-billing' },
+      { id: 'admin-time-rate-mgmt', label: 'Rate Management', icon: 'ri-settings-4-line', link: '/time-tracking/rate-management', parentId: 'admin-time-billing' },
+      { id: 'admin-time-invoice-gen', label: 'Invoice Generation', icon: 'ri-bill-line', link: '/time-tracking/billing/invoice-generation', parentId: 'admin-time-billing' },
+      { id: 'admin-time-analytics', label: 'Analytics', icon: 'ri-bar-chart-line', link: '/time-tracking/billing/analytics', parentId: 'admin-time-billing' }
     ]
   },
   {

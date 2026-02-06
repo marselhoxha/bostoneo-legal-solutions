@@ -115,8 +115,6 @@ export class CitationViewerModalComponent implements OnInit, OnDestroy, AfterVie
     // Get the search text - use a more specific approach
     let searchText = this.getSearchableText(this.citation.excerpt);
 
-    console.log('Searching PDF for:', searchText);
-
     // Use ngx-extended-pdf-viewer service to find text
     this.ngZone.runOutsideAngular(() => {
       this.pdfViewerService.find(searchText, {

@@ -5,9 +5,13 @@
 
 <div class="drafting-container" style="margin-top: 100px; max-width: 100%;">
 
-  <!-- Mobile Menu Toggle Button -->
-  <button class="mobile-menu-toggle" (click)="toggleSidebar()" aria-label="Toggle sidebar">
-    <i class="ri-menu-line"></i>
+  <!-- Mobile Menu Toggle Button - Opens history bottom sheet (hidden when in conversation) -->
+  <button class="mobile-menu-toggle"
+          *ngIf="!(showChat$ | async) && !(isGenerating$ | async) && !(draftingMode$ | async) && !(documentViewerMode$ | async)"
+          (click)="toggleSidebar()"
+          aria-label="View history">
+    <i class="ri-chat-history-line"></i>
+    <span class="toggle-label">History</span>
   </button>
 
   <!-- Note: Background Tasks Indicator moved to global topbar for app-wide visibility -->
@@ -1764,6 +1768,13 @@
 
     <!-- Chat Container (Active conversation - full width when not in drafting mode, hidden when document viewer is open) -->
     <div class="chat-container-main" *ngIf="((showChat$ | async) || (isGenerating$ | async)) && !(draftingMode$ | async) && !(documentViewerMode$ | async)">
+      <!-- Mobile Back Button Header -->
+      <div class="mobile-chat-header">
+        <button class="btn-back" (click)="goBackToTaskSelection()" aria-label="Go back">
+          <i class="ri-arrow-left-s-line"></i>
+        </button>
+        <span class="chat-header-title">{{ getActiveConversationTitle() || 'Conversation' }}</span>
+      </div>
       <div class="chat-messages-area">
         <ul class="list-unstyled chat-conversation-list">
 

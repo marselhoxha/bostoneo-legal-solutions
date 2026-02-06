@@ -1332,9 +1332,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         const caseName = this.case.title;
         const caseNumber = this.case.caseNumber;
 
-        // Debug: Log the update data being sent
-        console.log('Updating case with data:', JSON.stringify(updateData, null, 2));
-
         // Call the API to update the case
         this.caseService.updateCase(this.case.id, updateData).subscribe({
           next: async (response) => {

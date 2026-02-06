@@ -1,7 +1,7 @@
 # =============================================================================
-# Legience - RDS Aurora MySQL Module
+# Legience - RDS Aurora PostgreSQL Module
 # =============================================================================
-# Aurora MySQL Serverless v2 - HIPAA and SOC 2 compliant
+# Aurora PostgreSQL Serverless v2 - HIPAA and SOC 2 compliant
 # =============================================================================
 
 terraform {
@@ -52,11 +52,11 @@ resource "aws_security_group" "rds" {
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port       = 3306
-    to_port         = 3306
+    from_port       = 5432
+    to_port         = 5432
     protocol        = "tcp"
     security_groups = var.allowed_security_groups
-    description     = "MySQL from allowed security groups"
+    description     = "PostgreSQL from allowed security groups"
   }
 
   egress {
@@ -83,40 +83,36 @@ resource "aws_security_group" "rds" {
 # DB Parameter Group
 # -----------------------------------------------------------------------------
 resource "aws_rds_cluster_parameter_group" "main" {
-  family      = "aurora-mysql8.0"
+  family      = "aurora-postgresql15"
   name        = "legience-${var.environment}-aurora-params"
-  description = "Aurora MySQL parameter group for Legience"
+  description = "Aurora PostgreSQL parameter group for Legience"
 
-  # Performance and security parameters
+  # Performance parameters
   parameter {
-    name  = "character_set_server"
-    value = "utf8mb4"
+    name  = "log_statement"
+    value = "ddl"
   }
 
   parameter {
-    name  = "character_set_client"
-    value = "utf8mb4"
+    name  = "log_min_duration_statement"
+    value = "2000"  # Log queries longer than 2 seconds
   }
 
   parameter {
-    name  = "slow_query_log"
+    name  = "log_connections"
     value = "1"
   }
 
   parameter {
-    name  = "long_query_time"
-    value = "2"
-  }
-
-  parameter {
-    name  = "log_output"
-    value = "FILE"
+    name  = "log_disconnections"
+    value = "1"
   }
 
   # Security parameters
   parameter {
-    name  = "require_secure_transport"
-    value = "ON"
+    name         = "rds.force_ssl"
+    value        = "1"
+    apply_method = "pending-reboot"
   }
 
   tags = {
@@ -127,16 +123,17 @@ resource "aws_rds_cluster_parameter_group" "main" {
 }
 
 # -----------------------------------------------------------------------------
-# Aurora MySQL Serverless v2 Cluster
+# Aurora PostgreSQL Serverless v2 Cluster
 # -----------------------------------------------------------------------------
 resource "aws_rds_cluster" "main" {
   cluster_identifier = "legience-${var.environment}"
-  engine             = "aurora-mysql"
+  engine             = "aurora-postgresql"
   engine_mode        = "provisioned"
   engine_version     = var.engine_version
   database_name      = var.database_name
   master_username    = var.master_username
   master_password    = random_password.master.result
+  port               = 5432
 
   # Serverless v2 configuration
   serverlessv2_scaling_configuration {
@@ -163,8 +160,8 @@ resource "aws_rds_cluster" "main" {
   skip_final_snapshot          = var.environment == "staging" ? true : false
   final_snapshot_identifier    = var.environment == "production" ? "legience-${var.environment}-final-${formatdate("YYYY-MM-DD", timestamp())}" : null
 
-  # Logging (SOC 2 requirement)
-  enabled_cloudwatch_logs_exports = ["audit", "error", "slowquery"]
+  # Logging (SOC 2 requirement) - PostgreSQL log exports
+  enabled_cloudwatch_logs_exports = ["postgresql"]
 
   tags = {
     Name        = "legience-${var.environment}-aurora"
@@ -283,6 +280,6 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
     host     = aws_rds_cluster.main.endpoint
     port     = aws_rds_cluster.main.port
     dbname   = var.database_name
-    url      = "jdbc:mysql://${aws_rds_cluster.main.endpoint}:${aws_rds_cluster.main.port}/${var.database_name}"
+    url      = "jdbc:postgresql://${aws_rds_cluster.main.endpoint}:${aws_rds_cluster.main.port}/${var.database_name}"
   })
 }

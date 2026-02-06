@@ -17,6 +17,14 @@ terraform {
       version = "~> 3.0"
     }
   }
+
+  backend "s3" {
+    bucket         = "legience-terraform-state"
+    key            = "staging/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "legience-terraform-locks"
+  }
 }
 
 provider "aws" {
@@ -76,7 +84,7 @@ module "s3" {
 }
 
 # -----------------------------------------------------------------------------
-# RDS Aurora MySQL (Smaller capacity for staging)
+# RDS Aurora PostgreSQL (Smaller capacity for staging)
 # -----------------------------------------------------------------------------
 module "rds" {
   source = "../../modules/rds"
@@ -174,10 +182,29 @@ resource "aws_lb_listener" "http" {
   protocol          = "HTTP"
 
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.api.arn
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
 }
+
+# Note: HTTPS listener requires ACM certificate
+# Uncomment after certificate is created
+# resource "aws_lb_listener" "https" {
+#   load_balancer_arn = aws_lb.api.arn
+#   port              = 443
+#   protocol          = "HTTPS"
+#   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+#   certificate_arn   = aws_acm_certificate.main.arn
+#
+#   default_action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.api.arn
+#   }
+# }
 
 # -----------------------------------------------------------------------------
 # ECS (Smaller capacity for staging)

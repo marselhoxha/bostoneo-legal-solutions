@@ -99,11 +99,8 @@ export class DocumentAnalyzerService {
     // Refresh if token expires within 15 minutes (buffer for 10-min max analysis + follow-up requests)
     if (this.userService.isTokenAboutToExpire(15)) {
       try {
-        console.log('[DocumentAnalyzer] Token about to expire, refreshing before analysis...');
         await lastValueFrom(this.userService.refreshToken$());
-        console.log('[DocumentAnalyzer] Token refreshed successfully');
       } catch (error) {
-        console.warn('[DocumentAnalyzer] Failed to proactively refresh token:', error);
         // Continue anyway - the interceptor will handle if truly expired
       }
     }

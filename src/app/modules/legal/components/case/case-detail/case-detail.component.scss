@@ -1233,19 +1233,6 @@ body, html {
       }
     }
 
-    // Fade effect to indicate scrollable content
-    &::after {
-      content: '';
-      position: absolute;
-      right: 0;
-      top: 0;
-      bottom: 6px;
-      width: 40px;
-      background: linear-gradient(to right, transparent, var(--vz-card-bg));
-      pointer-events: none;
-      z-index: 1;
-    }
-
     .nav-item {
       flex-shrink: 0;
     }
@@ -1296,12 +1283,6 @@ body, html {
 
     &::-webkit-scrollbar-thumb {
       background-color: #64748b;
-    }
-
-    // Stronger fade hint
-    &::after {
-      width: 60px;
-      background: linear-gradient(to right, transparent 0%, var(--vz-card-bg) 80%);
     }
 
     .nav-link {

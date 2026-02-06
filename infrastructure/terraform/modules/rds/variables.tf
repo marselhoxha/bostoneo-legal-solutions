@@ -45,9 +45,9 @@ variable "master_username" {
 }
 
 variable "engine_version" {
-  description = "Aurora MySQL engine version"
+  description = "Aurora PostgreSQL engine version"
   type        = string
-  default     = "8.0.mysql_aurora.3.04.0"
+  default     = "15.4"
 }
 
 variable "min_capacity" {

@@ -19,5 +19,5 @@ variable "availability_zones" {
 variable "api_image" {
   description = "Docker image for API"
   type        = string
-  default     = "ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/legience-api:staging"
+  default     = "724629565287.dkr.ecr.us-east-1.amazonaws.com/legience-api:staging"
 }

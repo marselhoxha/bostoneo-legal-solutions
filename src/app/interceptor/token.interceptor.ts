@@ -64,7 +64,6 @@ export class TokenInterceptor implements HttpInterceptor {
         // Token is valid and not expired - ALWAYS reset failed state and proceed
         const currentState = this.refreshState$.getValue();
         if (currentState.failed) {
-          console.log('[TokenInterceptor] Valid non-expired token found, resetting failed state');
           this.resetState();
         }
 

@@ -261,19 +261,12 @@ export class NotificationService {
      * Mark notification as read
      */
     markAsRead(notificationId: string): Observable<void> {
-        console.log('NotificationService.markAsRead called with ID:', notificationId);
-        console.log('API URL:', `${this.apiUrl}/notifications/${notificationId}/read`);
-
         return this.http.put<CustomHttpResponse<void>>(
             `${this.apiUrl}/notifications/${notificationId}/read`,
             {}
         ).pipe(
-            tap(response => {
-                console.log('markAsRead API response:', response);
-            }),
             map(response => response.data),
             tap(() => {
-                console.log('Notification marked as read successfully in backend');
                 // Update local store
                 const notifications = this.userNotifications$.value;
                 const notification = notifications.find(n => n.id === notificationId);

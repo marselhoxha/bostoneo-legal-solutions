@@ -20,14 +20,13 @@ terraform {
     }
   }
 
-  # Remote state configuration (uncomment after S3 bucket is created)
-  # backend "s3" {
-  #   bucket         = "legience-terraform-state"
-  #   key            = "production/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   encrypt        = true
-  #   dynamodb_table = "legience-terraform-locks"
-  # }
+  backend "s3" {
+    bucket         = "legience-terraform-state"
+    key            = "production/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "legience-terraform-locks"
+  }
 }
 
 # -----------------------------------------------------------------------------
@@ -112,7 +111,7 @@ module "s3" {
 }
 
 # -----------------------------------------------------------------------------
-# RDS Aurora MySQL
+# RDS Aurora PostgreSQL
 # -----------------------------------------------------------------------------
 module "rds" {
   source = "../../modules/rds"

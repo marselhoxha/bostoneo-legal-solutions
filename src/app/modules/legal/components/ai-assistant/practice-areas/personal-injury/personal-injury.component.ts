@@ -1154,13 +1154,11 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
             this.demandDocumentId = response.documentId || null;
             this.demandConversationId = response.conversationId || null;
             this.demandDocumentContent = this.formatTablesForQuill(response.demandLetter);
-            console.log('Loaded existing demand letter for case', this.linkedCase?.id);
             this.cdr.detectChanges();
           }
         },
         error: (error) => {
           // No existing demand letter or error - that's okay, user can generate a new one
-          console.log('No existing demand letter found for case:', this.linkedCase?.id);
         }
       });
   }
@@ -2992,7 +2990,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           localStorage.setItem('pi_medical_providers', JSON.stringify(this.medicalProviders));
         }
       } catch (e) {
-        console.log('Could not parse medical providers from case');
+        // Could not parse medical providers from case - continue with defaults
       }
     }
   }

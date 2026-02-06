@@ -1449,13 +1449,309 @@
 [data-bs-theme="dark"] .expanded-table {
   background: var(--vz-dark);
   border-color: var(--vz-primary);
-  
+
   thead.sticky-top th {
     background: var(--vz-dark) !important;
     color: var(--vz-light);
   }
-  
+
   &::-webkit-scrollbar-track {
     background: var(--vz-dark);
+  }
+}
+
+/* ============================================================================
+   MOBILE RESPONSIVE STYLES - Time Dashboard Header & Stats
+   ============================================================================ */
+
+/* Tablet and below - Header stats layout */
+@media (max-width: 991.98px) {
+  /* Header section - stack title and stats */
+  .card-body > .row.align-items-center > .col-lg-8,
+  .card-body > .row.align-items-center > .col-lg-4 {
+    margin-bottom: 1rem;
+  }
+
+  /* Status badges - smaller on tablet */
+  .badge.px-2.py-1 {
+    font-size: 0.6875rem;
+    padding: 0.25rem 0.5rem !important;
+  }
+}
+
+/* Mobile - Header stats become 2 columns then stack */
+@media (max-width: 767.98px) {
+  /* Info alert - stack content and button */
+  .alert-info .d-flex.align-items-center {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.75rem;
+
+    .flex-grow-1 {
+      width: 100%;
+    }
+
+    .btn {
+      width: 100%;
+    }
+  }
+
+  /* Statistics cards row - smaller padding */
+  .row.g-4.mb-4 > [class*="col-"] {
+    .card-body {
+      padding: 0.875rem;
+    }
+
+    /* Smaller stat values */
+    .fs-22 {
+      font-size: 1.125rem;
+    }
+
+    /* Smaller trend badges */
+    .trend-badge {
+      font-size: 0.5625rem;
+      padding: 0.15rem 0.35rem;
+    }
+
+    /* Smaller avatar */
+    .avatar-sm {
+      width: 32px;
+      height: 32px;
+
+      .avatar-title {
+        width: 32px;
+        height: 32px;
+
+        i {
+          font-size: 1rem;
+        }
+      }
+    }
+  }
+
+  /* Quick Actions - 2 columns on tablet */
+  .row.g-3 > .col-md-3.col-sm-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+}
+
+/* Small mobile - stat cards full width */
+@media (max-width: 575.98px) {
+  /* Header stat cards - 2 per row on very small screens */
+  .col-lg-4 > .row.g-3 > .col-4 {
+    flex: 0 0 50%;
+    max-width: 50%;
+
+    &:last-child {
+      flex: 0 0 100%;
+      max-width: 100%;
+      margin-top: 0.5rem;
+    }
+  }
+
+  /* Smaller text in header stat cards */
+  .col-lg-4 .p-3 {
+    padding: 0.5rem !important;
+
+    .fs-20 {
+      font-size: 1rem;
+    }
+
+    h4.mb-0 {
+      font-size: 0.875rem;
+    }
+
+    small.fw-semibold {
+      font-size: 0.6875rem;
+      display: block;
+      line-height: 1.2;
+    }
+  }
+
+  /* Status badges - even smaller on mobile */
+  .badge.px-2.py-1 {
+    font-size: 0.625rem;
+    padding: 0.2rem 0.4rem !important;
+
+    i {
+      font-size: 0.625rem;
+    }
+  }
+
+  /* Quick Actions - single column on mobile */
+  .row.g-3 > .col-md-3.col-sm-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  /* Statistics cards - smaller */
+  .row.g-4.mb-4 > [class*="col-"] {
+    .card-body {
+      padding: 0.75rem;
+    }
+
+    .fs-22 {
+      font-size: 1rem;
+    }
+
+    .fs-13 {
+      font-size: 0.6875rem;
+    }
+
+    .badge.fs-12 {
+      font-size: 0.625rem;
+      padding: 0.2rem 0.4rem;
+    }
+
+    .progress-sm {
+      height: 0.2rem;
+    }
+
+    .card-footer {
+      padding: 0.5rem 0.75rem;
+
+      small {
+        font-size: 0.6875rem;
+      }
+    }
+  }
+
+  /* Page title box - compact */
+  .page-title-box {
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+
+    .breadcrumb {
+      font-size: 0.75rem;
+    }
+  }
+
+  /* Header title section - compact */
+  .avatar-sm {
+    width: 36px;
+    height: 36px;
+
+    .avatar-title {
+      width: 36px;
+      height: 36px;
+
+      i.fs-18 {
+        font-size: 1rem;
+      }
+    }
+  }
+
+  h4.mb-1.fw-semibold {
+    font-size: 1rem;
+    margin-bottom: 0.25rem !important;
+  }
+
+  p.text-muted.mb-2 {
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem !important;
+    line-height: 1.3;
+  }
+
+  /* Recent entries table - responsive */
+  .recent-entries {
+    .card-header {
+      flex-direction: column;
+      align-items: flex-start !important;
+      gap: 0.75rem;
+
+      h5.card-title {
+        font-size: 0.9375rem;
+      }
+
+      .d-flex.gap-2 {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
+    .card-footer .d-flex {
+      flex-direction: column;
+      gap: 0.5rem;
+
+      .d-flex.gap-3 {
+        flex-wrap: wrap;
+        gap: 0.5rem !important;
+      }
+    }
+
+    /* Table columns - hide less important ones on mobile */
+    .table {
+      font-size: 0.8125rem;
+
+      thead th {
+        font-size: 0.6875rem;
+        padding: 0.5rem;
+      }
+
+      tbody td {
+        padding: 0.5rem;
+      }
+
+      /* Hide Status and Billing columns on mobile to fit better */
+      th:nth-child(4),
+      td:nth-child(4),
+      th:nth-child(5),
+      td:nth-child(5) {
+        display: none;
+      }
+    }
+  }
+
+  /* Timer widget responsive */
+  .timer-widget {
+    .card-header h5.card-title {
+      font-size: 0.9375rem;
+    }
+
+    .card-footer {
+      flex-direction: column;
+      gap: 0.25rem;
+      text-align: center;
+    }
+  }
+
+  /* Active timers list */
+  .list-group-item {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+
+    .d-flex.gap-2 {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+}
+
+/* Very small screens - extreme compact mode */
+@media (max-width: 374px) {
+  /* Single column stat cards */
+  .col-lg-4 > .row.g-3 > .col-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  /* Extra small title */
+  h4.mb-1.fw-semibold {
+    font-size: 0.9375rem;
+  }
+
+  /* Hide trend badges on very small screens */
+  .trend-badge {
+    display: none;
+  }
+
+  /* Recent entries - hide more columns */
+  .recent-entries .table {
+    th:nth-child(3),
+    td:nth-child(3) {
+      display: none;
+    }
   }
 } 

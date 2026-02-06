@@ -2739,7 +2739,46 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.stateService.setSidebarOpen(false);
   }
 
+  // Go back to task selection from conversation view (mobile)
+  goBackToTaskSelection(): void {
+    // Clear active conversation
+    this.stateService.setActiveConversationId(null);
+    this.stateService.clearConversationMessages();
 
+    // Reset UI state to show welcome screen
+    this.stateService.setShowChat(false);
+    this.stateService.setShowBottomSearchBar(false);
+    this.stateService.setIsGenerating(false);
+    this.stateService.setDraftingMode(false);
+
+    // Clear inputs
+    this.customPrompt = '';
+    this.followUpMessage = '';
+    this.stateService.clearFollowUpQuestions();
+
+    // Reset workflow steps
+    this.resetWorkflowSteps();
+  }
+
+  // Get title of active conversation for mobile header
+  getActiveConversationTitle(): string {
+    const activeId = this.stateService.getActiveConversationId();
+    if (!activeId) {
+      // Check if there's a selected task type
+      if (this.selectedTask) {
+        const taskLabels: { [key: string]: string } = {
+          'question': 'Legal Question',
+          'draft': 'Document Draft',
+          'upload': 'Document Analysis',
+          'workflow': 'Workflow'
+        };
+        return taskLabels[this.selectedTask] || 'AI Assistant';
+      }
+      return 'AI Assistant';
+    }
+    const conversation = this.stateService.getConversations().find(c => c.id === activeId);
+    return conversation?.title || 'Conversation';
+  }
 
 
   // ========================================
@@ -3075,6 +3114,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Switch to a conversation (alias for loadConversation)
   switchConversation(conversationId: string): void {
     this.loadConversation(conversationId);
+    // Close sidebar on mobile after selecting conversation
+    this.closeSidebar();
   }
 
   // Delete an analyzed document
@@ -3735,12 +3776,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // This prevents logout when token expired during the 10+ minute analysis
     try {
       if (this.userService.isTokenAboutToExpire(5)) {
-        console.log('[AI Workspace] Refreshing token after long analysis...');
         await lastValueFrom(this.userService.refreshToken$());
-        console.log('[AI Workspace] Token refreshed successfully');
       }
     } catch (error) {
-      console.warn('[AI Workspace] Token refresh failed after analysis, continuing anyway:', error);
       // Continue anyway - interceptor will handle if truly expired
     }
 
@@ -8200,12 +8238,9 @@ You can:
     // Token may have expired during long background analysis
     try {
       if (this.userService.isTokenAboutToExpire(5)) {
-        console.log('[AI Workspace] Refreshing token in background task handler...');
         await lastValueFrom(this.userService.refreshToken$());
-        console.log('[AI Workspace] Token refreshed successfully');
       }
     } catch (error) {
-      console.warn('[AI Workspace] Token refresh failed in background task handler:', error);
       // Continue anyway - interceptor will handle if truly expired
     }
 
