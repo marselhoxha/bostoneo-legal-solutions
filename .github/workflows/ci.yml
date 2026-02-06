@@ -103,6 +103,13 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Generate Environment Files
+        run: |
+          mkdir -p src/environments
+          echo '${{ secrets.ENV_TS }}' > src/environments/environment.ts
+          echo '${{ secrets.ENV_PROD_TS }}' > src/environments/environment.prod.ts
+          echo '${{ secrets.ENV_STAGING_TS }}' > src/environments/environment.staging.ts
+
       - name: Build
         run: npm run build -- --configuration=production
 
@@ -216,9 +223,18 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install and Build
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Environment Files
         run: |
-          npm ci
+          mkdir -p src/environments
+          echo '${{ secrets.ENV_TS }}' > src/environments/environment.ts
+          echo '${{ secrets.ENV_PROD_TS }}' > src/environments/environment.prod.ts
+          echo '${{ secrets.ENV_STAGING_TS }}' > src/environments/environment.staging.ts
+
+      - name: Build
+        run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             npm run build -- --configuration=production
           else
