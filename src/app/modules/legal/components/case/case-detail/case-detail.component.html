@@ -1,5 +1,5 @@
 <!-- Breadcrumb -->
-<nav aria-label="breadcrumb" style="margin-top: 100px;">
+<nav aria-label="breadcrumb">
   <ol class="breadcrumb">
     <li class="breadcrumb-item">
       <a [routerLink]="['/']">Home</a>
@@ -162,6 +162,12 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#research" role="tab" aria-selected="false">
+            <i class="ri-search-2-line me-2 align-middle fs-16"></i>
+            <span>Research</span>
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#notes" role="tab" aria-selected="false">
             <i class="ri-sticky-note-line me-2 align-middle fs-16"></i>
             <span>Notes</span>
@@ -201,12 +207,6 @@
           <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#team" role="tab" aria-selected="false" (click)="onTeamTabClick()">
             <i class="ri-team-line me-2 align-middle fs-16"></i>
             <span>Team</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link rounded-pill fw-semibold" data-bs-toggle="tab" href="#research" role="tab" aria-selected="false">
-            <i class="ri-search-2-line me-2 align-middle fs-16"></i>
-            <span>Research</span>
           </a>
         </li>
       </ul>
@@ -803,6 +803,11 @@
         </div>
       </div>
       <!-- End of Case Details Tab -->
+
+      <!-- Legal Research Tab -->
+          <div class="tab-pane fade" id="research" role="tabpanel">
+            <app-case-research [caseId]="caseId" (taskCreated)="onTaskCreated()"></app-case-research>
+          </div>
 
       <!-- Notes Tab -->
           <div class="tab-pane fade" id="notes" role="tabpanel">
@@ -1508,10 +1513,6 @@
             </div>
           </div>
 
-          <!-- Legal Research Tab -->
-          <div class="tab-pane fade" id="research" role="tabpanel">
-            <app-case-research [caseId]="caseId" (taskCreated)="onTaskCreated()"></app-case-research>
-          </div>
         </div>
       </div>
     </div>

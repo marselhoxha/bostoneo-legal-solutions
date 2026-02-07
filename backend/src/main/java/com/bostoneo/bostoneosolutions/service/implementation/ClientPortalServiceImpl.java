@@ -895,7 +895,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
         // Update thread (keep legacy field for backwards compatibility)
         thread.setLastMessageAt(message.getCreatedAt());
         thread.setLastMessageBy("CLIENT");
-        thread.setUnreadByAttorney(thread.getUnreadByAttorney() + 1);
+        thread.setUnreadByAttorney((thread.getUnreadByAttorney() != null ? thread.getUnreadByAttorney() : 0) + 1);
         messageThreadRepository.save(thread);
 
         // CRITICAL FIX: Increment unread count for ALL attorneys assigned to this case/thread
@@ -1099,7 +1099,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                 .lastSenderName(lastSenderName)
                 .lastSenderType(lastSenderType)
                 .lastMessageAt(thread.getLastMessageAt())
-                .unreadCount(thread.getUnreadByClient())
+                .unreadCount(thread.getUnreadByClient() != null ? thread.getUnreadByClient() : 0)
                 .totalMessages(messages.size())
                 .status(thread.getStatus().name())
                 .clientName(clientName)

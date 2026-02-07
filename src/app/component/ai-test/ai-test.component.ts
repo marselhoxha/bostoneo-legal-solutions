@@ -4,7 +4,7 @@ import { AiAssistantService } from '../../service/ai-assistant.service';
 @Component({
   selector: 'app-ai-test',
   template: `
-    <div class="container mt-4" style="margin-top: 120px;">
+    <div class="container mt-4">
       <h2>🤖 AI Assistant Test</h2>
       
       <div class="row">

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 import static java.time.LocalDateTime.now;
 import static java.util.Map.of;
@@ -323,7 +324,8 @@ public class ClientPortalController {
     public ResponseEntity<HttpResponse> sendMessage(
             @AuthenticationPrincipal(expression = "id") Long userId,
             @PathVariable Long threadId,
-            @RequestBody String content) {
+            @RequestBody Map<String, String> request) {
+        String content = request.get("content");
         log.info("Client {} sending message to thread {}", userId, threadId);
         ClientPortalMessageDTO message = clientPortalService.sendMessage(userId, threadId, content);
 

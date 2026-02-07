@@ -147,7 +147,7 @@ export class MessagingService {
    */
   sendReply(threadId: number, content: string): Observable<Message> {
     if (this.isClientRole()) {
-      return this.http.post<any>(`${this.clientApiUrl}/messages/${threadId}`, content).pipe(
+      return this.http.post<any>(`${this.clientApiUrl}/messages/${threadId}`, { content }).pipe(
         map(response => response.data.message)
       );
     }

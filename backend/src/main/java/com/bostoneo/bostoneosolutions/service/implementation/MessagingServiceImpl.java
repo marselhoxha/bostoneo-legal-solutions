@@ -311,7 +311,7 @@ public class MessagingServiceImpl implements MessagingService {
         // Update thread
         thread.setLastMessageAt(message.getCreatedAt());
         thread.setLastMessageBy("ATTORNEY");
-        thread.setUnreadByClient(thread.getUnreadByClient() + 1);
+        thread.setUnreadByClient((thread.getUnreadByClient() != null ? thread.getUnreadByClient() : 0) + 1);
         threadRepository.save(thread);
 
         // CRITICAL: Increment unread count for OTHER attorneys (not the sender)
@@ -362,7 +362,7 @@ public class MessagingServiceImpl implements MessagingService {
         thread.setLastMessageAt(message.getCreatedAt());
         thread.setLastMessageBy("ATTORNEY");
         thread.setChannel("SMS");
-        thread.setUnreadByClient(thread.getUnreadByClient() + 1);
+        thread.setUnreadByClient((thread.getUnreadByClient() != null ? thread.getUnreadByClient() : 0) + 1);
         threadRepository.save(thread);
 
         // CRITICAL: Increment unread count for OTHER attorneys (not the sender)

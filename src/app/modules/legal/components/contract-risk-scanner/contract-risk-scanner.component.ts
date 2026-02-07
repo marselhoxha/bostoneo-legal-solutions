@@ -4,7 +4,7 @@ import { AiAssistantService } from '../../../../service/ai-assistant.service';
 @Component({
   selector: 'app-contract-risk-scanner',
   template: `
-    <div class="container-fluid" style="margin-top: 120px;">
+    <div class="container-fluid">
       <!-- Breadcrumb -->
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">

@@ -9,7 +9,7 @@ import { environment } from 'src/environments/environment';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   template: `
-    <div class="card" style="margin-top: 120px;">
+    <div class="card">
       <div class="card-header bg-soft-primary">
         <h5 class="card-title mb-0">Reminder Email Test Tool</h5>
       </div>

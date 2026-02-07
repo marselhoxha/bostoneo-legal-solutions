@@ -9,7 +9,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   template: `
-    <div class="card" style="margin-top: 120px;">
+    <div class="card">
       <div class="card-header bg-primary text-white">
         <h5 class="card-title mb-0">Firebase Push Notification Test</h5>
       </div>
