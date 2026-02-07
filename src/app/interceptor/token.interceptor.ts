@@ -83,9 +83,10 @@ export class TokenInterceptor implements HttpInterceptor {
         // Proceed with the request using the valid token
         return next.handle(this.addAuthorizationHeader(request, token)).pipe(
           catchError((error) => {
-            if (error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403)) {
+            if (error instanceof HttpErrorResponse && error.status === 401) {
               return this.handleAuthError(request, next);
             }
+            // 403 = valid token but no permission — don't refresh, just propagate the error
             return throwError(() => error);
           })
         );

@@ -43,9 +43,10 @@ export class ClientGuard implements CanActivate, CanActivateChild {
           return this.router.createUrlTree(['/login']);
         }
 
-        // Check if user has ROLE_USER (client portal users)
-        const hasClientRole = user.roleName === 'ROLE_USER' ||
-                              user.roles?.some((role: string) => role === 'ROLE_USER');
+        // Check if user has ROLE_CLIENT or ROLE_USER (client portal users)
+        const hasClientRole = user.roleName === 'ROLE_CLIENT' ||
+                              user.roleName === 'ROLE_USER' ||
+                              user.roles?.some((role: string) => role === 'ROLE_CLIENT' || role === 'ROLE_USER');
 
         if (hasClientRole) {
           return true;

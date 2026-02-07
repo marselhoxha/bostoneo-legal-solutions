@@ -177,11 +177,6 @@ export class TopbarComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     }, 100);
 
-    // Load case management data with a delay to ensure user data is ready
-    setTimeout(() => {
-      this.loadCaseManagementData();
-    }, 1000);
-
     // IMPORTANT: Subscribe to messaging state IMMEDIATELY (don't wait for user data)
     // This ensures we receive WebSocket notifications from the start
     this.subscribeToMessagingState();
@@ -189,8 +184,14 @@ export class TopbarComponent implements OnInit, OnDestroy {
     // Detect user role (for UI display purposes only - messaging subscription already done above)
     this.detectUserRole();
 
-    // Initialize time tracking - subscribe to active timers
-    this.initializeTimeTracking();
+    // Load case management data and time tracking only for non-client users
+    // Client users don't have access to these endpoints
+    if (!this.isClientUser) {
+      setTimeout(() => {
+        this.loadCaseManagementData();
+      }, 1000);
+      this.initializeTimeTracking();
+    }
   }
   
   /**

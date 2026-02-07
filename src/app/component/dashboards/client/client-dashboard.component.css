@@ -1,5 +1,10 @@
 /* Client Dashboard - Premium Velzon Theme */
 
+:host {
+  display: block;
+  margin-top: 70px;
+}
+
 /* Dashboard Greeting - Clean Editorial Design */
 .dashboard-greeting {
   padding: 1.25rem 0 2rem;
