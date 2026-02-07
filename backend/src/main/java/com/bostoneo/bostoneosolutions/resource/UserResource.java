@@ -77,11 +77,18 @@ public class UserResource {
     @Value("${app.profile-image.path:#{systemProperties['user.home'] + '/Downloads/images/'}}")
     private String profileImagePath;
 
+    // Holds the UserPrincipal from authentication to avoid rebuilding it in sendResponse()
+    private final ThreadLocal<UserPrincipal> authenticatedPrincipal = new ThreadLocal<>();
+
     @PostMapping("/login")
     @AuditLog(action = "LOGIN", entityType = "USER", description = "User login attempt")
     public ResponseEntity<HttpResponse> login(@RequestBody @Valid LoginForm loginForm) {
         UserDTO user = authenticate(loginForm.getEmail(), loginForm.getPassword());
-        return user.isUsingMFA() ? sendVerificationCode(user) : sendResponse(user);
+        try {
+            return user.isUsingMFA() ? sendVerificationCode(user) : sendResponse(user);
+        } finally {
+            authenticatedPrincipal.remove();
+        }
     }
 
     @PostMapping("/register")
@@ -133,11 +140,12 @@ public class UserResource {
     public ResponseEntity<HttpResponse> verifyCode(@PathVariable("email") String email, @PathVariable("code") String code) {
         UserDTO user = userService.verifyCode(email, code);
         publisher.publishEvent(new NewUserEvent(user.getEmail(), LOGIN_ATTEMPT_SUCCESS, user.getOrganizationId()));
+        UserPrincipal verifyPrincipal = getUserPrincipal(user);
         return ResponseEntity.ok().body(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .data(of("user", user, "access_token", tokenProvider.createAccessToken(getUserPrincipal(user))
-                                , "refresh_token", tokenProvider.createRefreshToken(getUserPrincipal(user))))
+                        .data(of("user", user, "access_token", tokenProvider.createAccessToken(verifyPrincipal)
+                                , "refresh_token", tokenProvider.createRefreshToken(verifyPrincipal)))
                         .message("Login Success")
                         .status(OK)
                         .statusCode(OK.value())
@@ -325,9 +333,10 @@ public class UserResource {
             UserDTO user = userService.getUserById(userId);
             log.info("Token refresh successful for user: {}", user != null ? user.getEmail() : "unknown");
 
-            // Generate new tokens
-            String newAccessToken = tokenProvider.createAccessToken(getUserPrincipal(user));
-            String newRefreshToken = tokenProvider.createRefreshToken(getUserPrincipal(user));
+            // Generate new tokens (cache principal to avoid duplicate DB queries)
+            UserPrincipal refreshPrincipal = getUserPrincipal(user);
+            String newAccessToken = tokenProvider.createAccessToken(refreshPrincipal);
+            String newRefreshToken = tokenProvider.createRefreshToken(refreshPrincipal);
 
             return ResponseEntity.ok().body(
                     HttpResponse.builder()
@@ -480,21 +489,28 @@ public class UserResource {
     }
 
     private UserDTO authenticate(String email, String password) {
-        UserDTO userByEmail = userService.getUserByEmail(email);
+        // Capture device/IP on request thread for async event processing
+        String device = com.bostoneo.bostoneosolutions.utils.RequestUtils.getDevice(request);
+        String ipAddress = com.bostoneo.bostoneosolutions.utils.RequestUtils.getIpAddress(request);
+        // Fire LOGIN_ATTEMPT event asynchronously without pre-fetching user
+        publisher.publishEvent(new NewUserEvent(email, LOGIN_ATTEMPT, null, device, ipAddress));
         try {
-            if(null != userByEmail) {
-                publisher.publishEvent(new NewUserEvent(email, LOGIN_ATTEMPT, userByEmail.getOrganizationId()));
-            }
             Authentication authentication = authenticationManager.authenticate(unauthenticated(email, password));
+            // Reuse the UserPrincipal from authentication — already has roles + permissions
+            UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
             UserDTO loggedInUser = getLoggedInUser(authentication);
+
+            // Add case role assignments (only extra query needed for token)
+            Set<com.bostoneo.bostoneosolutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(loggedInUser.getId());
+            principal = new UserPrincipal(principal.getUser(), principal.getRoles(), principal.getPermissions(), caseRoleAssignments);
+            authenticatedPrincipal.set(principal);
+
             if(!loggedInUser.isUsingMFA()) {
-                publisher.publishEvent(new NewUserEvent(email, LOGIN_ATTEMPT_SUCCESS, loggedInUser.getOrganizationId()));
+                publisher.publishEvent(new NewUserEvent(email, LOGIN_ATTEMPT_SUCCESS, loggedInUser.getOrganizationId(), device, ipAddress));
             }
             return loggedInUser;
         } catch (Exception exception) {
-            if(null != userByEmail) {
-                publisher.publishEvent(new NewUserEvent(email, LOGIN_ATTEMPT_FAILURE, userByEmail.getOrganizationId()));
-            }
+            publisher.publishEvent(new NewUserEvent(email, LOGIN_ATTEMPT_FAILURE, null, device, ipAddress));
             processError(request, response, exception);
             throw new ApiException(exception.getMessage());
         }
@@ -505,11 +521,17 @@ public class UserResource {
     }
 
     private ResponseEntity<HttpResponse> sendResponse(UserDTO user) {
+        // Reuse principal from authentication — avoids 5+ redundant DB queries
+        UserPrincipal principal = authenticatedPrincipal.get();
+        if (principal == null) {
+            // Fallback for non-login flows (e.g., MFA verify)
+            principal = getUserPrincipal(user);
+        }
         return ResponseEntity.ok().body(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .data(of("user", user, "access_token", tokenProvider.createAccessToken(getUserPrincipal(user))
-                                , "refresh_token", tokenProvider.createRefreshToken(getUserPrincipal(user))))
+                        .data(of("user", user, "access_token", tokenProvider.createAccessToken(principal)
+                                , "refresh_token", tokenProvider.createRefreshToken(principal)))
                         .message("Login Success")
                         .status(OK)
                         .statusCode(OK.value())

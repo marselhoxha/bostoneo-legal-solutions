@@ -77,10 +77,13 @@ export class NotificationService {
      */
     private initializeUserSubscription(): void {
         this.userService.userData$.subscribe(user => {
-            if (user?.id) {
+            if (user?.id && this.currentUserId !== user.id) {
                 this.currentUserId = user.id;
-                this.loadUserNotifications();
-                this.loadUserPreferences();
+                // Defer notification loading by 5s to avoid blocking login
+                setTimeout(() => {
+                    this.loadUserNotifications();
+                    this.loadUserPreferences();
+                }, 5000);
             }
         });
     }

@@ -73,16 +73,20 @@ export class MessagingStateService implements OnDestroy {
     private userService: UserService,
     private ngZone: NgZone
   ) {
-    // Initialize immediately if token exists (no delay)
+    // Defer initialization by 3 seconds to avoid blocking login with HTTP calls + WebSocket
     const token = localStorage.getItem(Key.TOKEN);
     if (token && !this.initialized) {
-      this.initialize();
+      setTimeout(() => {
+        if (!this.initialized) this.initialize();
+      }, 3000);
     }
 
     // Also subscribe to user data changes for login/logout
     this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
       if (user && !this.initialized) {
-        this.initialize();
+        setTimeout(() => {
+          if (!this.initialized) this.initialize();
+        }, 3000);
       } else if (!user) {
         this.reset();
       }

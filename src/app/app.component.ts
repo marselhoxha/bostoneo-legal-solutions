@@ -73,7 +73,7 @@ export class AppComponent implements OnInit, OnDestroy {
       ) {
         setTimeout(() => {
           this.preloaderService.hide();
-        }, 700);
+        }, 200);
       }
     });
 
@@ -129,20 +129,23 @@ export class AppComponent implements OnInit, OnDestroy {
     // Load organization context from JWT token
     this.organizationService.loadCurrentOrganization();
 
-    // Start deadline reminder service for authenticated users
-    this.reminderService.startReminders();
+    // Defer deadline reminder and alert services by 10 seconds
+    // These are background monitoring — not needed immediately after login
+    setTimeout(() => {
+      this.reminderService.startReminders();
+      this.deadlineAlertService.startDeadlineMonitoring();
+    }, 10000);
 
-    // Start deadline alert monitoring
-    this.deadlineAlertService.startDeadlineMonitoring();
-
-    // Initialize Enhanced Notification Manager with EventBus
+    // Initialize Enhanced Notification Manager with EventBus (no HTTP calls)
     this.enhancedNotificationManager.initialize();
 
     // Initialize WebSocket connection
     this.initializeWebSocketNotifications();
 
-    // Start proactive token refresh check (every 2 minutes)
-    this.startProactiveTokenRefresh();
+    // Defer proactive token refresh — token was just issued on login
+    setTimeout(() => {
+      this.startProactiveTokenRefresh();
+    }, 30000);
   }
 
   private isExcludedRoute(url: string): boolean {

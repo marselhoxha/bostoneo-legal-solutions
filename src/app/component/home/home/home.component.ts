@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, filter, take } from 'rxjs';
 import { User } from 'src/app/interface/user';
 import { UserService } from 'src/app/service/user.service';
 import { RbacService } from 'src/app/core/services/rbac.service';
@@ -37,22 +37,18 @@ export class HomeComponent implements OnInit, OnDestroy {
     // Get current user and role
     this.currentUser = this.userService.getCurrentUser();
 
-    // If no current user, try to load from profile
+    // If no current user, wait for userData$ (already loading via preloadUserData)
+    // instead of making a redundant profile$() API call
     if (!this.currentUser) {
-      this.userService.profile$().subscribe({
-        next: (response) => {
-          if (response?.data?.user) {
-            this.currentUser = response.data.user;
-            this.userRole = this.detectUserRole();
-            this.redirectBasedOnRole();
-            this.cdr.detectChanges();
-          }
-        },
-        error: (error) => {
-          console.error('Failed to load user profile:', error);
-          this.userRole = this.detectUserRole();
-          this.redirectBasedOnRole();
-        }
+      this.userService.userData$.pipe(
+        filter(user => !!user),
+        take(1),
+        takeUntil(this.destroy$)
+      ).subscribe(user => {
+        this.currentUser = user;
+        this.userRole = this.detectUserRole();
+        this.redirectBasedOnRole();
+        this.cdr.detectChanges();
       });
     } else {
       this.userRole = this.detectUserRole();

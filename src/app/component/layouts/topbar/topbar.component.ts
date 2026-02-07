@@ -16,7 +16,7 @@ import { NotificationService, PushNotification } from 'src/app/service/notificat
 import { UserService } from 'src/app/service/user.service';
 import { User } from 'src/app/interface/user';
 import { State } from '@ngrx/store';
-import { Observable, BehaviorSubject, map, Subject, takeUntil, filter } from 'rxjs';
+import { Observable, BehaviorSubject, map, Subject, takeUntil, filter, take } from 'rxjs';
 import { CustomHttpResponse, Profile } from 'src/app/interface/appstates';
 import { NavigationEnd } from '@angular/router';
 import { PushNotificationService } from 'src/app/core/services/push-notification.service';
@@ -122,10 +122,9 @@ export class TopbarComponent implements OnInit, OnDestroy {
     // Initialize user data
     this.user$ = this.userService.userData$;
 
-    // Load user data if authenticated
-    if (this.userService.isAuthenticated()) {
-      this.loadUserData();
-    }
+    // Note: Removed loadUserData() call - user data is already loaded by
+    // login$() (on login) or AppComponent.preloadUserData() (on refresh).
+    // The userData$ subscription below receives the cached data.
 
     // Check notification permission status
     this.checkNotificationPermission();
@@ -157,13 +156,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
     // Note: Removed refreshUserData() on every NavigationEnd to reduce API calls.
     // Profile is loaded once in loadUserData() and kept in sync via userData$.
 
-    // Initialize push notifications
-    this.initializePushNotifications();
-
-    // Initialize backend notifications
-    this.initializeBackendNotifications();
-
-    // Subscribe to push notifications from service (persisted state)
+    // Subscribe to push notifications from service (persisted state — no HTTP call)
     this.notificationService.getPushNotifications()
       .pipe(takeUntil(this.destroy$))
       .subscribe(notifications => {
@@ -172,25 +165,28 @@ export class TopbarComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       });
 
-    // Initialize dropdown component with a small delay to ensure proper rendering
+    // Defer non-critical topbar services to avoid API call storm on login
+    // Messaging threads (badge count) — defer 2 seconds
     setTimeout(() => {
-      this.cdr.detectChanges();
-    }, 100);
+      this.subscribeToMessagingState();
+    }, 2000);
 
-    // IMPORTANT: Subscribe to messaging state IMMEDIATELY (don't wait for user data)
-    // This ensures we receive WebSocket notifications from the start
-    this.subscribeToMessagingState();
+    // Push notifications and backend notifications — defer 4 seconds
+    setTimeout(() => {
+      this.initializePushNotifications();
+      this.initializeBackendNotifications();
+    }, 4000);
 
     // Detect user role (for UI display purposes only - messaging subscription already done above)
     this.detectUserRole();
 
     // Load case management data and time tracking only for non-client users
-    // Client users don't have access to these endpoints
+    // Deferred to 5 seconds — these populate topbar dropdowns, not critical at first paint
     if (!this.isClientUser) {
       setTimeout(() => {
         this.loadCaseManagementData();
-      }, 1000);
-      this.initializeTimeTracking();
+        this.initializeTimeTracking();
+      }, 5000);
     }
   }
   
@@ -203,15 +199,11 @@ export class TopbarComponent implements OnInit, OnDestroy {
       return;
     }
     
-    this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
-      if (!user || !user.id) {
-        // Retry after a delay if user data not available
-        setTimeout(() => {
-          this.loadCaseManagementDataDirect();
-        }, 500);
-        return;
-      }
-
+    this.userService.userData$.pipe(
+      filter(user => !!user && !!user.id),
+      take(1),
+      takeUntil(this.destroy$)
+    ).subscribe(user => {
       this.loadCaseDataForUser(user.id);
     });
   }
@@ -1498,11 +1490,13 @@ export class TopbarComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       });
 
-    // Load active timers when user data is available
-    this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
-      if (user && user.id) {
-        this.loadActiveTimers(user.id);
-      }
+    // Load active timers when user data is available (take(1) to fire only once)
+    this.userService.userData$.pipe(
+      filter(user => !!user && !!user.id),
+      take(1),
+      takeUntil(this.destroy$)
+    ).subscribe(user => {
+      this.loadActiveTimers(user.id);
     });
   }
 

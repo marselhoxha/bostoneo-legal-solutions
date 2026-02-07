@@ -110,12 +110,22 @@ public class AuditLogAspect {
             description = buildDescription(action, entityType, method.getName());
         }
 
-        // Log the activity - ensure metadata is valid JSON or empty object
+        // Log the activity asynchronously — don't block the response
         try {
             String safeMetadata = (metadata != null && !metadata.isEmpty()) ? metadata : "{}";
-            auditLogService.log(action, entityType, entityId, description, safeMetadata);
+            final Long finalEntityId = entityId;
+            final String finalDescription = description;
+            final com.bostoneo.bostoneosolutions.model.AuditLog.AuditAction finalAction = action;
+            final com.bostoneo.bostoneosolutions.model.AuditLog.EntityType finalEntityType = entityType;
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    auditLogService.log(finalAction, finalEntityType, finalEntityId, finalDescription, safeMetadata);
+                } catch (Exception ex) {
+                    log.error("Failed to log audit activity (async): {}", ex.getMessage());
+                }
+            });
         } catch (Exception e) {
-            log.error("Failed to log audit activity: {}", e.getMessage());
+            log.error("Failed to submit audit activity: {}", e.getMessage());
         }
 
         // Re-throw exception if occurred

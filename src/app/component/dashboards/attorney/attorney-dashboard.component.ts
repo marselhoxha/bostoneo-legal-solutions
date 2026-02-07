@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, Input, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subject, of, forkJoin } from 'rxjs';
-import { takeUntil, catchError, map } from 'rxjs/operators';
+import { Subject, of, forkJoin, Observable } from 'rxjs';
+import { takeUntil, catchError, map, shareReplay } from 'rxjs/operators';
 import { User } from 'src/app/interface/user';
 import { CaseService } from 'src/app/modules/legal/services/case.service';
 import { TimeTrackingService, TimeEntry } from 'src/app/modules/time-tracking/services/time-tracking.service';
@@ -205,19 +205,17 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.initializeWeekDays();
     this.loadDashboardData();
-    this.loadPendingAppointments();
-    this.loadPendingRescheduleRequests();
+
+    // Defer appointments and reschedule requests by 3 seconds — below the fold
+    setTimeout(() => {
+      this.loadPendingAppointments();
+      this.loadPendingRescheduleRequests();
+    }, 3000);
   }
 
-  private loadUrgentItems(): void {
-    // Load upcoming events (next 7 days) for urgent items
-    this.calendarService.getUpcomingEvents(7).pipe(
-      takeUntil(this.destroy$),
-      catchError(error => {
-        console.error('Error loading upcoming events for urgent items:', error);
-        return of([]);
-      })
-    ).subscribe({
+  private loadUrgentItems(upcomingEvents$: Observable<any[]>): void {
+    // Use shared upcoming events observable to avoid duplicate HTTP call
+    upcomingEvents$.subscribe({
       next: (events: any[]) => {
         const now = new Date();
 
@@ -324,7 +322,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  private loadScheduleEvents(): void {
+  private loadScheduleEvents(upcomingEvents$: Observable<any[]>): void {
     this.eventsLoading = true;
 
     // Fetch today's events using the dedicated endpoint
@@ -387,11 +385,8 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Also fetch upcoming events for week count
-    this.calendarService.getUpcomingEvents(7).pipe(
-      takeUntil(this.destroy$),
-      catchError(() => of([]))
-    ).subscribe({
+    // Use shared upcoming events observable for week count (avoids duplicate HTTP call)
+    upcomingEvents$.subscribe({
       next: (upcomingEvents: any[]) => {
         this.thisWeekEvents = upcomingEvents.length;
         this.cdr.detectChanges();
@@ -470,16 +465,31 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     this.scheduleEventsLoaded = false;
     this.urgentItemsLoaded = false;
 
-    // Clear cached briefing to get fresh data
-    this.aiBriefingService.invalidateCache().subscribe();
+    // Note: Removed immediate invalidateCache() POST call —
+    // the briefing already gets fresh data via tryLoadAiBriefing() after events/urgentItems load
 
-    // Load all data in parallel
+    // Share the upcoming events observable to avoid duplicate HTTP calls
+    const upcomingEvents$ = this.calendarService.getUpcomingEvents(7).pipe(
+      takeUntil(this.destroy$),
+      catchError(error => {
+        console.error('Error loading upcoming events:', error);
+        return of([]);
+      }),
+      shareReplay(1)
+    );
+
+    // Stagger calls to avoid overwhelming single ECS instance at login
+    // T+0: Cases (most visible — the card grid)
     this.loadCases();
-    this.loadTimeEntries();
-    this.loadScheduleEvents();
-    this.loadUrgentItems();
-    // Note: loadRecentActivity() is called inside loadCases() after cases are loaded,
-    // so we don't call it here to avoid a duplicate call with empty recentCases.
+
+    // T+1s: Calendar events + urgent items (shared observable)
+    setTimeout(() => {
+      this.loadScheduleEvents(upcomingEvents$);
+      this.loadUrgentItems(upcomingEvents$);
+    }, 1000);
+
+    // T+3.5s: Time entries (stats — can wait)
+    setTimeout(() => this.loadTimeEntries(), 3500);
   }
 
   /**
@@ -561,8 +571,12 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
 
         this.casesLoading = false;
         this.isLoading = false;
-        this.loadRecentActivity();
         this.cdr.detectChanges();
+
+        // Defer activity loading by 3 seconds — it's below the fold
+        setTimeout(() => {
+          this.loadRecentActivity();
+        }, 3000);
       },
       error: (error) => {
         console.error('Error processing cases:', error);
@@ -1665,7 +1679,13 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
             next: () => {
               this.closeRescheduleApproveModal();
               this.loadPendingRescheduleRequests();
-              this.loadScheduleEvents(); // Refresh calendar
+              // Refresh calendar with a fresh upcoming events observable
+              const refresh$ = this.calendarService.getUpcomingEvents(7).pipe(
+                takeUntil(this.destroy$),
+                catchError(() => of([])),
+                shareReplay(1)
+              );
+              this.loadScheduleEvents(refresh$);
               this.processingAction = false;
               Swal.fire({
                 title: 'Reschedule Approved!',

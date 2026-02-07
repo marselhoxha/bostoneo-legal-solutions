@@ -111,7 +111,15 @@ export class RbacService {
     private userService: UserService,
     private jwtHelper: JwtHelperService
   ) {
-    this.loadCurrentUserPermissions();
+    // Use fallback permissions immediately from JWT/localStorage (no HTTP call)
+    const userId = this.getCurrentUserId();
+    if (userId) {
+      this.createFallbackPermissions(userId).subscribe(p => {
+        if (p) this.currentUserPermissions$.next(p);
+      });
+    }
+    // Load full permissions from API after 5 seconds to avoid blocking login
+    setTimeout(() => this.loadCurrentUserPermissions(), 5000);
   }
 
   // Observable getters

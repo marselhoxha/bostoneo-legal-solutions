@@ -270,25 +270,19 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             log.error("User not found in the database");
             throw new UsernameNotFoundException("User not found in the database");
         } else {
-            log.info("User found in the database: {}", email);
-            
+            log.debug("User found in the database: {}", email);
+
             // Get all roles for the user
             Set<Role> roles = roleRepository.getRolesByUserId(user.getId());
-            
+
             // Get permissions for all the user's roles
             Set<Permission> permissions = new HashSet<>();
             for (Role role : roles) {
                 permissions.addAll(roleRepository.getPermissionsByRoleId(role.getId()));
             }
-            
-            log.info("User has {} roles and {} permissions", roles.size(), permissions.size());
-            log.info("Roles: {}", roles.stream().map(Role::getName).collect(java.util.stream.Collectors.toList()));
-            log.info("Permissions: {}", permissions.stream().map(Permission::getName).collect(java.util.stream.Collectors.toList()));
-            
+
             // Create UserPrincipal with full RBAC information
-            UserPrincipal principal = new UserPrincipal(user, roles, permissions, new HashSet<>());
-            log.info("UserPrincipal authorities: {}", principal.getAuthorities().stream().map(org.springframework.security.core.GrantedAuthority::getAuthority).collect(java.util.stream.Collectors.toList()));
-            return principal;
+            return new UserPrincipal(user, roles, permissions, new HashSet<>());
         }
     }
 
