@@ -23,6 +23,7 @@ import com.bostoneo.bostoneosolutions.repository.FileCommentRepository;
 import com.bostoneo.bostoneosolutions.repository.FileTagRepository;
 import com.bostoneo.bostoneosolutions.repository.FileShareRepository;
 import com.bostoneo.bostoneosolutions.repository.FileAccessLogRepository;
+import com.bostoneo.bostoneosolutions.configuration.FileStorageConfiguration;
 import com.bostoneo.bostoneosolutions.service.FileManagerService;
 import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
@@ -119,6 +120,7 @@ public class FileManagerServiceImpl implements FileManagerService {
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final RoleService roleService;
     private final TenantService tenantService;
+    private final FileStorageConfiguration fileStorageConfig;
 
     /**
      * Get the current organization ID from tenant context.
@@ -220,6 +222,12 @@ public class FileManagerServiceImpl implements FileManagerService {
 
             // Build the subdirectory path based on folder hierarchy
             String subdirectory = folderPath.isEmpty() ? "documents" : folderPath;
+
+            // Prefix with orgId for tenant isolation in S3
+            if ("s3".equals(fileStorageConfig.getType())) {
+                Long orgId = getRequiredOrganizationId();
+                subdirectory = orgId + "/" + subdirectory;
+            }
             log.info("Subdirectory for storage: '{}'", subdirectory);
 
             // Check if file already exists and generate unique name if needed
@@ -943,7 +951,12 @@ public class FileManagerServiceImpl implements FileManagerService {
             // Build the folder path for storage
             String folderPath = buildFolderPath(fileItem.getFolderId());
             String subdirectory = folderPath.isEmpty() ? "documents" : folderPath;
-            
+
+            // Prefix with orgId for tenant isolation in S3
+            if ("s3".equals(fileStorageConfig.getType())) {
+                subdirectory = orgId + "/" + subdirectory;
+            }
+
             // Use original filename for the new version
             String fileName = file.getOriginalFilename();
             

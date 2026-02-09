@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.configuration.FileStorageConfiguration;
 import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 
 @Service
+@ConditionalOnProperty(name = "file.storage.type", havingValue = "local", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class FileStorageServiceImpl implements FileStorageService {

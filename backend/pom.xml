@@ -332,6 +332,13 @@
 			<version>1.0.0-beta.1</version>
 		</dependency>
 
+		<!-- AWS SDK v2 - S3 for file storage -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.25.16</version>
+		</dependency>
+
 	</dependencies>
 
 	<profiles>

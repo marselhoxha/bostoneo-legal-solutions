@@ -13,7 +13,22 @@ import java.nio.file.Paths;
 @ConfigurationProperties(prefix = "file.storage")
 @Data
 public class FileStorageConfiguration implements WebMvcConfigurer {
-    
+
+    /**
+     * Storage type: "local" or "s3"
+     */
+    private String type = "local";
+
+    /**
+     * S3 bucket name (only used when type=s3)
+     */
+    private String s3BucketName;
+
+    /**
+     * S3 region (only used when type=s3)
+     */
+    private String s3Region = "us-east-1";
+
     /**
      * Base directory for file storage
      */

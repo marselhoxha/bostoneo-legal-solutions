@@ -377,6 +377,18 @@ module "ecs" {
     {
       name  = "REDIS_PORT"
       value = "6379"
+    },
+    {
+      name  = "FILE_STORAGE_TYPE"
+      value = "s3"
+    },
+    {
+      name  = "S3_BUCKET_NAME"
+      value = module.s3.documents_bucket_id
+    },
+    {
+      name  = "S3_REGION"
+      value = var.region
     }
   ]
 
