@@ -5,10 +5,10 @@
 }
 
 // ============================================================================
-// DESKTOP/LAPTOP STYLES (min-width: 992px)
-// These styles only apply to desktop horizontal navigation
+// DESKTOP STYLES (min-width: 1024.1px)
+// Matches Velzon theme horizontal nav breakpoint
 // ============================================================================
-@media (min-width: 992px) {
+@media (min-width: 1024.1px) {
   .app-menu {
     .navbar-nav {
       .nav-item {
@@ -25,9 +25,11 @@
             font-size: 1rem;
           }
 
-          &:hover {
-            background-color: rgba(var(--bs-primary-rgb), 0.1);
-            border-radius: 0.375rem;
+          @media (hover: hover) {
+            &:hover {
+              background-color: rgba(var(--bs-primary-rgb), 0.1);
+              border-radius: 0.375rem;
+            }
           }
         }
       }
@@ -44,7 +46,7 @@
 }
 
 // Laptop-specific (smaller desktop)
-@media (min-width: 992px) and (max-width: 1366px) {
+@media (min-width: 1024.1px) and (max-width: 1366px) {
   .app-menu {
     .navbar-nav {
       .nav-item {
@@ -60,10 +62,10 @@
 }
 
 // ============================================================================
-// MOBILE STYLES (max-width: 991.98px)
-// Let Velzon theme handle mobile navigation - minimal overrides only
+// MOBILE/TABLET STYLES (max-width: 1024px)
+// Matches Velzon theme breakpoint where horizontal nav collapses to hamburger
 // ============================================================================
-@media (max-width: 991.98px) {
+@media (max-width: 1024px) {
   .app-menu {
     .navbar-nav {
       flex-direction: column;
@@ -73,7 +75,7 @@
         margin-right: 0;
       }
 
-      // Ensure ALL menu text is visible on mobile (overrides laptop icon-only mode)
+      // Ensure ALL menu text is visible in mobile sidebar
       .nav-link {
         span,
         .menu-text {
@@ -83,7 +85,6 @@
     }
 
     // Submenu - rely on Velzon's native styling for dash indicators
-    // Do NOT override ::before which creates the dash indicator
     .menu-dropdown {
       box-shadow: none;
       border: none;

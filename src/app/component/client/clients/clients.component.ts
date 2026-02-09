@@ -18,7 +18,7 @@ import Swal from 'sweetalert2';
 @Component({
   selector: 'app-clients',
   templateUrl: './clients.component.html',
-  styleUrls: ['./clients.component.css'],
+  styleUrls: ['./clients.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush 
 
 })
@@ -194,6 +194,10 @@ export class ClientsComponent implements OnInit {
 
   selectClient(client: Client): void {
     this.router.navigate([`/clients/${client.id}`]);
+  }
+
+  getStatusCount(clients: Client[], status: string): number {
+    return clients?.filter(c => c.status === status).length || 0;
   }
 
   report(): void {

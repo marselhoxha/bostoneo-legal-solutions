@@ -11,6 +11,7 @@ import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,9 @@ public class InvoiceWorkflowService {
     private final ClientRepository clientRepository;
     private final OrganizationRepository organizationRepository;
     private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+
+    @Value("${app.invoice-workflows.enabled:true}")
+    private boolean workflowsEnabled;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -89,6 +93,10 @@ public class InvoiceWorkflowService {
      */
     @Scheduled(cron = "0 0 * * * *") // Every hour
     public void processScheduledWorkflows() {
+        if (!workflowsEnabled) {
+            log.debug("Invoice workflow service is disabled");
+            return;
+        }
         log.info("Processing scheduled invoice workflows");
 
         // GLOBAL: Get all active scheduled workflow rules (shared across all orgs)

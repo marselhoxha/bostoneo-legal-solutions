@@ -1,0 +1,398 @@
+// Client Detail - Simple Profile Page
+
+// ========================================
+// Profile Hero Section
+// ========================================
+.profile-hero {
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1.5rem;
+}
+
+.profile-hero-content {
+  padding: 1.5rem;
+}
+
+.profile-hero-info {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+// Avatar
+.profile-avatar-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profile-avatar-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #f3f6f9;
+}
+
+.profile-avatar-initials {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #405189 0%, #0ab39c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.profile-avatar-status {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #6c757d;
+  border: 2px solid #fff;
+
+  &.active {
+    background: #0ab39c;
+  }
+}
+
+// Hero Text
+.profile-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: var(--vz-heading-color, #495057);
+}
+
+.profile-email {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+}
+
+.profile-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  .badge {
+    font-weight: 500;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+  }
+}
+
+// Hero Actions
+.profile-hero-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+
+  .btn {
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+// ========================================
+// Profile Cards
+// ========================================
+.profile-card {
+  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  overflow: hidden;
+
+  .card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  .card-body {
+    padding: 1.25rem;
+  }
+}
+
+// ========================================
+// Account Summary
+// ========================================
+.profile-summary-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+
+    &:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    &:first-child {
+      padding-top: 0;
+    }
+  }
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.summary-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--vz-heading-color, #495057);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6c757d;
+
+  &.active {
+    background: #0ab39c;
+  }
+}
+
+// ========================================
+// Personal Information Grid
+// ========================================
+.profile-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.profile-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+
+  &.full-width {
+    grid-column: 1 / -1;
+  }
+}
+
+.info-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(64, 81, 137, 0.08);
+  color: #405189;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.info-content {
+  flex: 1;
+  min-width: 0;
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+  }
+
+  p {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--vz-heading-color, #495057);
+    margin: 0;
+    word-break: break-word;
+  }
+}
+
+// ========================================
+// Edit Form
+// ========================================
+.profile-edit-form {
+  .form-floating {
+    label {
+      color: #6c757d;
+    }
+
+    .form-control {
+      border-radius: 8px;
+      border-color: #e9ebec;
+
+      &:focus {
+        border-color: #405189;
+        box-shadow: 0 0 0 0.2rem rgba(64, 81, 137, 0.1);
+      }
+    }
+  }
+}
+
+// ========================================
+// Empty State
+// ========================================
+.avatar-empty {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(var(--vz-primary-rgb, 64, 81, 137), 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  i {
+    font-size: 1.5rem;
+    color: var(--vz-primary, #405189);
+  }
+}
+
+// ========================================
+// Avatar (invoice table)
+// ========================================
+.avatar-xs {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.avatar-title {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+
+// ========================================
+// Table
+// ========================================
+.table {
+  th {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--vz-secondary-color, #6c757d);
+  }
+}
+
+.fs-7 {
+  font-size: 0.5rem !important;
+}
+
+// ========================================
+// Soft Buttons
+// ========================================
+.btn-soft-primary {
+  color: var(--vz-primary, #405189);
+  background-color: rgba(var(--vz-primary-rgb, 64, 81, 137), 0.1);
+  border: none;
+
+  &:hover {
+    color: #fff;
+    background-color: var(--vz-primary, #405189);
+  }
+}
+
+.btn-soft-info {
+  color: var(--vz-info, #299cdb);
+  background-color: rgba(var(--vz-info-rgb, 41, 156, 219), 0.1);
+  border: none;
+
+  &:hover {
+    color: #fff;
+    background-color: var(--vz-info, #299cdb);
+  }
+}
+
+// ========================================
+// Responsive
+// ========================================
+@media (max-width: 991.98px) {
+  .profile-hero-info {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .profile-hero-text {
+    text-align: center;
+  }
+
+  .profile-badges {
+    justify-content: center;
+  }
+
+  .profile-hero-actions {
+    justify-content: center;
+    margin-top: 1rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .profile-hero-content {
+    padding: 1.25rem;
+  }
+
+  .profile-avatar-img,
+  .profile-avatar-initials {
+    width: 70px;
+    height: 70px;
+  }
+
+  .profile-avatar-initials {
+    font-size: 1.5rem;
+  }
+
+  .profile-name {
+    font-size: 1.1rem;
+  }
+
+  .profile-info-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .profile-info-item.full-width {
+    grid-column: 1;
+  }
+
+  .table-responsive {
+    table {
+      font-size: 0.8rem;
+
+      th, td {
+        padding: 0.5rem 0.4rem;
+      }
+    }
+  }
+}

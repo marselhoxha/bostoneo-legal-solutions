@@ -111,11 +111,11 @@ export class MessagingService {
   getThreads(): Observable<MessageThread[]> {
     if (this.isClientRole()) {
       return this.http.get<any>(`${this.clientApiUrl}/messages`).pipe(
-        map(response => response.data.threads || [])
+        map(response => (response.data.threads || []).map((t: MessageThread) => this.normalizeThreadImages(t)))
       );
     }
     return this.http.get<any>(`${this.apiUrl}/threads`).pipe(
-      map(response => response.data.threads || [])
+      map(response => (response.data.threads || []).map((t: MessageThread) => this.normalizeThreadImages(t)))
     );
   }
 
@@ -134,11 +134,11 @@ export class MessagingService {
   getMessages(threadId: number): Observable<Message[]> {
     if (this.isClientRole()) {
       return this.http.get<any>(`${this.clientApiUrl}/messages/${threadId}`).pipe(
-        map(response => response.data.messages || [])
+        map(response => (response.data.messages || []).map((m: Message) => this.normalizeMessageImages(m)))
       );
     }
     return this.http.get<any>(`${this.apiUrl}/threads/${threadId}/messages`).pipe(
-      map(response => response.data.messages || [])
+      map(response => (response.data.messages || []).map((m: Message) => this.normalizeMessageImages(m)))
     );
   }
 
@@ -241,5 +241,24 @@ export class MessagingService {
     }).pipe(
       map(response => response.data.cases || [])
     );
+  }
+
+  /** Normalize image URLs on thread data */
+  private normalizeThreadImages(thread: MessageThread): MessageThread {
+    if (thread.clientImageUrl) {
+      thread.clientImageUrl = this.userService.normalizeImageUrl(thread.clientImageUrl);
+    }
+    if (thread.attorneyImageUrl) {
+      thread.attorneyImageUrl = this.userService.normalizeImageUrl(thread.attorneyImageUrl);
+    }
+    return thread;
+  }
+
+  /** Normalize image URLs on message data */
+  private normalizeMessageImages(message: Message): Message {
+    if (message.senderImageUrl) {
+      message.senderImageUrl = this.userService.normalizeImageUrl(message.senderImageUrl);
+    }
+    return message;
   }
 }

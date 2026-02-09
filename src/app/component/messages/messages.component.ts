@@ -2,8 +2,8 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef,
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Subject, interval } from 'rxjs';
-import { takeUntil, switchMap, filter } from 'rxjs/operators';
+import { Subject, interval, of } from 'rxjs';
+import { takeUntil, switchMap, filter, catchError } from 'rxjs/operators';
 import { MessagingService, MessageThread, Message, ClientInfo, ClientCase } from '../../service/messaging.service';
 import { MessagingStateService } from '../../service/messaging-state.service';
 import { LegalCaseService } from '../../modules/legal/services/legal-case.service';
@@ -610,19 +610,33 @@ export class MessagesComponent implements OnInit, OnDestroy {
           messagePollCounter++;
           return messagePollCounter % 3 === 0;
         }),
-        switchMap(() => this.messagingService.getMessages(this.selectedThread!.id))
+        switchMap(() => this.messagingService.getMessages(this.selectedThread!.id).pipe(
+          catchError(() => of(null)) // On error, emit null instead of killing the polling stream
+        ))
       )
       .subscribe({
         next: (serverMessages) => {
+          // Skip this poll cycle if the API call failed
+          if (serverMessages === null) return;
+
           this.ngZone.run(() => {
             const prevCount = this.currentMessages.length;
             const threadId = this.selectedThread!.id;
 
             // Use centralized merge to preserve WebSocket messages and update cache
-            this.currentMessages = this.messagingStateService.mergeWithCachedMessages(
+            const merged = this.messagingStateService.mergeWithCachedMessages(
               threadId,
               serverMessages || []
             );
+
+            // Defensive: never reduce message count from polling — prevents sent messages from vanishing
+            if (merged.length >= prevCount) {
+              this.currentMessages = merged;
+            } else if (serverMessages.length > 0) {
+              // Server returned fewer messages but has data — trust it
+              this.currentMessages = merged;
+            }
+            // else: server returned empty/fewer AND merge would lose messages — keep current
 
             if (this.currentMessages.length > prevCount) {
               if (this.isNearBottom()) {

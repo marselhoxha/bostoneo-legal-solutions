@@ -1077,6 +1077,61 @@ body > div > .dropdown-menu.user-profile-dropdown {
 }
 
 // ==========================================
+// GLOBAL: Touch Device Double-Tap Fix
+// On touch devices, :hover fires on first tap, requiring a second tap for click.
+// This removes hover visual changes on touch-only devices so taps work instantly.
+// ==========================================
+@media (hover: none) and (pointer: coarse) {
+  // Navigation links — remove hover background/color changes
+  .navbar-nav .nav-link:hover,
+  .navbar-nav .nav-item:hover > .nav-link,
+  .menu-link:hover {
+    background-color: transparent !important;
+    color: inherit !important;
+  }
+
+  // Horizontal nav — prevent hover-triggered dropdown display
+  [data-layout="horizontal"] .navbar-nav .nav-item:hover > .menu-dropdown {
+    display: none !important;
+  }
+
+  // Allow click-toggled dropdowns to show normally
+  [data-layout="horizontal"] .navbar-nav .nav-item .menu-dropdown.show {
+    display: block !important;
+  }
+
+  // Topbar icon buttons (bell, messages, timer, etc.)
+  .btn-topbar:hover,
+  .btn-ghost-secondary:hover,
+  .btn-icon:hover {
+    background-color: transparent !important;
+    color: inherit !important;
+  }
+
+  // Dropdown items
+  .dropdown-item:hover {
+    background-color: transparent !important;
+  }
+
+  // Notification/message list items
+  .notification-item:hover,
+  .message-item:hover {
+    background-color: transparent !important;
+    transform: none !important;
+  }
+
+  // Cards and list items with hover effects
+  .hover-bg-light:hover {
+    background-color: transparent !important;
+  }
+
+  // Generic buttons — remove hover transform/shadow
+  .btn:hover {
+    transform: none !important;
+  }
+}
+
+// ==========================================
 // GLOBAL: Touch Target Sizes
 // ==========================================
 

@@ -34,11 +34,32 @@ export class UserService {
 
   setUserData(user: User) {
     if (user) {
+      // Normalize image URL to handle localhost/relative path issues
+      if (user.imageUrl) {
+        user.imageUrl = this.normalizeImageUrl(user.imageUrl);
+      }
       this.currentUser = user;
       this.userDataSubject.next(user);
       // Save to localStorage for RbacService to read roles
       localStorage.setItem('currentUser', JSON.stringify(user));
     }
+  }
+
+  /**
+   * Normalize image URL to work across environments (localhost, staging, production).
+   * Handles: absolute localhost URLs, relative paths without leading /
+   */
+  normalizeImageUrl(url: string): string {
+    if (!url) return url;
+    // Replace absolute localhost URL with current API URL
+    if (url.includes('localhost:8085')) {
+      url = url.replace(/https?:\/\/localhost:8085/g, this.server);
+    }
+    // Ensure relative paths have leading /
+    if (!url.startsWith('http') && !url.startsWith('/')) {
+      url = '/' + url;
+    }
+    return url;
   }
 
   getUserData(): Observable<User> {

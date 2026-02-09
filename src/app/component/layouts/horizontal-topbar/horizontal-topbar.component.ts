@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, EventEmitter, Output, ViewChild, ElementRef, Input, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, EventEmitter, Output, ViewChild, ElementRef, Input } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -58,9 +58,6 @@ export class HorizontalTopbarComponent implements OnInit, OnDestroy {
     if (isAdmin) {
       this.showAdminNavigation = true;
     }
-
-    // Initialize responsive menu
-    this.updateMenuResponsiveness();
   }
 
   ngOnDestroy(): void {
@@ -283,14 +280,10 @@ export class HorizontalTopbarComponent implements OnInit, OnDestroy {
    */
   toggleItem(event: any): void {
     event.preventDefault();
-    const nextEl = event.target.nextElementSibling;
+    const anchor = event.currentTarget;
+    const nextEl = anchor.nextElementSibling;
     if (nextEl) {
-      const hasShow = nextEl.classList.contains('show');
-      if (hasShow) {
-        nextEl.classList.remove('show');
-      } else {
-        nextEl.classList.add('show');
-      }
+      nextEl.classList.toggle('show');
     }
   }
 
@@ -299,14 +292,10 @@ export class HorizontalTopbarComponent implements OnInit, OnDestroy {
    */
   toggleSubItem(event: any): void {
     event.preventDefault();
-    const nextEl = event.target.nextElementSibling;
+    const anchor = event.currentTarget;
+    const nextEl = anchor.nextElementSibling;
     if (nextEl) {
-      const hasShow = nextEl.classList.contains('show');
-      if (hasShow) {
-        nextEl.classList.remove('show');
-      } else {
-        nextEl.classList.add('show');
-      }
+      nextEl.classList.toggle('show');
     }
   }
 
@@ -326,52 +315,10 @@ export class HorizontalTopbarComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Check if screen is in laptop mode
-   */
-  isLaptopMode(): boolean {
-    return window.innerWidth <= 1366 && window.innerWidth >= 1024;
-  }
-
-  /**
-   * Check if screen is in compact mode
-   */
-  isCompactMode(): boolean {
-    return window.innerWidth <= 1200;
-  }
-
-  /**
    * Get menu item display text based on screen size
    */
   getMenuDisplayText(item: MenuItem): string {
-    if (this.isCompactMode()) {
-      return ''; // Return empty string for icon-only mode
-    }
     return item.label || '';
-  }
-
-  /**
-   * Handle window resize for responsive menu
-   */
-  @HostListener('window:resize', ['$event'])
-  onWindowResize(event: any): void {
-    this.updateMenuResponsiveness();
-  }
-
-  /**
-   * Update menu responsiveness based on screen size
-   */
-  private updateMenuResponsiveness(): void {
-    const menuElements = document.querySelectorAll('.navbar-nav .nav-link .menu-text');
-
-    if (this.isCompactMode()) {
-      menuElements.forEach(element => {
-        (element as HTMLElement).style.display = 'none';
-      });
-    } else {
-      menuElements.forEach(element => {
-        (element as HTMLElement).style.display = 'inline';
-      });
-    }
   }
 
   /**

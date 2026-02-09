@@ -12,6 +12,7 @@ import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
 import com.bostoneo.bostoneosolutions.service.InvoiceWorkflowService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,14 +36,20 @@ public class InvoiceWorkflowScheduler {
     private final InvoiceReminderRepository reminderRepository;
     private final InvoiceWorkflowService workflowService;
     private final OrganizationRepository organizationRepository;
-    
+
+    @Value("${app.invoice-workflows.enabled:true}")
+    private boolean workflowsEnabled;
+
     /**
      * Run scheduled workflows every hour
      */
     @Scheduled(fixedDelay = 3600000) // 1 hour
     @Transactional
     public void runScheduledWorkflows() {
-        
+        if (!workflowsEnabled) {
+            log.debug("Invoice workflow scheduler is disabled");
+            return;
+        }
         try {
             // Process scheduled workflow rules
             List<InvoiceWorkflowRule> scheduledRules = workflowRuleRepository

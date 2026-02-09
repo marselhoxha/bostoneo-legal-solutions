@@ -1,263 +1,310 @@
 <ng-container *ngIf="(clientsState$ | async) as state" [ngSwitch]="state.dataState">
   <ng-container *ngSwitchCase="DataState.LOADED">
-     <app-layout [user]="state?.appData?.data?.user"></app-layout>
-     <section>
-        <div class="container-fluid">
-           <nav aria-label="breadcrumb" style="margin-top: 12px;">
-              <ol class="breadcrumb">
-                 <li class="breadcrumb-item">
-                    <a [routerLink]="['/']">Home</a>
-                 </li>
-                 <li class="breadcrumb-item active"> Clients </li>
-              </ol>
-           </nav>
-           <div class="row"  style="margin-bottom:60px;">
-              <div class="col-lg-12">
-                  <div class="card" id="customerList">
-                      <div class="card-header border-bottom-dashed">
-          
-                          <div class="row g-4 align-items-center">
-                              <div class="col-sm">
-                                  <div>
-                                      <h5 class="card-title mb-0">Client List</h5>
-                                  </div>
-                              </div>
-                              <div class="col-xl-6">
-                                  <div class="search-box">
-                                    <form #searchForm="ngForm" (ngSubmit)="searchClients(searchForm)" class="row g-3">
-                                      <div class="col">
-                                        <label for="name" class="form-label visually-hidden"></label>
-                                        <div class="input-group">
-                                          <input type="text" ngModel name="name" #name id="name" class="form-control" placeholder="Search by client name" aria-label="Search">
-                                          <button type="submit" class="btn btn-soft-info waves-effect">
-                                            <i class="ri-search-line align-middle"></i>
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </form>
-                                  </div>
-                              </div>
-                              <div class="col-sm-auto">
-                                  <div class="d-flex flex-wrap align-items-start gap-2">
-                                    <button type="button" class="btn btn-soft-success btn-animation waves-effect waves-light add-btn" (click)="openNewCustomerModal()" id="create-btn">
-                                      <i class="ri-add-line align-middle me-1"></i> Add Client
-                                    </button>
-                                      <button type="button" class="btn btn-soft-info btn-animation waves-effect waves-light" (click)="report()"><i class="ri-file-download-line align-bottom me-1"></i> Export</button>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-                      <div class="card-body">
-                          <div class="row g-4">
-                              
-                              <!--end col-->
-                              <div class="col-xl-6">
-                                  <div class="row g-3">
-                                      <div class="col-sm-4">
-                                          <div class="">
-                                          </div>
-                                      </div>
-                                      <!--end col-->
-                                     
-                                      <!--end col-->
-          
-                                     
-                                      <!--end col-->
-                                  </div>
-                              </div>
-                          </div>
-                          <!--end row-->
-                      </div>
-                      <div class="card-body">
-                          <div>
-                              <div class="table-responsive table-card mb-1 align-middle">
-                                  <table class="table">
-                                      <thead class="table-light">
-                                          <tr>
-                                            <th scope="col" class="text-center" style="width: 50px;">ID</th>
-                                            <th scope="col">Photo</th>
-                                            <th scope="col">Name</th>
-                                            <th scope="col">Email</th>
-                                            <th scope="col">Phone</th>
-                                            <th scope="col">Status</th>
-                                            <th scope="col">Type</th>
-                                            <th scope="col">Action</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody class="list form-check-all">
-                                          <tr *ngFor="let client of state?.appData?.data?.page.content">
-                                            <td class="text-center">{{ client.id }}</td>
-                                            <td><img [src]="client.imageUrl" width="42" height="42" class="rounded-circle" [alt]="client.name"></td>
-                                            <td>{{ client.name }}</td>
-                                            <td>{{ client.email }}</td>
-                                            <td>{{ client.phone }}</td>
-                                            <td>
-                                              <span class="badge text-uppercase"
-                                                [ngClass]="{
-                                                  'bg-success-subtle text-success': client.status === 'ACTIVE',
-                                                  'bg-primary-subtle text-primary': client.status === 'PENDING',
-                                                  'bg-danger-subtle text-danger': client.status === 'BANNED',
-                                                  'bg-info-subtle text-info': client.status === 'INACTIVE'
-                                                }">
-                                                {{ client.status }}
-                                              </span>
-                                            </td>
-                                            <td>{{ client.type }}</td>
-                                            <td>
-                                              <div class="btn-group" role="group">
-                                                <button type="button" [routerLink]="['/clients', client.id]" class="btn btn-sm btn-soft-primary btn-animation waves-effect waves-light me-2">
-                                                  <i class="ri-eye-line align-middle me-1"></i> View
-                                                </button>
-                                                <button type="button" (click)="deleteClient(client.id)" class="btn btn-sm btn-soft-danger btn-animation waves-effect waves-light">
-                                                  <i class="ri-delete-bin-line align-middle me-1"></i> Delete
-                                                </button>
-                                              </div>
-                                            </td>
-                                          </tr>
-                                        </tbody>
-                                  </table>
-                              </div>
-                              <div class="row justify-content-md-between align-items-md-center">
-                                  <div class="col col-sm-5">
-                                      <div class="dataTables_info mb-2" id="tickets-table_info" role="status" aria-live="polite">
-                                         
-                                      </div>
-                                  </div>
-                              
-                                   <!-- Pagination -->
-                                  <div class="col-12">
-                                      <nav *ngIf="state?.appData?.data?.page.content.length > 0" aria-label="Page navigation example">
-                                      <ul class="pagination justify-content-end mb-0">
-                                          <li [ngClass]="0 == (currentPage$ | async) ? ' disabled' : ''" class="page-item">
-                                          <a (click)="goToNextOrPreviousPage('backward')" class="page-link">&laquo; Prev</a>
-                                          </li>
-                                          <li *ngFor="let pageNumber of [].constructor(state?.appData?.data?.page.totalPages); let i = index;" class="page-item">
-                                          <a (click)="goToPage(i)" [ngClass]="i == (currentPage$ | async) ? ' active' : ''" class="page-link">
-                                              {{ i + 1 }}
-                                          </a>
-                                          </li>
-                                          <li [ngClass]="(state?.appData?.data?.page.totalPages - 1) == (currentPage$ | async) ? ' disabled' : ''" class="page-item">
-                                          <a (click)="goToNextOrPreviousPage('forward')" class="page-link">Next &raquo;</a>
-                                          </li>
-                                      </ul>
-                                      </nav>
-                                  </div>
-                                  <!-- End Pagination -->
-                              </div>
-                          </div>
-          
-                         <!-- Modal Template -->
-<!-- Client Create Modal -->
-<ng-template #content role="document" let-modal>
-<div class="modal-header bg-light p-3">
-  <h5 class="modal-title" id="exampleModalLabel">Add Client</h5>
-  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-modal" (click)="modal.dismiss('Cross click')"></button>
-</div>
-<form (ngSubmit)="createClient(newClientForm)" [formGroup]="customerForm" class="tablelist-form custom-form" #newClientForm="ngForm" autocomplete="off">
-  <div class="modal-body">
-    <input type="hidden" name="id" formControlName="_id" />
+    <div class="container-fluid">
 
-    <div class="mb-3">
-      <label for="name" class="form-label">Client Name</label>
-      <div class="form-floating">
-        <input type="text" id="name" name="name" ngModel formControlName="client" class="form-control" placeholder=" " required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['client'].invalid }" />
-        <label for="name">Client Name <span class="text-danger">*</span></label>
-        <div class="invalid-feedback">
-          <i class="ri-error-warning-line me-1"></i> Please enter a client name.
-        </div>
-      </div>
-    </div>
-
-    <div class="mb-3">
-      <label for="email" class="form-label">Email</label>
-      <div class="form-floating">
-        <input type="email" id="email" name="email" ngModel formControlName="email" class="form-control" placeholder=" " required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['email'].invalid }" />
-        <label for="email">Email <span class="text-danger">*</span></label>
-        <div class="invalid-feedback">
-          <i class="ri-error-warning-line me-1"></i> Please enter an email.
-        </div>
-      </div>
-    </div>
-
-    <div class="mb-3">
-      <label for="phone" class="form-label">Phone</label>
-      <div class="input-group input-group-dynamic">
-        <span class="input-group-text"><i class="ri-phone-line"></i></span>
-        <input type="text" id="phone" name="phone" ngModel formControlName="phone" class="form-control" placeholder="Enter Phone no." mask="000-000-0000" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['phone'].invalid }" />
-      </div>
-      <div class="invalid-feedback">
-        <i class="ri-error-warning-line me-1"></i> Please enter a phone number.
-      </div>
-    </div>
-
-    <div class="mb-3">
-      <label for="date" class="form-label">Joining Date</label>
-      <div class="input-group input-group-dynamic">
-        <span class="input-group-text"><i class="ri-calendar-line"></i></span>
-        <input class="form-control flatpickr-input" type="text" mwlFlatpickr [altInput]="true" [convertModelValue]="true" formControlName="date" placeholder="Select Date" [ngClass]="{ 'is-invalid': submitted && customerForm.controls['date'].invalid }">
-      </div>
-      <div class="invalid-feedback">
-        <i class="ri-error-warning-line me-1"></i> Please select a joining date.
-      </div>
-    </div>
-
-    <div class="mb-3">
-      <label for="status" class="form-label">Status</label>
-      <select class="form-select" id="status" name="status" ngModel formControlName="status" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['status'].invalid }">
-        <option value="ACTIVE">ACTIVE</option>
-        <option value="BANNED">BANNED</option>
-        <option value="PENDING">PENDING</option>
-        <option value="INACTIVE">INACTIVE</option>
-      </select>
-      <div class="invalid-feedback">
-        <i class="ri-error-warning-line me-1"></i> Please select a status.
-      </div>
-    </div>
-
-    <div class="mb-3">
-      <label for="imageUrl" class="form-label">Image URL</label>
-      <div class="input-group input-group-dynamic">
-        <span class="input-group-text"><i class="ri-image-line"></i></span>
-        <input type="text" id="imageUrl" name="imageUrl" ngModel formControlName="imageUrl" class="form-control" placeholder="Enter Image URL" required [ngClass]="{ 'is-invalid': submitted && customerForm.controls['imageUrl'].invalid }">
-      </div>
-      <div class="invalid-feedback">
-        <i class="ri-error-warning-line me-1"></i> Please provide an image URL.
-      </div>
-    </div>
-  </div>
-  <div class="modal-footer">
-    <div class="hstack gap-2 justify-content-end">
-      <button type="button" class="btn btn-soft-danger btn-animation waves-effect waves-light" data-bs-dismiss="modal" (click)="modal.close('Close click')">
-        <i class="ri-close-line align-middle me-1"></i> Cancel
-      </button>
-      <button type="submit" class="btn btn-soft-primary btn-animation waves-effect waves-light" id="add-btn" [disabled]="state.dataState === DataState.LOADING || customerForm.invalid">
-        <span *ngIf="state.dataState === DataState.LOADING" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-        <span *ngIf="state.dataState !== DataState.LOADING">
-          <i class="ri-save-line align-middle me-1"></i> Add Client
-        </span>
-      </button>
-    </div>
-  </div>
-</form>
-</ng-template>
-<!-- End Modal -->
-
-                          
-                      </div>
-                  </div>
-          
+      <!-- Page Header -->
+      <div class="row">
+        <div class="col-12">
+          <div class="page-header-wrapper">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+              <div>
+                <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Legal Management</div>
+                <h4 class="mb-0">Clients</h4>
               </div>
-              <!--end col-->
+              <div class="d-flex align-items-center gap-3">
+                <!-- Search Box -->
+                <div class="search-box d-none d-md-block">
+                  <form #searchForm="ngForm" (ngSubmit)="searchClients(searchForm)">
+                    <input type="text" class="form-control search-input"
+                           ngModel name="name" #name id="name"
+                           placeholder="Search clients...">
+                    <i class="ri-search-line search-icon"></i>
+                  </form>
+                </div>
+                <!-- Quick Actions -->
+                <div class="btn-group">
+                  <button class="btn btn-primary" (click)="openNewClientModal()">
+                    <i class="ri-add-line me-1"></i> New Client
+                  </button>
+                  <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+                          data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">Toggle Dropdown</span>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <a class="dropdown-item" (click)="openNewClientModal()">
+                        <i class="ri-user-add-line me-2 text-primary"></i> Create New Client
+                      </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <a class="dropdown-item" (click)="report()">
+                        <i class="ri-file-download-line me-2 text-info"></i> Export Clients
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-     </section>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="stats-row" *ngIf="state?.appData?.data?.page as page">
+        <div class="stat-item">
+          <div class="stat-header">
+            <span class="stat-label">TOTAL CLIENTS</span>
+            <span class="stat-indicator stat-indicator-primary">
+              <i class="ri-team-line"></i>
+            </span>
+          </div>
+          <div class="stat-body">
+            <i class="ri-group-line stat-icon text-primary"></i>
+            <span class="stat-value">{{ page.totalElements }}</span>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-header">
+            <span class="stat-label">ACTIVE</span>
+            <span class="stat-indicator stat-indicator-success">
+              <i class="ri-checkbox-circle-line"></i>
+            </span>
+          </div>
+          <div class="stat-body">
+            <i class="ri-user-follow-line stat-icon text-success"></i>
+            <span class="stat-value">{{ getStatusCount(page.content, 'ACTIVE') }}</span>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-header">
+            <span class="stat-label">PENDING</span>
+            <span class="stat-indicator stat-indicator-warning">
+              <i class="ri-time-line"></i>
+            </span>
+          </div>
+          <div class="stat-body">
+            <i class="ri-hourglass-line stat-icon text-warning"></i>
+            <span class="stat-value">{{ getStatusCount(page.content, 'PENDING') }}</span>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-header">
+            <span class="stat-label">INACTIVE</span>
+            <span class="stat-indicator stat-indicator-info">
+              <i class="ri-user-unfollow-line"></i>
+            </span>
+          </div>
+          <div class="stat-body">
+            <i class="ri-user-unfollow-line stat-icon text-info"></i>
+            <span class="stat-value">{{ getStatusCount(page.content, 'INACTIVE') }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content Card -->
+      <div class="row" style="margin-bottom: 60px;">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-bottom">
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div>
+                  <h5 class="mb-1 fw-semibold">All Clients</h5>
+                  <p class="text-muted mb-0 fs-13">Manage and track all your clients</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <button class="btn btn-soft-info btn-sm" (click)="report()">
+                    <i class="ri-file-download-line me-1"></i> Export
+                  </button>
+                  <button class="btn btn-soft-secondary btn-sm btn-icon" (click)="loadClients()">
+                    <i class="ri-refresh-line"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <!-- Table -->
+              <div class="table-responsive">
+                <table class="table table-hover table-nowrap align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col" style="width: 35%;">Client</th>
+                      <th scope="col" style="width: 18%;">Phone</th>
+                      <th scope="col" style="width: 14%;">Type</th>
+                      <th scope="col" style="width: 14%;">Status</th>
+                      <th scope="col" style="width: 19%;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let client of state?.appData?.data?.page.content"
+                        class="cursor-pointer"
+                        (click)="selectClient(client)">
+                      <!-- Client -->
+                      <td>
+                        <div class="d-flex align-items-center gap-2">
+                          <div class="avatar-xs flex-shrink-0">
+                            <img *ngIf="client.imageUrl" [src]="client.imageUrl" alt=""
+                                 class="rounded-circle avatar-xs object-fit-cover">
+                            <span *ngIf="!client.imageUrl"
+                                  class="avatar-title rounded-circle bg-primary-subtle text-primary">
+                              {{ client.name?.charAt(0)?.toUpperCase() }}
+                            </span>
+                          </div>
+                          <div class="flex-grow-1 overflow-hidden">
+                            <h6 class="mb-0 text-truncate" style="max-width: 250px;">{{ client.name }}</h6>
+                            <small class="text-muted d-flex align-items-center gap-1 mt-1">
+                              <i class="ri-mail-line fs-12"></i>{{ client.email }}
+                            </small>
+                          </div>
+                        </div>
+                      </td>
+
+                      <!-- Phone -->
+                      <td>
+                        <span class="text-muted" *ngIf="client.phone">
+                          <i class="ri-phone-line fs-12 me-1"></i>{{ client.phone }}
+                        </span>
+                        <span class="text-muted" *ngIf="!client.phone">-</span>
+                      </td>
+
+                      <!-- Type -->
+                      <td>
+                        <span class="badge rounded-pill bg-light text-body" *ngIf="client.type">{{ client.type }}</span>
+                        <span class="text-muted" *ngIf="!client.type">-</span>
+                      </td>
+
+                      <!-- Status -->
+                      <td>
+                        <span class="badge rounded-pill"
+                          [ngClass]="{
+                            'bg-success-subtle text-success': client.status === 'ACTIVE',
+                            'bg-primary-subtle text-primary': client.status === 'PENDING',
+                            'bg-danger-subtle text-danger': client.status === 'BANNED',
+                            'bg-info-subtle text-info': client.status === 'INACTIVE'
+                          }">
+                          <i class="ri-circle-fill fs-7 me-1"></i>
+                          {{ client.status }}
+                        </span>
+                      </td>
+
+                      <!-- Actions -->
+                      <td (click)="$event.stopPropagation()">
+                        <div class="d-flex gap-2">
+                          <button type="button" class="btn btn-soft-primary btn-icon"
+                                  [routerLink]="['/clients', client.id]">
+                            <i class="ri-eye-line fs-16"></i>
+                          </button>
+                          <button type="button" class="btn btn-soft-danger btn-icon"
+                                  (click)="deleteClient(client.id)">
+                            <i class="ri-delete-bin-line fs-16"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <!-- Empty State -->
+                    <tr *ngIf="state?.appData?.data?.page.content.length === 0">
+                      <td colspan="5" class="text-center py-5">
+                        <div class="empty-state-container">
+                          <div class="empty-state-illustration">
+                            <div class="empty-state-icon-lg">
+                              <i class="ri-user-search-line"></i>
+                            </div>
+                            <div class="empty-state-circles">
+                              <span></span><span></span><span></span>
+                            </div>
+                          </div>
+                          <h5 class="fw-semibold mb-2">No Clients Found</h5>
+                          <p class="text-muted mb-4">Get started by adding your first client</p>
+                          <button class="btn btn-primary" (click)="openNewClientModal()">
+                            <i class="ri-add-line me-1"></i> Add Client
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination -->
+              <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top"
+                   *ngIf="state?.appData?.data?.page.content.length > 0">
+                <div class="text-muted fs-13">
+                  Showing {{ state?.appData?.data?.page.numberOfElements }} of {{ state?.appData?.data?.page.totalElements }} clients
+                </div>
+                <nav aria-label="Page navigation">
+                  <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item" [class.disabled]="(currentPage$ | async) === 0">
+                      <a class="page-link" (click)="goToNextOrPreviousPage('backward')">
+                        <i class="ri-arrow-left-s-line"></i>
+                      </a>
+                    </li>
+                    <li *ngFor="let pageNumber of [].constructor(state?.appData?.data?.page.totalPages); let i = index;"
+                        class="page-item" [class.active]="i === (currentPage$ | async)">
+                      <a class="page-link" (click)="goToPage(i)">{{ i + 1 }}</a>
+                    </li>
+                    <li class="page-item" [class.disabled]="(currentPage$ | async) === (state?.appData?.data?.page.totalPages - 1)">
+                      <a class="page-link" (click)="goToNextOrPreviousPage('forward')">
+                        <i class="ri-arrow-right-s-line"></i>
+                      </a>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </ng-container>
 
+  <!-- Loading State -->
   <ng-container *ngSwitchCase="DataState.LOADING">
-      <div>Loading...</div>
-   </ng-container>
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-12">
+          <div class="page-header-wrapper">
+            <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Legal Management</div>
+            <h4 class="mb-0">Clients</h4>
+          </div>
+        </div>
+      </div>
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+          <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+          <h5 class="mt-4">Loading Clients</h5>
+          <p class="text-muted">Fetching your client list...</p>
+        </div>
+      </div>
+    </div>
+  </ng-container>
 
-   <ng-container *ngSwitchCase="DataState.ERROR">
-      <div>{{ state.error }}</div>
-   </ng-container>
+  <!-- Error State -->
+  <ng-container *ngSwitchCase="DataState.ERROR">
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-12">
+          <div class="page-header-wrapper">
+            <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Legal Management</div>
+            <h4 class="mb-0">Clients</h4>
+          </div>
+        </div>
+      </div>
+      <div class="alert alert-danger d-flex align-items-center" role="alert">
+        <i class="ri-error-warning-line fs-4 me-3"></i>
+        <div>{{ state.error }}</div>
+      </div>
+    </div>
+  </ng-container>
 </ng-container>
+
+<!-- Floating Action Button -->
+<div class="fab-container">
+  <button class="fab-main btn btn-primary" (click)="openNewClientModal()">
+    <i class="ri-add-line"></i>
+  </button>
+</div>

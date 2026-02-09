@@ -376,6 +376,12 @@ export class TopbarComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(message => {
         if (message.type === 'notification' && message.data) {
+          // Skip messaging-related WebSocket events — handled by MessagingStateService
+          const wsType = message.data.type;
+          if (wsType === 'NEW_MESSAGE' || wsType === 'MESSAGE_READ') {
+            return;
+          }
+
           const wsNotification = {
             notification: {
               title: message.data.title,

@@ -12,7 +12,7 @@ import { ClientService } from 'src/app/service/client.service';
 @Component({
   selector: 'app-client',
   templateUrl: './client-detail.component.html',
-  styleUrls: ['./client-detail.component.css']
+  styleUrls: ['./client-detail.component.scss']
 })
 export class ClientDetailComponent implements OnInit {
   clientState$: Observable<State<CustomHttpResponse<ClientState>>>;
@@ -21,6 +21,8 @@ export class ClientDetailComponent implements OnInit {
   isLoading$ = this.isLoadingSubject.asObservable();
   readonly DataState = DataState;
   private readonly CLIENT_ID: string = 'id';
+
+  isEditing = false;
 
   constructor(private activatedRoute: ActivatedRoute, private clientService: ClientService) { }
 
@@ -42,17 +44,26 @@ export class ClientDetailComponent implements OnInit {
     );
   }
 
+  startEditing(): void {
+    this.isEditing = true;
+  }
+
+  cancelEditing(): void {
+    this.isEditing = false;
+  }
+
   updateClient(customerForm: NgForm): void {
     this.isLoadingSubject.next(true);
     this.clientState$ = this.clientService.update$(customerForm.value)
       .pipe(
         map(response => {
-          this.dataSubject.next({ ...response, 
-            data: { ...response.data, 
-              client: { ...response.data.client, 
+          this.dataSubject.next({ ...response,
+            data: { ...response.data,
+              client: { ...response.data.client,
                 invoices: this.dataSubject.value.data.client.invoices }}});
 
           this.isLoadingSubject.next(false);
+          this.isEditing = false;
           return { dataState: DataState.LOADED, appData: this.dataSubject.value };
         }),
         startWith({ dataState: DataState.LOADED, appData: this.dataSubject.value }),
@@ -63,4 +74,32 @@ export class ClientDetailComponent implements OnInit {
       )
   }
 
+  getInitials(name: string): string {
+    if (!name) return '?';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
+
+  getStatusBadgeClass(status: string): string {
+    const statusMap: { [key: string]: string } = {
+      'ACTIVE': 'bg-success',
+      'INACTIVE': 'bg-secondary',
+      'PENDING': 'bg-warning',
+      'BANNED': 'bg-danger'
+    };
+    return statusMap[status] || 'bg-secondary';
+  }
+
+  formatStatus(value: string): string {
+    if (!value) return '-';
+    return value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  isOverdue(dueDate: string): boolean {
+    if (!dueDate) return false;
+    return new Date(dueDate) < new Date();
+  }
 }
