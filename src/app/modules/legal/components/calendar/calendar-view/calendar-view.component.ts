@@ -75,7 +75,8 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
       return `+${arg.num} more`;
     },
     events: [], // Start with empty events, they'll be loaded
-    height: 650,
+    height: 'auto',
+    aspectRatio: 1.35,
     themeSystem: 'bootstrap5',
     dateClick: this.handleDateClick.bind(this),
     eventClick: this.handleEventClick.bind(this),

@@ -297,8 +297,6 @@ body {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--msg-border);
-    height: auto; // Allow natural height on mobile
-    max-height: 50vh; // Limit on mobile to leave room for chat
   }
 
   &.collapsed {

@@ -543,7 +543,7 @@
                 <div *ngIf="user$ | async as user" class="dropdown ms-sm-3 header-item topbar-user" ngbDropdown display="dynamic" placement="bottom-end" container="body">
                     <button type="button" class="btn material-shadow-none" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ngbDropdownToggle>
                         <span class="d-flex align-items-center">
-                            <img class="rounded-circle header-profile-user" [src]="user?.imageUrl" alt="Header Avatar">
+                            <img class="rounded-circle header-profile-user" [src]="user?.imageUrl || 'assets/images/users/user-dummy-img.jpg'" alt="Header Avatar" (error)="$event.target.src = 'assets/images/users/user-dummy-img.jpg'">
                             <span class="text-start ms-xl-2">
                                 <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ user.firstName }} {{ user.lastName }}</span>
                                 <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">{{ user.title }}</span>

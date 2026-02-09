@@ -568,7 +568,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     }
 
     private String setUserImageUrl(String email) {
-        return fromCurrentContextPath().path("/user/image/" + email + ".png").toUriString();
+        return "/user/image/" + email + ".png";
     }
 
     private void saveImage(String email, MultipartFile image) {

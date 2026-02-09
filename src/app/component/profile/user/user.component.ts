@@ -287,27 +287,13 @@ export class UserComponent implements OnInit, OnDestroy {
   updatePicture(image: File): void {
     if (image) {
       this.isLoadingSubject.next(true);
+      // Refresh cache ID so the new image loads fresh
+      this.userService.refreshImageCache();
       this.profileState$ = this.userService.updateImage$(this.getFormData(image))
         .pipe(
           map(response => {
             this.noficationService.onDefault(response.message);
-
-            // Update the user data in the service with a timestamp to force cache refresh
-            const updatedUser = {
-              ...response.data.user,
-              imageUrl: `${response.data.user.imageUrl}?time=${new Date().getTime()}`
-            };
-            this.userService.setUserData(updatedUser);
-            
-            // Update the local data subject
-            this.dataSubject.next({ 
-              ...response, 
-              data: { 
-                ...response.data, 
-                user: updatedUser
-              }
-            });
-            
+            this.dataSubject.next({ ...response, data: response.data });
             this.isLoadingSubject.next(false);
             return { dataState: DataState.LOADED, appData: this.dataSubject.value };
           }),

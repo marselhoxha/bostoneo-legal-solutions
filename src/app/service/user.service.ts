@@ -20,6 +20,7 @@ export class UserService {
   private userDataSubject = new BehaviorSubject<User | null>(null);
   userData$ = this.userDataSubject.asObservable();
   private currentUser: User | null = null;
+  private imageSessionId = Date.now().toString();
 
   // Subject to notify when login is successful - used by TokenInterceptor to reset state
   private loginSuccessSubject = new Subject<void>();
@@ -47,19 +48,33 @@ export class UserService {
 
   /**
    * Normalize image URL to work across environments (localhost, staging, production).
-   * Handles: absolute localhost URLs, relative paths without leading /
+   * Handles: absolute localhost URLs, relative paths, and cache-busting for profile images.
    */
   normalizeImageUrl(url: string): string {
     if (!url) return url;
-    // Replace absolute localhost URL with current API URL
+    // Replace absolute localhost URL with current API URL (backward compat for old DB records)
     if (url.includes('localhost:8085')) {
       url = url.replace(/https?:\/\/localhost:8085/g, this.server);
     }
-    // Ensure relative paths have leading /
-    if (!url.startsWith('http') && !url.startsWith('/')) {
-      url = '/' + url;
+    // For relative paths, prepend the API server URL
+    if (!url.startsWith('http')) {
+      if (!url.startsWith('/')) {
+        url = '/' + url;
+      }
+      url = this.server + url;
+    }
+    // Cache-bust profile image URLs with session ID
+    if (url.includes('/user/image/')) {
+      url = url.split('?')[0] + '?v=' + this.imageSessionId;
     }
     return url;
+  }
+
+  /**
+   * Refresh the image cache session ID so profile images reload from server.
+   */
+  refreshImageCache(): void {
+    this.imageSessionId = Date.now().toString();
   }
 
   getUserData(): Observable<User> {

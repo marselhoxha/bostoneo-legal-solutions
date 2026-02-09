@@ -195,7 +195,7 @@
 
 .calendar-wrapper {
   position: relative;
-  height: 700px;
+  min-height: 500px;
   width: 100%;
   background: var(--vz-card-bg);
   
@@ -253,33 +253,21 @@
   }
 }
 
-// Fix for Create Event button - ultra aggressive approach
+// Fix for Create Event button
 .add-btn {
   position: relative !important;
   display: inline-block !important;
   cursor: pointer !important;
-  z-index: 100 !important;
   pointer-events: auto !important;
   transform: none !important;
   transition: none !important;
   animation: none !important;
-  
+
   &::before, &::after {
     display: none !important;
     content: none !important;
   }
-  
-  // Extend the clickable area
-  &:before {
-    content: "";
-    position: absolute;
-    top: -5px;
-    left: -5px;
-    right: -5px;
-    bottom: -5px;
-    z-index: -1;
-  }
-  
+
   // Override any parent styles that might interfere
   &:hover, &:focus, &:active {
     color: #fff !important;
@@ -289,9 +277,9 @@
     transform: none !important;
     transition: background-color 0.2s ease !important;
   }
-  
+
   * {
-    pointer-events: none !important; 
+    pointer-events: none !important;
   }
 }
 
@@ -358,15 +346,57 @@
   display: inline-block;
   position: relative;
   cursor: pointer;
-  z-index: 100;
   padding: 0;
   margin: 0;
-  
+
   &:hover {
     button {
       color: #fff !important;
       background-color: var(--vz-success) !important;
       border-color: var(--vz-success) !important;
     }
+  }
+}
+
+// Mobile responsiveness
+@media (max-width: 768px) {
+  .calendar-wrapper {
+    min-height: 400px;
+
+    ::ng-deep {
+      .fc {
+        .fc-toolbar {
+          flex-direction: column;
+          gap: 0.5rem;
+
+          .fc-toolbar-chunk {
+            display: flex;
+            justify-content: center;
+
+            .fc-button-group .fc-button {
+              padding: 0.25rem 0.5rem;
+              font-size: 0.8rem;
+            }
+
+            .fc-today-button {
+              padding: 0.25rem 0.5rem;
+              font-size: 0.8rem;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .card-header {
+    .event-type-info {
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+  }
+
+  .badge-info {
+    margin-right: 8px;
+    font-size: 0.75rem;
   }
 }
