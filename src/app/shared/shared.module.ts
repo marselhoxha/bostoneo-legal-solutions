@@ -13,6 +13,7 @@ import { ConfirmationDialogModule } from './components/confirmation-dialog/confi
 import { VirtualListComponent } from './components/virtual-list/virtual-list.component';
 import { VirtualTableComponent } from './components/virtual-table/virtual-table.component';
 import { AvailabilitySettingsComponent } from './components/availability-settings/availability-settings.component';
+import { ImageUrlPipe } from '../pipes/image-url.pipe';
 
 /**
  * Note about standalone components:
@@ -59,7 +60,8 @@ import { AvailabilitySettingsComponent } from './components/availability-setting
     ScrollingModule,
     MatDialogModule,
     MatButtonModule,
-    ConfirmationDialogModule
+    ConfirmationDialogModule,
+    ImageUrlPipe
   ],
   exports: [
     RouterModule,
@@ -74,7 +76,8 @@ import { AvailabilitySettingsComponent } from './components/availability-setting
     VirtualTableComponent,
     AvailabilitySettingsComponent,
     MatDialogModule,
-    MatButtonModule
+    MatButtonModule,
+    ImageUrlPipe
   ]
 })
 export class SharedModule { }

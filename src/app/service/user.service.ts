@@ -48,7 +48,8 @@ export class UserService {
 
   /**
    * Normalize image URL to work across environments (localhost, staging, production).
-   * Handles: absolute localhost URLs, relative paths, and cache-busting for profile images.
+   * Handles: absolute localhost URLs, backend relative paths (/user/image/), and cache-busting.
+   * Does NOT modify frontend asset paths (/assets/...) or external URLs.
    */
   normalizeImageUrl(url: string): string {
     if (!url) return url;
@@ -56,8 +57,9 @@ export class UserService {
     if (url.includes('localhost:8085')) {
       url = url.replace(/https?:\/\/localhost:8085/g, this.server);
     }
-    // For relative paths, prepend the API server URL
-    if (!url.startsWith('http')) {
+    // For backend image paths (relative), prepend the API server URL.
+    // Only for /user/image/ paths — leave /assets/ and other frontend paths alone.
+    if (!url.startsWith('http') && url.includes('/user/image/')) {
       if (!url.startsWith('/')) {
         url = '/' + url;
       }

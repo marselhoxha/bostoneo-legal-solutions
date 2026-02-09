@@ -1220,7 +1220,7 @@
                               <!-- Member Header -->
                               <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="d-flex align-items-center">
-                                  <img [src]="member.imageUrl || 'assets/images/users/user-dummy-img.jpg'"
+                                  <img [src]="member.imageUrl | imageUrl"
                                        alt="{{ member.name }}"
                                        class="avatar-sm rounded-circle me-3"
                                        (error)="$event.target.src='assets/images/users/user-dummy-img.jpg'">

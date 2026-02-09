@@ -5,11 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil, finalize } from 'rxjs/operators';
 import { ClientPortalService, ClientProfile } from '../../services/client-portal.service';
+import { ImageUrlPipe } from '../../../../pipes/image-url.pipe';
 
 @Component({
   selector: 'app-client-profile',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, ImageUrlPipe],
   templateUrl: './client-profile.component.html',
   styleUrls: ['./client-profile.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

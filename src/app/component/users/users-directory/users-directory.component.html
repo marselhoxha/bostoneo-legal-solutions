@@ -108,7 +108,7 @@
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="flex-shrink-0">
-                                                <img *ngIf="user.imageUrl" [src]="user.imageUrl" alt=""
+                                                <img *ngIf="user.imageUrl" [src]="user.imageUrl | imageUrl" alt=""
                                                     class="avatar-xxs rounded-circle image_src">
                                                 <div *ngIf="!user.imageUrl" class="avatar-xxs rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fs-10">
                                                     {{ getUserInitials(user) }}

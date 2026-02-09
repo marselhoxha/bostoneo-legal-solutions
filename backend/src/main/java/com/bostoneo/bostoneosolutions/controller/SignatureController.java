@@ -127,8 +127,9 @@ public class SignatureController {
     /**
      * Get all signature requests for an organization - TENANT FILTERED
      */
-    @GetMapping("/requests/organization")
+    @GetMapping("/requests/organization/{organizationId}")
     public ResponseEntity<HttpResponse> getSignatureRequestsByOrganization(
+            @PathVariable Long organizationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -404,8 +405,8 @@ public class SignatureController {
     /**
      * Get all templates for an organization - TENANT FILTERED
      */
-    @GetMapping("/templates/organization")
-    public ResponseEntity<HttpResponse> getTemplates() {
+    @GetMapping("/templates/organization/{organizationId}")
+    public ResponseEntity<HttpResponse> getTemplates(@PathVariable Long organizationId) {
         Long orgId = getRequiredOrganizationId();
         List<SignatureTemplateDTO> templates = boldSignService.getTemplatesForOrganization(orgId);
 
@@ -423,8 +424,9 @@ public class SignatureController {
     /**
      * Get templates by category - TENANT FILTERED
      */
-    @GetMapping("/templates/category/{category}")
+    @GetMapping("/templates/organization/{organizationId}/category/{category}")
     public ResponseEntity<HttpResponse> getTemplatesByCategory(
+            @PathVariable Long organizationId,
             @PathVariable String category) {
 
         Long orgId = getRequiredOrganizationId();
@@ -530,8 +532,8 @@ public class SignatureController {
     /**
      * Get template categories - TENANT FILTERED
      */
-    @GetMapping("/templates/categories")
-    public ResponseEntity<HttpResponse> getTemplateCategories() {
+    @GetMapping("/templates/categories/{organizationId}")
+    public ResponseEntity<HttpResponse> getTemplateCategories(@PathVariable Long organizationId) {
         Long orgId = getRequiredOrganizationId();
         List<String> categories = boldSignService.getTemplateCategories(orgId);
 
@@ -571,8 +573,9 @@ public class SignatureController {
     /**
      * Get audit logs for an organization - TENANT FILTERED
      */
-    @GetMapping("/audit/organization")
+    @GetMapping("/audit/organization/{organizationId}")
     public ResponseEntity<HttpResponse> getAuditLogsByOrganization(
+            @PathVariable Long organizationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
 
@@ -846,8 +849,8 @@ public class SignatureController {
     /**
      * Get signature statistics for an organization - TENANT FILTERED
      */
-    @GetMapping("/stats/organization")
-    public ResponseEntity<HttpResponse> getStatistics() {
+    @GetMapping("/stats/organization/{organizationId}")
+    public ResponseEntity<HttpResponse> getStatistics(@PathVariable Long organizationId) {
         Long orgId = getRequiredOrganizationId();
         BoldSignService.SignatureStatsDTO stats = boldSignService.getStatistics(orgId);
 
@@ -865,8 +868,8 @@ public class SignatureController {
     /**
      * Get dashboard data from BoldSign API - TENANT FILTERED
      */
-    @GetMapping("/dashboard")
-    public ResponseEntity<HttpResponse> getDashboard() {
+    @GetMapping("/dashboard/{organizationId}")
+    public ResponseEntity<HttpResponse> getDashboard(@PathVariable Long organizationId) {
         Long orgId = getRequiredOrganizationId();
         log.info("Fetching dashboard for organization {}", orgId);
         BoldSignDashboardDTO dashboard = boldSignService.getDashboard(orgId);
@@ -935,8 +938,9 @@ public class SignatureController {
     /**
      * Sync documents from BoldSign to local database - TENANT FILTERED
      */
-    @PostMapping("/sync/documents")
+    @PostMapping("/sync/documents/{organizationId}")
     public ResponseEntity<HttpResponse> syncDocuments(
+            @PathVariable Long organizationId,
             @AuthenticationPrincipal UserDTO user) {
 
         Long orgId = getRequiredOrganizationId();
@@ -957,8 +961,9 @@ public class SignatureController {
     /**
      * Sync templates from BoldSign to local database - TENANT FILTERED
      */
-    @PostMapping("/sync/templates")
+    @PostMapping("/sync/templates/{organizationId}")
     public ResponseEntity<HttpResponse> syncTemplates(
+            @PathVariable Long organizationId,
             @AuthenticationPrincipal UserDTO user) {
 
         Long orgId = getRequiredOrganizationId();
@@ -981,8 +986,8 @@ public class SignatureController {
     /**
      * Get brand settings for an organization - TENANT FILTERED
      */
-    @GetMapping("/brand")
-    public ResponseEntity<HttpResponse> getBrand() {
+    @GetMapping("/brand/{organizationId}")
+    public ResponseEntity<HttpResponse> getBrand(@PathVariable Long organizationId) {
         Long orgId = getRequiredOrganizationId();
         BoldSignService.BrandDTO brand = boldSignService.getBrand(orgId);
 
@@ -1000,8 +1005,9 @@ public class SignatureController {
     /**
      * Create or update brand for an organization - TENANT FILTERED
      */
-    @PostMapping("/brand")
+    @PostMapping("/brand/{organizationId}")
     public ResponseEntity<HttpResponse> createOrUpdateBrand(
+            @PathVariable Long organizationId,
             @RequestBody Map<String, String> brandData) {
 
         Long orgId = getRequiredOrganizationId();
@@ -1044,8 +1050,8 @@ public class SignatureController {
     /**
      * Delete brand for an organization - TENANT FILTERED
      */
-    @DeleteMapping("/brand")
-    public ResponseEntity<HttpResponse> deleteBrand() {
+    @DeleteMapping("/brand/{organizationId}")
+    public ResponseEntity<HttpResponse> deleteBrand(@PathVariable Long organizationId) {
         Long orgId = getRequiredOrganizationId();
         log.info("Deleting brand for organization {}", orgId);
         boldSignService.deleteBrand(orgId);

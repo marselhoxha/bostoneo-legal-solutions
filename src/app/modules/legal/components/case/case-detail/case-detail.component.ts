@@ -41,6 +41,7 @@ import { AuditLogService } from '../../../../../core/services/audit-log.service'
 import { PushNotificationService } from '../../../../../core/services/push-notification.service';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../../core/services/notification-manager.service';
 import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField, TYPE_TO_PRACTICE_AREA } from '../../../shared/practice-area-fields.config';
+import { ImageUrlPipe } from '../../../../../pipes/image-url.pipe';
 
 @Component({
   selector: 'app-case-detail',
@@ -57,7 +58,8 @@ import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField, TYPE_TO_P
     CaseTimelineComponent,
     CaseTimeEntriesComponent,
     CaseResearchComponent,
-    CaseProgressManagerComponent
+    CaseProgressManagerComponent,
+    ImageUrlPipe
   ]
 })
 export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {

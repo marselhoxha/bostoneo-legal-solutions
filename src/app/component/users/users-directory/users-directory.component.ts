@@ -8,6 +8,7 @@ import { takeUntil, catchError, debounceTime, distinctUntilChanged, switchMap, s
 import Swal from 'sweetalert2';
 
 import { User } from '../../../interface/user';
+import { ImageUrlPipe } from '../../../pipes/image-url.pipe';
 import { UserService } from '../../../service/user.service';
 import { NotificationService } from '../../../service/notification.service';
 import { RbacService } from '../../../core/services/rbac.service';
@@ -34,7 +35,8 @@ interface UsersState {
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule
+    FormsModule,
+    ImageUrlPipe
   ]
 })
 export class UsersDirectoryComponent implements OnInit, OnDestroy {

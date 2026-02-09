@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Subject, interval, of } from 'rxjs';
 import { takeUntil, switchMap, filter, catchError } from 'rxjs/operators';
 import { MessagingService, MessageThread, Message, ClientInfo, ClientCase } from '../../service/messaging.service';
+import { ImageUrlPipe } from '../../pipes/image-url.pipe';
 import { MessagingStateService } from '../../service/messaging-state.service';
 import { LegalCaseService } from '../../modules/legal/services/legal-case.service';
 import { WebSocketService } from '../../service/websocket.service';
@@ -32,7 +33,7 @@ interface QuickReplyCategory {
 @Component({
   selector: 'app-messages',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, ImageUrlPipe],
   templateUrl: './messages.component.html',
   styleUrls: ['./messages.component.scss'],
   encapsulation: ViewEncapsulation.None

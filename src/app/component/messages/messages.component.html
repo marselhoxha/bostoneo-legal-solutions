@@ -247,7 +247,7 @@
                     <div class="avatar-wrapper me-3">
                       <div class="avatar-sm topbar-avatar">
                         <ng-container *ngIf="getOtherPartyImageUrl(); else topbarInitials">
-                          <img [src]="getOtherPartyImageUrl()" class="avatar-img rounded-circle" alt="">
+                          <img [src]="getOtherPartyImageUrl() | imageUrl" class="avatar-img rounded-circle" alt="">
                         </ng-container>
                         <ng-template #topbarInitials>
                           <span class="avatar-title rounded-circle">
@@ -350,7 +350,7 @@
                       <!-- Avatar for incoming messages -->
                       <div class="message-avatar" *ngIf="!isSentByMe(message) && !isGroupedMessage(i)">
                         <ng-container *ngIf="getMessageSenderImageUrl(message); else messageInitials">
-                          <img [src]="getMessageSenderImageUrl(message)" class="avatar-img rounded-circle" alt="">
+                          <img [src]="getMessageSenderImageUrl(message) | imageUrl" class="avatar-img rounded-circle" alt="">
                         </ng-container>
                         <ng-template #messageInitials>
                           <span class="avatar-title rounded-circle">
@@ -387,7 +387,7 @@
                   <div class="message-wrapper">
                     <div class="message-avatar">
                       <ng-container *ngIf="getTypingAvatarImageUrl(); else typingInitials">
-                        <img [src]="getTypingAvatarImageUrl()" class="avatar-img rounded-circle" alt="">
+                        <img [src]="getTypingAvatarImageUrl() | imageUrl" class="avatar-img rounded-circle" alt="">
                       </ng-container>
                       <ng-template #typingInitials>
                         <span class="avatar-title rounded-circle">
@@ -514,7 +514,7 @@
             <div class="client-info-section">
               <div class="client-avatar-lg">
                 <ng-container *ngIf="selectedThread.clientImageUrl; else clientPanelInitials">
-                  <img [src]="selectedThread.clientImageUrl" class="avatar-img rounded-circle" alt="">
+                  <img [src]="selectedThread.clientImageUrl | imageUrl" class="avatar-img rounded-circle" alt="">
                 </ng-container>
                 <ng-template #clientPanelInitials>
                   <span class="avatar-title rounded-circle">
@@ -573,7 +573,7 @@
   <div class="thread-content">
     <div class="thread-avatar">
       <ng-container *ngIf="getOtherPartyImageUrl(thread); else threadInitials">
-        <img [src]="getOtherPartyImageUrl(thread)" class="avatar-img rounded-circle" alt="">
+        <img [src]="getOtherPartyImageUrl(thread) | imageUrl" class="avatar-img rounded-circle" alt="">
       </ng-container>
       <ng-template #threadInitials>
         <span class="avatar-title rounded-circle">
