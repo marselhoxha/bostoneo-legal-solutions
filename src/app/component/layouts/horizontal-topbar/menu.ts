@@ -229,13 +229,7 @@ export const ATTORNEY_MENU: MenuItem[] = [
     link: '/legal/ai-assistant/ai-workspace',
     subItems: [
       { id: 'att-ai-workspace', label: 'AI Workspace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/ai-workspace', parentId: 'att-ai-tools' },
-      { id: 'att-ai-personal-injury', label: 'Personal Injury', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/practice-areas/personal-injury', parentId: 'att-ai-tools' },
-      { id: 'att-ai-family-law', label: 'Family Law', icon: 'ri-parent-line', link: '/legal/ai-assistant/practice-areas/family-law', parentId: 'att-ai-tools' },
-      { id: 'att-ai-criminal', label: 'Criminal Defense', icon: 'ri-shield-user-line', link: '/legal/ai-assistant/practice-areas/criminal-defense', parentId: 'att-ai-tools' },
-      { id: 'att-ai-immigration', label: 'Immigration', icon: 'ri-passport-line', link: '/legal/ai-assistant/practice-areas/immigration', parentId: 'att-ai-tools' },
-      { id: 'att-ai-real-estate', label: 'Real Estate', icon: 'ri-building-line', link: '/legal/ai-assistant/practice-areas/real-estate', parentId: 'att-ai-tools' },
-      { id: 'att-ai-ip', label: 'Intellectual Property', icon: 'ri-lightbulb-line', link: '/legal/ai-assistant/practice-areas/intellectual-property', parentId: 'att-ai-tools' },
-      { id: 'att-ai-practice-areas', label: 'All Practice Areas', icon: 'ri-apps-line', link: '/legal/ai-assistant/practice-areas', parentId: 'att-ai-tools' }
+      { id: 'att-ai-personal-injury', label: 'Personal Injury', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/practice-areas/personal-injury', parentId: 'att-ai-tools' }
     ]
   },
   {
@@ -347,13 +341,7 @@ export const ADMIN_MENU: MenuItem[] = [
     link: '/legal/ai-assistant/ai-workspace',
     subItems: [
       { id: 'admin-ai-workspace', label: 'AI Workspace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/ai-workspace', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-personal-injury', label: 'Personal Injury', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/practice-areas/personal-injury', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-family-law', label: 'Family Law', icon: 'ri-parent-line', link: '/legal/ai-assistant/practice-areas/family-law', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-criminal', label: 'Criminal Defense', icon: 'ri-shield-user-line', link: '/legal/ai-assistant/practice-areas/criminal-defense', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-immigration', label: 'Immigration', icon: 'ri-passport-line', link: '/legal/ai-assistant/practice-areas/immigration', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-real-estate', label: 'Real Estate', icon: 'ri-building-line', link: '/legal/ai-assistant/practice-areas/real-estate', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-ip', label: 'Intellectual Property', icon: 'ri-lightbulb-line', link: '/legal/ai-assistant/practice-areas/intellectual-property', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-practice-areas', label: 'All Practice Areas', icon: 'ri-apps-line', link: '/legal/ai-assistant/practice-areas', parentId: 'admin-ai-tools' }
+      { id: 'admin-ai-personal-injury', label: 'Personal Injury', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/practice-areas/personal-injury', parentId: 'admin-ai-tools' }
     ]
   },
   {
