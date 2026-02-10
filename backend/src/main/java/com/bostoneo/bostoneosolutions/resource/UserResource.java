@@ -17,6 +17,7 @@ import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import com.bostoneo.bostoneosolutions.provider.TokenProvider;
 import com.bostoneo.bostoneosolutions.repository.ClientRepository;
 import com.bostoneo.bostoneosolutions.service.EventService;
+import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import com.bostoneo.bostoneosolutions.service.RoleService;
 import com.bostoneo.bostoneosolutions.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +25,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,10 +34,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -73,9 +70,7 @@ public class UserResource {
     private final HttpServletResponse response;
     private final ApplicationEventPublisher publisher;
     private final ClientRepository clientRepository;
-
-    @Value("${app.profile-image.path:#{systemProperties['user.home'] + '/Downloads/images/'}}")
-    private String profileImagePath;
+    private final FileStorageService fileStorageService;
 
     // Holds the UserPrincipal from authentication to avoid rebuilding it in sendResponse()
     private final ThreadLocal<UserPrincipal> authenticatedPrincipal = new ThreadLocal<>();
@@ -290,7 +285,7 @@ public class UserResource {
 
     @GetMapping(value = "/image/{fileName}", produces = IMAGE_PNG_VALUE)
     public byte[] getProfileImage(@PathVariable("fileName") String fileName) throws Exception {
-        return Files.readAllBytes(Paths.get(profileImagePath).resolve(fileName));
+        return fileStorageService.loadFileAsResource("profile-images/" + fileName).getInputStream().readAllBytes();
     }
 
     @GetMapping("/refresh/token")

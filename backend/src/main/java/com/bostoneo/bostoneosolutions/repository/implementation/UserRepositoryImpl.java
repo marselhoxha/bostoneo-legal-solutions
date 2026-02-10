@@ -15,9 +15,9 @@ import com.bostoneo.bostoneosolutions.repository.RoleRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.rowmapper.UserRowMapper;
 import com.bostoneo.bostoneosolutions.service.EmailService;
+import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -32,9 +32,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -48,7 +45,6 @@ import static com.bostoneo.bostoneosolutions.enumeration.RoleType.ROLE_USER;
 import static com.bostoneo.bostoneosolutions.enumeration.VerificationType.ACCOUNT;
 import static com.bostoneo.bostoneosolutions.enumeration.VerificationType.PASSWORD;
 import static com.bostoneo.bostoneosolutions.query.UserQuery.*;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Map.of;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
@@ -65,9 +61,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     private final RoleRepository<Role> roleRepository;
     private final BCryptPasswordEncoder encoder;
     private final EmailService emailService;
-
-    @Value("${app.profile-image.path:#{systemProperties['user.home'] + '/Downloads/images/'}}")
-    private String profileImagePath;
+    private final FileStorageService fileStorageService;
 
     @Override
     public User create(User user) {
@@ -572,23 +566,13 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     }
 
     private void saveImage(String email, MultipartFile image) {
-        Path fileStorageLocation = Paths.get(profileImagePath).toAbsolutePath().normalize();
-        if(!Files.exists(fileStorageLocation)) {
-            try {
-                Files.createDirectories(fileStorageLocation);
-            } catch (Exception exception) {
-                log.error(exception.getMessage());
-                throw new ApiException("Unable to create directories to save image");
-            }
-            log.info("Created directories: {}", fileStorageLocation);
-        }
         try {
-            Files.copy(image.getInputStream(), fileStorageLocation.resolve(email + ".png"), REPLACE_EXISTING);
+            fileStorageService.storeFile(image, "profile-images", email + ".png");
+            log.info("Profile image saved for user: {}", email);
         } catch (IOException exception) {
-            log.error(exception.getMessage());
-            throw new ApiException(exception.getMessage());
+            log.error("Failed to save profile image for {}: {}", email, exception.getMessage());
+            throw new ApiException("Unable to save profile image");
         }
-        log.info("File saved in: {} folder", fileStorageLocation);
     }
 
     private Boolean isLinkExpired(String key, VerificationType password) {

@@ -3,7 +3,7 @@ import { UserService } from '../service/user.service';
 
 @Pipe({ name: 'imageUrl', standalone: true })
 export class ImageUrlPipe implements PipeTransform {
-  private readonly defaultAvatar = 'assets/images/users/user-dummy-img.jpg';
+  private readonly defaultAvatar = 'assets/images/users/default-avatar.jpg';
 
   constructor(private userService: UserService) {}
 

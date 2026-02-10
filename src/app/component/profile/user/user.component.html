@@ -15,8 +15,9 @@
                <div class="card-body p-4">
                   <div class="text-center">
                      <div class="profile-user position-relative d-inline-block mx-auto mb-4">
-                        <img [src]="state?.appData?.data?.user?.imageUrl"
-                           class="rounded-circle avatar-xl img-thumbnail user-profile-image" alt="Profile Image">
+                        <img [src]="state?.appData?.data?.user?.imageUrl | imageUrl"
+                           class="rounded-circle avatar-xl img-thumbnail user-profile-image" alt="Profile Image"
+                           (error)="$event.target.src='assets/images/users/default-avatar.jpg'">
                         <div class="avatar-xs p-0 rounded-circle profile-photo-edit">
                            <input id="profile-img-file-input" type="file" (click)="$event.preventDefault(); fileInput.click()"
                               class="profile-img-file-input">

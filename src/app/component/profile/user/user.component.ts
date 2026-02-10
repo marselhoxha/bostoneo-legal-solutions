@@ -287,8 +287,6 @@ export class UserComponent implements OnInit, OnDestroy {
   updatePicture(image: File): void {
     if (image) {
       this.isLoadingSubject.next(true);
-      // Refresh cache ID so the new image loads fresh
-      this.userService.refreshImageCache();
       this.profileState$ = this.userService.updateImage$(this.getFormData(image))
         .pipe(
           map(response => {

@@ -307,6 +307,8 @@ export class UserService {
       .pipe(
         tap(response => {
           if (response && response.data && response.data.user) {
+            // Refresh cache BEFORE setUserData so normalizeImageUrl uses the new session ID
+            this.refreshImageCache();
             this.setUserData(response.data.user);
           }
         }),
