@@ -5,7 +5,7 @@ import { CaseDocument } from '../../../interfaces/case.interface';
 import { DocumentType, DocumentCategory } from '../../../interfaces/document.interface';
 import { CaseDocumentsService } from '../../../services/case-documents.service';
 import { FileManagerService } from '../../../../file-manager/services/file-manager.service';
-import { FileItemModel } from '../../../../file-manager/models/file-manager.model';
+import { FileItemModel, FolderModel } from '../../../../file-manager/models/file-manager.model';
 import { FilePreviewModalComponent } from '../../../../file-manager/components/file-preview-modal/file-preview-modal.component';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -18,6 +18,8 @@ import { DOCUMENT } from '@angular/common';
 import { finalize } from 'rxjs/operators';
 import { Pipe, PipeTransform } from '@angular/core';
 import { RbacService } from '../../../../../core/services/rbac.service';
+import { TemplateService } from '../../../../file-manager/services/template.service';
+import { FolderTemplate, TemplateFolderStructure } from '../../../../file-manager/models/template.model';
 
 @Pipe({
   name: 'safe',
@@ -200,136 +202,353 @@ export class SafePipe implements PipeTransform {
           </div>
         </div>
 
-        <!-- Document Filters -->
-        <div class="row mb-4">
-          <div class="col-md-3">
-            <select class="form-select" [(ngModel)]="selectedCategory" (change)="filterDocuments()">
-              <option value="">All Categories</option>
-              @for(category of categories; track category) {
-                <option [value]="category">{{category}}</option>
-              }
-            </select>
-          </div>
-          <div class="col-md-3">
-            <select class="form-select" [(ngModel)]="selectedType" (change)="filterDocuments()">
-              <option value="">All Types</option>
-              @for(type of documentTypes; track type) {
-                <option [value]="type">{{type}}</option>
-              }
-            </select>
-          </div>
-          <div class="col-md-6">
-            <input 
-              type="text" 
-              class="form-control" 
-              placeholder="Search documents..."
-              [(ngModel)]="searchTerm"
-              (input)="filterDocuments()"
-            >
-          </div>
-        </div>
+        <!-- Split-Panel Layout (always show) -->
+          <div class="row g-0">
+            <!-- Left: Folder Tree Sidebar -->
+            <div class="col-md-3 col-12 mb-3 mb-md-0">
+              <div class="folder-tree-sidebar">
+                <div class="folder-tree-header d-flex align-items-center justify-content-between">
+                  <span class="fs-13 fw-semibold text-uppercase text-muted">Folders</span>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-soft-secondary p-0 tree-action-btn"
+                            (click)="createFolderStructure()"
+                            title="Create Folder Structure from Template">
+                      <i class="ri-node-tree fs-14"></i>
+                    </button>
+                    <button class="btn btn-sm btn-soft-primary p-0 tree-action-btn"
+                            (click)="createNewFolder()"
+                            title="New Folder">
+                      <i class="ri-folder-add-line fs-14"></i>
+                    </button>
+                  </div>
+                </div>
 
-        <!-- Empty State with Drag & Drop -->
-        @if(filteredDocuments.length === 0) {
-          <div class="dropzone-wrapper"
-               [class.dropzone-dragging]="isDragging"
-               (dragover)="onDragOver($event)"
-               (dragleave)="onDragLeave($event)"
-               (drop)="onDrop($event)"
-               (click)="toggleUploadForm()">
-            <div class="dropzone-content">
-              <div class="dropzone-icon">
-                <i class="ri-upload-cloud-2-line"></i>
+                <!-- All Documents -->
+                <div class="tree-item"
+                     [class.active]="selectedFolderId === null"
+                     (click)="selectFolder(null)">
+                  <div class="d-flex align-items-center">
+                    <i class="ri-file-list-3-line me-2 fs-16 text-primary"></i>
+                    <span class="tree-item-name flex-grow-1">All Documents</span>
+                    <span class="badge bg-primary-subtle text-primary rounded-pill ms-auto">{{combinedDocuments.length}}</span>
+                  </div>
+                </div>
+
+                <hr class="my-1 opacity-25">
+
+                <!-- Loading state -->
+                @if(isLoadingFolders || isCreatingStructure) {
+                  <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    @if(isCreatingStructure) {
+                      <p class="text-muted fs-12 mt-2 mb-0">Creating folder structure...</p>
+                    }
+                  </div>
+                }
+
+                <!-- Empty state: no folders yet -->
+                @if(!isLoadingFolders && !isCreatingStructure && topLevelFolders.length === 0) {
+                  <div class="text-center py-3 px-2">
+                    <i class="ri-folder-line fs-24 text-muted d-block mb-2"></i>
+                    <p class="text-muted fs-12 mb-2">No folder structure yet</p>
+                    <button class="btn btn-sm btn-soft-primary w-100 mb-2" (click)="createFolderStructure()">
+                      <i class="ri-folder-add-line me-1"></i> Create Folder Structure
+                    </button>
+                    <button class="btn btn-sm btn-soft-secondary w-100" (click)="createNewFolder()">
+                      <i class="ri-add-line me-1"></i> New Empty Folder
+                    </button>
+                  </div>
+                }
+
+                <!-- Folder tree -->
+                @for(folder of topLevelFolders; track folder.id) {
+                  <ng-container>
+                    <!-- Parent folder row -->
+                    <div class="tree-item"
+                         [class.active]="selectedFolderId === folder.id"
+                         [class.drag-over]="dragOverFolderId === folder.id"
+                         (click)="selectFolder(folder)"
+                         (dragover)="onTreeFolderDragOver($event, folder)"
+                         (dragleave)="onTreeFolderDragLeave($event)"
+                         (drop)="onTreeFolderDrop($event, folder)">
+                      <div class="d-flex align-items-center">
+                        @if(hasChildren(folder.id)) {
+                          <button class="btn btn-sm tree-expand-btn p-0 me-1"
+                                  (click)="toggleFolderExpand(folder.id, $event)">
+                            <i [class]="isFolderExpanded(folder.id) ? 'ri-arrow-down-s-fill' : 'ri-arrow-right-s-fill'" class="fs-14"></i>
+                          </button>
+                        } @else {
+                          <span class="tree-expand-spacer me-1"></span>
+                        }
+                        <i class="ri-folder-fill text-warning me-2 fs-16"></i>
+                        <span class="tree-item-name flex-grow-1 text-truncate" [title]="folder.name">{{folder.name}}</span>
+                        @if(folder.fileCount) {
+                          <span class="badge bg-light text-muted rounded-pill ms-1 fs-10">{{folder.fileCount}}</span>
+                        }
+                        <button class="btn btn-sm tree-delete-btn p-0 ms-1"
+                                (click)="deleteFolderConfirm(folder, $event)"
+                                title="Delete folder">
+                          <i class="ri-delete-bin-line fs-12"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Child folders (expanded) -->
+                    @if(isFolderExpanded(folder.id)) {
+                      @for(child of getChildFolders(folder.id); track child.id) {
+                        <div class="tree-item tree-child"
+                             [class.active]="selectedFolderId === child.id"
+                             [class.drag-over]="dragOverFolderId === child.id"
+                             (click)="selectFolder(child)"
+                             (dragover)="onTreeFolderDragOver($event, child)"
+                             (dragleave)="onTreeFolderDragLeave($event)"
+                             (drop)="onTreeFolderDrop($event, child)">
+                          <div class="d-flex align-items-center">
+                            @if(hasChildren(child.id)) {
+                              <button class="btn btn-sm tree-expand-btn p-0 me-1"
+                                      (click)="toggleFolderExpand(child.id, $event)">
+                                <i [class]="isFolderExpanded(child.id) ? 'ri-arrow-down-s-fill' : 'ri-arrow-right-s-fill'" class="fs-14"></i>
+                              </button>
+                            } @else {
+                              <span class="tree-expand-spacer me-1"></span>
+                            }
+                            <i class="ri-folder-line text-warning me-2 fs-14"></i>
+                            <span class="tree-item-name flex-grow-1 text-truncate" [title]="child.name">{{child.name}}</span>
+                            @if(child.fileCount) {
+                              <span class="badge bg-light text-muted rounded-pill ms-1 fs-10">{{child.fileCount}}</span>
+                            }
+                            <button class="btn btn-sm tree-delete-btn p-0 ms-1"
+                                    (click)="deleteFolderConfirm(child, $event)"
+                                    title="Delete folder">
+                              <i class="ri-delete-bin-line fs-12"></i>
+                            </button>
+                          </div>
+                        </div>
+
+                        <!-- Third level children -->
+                        @if(isFolderExpanded(child.id)) {
+                          @for(grandchild of getChildFolders(child.id); track grandchild.id) {
+                            <div class="tree-item tree-grandchild"
+                                 [class.active]="selectedFolderId === grandchild.id"
+                                 [class.drag-over]="dragOverFolderId === grandchild.id"
+                                 (click)="selectFolder(grandchild)"
+                                 (dragover)="onTreeFolderDragOver($event, grandchild)"
+                                 (dragleave)="onTreeFolderDragLeave($event)"
+                                 (drop)="onTreeFolderDrop($event, grandchild)">
+                              <div class="d-flex align-items-center">
+                                @if(hasChildren(grandchild.id)) {
+                                  <button class="btn btn-sm tree-expand-btn p-0 me-1"
+                                          (click)="toggleFolderExpand(grandchild.id, $event)">
+                                    <i [class]="isFolderExpanded(grandchild.id) ? 'ri-arrow-down-s-fill' : 'ri-arrow-right-s-fill'" class="fs-14"></i>
+                                  </button>
+                                } @else {
+                                  <span class="tree-expand-spacer me-1"></span>
+                                }
+                                <i class="ri-folder-line text-muted me-2 fs-14"></i>
+                                <span class="tree-item-name flex-grow-1 text-truncate" [title]="grandchild.name">{{grandchild.name}}</span>
+                                @if(grandchild.fileCount) {
+                                  <span class="badge bg-light text-muted rounded-pill ms-1 fs-10">{{grandchild.fileCount}}</span>
+                                }
+                                <button class="btn btn-sm tree-delete-btn p-0 ms-1"
+                                        (click)="deleteFolderConfirm(grandchild, $event)"
+                                        title="Delete folder">
+                                  <i class="ri-delete-bin-line fs-12"></i>
+                                </button>
+                              </div>
+                            </div>
+                          }
+                        }
+                      }
+                    }
+                  </ng-container>
+                }
+
+                <!-- New Folder button at bottom of tree -->
+                <div class="tree-item" style="opacity: 0.6;">
+                  <div class="d-flex align-items-center" (click)="createNewFolder()">
+                    <span class="tree-expand-spacer me-1"></span>
+                    <i class="ri-add-line me-2 fs-14 text-muted"></i>
+                    <span class="tree-item-name text-muted fs-12">New Folder...</span>
+                  </div>
+                </div>
               </div>
-              <h5 class="dropzone-title">Drop files here or click to upload</h5>
-              <p class="dropzone-subtitle">PDF, DOC, DOCX, XLS, XLSX, JPG, PNG up to 50MB</p>
+            </div>
+
+            <!-- Right: Content Area -->
+            <div class="col-md-9 col-12">
+              <div class="content-panel ps-md-3">
+                <!-- Breadcrumb bar -->
+                <div class="d-flex align-items-center mb-3 flex-wrap gap-2">
+                  <nav aria-label="folder breadcrumb">
+                    <ol class="breadcrumb mb-0 fs-13">
+                      <li class="breadcrumb-item">
+                        <a href="javascript:void(0);" (click)="selectFolder(null)" class="text-primary">
+                          <i class="ri-folder-3-line me-1"></i>All Documents
+                        </a>
+                      </li>
+                      @for(crumb of getSelectedFolderBreadcrumb(); track crumb.id; let last = $last) {
+                        <li class="breadcrumb-item" [class.active]="last">
+                          @if(!last) {
+                            <a href="javascript:void(0);" (click)="selectFolder(crumb)" class="text-primary">{{crumb.name}}</a>
+                          } @else {
+                            <span class="text-muted">{{crumb.name}}</span>
+                          }
+                        </li>
+                      }
+                    </ol>
+                  </nav>
+                </div>
+
+                <!-- Compact filters row -->
+                <div class="row g-2 mb-3">
+                  <div class="col-md-3 col-6">
+                    <select class="form-select form-select-sm" [(ngModel)]="selectedCategory" (change)="filterDocuments()">
+                      <option value="">All Categories</option>
+                      @for(category of categories; track category) {
+                        <option [value]="category">{{category}}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="col-md-3 col-6">
+                    <select class="form-select form-select-sm" [(ngModel)]="selectedType" (change)="filterDocuments()">
+                      <option value="">All Types</option>
+                      @for(type of documentTypes; track type) {
+                        <option [value]="type">{{type}}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text"><i class="ri-search-line"></i></span>
+                      <input type="text" class="form-control" placeholder="Search documents..."
+                             [(ngModel)]="searchTerm" (input)="filterDocuments()">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Loading folder files -->
+                @if(isLoadingFolderFiles) {
+                  <div class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                  </div>
+                } @else if(getDisplayedDocuments().length === 0) {
+                  <!-- Empty state -->
+                  <div class="dropzone-wrapper"
+                       [class.dropzone-dragging]="isDragging"
+                       (dragover)="onContentAreaDragOver($event)"
+                       (dragleave)="onContentAreaDragLeave($event)"
+                       (drop)="onContentAreaDrop($event)"
+                       (click)="toggleUploadForm()">
+                    <div class="dropzone-content">
+                      <div class="dropzone-icon">
+                        <i class="ri-upload-cloud-2-line"></i>
+                      </div>
+                      <h5 class="dropzone-title">
+                        @if(selectedFolderId !== null) {
+                          This folder is empty - drop files here to upload
+                        } @else {
+                          Drop files here or click to upload
+                        }
+                      </h5>
+                      <p class="dropzone-subtitle">PDF, DOC, DOCX, XLS, XLSX, JPG, PNG up to 50MB</p>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- Document table -->
+                  <div class="table-responsive"
+                       (dragover)="onContentAreaDragOver($event)"
+                       (dragleave)="onContentAreaDragLeave($event)"
+                       (drop)="onContentAreaDrop($event)">
+                    <table class="table table-nowrap table-hover mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th scope="col">Document</th>
+                          <th scope="col">Type</th>
+                          <th scope="col">Category</th>
+                          <th scope="col">Date</th>
+                          <th scope="col" class="text-end">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for(document of getDisplayedDocuments(); track document.id) {
+                          <tr [attr.draggable]="document.isFileManagerFile ? 'true' : null"
+                              [class.draggable-row]="document.isFileManagerFile"
+                              (dragstart)="onFileDragStart($event, document)"
+                              (dragend)="onFileDragEnd($event)">
+                            <td>
+                              <div class="d-flex align-items-center">
+                                <div class="avatar-sm flex-shrink-0">
+                                  <span class="avatar-title bg-soft-primary text-primary rounded fs-3"
+                                        [style.background-color]="document.isFileManagerFile && document.iconColor ? document.iconColor + '20' : ''"
+                                        [style.color]="document.isFileManagerFile && document.iconColor ? document.iconColor : ''">
+                                    <i [class]="document.isFileManagerFile && document.icon ? document.icon : 'ri-file-text-line'"></i>
+                                  </span>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                  <h6 class="mb-0 fs-13">{{document.title}}</h6>
+                                  @if(document.isFileManagerFile && document.size) {
+                                    <small class="text-muted">{{formatFileSize(document.size)}}</small>
+                                  }
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              @if(document.type) {
+                                <span class="badge bg-primary-subtle text-primary">{{document.type | titlecase}}</span>
+                              } @else {
+                                <span class="text-muted">-</span>
+                              }
+                            </td>
+                            <td>
+                              @if(document.category) {
+                                <span class="badge bg-info-subtle text-info">{{document.category | titlecase}}</span>
+                              } @else {
+                                <span class="text-muted">-</span>
+                              }
+                            </td>
+                            <td><span class="fs-12 text-muted">{{document.uploadedAt | date:'mediumDate'}}</span></td>
+                            <td class="text-end">
+                              <div class="d-flex justify-content-end gap-1">
+                                <button class="btn btn-icon btn-sm btn-soft-primary"
+                                        type="button"
+                                        (click)="openPreviewModal(document)"
+                                        title="Preview">
+                                  <i class="ri-eye-line"></i>
+                                </button>
+                                <button class="btn btn-icon btn-sm btn-soft-danger"
+                                        type="button"
+                                        (click)="deleteDocument(document)"
+                                        title="Delete">
+                                  <i class="ri-delete-bin-line"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Drop zone hint at bottom -->
+                  <div class="upload-drop-hint mt-3"
+                       [class.dropzone-dragging]="isDragging"
+                       (dragover)="onContentAreaDragOver($event)"
+                       (dragleave)="onContentAreaDragLeave($event)"
+                       (drop)="onContentAreaDrop($event)">
+                    <i class="ri-upload-cloud-line me-2 text-muted"></i>
+                    <span class="text-muted fs-12">Drag files here to upload</span>
+                    @if(selectedFolderId !== null) {
+                      <span class="text-muted fs-12"> to this folder</span>
+                    }
+                  </div>
+                }
+              </div>
             </div>
           </div>
-        } @else {
-        <!-- Documents List -->
-        <div class="table-responsive">
-          <table class="table table-nowrap table-hover mb-0">
-            <thead class="table-light">
-              <tr>
-                <th scope="col">Document</th>
-                <th scope="col">Type</th>
-                <th scope="col">Category</th>
-                <th scope="col">Version</th>
-                <th scope="col">Uploaded By</th>
-                <th scope="col">Date</th>
-                <th scope="col" class="text-end">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for(document of filteredDocuments; track document.id) {
-                <tr>
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <div class="avatar-sm flex-shrink-0">
-                        <span class="avatar-title bg-soft-primary text-primary rounded fs-3"
-                              [style.background-color]="document.isFileManagerFile && document.iconColor ? document.iconColor + '20' : ''"
-                              [style.color]="document.isFileManagerFile && document.iconColor ? document.iconColor : ''">
-                          <i [class]="document.isFileManagerFile && document.icon ? document.icon : 'ri-file-text-line'"></i>
-                        </span>
-                      </div>
-                      <div class="flex-grow-1 ms-3">
-                        <div class="d-flex align-items-center gap-2">
-                          <h6 class="mb-0">{{document.title}}</h6>
-                        </div>
-                        @if(document.description) {
-                          <small class="text-muted">{{document.description}}</small>
-                        }
-                        @if(document.isFileManagerFile && document.size) {
-                          <small class="text-muted d-block">Size: {{formatFileSize(document.size)}}</small>
-                        }
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    @if(document.type) {
-                      <span class="badge bg-primary-subtle text-primary">{{document.type | titlecase}}</span>
-                    } @else {
-                      <span class="text-muted">-</span>
-                    }
-                  </td>
-                  <td>
-                    @if(document.category) {
-                      <span class="badge bg-info-subtle text-info">{{document.category | titlecase}}</span>
-                    } @else {
-                      <span class="text-muted">-</span>
-                    }
-                  </td>
-                  <td>v{{document.currentVersion}}</td>
-                  <td>
-                    @if(document.uploadedBy) {
-                      {{document.uploadedBy.firstName}} {{document.uploadedBy.lastName}}
-                    } @else {
-                      <span class="text-muted">Unknown</span>
-                    }
-                  </td>
-                  <td>{{document.uploadedAt | date:'mediumDate'}}</td>
-                  <td class="text-end">
-                    <div class="d-flex justify-content-end gap-2">
-                      <button class="btn btn-icon btn-sm btn-soft-primary" 
-                              type="button" 
-                              (click)="openPreviewModal(document)" 
-                              title="Preview">
-                        <i class="ri-eye-line"></i>
-                      </button>
-                      <button class="btn btn-icon btn-sm btn-soft-danger" 
-                              type="button" 
-                              (click)="deleteDocument(document)" 
-                              title="Delete">
-                        <i class="ri-delete-bin-line"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-        }
       </div>
     </div>
 
@@ -902,6 +1121,188 @@ export class SafePipe implements PipeTransform {
     .btn-ghost-danger:hover {
       background: rgba(240, 101, 72, 0.1);
     }
+
+    /* Folder card styles */
+    .folder-card {
+      transition: all 0.2s ease;
+      border-radius: 0.375rem;
+    }
+
+    .folder-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: var(--vz-primary, #405189) !important;
+    }
+
+    /* === Split-Panel Folder Tree === */
+    .folder-tree-sidebar {
+      background: var(--vz-card-bg, #fff);
+      border: 1px solid var(--vz-border-color, #e9ebec);
+      border-radius: 0.375rem;
+      padding: 0.5rem 0;
+      max-height: 60vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .folder-tree-header {
+      padding: 0.5rem 0.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    .tree-item {
+      padding: 0.4rem 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border-left: 3px solid transparent;
+      user-select: none;
+    }
+
+    .tree-item:hover {
+      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.06));
+    }
+
+    .tree-item.active {
+      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.1));
+      border-left-color: var(--vz-primary, #405189);
+    }
+
+    .tree-item.active .tree-item-name {
+      color: var(--vz-primary, #405189);
+      font-weight: 600;
+    }
+
+    .tree-item.drag-over {
+      background: rgba(255, 193, 7, 0.15);
+      border-left-color: #ffc107;
+    }
+
+    .tree-item-name {
+      font-size: 13px;
+      color: var(--vz-heading-color, #495057);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tree-child {
+      padding-left: 1.75rem;
+    }
+
+    .tree-grandchild {
+      padding-left: 2.75rem;
+    }
+
+    .tree-expand-btn {
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--vz-secondary-color, #878a99);
+      background: none;
+      border: none;
+      border-radius: 3px;
+      line-height: 1;
+    }
+
+    .tree-expand-btn:hover {
+      background: var(--vz-light, #f3f6f9);
+      color: var(--vz-primary, #405189);
+    }
+
+    .tree-expand-spacer {
+      width: 18px;
+      display: inline-block;
+    }
+
+    .tree-delete-btn {
+      width: 20px;
+      height: 20px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      color: var(--vz-secondary-color, #878a99);
+      background: none;
+      border: none;
+      border-radius: 3px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .tree-item:hover .tree-delete-btn {
+      display: inline-flex;
+    }
+
+    .tree-delete-btn:hover {
+      color: #ef476f;
+      background: rgba(239, 71, 111, 0.1);
+    }
+
+    .tree-action-btn {
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+    }
+
+    .content-panel {
+      min-height: 300px;
+    }
+
+    /* Draggable rows */
+    .draggable-row {
+      cursor: grab;
+    }
+
+    .draggable-row:active {
+      cursor: grabbing;
+      opacity: 0.7;
+    }
+
+    /* Upload drop hint */
+    .upload-drop-hint {
+      border: 1px dashed var(--vz-border-color, #e9ebec);
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .upload-drop-hint.dropzone-dragging {
+      border-color: var(--vz-primary, #405189);
+      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.06));
+    }
+
+    /* Dark mode support for folder tree */
+    [data-layout-mode="dark"] .folder-tree-sidebar {
+      background: var(--vz-card-bg, #212529);
+      border-color: var(--vz-border-color, #32383e);
+    }
+
+    [data-layout-mode="dark"] .tree-item:hover {
+      background: rgba(64, 81, 137, 0.15);
+    }
+
+    [data-layout-mode="dark"] .tree-item.active {
+      background: rgba(64, 81, 137, 0.2);
+    }
+
+    /* Scrollbar styling for folder tree */
+    .folder-tree-sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .folder-tree-sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .folder-tree-sidebar::-webkit-scrollbar-thumb {
+      background: var(--vz-border-color, #e9ebec);
+      border-radius: 4px;
+    }
   `]
 })
 export class CaseDocumentsComponent implements OnInit, OnDestroy {
@@ -934,6 +1335,20 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   isDragging: boolean = false;
   currentView: 'activity' | 'timeline' | 'categories' | 'team' | 'deadlines' = 'activity';
   deadlineFilter: 'upcoming' | 'overdue' | 'all' = 'upcoming';
+
+  // Folder tree state (split-panel layout)
+  caseFolders: FolderModel[] = [];
+  topLevelFolders: FolderModel[] = [];
+  folderChildrenMap: Map<number, FolderModel[]> = new Map();
+  allFoldersMap: Map<number, FolderModel> = new Map();
+  expandedFolderIds: Set<number> = new Set();
+  selectedFolderId: number | null = null; // null = "All Documents"
+  selectedFolderFiles: any[] = [];
+  dragOverFolderId: number | null = null;
+  draggingFileId: number | null = null;
+  isLoadingFolders: boolean = false;
+  isLoadingFolderFiles: boolean = false;
+  isCreatingStructure: boolean = false;
 
   documentTypes = Object.values(DocumentType);
   allCategories = Object.values(DocumentCategory);
@@ -968,7 +1383,8 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     private sanitizer: DomSanitizer,
     private cdr: ChangeDetectorRef,
     @Inject(DOCUMENT) private document: Document,
-    private rbacService: RbacService
+    private rbacService: RbacService,
+    private templateService: TemplateService
   ) {
     this.uploadForm = this.fb.group({
       title: ['', Validators.required],
@@ -986,6 +1402,7 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     if (this.caseId) {
       this.loadDocuments();
       this.loadFileManagerFiles();
+      this.loadCaseFolders();
     } else {
       console.error('No case ID provided. Documents cannot be loaded.');
       this.toastr.error('Unable to load documents - missing case ID');
@@ -1049,6 +1466,467 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
         console.error('Error loading file manager files:', error);
         this.fileManagerFiles = [];
         this.combineCaseDocuments();
+      }
+    });
+  }
+
+  loadCaseFolders(): void {
+    this.isLoadingFolders = true;
+    this.fileManagerService.getFoldersByCase(Number(this.caseId)).subscribe({
+      next: (folders) => {
+        // API returns only ROOT folders for this case
+        this.caseFolders = folders || [];
+        this.topLevelFolders = [...this.caseFolders].sort((a, b) => a.name.localeCompare(b.name));
+        // Index root folders
+        for (const folder of this.topLevelFolders) {
+          this.allFoldersMap.set(folder.id, folder);
+        }
+        this.isLoadingFolders = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading case folders:', error);
+        this.caseFolders = [];
+        this.topLevelFolders = [];
+        this.isLoadingFolders = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  getChildFolders(parentId: number): FolderModel[] {
+    return this.folderChildrenMap.get(parentId) || [];
+  }
+
+  hasChildren(folderId: number): boolean {
+    // Check loaded children first, then fall back to hasChildren flag from API
+    const loaded = this.folderChildrenMap.get(folderId);
+    if (loaded && loaded.length > 0) return true;
+    const folder = this.allFoldersMap.get(folderId);
+    return folder?.hasChildren || (folder?.folderCount || 0) > 0;
+  }
+
+  toggleFolderExpand(folderId: number, event: Event): void {
+    event.stopPropagation();
+    if (this.expandedFolderIds.has(folderId)) {
+      this.expandedFolderIds.delete(folderId);
+    } else {
+      this.expandedFolderIds.add(folderId);
+      // Lazy-load children if not already loaded
+      if (!this.folderChildrenMap.has(folderId)) {
+        this.loadFolderChildren(folderId);
+      }
+    }
+  }
+
+  private loadFolderChildren(folderId: number): void {
+    this.fileManagerService.getFolderContents(folderId).subscribe({
+      next: (response) => {
+        const childFolders = (response.folders || []) as FolderModel[];
+        childFolders.sort((a: FolderModel, b: FolderModel) => a.name.localeCompare(b.name));
+        this.folderChildrenMap.set(folderId, childFolders);
+        // Index the child folders so breadcrumb and expand work for them
+        for (const child of childFolders) {
+          this.allFoldersMap.set(child.id, child);
+        }
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading children for folder:', folderId, error);
+        this.folderChildrenMap.set(folderId, []);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  isFolderExpanded(folderId: number): boolean {
+    return this.expandedFolderIds.has(folderId);
+  }
+
+  selectFolder(folder: FolderModel | null): void {
+    if (folder === null) {
+      // "All Documents" selected
+      this.selectedFolderId = null;
+      this.selectedFolderFiles = [];
+      return;
+    }
+
+    this.selectedFolderId = folder.id;
+    this.isLoadingFolderFiles = true;
+
+    // Auto-expand parent folders to show selection context
+    this.expandParents(folder.id);
+
+    this.fileManagerService.getFolderContents(folder.id).subscribe({
+      next: (response) => {
+        this.selectedFolderFiles = (response.files || []).map((file: any) => this.mapFileToDocument(file));
+        // Also populate children if not yet loaded
+        const childFolders = (response.folders || []) as FolderModel[];
+        if (childFolders.length > 0) {
+          childFolders.sort((a: FolderModel, b: FolderModel) => a.name.localeCompare(b.name));
+          this.folderChildrenMap.set(folder.id, childFolders);
+          for (const child of childFolders) {
+            this.allFoldersMap.set(child.id, child);
+          }
+        }
+        this.isLoadingFolderFiles = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading folder contents:', error);
+        this.selectedFolderFiles = [];
+        this.isLoadingFolderFiles = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private expandParents(folderId: number): void {
+    const folder = this.allFoldersMap.get(folderId);
+    if (folder?.parentId) {
+      this.expandedFolderIds.add(folder.parentId);
+      this.expandParents(folder.parentId);
+    }
+  }
+
+  // Create folder
+  createNewFolder(parentFolderId?: number): void {
+    Swal.fire({
+      title: 'New Folder',
+      input: 'text',
+      inputLabel: 'Folder name',
+      inputPlaceholder: 'Enter folder name',
+      showCancelButton: true,
+      confirmButtonText: 'Create',
+      inputValidator: (value) => {
+        if (!value || !value.trim()) {
+          return 'Please enter a folder name';
+        }
+        return null;
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const request = {
+          name: result.value.trim(),
+          parentId: parentFolderId || undefined,
+          caseId: Number(this.caseId)
+        };
+        this.fileManagerService.createFolder(request).subscribe({
+          next: (folder) => {
+            this.toastr.success(`Folder "${folder.name}" created`);
+            // Reload folder tree
+            this.folderChildrenMap.clear();
+            this.allFoldersMap.clear();
+            this.expandedFolderIds.clear();
+            this.loadCaseFolders();
+          },
+          error: (error) => {
+            console.error('Error creating folder:', error);
+            this.toastr.error('Failed to create folder');
+          }
+        });
+      }
+    });
+  }
+
+  // Delete folder
+  deleteFolderConfirm(folder: FolderModel, event: Event): void {
+    event.stopPropagation();
+    Swal.fire({
+      title: 'Delete Folder?',
+      text: `Are you sure you want to delete "${folder.name}"? This will also delete all files and subfolders inside it.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#ef476f'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.fileManagerService.deleteFolder(folder.id).subscribe({
+          next: () => {
+            this.toastr.success(`Folder "${folder.name}" deleted`);
+            // If the deleted folder was selected, go back to All Documents
+            if (this.selectedFolderId === folder.id) {
+              this.selectedFolderId = null;
+              this.selectedFolderFiles = [];
+            }
+            // Reload folder tree
+            this.folderChildrenMap.clear();
+            this.allFoldersMap.clear();
+            this.expandedFolderIds.clear();
+            this.loadCaseFolders();
+            this.loadFileManagerFiles();
+          },
+          error: (error) => {
+            console.error('Error deleting folder:', error);
+            this.toastr.error('Failed to delete folder');
+          }
+        });
+      }
+    });
+  }
+
+  // Create folder structure from template
+  createFolderStructure(): void {
+    this.templateService.getTemplates().subscribe(templates => {
+      const inputOptions: { [key: string]: string } = {};
+      templates.forEach(t => {
+        inputOptions[t.id] = t.name;
+      });
+
+      Swal.fire({
+        title: 'Create Folder Structure',
+        text: 'Choose a template to create the folder structure for this case.',
+        input: 'select',
+        inputOptions: inputOptions,
+        inputPlaceholder: 'Select a template',
+        showCancelButton: true,
+        confirmButtonText: 'Create',
+        inputValidator: (value) => {
+          if (!value) {
+            return 'Please select a template';
+          }
+          return null;
+        }
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          const selectedTemplate = templates.find(t => t.id === result.value);
+          if (selectedTemplate) {
+            this.applyFolderTemplate(selectedTemplate);
+          }
+        }
+      });
+    });
+  }
+
+  private applyFolderTemplate(template: FolderTemplate): void {
+    this.isCreatingStructure = true;
+    this.cdr.detectChanges();
+    this.createRootFoldersSequentially(template.folders, 0, template.name);
+  }
+
+  private createRootFoldersSequentially(folders: TemplateFolderStructure[], index: number, templateName: string): void {
+    if (index >= folders.length) {
+      // All done
+      this.toastr.success(`"${templateName}" folder structure created`);
+      this.isCreatingStructure = false;
+      this.folderChildrenMap.clear();
+      this.allFoldersMap.clear();
+      this.expandedFolderIds.clear();
+      this.loadCaseFolders();
+      return;
+    }
+
+    const rootFolder = folders[index];
+    this.fileManagerService.createFolder({
+      name: rootFolder.name,
+      caseId: Number(this.caseId)
+    }).subscribe({
+      next: (createdRoot) => {
+        if (rootFolder.subFolders?.length && createdRoot?.id) {
+          this.createSubFoldersSequentially(rootFolder.subFolders, 0, createdRoot.id, () => {
+            this.createRootFoldersSequentially(folders, index + 1, templateName);
+          });
+        } else {
+          this.createRootFoldersSequentially(folders, index + 1, templateName);
+        }
+      },
+      error: (error) => {
+        console.error(`Error creating folder "${rootFolder.name}":`, error);
+        // Continue with next folder even on error
+        this.createRootFoldersSequentially(folders, index + 1, templateName);
+      }
+    });
+  }
+
+  private createSubFoldersSequentially(subFolders: TemplateFolderStructure[], index: number, parentId: number, onComplete: () => void): void {
+    if (index >= subFolders.length) {
+      onComplete();
+      return;
+    }
+
+    this.fileManagerService.createFolder({
+      name: subFolders[index].name,
+      parentId: parentId,
+      caseId: Number(this.caseId)
+    }).subscribe({
+      next: () => {
+        this.createSubFoldersSequentially(subFolders, index + 1, parentId, onComplete);
+      },
+      error: (error) => {
+        console.error(`Error creating subfolder "${subFolders[index].name}":`, error);
+        this.createSubFoldersSequentially(subFolders, index + 1, parentId, onComplete);
+      }
+    });
+  }
+
+  private mapFileToDocument(file: any): any {
+    return {
+      id: file.id,
+      title: file.name,
+      type: file.documentStatus || this.mapMimeTypeToDocumentType(file.mimeType),
+      category: file.documentCategory || 'OTHER',
+      status: 'FINAL',
+      description: file.description || '',
+      fileName: file.originalName,
+      fileUrl: file.downloadUrl,
+      uploadedAt: file.createdAt,
+      uploadedBy: file.createdByName ? {
+        firstName: file.createdByName.split(' ')[0],
+        lastName: file.createdByName.split(' ').slice(1).join(' ') || ''
+      } : null,
+      tags: file.tags || [],
+      currentVersion: file.version || 1,
+      versions: [],
+      source: 'filemanager',
+      isFileManagerFile: true,
+      size: file.size,
+      mimeType: file.mimeType,
+      icon: file.icon,
+      iconColor: file.iconColor
+    };
+  }
+
+  getSelectedFolderBreadcrumb(): FolderModel[] {
+    if (!this.selectedFolderId) return [];
+    const path: FolderModel[] = [];
+    let current = this.allFoldersMap.get(this.selectedFolderId);
+    while (current) {
+      path.unshift(current);
+      current = current.parentId ? this.allFoldersMap.get(current.parentId) : undefined;
+    }
+    return path;
+  }
+
+  getDisplayedDocuments(): any[] {
+    if (this.selectedFolderId !== null) {
+      return this.selectedFolderFiles;
+    }
+    return this.filteredDocuments;
+  }
+
+  getFolderFileCount(folder: FolderModel): number {
+    return folder.fileCount || 0;
+  }
+
+  // Drag-and-drop: file row drag from table
+  onFileDragStart(event: DragEvent, doc: any): void {
+    // Only allow dragging file manager files (legacy docs can't be moved)
+    if (!doc.isFileManagerFile) {
+      event.preventDefault();
+      return;
+    }
+    this.draggingFileId = doc.id;
+    event.dataTransfer?.setData('text/plain', String(doc.id));
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+    }
+  }
+
+  onFileDragEnd(event: DragEvent): void {
+    this.draggingFileId = null;
+    this.dragOverFolderId = null;
+  }
+
+  // Drag-and-drop: folder tree as drop target
+  onTreeFolderDragOver(event: DragEvent, folder: FolderModel): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+    this.dragOverFolderId = folder.id;
+  }
+
+  onTreeFolderDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.dragOverFolderId = null;
+  }
+
+  onTreeFolderDrop(event: DragEvent, folder: FolderModel): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOverFolderId = null;
+
+    const fileIdStr = event.dataTransfer?.getData('text/plain');
+    if (!fileIdStr) return;
+
+    const fileId = Number(fileIdStr);
+    if (isNaN(fileId)) return;
+
+    this.fileManagerService.moveFiles([fileId], folder.id).subscribe({
+      next: () => {
+        this.toastr.success(`File moved to ${folder.name}`);
+        // Refresh data: reload files, clear folder cache, reload tree
+        this.loadFileManagerFiles();
+        this.folderChildrenMap.clear();
+        this.loadCaseFolders();
+        // Refresh the current view
+        if (this.selectedFolderId !== null) {
+          // Re-select after a brief delay to allow the folder tree to reload
+          const currentFolderId = this.selectedFolderId;
+          setTimeout(() => {
+            const f = this.allFoldersMap.get(currentFolderId);
+            if (f) this.selectFolder(f);
+          }, 300);
+        }
+      },
+      error: (error) => {
+        console.error('Error moving file:', error);
+        this.toastr.error('Failed to move file');
+      }
+    });
+  }
+
+  // External file drop on content area → upload to selected folder
+  onContentAreaDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = true;
+  }
+
+  onContentAreaDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+  }
+
+  onContentAreaDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+
+    const files = event.dataTransfer?.files;
+    if (!files?.length) return;
+
+    // If we have an internal file drag (from table), ignore here
+    if (this.draggingFileId) {
+      this.draggingFileId = null;
+      return;
+    }
+
+    // External file → upload to selected folder
+    const file = files[0];
+    const folderId = this.selectedFolderId || undefined;
+
+    this.fileManagerService.uploadFile(
+      file,
+      folderId,
+      Number(this.caseId)
+    ).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.toastr.success('File uploaded successfully');
+          this.loadFileManagerFiles();
+          if (this.selectedFolderId !== null) {
+            this.selectFolder(this.allFoldersMap.get(this.selectedFolderId) || null);
+          }
+          this.loadCaseFolders();
+        }
+      },
+      error: (error) => {
+        console.error('Error uploading file:', error);
+        this.toastr.error('Failed to upload file');
       }
     });
   }
@@ -1493,10 +2371,11 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     const description = this.newDocument.description || '';
     const tags = this.tagsInput || '';
 
-    // Use File Manager service for upload - documents will appear in both places
+    // Use File Manager service for upload - upload to selected folder if any
+    const folderId = this.selectedFolderId || undefined;
     this.fileManagerService.uploadFile(
       this.selectedFile,
-      undefined, // folderId - no folder
+      folderId,
       Number(this.caseId), // caseId - link to this case
       description,
       tags,
@@ -1505,6 +2384,11 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         this.loadFileManagerFiles();
+        this.loadCaseFolders();
+        // Refresh current folder view if a folder is selected
+        if (this.selectedFolderId !== null) {
+          this.selectFolder(this.allFoldersMap.get(this.selectedFolderId) || null);
+        }
 
         // Show sweet alert success message
         Swal.fire({

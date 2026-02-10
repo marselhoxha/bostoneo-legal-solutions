@@ -142,6 +142,15 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
         @Param("parentId") Long parentId,
         @Param("orgId") Long organizationId);
 
+    /** SECURITY: Find folder by name, parent, case, and org filter */
+    @Query("SELECT f FROM Folder f WHERE f.deleted = false AND f.name = :name AND f.organizationId = :orgId AND f.caseId = :caseId AND " +
+           "(:parentId IS NULL AND f.parentFolderId IS NULL OR f.parentFolderId = :parentId)")
+    Optional<Folder> findByNameAndParentAndCaseAndOrganizationId(
+        @Param("name") String name,
+        @Param("parentId") Long parentId,
+        @Param("caseId") Long caseId,
+        @Param("orgId") Long organizationId);
+
     /** SECURITY: Find subfolders in folder with org filter */
     @Query("SELECT f FROM Folder f WHERE f.parentFolderId = :parentFolderId AND f.deleted = false AND f.organizationId = :orgId")
     List<Folder> findByParentFolderIdAndDeletedFalseAndOrgId(

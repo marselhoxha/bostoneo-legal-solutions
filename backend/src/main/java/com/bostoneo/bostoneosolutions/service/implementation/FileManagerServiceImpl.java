@@ -730,8 +730,15 @@ public class FileManagerServiceImpl implements FileManagerService {
         
         Long orgId = getRequiredOrganizationId();
         Long parentFolderId = request.getParentFolderIdValue();
-        // SECURITY: Check for existing folder only within current organization using tenant-filtered query
-        Optional<Folder> existingFolder = folderRepository.findByNameAndParentAndOrganizationId(request.getName(), parentFolderId, orgId);
+        // SECURITY: Check for existing folder — scope to case when caseId is present
+        Optional<Folder> existingFolder;
+        if (request.getCaseId() != null) {
+            existingFolder = folderRepository.findByNameAndParentAndCaseAndOrganizationId(
+                    request.getName(), parentFolderId, request.getCaseId(), orgId);
+        } else {
+            existingFolder = folderRepository.findByNameAndParentAndOrganizationId(
+                    request.getName(), parentFolderId, orgId);
+        }
         if (existingFolder.isPresent()) {
             log.warn("Folder already exists: {} in parent: {}", request.getName(), parentFolderId);
             // Return existing folder instead of throwing error
@@ -742,6 +749,7 @@ public class FileManagerServiceImpl implements FileManagerService {
                 .name(request.getName())
                 .parentFolderId(parentFolderId)
                 .caseId(request.getCaseId())
+                .organizationId(orgId)
                 .createdBy(getCurrentUserId())
                 .build();
         

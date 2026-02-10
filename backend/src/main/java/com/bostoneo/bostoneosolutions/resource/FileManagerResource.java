@@ -350,14 +350,18 @@ public class FileManagerResource {
     @Operation(summary = "Move multiple files and folders")
     @PreAuthorize("hasAuthority('DOCUMENT:EDIT') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, Object>> bulkMove(@RequestBody Map<String, Object> request) {
-        List<Long> fileIds = (List<Long>) request.get("fileIds");
-        List<Long> folderIds = (List<Long>) request.get("folderIds");
+        // Safely convert from Integer/Long to Long (Jackson deserializes JSON ints as Integer)
+        List<Number> rawFileIds = (List<Number>) request.get("fileIds");
+        List<Number> rawFolderIds = (List<Number>) request.get("folderIds");
         Long targetFolderId = ((Number) request.get("targetFolderId")).longValue();
-        
+
+        List<Long> fileIds = rawFileIds != null ? rawFileIds.stream().map(Number::longValue).collect(java.util.stream.Collectors.toList()) : null;
+        List<Long> folderIds = rawFolderIds != null ? rawFolderIds.stream().map(Number::longValue).collect(java.util.stream.Collectors.toList()) : null;
+
         int movedFiles = 0;
         int movedFolders = 0;
         List<String> errors = new java.util.ArrayList<>();
-        
+
         // Move files
         if (fileIds != null) {
             for (Long fileId : fileIds) {
@@ -369,7 +373,7 @@ public class FileManagerResource {
                 }
             }
         }
-        
+
         // Move folders
         if (folderIds != null) {
             for (Long folderId : folderIds) {
