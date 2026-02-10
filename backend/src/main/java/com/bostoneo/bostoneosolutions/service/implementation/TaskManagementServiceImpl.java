@@ -73,8 +73,8 @@ public class TaskManagementServiceImpl implements TaskManagementService {
     }
 
     /**
-     * Check if the current user has admin or manager privileges.
-     * Admins and managers can modify any task.
+     * Check if the current user has privileges to manage any task.
+     * Admins, managers, superadmins, and attorneys can modify any task.
      */
     private boolean isAdminOrManager() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -83,12 +83,14 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             if (principal instanceof UserPrincipal) {
                 UserPrincipal userPrincipal = (UserPrincipal) principal;
                 return userPrincipal.hasRole("ADMIN") || userPrincipal.hasRole("ROLE_ADMIN") ||
-                       userPrincipal.hasRole("MANAGER") || userPrincipal.hasRole("ROLE_MANAGER");
+                       userPrincipal.hasRole("MANAGER") || userPrincipal.hasRole("ROLE_MANAGER") ||
+                       userPrincipal.hasRole("ROLE_SUPERADMIN") || userPrincipal.hasRole("ROLE_ATTORNEY");
             } else if (principal instanceof UserDTO) {
                 UserDTO userDTO = (UserDTO) principal;
                 String role = userDTO.getRoleName();
                 return role != null && (role.equalsIgnoreCase("ADMIN") || role.equalsIgnoreCase("ROLE_ADMIN") ||
-                       role.equalsIgnoreCase("MANAGER") || role.equalsIgnoreCase("ROLE_MANAGER"));
+                       role.equalsIgnoreCase("MANAGER") || role.equalsIgnoreCase("ROLE_MANAGER") ||
+                       role.equalsIgnoreCase("ROLE_SUPERADMIN") || role.equalsIgnoreCase("ROLE_ATTORNEY"));
             }
         }
         return false;
@@ -97,19 +99,25 @@ public class TaskManagementServiceImpl implements TaskManagementService {
     /**
      * Check if the current user can modify a specific task.
      * Admins/Managers can modify any task.
-     * Other users can only modify tasks assigned to them.
+     * Task creator (assignedBy) can modify their own tasks.
+     * Task assignee can modify tasks assigned to them.
      */
     private void validateTaskModificationPermission(CaseTask task) {
         if (isAdminOrManager()) {
-            return; // Admins and managers can modify any task
+            return;
         }
 
         Long currentUserId = getCurrentUserId();
         Long assignedToId = task.getAssignedTo() != null ? task.getAssignedTo().getId() : null;
+        Long creatorId = task.getAssignedBy() != null ? task.getAssignedBy().getId() : null;
 
-        if (assignedToId == null || !assignedToId.equals(currentUserId)) {
-            throw new ApiException("You can only modify tasks assigned to you");
+        // Allow if task is assigned to current user or current user created it
+        if ((assignedToId != null && assignedToId.equals(currentUserId))
+                || (creatorId != null && creatorId.equals(currentUserId))) {
+            return;
         }
+
+        throw new ApiException("You can only modify tasks assigned to you or created by you");
     }
 
     @Override

@@ -89,7 +89,7 @@
                   <td>
                     <div class="d-flex align-items-center">
                       <div class="avatar-sm me-2">
-                        <img *ngIf="user.imageUrl" [src]="user.imageUrl" class="avatar-sm rounded-circle" alt="">
+                        <img *ngIf="user.imageUrl" [src]="user.imageUrl | imageUrl" class="avatar-sm rounded-circle" alt="" (error)="$event.target.src='assets/images/users/default-avatar.jpg'">
                         <span *ngIf="!user.imageUrl" class="avatar-title bg-soft-primary text-primary rounded-circle">
                           {{ user.firstName?.charAt(0) }}{{ user.lastName?.charAt(0) }}
                         </span>

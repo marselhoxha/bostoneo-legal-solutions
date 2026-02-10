@@ -28,6 +28,7 @@ export class SignatureListComponent implements OnInit {
   @Output() documentSelected = new EventEmitter<BoldSignDocument>();
   @Output() createRequest = new EventEmitter<void>();
   @Output() viewAuditLog = new EventEmitter<SignatureRequest>();
+  @Output() totalCountChanged = new EventEmitter<number>();
 
   // Local database requests
   requests: SignatureRequest[] = [];
@@ -98,6 +99,7 @@ export class SignatureListComponent implements OnInit {
         this.boldsignDocuments = response.data?.documents || [];
         this.totalElements = response.data?.totalCount || 0;
         this.totalPages = Math.ceil(this.totalElements / this.pageSize);
+        this.totalCountChanged.emit(this.totalElements);
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -138,6 +140,7 @@ export class SignatureListComponent implements OnInit {
         this.requests = response.data?.signatureRequests || [];
         this.totalElements = response.data?.totalElements || 0;
         this.totalPages = response.data?.totalPages || 0;
+        this.totalCountChanged.emit(this.totalElements);
         this.applyFilters();
         this.loading = false;
         this.cdr.detectChanges();

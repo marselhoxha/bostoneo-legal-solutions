@@ -57,7 +57,7 @@
           <td>
             <div class="d-flex align-items-center gap-3">
               <div class="avatar-sm flex-shrink-0">
-                <img *ngIf="member.imageUrl" [src]="member.imageUrl" alt="" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">
+                <img *ngIf="member.imageUrl" [src]="member.imageUrl | imageUrl" alt="" class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;" (error)="$event.target.src='assets/images/users/default-avatar.jpg'">
                 <span *ngIf="!member.imageUrl" class="avatar-title rounded-circle" [ngClass]="'bg-' + getAvatarColor(member) + '-subtle text-' + getAvatarColor(member)">
                   {{ getMemberInitials(member) }}
                 </span>

@@ -35,7 +35,7 @@
         <div class="card">
           <div class="card-body text-center">
             <div class="mb-3">
-              <img *ngIf="user.imageUrl" [src]="user.imageUrl" class="avatar-xl rounded-circle" alt="">
+              <img *ngIf="user.imageUrl" [src]="user.imageUrl | imageUrl" class="avatar-xl rounded-circle" alt="" (error)="$event.target.src='assets/images/users/default-avatar.jpg'">
               <div *ngIf="!user.imageUrl" class="avatar-xl mx-auto">
                 <span class="avatar-title rounded-circle bg-primary-subtle text-primary fs-1">
                   {{ user.firstName?.charAt(0) }}{{ user.lastName?.charAt(0) }}

@@ -412,7 +412,7 @@
                   <div class="d-flex align-items-center" *ngIf="task.assignedToId">
                     <ng-container *ngIf="getUserById(task.assignedToId) as assignee">
                       <div class="avatar-xs me-2">
-                        <img *ngIf="assignee.imageUrl" [src]="assignee.imageUrl" alt="" class="rounded-circle avatar-xs">
+                        <img *ngIf="assignee.imageUrl" [src]="assignee.imageUrl | imageUrl" alt="" class="rounded-circle avatar-xs" (error)="$event.target.src='assets/images/users/default-avatar.jpg'">
                         <span *ngIf="!assignee.imageUrl" class="avatar-title bg-primary-subtle text-primary rounded-circle fs-12">
                           {{ assignee.firstName?.charAt(0)?.toUpperCase() || 'U' }}
                         </span>
@@ -623,7 +623,7 @@
                [ngbTooltip]="task.assignedToName || getAssigneeName(task)" placement="top"
                (click)="$event.stopPropagation(); openAssignModal(task)">
               <ng-container *ngIf="getUserById(task.assignedToId)?.imageUrl; else noPhotoAssigned">
-                <img [src]="getUserById(task.assignedToId)?.imageUrl" alt="" class="rounded-circle avatar-xxs">
+                <img [src]="getUserById(task.assignedToId)?.imageUrl | imageUrl" alt="" class="rounded-circle avatar-xxs" (error)="$event.target.src='assets/images/users/default-avatar.jpg'">
               </ng-container>
               <ng-template #noPhotoAssigned>
                 <div class="avatar-xxs">
@@ -732,7 +732,7 @@
                   (click)="openAssignModalFromDetails(viewingTask)">
             <ng-container *ngIf="viewingTask.assignedToId">
               <ng-container *ngIf="getUserById(viewingTask.assignedToId)?.imageUrl; else quickNoPhoto">
-                <img [src]="getUserById(viewingTask.assignedToId)?.imageUrl" alt="" class="rounded-circle me-2" style="width: 20px; height: 20px; object-fit: cover;">
+                <img [src]="getUserById(viewingTask.assignedToId)?.imageUrl | imageUrl" alt="" class="rounded-circle me-2" style="width: 20px; height: 20px; object-fit: cover;" (error)="$event.target.src='assets/images/users/default-avatar.jpg'">
               </ng-container>
               <ng-template #quickNoPhoto>
                 <div class="avatar-xs me-2">
@@ -799,8 +799,8 @@
               </div>
               <div class="d-flex align-items-center" *ngIf="viewingTask.assignedToId">
                 <ng-container *ngIf="getUserById(viewingTask.assignedToId)?.imageUrl; else detailNoPhoto">
-                  <img [src]="getUserById(viewingTask.assignedToId)?.imageUrl" alt=""
-                       class="rounded-circle avatar-md me-3">
+                  <img [src]="getUserById(viewingTask.assignedToId)?.imageUrl | imageUrl" alt=""
+                       class="rounded-circle avatar-md me-3" (error)="$event.target.src='assets/images/users/default-avatar.jpg'">
                 </ng-container>
                 <ng-template #detailNoPhoto>
                   <div class="avatar-md me-3">
@@ -979,7 +979,7 @@
                 <span class="text-muted fs-12 me-2">Currently assigned to:</span>
                 <ng-container *ngIf="getUserById(assigningTask.assignedToId) as currentAssignee">
                   <div class="avatar-xs me-2">
-                    <img *ngIf="currentAssignee.imageUrl" [src]="currentAssignee.imageUrl" alt="" class="rounded-circle avatar-xs">
+                    <img *ngIf="currentAssignee.imageUrl" [src]="currentAssignee.imageUrl | imageUrl" alt="" class="rounded-circle avatar-xs" (error)="$event.target.src='assets/images/users/default-avatar.jpg'">
                     <span *ngIf="!currentAssignee.imageUrl" class="avatar-title bg-warning-subtle text-warning rounded-circle fs-12">
                       {{ currentAssignee.firstName?.charAt(0)?.toUpperCase() || 'U' }}
                     </span>
@@ -1026,7 +1026,7 @@
                  (click)="selectAssignee(user.id)">
               <div class="d-flex align-items-center">
                 <div class="avatar-sm me-3 flex-shrink-0 position-relative">
-                  <img *ngIf="user.imageUrl" [src]="user.imageUrl" alt="" class="rounded-circle avatar-sm">
+                  <img *ngIf="user.imageUrl" [src]="user.imageUrl | imageUrl" alt="" class="rounded-circle avatar-sm" (error)="$event.target.src='assets/images/users/default-avatar.jpg'">
                   <span *ngIf="!user.imageUrl" class="avatar-title bg-primary-subtle text-primary rounded-circle">
                     {{ user.firstName?.charAt(0)?.toUpperCase() || 'U' }}{{ user.lastName?.charAt(0)?.toUpperCase() || '' }}
                   </span>

@@ -140,7 +140,7 @@
               <a ngbNavLink class="d-flex align-items-center gap-2">
                 <i class="ri-file-list-3-line fs-16"></i>
                 <span>Documents</span>
-                <span class="badge bg-primary-subtle text-primary ms-1" *ngIf="stats">{{ stats.totalRequests }}</span>
+                <span class="badge bg-primary-subtle text-primary ms-1" *ngIf="documentCount > 0">{{ documentCount }}</span>
               </a>
               <ng-template ngbNavContent>
                 <!-- Documents Tab Content -->
@@ -158,7 +158,8 @@
                     [dataSource]="'boldsign'"
                     (documentSelected)="onBoldsignDocumentSelected($event)"
                     (requestSelected)="onRequestSelected($event)"
-                    (viewAuditLog)="onViewAuditLog($event)">
+                    (viewAuditLog)="onViewAuditLog($event)"
+                    (totalCountChanged)="documentCount = $event">
                   </app-signature-list>
                 </div>
               </ng-template>

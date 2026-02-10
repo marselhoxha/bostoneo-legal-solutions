@@ -21,7 +21,7 @@
                 <div class="profile-hero-info">
                   <!-- Avatar -->
                   <div class="profile-avatar-container">
-                    <img *ngIf="client.imageUrl" [src]="client.imageUrl" [alt]="client.name" class="profile-avatar-img">
+                    <img *ngIf="client.imageUrl" [src]="client.imageUrl | imageUrl" [alt]="client.name" class="profile-avatar-img" (error)="$event.target.src='assets/images/users/default-avatar.jpg'">
                     <div *ngIf="!client.imageUrl" class="profile-avatar-initials">
                       {{ getInitials(client.name) }}
                     </div>

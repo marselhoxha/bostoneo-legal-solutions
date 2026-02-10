@@ -60,6 +60,7 @@ export class SignaturesComponent implements OnInit {
   // Stats
   stats: SignatureStats | null = null;
   loadingStats = false;
+  documentCount: number = 0;
 
   // Dashboard
   dashboard: BoldSignDashboard | null = null;
