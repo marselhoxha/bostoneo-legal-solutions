@@ -24,7 +24,11 @@ public class RequestUtils {
     }
 
     public static String getDevice(HttpServletRequest request) {
-        UserAgent agent = USER_AGENT_ANALYZER.parse(request.getHeader("user-agent"));
+        return getDevice(request.getHeader("user-agent"));
+    }
+
+    public static String getDevice(String userAgentString) {
+        UserAgent agent = USER_AGENT_ANALYZER.parse(userAgentString);
         return agent.getValue(AGENT_NAME) + " - " + agent.getValue(DEVICE_NAME);
     }
 }

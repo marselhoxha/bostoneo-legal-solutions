@@ -289,7 +289,7 @@ resource "aws_ecs_task_definition" "api" {
         },
         {
           name  = "JAVA_OPTS"
-          value = "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+          value = "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+TieredCompilation -XX:+AlwaysPreTouch -Djava.security.egd=file:/dev/./urandom"
         }
       ], var.container_environment)
 
