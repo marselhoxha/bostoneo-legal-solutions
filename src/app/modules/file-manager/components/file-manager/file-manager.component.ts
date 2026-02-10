@@ -87,7 +87,6 @@ export class FileManagerComponent implements OnInit, OnDestroy {
   // Form properties
   folderForm: any;
   submitted = false;
-  deleteId: number | null = null;
   activeModal: any = null;
   
   // Upload properties
@@ -756,122 +755,122 @@ export class FileManagerComponent implements OnInit, OnDestroy {
    * Create new folder with SweetAlert
    */
   createNewFolderWithSwal(): void {
-    Swal.fire({
-      title: 'Create Folder',
-      html: `
-        <div class="text-start">
-          <div class="mb-3">
-            <label class="form-label">Folder Type</label>
-            <select id="folderType" class="form-select">
-              <option value="single">Single Folder</option>
-              <option value="template">Template Structure</option>
-            </select>
-          </div>
-          <div id="singleFolderOptions">
+    this.templateService.getTemplates().subscribe(templates => {
+      const templateOptions = templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+
+      Swal.fire({
+        title: 'Create Folder',
+        html: `
+          <div class="text-start">
             <div class="mb-3">
-              <label class="form-label">Folder Name</label>
-              <input type="text" id="folderName" class="form-control" placeholder="Enter folder name...">
-            </div>
-          </div>
-          <div id="templateOptions" style="display: none;">
-            ${this.navigationState.context === 'case' && this.navigationState.caseId ? `
-              <div class="mb-3">
-                <label class="form-label">Current Case</label>
-                <div class="alert alert-info mb-0">
-                  <i class="ri-briefcase-line me-2"></i>
-                  <strong>${this.navigationState.caseName || 'Active Case'}</strong>
-                  <br><small class="text-muted">Template will be created for this case</small>
-                </div>
-              </div>
-            ` : `
-              <div class="mb-3">
-                <label class="form-label">Case</label>
-                <select id="caseSelect" class="form-select">
-                  <option value="">Select a case...</option>
-                  ${this.activeCases.map(c => `<option value="${c.id}">${c.title || c.name || c.caseNumber}</option>`).join('')}
-                </select>
-              </div>
-            `}
-            <div class="mb-3">
-              <label class="form-label">Template</label>
-              <select id="templateSelect" class="form-select">
-                <option value="litigation-standard">Standard Litigation</option>
-                <option value="corporate-standard">Standard Corporate</option>
-                <option value="family-standard">Standard Family Law</option>
-                <option value="real-estate-standard">Standard Real Estate</option>
-                <option value="criminal-standard">Standard Criminal Defense</option>
+              <label class="form-label">Folder Type</label>
+              <select id="folderType" class="form-select">
+                <option value="single">Single Folder</option>
+                <option value="template">Template Structure</option>
               </select>
             </div>
+            <div id="singleFolderOptions">
+              <div class="mb-3">
+                <label class="form-label">Folder Name</label>
+                <input type="text" id="folderName" class="form-control" placeholder="Enter folder name...">
+              </div>
+            </div>
+            <div id="templateOptions" style="display: none;">
+              ${this.navigationState.context === 'case' && this.navigationState.caseId ? `
+                <div class="mb-3">
+                  <label class="form-label">Current Case</label>
+                  <div class="alert alert-info mb-0">
+                    <i class="ri-briefcase-line me-2"></i>
+                    <strong>${this.navigationState.caseName || 'Active Case'}</strong>
+                    <br><small class="text-muted">Template will be created for this case</small>
+                  </div>
+                </div>
+              ` : `
+                <div class="mb-3">
+                  <label class="form-label">Case</label>
+                  <select id="caseSelect" class="form-select">
+                    <option value="">Select a case...</option>
+                    ${this.activeCases.map(c => `<option value="${c.id}">${c.title || c.name || c.caseNumber}</option>`).join('')}
+                  </select>
+                </div>
+              `}
+              <div class="mb-3">
+                <label class="form-label">Template</label>
+                <select id="templateSelect" class="form-select">
+                  ${templateOptions}
+                </select>
+              </div>
+            </div>
           </div>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Create',
-      confirmButtonColor: '#0ab39c',
-      cancelButtonColor: '#f06548',
-      didOpen: () => {
-        const folderTypeSelect = document.getElementById('folderType') as HTMLSelectElement;
-        const singleOptions = document.getElementById('singleFolderOptions') as HTMLElement;
-        const templateOptions = document.getElementById('templateOptions') as HTMLElement;
-        
-        folderTypeSelect.addEventListener('change', () => {
-          if (folderTypeSelect.value === 'template') {
-            singleOptions.style.display = 'none';
-            templateOptions.style.display = 'block';
-          } else {
-            singleOptions.style.display = 'block';
-            templateOptions.style.display = 'none';
-          }
-        });
-      },
-      preConfirm: () => {
-        const folderType = (document.getElementById('folderType') as HTMLSelectElement).value;
-        
-        if (folderType === 'single') {
-          const folderName = (document.getElementById('folderName') as HTMLInputElement).value;
-          if (!folderName?.trim()) {
-            Swal.showValidationMessage('Folder name is required');
-            return false;
-          }
-          return { type: 'single', name: folderName.trim() };
-        } else {
-          const template = (document.getElementById('templateSelect') as HTMLSelectElement).value;
-          
-          // If we're in case context, use current case ID
-          if (this.navigationState.context === 'case' && this.navigationState.caseId) {
-            return { type: 'template', caseId: this.navigationState.caseId, template, useCurrentCase: true };
-          } else {
-            // Otherwise get from dropdown
-            const caseSelect = document.getElementById('caseSelect') as HTMLSelectElement;
-            const caseId = caseSelect?.value;
-            if (!caseId) {
-              Swal.showValidationMessage('Please select a case');
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Create',
+        confirmButtonColor: '#0ab39c',
+        cancelButtonColor: '#f06548',
+        didOpen: () => {
+          const folderTypeSelect = document.getElementById('folderType') as HTMLSelectElement;
+          const singleOptions = document.getElementById('singleFolderOptions') as HTMLElement;
+          const templateOptionsDiv = document.getElementById('templateOptions') as HTMLElement;
+
+          folderTypeSelect.addEventListener('change', () => {
+            if (folderTypeSelect.value === 'template') {
+              singleOptions.style.display = 'none';
+              templateOptionsDiv.style.display = 'block';
+            } else {
+              singleOptions.style.display = 'block';
+              templateOptionsDiv.style.display = 'none';
+            }
+          });
+        },
+        preConfirm: () => {
+          const folderType = (document.getElementById('folderType') as HTMLSelectElement).value;
+
+          if (folderType === 'single') {
+            const folderName = (document.getElementById('folderName') as HTMLInputElement).value;
+            if (!folderName?.trim()) {
+              Swal.showValidationMessage('Folder name is required');
               return false;
             }
-            return { type: 'template', caseId: parseInt(caseId), template };
-          }
-        }
-      }
-    }).then((result) => {
-      if (result.isConfirmed && result.value) {
-        if (result.value.type === 'single') {
-          this.createSingleFolderInCurrentDirectory(result.value.name);
-        } else {
-          let selectedCase;
-          if (result.value.useCurrentCase && this.navigationState.caseId) {
-            // Use current case info
-            const currentCaseFromList = this.activeCases.find(c => c.id === this.navigationState.caseId);
-            selectedCase = {
-              id: this.navigationState.caseId,
-              caseNumber: currentCaseFromList?.caseNumber || `CASE-${this.navigationState.caseId}`,
-              title: this.navigationState.caseName || 'Active Case'
-            };
+            return { type: 'single', name: folderName.trim() };
           } else {
-            selectedCase = this.activeCases.find(c => c.id === result.value.caseId);
+            const template = (document.getElementById('templateSelect') as HTMLSelectElement).value;
+
+            // If we're in case context, use current case ID
+            if (this.navigationState.context === 'case' && this.navigationState.caseId) {
+              return { type: 'template', caseId: this.navigationState.caseId, template, useCurrentCase: true };
+            } else {
+              // Otherwise get from dropdown
+              const caseSelect = document.getElementById('caseSelect') as HTMLSelectElement;
+              const caseId = caseSelect?.value;
+              if (!caseId) {
+                Swal.showValidationMessage('Please select a case');
+                return false;
+              }
+              return { type: 'template', caseId: parseInt(caseId), template };
+            }
           }
-          this.createFolderStructureInCurrentDirectory(result.value.template, selectedCase);
         }
-      }
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          if (result.value.type === 'single') {
+            this.createSingleFolderInCurrentDirectory(result.value.name);
+          } else {
+            let selectedCase;
+            if (result.value.useCurrentCase && this.navigationState.caseId) {
+              // Use current case info
+              const currentCaseFromList = this.activeCases.find(c => c.id === this.navigationState.caseId);
+              selectedCase = {
+                id: this.navigationState.caseId,
+                caseNumber: currentCaseFromList?.caseNumber || `CASE-${this.navigationState.caseId}`,
+                title: this.navigationState.caseName || 'Active Case'
+              };
+            } else {
+              selectedCase = this.activeCases.find(c => c.id === result.value.caseId);
+            }
+            this.createFolderStructureInCurrentDirectory(result.value.template, selectedCase);
+          }
+        }
+      });
     });
   }
   

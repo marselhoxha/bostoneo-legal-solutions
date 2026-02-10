@@ -687,8 +687,7 @@
                                                    href="javascript:void(0);" 
                                                    (click)="startInlineEdit(folder.id, 'folder', folder.name)">Rename</a></li>
                                             <li><a class="dropdown-item" href="javascript:void(0);"
-                                                   (click)="confirmDeleteFolder(deleteModel, folder.id)" 
-                                                   data-bs-toggle="modal" role="button">Delete</a></li>
+                                                   (click)="confirmDeleteFolder(null, folder.id)">Delete</a></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -961,10 +960,9 @@
                                                            (click)="openVersionHistory(file)">
                                                         <i class="ri-history-line me-2"></i>Version History</a></li>
                                                     <li class="dropdown-divider"></li>
-                                                    <li><a class="dropdown-item remove-list" 
+                                                    <li><a class="dropdown-item remove-list"
                                                            href="javascript:void(0);"
-                                                           data-bs-toggle="modal" role="button"
-                                                           (click)="confirmDeleteFile(deleteFileModel, file.id)">Delete</a></li>
+                                                           (click)="confirmDeleteFile(null, file.id)">Delete</a></li>
                                                 </ng-container>
                                                 
                                                 <!-- Actions for deleted files -->
@@ -1016,7 +1014,7 @@
                                                 <li><a class="dropdown-item" href="javascript:void(0);" (click)="openVersionHistory(file)">
                                                     <i class="ri-history-line me-2"></i>Version History</a></li>
                                                 <li class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="confirmDeleteFile(deleteFileModel, file.id)">Delete</a></li>
+                                                <li><a class="dropdown-item text-danger" href="javascript:void(0);" (click)="confirmDeleteFile(null, file.id)">Delete</a></li>
                                             </ng-container>
                                             
                                             <!-- Actions for deleted files -->
@@ -1222,8 +1220,7 @@
                                 <i class="ri-download-2-line align-bottom me-1"></i> Download
                             </button>
                             <button type="button" class="btn btn-soft-danger w-100 remove-file-overview"
-                                    data-bs-toggle="modal" data-bs-target="#removeFileItemModal"
-                                    (click)="confirmDeleteFile(deleteFileModel, selectedFile.id)">
+                                    (click)="confirmDeleteFile(null, selectedFile.id)">
                                 <i class="ri-close-fill align-bottom me-1"></i> Delete
                             </button>
                         </div>
@@ -1301,61 +1298,6 @@
     </div>
 </ng-template>
 
-<!-- Delete Folder Modal -->
-<ng-template #deleteModel let-modal>
-    <div class="modal-content">
-        <div class="modal-header">
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btn-close"
-                    (click)="modal.dismiss('Cross click')"></button>
-        </div>
-        <div class="modal-body">
-            <div class="mt-2 text-center">
-                <lord-icon src="https://cdn.lordicon.com/gsqxdxog.json" trigger="loop"
-                          colors="primary:#f7b84b,secondary:#f06548" style="width:90px;height:90px"></lord-icon>
-                <div class="mt-4 pt-2 fs-15 mx-4 mx-sm-5">
-                    <h4>Are you sure ?</h4>
-                    <p class="text-muted mx-4 mb-0">Are you sure you want to remove this folder ?</p>
-                </div>
-            </div>
-            <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
-                <button class="btn btn-link link-success fw-medium text-decoration-none" data-bs-dismiss="modal"
-                        (click)="modal.close('Close click')">
-                    <i class="ri-close-line me-1 align-middle"></i> Close
-                </button>
-                <button type="button" class="btn w-sm btn-danger" id="remove-folderList" 
-                        (click)="deleteFolder(deleteId)" (click)="modal.close('Close click')">Yes, Delete It!</button>
-            </div>
-        </div>
-    </div>
-</ng-template>
-
-<!-- Delete File Modal -->
-<ng-template #deleteFileModel let-modal>
-    <div class="modal-content">
-        <div class="modal-header">
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btn-close"
-                    (click)="modal.dismiss('Cross click')"></button>
-        </div>
-        <div class="modal-body">
-            <div class="mt-2 text-center">
-                <lord-icon src="https://cdn.lordicon.com/gsqxdxog.json" trigger="loop"
-                          colors="primary:#f7b84b,secondary:#f06548" style="width:90px;height:90px"></lord-icon>
-                <div class="mt-4 pt-2 fs-15 mx-4 mx-sm-5">
-                    <h4>Are you sure ?</h4>
-                    <p class="text-muted mx-4 mb-0">Are you sure you want to remove this file ?</p>
-                </div>
-            </div>
-            <div class="d-flex gap-2 justify-content-center mt-4 mb-2">
-                <button class="btn btn-link link-success fw-medium text-decoration-none" data-bs-dismiss="modal"
-                        (click)="modal.close('Close click')">
-                    <i class="ri-close-line me-1 align-middle"></i> Close
-                </button>
-                <button type="button" class="btn w-sm btn-danger" id="remove-fileList" 
-                        (click)="deleteFile(deleteId)" (click)="modal.close('Close click')">Yes, Delete It!</button>
-            </div>
-        </div>
-    </div>
-</ng-template>
 
 <!-- File Upload Modal -->
 <ng-template #uploadModal let-modal>

@@ -376,6 +376,122 @@ export class TemplateService {
             ]
           }
         ]
+      },
+      {
+        id: 'personal-injury-standard',
+        name: 'Standard Personal Injury',
+        description: 'Complete folder structure for personal injury cases',
+        practiceArea: PracticeArea.PERSONAL_INJURY,
+        isDefault: true,
+        isCustom: false,
+        folders: [
+          {
+            name: '01-Intake-Client-Information',
+            description: 'Client intake and initial case information',
+            isRequired: true,
+            subFolders: [
+              { name: 'Retainer Agreements', isRequired: true },
+              { name: 'Client Questionnaires', isRequired: true },
+              { name: 'Initial Consultation Notes', isRequired: true }
+            ]
+          },
+          {
+            name: '02-Medical-Records',
+            description: 'All medical documentation related to the injury',
+            isRequired: true,
+            subFolders: [
+              { name: 'Hospital Records', isRequired: true },
+              { name: 'Treatment Records', isRequired: true },
+              { name: 'Pharmacy Records', isRequired: false },
+              { name: 'Expert Medical Reports', isRequired: false }
+            ]
+          },
+          {
+            name: '03-Damages-Documentation',
+            description: 'Documentation of all damages suffered',
+            isRequired: true,
+            subFolders: [
+              { name: 'Medical Bills', isRequired: true },
+              { name: 'Lost Wages', isRequired: true },
+              { name: 'Property Damage', isRequired: false },
+              { name: 'Pain and Suffering', isRequired: false }
+            ]
+          },
+          {
+            name: '04-Insurance',
+            description: 'Insurance policies and communications',
+            isRequired: true,
+            subFolders: [
+              { name: 'Policy Documents', isRequired: true },
+              { name: 'Claim Correspondence', isRequired: true },
+              { name: 'Adjustor Communications', isRequired: false }
+            ]
+          },
+          {
+            name: '05-Pleadings',
+            description: 'Court filings and pleadings',
+            isRequired: true,
+            subFolders: [
+              { name: 'Complaint', isRequired: true },
+              { name: 'Motions', isRequired: true },
+              { name: 'Responses', isRequired: true }
+            ]
+          },
+          {
+            name: '06-Discovery',
+            description: 'Discovery materials and responses',
+            isRequired: true,
+            subFolders: [
+              { name: 'Interrogatories', isRequired: true },
+              { name: 'Document Requests', isRequired: true },
+              { name: 'Depositions', isRequired: true },
+              { name: 'Expert Reports', isRequired: false }
+            ]
+          },
+          {
+            name: '07-Evidence',
+            description: 'Physical and documentary evidence',
+            isRequired: true,
+            subFolders: [
+              { name: 'Accident Scene Photos', isRequired: true },
+              { name: 'Police Reports', isRequired: true },
+              { name: 'Witness Statements', isRequired: false },
+              { name: 'Surveillance', isRequired: false }
+            ]
+          },
+          {
+            name: '08-Correspondence',
+            description: 'All case correspondence',
+            isRequired: true,
+            subFolders: [
+              { name: 'Client Communications', isRequired: true },
+              { name: 'Opposing Counsel', isRequired: true },
+              { name: 'Insurance Communications', isRequired: true },
+              { name: 'Court Communications', isRequired: true }
+            ]
+          },
+          {
+            name: '09-Settlement-Trial',
+            description: 'Settlement negotiations and trial preparation',
+            isRequired: false,
+            subFolders: [
+              { name: 'Demand Letters', isRequired: false },
+              { name: 'Mediation', isRequired: false },
+              { name: 'Settlement Agreements', isRequired: false },
+              { name: 'Trial Preparation', isRequired: false }
+            ]
+          },
+          {
+            name: '10-Liens-Subrogation',
+            description: 'Liens and subrogation claims',
+            isRequired: false,
+            subFolders: [
+              { name: 'Medical Liens', isRequired: false },
+              { name: 'Medicare-Medicaid', isRequired: false },
+              { name: 'Workers Compensation', isRequired: false }
+            ]
+          }
+        ]
       }
     ];
   }

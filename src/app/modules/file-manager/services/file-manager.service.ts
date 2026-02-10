@@ -856,18 +856,11 @@ export class FileManagerService {
       fileIds: fileIds,
       targetFolderId: targetFolderId
     };
-    
-    return this.http.post<void>(`${this.FILE_MANAGER_API}/files/move`, request).pipe(
+
+    return this.http.post<any>(`${this.FILE_MANAGER_API}/bulk/move`, request).pipe(
+      map(() => undefined as void),
       tap(() => this.refreshCurrentFolderFiles()),
-      catchError((error) => {
-        if (error.status === 405) {
-          console.warn('File move API not yet implemented on backend, simulating move operation');
-          // Simulate move operation by refreshing cache
-          this.refreshCurrentFolderFiles();
-          return of(undefined); // Return successful observable
-        }
-        return this.handleError(error);
-      })
+      catchError(this.handleError)
     );
   }
 
