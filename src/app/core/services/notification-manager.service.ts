@@ -65,19 +65,6 @@ export class NotificationManagerService {
       const previousUser = this.currentUser;
       this.currentUser = user;
 
-      // If user just logged in (previously null, now has user), check for missed notifications
-      // Check service flag to avoid duplicate loading with topbar component
-      if (!previousUser && user?.id) {
-        if (!this.notificationService.isPushNotificationsLoaded()) {
-          // Use setTimeout to avoid blocking the login flow
-          setTimeout(() => {
-            this.checkMissedNotifications(user.id);
-            // Mark as loaded in service to coordinate with topbar
-            this.notificationService.setPushNotificationsLoaded(true);
-          }, 2000); // Wait 2 seconds after login to check notifications
-        }
-      }
-
       // Reset service state on logout
       if (previousUser?.id && !user) {
         this.notificationService.resetPushNotifications();

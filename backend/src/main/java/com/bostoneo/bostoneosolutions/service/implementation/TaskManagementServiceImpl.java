@@ -302,49 +302,11 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // Save the updated task
         CaseTask updatedTask = caseTaskRepository.save(task);
         
-        // Send task reassignment notifications if assignee changed
-        // Skip notification if user is assigning to themselves (self-assignment)
-        Long currentUserId = getCurrentUserId();
-        boolean isSelfAssignment = newAssignedToId != null && newAssignedToId.equals(currentUserId);
+        // Task assignment notifications are handled by the frontend NotificationTriggerService
+        // which sends more descriptive messages (includes assigner name, case name, due date)
 
-        if (!isSelfAssignment && newAssignedToId != null && oldAssignedTo != null &&
-            !oldAssignedTo.getId().equals(newAssignedToId) && newAssignedToId != 0) {
-            // Task was reassigned to a different user (not self)
-            try {
-                String title = "Task Assigned";
-                String message = String.format("You have been assigned to task \"%s\"",
-                    updatedTask.getTitle());
-
-                // Send notification to the newly assigned user
-                notificationService.sendCrmNotification(title, message, newAssignedToId,
-                    "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(),
-                                           "caseId", updatedTask.getLegalCase().getId(),
-                                           "taskTitle", updatedTask.getTitle()));
-
-                log.info("📧 Task reassignment notification sent to user: {}", newAssignedToId);
-            } catch (Exception e) {
-                log.error("Failed to send task reassignment notification: {}", e.getMessage());
-            }
-        } else if (!isSelfAssignment && newAssignedToId != null && oldAssignedTo == null && newAssignedToId != 0) {
-            // Task was assigned for the first time (not self)
-            try {
-                String title = "Task Assigned";
-                String message = String.format("You have been assigned to task \"%s\"",
-                    updatedTask.getTitle());
-
-                // Send notification to the newly assigned user
-                notificationService.sendCrmNotification(title, message, newAssignedToId,
-                    "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(),
-                                           "caseId", updatedTask.getLegalCase().getId(),
-                                           "taskTitle", updatedTask.getTitle()));
-
-                //log.info("📧 Task assignment notification sent to user: {}", newAssignedToId);
-            } catch (Exception e) {
-                log.error("Failed to send task assignment notification: {}", e.getMessage());
-            }
-        }
-        
         // Send status change notifications (excluding the user who made the change)
+        Long currentUserId = getCurrentUserId();
         if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
             try {
                 String title = "Task Status Changed";
@@ -540,29 +502,8 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // Save the updated task
         CaseTask updatedTask = caseTaskRepository.save(task);
 
-        // Send task assignment notification only if NOT self-assignment
-        Long currentUserId = getCurrentUserId();
-        boolean isSelfAssignment = userId.equals(currentUserId);
-
-        if (!isSelfAssignment) {
-            try {
-                String title = "Task Assigned";
-                String message = String.format("You have been assigned to task \"%s\"",
-                    updatedTask.getTitle());
-
-                // Send notification to the assigned user
-                notificationService.sendCrmNotification(title, message, userId,
-                    "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(),
-                                           "caseId", updatedTask.getLegalCase().getId(),
-                                           "taskTitle", updatedTask.getTitle()));
-
-                //log.info("📧 Task assignment notification sent to user: {}", userId);
-            } catch (Exception e) {
-                log.error("Failed to send task assignment notification: {}", e.getMessage());
-            }
-        }
-
-        //log.info("Successfully assigned task {} to user {}", taskId, userId);
+        // Task assignment notifications are handled by the frontend NotificationTriggerService
+        // which sends more descriptive messages (includes assigner name, case name, due date)
         return convertToDTO(updatedTask);
     }
 
