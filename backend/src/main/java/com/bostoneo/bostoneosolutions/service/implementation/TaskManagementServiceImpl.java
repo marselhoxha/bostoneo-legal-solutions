@@ -302,11 +302,32 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // Save the updated task
         CaseTask updatedTask = caseTaskRepository.save(task);
         
-        // Task assignment notifications are handled by the frontend NotificationTriggerService
-        // which sends more descriptive messages (includes assigner name, case name, due date)
+        // Send task assignment notification if assignee changed
+        Long currentUserId = getCurrentUserId();
+        boolean isSelfAssignment = newAssignedToId != null && newAssignedToId.equals(currentUserId);
+
+        if (!isSelfAssignment && newAssignedToId != null && newAssignedToId != 0) {
+            boolean isReassignment = oldAssignedTo != null && !oldAssignedTo.getId().equals(newAssignedToId);
+            boolean isFirstAssignment = oldAssignedTo == null;
+
+            if (isReassignment || isFirstAssignment) {
+                try {
+                    User assigner = userRepository.get(currentUserId);
+                    String assignerName = assigner != null
+                        ? assigner.getFirstName() + " " + assigner.getLastName() : "Someone";
+                    String message = buildTaskAssignmentMessage(assignerName, updatedTask);
+
+                    notificationService.sendCrmNotification("Task Assigned", message, newAssignedToId,
+                        "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(),
+                                               "caseId", updatedTask.getLegalCase().getId(),
+                                               "taskTitle", updatedTask.getTitle()));
+                } catch (Exception e) {
+                    log.error("Failed to send task assignment notification: {}", e.getMessage());
+                }
+            }
+        }
 
         // Send status change notifications (excluding the user who made the change)
-        Long currentUserId = getCurrentUserId();
         if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
             try {
                 String title = "Task Status Changed";
@@ -502,8 +523,24 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         // Save the updated task
         CaseTask updatedTask = caseTaskRepository.save(task);
 
-        // Task assignment notifications are handled by the frontend NotificationTriggerService
-        // which sends more descriptive messages (includes assigner name, case name, due date)
+        // Send task assignment notification (skip if self-assignment)
+        Long currentUserId = getCurrentUserId();
+        if (!userId.equals(currentUserId)) {
+            try {
+                User assigner = userRepository.get(currentUserId);
+                String assignerName = assigner != null
+                    ? assigner.getFirstName() + " " + assigner.getLastName() : "Someone";
+                String message = buildTaskAssignmentMessage(assignerName, updatedTask);
+
+                notificationService.sendCrmNotification("Task Assigned", message, userId,
+                    "TASK_ASSIGNED", Map.of("taskId", updatedTask.getId(),
+                                           "caseId", updatedTask.getLegalCase().getId(),
+                                           "taskTitle", updatedTask.getTitle()));
+            } catch (Exception e) {
+                log.error("Failed to send task assignment notification: {}", e.getMessage());
+            }
+        }
+
         return convertToDTO(updatedTask);
     }
 
@@ -961,6 +998,22 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             .build();
     }
     
+    private String buildTaskAssignmentMessage(String assignerName, CaseTask task) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(assignerName).append(" assigned you task \"").append(task.getTitle()).append("\"");
+
+        if (task.getLegalCase() != null && task.getLegalCase().getTitle() != null) {
+            sb.append(" for case \"").append(task.getLegalCase().getTitle()).append("\"");
+        }
+
+        if (task.getDueDate() != null) {
+            java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy");
+            sb.append(" (due ").append(task.getDueDate().format(fmt)).append(")");
+        }
+
+        return sb.toString();
+    }
+
     private TaskCommentDTO convertCommentToDTO(TaskComment comment) {
         return TaskCommentDTO.builder()
             .id(comment.getId())

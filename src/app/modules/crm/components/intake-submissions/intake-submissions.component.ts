@@ -2,7 +2,6 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrmService } from '../../services/crm.service';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../core/services/notification-manager.service';
-import { NotificationTriggerService } from '../../../../core/services/notification-trigger.service';
 import Swal from 'sweetalert2';
 
 export interface IntakeSubmissionDTO {
@@ -143,8 +142,7 @@ export class IntakeSubmissionsComponent implements OnInit {
     private crmService: CrmService,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private notificationManager: NotificationManagerService,
-    private notificationTrigger: NotificationTriggerService
+    private notificationManager: NotificationManagerService
   ) {}
 
   ngOnInit(): void {
@@ -874,14 +872,6 @@ export class IntakeSubmissionsComponent implements OnInit {
             practiceArea: submission.practiceArea
           }
         );
-        
-        // Send notification via new system
-        this.notificationTrigger.triggerIntakeFormSubmitted(
-          submission.id,
-          `${submission.firstName} ${submission.lastName}`,
-          submission.email,
-          submission.practiceArea
-        ).catch(error => console.error('Error triggering intake form notification:', error));
         
         Swal.fire({
           title: 'Converted!',

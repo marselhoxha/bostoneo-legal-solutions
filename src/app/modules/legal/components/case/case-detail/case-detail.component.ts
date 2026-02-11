@@ -30,7 +30,6 @@ import { CaseTask } from '../../../../../interface/case-task';
 import { Subject, forkJoin, of } from 'rxjs';
 import { takeUntil, switchMap, tap, catchError } from 'rxjs/operators';
 import { TaskAssignmentModalComponent, TaskAssignmentData } from '../../../../../component/case-task/task-management/components/task-assignment-modal/task-assignment-modal.component';
-import { NotificationTriggerService } from '../../../../../core/services/notification-trigger.service';
 import { QuickTaskModalComponent, QuickTaskData } from '../../../../../component/case-task/task-management/components/quick-task-modal/quick-task-modal.component';
 import { TeamAssignmentModalComponent, TeamAssignmentData } from '../../../../../component/case-task/task-management/components/team-assignment-modal/team-assignment-modal.component';
 import { WorkloadBalancingModalComponent, WorkloadBalancingData } from '../../../../../component/case-task/task-management/components/workload-balancing-modal/workload-balancing-modal.component';
@@ -136,8 +135,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     private notificationService: NotificationService,
     private auditLogService: AuditLogService,
     private pushNotificationService: PushNotificationService,
-    private notificationManager: NotificationManagerService,
-    private notificationTrigger: NotificationTriggerService
+    private notificationManager: NotificationManagerService
   ) {
     this.editForm = this.fb.group({
       caseNumber: ['', Validators.required],
@@ -1328,41 +1326,9 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           });
         });
 
-        // Store original values for change detection
-        const originalStatus = this.case.status;
-        const originalPriority = this.case.priority;
-        const caseName = this.case.title;
-        const caseNumber = this.case.caseNumber;
-
         // Call the API to update the case
         this.caseService.updateCase(this.case.id, updateData).subscribe({
-          next: async (response) => {
-            // Detect and trigger notifications for changes
-            const newStatus = formValues.status;
-            const newPriority = formValues.priority;
-
-            // Trigger status change notification
-            if (originalStatus !== newStatus) {
-              await this.notificationTrigger.triggerCaseStatusChanged(
-                Number(this.case.id), 
-                originalStatus, 
-                newStatus, 
-                caseName, 
-                caseNumber
-              );
-            }
-            
-            // Trigger priority change notification
-            if (originalPriority !== newPriority) {
-              await this.notificationTrigger.triggerCasePriorityChanged(
-                Number(this.case.id), 
-                originalPriority, 
-                newPriority, 
-                caseName, 
-                caseNumber
-              );
-            }
-            
+          next: (response) => {
             // Reload the case data after update
             this.loadCase(this.case!.id);
             this.isEditing = false;
@@ -1943,22 +1909,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         const userId = member.userId || member.id;
         
         this.caseAssignmentService.unassignCase(Number(this.caseId), userId, reason).subscribe({
-          next: async () => {
-            // Send personalized notifications using the new system
-            try {
-              await this.notificationTrigger.triggerCaseUnassignmentWithPersonalizedMessages(
-                Number(this.caseId),
-                userId,
-                memberName,
-                this.case?.title,
-                this.case?.caseNumber,
-                reason
-              );
-              
-            } catch (error) {
-              console.error('Failed to send personalized unassignment notifications:', error);
-            }
-            
+          next: () => {
             this.snackBar.open('Team member removed successfully', 'Close', { duration: 3000 });
             this.loadCaseTeam(this.caseId!);
           },
@@ -2679,59 +2630,21 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         this.loadAllCaseTasks(this.caseId!);
         this.loadCaseTeam(this.caseId!);
       } else if (result.assignedUser && task.id) {
-        // Fallback to modal selected user if task doesn't have assignment info
+        // Backend createTask() already handled the assignment — just show the UI notification
         const user = result.assignedUser;
         message += ` and assigned to ${user.firstName} ${user.lastName}`;
-        
-        // Validate task ID before assignment
-        if (!task.id || task.id === undefined || task.id === null) {
-          console.error('Cannot assign task: task.id is undefined');
-          this.showNotification('Task created but assignment failed - invalid task ID', 'info');
-          return;
-        }
 
-        // Use sync service for the assignment part
-        this.assignmentSyncService.assignTaskToUser(
-          task.id,
-          user.id,
-          Number(this.caseId)
-        ).subscribe({
-          next: (syncResult) => {
-            if (syncResult.success) {
-              // Show enhanced notification for task creation + assignment
-              this.showNotification(message, 'success', {
-                caseId: this.caseId,
-                userId: user.id,
-                memberName: `${user.firstName} ${user.lastName}`,
-                taskCount: 1,
-                taskId: task.id,
-                taskTitle: taskTitle
-              });
-              
-              // Log both creation and assignment (safe method)
-              this.safeAuditLog(() => {
-                this.auditLogService.log({
-                  action: 'TASK_CREATED_AND_ASSIGNED',
-                  entityType: 'task',
-                  entityId: task.id,
-                  entityName: task.title,
-                  component: 'CaseDetail',
-                  severity: 'LOW',
-                  category: 'USER_ACTION',
-                  metadata: {
-                    assigned: true,
-                    assignee: `${user.firstName} ${user.lastName}`,
-                    caseId: this.caseId
-                  }
-                });
-              });
-            }
-          },
-          error: (error) => {
-            console.error('Task assignment failed:', error);
-            this.showNotification('Task created but assignment failed', 'info');
-          }
+        this.showNotification(message, 'success', {
+          caseId: this.caseId,
+          taskId: task.id,
+          taskTitle: taskTitle,
+          assignedTo: `${user.firstName} ${user.lastName}`,
+          action: 'TASK_CREATED_AND_ASSIGNED'
         });
+
+        // Refresh the tasks and team data
+        this.loadAllCaseTasks(this.caseId!);
+        this.loadCaseTeam(this.caseId!);
       } else {
         // Just task creation (no assignment)
         this.showNotification(message, 'success', {

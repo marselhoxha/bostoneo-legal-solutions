@@ -1,8 +1,11 @@
 package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.dto.ExpenseDTO;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.model.CaseAssignment;
 import com.bostoneo.bostoneosolutions.model.Expense;
 import com.bostoneo.bostoneosolutions.model.Receipt;
+import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
 import com.bostoneo.bostoneosolutions.repository.ExpenseRepository;
 import com.bostoneo.bostoneosolutions.repository.ReceiptRepository;
 import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
@@ -11,6 +14,8 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
@@ -19,6 +24,8 @@ import com.bostoneo.bostoneosolutions.model.Invoice;
 import com.bostoneo.bostoneosolutions.model.LegalCase;
 import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +36,8 @@ public class ExpenseService {
     private final ReceiptRepository receiptRepository;
     private final ExpenseMapper expenseMapper;
     private final TenantService tenantService;
+    private final NotificationService notificationService;
+    private final CaseAssignmentRepository caseAssignmentRepository;
     private static final Logger log = LoggerFactory.getLogger(ExpenseService.class);
 
     private Long getRequiredOrganizationId() {
@@ -63,6 +72,10 @@ public class ExpenseService {
         Expense expense = expenseMapper.toEntity(expenseDTO);
         expense.setOrganizationId(orgId);  // SECURITY: Set organization context
         Expense savedExpense = expenseRepository.save(expense);
+
+        // Send notification to case assignees
+        sendExpenseNotification(savedExpense, expenseDTO.getLegalCaseId(), orgId);
+
         return new CustomHttpResponse<>(201, "Expense created successfully", savedExpense);
     }
 
@@ -147,4 +160,81 @@ public class ExpenseService {
         
         return new CustomHttpResponse<>(200, "Receipt attached successfully", savedExpense);
     }
-} 
+
+    private void sendExpenseNotification(Expense expense, Long legalCaseId, Long orgId) {
+        try {
+            Long currentUserId = getCurrentUserId();
+            String submitterName = getCurrentUserName();
+
+            String title = "New Expense Submitted";
+            String message = String.format("New expense submitted: $%s - %s",
+                expense.getAmount(), expense.getDescription() != null ? expense.getDescription() : "No description");
+
+            Set<Long> notificationUserIds = new HashSet<>();
+
+            // If expense is linked to a case, notify case assignees
+            if (legalCaseId != null) {
+                try {
+                    List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(legalCaseId, orgId);
+                    for (CaseAssignment assignment : assignments) {
+                        if (assignment.getAssignedTo() != null) {
+                            notificationUserIds.add(assignment.getAssignedTo().getId());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to get case assignments for expense notification: {}", e.getMessage());
+                }
+            }
+
+            // Exclude submitter
+            if (currentUserId != null) {
+                notificationUserIds.remove(currentUserId);
+            }
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("expenseId", expense.getId());
+            if (legalCaseId != null) {
+                data.put("caseId", legalCaseId);
+            }
+
+            for (Long userId : notificationUserIds) {
+                notificationService.sendCrmNotification(title, message, userId, "EXPENSE_SUBMITTED", data);
+            }
+
+            log.info("Expense notification sent to {} users for expense ID: {}", notificationUserIds.size(), expense.getId());
+        } catch (Exception e) {
+            log.error("Failed to send expense notification for expense ID: {}", expense.getId(), e);
+        }
+    }
+
+    private Long getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof UserDTO) {
+                    return ((UserDTO) principal).getId();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not get current user ID: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private String getCurrentUserName() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof UserDTO) {
+                    UserDTO user = (UserDTO) principal;
+                    return user.getFirstName() + " " + user.getLastName();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not get current user name: {}", e.getMessage());
+        }
+        return "Someone";
+    }
+}

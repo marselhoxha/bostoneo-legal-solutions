@@ -21,7 +21,6 @@ import { ReminderService } from './modules/legal/services/reminder.service';
 import { PushNotificationService } from './core/services/push-notification.service';
 import { WebSocketService } from './core/services/websocket.service';
 import { DeadlineAlertService } from './core/services/deadline-alert.service';
-import { EnhancedNotificationManagerService } from './core/services/enhanced-notification-manager.service';
 import { OrganizationService } from './core/services/organization.service';
 
 @Component({
@@ -45,7 +44,6 @@ export class AppComponent implements OnInit, OnDestroy {
     private pushNotificationService: PushNotificationService,
     private webSocketService: WebSocketService,
     private deadlineAlertService: DeadlineAlertService,
-    private enhancedNotificationManager: EnhancedNotificationManagerService,
     private organizationService: OrganizationService
   ) {
     this.preloaderService.showPreloader$.subscribe((show) => {
@@ -135,9 +133,6 @@ export class AppComponent implements OnInit, OnDestroy {
       this.reminderService.startReminders();
       this.deadlineAlertService.startDeadlineMonitoring();
     }, 10000);
-
-    // Initialize Enhanced Notification Manager with EventBus (no HTTP calls)
-    this.enhancedNotificationManager.initialize();
 
     // Initialize WebSocket connection
     this.initializeWebSocketNotifications();

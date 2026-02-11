@@ -5,7 +5,6 @@ import { CalendarEvent, CreateEventRequest } from '../interfaces/calendar-event.
 import { CalendarService } from '../../../services/calendar.service';
 import { ToastrService } from 'ngx-toastr';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../../core/services/notification-manager.service';
-import { NotificationTriggerService } from '../../../../../core/services/notification-trigger.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -29,8 +28,7 @@ export class EventModalComponent implements OnInit, OnDestroy {
     public activeModal: NgbActiveModal,
     private calendarService: CalendarService,
     private toastr: ToastrService,
-    private notificationManager: NotificationManagerService,
-    private notificationTrigger: NotificationTriggerService
+    private notificationManager: NotificationManagerService
   ) {}
 
   ngOnInit(): void {
@@ -184,28 +182,11 @@ export class EventModalComponent implements OnInit, OnDestroy {
         finalize(() => this.loading = false)
       )
       .subscribe({
-        next: async (response) => {
+        next: (response) => {
           if (response) {
             // Send event notification (existing system)
             this.notifyEventAction(formattedRequest, eventRequest.id ? 'updated' : 'created');
-            
-            // Send event notification (new system)
-            try {
-              if (!eventRequest.id) {
-                // Only trigger for new events, not updates
-                const eventId = (response as any).data?.id || response.id || 1;
-                const eventTime = new Date(formattedRequest.startTime).toLocaleString();
-                
-                await this.notificationTrigger.triggerCalendarEventCreated(
-                  eventId,
-                  formattedRequest.title,
-                  eventTime
-                );
-              }
-            } catch (error) {
-              console.error('Error triggering calendar event notification:', error);
-            }
-            
+
             this.toastr.success(
               eventRequest.id ? 'Event updated successfully' : 'Event created successfully', 
               'Success'

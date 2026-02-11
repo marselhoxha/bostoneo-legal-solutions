@@ -12,7 +12,6 @@ import { LegalCase } from 'src/app/modules/legal/interfaces/case.interface';
 import { LegalCaseService } from 'src/app/modules/legal/services/legal-case.service';
 import { InvoiceTemplateService } from 'src/app/service/invoice-template.service';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from 'src/app/core/services/notification-manager.service';
-import { NotificationTriggerService } from 'src/app/core/services/notification-trigger.service';
 import { InvoiceTemplate } from 'src/app/interface/invoice-template';
 import Swal from 'sweetalert2';
 import { Router } from '@angular/router';
@@ -51,8 +50,7 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
     private templateService: InvoiceTemplateService,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private notificationManager: NotificationManagerService,
-    private notificationTrigger: NotificationTriggerService
+    private notificationManager: NotificationManagerService
   ) {
     this.initializeForm();
   }
@@ -492,24 +490,12 @@ export class NewinvoiceComponent implements OnInit, AfterViewInit, OnDestroy {
     };
 
     this.invoiceService.createInvoice(invoice).subscribe({
-      next: async (response) => {
+      next: (response) => {
         this.isLoadingSubject.next(false);
-        
+
         // Send invoice creation notification (existing)
         this.notifyInvoiceCreated(response.data);
-        
-        // Send invoice creation notification (new system)
-        try {
-          await this.notificationTrigger.triggerInvoiceCreated(
-            response.data.id,
-            response.data.invoiceNumber,
-            response.data.totalAmount.toString(),
-            client?.name || 'Unknown Client'
-          );
-        } catch (error) {
-          console.error('Error triggering invoice creation notification:', error);
-        }
-        
+
         Swal.fire({
           title: 'Success!',
           text: 'Invoice created successfully',

@@ -2,13 +2,17 @@ package com.bostoneo.bostoneosolutions.service.implementation;
 
 import com.bostoneo.bostoneosolutions.dto.CaseNoteDTO;
 import com.bostoneo.bostoneosolutions.dto.CreateCaseNoteRequest;
+import com.bostoneo.bostoneosolutions.dto.LegalCaseDTO;
 import com.bostoneo.bostoneosolutions.dto.UpdateCaseNoteRequest;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.exception.ResourceNotFoundException;
+import com.bostoneo.bostoneosolutions.model.CaseAssignment;
 import com.bostoneo.bostoneosolutions.model.CaseNote;
+import com.bostoneo.bostoneosolutions.repository.CaseAssignmentRepository;
 import com.bostoneo.bostoneosolutions.repository.CaseNoteRepository;
 import com.bostoneo.bostoneosolutions.service.CaseNoteService;
 import com.bostoneo.bostoneosolutions.service.LegalCaseService;
+import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.UserService;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +35,8 @@ public class CaseNoteServiceImpl implements CaseNoteService {
     private final UserService userService;
     private final CaseNoteRepository caseNoteRepository;
     private final TenantService tenantService;
+    private final NotificationService notificationService;
+    private final CaseAssignmentRepository caseAssignmentRepository;
 
     /**
      * Get the current organization ID from tenant context.
@@ -116,14 +122,19 @@ public class CaseNoteServiceImpl implements CaseNoteService {
             CaseNoteDTO noteDTO = mapToDTO(savedNote);
 
             // Add user information if available
+            String creatorName = "Someone";
             try {
                 if (request.getUserId() != null) {
                     UserDTO user = userService.getUserById(request.getUserId());
                     noteDTO.setUser(user);
+                    creatorName = user.getFirstName() + " " + user.getLastName();
                 }
             } catch (Exception e) {
                 log.warn("Could not fetch user information for note creator: {}", e.getMessage());
             }
+
+            // Send notification to case assignees
+            sendNoteNotification(request.getCaseId(), savedNote.getId(), request.getTitle(), creatorName, request.getUserId(), orgId);
 
             return noteDTO;
         } catch (Exception e) {
@@ -191,6 +202,43 @@ public class CaseNoteServiceImpl implements CaseNoteService {
         log.info("Note deleted successfully");
     }
     
+    private void sendNoteNotification(Long caseId, Long noteId, String noteTitle, String creatorName, Long creatorUserId, Long orgId) {
+        try {
+            LegalCaseDTO legalCase = legalCaseService.getCase(caseId);
+            String caseTitle = legalCase != null ? legalCase.getTitle() : "Case #" + caseId;
+
+            String title = "Case Note Added";
+            String message = String.format("%s added a note to case \"%s\"", creatorName, caseTitle);
+
+            // Get all users assigned to this case
+            Set<Long> notificationUserIds = new HashSet<>();
+            try {
+                List<CaseAssignment> assignments = caseAssignmentRepository.findActiveByCaseIdAndOrganizationId(caseId, orgId);
+                for (CaseAssignment assignment : assignments) {
+                    if (assignment.getAssignedTo() != null) {
+                        notificationUserIds.add(assignment.getAssignedTo().getId());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Failed to get case assignments for note notification: {}", e.getMessage());
+            }
+
+            // Exclude note creator
+            if (creatorUserId != null) {
+                notificationUserIds.remove(creatorUserId);
+            }
+
+            for (Long userId : notificationUserIds) {
+                notificationService.sendCrmNotification(title, message, userId, "CASE_NOTE_ADDED",
+                    Map.of("caseId", caseId, "noteId", noteId));
+            }
+
+            log.info("Case note notification sent to {} users for case ID: {}", notificationUserIds.size(), caseId);
+        } catch (Exception e) {
+            log.error("Failed to send case note notification for case ID: {}", caseId, e);
+        }
+    }
+
     /**
      * Map entity to DTO
      */

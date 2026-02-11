@@ -13,7 +13,6 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NotificationService } from '../../../../service/notification.service';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../core/services/notification-manager.service';
-import { NotificationTriggerService } from '../../../../core/services/notification-trigger.service';
 import { Key } from '../../../../enum/key.enum';
 import { environment } from '../../../../../environments/environment';
 
@@ -57,8 +56,7 @@ export class ExpenseFormComponent implements OnInit {
     private caseService: CaseService,
     private http: HttpClient,
     private notificationService: NotificationService,
-    private notificationManager: NotificationManagerService,
-    private notificationTrigger: NotificationTriggerService
+    private notificationManager: NotificationManagerService
   ) {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format for flatpickr
     
@@ -467,29 +465,10 @@ export class ExpenseFormComponent implements OnInit {
         : this.expensesService.createExpense(expenseData);
 
       request$.subscribe({
-        next: async (response) => {
+        next: (response) => {
           // Send expense submission notification (existing)
           this.notifyExpenseSubmitted(expenseData, this.isEditMode);
-          
-          // Send expense submission notification (new system)
-          try {
-            const categoryName = this.categories.find(c => c.id == expenseData.categoryId)?.name || 'Unknown';
-            const clientName = this.clients.find(c => c.id == expenseData.clientId)?.name || 'Unknown';
-            
-            if (!this.isEditMode) {
-              // Only send notifications for new expense submissions, not updates
-              await this.notificationTrigger.triggerExpenseSubmitted(
-                response.data?.id || 1, // Expense ID from response
-                expenseData.amount,
-                categoryName,
-                clientName,
-                expenseData.description || 'No description provided'
-              );
-            }
-          } catch (error) {
-            console.error('Error triggering expense submission notification:', error);
-          }
-          
+
           this.router.navigate(['/expenses']);
         },
         error: (error) => {

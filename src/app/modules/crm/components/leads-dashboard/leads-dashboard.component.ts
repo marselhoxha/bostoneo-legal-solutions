@@ -5,7 +5,6 @@ import { CrmService } from '../../services/crm.service';
 import { UserService } from '../../../../service/user.service';
 import { User } from '../../../../interface/user';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../core/services/notification-manager.service';
-import { NotificationTriggerService } from '../../../../core/services/notification-trigger.service';
 import Swal from 'sweetalert2';
 import flatpickr from 'flatpickr';
 
@@ -163,8 +162,7 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
     private cdr: ChangeDetectorRef,
     private fb: FormBuilder,
     private router: Router,
-    private notificationManager: NotificationManagerService,
-    private notificationTrigger: NotificationTriggerService
+    private notificationManager: NotificationManagerService
   ) {
     this.initializeForms();
   }
