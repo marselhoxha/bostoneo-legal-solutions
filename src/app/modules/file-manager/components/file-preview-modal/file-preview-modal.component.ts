@@ -114,13 +114,16 @@ export class FilePreviewModalComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       },
       error: async (error) => {
-        let msg = error.message || 'Unknown error';
-        if (error.error instanceof Blob) {
+        let msg = error.headers?.get('X-Error-Message') || '';
+        if (!msg && error.error instanceof Blob) {
           try {
             const text = await error.error.text();
             const parsed = JSON.parse(text);
-            msg = parsed.message || parsed.error || msg;
-          } catch (e) { /* not JSON, keep default */ }
+            msg = parsed.message || parsed.error || '';
+          } catch (e) { /* not JSON */ }
+        }
+        if (!msg) {
+          msg = error.message || 'Unknown error';
         }
         this.error = 'Failed to load file preview: ' + msg;
         this.isLoading = false;

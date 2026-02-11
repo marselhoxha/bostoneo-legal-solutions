@@ -290,21 +290,30 @@ public class FileManagerResource {
                 
         } catch (IOException e) {
             log.error("Error downloading file {}: {}", fileId, e.getMessage(), e);
-            String errorJson = "{\"error\":\"" + (e.getMessage() != null ? e.getMessage().replace("\"", "'") : "IO error") + "\"}";
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "IO error";
+            String errorJson = "{\"error\":\"" + errorMsg.replace("\"", "'") + "\"}";
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .header("Content-Type", "application/json")
+                .header("X-Error-Message", errorMsg)
+                .header("Access-Control-Expose-Headers", "X-Error-Message")
                 .body(errorJson.getBytes());
         } catch (RuntimeException e) {
             log.error("Runtime error accessing file {}: {}", fileId, e.getMessage(), e);
-            String errorJson = "{\"error\":\"" + (e.getMessage() != null ? e.getMessage().replace("\"", "'") : "File not found") + "\"}";
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "File not found";
+            String errorJson = "{\"error\":\"" + errorMsg.replace("\"", "'") + "\"}";
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .header("Content-Type", "application/json")
+                .header("X-Error-Message", errorMsg)
+                .header("Access-Control-Expose-Headers", "X-Error-Message")
                 .body(errorJson.getBytes());
         } catch (Exception e) {
             log.error("Unexpected error accessing file {}: {}", fileId, e.getMessage(), e);
-            String errorJson = "{\"error\":\"" + (e.getMessage() != null ? e.getMessage().replace("\"", "'") : "Unexpected error") + "\"}";
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Unexpected error";
+            String errorJson = "{\"error\":\"" + errorMsg.replace("\"", "'") + "\"}";
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .header("Content-Type", "application/json")
+                .header("X-Error-Message", errorMsg)
+                .header("Access-Control-Expose-Headers", "X-Error-Message")
                 .body(errorJson.getBytes());
         }
     }

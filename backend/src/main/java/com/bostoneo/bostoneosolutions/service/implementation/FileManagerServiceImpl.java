@@ -664,12 +664,13 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public List<FolderDTO> getRootFolders() {
         log.info("Getting personal root folders for current user");
-        
+
         Long userId = getCurrentUserId();
-        
-        // Get only personal folders (no case_id) that belong to current user or are shared
-        List<Folder> personalFolders = folderRepository.findPersonalRootFolders(userId);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        List<Folder> personalFolders = folderRepository.findPersonalRootFoldersByOrganization(userId, orgId);
+
         return personalFolders.stream()
                 .map(this::convertToFolderDTO)
                 .collect(Collectors.toList());
@@ -711,12 +712,13 @@ public class FileManagerServiceImpl implements FileManagerService {
     @Transactional(readOnly = true)
     public List<FolderDTO> getPersonalSubfolders(Long parentFolderId) {
         log.info("Getting personal subfolders for parent folder ID: {}", parentFolderId);
-        
+
         Long currentUserId = getCurrentUserId();
-        
-        // Use repository method that filters by user
-        List<Folder> subfolders = folderRepository.findPersonalSubfolders(parentFolderId, currentUserId);
-        
+        Long orgId = getRequiredOrganizationId();
+
+        // SECURITY: Use tenant-filtered query
+        List<Folder> subfolders = folderRepository.findPersonalSubfoldersByOrganization(parentFolderId, currentUserId, orgId);
+
         return subfolders.stream()
                 .map(this::convertToFolderDTO)
                 .collect(Collectors.toList());

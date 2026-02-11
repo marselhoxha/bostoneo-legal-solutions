@@ -22,10 +22,18 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
     @Query("SELECT f FROM Folder f WHERE f.parentFolderId IS NULL AND f.deleted = false " +
            "AND f.caseId IS NULL AND f.createdBy = :userId")
     List<Folder> findPersonalRootFolders(@Param("userId") Long userId);
-    
+
+    @Query("SELECT f FROM Folder f WHERE f.parentFolderId IS NULL AND f.deleted = false " +
+           "AND f.caseId IS NULL AND f.createdBy = :userId AND f.organizationId = :orgId")
+    List<Folder> findPersonalRootFoldersByOrganization(@Param("userId") Long userId, @Param("orgId") Long organizationId);
+
     @Query("SELECT f FROM Folder f WHERE f.parentFolderId = :parentId AND f.deleted = false " +
            "AND f.caseId IS NULL AND f.createdBy = :userId")
     List<Folder> findPersonalSubfolders(@Param("parentId") Long parentId, @Param("userId") Long userId);
+
+    @Query("SELECT f FROM Folder f WHERE f.parentFolderId = :parentId AND f.deleted = false " +
+           "AND f.caseId IS NULL AND f.createdBy = :userId AND f.organizationId = :orgId")
+    List<Folder> findPersonalSubfoldersByOrganization(@Param("parentId") Long parentId, @Param("userId") Long userId, @Param("orgId") Long organizationId);
     
     List<Folder> findByCreatedByAndDeletedFalse(Long createdBy);
     
