@@ -29,6 +29,7 @@ public class ConflictCheckServiceImpl implements ConflictCheckService {
     private final ConflictCheckRepository conflictCheckRepository;
     private final ObjectMapper objectMapper;
     private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+    private final org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate jdbc;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -350,39 +351,150 @@ public class ConflictCheckServiceImpl implements ConflictCheckService {
         }
     }
 
-    private List<ConflictMatchDTO> performConflictSearch(List<String> searchTerms, 
-                                                       Map<String, Object> searchParameters, 
+    private List<ConflictMatchDTO> performConflictSearch(List<String> searchTerms,
+                                                       Map<String, Object> searchParameters,
                                                        String checkType) {
-        // This is a simplified implementation
-        // In a real system, this would:
-        // 1. Search existing clients/matters in the database
-        // 2. Check against external conflict databases
-        // 3. Use fuzzy matching algorithms
-        // 4. Apply business rules for conflict detection
-        
+        Long orgId = getRequiredOrganizationId();
         List<ConflictMatchDTO> matches = new ArrayList<>();
-        
-        // Simulate conflict search logic
+        Set<String> seen = new HashSet<>();
+
         for (String term : searchTerms) {
-            if (term.toLowerCase().contains("conflict")) {
-                // Simulate a potential conflict
-                ConflictMatchDTO match = ConflictMatchDTO.builder()
-                        .entityType("CLIENT")
-                        .entityId(999L)
-                        .entityName("Existing Client with similar name")
-                        .matchType("NAME_SIMILARITY")
-                        .matchScore(new BigDecimal("75.50"))
-                        .matchReason("Similar name pattern detected")
-                        .riskLevel("MEDIUM")
-                        .status("REQUIRES_REVIEW")
-                        .recommendedAction("Manual review required")
-                        .lastUpdated(new Timestamp(System.currentTimeMillis()))
-                        .build();
-                
-                matches.add(match);
+            if (term == null || term.trim().length() < 2) continue;
+            String cleanTerm = term.trim();
+
+            // Search clients by fuzzy name match
+            if (!"MATTER_ONLY".equals(checkType)) {
+                searchClients(orgId, cleanTerm, matches, seen);
             }
+
+            // Search legal cases by client name and title
+            if (!"CLIENT_ONLY".equals(checkType)) {
+                searchCases(orgId, cleanTerm, matches, seen);
+            }
+
+            // Search adverse parties
+            searchAdverseParties(orgId, cleanTerm, matches, seen);
         }
-        
+
+        // Also do exact email match if provided
+        String email = (String) searchParameters.get("email");
+        if (email != null && !email.isBlank()) {
+            searchByEmail(orgId, email, matches, seen);
+        }
+
         return matches;
+    }
+
+    private void searchClients(Long orgId, String term, List<ConflictMatchDTO> matches, Set<String> seen) {
+        try {
+            String sql = "SELECT id, name, email, phone, " +
+                    "GREATEST(similarity(name, :term), similarity(COALESCE(email,''), :term)) AS score " +
+                    "FROM clients WHERE organization_id = :orgId " +
+                    "AND (similarity(name, :term) > 0.3 OR name ILIKE '%' || :term || '%') " +
+                    "ORDER BY score DESC LIMIT 10";
+            var params = Map.of("orgId", orgId, "term", term);
+            jdbc.query(sql, params, rs -> {
+                String key = "CLIENT-" + rs.getLong("id");
+                if (seen.add(key)) {
+                    BigDecimal score = rs.getBigDecimal("score").multiply(new BigDecimal("100")).setScale(2, java.math.RoundingMode.HALF_UP);
+                    matches.add(ConflictMatchDTO.builder()
+                            .entityType("CLIENT").entityId(rs.getLong("id"))
+                            .entityName(rs.getString("name"))
+                            .matchType("NAME_SIMILARITY").matchScore(score)
+                            .matchReason("Client name matches: " + rs.getString("name"))
+                            .riskLevel(score.compareTo(new BigDecimal("80")) >= 0 ? "HIGH" : "MEDIUM")
+                            .status("REQUIRES_REVIEW")
+                            .recommendedAction("Review existing client relationship")
+                            .lastUpdated(new Timestamp(System.currentTimeMillis()))
+                            .build());
+                }
+            });
+        } catch (Exception e) {
+            log.error("Error searching clients for term '{}': {}", term, e.getMessage());
+        }
+    }
+
+    private void searchCases(Long orgId, String term, List<ConflictMatchDTO> matches, Set<String> seen) {
+        try {
+            String sql = "SELECT id, title, client_name, case_number, " +
+                    "GREATEST(similarity(client_name, :term), similarity(title, :term)) AS score " +
+                    "FROM legal_cases WHERE organization_id = :orgId " +
+                    "AND (similarity(client_name, :term) > 0.3 OR similarity(title, :term) > 0.3 " +
+                    "OR client_name ILIKE '%' || :term || '%' OR title ILIKE '%' || :term || '%') " +
+                    "ORDER BY score DESC LIMIT 10";
+            var params = Map.of("orgId", orgId, "term", term);
+            jdbc.query(sql, params, rs -> {
+                String key = "CASE-" + rs.getLong("id");
+                if (seen.add(key)) {
+                    BigDecimal score = rs.getBigDecimal("score").multiply(new BigDecimal("100")).setScale(2, java.math.RoundingMode.HALF_UP);
+                    matches.add(ConflictMatchDTO.builder()
+                            .entityType("CASE").entityId(rs.getLong("id"))
+                            .entityName(rs.getString("title") + " (" + rs.getString("case_number") + ")")
+                            .matchType("CASE_SIMILARITY").matchScore(score)
+                            .matchReason("Case client '" + rs.getString("client_name") + "' matches search term")
+                            .riskLevel(score.compareTo(new BigDecimal("80")) >= 0 ? "HIGH" : "MEDIUM")
+                            .status("REQUIRES_REVIEW")
+                            .recommendedAction("Review case for conflict of interest")
+                            .lastUpdated(new Timestamp(System.currentTimeMillis()))
+                            .build());
+                }
+            });
+        } catch (Exception e) {
+            log.error("Error searching cases for term '{}': {}", term, e.getMessage());
+        }
+    }
+
+    private void searchAdverseParties(Long orgId, String term, List<ConflictMatchDTO> matches, Set<String> seen) {
+        try {
+            String sql = "SELECT id, name, case_id, party_type, " +
+                    "similarity(name, :term) AS score " +
+                    "FROM adverse_parties WHERE organization_id = :orgId " +
+                    "AND (similarity(name, :term) > 0.3 OR name ILIKE '%' || :term || '%') " +
+                    "ORDER BY score DESC LIMIT 10";
+            var params = Map.of("orgId", orgId, "term", term);
+            jdbc.query(sql, params, rs -> {
+                String key = "ADVERSE-" + rs.getLong("id");
+                if (seen.add(key)) {
+                    BigDecimal score = rs.getBigDecimal("score").multiply(new BigDecimal("100")).setScale(2, java.math.RoundingMode.HALF_UP);
+                    matches.add(ConflictMatchDTO.builder()
+                            .entityType("ADVERSE_PARTY").entityId(rs.getLong("id"))
+                            .entityName(rs.getString("name") + " (" + rs.getString("party_type") + ")")
+                            .matchType("ADVERSE_PARTY_MATCH").matchScore(score)
+                            .matchReason("Adverse party name matches in case ID " + rs.getLong("case_id"))
+                            .riskLevel("HIGH")
+                            .status("REQUIRES_REVIEW")
+                            .recommendedAction("Potential direct conflict — adverse party in existing case")
+                            .lastUpdated(new Timestamp(System.currentTimeMillis()))
+                            .build());
+                }
+            });
+        } catch (Exception e) {
+            log.error("Error searching adverse parties for term '{}': {}", term, e.getMessage());
+        }
+    }
+
+    private void searchByEmail(Long orgId, String email, List<ConflictMatchDTO> matches, Set<String> seen) {
+        try {
+            String sql = "SELECT id, name, email FROM clients " +
+                    "WHERE organization_id = :orgId AND LOWER(email) = LOWER(:email)";
+            var params = Map.of("orgId", orgId, "email", email);
+            jdbc.query(sql, params, rs -> {
+                String key = "CLIENT-" + rs.getLong("id");
+                if (seen.add(key)) {
+                    matches.add(ConflictMatchDTO.builder()
+                            .entityType("CLIENT").entityId(rs.getLong("id"))
+                            .entityName(rs.getString("name"))
+                            .matchType("EMAIL_EXACT_MATCH").matchScore(new BigDecimal("100.00"))
+                            .matchReason("Exact email match: " + rs.getString("email"))
+                            .riskLevel("HIGH")
+                            .status("REQUIRES_REVIEW")
+                            .recommendedAction("Existing client with same email address")
+                            .lastUpdated(new Timestamp(System.currentTimeMillis()))
+                            .build());
+                }
+            });
+        } catch (Exception e) {
+            log.error("Error searching by email '{}': {}", email, e.getMessage());
+        }
     }
 }

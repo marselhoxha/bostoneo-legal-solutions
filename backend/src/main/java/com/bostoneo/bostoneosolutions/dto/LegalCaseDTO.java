@@ -91,6 +91,9 @@ public class LegalCaseDTO {
     private Date createdAt;
     private Date updatedAt;
 
+    // Conflict check reference (required for case creation)
+    private Long conflictCheckId;
+
     // Assigned attorneys for display in case list
     private List<AssignedAttorneyDTO> assignedAttorneys;
 

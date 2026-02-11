@@ -47,6 +47,11 @@ public class UserQuery {
         "INNER JOIN user_roles ur ON u.id = ur.user_id " +
         "WHERE ur.role_id = :roleId AND u.organization_id = :organizationId";
 
+    // Account lockout queries
+    public static final String INCREMENT_FAILED_LOGIN_QUERY = "UPDATE users SET failed_login_attempts = failed_login_attempts + 1 WHERE email = :email";
+    public static final String LOCK_USER_ACCOUNT_QUERY = "UPDATE users SET locked_until = NOW() + INTERVAL '15 minutes' WHERE email = :email";
+    public static final String RESET_LOGIN_ATTEMPTS_QUERY = "UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE email = :email";
+
     // Delete user and related data
     public static final String DELETE_USER_ROLES_QUERY = "DELETE FROM user_roles WHERE user_id = :userId";
     public static final String DELETE_USER_EVENTS_QUERY = "DELETE FROM user_events WHERE user_id = :userId";

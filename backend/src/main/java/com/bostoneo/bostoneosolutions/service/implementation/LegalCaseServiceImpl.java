@@ -78,6 +78,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     private final NotificationService notificationService;
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final TenantService tenantService;
+    private final com.bostoneo.bostoneosolutions.service.ConflictCheckService conflictCheckService;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -107,6 +108,18 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     public LegalCaseDTO createCase(LegalCaseDTO caseDTO) {
         // SECURITY: Set organization_id from tenant context for multi-tenant isolation
         Long orgId = getRequiredOrganizationId();
+
+        // COMPLIANCE: Validate conflict check before case creation (Rules 1.7/1.9/1.10)
+        if (caseDTO.getConflictCheckId() != null) {
+            var conflictCheck = conflictCheckService.findById(caseDTO.getConflictCheckId())
+                    .orElseThrow(() -> new LegalCaseException("Conflict check not found: " + caseDTO.getConflictCheckId()));
+            if (!java.util.Set.of("CLEAR", "APPROVED", "RESOLVED", "LOW_RISK").contains(conflictCheck.getStatus())) {
+                throw new LegalCaseException("Cannot create case: conflict check status is '" + conflictCheck.getStatus() +
+                        "'. Resolve conflicts before proceeding.");
+            }
+        } else {
+            log.warn("Case created without conflict check for client: {}. Conflict check is recommended.", caseDTO.getClientName());
+        }
 
         LegalCase legalCase = legalCaseDTOMapper.toEntity(caseDTO);
         legalCase.setOrganizationId(orgId);

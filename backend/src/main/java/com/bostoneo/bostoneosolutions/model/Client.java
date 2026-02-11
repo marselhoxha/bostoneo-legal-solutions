@@ -3,6 +3,7 @@ package com.bostoneo.bostoneosolutions.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -48,10 +49,12 @@ public class Client {
     @Column(name = "status", length = 50)
     private String status;
 
-    @Column(name = "address", length = 255)
+    @Column(name = "address", columnDefinition = "TEXT")
+    @Convert(converter = EncryptedStringConverter.class)
     private String address;
 
-    @Column(name = "phone", length = 30)
+    @Column(name = "phone", columnDefinition = "TEXT")
+    @Convert(converter = EncryptedStringConverter.class)
     private String phone;
     
     @Column(name = "image_url", length = 255)

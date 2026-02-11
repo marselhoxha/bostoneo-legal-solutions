@@ -30,6 +30,11 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
         if (encryptionUtil == null || dbData == null) {
             return dbData;
         }
-        return encryptionUtil.decrypt(dbData);
+        try {
+            return encryptionUtil.decrypt(dbData);
+        } catch (Exception e) {
+            // Graceful fallback: existing plaintext data that hasn't been encrypted yet
+            return dbData;
+        }
     }
 }

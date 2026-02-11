@@ -2246,37 +2246,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     Promise.all(assignmentPromises)
-      .then(async (responses) => {
-        // Send notification for each assigned task
-        for (let i = 0; i < validTaskIds.length; i++) {
-          const taskId = validTaskIds[i];
-          const response = responses[i];
-          
-          // Get task details from response or find in recentTasks
-          let taskTitle = `Task ${taskId}`;
-          const existingTask = this.recentTasks.find(t => t.id === taskId);
-          if (existingTask) {
-            taskTitle = existingTask.title;
-          } else if (response && response.data && response.data.title) {
-            taskTitle = response.data.title;
-          }
-          
-          try {
-            await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
-              taskId,
-              taskTitle,
-              userId,
-              memberName,
-              Number(this.caseId),
-              this.case?.title,
-              undefined, // dueDate
-              undefined  // priority
-            );
-          } catch (error) {
-            console.error(`Failed to send assignment notification for task ${taskId}:`, error);
-          }
-        }
-        
+      .then((responses) => {
         Swal.fire({
           title: 'Tasks Assigned!',
           text: `Successfully assigned ${validTaskIds.length} task(s) to ${memberName}`,
@@ -2639,7 +2609,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         user.id,
         Number(this.caseId)
       ).subscribe({
-        next: async (syncResult) => {
+        next: (syncResult) => {
           if (syncResult.success) {
             // Success message through enhanced topbar notification
             this.showNotification(
@@ -2654,22 +2624,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
                 taskTitle: task.title
               }
             );
-            
-            // Send personalized task assignment notification
-            try {
-              await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
-                task.id,
-                task.title,
-                user.id,
-                `${user.firstName} ${user.lastName}`,
-                Number(this.caseId),
-                this.case?.title,
-                task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
-                task.priority
-              );
-            } catch (error) {
-              console.error('Failed to send personalized task assignment notification:', error);
-            }
             
             // Log the assignment change (safe method)
             this.safeAuditLog(() => {
@@ -2708,44 +2662,10 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       const taskTitle = task.title || task.name || 'New Task';
       let message = `Task "${taskTitle}" created successfully`;
 
-      // ALWAYS trigger task creation notification to notify team members about new tasks
-      if (task.id) {
-        const assigneeName = task.assignedToId && task.assignedToName ? task.assignedToName : 'Unassigned';
-        
-        try {
-          await this.notificationTrigger.triggerTaskCreated(
-            task.id,
-            taskTitle,
-            assigneeName,
-            Number(this.caseId),
-            this.case?.title,
-            task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined
-          );
-        } catch (error) {
-          console.error('Failed to send task creation notification:', error);
-        }
-      }
-      
       // Check if task was assigned during creation - use task data instead of modal data
       if (task.assignedToId && task.assignedToName) {
         message += ` and assigned to ${task.assignedToName}`;
 
-        // Additionally, send specific assignment notification
-        try {
-          await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
-            task.id,
-            taskTitle,
-            task.assignedToId,
-            task.assignedToName,
-            Number(this.caseId),
-            this.case?.title,
-            task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
-            task.priority
-          );
-        } catch (error) {
-          console.error('Failed to send task assignment notification:', error);
-        }
-        
         // Show notification for task with assignment
         this.showNotification(message, 'success', {
           caseId: this.caseId,
@@ -2776,24 +2696,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           user.id,
           Number(this.caseId)
         ).subscribe({
-          next: async (syncResult) => {
+          next: (syncResult) => {
             if (syncResult.success) {
-              // Send task assignment notification
-              try {
-                await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
-                  task.id,
-                  taskTitle,
-                  user.id,
-                  `${user.firstName} ${user.lastName}`,
-                  Number(this.caseId),
-                  this.case?.title,
-                  task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
-                  task.priority
-                );
-              } catch (error) {
-                console.error('Failed to send task assignment notification:', error);
-              }
-              
               // Show enhanced notification for task creation + assignment
               this.showNotification(message, 'success', {
                 caseId: this.caseId,

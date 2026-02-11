@@ -29,9 +29,12 @@ public class S3FileStorageServiceImpl implements FileStorageService {
 
     private final FileStorageConfiguration config;
     private final S3Client s3Client;
+    private final com.bostoneo.bostoneosolutions.service.FileContentValidator fileContentValidator;
 
-    public S3FileStorageServiceImpl(FileStorageConfiguration config) {
+    public S3FileStorageServiceImpl(FileStorageConfiguration config,
+                                   com.bostoneo.bostoneosolutions.service.FileContentValidator fileContentValidator) {
         this.config = config;
+        this.fileContentValidator = fileContentValidator;
         this.s3Client = S3Client.builder()
                 .region(Region.of(config.getS3Region()))
                 .credentialsProvider(DefaultCredentialsProvider.create())
@@ -66,6 +69,10 @@ public class S3FileStorageServiceImpl implements FileStorageService {
             throw new IOException("File size exceeds maximum allowed: " + config.getMaxFileSize());
         }
 
+        if (!fileContentValidator.validate(file)) {
+            throw new IOException("File rejected: potentially dangerous content detected in " + fileName);
+        }
+
         String s3Key = subdirectory + "/" + fileName;
 
         try {
@@ -74,6 +81,7 @@ public class S3FileStorageServiceImpl implements FileStorageService {
                     .key(s3Key)
                     .contentType(file.getContentType())
                     .contentLength(file.getSize())
+                    .serverSideEncryption(ServerSideEncryption.AES256)
                     .build();
 
             s3Client.putObject(putRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));

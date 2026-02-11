@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
@@ -89,9 +90,10 @@ public class CommunicationLog {
     private String fromAddress;
 
     /**
-     * Message content (for SMS/WhatsApp/Email)
+     * Message content (for SMS/WhatsApp/Email) — encrypted at rest for compliance
      */
     @Column(name = "content", columnDefinition = "TEXT")
+    @Convert(converter = EncryptedStringConverter.class)
     private String content;
 
     /**

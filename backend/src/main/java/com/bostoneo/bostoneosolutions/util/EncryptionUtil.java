@@ -1,8 +1,11 @@
 package com.bostoneo.bostoneosolutions.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -14,19 +17,44 @@ import java.security.spec.KeySpec;
 import java.util.Base64;
 
 @Component
+@Slf4j
 public class EncryptionUtil {
-    
+
     private static final String ALGORITHM = "AES/CBC/PKCS5Padding";
     private static final String SECRET_KEY_ALGORITHM = "PBKDF2WithHmacSHA256";
     private static final int ITERATION_COUNT = 65536;
     private static final int KEY_LENGTH = 256;
     private static final int IV_LENGTH = 16;
-    
-    @Value("${encryption.secret:default-encryption-secret-key}")
+
+    private static final java.util.Set<String> INSECURE_DEFAULTS = java.util.Set.of(
+            "default-encryption-secret-key", "dev-encryption-secret-change-prod",
+            "default-salt-value", "dev-salt-value-change-in-production"
+    );
+
+    private final Environment environment;
+
+    @Value("${encryption.secret}")
     private String encryptionSecret;
-    
-    @Value("${encryption.salt:default-salt-value}")
+
+    @Value("${encryption.salt}")
     private String salt;
+
+    public EncryptionUtil(Environment environment) {
+        this.environment = environment;
+    }
+
+    @PostConstruct
+    public void validateEncryptionConfig() {
+        boolean isProduction = environment.matchesProfiles("prod | staging");
+        if (INSECURE_DEFAULTS.contains(encryptionSecret) || INSECURE_DEFAULTS.contains(salt)) {
+            if (isProduction) {
+                throw new IllegalStateException(
+                        "CRITICAL: Encryption secret/salt must be changed from defaults in production/staging. " +
+                        "Set ENCRYPTION_SECRET and ENCRYPTION_SALT environment variables.");
+            }
+            log.warn("WARNING: Using default encryption secret/salt. This is acceptable for dev only.");
+        }
+    }
     
     public String encrypt(String data) {
         if (data == null) return null;

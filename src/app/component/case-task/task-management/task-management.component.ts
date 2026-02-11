@@ -20,7 +20,6 @@ import { WorkloadBalancerService, WorkloadMetrics } from '../../../core/services
 import { AssignmentSyncService } from '../../../core/services/assignment-sync.service';
 import { AuditLogService } from '../../../core/services/audit-log.service';
 import { WebSocketService } from '../../../core/services/websocket.service';
-import { NotificationTriggerService } from '../../../core/services/notification-trigger.service';
 
 // Interfaces
 import { CaseTask, TaskStatus, TaskPriority, TaskType, TaskCreateRequest } from '../../../interface/case-task';
@@ -120,8 +119,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
     private assignmentSyncService: AssignmentSyncService,
     private auditLogService: AuditLogService,
     private webSocketService: WebSocketService,
-    private legalCaseService: LegalCaseService,
-    private notificationTrigger: NotificationTriggerService
+    private legalCaseService: LegalCaseService
   ) {
     this.taskForm = this.createTaskForm();
   }
@@ -653,10 +651,10 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
           task.caseId,
           'Drag and drop status change'
         ).subscribe({
-          next: async (syncResult) => {
+          next: (syncResult) => {
             if (syncResult.success) {
               this.notificationService.onSuccess(`Task moved to ${targetStatus}`);
-              
+
               // Log the status change
               this.auditLogService.logTaskStatusChange(
                 task.id!,
@@ -665,18 +663,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
                 updatedTask.status,
                 'TaskManagement'
               ).subscribe();
-              
-              // Trigger task status change notification
-              const caseName = this.currentCase?.title || `Case ID ${task.caseId}`;
-              await this.notificationTrigger.triggerTaskStatusChanged(
-                task.id!,
-                task.title,
-                oldStatus,
-                updatedTask.status,
-                task.caseId,
-                caseName
-              );
-              
+
               // Update through context service for real-time sync
               if (this.caseMode) {
                 this.caseContextService.updateTask(updatedTask);
@@ -892,11 +879,11 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
       };
 
       this.caseTaskService.updateTask(this.selectedTask.id, updateData).subscribe({
-        next: async (response) => {
+        next: (response) => {
           const updatedTask = response.data;
           const originalTask = this.selectedTask!;
           
-          // Check if status changed for audit logging and notifications
+          // Check if status changed for audit logging
           if (originalTask.status !== updatedTask.status) {
             this.auditLogService.logTaskStatusChange(
               updatedTask.id,
@@ -905,17 +892,6 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
               updatedTask.status,
               'TaskManagement'
             ).subscribe();
-            
-            // Trigger task status change notification
-            const caseName = this.currentCase?.title || `Case ID ${updatedTask.caseId}`;
-            await this.notificationTrigger.triggerTaskStatusChanged(
-              updatedTask.id,
-              updatedTask.title,
-              originalTask.status,
-              updatedTask.status,
-              updatedTask.caseId,
-              caseName
-            );
           }
           
           // Check if assignment changed
@@ -962,52 +938,10 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
       };
 
       this.caseTaskService.createTask(createData).subscribe({
-        next: async (response) => {
+        next: (response) => {
           const newTask = response.data.task;
           this.notificationService.onSuccess('Task created successfully');
 
-          // ALWAYS trigger task creation notification to notify team members about new tasks
-          if (newTask.id) {
-            const caseName = this.currentCase?.title;
-            const assigneeName = newTask.assignedToId ? this.getUserNameById(newTask.assignedToId) : 'Unassigned';
-
-            try {
-              await this.notificationTrigger.triggerTaskCreated(
-                newTask.id,
-                newTask.title,
-                assigneeName,
-                newTask.caseId,
-                caseName,
-                newTask.dueDate ? new Date(newTask.dueDate).toLocaleDateString() : undefined
-              );
-            } catch (error) {
-              console.error('Failed to send task creation notification:', error);
-            }
-          }
-
-          // Additionally, if task is assigned to someone else (not self), send specific assignment notification
-          const currentUserId = this.currentUser?.id;
-          const isSelfAssignment = currentUserId != null && Number(currentUserId) === Number(newTask.assignedToId);
-          if (newTask.id && newTask.assignedToId && !isSelfAssignment) {
-            const caseName = this.currentCase?.title;
-            const assigneeName = this.getUserNameById(newTask.assignedToId);
-
-            try {
-              await this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
-                newTask.id,
-                newTask.title,
-                newTask.assignedToId,
-                assigneeName,
-                newTask.caseId,
-                caseName,
-                newTask.dueDate ? new Date(newTask.dueDate).toLocaleDateString() : undefined,
-                newTask.priority
-              );
-            } catch (error) {
-              console.error('Failed to send task assignment notifications:', error);
-            }
-          }
-          
           this.closeTaskModal();
           this.loading.submit = false;
           
@@ -1147,10 +1081,6 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
     const oldAssignee = oldTask.assignedToId ? this.getUserNameById(oldTask.assignedToId) : undefined;
     const newAssignee = newTask.assignedToId ? this.getUserNameById(newTask.assignedToId) : undefined;
 
-    // Check self-assignment - compare as numbers to avoid type mismatch
-    const currentUserId = this.currentUser?.id;
-    const isSelfAssignment = currentUserId != null && Number(currentUserId) === Number(newTask.assignedToId);
-
     if (newTask.assignedToId && oldTask.assignedToId !== newTask.assignedToId) {
       // Use AssignmentSyncService for task assignments
       this.assignmentSyncService.assignTaskToUser(
@@ -1160,25 +1090,6 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
       ).subscribe({
         next: (syncResult) => {
           if (syncResult.success) {
-            // Only send notification if NOT self-assignment
-            if (!isSelfAssignment) {
-              const assigneeName = this.getUserNameById(newTask.assignedToId!);
-              const caseName = this.currentCase?.title;
-
-              this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
-                newTask.id!,
-                newTask.title,
-                newTask.assignedToId!,
-                assigneeName,
-                newTask.caseId,
-                caseName,
-                newTask.dueDate ? new Date(newTask.dueDate).toLocaleDateString() : undefined,
-                newTask.priority
-              ).catch(error => {
-                console.error('Failed to send personalized task assignment notification:', error);
-              });
-            }
-
             // Log assignment change
             this.auditLogService.logAssignmentChange(
               'task',
@@ -1791,16 +1702,8 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
     // Store all values locally before any async operations
     const taskId = this.assigningTask.id;
     const taskTitle = this.assigningTask.title;
-    const caseId = this.assigningTask.caseId;
     const oldAssigneeId = this.assigningTask.assignedToId;
     const selectedId = this.selectedAssigneeId;
-    const dueDate = this.assigningTask.dueDate;
-    const priority = this.assigningTask.priority;
-    const caseName = this.currentCase?.title || this.assigningTask.caseTitle;
-
-    // Check self-assignment - compare as numbers to avoid type mismatch
-    const currentUserId = this.currentUser?.id;
-    const isSelfAssignment = currentUserId != null && Number(currentUserId) === Number(selectedId);
 
     // Make direct API call to update task assignment
     this.caseTaskService.updateTask(taskId, { assignedToId: selectedId }).subscribe({
@@ -1814,22 +1717,6 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
         if (taskIndex !== -1) {
           this.allTasks[taskIndex].assignedToId = selectedId;
           this.allTasks[taskIndex].assignedToName = assigneeName;
-        }
-
-        // Only send notification if NOT self-assignment
-        if (!isSelfAssignment) {
-          this.notificationTrigger.triggerTaskAssignmentWithPersonalizedMessages(
-            taskId,
-            taskTitle,
-            selectedId,
-            assigneeName,
-            caseId,
-            caseName,
-            dueDate ? new Date(dueDate).toLocaleDateString() : undefined,
-            priority
-          ).catch(error => {
-            console.error('Failed to send assignment notification:', error);
-          });
         }
 
         // Log assignment change
@@ -1911,7 +1798,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
       task.caseId,
       'Quick status change from modal'
     ).subscribe({
-      next: async (syncResult) => {
+      next: (syncResult) => {
         if (syncResult.success) {
           // Update local task
           task.status = newStatus as TaskStatus;
@@ -1924,17 +1811,6 @@ export class TaskManagementComponent implements OnInit, OnDestroy, AfterViewInit
             newStatus as TaskStatus,
             'TaskManagement'
           ).subscribe();
-
-          // Trigger notification
-          const caseName = this.currentCase?.title || `Case ID ${task.caseId}`;
-          await this.notificationTrigger.triggerTaskStatusChanged(
-            task.id!,
-            task.title,
-            oldStatus,
-            newStatus as TaskStatus,
-            task.caseId,
-            caseName
-          );
 
           // Update through context service
           if (this.caseMode) {

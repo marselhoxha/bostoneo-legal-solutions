@@ -132,6 +132,14 @@ public class TokenProvider {
      * Extract organization ID from JWT token
      * This allows setting tenant context without a database lookup
      */
+    public long getIssuedAt(String token) {
+        try {
+            return getJWTVerifier().verify(token).getIssuedAt().getTime();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     public Long getOrganizationId(String token) {
         try {
             JWTVerifier verifier = getJWTVerifier();

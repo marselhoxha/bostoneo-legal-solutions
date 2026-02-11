@@ -33,6 +33,7 @@ import javax.imageio.ImageIO;
 public class FileStorageServiceImpl implements FileStorageService {
     
     private final FileStorageConfiguration config;
+    private final com.bostoneo.bostoneosolutions.service.FileContentValidator fileContentValidator;
     
     @PostConstruct
     public void init() {
@@ -79,7 +80,12 @@ public class FileStorageServiceImpl implements FileStorageService {
         if (file.getSize() > config.getMaxFileSize()) {
             throw new IOException("File size exceeds maximum allowed: " + config.getMaxFileSize());
         }
-        
+
+        // Validate file content (magic bytes check)
+        if (!fileContentValidator.validate(file)) {
+            throw new IOException("File rejected: potentially dangerous content detected in " + fileName);
+        }
+
         try {
             // Determine target directory
             Path targetDirectory = config.getBaseDirectoryPath().resolve(subdirectory);

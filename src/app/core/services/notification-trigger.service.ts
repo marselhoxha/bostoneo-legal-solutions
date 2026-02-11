@@ -109,9 +109,10 @@ export class NotificationTriggerService {
         }
       };
 
-      // Generate notification using templates
+      // Generate notification using templates (use template category for correct template matching)
       const category = this.getNotificationCategory(event.type);
-      const notification = this.notificationTemplates.generateNotificationByCategory(category, notificationContext);
+      const templateCategory = this.getTemplateCategoryForEvent(event.type);
+      const notification = this.notificationTemplates.generateNotificationByCategory(templateCategory, notificationContext);
       
       // Map notification priority to system priority
       const priority = this.mapNotificationPriority(notification.priority);
@@ -325,6 +326,36 @@ export class NotificationTriggerService {
         return NotificationCategory.CALENDAR;
       default:
         return NotificationCategory.SYSTEM;
+    }
+  }
+
+  /**
+   * Map event type to the correct template category string for generateNotificationByCategory()
+   */
+  private getTemplateCategoryForEvent(eventType: EventType): string {
+    switch (eventType) {
+      case EventType.CASE_STATUS_CHANGED: return 'case_status';
+      case EventType.CASE_PRIORITY_CHANGED: return 'case_priority';
+      case EventType.CASE_ASSIGNMENT_ADDED: return 'case_new_assignment';
+      case EventType.CASE_ASSIGNMENT_REMOVED: return 'case_assignment_removed';
+      case EventType.CASE_NOTE_ADDED:
+      case EventType.CASE_NOTE_UPDATED: return 'case_note';
+      case EventType.TASK_CREATED: return 'task_created';
+      case EventType.TASK_STATUS_CHANGED: return 'task_status';
+      case EventType.TASK_ASSIGNED:
+      case EventType.TASK_COMPLETED: return 'task_assignment';
+      case EventType.DEADLINE_APPROACHING: return 'deadline';
+      case EventType.DOCUMENT_UPLOADED: return 'files';
+      case EventType.DOCUMENT_VERSION_UPDATED: return 'document_version';
+      case EventType.INVOICE_CREATED: return 'invoice';
+      case EventType.PAYMENT_RECEIVED: return 'payment_received';
+      case EventType.EXPENSE_SUBMITTED: return 'expense';
+      case EventType.LEAD_STATUS_CHANGED: return 'lead_status';
+      case EventType.LEAD_ASSIGNED: return 'lead';
+      case EventType.INTAKE_FORM_SUBMITTED: return 'intake_form';
+      case EventType.CALENDAR_EVENT_CREATED:
+      case EventType.CALENDAR_EVENT_UPDATED: return 'calendar';
+      default: return 'system';
     }
   }
 

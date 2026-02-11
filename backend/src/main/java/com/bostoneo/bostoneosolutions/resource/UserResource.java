@@ -71,6 +71,8 @@ public class UserResource {
     private final ApplicationEventPublisher publisher;
     private final ClientRepository clientRepository;
     private final FileStorageService fileStorageService;
+    private final com.bostoneo.bostoneosolutions.repository.implementation.UserRepositoryImpl userRepositoryImpl;
+    private final com.bostoneo.bostoneosolutions.service.TokenBlacklistService tokenBlacklistService;
 
     // Holds the UserPrincipal from authentication to avoid rebuilding it in sendResponse()
     private final ThreadLocal<UserPrincipal> authenticatedPrincipal = new ThreadLocal<>();
@@ -84,6 +86,23 @@ public class UserResource {
         } finally {
             authenticatedPrincipal.remove();
         }
+    }
+
+    @PostMapping("/logout")
+    @AuditLog(action = "LOGOUT", entityType = "USER", description = "User logout")
+    public ResponseEntity<HttpResponse> logout(HttpServletRequest request) {
+        String authHeader = request.getHeader(AUTHORIZATION);
+        if (authHeader != null && authHeader.startsWith(TOKEN_PREFIX)) {
+            String token = authHeader.substring(TOKEN_PREFIX.length());
+            tokenBlacklistService.blacklistToken(token, java.time.Duration.ofHours(8));
+        }
+        return ResponseEntity.ok().body(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message("Logged out successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
     }
 
     @PostMapping("/register")
@@ -204,6 +223,8 @@ public class UserResource {
     public ResponseEntity<HttpResponse> updatePassword(Authentication authentication, @RequestBody @Valid UpdatePasswordForm form) {
         UserDTO userDTO = getAuthenticatedUser(authentication);
         userService.updatePassword(userDTO.getId(), form.getCurrentPassword(), form.getNewPassword(), form.getConfirmNewPassword());
+        // Invalidate all existing tokens for this user
+        tokenBlacklistService.blacklistAllUserTokens(userDTO.getId());
         publisher.publishEvent(new NewUserEvent(userDTO.getEmail(), PASSWORD_UPDATE, userDTO.getOrganizationId()));
         return ResponseEntity.ok().body(
                 HttpResponse.builder()
@@ -495,6 +516,9 @@ public class UserResource {
             UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
             UserDTO loggedInUser = getLoggedInUser(authentication);
 
+            // Reset failed login attempts on successful authentication
+            userRepositoryImpl.resetLoginAttempts(email);
+
             // Add case role assignments (only extra query needed for token)
             Set<com.bostoneo.bostoneosolutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(loggedInUser.getId());
             principal = new UserPrincipal(principal.getUser(), principal.getRoles(), principal.getPermissions(), caseRoleAssignments);
@@ -505,6 +529,8 @@ public class UserResource {
             }
             return loggedInUser;
         } catch (Exception exception) {
+            // Record failed login attempt for account lockout
+            userRepositoryImpl.recordLoginFailure(email);
             publisher.publishEvent(new NewUserEvent(email, LOGIN_ATTEMPT_FAILURE, null, device, ipAddress));
             processError(request, response, exception);
             throw new ApiException(exception.getMessage());

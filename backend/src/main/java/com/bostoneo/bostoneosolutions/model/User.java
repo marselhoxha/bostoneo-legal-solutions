@@ -60,6 +60,12 @@ public class User {
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "failed_login_attempts")
+    private int failedLoginAttempts;
+
+    @Column(name = "locked_until")
+    private LocalDateTime lockedUntil;
     
     // RBAC fields - This will be handled by the custom repository, not JPA
     @Transient

@@ -62,6 +62,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     private final BCryptPasswordEncoder encoder;
     private final EmailService emailService;
     private final FileStorageService fileStorageService;
+    private final com.bostoneo.bostoneosolutions.util.PasswordPolicyValidator passwordPolicyValidator;
 
     @Override
     public User create(User user) {
@@ -264,6 +265,12 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             log.error("User not found in the database");
             throw new UsernameNotFoundException("User not found in the database");
         } else {
+            // Check if account is temporarily locked
+            if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(java.time.LocalDateTime.now())) {
+                long minutesRemaining = java.time.Duration.between(java.time.LocalDateTime.now(), user.getLockedUntil()).toMinutes() + 1;
+                throw new ApiException("Account locked due to too many failed login attempts. Try again in " + minutesRemaining + " minute(s).");
+            }
+
             log.debug("User found in the database: {}", email);
 
             // Get all roles for the user
@@ -277,6 +284,27 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
 
             // Create UserPrincipal with full RBAC information
             return new UserPrincipal(user, roles, permissions, new HashSet<>());
+        }
+    }
+
+    public void recordLoginFailure(String email) {
+        try {
+            jdbc.update(INCREMENT_FAILED_LOGIN_QUERY, of("email", email));
+            User user = getUserByEmail(email);
+            if (user.getFailedLoginAttempts() >= 5) {
+                jdbc.update(LOCK_USER_ACCOUNT_QUERY, of("email", email));
+                log.warn("Account locked for {} after {} failed attempts", email, user.getFailedLoginAttempts());
+            }
+        } catch (Exception e) {
+            log.error("Error recording login failure for {}: {}", email, e.getMessage());
+        }
+    }
+
+    public void resetLoginAttempts(String email) {
+        try {
+            jdbc.update(RESET_LOGIN_ATTEMPTS_QUERY, of("email", email));
+        } catch (Exception e) {
+            log.error("Error resetting login attempts for {}: {}", email, e.getMessage());
         }
     }
 
@@ -362,6 +390,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     @Override
     public void renewPassword(String key, String password, String confirmPassword) {
         if(!password.equals(confirmPassword)) throw new ApiException("Passwords don't match. Please try again.");
+        passwordPolicyValidator.validate(password);
         try {
             jdbc.update(UPDATE_USER_PASSWORD_BY_URL_QUERY, of("password", encoder.encode(password), "url", getVerificationUrl(key, PASSWORD.getType())));
             jdbc.update(DELETE_VERIFICATION_BY_URL_QUERY, of("url", getVerificationUrl(key, PASSWORD.getType())));
@@ -373,6 +402,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     @Override
     public void renewPassword(Long userId, String password, String confirmPassword) {
         if(!password.equals(confirmPassword)) throw new ApiException("Passwords don't match. Please try again.");
+        passwordPolicyValidator.validate(password);
         try {
             jdbc.update(UPDATE_USER_PASSWORD_BY_USER_ID_QUERY, of("id", userId, "password", encoder.encode(password)));
             //jdbc.update(DELETE_PASSWORD_VERIFICATION_BY_USER_ID_QUERY, of("userId", userId));
@@ -412,6 +442,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     @Override
     public void updatePassword(Long id, String currentPassword, String newPassword, String confirmNewPassword) {
         if(!newPassword.equals(confirmNewPassword)) { throw new ApiException("Passwords don't match. Please try again."); }
+        passwordPolicyValidator.validate(newPassword);
         User user = get(id);
         if(encoder.matches(currentPassword, user.getPassword())) {
             try {

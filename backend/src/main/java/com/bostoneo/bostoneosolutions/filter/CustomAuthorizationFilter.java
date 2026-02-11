@@ -34,6 +34,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 public class CustomAuthorizationFilter extends OncePerRequestFilter {
 
     private final TokenProvider tokenProvider;
+    private final com.bostoneo.bostoneosolutions.service.TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -53,6 +54,19 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
             Long userId = getUserId(request);
 
             boolean isTokenValid = tokenProvider.isTokenValid(userId, token);
+
+            // Check token blacklist (logout/password change)
+            if (isTokenValid && tokenBlacklistService.isTokenBlacklisted(token)) {
+                log.warn("Blacklisted token used for user {}", userId);
+                isTokenValid = false;
+            }
+            if (isTokenValid) {
+                long tokenIssuedAt = tokenProvider.getIssuedAt(token);
+                if (tokenBlacklistService.isUserTokenBlacklisted(userId, tokenIssuedAt)) {
+                    log.warn("Token issued before password change used for user {}", userId);
+                    isTokenValid = false;
+                }
+            }
 
             if (isTokenValid){
                 // IMPORTANT: Set tenant context BEFORE calling getAuthentication()

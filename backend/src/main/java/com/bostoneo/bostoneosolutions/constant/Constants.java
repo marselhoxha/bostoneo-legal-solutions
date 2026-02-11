@@ -6,8 +6,7 @@ public class Constants {
     public static final String[] PUBLIC_URLS = {"/user/login/**", "/user/register/**", "/user/verify/code/**",
             "/user/verify/password/**", "/user/verify/account/**", "/user/resetpassword/**","/user/new/password/**",
             "/user/refresh/token/**", "/user/image/**", "/api/v1/test/**", "/analytics/**", "/api/test/**",
-            "/api/v1/case-assignments/**", "/api/v1/tasks/**", "/legal-case/**", "/api/public/intake-forms/**",
-            "/api/communications/webhook/**"};
+            "/api/public/intake-forms/**", "/api/communications/webhook/**"};
 
     public static final String TOKEN_PREFIX = "Bearer ";
     public static final String[] PUBLIC_ROUTES = {"/user/new/password","/user/login/", "/user/register", "/user/verify/code", "/user/refresh/token", "/user/image", "/api/ai/legal-memo", "/api/ai/search-case-law", "/api/ai/interpret-statute", "/api/ai/find-precedents", "/api/communications/webhook"};
