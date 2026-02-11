@@ -573,7 +573,7 @@ public class FileManagerResource {
         } catch (Exception e) {
             log.error("Error deleting folder {}: {}", folderId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Unknown error"));
+                .body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Unknown error"));
         }
     }
     

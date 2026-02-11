@@ -1257,14 +1257,16 @@ export class FileManagerService {
    */
   private handleError(error: any): Observable<never> {
     console.error('FileManagerService error:', error);
-    
+
     let errorMessage = 'An error occurred';
     if (error.error && error.error.message) {
       errorMessage = error.error.message;
+    } else if (error.error && error.error.error) {
+      errorMessage = error.error.error;
     } else if (error.message) {
       errorMessage = error.message;
     }
-    
+
     return throwError(() => new Error(errorMessage));
   }
 }
