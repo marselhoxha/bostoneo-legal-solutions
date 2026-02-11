@@ -44,6 +44,15 @@ public class S3FileStorageServiceImpl implements FileStorageService {
     @PostConstruct
     public void init() {
         log.info("S3 file storage initialized - bucket: {}, region: {}", config.getS3BucketName(), config.getS3Region());
+        if (config.getS3BucketName() == null || config.getS3BucketName().isBlank()) {
+            throw new IllegalStateException("S3 bucket name not configured (file.storage.s3-bucket-name)");
+        }
+        try {
+            s3Client.headBucket(HeadBucketRequest.builder().bucket(config.getS3BucketName()).build());
+            log.info("S3 bucket verified: {}", config.getS3BucketName());
+        } catch (Exception e) {
+            log.error("S3 bucket access failed: {} - {}", config.getS3BucketName(), e.getMessage());
+        }
     }
 
     @Override

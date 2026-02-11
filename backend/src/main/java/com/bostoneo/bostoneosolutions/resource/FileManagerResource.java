@@ -290,13 +290,22 @@ public class FileManagerResource {
                 
         } catch (IOException e) {
             log.error("Error downloading file {}: {}", fileId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            String errorJson = "{\"error\":\"" + (e.getMessage() != null ? e.getMessage().replace("\"", "'") : "IO error") + "\"}";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .header("Content-Type", "application/json")
+                .body(errorJson.getBytes());
         } catch (RuntimeException e) {
             log.error("Runtime error accessing file {}: {}", fileId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            String errorJson = "{\"error\":\"" + (e.getMessage() != null ? e.getMessage().replace("\"", "'") : "File not found") + "\"}";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .header("Content-Type", "application/json")
+                .body(errorJson.getBytes());
         } catch (Exception e) {
             log.error("Unexpected error accessing file {}: {}", fileId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            String errorJson = "{\"error\":\"" + (e.getMessage() != null ? e.getMessage().replace("\"", "'") : "Unexpected error") + "\"}";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .header("Content-Type", "application/json")
+                .body(errorJson.getBytes());
         }
     }
     
@@ -558,8 +567,14 @@ public class FileManagerResource {
     @Operation(summary = "Delete a folder")
     @PreAuthorize("hasAuthority('DOCUMENT:DELETE') or hasRole('ROLE_USER')")
     public ResponseEntity<Map<String, String>> deleteFolder(@PathVariable Long folderId) {
-        fileManagerService.deleteFolder(folderId);
-        return ResponseEntity.ok(Map.of("message", "Folder deleted successfully"));
+        try {
+            fileManagerService.deleteFolder(folderId);
+            return ResponseEntity.ok(Map.of("message", "Folder deleted successfully"));
+        } catch (Exception e) {
+            log.error("Error deleting folder {}: {}", folderId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Unknown error"));
+        }
     }
     
     // Case-related operations

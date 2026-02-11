@@ -2056,10 +2056,11 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error deleting folder:', error);
+          const serverMsg = error?.error?.error || error?.error?.message || error?.message || 'Unknown error';
           Swal.fire({
             icon: 'error',
             title: 'Delete Failed',
-            text: 'Failed to delete the folder. Please try again.',
+            text: serverMsg,
             confirmButtonText: 'OK'
           });
         }
