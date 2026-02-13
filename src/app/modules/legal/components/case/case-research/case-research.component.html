@@ -48,26 +48,6 @@
           <!-- Enhanced Top Search Bar (Visible when not scrolled) -->
           <div class="compact-search-header" *ngIf="showChat && !showBottomSearchBar">
             <form (ngSubmit)="performSearch()">
-              <!-- Research Mode Toggle -->
-              <div class="research-mode-toggle-compact mb-2">
-                <div class="btn-group btn-group-sm" role="group">
-                  <button type="button"
-                          class="btn"
-                          [class.btn-primary]="researchMode === 'fast'"
-                          [class.btn-outline-primary]="researchMode !== 'fast'"
-                          (click)="researchMode = 'fast'">
-                    <i class="ri-flashlight-line"></i> Fast
-                  </button>
-                  <button type="button"
-                          class="btn"
-                          [class.btn-primary]="researchMode === 'thorough'"
-                          [class.btn-outline-primary]="researchMode !== 'thorough'"
-                          (click)="researchMode = 'thorough'">
-                    <i class="ri-search-2-line"></i> Thorough
-                  </button>
-                </div>
-              </div>
-
               <div class="search-input-group">
                 <div class="search-input-wrapper">
                   <div class="search-icon">
@@ -142,30 +122,6 @@
 
               <!-- Search Input -->
               <form (ngSubmit)="performSearch()" class="hero-search-form">
-                <!-- Research Mode Toggle -->
-                <div class="research-mode-toggle mb-3">
-                  <div class="btn-group" role="group">
-                    <button type="button"
-                            class="btn btn-sm"
-                            [class.btn-primary]="researchMode === 'fast'"
-                            [class.btn-outline-primary]="researchMode !== 'fast'"
-                            (click)="researchMode = 'fast'">
-                      <i class="ri-flashlight-line me-1"></i> Fast (15s)
-                    </button>
-                    <button type="button"
-                            class="btn btn-sm"
-                            [class.btn-primary]="researchMode === 'thorough'"
-                            [class.btn-outline-primary]="researchMode !== 'thorough'"
-                            (click)="researchMode = 'thorough'">
-                      <i class="ri-search-2-line me-1"></i> Thorough (2-3min)
-                    </button>
-                  </div>
-                  <small class="text-muted ms-2 d-block mt-2">
-                    <span *ngIf="researchMode === 'fast'"><strong>Fast:</strong> Quick research using Claude's extensive legal training data. Best for strategy, procedural questions, and general legal analysis. ~15 seconds response time.</span>
-                    <span *ngIf="researchMode === 'thorough'"><strong>Thorough:</strong> Deep research with live case law search, regulation lookup, and citation verification. Best for finding specific cases or verifying citations. ~2-3 minutes response time.</span>
-                  </small>
-                </div>
-
                 <div class="search-wrapper">
                   <input type="text"
                          class="form-control"
@@ -196,6 +152,8 @@
                 <i class="ri-error-warning-line me-2"></i>{{ searchError }}
                 <button type="button" class="btn-close" (click)="searchError = ''"></button>
               </div>
+
+              <app-ai-disclaimer *ngIf="showChat"></app-ai-disclaimer>
 
               <!-- Chat Conversation List -->
               <ul class="list-unstyled chat-conversation-list" id="users-conversation" *ngIf="showChat">
@@ -266,13 +224,7 @@
                                 <i class="ri-sparkling-line me-1"></i>Legience
                               </span>
                             </div>
-                            <!-- Research Mode Badge -->
-                            <div class="research-mode-badge" *ngIf="message.researchMode">
-                              <span class="badge fs-11" [ngClass]="message.researchMode === 'THOROUGH' ? 'badge-thorough' : 'badge-fast'">
-                                <i [class]="message.researchMode === 'THOROUGH' ? 'ri-search-eye-line me-1' : 'ri-flashlight-line me-1'"></i>
-                                {{ message.researchMode === 'THOROUGH' ? 'Thorough' : 'Fast' }}
-                              </span>
-                            </div>
+                            <!-- Research mode badge removed — unified mode -->
                           </div>
 
                           <!-- Collapsible AI Response -->

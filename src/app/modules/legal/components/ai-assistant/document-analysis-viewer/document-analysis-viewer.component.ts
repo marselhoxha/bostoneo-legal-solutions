@@ -13,6 +13,7 @@ import { NotificationService } from '../../../services/notification.service';
 import { ActionItemService } from '../../../services/action-item.service';
 import { AiWorkspaceStateService } from '../../../services/ai-workspace-state.service';
 import { DocumentCollectionService, DocumentRelationship, RelationshipType } from '../../../services/document-collection.service';
+import { AiDisclaimerComponent } from '../../../../../shared/components/ai-disclaimer/ai-disclaimer.component';
 
 export interface AnalyzedDocumentData {
   id: string;
@@ -46,7 +47,8 @@ export interface AnalyzedDocumentData {
     NgbNavModule,
     MarkdownToHtmlPipe,
     ActionItemsListComponent,
-    TimelineViewComponent
+    TimelineViewComponent,
+    AiDisclaimerComponent
   ],
   templateUrl: './document-analysis-viewer.component.html',
   styleUrls: ['./document-analysis-viewer.component.scss']

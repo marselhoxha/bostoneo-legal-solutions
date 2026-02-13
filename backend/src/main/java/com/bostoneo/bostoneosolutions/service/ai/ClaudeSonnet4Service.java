@@ -1,13 +1,21 @@
 package com.bostoneo.bostoneosolutions.service.ai;
 
 import com.bostoneo.bostoneosolutions.config.AIConfig;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.dto.ai.*;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import com.bostoneo.bostoneosolutions.service.AiAuditLogService;
 import com.bostoneo.bostoneosolutions.service.tools.LegalResearchTools;
 import com.bostoneo.bostoneosolutions.service.ResearchProgressPublisher;
 import com.bostoneo.bostoneosolutions.service.GenerationCancellationService;
+import com.bostoneo.bostoneosolutions.utils.PiiDetector;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 import reactor.core.publisher.Mono;
@@ -31,6 +39,8 @@ public class ClaudeSonnet4Service implements AIService {
     private final LegalResearchTools legalResearchTools;
     private final ResearchProgressPublisher progressPublisher;
     private final GenerationCancellationService cancellationService;
+    private final AiAuditLogService aiAuditLogService;
+    private final TenantService tenantService;
     
     @Override
     public CompletableFuture<String> generateCompletion(String prompt, boolean useDeepThinking) {
@@ -59,27 +69,30 @@ public class ClaudeSonnet4Service implements AIService {
     public CompletableFuture<String> generateCompletion(String prompt, String systemMessage, boolean useDeepThinking, Long sessionId, Double temperature) {
         // Check if generation has been cancelled BEFORE making expensive API call
         if (sessionId != null && cancellationService.isCancelled(sessionId)) {
-            log.warn("🛑 AI generation cancelled before API call for session {}", sessionId);
+            log.warn("AI generation cancelled before API call for session {}", sessionId);
             cancellationService.clearCancellation(sessionId);
             return CompletableFuture.failedFuture(new IllegalStateException("AI generation cancelled by user"));
         }
-        AIRequest request = createRequest(prompt, systemMessage, useDeepThinking, temperature);
-
-        log.info("=== SENDING REQUEST TO ANTHROPIC ===");
-        log.info("Model: {}", request.getModel());
-        log.info("Max tokens: {}", request.getMax_tokens());
-        log.info("Prompt length: {}", prompt.length());
-        if (systemMessage != null) {
-            log.info("System message length: {}", systemMessage.length());
+        // Redact PII before sending to external API
+        String piiTypes = PiiDetector.detectPiiTypes(prompt);
+        if (!piiTypes.isEmpty()) {
+            log.warn("PII detected in prompt before API call: {}", piiTypes);
         }
+        String redactedPrompt = PiiDetector.redact(prompt);
+        String redactedSystemMessage = PiiDetector.redact(systemMessage);
+
+        AIRequest request = createRequest(redactedPrompt, redactedSystemMessage, useDeepThinking, temperature);
+
+        log.info("Sending request to Anthropic: model={}, maxTokens={}, promptLen={}",
+                request.getModel(), request.getMax_tokens(), redactedPrompt.length());
 
         String apiKey = aiConfig.getApiKey();
-        log.info("API Key being used: {}", apiKey.isEmpty() ? "EMPTY!" : apiKey.substring(0, Math.min(20, apiKey.length())) + "...");
 
-        // Create CompletableFuture manually to bridge reactive and imperative worlds
+        // Capture user context from request thread BEFORE going async
+        AuditContext auditCtx = captureAuditContext();
+
         CompletableFuture<String> future = new CompletableFuture<>();
 
-        // Build the reactive Mono
         Mono<String> responseMono = anthropicWebClient
                 .post()
                 .uri("/v1/messages")
@@ -131,30 +144,36 @@ public class ClaudeSonnet4Service implements AIService {
                     return new RuntimeException("AI service unavailable: " + e.getMessage(), e);
                 });
 
-        // Subscribe and store the Disposable for proper cancellation
-        log.info("🔵 Creating subscription for session {}", sessionId);
         reactor.core.Disposable subscription = responseMono.subscribe(
             result -> {
-                // On success
-                log.info("✅ AI request completed successfully for session {}", sessionId);
+                log.info("AI request completed for session {}", sessionId);
                 future.complete(result);
                 if (sessionId != null) {
                     cancellationService.clearCancellation(sessionId);
                 }
+                // Audit log: success
+                aiAuditLogService.logAiCall(
+                        auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
+                        auditCtx.organizationId, "AI_COMPLETION", "AI_QUERY",
+                        sessionId, auditCtx.ipAddress, auditCtx.userAgent,
+                        prompt, result, true, null);
             },
             error -> {
-                // On error
-                log.error("❌ AI request failed for session {}: {}", sessionId, error.getMessage());
+                log.error("AI request failed for session {}: {}", sessionId, error.getMessage());
                 future.completeExceptionally(error);
                 if (sessionId != null) {
                     cancellationService.clearCancellation(sessionId);
                 }
+                // Audit log: failure
+                aiAuditLogService.logAiCall(
+                        auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
+                        auditCtx.organizationId, "AI_COMPLETION", "AI_QUERY",
+                        sessionId, auditCtx.ipAddress, auditCtx.userAgent,
+                        prompt, null, false, error.getMessage());
             }
         );
 
-        // Register the Disposable subscription so it can be cancelled mid-flight
         if (sessionId != null) {
-            log.info("📝 Registering subscription for session {} (disposed: {})", sessionId, subscription.isDisposed());
             cancellationService.registerSubscription(sessionId, subscription);
         }
 
@@ -1064,40 +1083,57 @@ public class ClaudeSonnet4Service implements AIService {
      * Agentic mode: Claude can use tools iteratively to research
      */
     public CompletableFuture<String> generateWithTools(String prompt, boolean useDeepThinking, String sessionId) {
-        log.info("🤖 Starting agentic research with tools (session: {})", sessionId);
+        log.info("Starting agentic research with tools (session: {})", sessionId);
+
+        // Capture contexts from caller's thread before going async
+        Long caseId = legalResearchTools.getCurrentCaseId();
+        Long orgId = legalResearchTools.getCurrentOrgId();
+        AuditContext auditCtx = captureAuditContext();
+
+        // Redact PII before sending to external API
+        String piiTypesTools = PiiDetector.detectPiiTypes(prompt);
+        if (!piiTypesTools.isEmpty()) {
+            log.warn("PII detected in agentic prompt before API call: {}", piiTypesTools);
+        }
+        String redactedPromptTools = PiiDetector.redact(prompt);
 
         List<ToolDefinition> toolDefs = legalResearchTools.getToolDefinitions();
-        log.info("🔧 Tool definitions loaded: {} tools", toolDefs != null ? toolDefs.size() : 0);
-        if (toolDefs != null) {
-            toolDefs.forEach(t -> log.info("  - Tool: {}", t.getName()));
-        }
+        log.info("Tool definitions loaded: {} tools", toolDefs != null ? toolDefs.size() : 0);
 
-        AIRequest request = createRequest(prompt, useDeepThinking);
+        AIRequest request = createRequest(redactedPromptTools, useDeepThinking);
         request.setTools(toolDefs);
 
         List<AIRequest.Message> messageHistory = new ArrayList<>();
         messageHistory.add(request.getMessages()[0]);
 
-        return executeAgenticLoop(messageHistory, 0, sessionId).toFuture();
+        return executeAgenticLoop(messageHistory, 0, sessionId, caseId, orgId).toFuture()
+                .whenComplete((result, error) -> {
+                    // Audit log the agentic research call
+                    aiAuditLogService.logAiCall(
+                            auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
+                            auditCtx.organizationId, "AI_AGENTIC_RESEARCH", "AI_RESEARCH",
+                            caseId, auditCtx.ipAddress, auditCtx.userAgent,
+                            prompt, result, error == null, error != null ? error.getMessage() : null);
+                });
     }
 
     /**
      * Recursive tool-calling loop
      */
-    private Mono<String> executeAgenticLoop(List<AIRequest.Message> messageHistory, int iteration, String sessionId) {
-        final int MAX_ITERATIONS = 5;  // REDUCED FROM 10 - stop wasting money
+    private Mono<String> executeAgenticLoop(List<AIRequest.Message> messageHistory, int iteration, String sessionId, Long caseId, Long orgId) {
+        final int MAX_ITERATIONS = 5;  // Typical: search + verify + response = 3 rounds
 
         if (iteration >= MAX_ITERATIONS) {
             log.error("❌ MAX ITERATIONS REACHED ({}). Stopping to prevent cost waste.", MAX_ITERATIONS);
             log.error("❌ This means Claude kept calling tools without finishing. Forcing response now.");
-            return Mono.just("Research incomplete - reached maximum tool call limit. Please try a more specific query or use FAST mode.");
+            return Mono.just("Research incomplete - reached maximum tool call limit. Please try a more specific query.");
         }
 
         log.info("🔄 Agentic iteration {}/{}", iteration + 1, MAX_ITERATIONS);
 
         AIRequest request = new AIRequest();
-        request.setModel("claude-opus-4-5-20251101");
-        request.setMax_tokens(12000); // Increased from 8000 to allow comprehensive analysis with full citation verification
+        request.setModel("claude-sonnet-4-5-20250929");
+        request.setMax_tokens(4096); // Target 800-1200 words (~2K tokens), 4096 gives headroom
 
         List<ToolDefinition> tools = legalResearchTools.getToolDefinitions();
         log.info("🔧 Setting {} tools on request", tools != null ? tools.size() : 0);
@@ -1204,6 +1240,10 @@ public class ClaudeSonnet4Service implements AIService {
 
                             // Execute each tool asynchronously
                             CompletableFuture<Map<String, Object>> toolFuture = CompletableFuture.supplyAsync(() -> {
+                                // Propagate research context to this worker thread
+                                if (caseId != null && orgId != null) {
+                                    legalResearchTools.setResearchContext(caseId, orgId);
+                                }
                                 Object toolResult;
                                 try {
                                     toolResult = legalResearchTools.executeTool(
@@ -1214,6 +1254,9 @@ public class ClaudeSonnet4Service implements AIService {
                                 } catch (Exception e) {
                                     log.error("  ❌ Tool '{}' execution failed: {}", toolUse.getName(), e.getMessage());
                                     toolResult = "Error: " + e.getMessage();
+                                } finally {
+                                    // Clean up ThreadLocal on worker thread
+                                    legalResearchTools.clearResearchContext();
                                 }
 
                                 return Map.of(
@@ -1261,8 +1304,8 @@ public class ClaudeSonnet4Service implements AIService {
                         toolResultMsg.setContent(toolResults);
                         messageHistory.add(toolResultMsg);
 
-                        // Continue loop
-                        return executeAgenticLoop(messageHistory, iteration + 1, sessionId);
+                        // Continue loop (pass caseId/orgId through for document access)
+                        return executeAgenticLoop(messageHistory, iteration + 1, sessionId, caseId, orgId);
 
                     } else {
                         // Claude is done - return final answer
@@ -1495,5 +1538,48 @@ public class ClaudeSonnet4Service implements AIService {
             case "web_search" -> "ri-global-line";
             default -> "ri-tools-line";
         };
+    }
+
+    // ===== AUDIT LOGGING HELPERS =====
+
+    /**
+     * Simple record to hold user context captured from the request thread.
+     * Must be captured BEFORE going async, since ThreadLocals are not available in async threads.
+     */
+    private record AuditContext(Long userId, String userEmail, String userRole,
+                                Long organizationId, String ipAddress, String userAgent) {}
+
+    private AuditContext captureAuditContext() {
+        Long userId = null;
+        String userEmail = "unknown";
+        String userRole = "unknown";
+        Long organizationId = TenantContext.getCurrentTenant();
+        String ipAddress = "";
+        String userAgent = "";
+
+        try {
+            Optional<UserDTO> user = tenantService.getCurrentUserDTO();
+            if (user.isPresent()) {
+                userId = user.get().getId();
+                userEmail = user.get().getEmail();
+                userRole = user.get().getRoleName();
+            }
+        } catch (Exception e) {
+            log.debug("Could not capture user context for audit: {}", e.getMessage());
+        }
+
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                HttpServletRequest request = attrs.getRequest();
+                String xff = request.getHeader("X-Forwarded-For");
+                ipAddress = (xff != null && !xff.isEmpty()) ? xff.split(",")[0].trim() : request.getRemoteAddr();
+                userAgent = request.getHeader("User-Agent");
+            }
+        } catch (Exception e) {
+            log.debug("Could not capture request context for audit: {}", e.getMessage());
+        }
+
+        return new AuditContext(userId, userEmail, userRole, organizationId, ipAddress, userAgent != null ? userAgent : "");
     }
 }

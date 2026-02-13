@@ -14,6 +14,7 @@ import { VirtualListComponent } from './components/virtual-list/virtual-list.com
 import { VirtualTableComponent } from './components/virtual-table/virtual-table.component';
 import { AvailabilitySettingsComponent } from './components/availability-settings/availability-settings.component';
 import { ImageUrlPipe } from '../pipes/image-url.pipe';
+import { AiDisclaimerComponent } from './components/ai-disclaimer/ai-disclaimer.component';
 
 /**
  * Note about standalone components:
@@ -61,7 +62,8 @@ import { ImageUrlPipe } from '../pipes/image-url.pipe';
     MatDialogModule,
     MatButtonModule,
     ConfirmationDialogModule,
-    ImageUrlPipe
+    ImageUrlPipe,
+    AiDisclaimerComponent
   ],
   exports: [
     RouterModule,
@@ -77,7 +79,8 @@ import { ImageUrlPipe } from '../pipes/image-url.pipe';
     AvailabilitySettingsComponent,
     MatDialogModule,
     MatButtonModule,
-    ImageUrlPipe
+    ImageUrlPipe,
+    AiDisclaimerComponent
   ]
 })
 export class SharedModule { }

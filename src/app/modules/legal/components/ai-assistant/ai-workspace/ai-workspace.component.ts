@@ -32,6 +32,7 @@ import { TimelineViewComponent } from '../timeline-view/timeline-view.component'
 import { DocumentAnalysisViewerComponent, AnalyzedDocumentData } from '../document-analysis-viewer/document-analysis-viewer.component';
 import { CollectionViewerComponent } from '../collection-viewer/collection-viewer.component';
 import { BackgroundTasksIndicatorComponent } from './background-tasks-indicator/background-tasks-indicator.component';
+import { AiDisclaimerComponent } from '../../../../../shared/components/ai-disclaimer/ai-disclaimer.component';
 
 // NEW: Refactored services
 import { NotificationService } from '../../../services/notification.service';
@@ -73,7 +74,8 @@ import { DocumentState } from '../../../models/document.model';
     TimelineViewComponent,
     DocumentAnalysisViewerComponent,
     CollectionViewerComponent,
-    BackgroundTasksIndicatorComponent
+    BackgroundTasksIndicatorComponent,
+    AiDisclaimerComponent
   ],
   templateUrl: './ai-workspace.component.html',
   styleUrls: ['./ai-workspace.component.scss']
@@ -351,8 +353,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   selectedJurisdiction = 'Massachusetts';
   jurisdictions = ['Massachusetts', 'Federal'];
 
-  // Research Mode (FAST or THOROUGH)
-  selectedResearchMode: ResearchMode = ResearchMode.Fast;
+  // Research Mode — unified mode, always THOROUGH
+  selectedResearchMode: ResearchMode = ResearchMode.Thorough;
 
   // Document editor modal
   editorModalOpen = false;
@@ -2538,17 +2540,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Handle research mode change (FAST or THOROUGH)
+   * Research mode change — unified mode, always THOROUGH
    */
   onResearchModeChange(mode: 'FAST' | 'THOROUGH'): void {
-    this.selectedResearchMode = mode === 'FAST' ? ResearchMode.Fast : ResearchMode.Thorough;
-
-    // Show notification to user
-    const modeInfo = mode === 'FAST'
-      ? { title: 'Fast Mode', msg: 'Quick answers without citations (~15s)' }
-      : { title: 'Thorough Mode', msg: 'Verified citations via CourtListener (~90s)' };
-
-    this.notificationService.success(modeInfo.title, modeInfo.msg);
+    // Unified mode — always thorough. Kept for backward compatibility.
+    this.selectedResearchMode = ResearchMode.Thorough;
   }
 
   /**

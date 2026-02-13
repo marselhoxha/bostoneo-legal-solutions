@@ -31,11 +31,12 @@ interface Conversation {
 import Swal from 'sweetalert2';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
+import { AiDisclaimerComponent } from '../../../../../shared/components/ai-disclaimer/ai-disclaimer.component';
 
 @Component({
   selector: 'app-case-research',
   standalone: true,
-  imports: [CommonModule, FormsModule, MarkdownToHtmlPipe, ApexChartDirective],
+  imports: [CommonModule, FormsModule, MarkdownToHtmlPipe, ApexChartDirective, AiDisclaimerComponent],
   templateUrl: './case-research.component.html',
   styleUrls: ['./case-research.component.scss'],
   host: {
@@ -56,7 +57,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
   searchQuery = '';
   searchType: 'all' | 'statutes' | 'rules' | 'regulations' | 'guidelines' = 'all';
-  researchMode: 'fast' | 'thorough' = 'fast';  // Fast (15s) or Thorough (2-3min with case law search)
+  researchMode: 'fast' | 'thorough' = 'thorough';  // Unified mode — always thorough (Claude decides tool usage)
   isSearching = false;
   searchError = '';
 
