@@ -183,9 +183,11 @@ export class LegalResearchService {
     this.searchStatusSubject.next('searching');
 
     // Add session ID and enable lawyer-grade precision by default
+    // Unified mode: always use THOROUGH — Claude decides when to use tools
     const requestWithEnhancements = {
       ...searchRequest,
       sessionId: searchRequest.sessionId || this.currentSessionId,
+      researchMode: 'THOROUGH' as const,
       enableLawyerGradePrecision: searchRequest.enableLawyerGradePrecision !== false, // Default to true
       effectiveDate: searchRequest.effectiveDate || new Date().toISOString().split('T')[0],
       validateCitations: searchRequest.validateCitations !== false, // Default to true
@@ -729,9 +731,11 @@ export class LegalResearchService {
     jurisdiction?: string
   ): Observable<AiConversationSession> {
     const userId = this.getUserId();
+    // Unified mode: always use THOROUGH
+    const mode = 'THOROUGH';
     return this.http.post<any>(
       `${this.conversationApiUrl}`,
-      { userId, title, researchMode, taskType, documentType, jurisdiction },
+      { userId, title, researchMode: mode, taskType, documentType, jurisdiction },
       { withCredentials: true }
     ).pipe(
       map(response => response.data.session),

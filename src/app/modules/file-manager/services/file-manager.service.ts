@@ -285,11 +285,9 @@ export class FileManagerService {
    * Download file
    */
   downloadFile(fileId: number): Observable<Blob> {
-    return this.http.get(`${this.FILE_MANAGER_API}/files/${fileId}/download`, { 
+    return this.http.get(`${this.FILE_MANAGER_API}/files/${fileId}/download`, {
       responseType: 'blob'
-    }).pipe(
-      catchError(this.handleError)
-    );
+    });
   }
 
   /**
@@ -529,11 +527,9 @@ export class FileManagerService {
    * Download file version
    */
   downloadFileVersion(fileId: number, versionId: number): Observable<Blob> {
-    return this.http.get(`${this.FILE_MANAGER_API}/files/${fileId}/versions/${versionId}/download`, { 
+    return this.http.get(`${this.FILE_MANAGER_API}/files/${fileId}/versions/${versionId}/download`, {
       responseType: 'blob'
-    }).pipe(
-      catchError(this.handleError)
-    );
+    });
   }
 
   /**
@@ -938,13 +934,11 @@ export class FileManagerService {
    */
   bulkDownload(fileIds: number[]): Observable<Blob> {
     const fileIdsParam = fileIds.join(',');
-    
+
     return this.http.get(`${this.FILE_MANAGER_API}/bulk/download`, {
       params: new HttpParams().set('fileIds', fileIdsParam),
       responseType: 'blob'
-    }).pipe(
-      catchError(this.handleError)
-    );
+    });
   }
 
   // Helper Methods
@@ -1205,6 +1199,7 @@ export class FileManagerService {
    */
   clearCache(): void {
     this.cache.clear();
+    this.frequentlyAccessedCache.clear();
   }
   
   /**

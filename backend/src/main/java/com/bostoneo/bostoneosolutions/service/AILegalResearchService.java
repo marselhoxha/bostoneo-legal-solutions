@@ -65,6 +65,8 @@ public class AILegalResearchService {
     private final CitationUrlInjector citationUrlInjector;
     private final CourtRulesService courtRulesService;
     private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+    private final CaseDocumentService caseDocumentService;
+    private final com.bostoneo.bostoneosolutions.service.tools.LegalResearchTools legalResearchTools;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -118,147 +120,12 @@ public class AILegalResearchService {
             return rateLimitError;
         }
 
-        log.info("Parsed search parameters - query: '{}', searchType: '{}', jurisdiction: '{}', caseId: '{}', mode: {}",
-                 query, searchType, jurisdiction, caseId != null ? caseId : "general", researchMode);
+        log.info("Parsed search parameters - query: '{}', searchType: '{}', jurisdiction: '{}', caseId: '{}', mode: UNIFIED",
+                 query, searchType, jurisdiction, caseId != null ? caseId : "general");
 
-        // Smart mode selection: automatically choose FAST vs THOROUGH based on query type
-        ResearchMode selectedMode = selectOptimalMode(query, researchMode);
-        if (selectedMode != researchMode) {
-            log.info("🎯 Smart mode selector: {} → {} for query type", researchMode, selectedMode);
-            researchMode = selectedMode;
-        }
-
-        // Route to appropriate research method
-        if (researchMode == ResearchMode.THOROUGH) {
-            return performThoroughResearch(searchRequest);
-        }
-
-        // Continue with existing FAST mode...
-
-        long startTime = System.currentTimeMillis();
-
-        try {
-            // Step 1: Understanding the query (10% progress)
-            if (sessionId != null) {
-                progressPublisher.publishStep(sessionId, "query_analysis",
-                    "Understanding your legal question",
-                    query,
-                    "ri-file-search-line",
-                    10);
-            }
-
-            // Check if we have a cached result
-            // IMPORTANT: Include caseId in hash so different cases don't share cached responses
-            String queryHash = generateQueryHash(query, searchType, jurisdiction, caseId, "FAST");
-            // SECURITY: Require org context for cache lookup to prevent cross-tenant data leakage
-            Long currentOrgId = tenantService.getCurrentOrganizationId()
-                .orElseThrow(() -> new RuntimeException("Organization context required for research"));
-            Optional<AIResearchCache> cachedResult = cacheRepository.findByOrganizationIdAndQueryHash(currentOrgId, queryHash);
-
-            if (cachedResult.isPresent() && cachedResult.get().getIsValid() &&
-                cachedResult.get().getExpiresAt().isAfter(LocalDateTime.now())) {
-
-                log.info("✓ CACHE HIT - Returning cached result for query: '{}', caseId: '{}', hash: {}",
-                         query, caseId != null ? caseId : "general", queryHash.substring(0, 16) + "...");
-
-                // Update cache usage
-                AIResearchCache cache = cachedResult.get();
-                cache.setUsageCount(cache.getUsageCount() + 1);
-                cache.setLastUsed(LocalDateTime.now());
-                cacheRepository.save(cache);
-
-                // Still save search history
-                saveSearchHistory(userId, sessionId, query, searchType, 0,
-                                System.currentTimeMillis() - startTime);
-
-                // Complete immediately for cached results
-                if (sessionId != null) {
-                    progressPublisher.publishComplete(sessionId, "Research completed (cached result)");
-                }
-
-                // Log performance metrics
-                long executionTime = System.currentTimeMillis() - startTime;
-                long cacheAgeMinutes = java.time.Duration.between(cache.getCreatedAt(), LocalDateTime.now()).toMinutes();
-                logPerformanceMetrics("FAST", query, executionTime, true, cacheAgeMinutes, userId);
-
-                return parseAIResponse(cache.getAiResponse());
-            }
-
-            // Step 2: Searching legal databases (30% progress)
-            if (sessionId != null) {
-                progressPublisher.publishStep(sessionId, "database_search",
-                    "Searching Massachusetts statutes and regulations",
-                    "Querying legal databases...",
-                    "ri-search-line",
-                    30);
-            }
-
-            // Perform new search
-            log.info("✗ CACHE MISS - Performing new search for query: '{}', caseId: '{}'",
-                     query, caseId != null ? caseId : "general");
-            Map<String, Object> searchResults = executeSearch(query, searchType, jurisdiction);
-
-            // Step 3: AI Analysis (60% progress)
-            if (sessionId != null) {
-                progressPublisher.publishStep(sessionId, "ai_analysis",
-                    "Analyzing legal sources with Claude AI",
-                    "Processing " + searchResults.getOrDefault("totalResults", 0) + " legal sources...",
-                    "ri-brain-line",
-                    60);
-            }
-
-            // Generate AI analysis with conversation history
-            CompletableFuture<String> aiAnalysis = generateAIAnalysis(query, searchResults,
-                                                                    QueryType.valueOf(searchType.toUpperCase()), caseId, conversationHistory);
-
-            // Wait for AI analysis
-            String analysis = aiAnalysis.join();
-
-            // Step 4: Preparing response (90% progress)
-            if (sessionId != null) {
-                progressPublisher.publishStep(sessionId, "response_generation",
-                    "Preparing comprehensive answer",
-                    "Formatting legal analysis...",
-                    "ri-quill-pen-line",
-                    90);
-            }
-
-            // Cache the result with case-specific hash
-            cacheAIResult(queryHash, query, searchType, jurisdiction, caseId, analysis);
-
-            // Combine results with AI analysis
-            Map<String, Object> finalResults = combineResultsWithAI(searchResults, analysis);
-
-            // Save search history
-            saveSearchHistory(userId, sessionId, query, searchType,
-                            (Integer) finalResults.getOrDefault("totalResults", 0),
-                            System.currentTimeMillis() - startTime);
-
-            // Step 5: Complete (100% progress)
-            if (sessionId != null) {
-                progressPublisher.publishComplete(sessionId, "Research completed successfully");
-            }
-
-            // Log performance metrics
-            long totalTime = System.currentTimeMillis() - startTime;
-            logPerformanceMetrics("FAST", query, totalTime, false, 0, userId);
-
-            return finalResults;
-
-        } catch (Exception e) {
-            log.error("Error performing search: ", e);
-
-            // Publish error event
-            if (sessionId != null) {
-                progressPublisher.publishError(sessionId, "Search failed: " + e.getMessage());
-            }
-
-            Map<String, Object> errorResult = new HashMap<>();
-            errorResult.put("success", false);
-            errorResult.put("error", "Search failed: " + e.getMessage());
-            errorResult.put("results", Collections.emptyList());
-            return errorResult;
-        }
+        // UNIFIED MODE: Always route through agentic path with tools
+        // Claude decides when to use tools based on question type (classification-driven)
+        return performThoroughResearch(searchRequest);
     }
 
     private Map<String, Object> executeSearch(String query, String searchType, String jurisdiction) {
@@ -2519,6 +2386,15 @@ public class AILegalResearchService {
         return QuestionType.FOLLOW_UP_CLARIFICATION;
     }
 
+    /**
+     * Detect if user's query is about case documents/files
+     */
+    private boolean isDocumentRelatedQuery(String query) {
+        if (query == null) return false;
+        String q = query.toLowerCase();
+        return q.matches(".*(document|contract|agreement|file|exhibit|pleading|motion|filed|uploaded|attachment|clause|term|provision|paragraph|section of the|what does the|review the|analyze the|read the|look at the|check the).*");
+    }
+
     private Map<String, Object> parseAIResponse(String aiResponse) {
         try {
             return objectMapper.readValue(aiResponse, objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
@@ -3230,121 +3106,203 @@ public class AILegalResearchService {
             prompt.append("Build on what was already discussed. Focus on the new question and provide NEW insights.\n\n");
         }
 
-        // CRITICAL: Force numbered lists for ranked arguments (moved to top for maximum visibility)
-        prompt.append("⚠️⚠️⚠️ CRITICAL FORMATTING REQUIREMENT ⚠️⚠️⚠️\n");
-        prompt.append("When presenting \"Strongest Arguments (ranked):\", you MUST use NUMBERED LIST format.\n");
-        prompt.append("CORRECT format: 1. **Argument Name - STRENGTH** - Risk: X%\n");
-        prompt.append("WRONG format: - Argument Name or ■ Argument Name (DO NOT USE BULLETS)\n");
-        prompt.append("This is NON-NEGOTIABLE. Use 1., 2., 3., etc.\n\n");
-
-        // Adaptive response format based on question type
-        prompt.append("**RESPONSE TYPE** (").append(questionType).append("):\n");
+        // Adaptive response type hint
+        prompt.append("**RESPONSE TYPE**: ").append(questionType).append("\n");
         switch (questionType) {
             case NARROW_TECHNICAL:
-                prompt.append("- NARROW question: Provide focused answer (400-600 words)\n");
-                prompt.append("- Focus on the specific concept/statute asked about\n");
-                prompt.append("- Use search_case_law ONLY if highly relevant\n");
-                prompt.append("- DO NOT provide full case strategy analysis\n\n");
+                prompt.append("Focused answer (400-600 words). Search only if highly relevant.\n\n");
                 break;
-
             case FOLLOW_UP_CLARIFICATION:
-                prompt.append("- FOLLOW-UP question: Build on previous discussion\n");
-                prompt.append("- Reference prior conversation naturally\n");
-                prompt.append("- DO NOT repeat information already provided\n");
-                prompt.append("- Use tools only if new research is needed\n\n");
+                prompt.append("Build on previous discussion. No repetition. Tools only if new research needed.\n\n");
                 break;
-
             case PROCEDURAL_GUIDANCE:
-                prompt.append("- PROCEDURAL question: Provide step-by-step guidance\n");
-                prompt.append("- Use numbered list format (1., 2., 3., etc.)\n");
-                prompt.append("- Focus on practical court procedures and deadlines\n");
-                prompt.append("- Use deadline tools if relevant\n\n");
+                prompt.append("Step-by-step procedural guidance with deadlines.\n\n");
                 break;
-
             case INITIAL_STRATEGY:
             default:
-                prompt.append("- COMPREHENSIVE question: Full counsel-ready analysis\n");
-                prompt.append("- MUST use search_case_law for 5-10 precedents\n");
-                prompt.append("- Provide ranked arguments with risk assessment\n");
-                prompt.append("- Include procedural guidance and timeline\n\n");
+                prompt.append("Comprehensive analysis. Use search_case_law to find relevant precedents.\n\n");
                 break;
         }
 
-        prompt.append("**TOOLS** (9 available):\n");
-        prompt.append("• get_current_date, check_deadline_status, validate_case_timeline (temporal)\n");
-        prompt.append("• generate_case_timeline (visual deadlines), generate_motion_template (samples)\n");
-        prompt.append("• search_case_law ⚠️ **REQUIRED for counsel-ready response** - Find 5-10 controlling precedents\n");
-        prompt.append("• get_cfr_text, verify_citation (validate legal authority)\n");
-        prompt.append("• web_search (EXPENSIVE - use sparingly for case details/facts)\n\n");
+        prompt.append("**TOOLS**: search_case_law, get_cfr_text, verify_citation, read_case_document\n\n");
 
-        prompt.append("**TOOL USAGE REQUIREMENTS** (CITATION VERIFICATION MANDATORY):\n");
-        prompt.append("1. **MANDATORY**: Use search_case_law ONCE OR TWICE MAX to find 5+ controlling precedents\n");
-        prompt.append("   - Use broad search terms to get 10+ results in one call\n");
-        prompt.append("   - Don't keep searching - work with what you get (5-10 cases is enough)\n");
-        prompt.append("2. ⚠️ **CRITICAL - CITATION POLICY**:\n");
-        prompt.append("   - Include ALL relevant case citations you find via search_case_law tool\n");
-        prompt.append("   - Call verify_citation(CITATION_NUMBER) for EACH citation - use citation number like '326 U.S. 310', NOT case name alone\n");
-        prompt.append("   - CORRECT: verify_citation('326 U.S. 310') or verify_citation('International Shoe Co. v. Washington, 326 U.S. 310')\n");
-        prompt.append("   - WRONG: verify_citation('International Shoe v. Washington') - this will return wrong URLs\n");
-        prompt.append("   - If verification SUCCEEDS: Include as '✓ [Case Name, Citation](CourtListener URL)'\n");
-        prompt.append("   - If verification FAILS: STILL include citation with warning: '⚠️ Case Name, Citation'\n");
-        prompt.append("   - NEVER omit relevant citations - attorneys need case law even if CourtListener verification unavailable\n");
-        prompt.append("   - Note: Post-processing will verify any citations you missed and add markers for those\n");
-        prompt.append("3. Use web_search ONLY if absolutely necessary for critical case-specific facts\n");
-        prompt.append("4. Deadline status shown in context - trust it, don't validate\n");
-        prompt.append("5. DO NOT request motion templates unless explicitly asked\n");
-        prompt.append("6. **CRITICAL**: Complete research in 2-3 tool calls maximum. Don't keep researching.\n\n");
+        prompt.append("**TOOL USAGE**:\n");
+        prompt.append("1. Use search_case_law 1-2 times with broad terms to find controlling precedents\n");
+        prompt.append("2. Verify your top 3-5 citations using verify_citation (batch in one round)\n");
+        prompt.append("3. Complete ALL research in 3-5 rounds max. Don't over-research.\n");
+        prompt.append("4. Verified citations: '✓ [Case Name, Citation](URL)'. Unverified: '⚠️ Case Name, Citation'\n\n");
 
-        // Add case context if available
+        // Add comprehensive case context if available (ported from buildAIPrompt for full document-informed research)
         String[] caseTypeHolder = new String[1]; // To capture case type from lambda
+        Long[] caseIdLongHolder = new Long[1];
+        Long[] orgIdHolder = new Long[1];
         if (caseId != null && !caseId.isEmpty()) {
             try {
                 Long caseIdLong = Long.parseLong(caseId);
+                caseIdLongHolder[0] = caseIdLong;
                 Long orgIdForCase = tenantService.getCurrentOrganizationId().orElse(null);
+                orgIdHolder[0] = orgIdForCase;
                 // SECURITY: Use tenant-filtered query
                 Optional<LegalCase> caseOptForPrompt = orgIdForCase != null
                     ? legalCaseRepository.findByIdAndOrganizationId(caseIdLong, orgIdForCase)
                     : Optional.empty();
                 caseOptForPrompt.ifPresent(legalCase -> {
                     caseTypeHolder[0] = legalCase.getType(); // Capture for practice-area guidance
-                    prompt.append("**CASE**: ").append(legalCase.getCaseNumber())
-                        .append(" - ").append(legalCase.getTitle())
-                        .append(" (").append(legalCase.getType() != null ? legalCase.getType() : "General").append(")\n");
+                    boolean isFollowUp = questionType == QuestionType.FOLLOW_UP_CLARIFICATION;
 
-                    if (legalCase.getDescription() != null && !legalCase.getDescription().isEmpty()) {
-                        String cleanDescription = removeStaleDateCalculations(legalCase.getDescription());
-                        // Truncate description if too long (save tokens)
-                        if (cleanDescription.length() > 200) {
-                            cleanDescription = cleanDescription.substring(0, 200) + "...";
+                    String countyName = legalCase.getCountyName();
+                    String jurisdictionType = "UNKNOWN";
+                    String applicableRules = "applicable procedural rules";
+
+                    if (!isFollowUp) {
+                        prompt.append("**CRITICAL - CASE-SPECIFIC CONTEXT**:\n");
+                        prompt.append("This research is for a SPECIFIC active case. Your response MUST be tailored to this case's details.\n\n");
+
+                        prompt.append("**Case Identification:**\n");
+                        prompt.append("- Case Number: ").append(legalCase.getCaseNumber()).append("\n");
+                        prompt.append("- Case Title: ").append(legalCase.getTitle()).append("\n");
+                        prompt.append("- Case Type: ").append(legalCase.getType() != null ? legalCase.getType() : "General").append("\n");
+
+                        // Full description (not truncated)
+                        if (legalCase.getDescription() != null && !legalCase.getDescription().isEmpty()) {
+                            String cleanDescription = removeStaleDateCalculations(legalCase.getDescription());
+                            prompt.append("- Case Description: ").append(cleanDescription).append("\n");
                         }
-                        prompt.append(cleanDescription).append("\n");
+
+                        // County and Jurisdiction
+                        if (countyName != null && !countyName.isEmpty()) {
+                            prompt.append("- County: ").append(countyName).append("\n");
+                            String countyLower = countyName.toLowerCase();
+                            if (countyLower.contains("u.s. district") || countyLower.contains("federal") ||
+                                countyLower.contains("usdc") || countyLower.contains("united states district")) {
+                                jurisdictionType = "FEDERAL";
+                                applicableRules = "Federal Rules of Civil Procedure (FRCP)";
+                            } else if (countyLower.contains("superior") || countyLower.contains("massachusetts") ||
+                                       countyLower.contains("district court") || countyLower.contains("ma ")) {
+                                jurisdictionType = "STATE";
+                                applicableRules = "Massachusetts Rules of Civil Procedure (Mass. R. Civ. P.)";
+                            }
+                            if (legalCase.getCourtroom() != null && !legalCase.getCourtroom().isEmpty()) {
+                                prompt.append("- Courtroom: ").append(legalCase.getCourtroom()).append("\n");
+                            }
+                            if (legalCase.getJudgeName() != null && !legalCase.getJudgeName().isEmpty()) {
+                                prompt.append("- Judge: ").append(legalCase.getJudgeName()).append("\n");
+                            }
+                        }
+
+                        // Court rules
+                        String caseDetails = String.format("County: %s, Type: %s, Description: %s",
+                            countyName != null ? countyName : "",
+                            legalCase.getType() != null ? legalCase.getType() : "",
+                            legalCase.getDescription() != null ? legalCase.getDescription() : "");
+                        CourtRulesService.CourtRulesContext courtRules = courtRulesService.getApplicableRules(caseDetails);
+                        if (courtRules != null) {
+                            prompt.append("\n").append(courtRules.generatePromptAddition());
+                        }
+
+                        if (legalCase.getStatus() != null) {
+                            prompt.append("- Status: ").append(legalCase.getStatus()).append("\n");
+                        }
+                        if (legalCase.getPriority() != null) {
+                            prompt.append("- Priority: ").append(legalCase.getPriority()).append("\n");
+                        }
+                    } else {
+                        prompt.append("**CASE CONTEXT** (for reference - do not repeat in your response):\n");
+                        prompt.append("- Case: ").append(legalCase.getCaseNumber()).append(" - ").append(legalCase.getTitle()).append("\n");
                     }
 
-                    // Extract and display deadline status (compressed format)
+                    // Procedural Timeline (always include — can change)
+                    prompt.append("\n**Procedural Timeline:**\n");
+                    String proceduralStage = "Unknown stage";
+
+                    if (legalCase.getFilingDate() != null) {
+                        prompt.append("- Filing Date: ").append(legalCase.getFilingDate()).append("\n");
+                        long daysSinceFiling = (new java.util.Date().getTime() - legalCase.getFilingDate().getTime()) / (1000 * 60 * 60 * 24);
+                        if (daysSinceFiling < 90) {
+                            proceduralStage = "Early litigation (within 90 days of filing)";
+                        } else if (daysSinceFiling < 180) {
+                            proceduralStage = "Active discovery phase";
+                        } else {
+                            proceduralStage = "Advanced litigation";
+                        }
+                    } else {
+                        proceduralStage = "Pre-filing stage (case not yet filed)";
+                    }
+
+                    if (legalCase.getNextHearing() != null) {
+                        long daysToHearing = (legalCase.getNextHearing().getTime() - new java.util.Date().getTime()) / (1000 * 60 * 60 * 24);
+                        String timeDescription = daysToHearing >= 0
+                            ? daysToHearing + " days from now"
+                            : Math.abs(daysToHearing) + " days ago (DEADLINE PASSED)";
+                        prompt.append("- Next Hearing: ").append(legalCase.getNextHearing())
+                              .append(" (").append(timeDescription).append(")\n");
+                        proceduralStage = daysToHearing >= 0 ? "Active litigation with upcoming hearing" : "Active litigation - hearing deadline passed";
+                    }
+                    if (legalCase.getTrialDate() != null) {
+                        long daysToTrial = (legalCase.getTrialDate().getTime() - new java.util.Date().getTime()) / (1000 * 60 * 60 * 24);
+                        String timeDescription = daysToTrial >= 0
+                            ? daysToTrial + " days from now"
+                            : Math.abs(daysToTrial) + " days ago (PAST)";
+                        prompt.append("- Trial Date: ").append(legalCase.getTrialDate())
+                              .append(" (").append(timeDescription).append(")\n");
+                        proceduralStage = daysToTrial >= 0 ? "Trial preparation phase" : "Post-trial phase";
+                    }
+                    prompt.append("- Current Procedural Stage: ").append(proceduralStage).append("\n");
+
+                    // Client Information
+                    prompt.append("\n**Client Information:**\n");
+                    prompt.append("(Remember: You are addressing the ATTORNEY representing this client, not the client themselves)\n");
+                    prompt.append("- Client: ").append(legalCase.getClientName()).append("\n");
+
+                    // Jurisdiction enforcement
+                    if (!isFollowUp) {
+                        prompt.append("\n**CRITICAL INSTRUCTIONS**:\n");
+                        prompt.append("1. JURISDICTION: This case is in ").append(jurisdictionType).append(" court.\n");
+                        prompt.append("   - You MUST use ONLY ").append(applicableRules).append("\n");
+                        prompt.append("   - DO NOT mix federal and state procedural rules\n");
+                        prompt.append("2. PROCEDURAL POSTURE: This case is in the \"").append(proceduralStage).append("\" stage.\n");
+                        prompt.append("   - Tailor recommendations to what is appropriate at THIS stage\n\n");
+
+                        // Case-type-specific instructions (ported from buildAIPrompt)
+                        String caseType = legalCase.getType() != null ? legalCase.getType().toLowerCase() : "";
+                        if (caseType.contains("data breach") || caseType.contains("privacy")) {
+                            prompt.append("3. CASE-SPECIFIC: DATA BREACH/PRIVACY - Address Article III standing, notification obligations, consumer protection statutes.\n\n");
+                        } else if (caseType.contains("malpractice") || caseType.contains("medical negligence")) {
+                            prompt.append("3. CASE-SPECIFIC: MEDICAL MALPRACTICE - Expert testimony required (M.G.L. c. 231, §60B), tribunal requirement, 3-year SOL.\n\n");
+                        } else if (caseType.contains("class action")) {
+                            prompt.append("3. CASE-SPECIFIC: CLASS ACTION - Address Rule 23 requirements (numerosity, commonality, typicality, adequacy).\n\n");
+                        } else if (caseType.contains("employment")) {
+                            prompt.append("3. CASE-SPECIFIC: EMPLOYMENT - Use McDonnell Douglas framework, check administrative exhaustion, temporal proximity.\n\n");
+                        } else if (caseType.contains("trade secret") || caseType.contains("misappropriation")) {
+                            prompt.append("3. CASE-SPECIFIC: TRADE SECRETS - Address DTSA claims, identification requirement, reasonable protection measures.\n\n");
+                        } else if (caseType.contains("immigration") || caseType.contains("removal") || caseType.contains("asylum")) {
+                            prompt.append("3. CASE-SPECIFIC: IMMIGRATION - Consider dual proceedings, aggravated felony bars, asylum requirements, Padilla warning.\n\n");
+                        } else if (caseType.contains("bankruptcy")) {
+                            prompt.append("3. CASE-SPECIFIC: BANKRUPTCY - Priorities: cash collateral, DIP financing, critical vendor, employee wages.\n\n");
+                        }
+                    }
+
+                    // Deadlines (compressed format)
                     Map<String, DeadlineInfo> deadlines = extractCaseDeadlines(legalCase);
                     if (!deadlines.isEmpty()) {
-                        prompt.append("\n**DEADLINES**: ");
+                        prompt.append("**DEADLINES**: ");
                         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d");
-
                         boolean first = true;
                         long passedCount = 0;
                         for (Map.Entry<String, DeadlineInfo> entry : deadlines.entrySet()) {
                             DeadlineInfo info = entry.getValue();
                             if (!first) prompt.append(", ");
                             first = false;
-
                             String emoji = switch (info.getStatus()) {
                                 case PASSED -> { passedCount++; yield "❌"; }
                                 case TODAY -> "🔔";
                                 case UPCOMING -> info.getUrgency() == DeadlineInfo.UrgencyLevel.CRITICAL ? "🚨" :
                                               info.getUrgency() == DeadlineInfo.UrgencyLevel.HIGH ? "⚡" : "✅";
                             };
-
                             prompt.append(emoji).append(entry.getKey().replace("Date", "")).append(" ")
                                 .append(info.getDate().format(formatter));
                         }
                         prompt.append("\n");
-
                         if (passedCount > 0) {
                             prompt.append("⚠️ ").append(passedCount).append(" deadline(s) PASSED - advise on post-deadline remedies.\n");
                         }
@@ -3357,20 +3315,41 @@ public class AILegalResearchService {
             }
         }
 
-        // Counsel-ready quality standards
-        prompt.append("**COUNSEL-READY STANDARDS** (Be CONCISE and EFFICIENT):\n");
-        prompt.append("1. **Case Law**: Cite 5+ controlling precedents from your search (1-2 sentences each)\n");
-        prompt.append("   - Use whatever cases your search returns - don't keep searching for more\n");
-        prompt.append("2. **Case-Specific**: Analyze actual facts (parties, documents, issues) - no generic advice\n");
-        prompt.append("3. **Strategic Assessment**: Rank top 3-5 arguments by strength (strongest → weakest)\n");
-        prompt.append("4. **Risk Analysis**: Brief probability estimate + settlement range if applicable\n");
-        prompt.append("5. **Action Items**: Top 3-5 next steps with deadlines (bullet points)\n");
-        prompt.append("6. **Efficiency**: Complete in 2-3 tool calls. Don't over-research.\n");
-        prompt.append("7. **Conciseness**: Target 800-1200 words total. Use bullets, avoid repetition.\n");
-        prompt.append("8. **Federal Procedure Questions**: When answering questions about federal procedure (summary judgment, discovery, pleading, evidence), include:\n");
-        prompt.append("   - Specific FRCP rule requirements (e.g., Rule 56(c)(2) response requirement)\n");
-        prompt.append("   - How to cure procedural defects (e.g., supplemental affidavits, amended pleadings)\n");
-        prompt.append("   - Circuit-specific variations when relevant (e.g., 1st Cir. authentication standards)\n\n");
+        // Add document inventory if case has documents
+        if (caseIdLongHolder[0] != null && orgIdHolder[0] != null) {
+            List<com.bostoneo.bostoneosolutions.dto.CaseDocumentSummary> docs =
+                caseDocumentService.getDocumentInventory(caseIdLongHolder[0], orgIdHolder[0]);
+            if (!docs.isEmpty()) {
+                prompt.append("**CASE DOCUMENTS** (").append(docs.size()).append(" files available via read_case_document tool):\n");
+                for (com.bostoneo.bostoneosolutions.dto.CaseDocumentSummary doc : docs) {
+                    prompt.append("  - ID: ").append(doc.getId())
+                        .append(" | ").append(doc.getName())
+                        .append(" (").append(doc.getFileType());
+                    if (doc.getCategory() != null) {
+                        prompt.append(", ").append(doc.getCategory());
+                    }
+                    prompt.append(")\n");
+                }
+                prompt.append("\n");
+
+                // Document relevance detection — mandate tool use when query is about documents
+                if (isDocumentRelatedQuery(query)) {
+                    prompt.append("⚠️ **MANDATORY**: The user's question relates to case documents. ");
+                    prompt.append("You MUST use read_case_document to examine the relevant files listed above before answering.\n\n");
+                } else {
+                    prompt.append("Case documents are available via read_case_document if you need to examine file contents.\n\n");
+                }
+            }
+        }
+
+        // Quality standard
+        prompt.append("**QUALITY STANDARD**:\n");
+        prompt.append("Write as a senior attorney advising a colleague. Your analysis should:\n");
+        prompt.append("- Be grounded in controlling authorities with citations and holdings\n");
+        prompt.append("- Address the specific facts of this case, not generic advice\n");
+        prompt.append("- Identify the strongest and weakest positions honestly\n");
+        prompt.append("- Provide clear next steps with deadlines where applicable\n");
+        prompt.append("- Be concise (800-1200 words). No filler.\n\n");
 
         // Add Practice-Area-Specific Guidance
         String practiceAreaGuidance = getPracticeAreaGuidance(caseTypeHolder[0]);
@@ -3381,121 +3360,17 @@ public class AILegalResearchService {
             .append("Timelines: District 4-6wk, Superior 8-12wk, Federal 6-10wk, Immigration 1-3yr. ")
             .append("Emergency motions heard in days; 1st continuances usually granted.\n\n");
 
-        // Response format (matching FAST mode structure that works)
-        prompt.append("**RESPONSE FORMAT** (CONCISE - use bullet points):\n\n");
-        prompt.append("# [Case Title/Strategy Title]\n\n");
-        prompt.append("## Controlling Legal Authority\n");
-        prompt.append("⚠️ **REQUIRED**: Cite 5-7 precedents (1-2 sentences each):\n");
-        prompt.append("- *Case v. Name*, Citation (Year): [Holding]. Applies here because [1 sentence].\n");
-        prompt.append("Focus on most relevant cases. Be brief.\n\n");
-        prompt.append("## Strategic Analysis\n");
-        prompt.append("\n");
-        prompt.append("⚠️⚠️⚠️ CRITICAL FORMATTING RULE ⚠️⚠️⚠️\n");
-        prompt.append("When you present \"Strongest Arguments (ranked):\", YOU MUST USE NUMBERED LISTS.\n");
-        prompt.append("✅ CORRECT: 1. **Argument** - STRENGTH\n");
-        prompt.append("❌ WRONG: - **Argument** or ■ **Argument** (DO NOT USE BULLETS/SYMBOLS)\n");
-        prompt.append("This is NON-NEGOTIABLE. Use 1., 2., 3., etc.\n");
-        prompt.append("\n");
-        prompt.append("**Strongest Arguments (ranked):**\n");
-        prompt.append("\n");
-        prompt.append("⚠️ REMINDER: Use NUMBERED format 1., 2., 3. - NOT bullets (-) or symbols (■)\n");
-        prompt.append("\n");
-        prompt.append("1. **[Argument Name] - [STRENGTH LEVEL]** - Risk: [X]%\n");
-        prompt.append("   - Supporting point A\n");
-        prompt.append("   - Supporting point B\n");
-        prompt.append("2. **[Next Argument] - [STRENGTH LEVEL]** - Risk: [Y]%\n");
-        prompt.append("   - Supporting point\n");
-        prompt.append("3. **[Third Argument] - [STRENGTH LEVEL]** - Risk: [Z]%\n");
-        prompt.append("   - Supporting point\n");
-        prompt.append("\n");
-        prompt.append("Format: Start each main argument with a number (1., 2., 3.), indent sub-points with 3 spaces and dash.\n");
-        prompt.append("\n");
-        prompt.append("**Recommended Actions** (prioritized):\n");
-        prompt.append("\n");
-        prompt.append("1. [Action] (Deadline: [date]) - [Why critical]\n");
-        prompt.append("2-5 more bullets\n\n");
-        prompt.append("⚖️ Disclaimer: Independently verify all citations.\n\n");
-        prompt.append("## Follow-up Questions\n");
-        prompt.append("Suggest 3-5 relevant follow-up questions the user might want to explore, such as:\n");
-        prompt.append("- Specific procedural steps or filing requirements\n");
-        prompt.append("- Related legal issues or considerations\n");
-        prompt.append("- Jurisdictional variations or exceptions\n");
-        prompt.append("Format each as a clear, clickable question.\n\n");
-
-        prompt.append("**FORMATTING REQUIREMENTS** (Professional presentation):\n");
-        prompt.append("- Use **bold** for section headers and emphasis\n");
-        prompt.append("- Format dollar amounts: $50K, $150K, $2.0M (no decimals for round numbers)\n");
-        prompt.append("- Format dates: Oct 25, 2025 (Month Day, Year)\n");
-        prompt.append("- Use [statute name](URL) for clickable links to legal citations\n");
-        prompt.append("- Use proper indentation for sub-bullets (3 spaces)\n\n");
-        prompt.append("**SUBSECTION FORMATTING** (for Strategic Analysis sections):\n");
-        prompt.append("When listing multiple standards/elements/requirements, use NUMBERED BOLD SUBSECTIONS:\n");
-        prompt.append("✅ CORRECT:\n");
-        prompt.append("**1. Proportionality (FRCP 26(b)(1))** - PRIMARY STANDARD\n");
-        prompt.append("   - Bullet point\n");
-        prompt.append("   - Bullet point\n\n");
-        prompt.append("**2. Not Reasonably Accessible (FRCP 26(b)(2)(B))**\n");
-        prompt.append("   - Bullet point\n\n");
-        prompt.append("❌ WRONG:\n");
-        prompt.append("Proportionality (FRCP 26(b)(1)) - PRIMARY STANDARD\n");
-        prompt.append("- Bullet point\n");
-        prompt.append("(Missing number and bold formatting)\n\n");
-
-        prompt.append("**MARKDOWN SPACING STANDARDS** (Attorney-ready format - follow exactly):\n");
-        prompt.append("1. **Section Headers**: Add 2 blank lines BEFORE ## headers, 1 blank line after\n");
-        prompt.append("   Example:\n");
-        prompt.append("   ```\n");
-        prompt.append("   Previous paragraph or list item.\n");
-        prompt.append("   \n");
-        prompt.append("   \n");
-        prompt.append("   ## Strategic Analysis\n");
-        prompt.append("   \n");
-        prompt.append("   **Strongest Arguments** (ranked):\n");
-        prompt.append("   ```\n\n");
-
-        prompt.append("2. **Lists**: NO blank lines between items in same list\n");
-        prompt.append("   Example:\n");
-        prompt.append("   ```\n");
-        prompt.append("   1. First argument - Risk: 40%\n");
-        prompt.append("      - Sub-point A (indent with 3 spaces)\n");
-        prompt.append("      - Sub-point B\n");
-        prompt.append("   2. Second argument - Risk: 60%\n");
-        prompt.append("      - Sub-point C\n");
-        prompt.append("   \n");
-        prompt.append("   Next paragraph starts here.\n");
-        prompt.append("   ```\n\n");
-
-        prompt.append("3. **Sub-bullets**: Indent with exactly 3 spaces + dash, compact (no blank lines)\n");
-        prompt.append("4. **Bold labels**: Use inline format: **Strength:** text, **Action:** text\n");
-        prompt.append("5. **List endings**: Single blank line after list ends, before next content\n\n");
-
-        prompt.append("**EMPHASIS FOR IMPORTANT TEXT** (Simple bold + emoji format):\n");
-        prompt.append("Use bold text with emoji prefix for visual emphasis - clean and professional:\n");
-        prompt.append("- Critical items: **⚠️ CRITICAL:** Description\n");
-        prompt.append("- Urgent deadlines: **⏰ DEADLINE:** Date and action required\n");
-        prompt.append("- Important notes: **📌 IMPORTANT:** Key information\n");
-        prompt.append("- Disclaimers: **⚖️ Disclaimer:** Verification requirements\n");
-        prompt.append("Example: **⏰ DEADLINE:** File suppression motion by Oct 22, 2025 (2 days)\n\n");
-
-        prompt.append("**LINKS AND URLS** (Make them clickable):\n");
-        prompt.append("ALWAYS use markdown link syntax for URLs:\n");
-        prompt.append("- CORRECT: [BIA Precedent Manual](https://justice.gov/eoir/board-immigration-appeals)\n");
-        prompt.append("- WRONG: justice.gov/eoir/board-immigration-appeals (not clickable)\n\n");
-
-        prompt.append("**MATHEMATICAL CALCULATIONS** (CRITICAL - Verify all math):\n");
-        prompt.append("⚠️ When performing financial calculations, ALWAYS show your work step-by-step:\n");
-        prompt.append("- Tax savings = Deduction × Marginal Tax Rate\n");
-        prompt.append("  Example: $3.5M × 37% = $3,500,000 × 0.37 = $1,295,000 ≈ $1.3M\n");
-        prompt.append("- Worst case = Lost deduction benefit + Penalties\n");
-        prompt.append("  Example: $0 deduction benefit + $1.4M penalty = $1.4M downside (NOT $3.5M)\n");
-        prompt.append("- DOUBLE-CHECK: Does the math add up? Verify before presenting.\n");
-        prompt.append("- If unsure, show the calculation: \"$2.2M × 0.37 = $814K tax savings\"\n\n");
-
-        prompt.append("**DO NOT INCLUDE**:\n");
-        prompt.append("- '## Tools Used' or tool summaries - tools are displayed automatically\n");
-        prompt.append("- Meta-commentary about research process (\"the database didn't return...\", \"I searched for...\")\n");
-        prompt.append("- Disclaimers about tool failures or search limitations\n");
-        prompt.append("- Apologetic language - present findings confidently\n\n");
+        // Response format — flexible, natural structure
+        prompt.append("**RESPONSE FORMAT**:\n\n");
+        prompt.append("# [Descriptive Title]\n\n");
+        prompt.append("**Summary**: 2-3 sentences — bottom-line assessment and recommendation.\n\n");
+        prompt.append("[Body: Structure however best fits the question — by issue, by argument strength, ");
+        prompt.append("by timeline, or by procedural step. Weave citations into your analysis naturally. ");
+        prompt.append("Use ### subheadings when they help readability. Use numbered lists for sequential steps or ranked items only.]\n\n");
+        prompt.append("## Follow-Up Questions\n");
+        prompt.append("3-5 specific questions to explore further.\n\n");
+        prompt.append("**RULES**: Bold for emphasis, *italics* for case names. No emoji prefixes. ");
+        prompt.append("No meta-commentary about tools or search process. Present findings confidently.\n\n");
 
         prompt.append("**LEGAL QUERY:** ").append(query).append("\n\n");
         prompt.append("Conduct thorough research using your tools and provide a comprehensive, cite-backed response.\n");
@@ -3602,8 +3477,22 @@ public class AILegalResearchService {
             // Build agentic prompt with case context, conversation history, and tool instructions
             String prompt = buildAgenticPrompt(query, caseId, conversationHistory);
 
-            // Call agentic Claude with tools (progress will be published by ClaudeSonnet4Service for each tool execution)
-            String aiResponse = claudeService.generateWithTools(prompt, true, sessionId).get();
+            // Set document context for read_case_document tool
+            Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+            if (caseId != null && orgId != null) {
+                try {
+                    legalResearchTools.setResearchContext(Long.parseLong(caseId), orgId);
+                } catch (NumberFormatException ignored) {}
+            }
+
+            String aiResponse;
+            try {
+                // Call agentic Claude with tools (progress will be published by ClaudeSonnet4Service for each tool execution)
+                aiResponse = claudeService.generateWithTools(prompt, true, sessionId).get();
+            } finally {
+                // Always clear context after research completes
+                legalResearchTools.clearResearchContext();
+            }
 
             log.info("✅ Agentic research complete in {}ms", System.currentTimeMillis() - startTime);
 

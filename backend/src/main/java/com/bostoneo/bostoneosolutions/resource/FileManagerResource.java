@@ -285,6 +285,7 @@ public class FileManagerResource {
             return ResponseEntity.ok()
                 .header("Content-Disposition", contentDisposition)
                 .header("Content-Type", contentType)
+                .header("Cache-Control", "no-store")
                 .header("Access-Control-Expose-Headers", "Content-Disposition")
                 .body(fileContent);
                 

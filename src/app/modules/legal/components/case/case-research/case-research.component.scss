@@ -631,31 +631,7 @@
           }
         }
 
-        // Research Mode Badge - Shows Fast or Thorough mode
-        .research-mode-badge {
-          .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.25rem 0.625rem;
-            font-weight: 600;
-            border-radius: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-
-            &.badge-fast {
-              background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.08) 100%);
-              color: #16a34a;
-              border: 1px solid rgba(34, 197, 94, 0.3);
-            }
-
-            &.badge-thorough {
-              background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.08) 100%);
-              color: #4f46e5;
-              border: 1px solid rgba(99, 102, 241, 0.3);
-            }
-          }
-        }
+        // Research mode badge removed — unified mode
 
         .ai-answer-header {
           h6 {
@@ -761,19 +737,15 @@
             font-weight: 600;
           }
 
-          // Paragraphs - Legal Brief Style
+          // Paragraphs
           p {
             margin-bottom: 1rem;
-            text-align: justify;
-            text-indent: 2em;
+            text-align: left;
+            text-indent: 0;
             color: var(--vz-body-color);
             overflow-wrap: break-word;
             word-wrap: break-word;
             word-break: break-word;
-
-            &:first-of-type {
-              text-indent: 0;
-            }
 
             strong {
               font-weight: 700;
@@ -801,7 +773,7 @@
             li {
               margin-bottom: 0.75rem;  // Increased: Better readability with more spacing
               line-height: 1.9;  // Slightly increased line height
-              text-align: justify;
+              text-align: left;
               color: var(--vz-body-color);
 
               &:last-child {
@@ -866,17 +838,16 @@
             border-top: 2px solid var(--vz-border-color);
           }
 
-          // Individual citation with colored icon
-          ul li,
-          ol li {
-            &:has(a),
-            &:has(strong) {
+          // Citation icons — scoped to a dedicated citations wrapper only
+          .citations-list {
+            ul li,
+            ol li {
               position: relative;
               padding-left: 2rem;
               margin-bottom: 1rem;
 
               &::before {
-                content: '\F1A9'; // Remix icon bookmark
+                content: '\F1A9';
                 font-family: 'remixicon';
                 position: absolute;
                 left: 0;
@@ -891,12 +862,10 @@
                 color: white;
               }
 
-              // Green icon for positive/primary citations
               &:nth-child(odd)::before {
                 background: var(--vz-success);
               }
 
-              // Blue icon for secondary citations
               &:nth-child(even)::before {
                 background: var(--vz-info);
               }
@@ -2152,13 +2121,7 @@
         }
       }
 
-      // Research mode toggle smaller
-      .research-mode-toggle-compact {
-        .btn-group .btn {
-          font-size: 0.75rem;
-          padding: 0.25rem 0.5rem;
-        }
-      }
+      // Research mode toggle removed — unified mode
     }
   }
 }

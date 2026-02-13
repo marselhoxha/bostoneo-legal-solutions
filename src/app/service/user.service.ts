@@ -9,6 +9,7 @@ import { Key } from '../enum/key.enum';
 import { HttpCacheService } from './http.cache.service';
 import { Router } from '@angular/router';
 import { PreloaderService } from './preloader.service';
+import { FileManagerService } from '../modules/file-manager/services/file-manager.service';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -30,7 +31,8 @@ export class UserService {
     private http: HttpClient,
     private httpCache: HttpCacheService,
     private router: Router,
-    private preloaderService: PreloaderService
+    private preloaderService: PreloaderService,
+    private fileManagerService: FileManagerService
   ) { }
 
   setUserData(user: User) {
@@ -396,6 +398,7 @@ export class UserService {
 
   logOut() {
     this.httpCache.evictAll();
+    this.fileManagerService.clearCache();
     this.clearUserCache();
     localStorage.removeItem(Key.TOKEN);
     localStorage.removeItem(Key.REFRESH_TOKEN);
@@ -409,6 +412,7 @@ export class UserService {
    */
   handleSessionExpired(): void {
     this.httpCache.evictAll();
+    this.fileManagerService.clearCache();
     this.clearUserCache();
     localStorage.removeItem(Key.TOKEN);
     localStorage.removeItem(Key.REFRESH_TOKEN);

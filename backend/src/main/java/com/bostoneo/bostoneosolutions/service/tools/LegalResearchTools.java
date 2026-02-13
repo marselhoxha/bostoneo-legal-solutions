@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.service.tools;
 
 import com.bostoneo.bostoneosolutions.dto.DeadlineInfo;
 import com.bostoneo.bostoneosolutions.dto.ai.ToolDefinition;
+import com.bostoneo.bostoneosolutions.service.CaseDocumentService;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import com.bostoneo.bostoneosolutions.service.external.CourtListenerService;
 import com.bostoneo.bostoneosolutions.service.external.ECFRService;
@@ -31,6 +32,31 @@ public class LegalResearchTools {
     private final CourtListenerService courtListenerService;
     private final ECFRService ecfrService;
     private final MotionTemplateService motionTemplateService;
+    private final CaseDocumentService caseDocumentService;
+
+    // ThreadLocal context for document tool (set per-request by AILegalResearchService)
+    private static final ThreadLocal<Long> currentCaseId = new ThreadLocal<>();
+    private static final ThreadLocal<Long> currentOrgId = new ThreadLocal<>();
+
+    public void setResearchContext(Long caseId, Long orgId) {
+        currentCaseId.set(caseId);
+        currentOrgId.set(orgId);
+    }
+
+    public void clearResearchContext() {
+        currentCaseId.remove();
+        currentOrgId.remove();
+    }
+
+    /** Get current case ID from ThreadLocal (for propagation to async threads) */
+    public Long getCurrentCaseId() {
+        return currentCaseId.get();
+    }
+
+    /** Get current org ID from ThreadLocal (for propagation to async threads) */
+    public Long getCurrentOrgId() {
+        return currentOrgId.get();
+    }
 
     // In-memory cache for tool results (reduces external API costs)
     private static class CachedToolResult {
@@ -65,21 +91,11 @@ public class LegalResearchTools {
      */
     public List<ToolDefinition> getToolDefinitions() {
         return List.of(
-            // ===== ESSENTIAL LEGAL RESEARCH TOOLS (3) =====
-            // These provide unique value that FAST mode cannot replicate:
-            searchCaseLawTool(),      // Real case law search (FAST hallucinates citations)
-            getCFRTextTool(),          // Exact regulation text (FAST approximates)
-            verifyCitationTool()       // Citation validation (FAST can't verify)
-
-            // ===== REMOVED TOOLS (5) - Moved to FAST mode or deprecated =====
-            // webSearchTool(),  // DISABLED - too slow (30-60s nested Claude API calls), causes hanging and wasted costs
-            // getCurrentDateTool(),  // REMOVED - FAST mode gets date via system message
-            // checkDeadlineStatusTool(),  // REMOVED - FAST mode handles via system message instructions
-            // validateCaseTimelineTool(),  // REMOVED - FAST mode handles via system message instructions
-            // generateCaseTimelineTool(),  // REMOVED - FAST mode can generate timelines in markdown
-            // generateMotionTemplateTool()  // REMOVED - Low value, attorneys customize heavily
-
-            // Result: THOROUGH mode cost reduced from 2.5-3x FAST → 1.5x FAST (40% savings)
+            // ===== ESSENTIAL LEGAL RESEARCH TOOLS (4) =====
+            searchCaseLawTool(),       // Real case law search via CourtListener
+            getCFRTextTool(),          // Exact regulation text
+            verifyCitationTool(),      // Citation validation
+            readCaseDocumentTool()     // Read case file content for document-informed research
         );
     }
 
@@ -93,20 +109,11 @@ public class LegalResearchTools {
 
         try {
             return switch (toolName) {
-                // ===== ACTIVE LEGAL RESEARCH TOOLS (3) =====
                 case "search_case_law" -> searchCaseLaw(input);
                 case "get_cfr_text" -> getCFRText(input);
                 case "verify_citation" -> verifyCitation(input);
-
-                // ===== DISABLED TOOLS =====
-                // case "web_search" -> executeWebSearch(input);  // DISABLED - too slow and expensive
-                // case "get_current_date" -> getCurrentDate(input);  // REMOVED - FAST mode handles via system message
-                // case "check_deadline_status" -> checkDeadlineStatus(input);  // REMOVED - FAST mode handles via system message
-                // case "validate_case_timeline" -> validateCaseTimeline(input);  // REMOVED - FAST mode handles via system message
-                // case "generate_case_timeline" -> generateCaseTimeline(input);  // REMOVED - FAST mode can generate timelines
-                // case "generate_motion_template" -> generateMotionTemplate(input);  // REMOVED - Low value
-
-                default -> "Error: Unknown tool '" + toolName + "'. Only 3 tools available: search_case_law, get_cfr_text, verify_citation";
+                case "read_case_document" -> readCaseDocument(input);
+                default -> "Error: Unknown tool '" + toolName + "'. Available tools: search_case_law, get_cfr_text, verify_citation, read_case_document";
             };
         } catch (Exception e) {
             log.error("Tool execution error: {}", e.getMessage(), e);
@@ -119,7 +126,7 @@ public class LegalResearchTools {
     private ToolDefinition searchCaseLawTool() {
         return ToolDefinition.builder()
             .name("search_case_law")
-            .description("⚠️ REQUIRED for counsel-ready responses: Search for controlling case law precedents. MUST find minimum 5-10 cases with specific holdings. Returns court decisions with citations, holdings, and procedural history. TIP: Use from_year parameter to search recent precedents (2023+) for evolving standards. Multiple searches recommended to meet minimum citation requirements.")
+            .description("Search case law precedents. Returns decisions with citations, courts, dates, and summaries.")
             .input_schema(Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -169,24 +176,7 @@ public class LegalResearchTools {
     private ToolDefinition verifyCitationTool() {
         return ToolDefinition.builder()
             .name("verify_citation")
-            .description("""
-                **MANDATORY: Verify EVERY citation before including in your response.**
-
-                Verifies a legal citation against CourtListener and Justia databases.
-                Prevents AI hallucinations by validating citations against primary sources.
-
-                Examples:
-                - verify_citation("550 U.S. 544") → Returns case name, court, year, URL
-                - verify_citation("Bell Atlantic v. Twombly") → Searches by case name
-
-                **IMPORTANT**: Always include citations in your response, even when verification fails.
-                - If verification SUCCEEDS: Use clickable link format with ✓ marker
-                - If verification FAILS: Include citation with ⚠️ warning marker
-
-                Attorneys need case law citations regardless of database verification status.
-
-                **Returns**: Full case details with URL if found, instruction to include with warning marker if not found.
-                """)
+            .description("Verify a legal citation against CourtListener/Justia. Returns case details with URL if found.")
             .input_schema(Map.of(
                 "type", "object",
                 "properties", Map.of(
@@ -202,6 +192,55 @@ public class LegalResearchTools {
                 "required", List.of("citation")
             ))
             .build();
+    }
+
+    private ToolDefinition readCaseDocumentTool() {
+        return ToolDefinition.builder()
+            .name("read_case_document")
+            .description("""
+                Read the text content of a case document (contract, pleading, motion, correspondence, etc.).
+                Use this to examine specific documents uploaded to the case when answering questions about
+                document contents, terms, clauses, or when the user asks about their case files.
+                Returns up to 4,000 characters of extracted text. Only works with text-extractable files
+                (PDF, Word, text files) — not images, videos, or audio.
+                """)
+            .input_schema(Map.of(
+                "type", "object",
+                "properties", Map.of(
+                    "document_id", Map.of(
+                        "type", "integer",
+                        "description", "The ID of the document to read (from the document inventory provided in the prompt)"
+                    )
+                ),
+                "required", List.of("document_id")
+            ))
+            .build();
+    }
+
+    private Object readCaseDocument(Map<String, Object> input) {
+        Long orgId = currentOrgId.get();
+        if (orgId == null) {
+            return "Error: No organization context available. Cannot read case documents.";
+        }
+
+        Object docIdRaw = input.get("document_id");
+        Long documentId;
+        try {
+            if (docIdRaw instanceof Integer) {
+                documentId = ((Integer) docIdRaw).longValue();
+            } else if (docIdRaw instanceof Long) {
+                documentId = (Long) docIdRaw;
+            } else if (docIdRaw instanceof Number) {
+                documentId = ((Number) docIdRaw).longValue();
+            } else {
+                documentId = Long.parseLong(docIdRaw.toString());
+            }
+        } catch (Exception e) {
+            return "Error: Invalid document_id. Must be a number.";
+        }
+
+        log.info("Reading case document {} for org {}", documentId, orgId);
+        return caseDocumentService.getDocumentText(documentId, orgId, 4000);
     }
 
     private ToolDefinition webSearchTool() {
@@ -303,26 +342,18 @@ public class LegalResearchTools {
             return noResults;
         }
 
-        // Format results for Claude (show up to 10 cases for counsel-ready citations)
+        // Format results for Claude (show up to 5 cases)
         StringBuilder formatted = new StringBuilder();
-        formatted.append(String.format("Found %d cases:\n", results.size()));
+        formatted.append(String.format("Found %d cases:\n\n", results.size()));
 
-        // Warn if insufficient cases found
-        if (results.size() < 5) {
-            formatted.append("⚠️ WARNING: Only ").append(results.size())
-                     .append(" cases found. Counsel-ready responses require 5-10 precedents. ")
-                     .append("Conduct additional searches with different keywords/jurisdictions.\n");
-        }
-        formatted.append("\n");
-
-        for (int i = 0; i < Math.min(10, results.size()); i++) {
+        for (int i = 0; i < Math.min(5, results.size()); i++) {
             Map<String, Object> result = results.get(i);
             formatted.append(String.format("%d. %s\n", i + 1, result.get("title")));
             formatted.append(String.format("   Citation: %s\n", result.get("citation")));
             formatted.append(String.format("   Court: %s | Date: %s\n",
                 result.get("court"), result.get("date")));
             formatted.append(String.format("   Holding/Summary: %s\n",
-                truncate((String) result.get("summary"), 300)));
+                truncate((String) result.get("summary"), 200)));
 
             // Add procedural posture if available
             if (result.containsKey("posture") && result.get("posture") != null) {
@@ -331,10 +362,6 @@ public class LegalResearchTools {
             }
             formatted.append("\n");
         }
-
-        // Add reminder about citation requirements
-        formatted.append("💡 TIP: Extract holdings and analyze how each case applies to your query. ");
-        formatted.append("If you have fewer than 5 cases with relevant holdings, conduct additional searches.\n");
 
         String formattedResult = formatted.toString();
         saveToCache(cacheKey, formattedResult, 30); // Cache for 30 days

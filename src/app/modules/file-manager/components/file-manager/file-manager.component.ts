@@ -1126,7 +1126,9 @@ export class FileManagerComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Download error:', error);
-          alert('Failed to download files: ' + error.message);
+          this.extractDownloadErrorMessage(error).then(msg => {
+            alert('Failed to download files: ' + msg);
+          });
         }
       });
     }
@@ -1147,7 +1149,9 @@ export class FileManagerComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Download error:', error);
-        alert('Failed to download file: ' + error.message);
+        this.extractDownloadErrorMessage(error).then(msg => {
+          alert('Failed to download file: ' + msg);
+        });
       }
     });
   }
@@ -1162,6 +1166,29 @@ export class FileManagerComponent implements OnInit, OnDestroy {
     link.download = filename;
     link.click();
     window.URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Extract error message from HttpErrorResponse (blob responses).
+   * Checks X-Error-Message header first, then tries parsing the blob body, then falls back.
+   */
+  private async extractDownloadErrorMessage(error: any): Promise<string> {
+    // Check X-Error-Message header (from our backend error responses)
+    if (error.headers?.get) {
+      const headerMsg = error.headers.get('X-Error-Message');
+      if (headerMsg) return headerMsg;
+    }
+    // Try to parse blob body as JSON
+    if (error.error instanceof Blob) {
+      try {
+        const text = await error.error.text();
+        const json = JSON.parse(text);
+        if (json.error) return json.error;
+        if (json.message) return json.message;
+      } catch { /* not JSON, ignore */ }
+    }
+    // Fallback to standard error fields
+    return error.statusText || error.message || 'An error occurred';
   }
 
   /**
