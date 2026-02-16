@@ -218,6 +218,30 @@ public class ClientResource {
                         .build());
     }
 
+    @PostMapping("/{id}/send-ai-consent")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
+    public ResponseEntity<HttpResponse> sendAiConsentEmail(@AuthenticationPrincipal UserDTO user, @PathVariable("id") Long id, @RequestParam Optional<String> email) {
+        try {
+            clientService.sendAiConsentEmail(id, email.orElse(null));
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("AI disclosure email sent successfully")
+                            .status(OK)
+                            .statusCode(OK.value())
+                            .build());
+        } catch (Exception e) {
+            log.error("Error sending AI consent email for client {}", id, e);
+            return ResponseEntity.badRequest().body(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message(e.getMessage())
+                            .status(BAD_REQUEST)
+                            .statusCode(BAD_REQUEST.value())
+                            .build());
+        }
+    }
+
     @PostMapping("/invoice/create")
     @PreAuthorize("hasAuthority('CREATE:INVOICE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "INVOICE", description = "Created new invoice")

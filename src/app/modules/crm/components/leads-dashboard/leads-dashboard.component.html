@@ -152,11 +152,30 @@
                     </div>
                   </td>
                   <td>
-                    <span class="badge" [class]="getStatusBadgeClass(lead.status)"
-                          [title]="'Valid next steps: ' + getValidNextStatuses(lead.status || 'NEW').join(', ')">
+                    <!-- Final status: static badge (no dropdown) -->
+                    <span *ngIf="getValidNextStatuses(lead.status || 'NEW').length === 0"
+                          class="badge" [class]="getStatusBadgeClass(lead.status)">
                       {{getStatusDisplayName(lead.status || 'NEW')}}
-                      <i class="ri-lock-line ms-1" *ngIf="getValidNextStatuses(lead.status || 'NEW').length === 0" title="Final status"></i>
+                      <i class="ri-lock-line ms-1"></i>
                     </span>
+
+                    <!-- Active status: clickable dropdown -->
+                    <div class="dropdown" *ngIf="getValidNextStatuses(lead.status || 'NEW').length > 0">
+                      <button class="badge border-0 dropdown-toggle" [class]="getStatusBadgeClass(lead.status)"
+                              type="button" data-bs-toggle="dropdown" style="cursor: pointer;">
+                        {{getStatusDisplayName(lead.status || 'NEW')}}
+                      </button>
+                      <ul class="dropdown-menu">
+                        <li class="dropdown-header small text-muted">Change status to:</li>
+                        <li *ngFor="let status of getValidNextStatuses(lead.status || 'NEW')">
+                          <a class="dropdown-item" href="#"
+                             (click)="changeLeadStatus(lead, status); $event.preventDefault()">
+                            <span class="badge me-2" [class]="getStatusBadgeClass(status)">&nbsp;</span>
+                            {{getStatusDisplayName(status)}}
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
                   </td>
                   <td>
                     <span class="badge" [class]="getUrgencyBadgeClass(lead.urgencyLevel)" *ngIf="lead.urgencyLevel">
@@ -219,21 +238,6 @@
                           <i class="ri-arrow-right-circle-line me-2"></i>Convert to Client
                         </a></li>
                         
-                        <!-- Status information -->
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">
-                          Status: {{getStatusDisplayName(lead.status || 'NEW')}}
-                        </h6></li>
-                        <li *ngIf="getValidNextStatuses(lead.status || 'NEW').length === 0">
-                          <span class="dropdown-item-text text-muted small">
-                            <i class="ri-lock-line me-1"></i>Lead in final status
-                          </span>
-                        </li>
-                        <li *ngIf="getValidNextStatuses(lead.status || 'NEW').length > 0">
-                          <span class="dropdown-item-text text-muted small">
-                            <i class="ri-information-line me-1"></i>Next: {{getFormattedNextStatuses(lead.status || 'NEW')}}
-                          </span>
-                        </li>
                       </ul>
                     </div>
                   </td>
@@ -534,22 +538,6 @@
           </div>
 
           <div class="row">
-            <div class="col-md-4">
-              <div class="mb-3">
-                <label class="form-label">Status</label>
-                <select class="form-select" formControlName="status">
-                  <option value="">Select Status</option>
-                  <option value="NEW">New</option>
-                  <option value="CONTACTED">Contacted</option>
-                  <option value="QUALIFIED">Qualified</option>
-                  <option value="CONSULTATION_SCHEDULED">Consultation Scheduled</option>
-                  <option value="PROPOSAL_SENT">Proposal Sent</option>
-                  <option value="NEGOTIATION">Negotiation</option>
-                  <option value="CONVERTED">Converted</option>
-                  <option value="LOST">Lost</option>
-                </select>
-              </div>
-            </div>
             <div class="col-md-4">
               <div class="mb-3">
                 <label class="form-label">Urgency</label>

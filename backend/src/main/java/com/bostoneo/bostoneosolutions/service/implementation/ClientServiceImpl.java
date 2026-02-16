@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static com.bostoneo.bostoneosolutions.query.ClientQuery.STATS_QUERY;
 
@@ -38,6 +39,7 @@ public class ClientServiceImpl implements ClientService {
     private final NamedParameterJdbcTemplate jdbc;
     private final EntityManager entityManager;
     private final TenantService tenantService;
+    private final com.bostoneo.bostoneosolutions.service.EmailService emailService;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -249,6 +251,119 @@ public class ClientServiceImpl implements ClientService {
         }
     }
 
+
+    @Override
+    public void sendAiConsentEmail(Long clientId, String emailOverride) {
+        Long orgId = getRequiredOrganizationId();
+        Client client = clientRepository.findByIdAndOrganizationId(clientId, orgId)
+                .orElseThrow(() -> new RuntimeException("Client not found or access denied"));
+
+        // Use override email if provided, otherwise fall back to client's email
+        String targetEmail = (emailOverride != null && !emailOverride.isBlank()) ? emailOverride.trim() : client.getEmail();
+
+        if (targetEmail == null || targetEmail.isBlank()) {
+            throw new RuntimeException("No email address provided");
+        }
+
+        // Generate token and save
+        String token = UUID.randomUUID().toString();
+        client.setAiConsentToken(token);
+        clientRepository.save(client);
+
+        // Build consent URL (frontend public route)
+        String consentUrl = "http://localhost:4200/public/ai-consent/" + token;
+
+        // Build branded email body
+        String htmlBody = buildAiConsentEmailHtml(client.getName(), consentUrl);
+        emailService.sendEmail(targetEmail, "AI Technology Disclosure - Your Acknowledgment Requested", htmlBody);
+        log.info("AI consent email sent to client {} ({})", client.getName(), targetEmail);
+    }
+
+    @Override
+    public void acknowledgeAiConsent(String token) {
+        Client client = clientRepository.findByAiConsentToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid or expired consent token"));
+
+        client.setAiConsentGiven(true);
+        client.setAiConsentDate(new Date());
+        client.setAiConsentNotes("Acknowledged via email consent link");
+        client.setAiConsentToken(null); // Invalidate token after use
+        clientRepository.save(client);
+        log.info("AI consent acknowledged for client: {}", client.getName());
+    }
+
+    @Override
+    public Client getClientByConsentToken(String token) {
+        return clientRepository.findByAiConsentToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid or expired consent token"));
+    }
+
+    private String buildAiConsentEmailHtml(String clientName, String consentUrl) {
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html><html lang=\"en\"><head>");
+        html.append("<meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
+        html.append("<title>AI Technology Disclosure</title>");
+        html.append("<style>");
+        html.append("body{margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f5f7fa;color:#333;line-height:1.6}");
+        html.append(".container{max-width:600px;margin:0 auto;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.1);border-radius:8px;overflow:hidden}");
+        html.append(".header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px;text-align:center}");
+        html.append(".header h2{margin:0;font-size:24px;font-weight:300;letter-spacing:1px}");
+        html.append(".content{padding:30px}");
+        html.append(".content h3{margin:0 0 20px;color:#333;font-size:20px}");
+        html.append(".info-box{background:#e3f2fd;border-left:4px solid #1976d2;padding:20px;border-radius:8px;margin:20px 0}");
+        html.append(".info-box h4{margin:0 0 5px;font-size:18px;color:#333}");
+        html.append(".uses-list{margin:15px 0;padding-left:20px;color:#555}");
+        html.append(".uses-list li{margin-bottom:8px}");
+        html.append(".note{background:#f8f9fa;padding:15px;border-radius:6px;margin:20px 0;border-left:3px solid #28a745;font-size:14px;color:#555}");
+        html.append(".cta{text-align:center;margin:30px 0;padding:20px;background:#f8f9fa;border-radius:8px}");
+        html.append(".cta-btn{display:inline-block;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:14px 40px;text-decoration:none;border-radius:25px;font-weight:600;font-size:16px}");
+        html.append(".cta p{margin:15px 0 0;font-size:14px;color:#666}");
+        html.append(".badge{display:inline-block;background:#e8f5e9;color:#2e7d32;padding:6px 12px;border-radius:12px;font-size:13px;font-weight:500;margin-top:10px}");
+        html.append(".footer{background:#f8f9fa;padding:20px;text-align:center;border-top:1px solid #e9ecef;font-size:14px;color:#555}");
+        html.append(".footer small{color:#999;font-size:12px}");
+        html.append("</style></head><body>");
+
+        html.append("<div class=\"container\">");
+        html.append("<div class=\"header\"><h2>Bostoneo Legal Solutions</h2></div>");
+        html.append("<div class=\"content\">");
+        html.append("<h3>Hello ").append(clientName != null ? clientName : "").append(",</h3>");
+
+        html.append("<div class=\"info-box\">");
+        html.append("<h4>AI Technology Disclosure</h4>");
+        html.append("<p style=\"margin:5px 0 0;font-size:12px;color:#666;text-transform:uppercase;letter-spacing:.5px\">ABA Rule 1.4 Compliance</p>");
+        html.append("</div>");
+
+        html.append("<p style=\"font-size:16px;color:#555\">Our firm may use AI-assisted technology in connection with your legal matter. We want to be transparent about how these tools are used.</p>");
+
+        html.append("<p style=\"font-size:15px;color:#555;font-weight:600\">AI tools may be used for:</p>");
+        html.append("<ul class=\"uses-list\">");
+        html.append("<li>Legal research and case law analysis</li>");
+        html.append("<li>Document review and analysis</li>");
+        html.append("<li>Drafting assistance for legal documents</li>");
+        html.append("<li>Case strategy research</li>");
+        html.append("</ul>");
+
+        html.append("<div class=\"note\">");
+        html.append("<strong>Important:</strong> All AI-generated output is reviewed and verified by a licensed attorney before being used in your case. AI tools do not replace professional legal judgment.");
+        html.append("</div>");
+
+        html.append("<div class=\"cta\">");
+        html.append("<a href=\"").append(consentUrl).append("\" class=\"cta-btn\">I Acknowledge This Disclosure</a>");
+        html.append("<p>Or copy and paste this link in your browser:</p>");
+        html.append("<p style=\"font-size:12px;color:#666;word-break:break-all\">").append(consentUrl).append("</p>");
+        html.append("<div class=\"badge\">Consent is NOT required to receive legal services</div>");
+        html.append("</div>");
+
+        html.append("</div>"); // end content
+        html.append("<div class=\"footer\">");
+        html.append("<p>Best regards,<br><strong>Bostoneo Legal Solutions Team</strong></p>");
+        html.append("<small>This is an automated disclosure email. If you did not expect this email, you can safely ignore it.</small>");
+        html.append("</div>");
+        html.append("</div>"); // end container
+        html.append("</body></html>");
+
+        return html.toString();
+    }
 
     @Override
     public Stats getStats() {

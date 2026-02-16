@@ -2,7 +2,8 @@ package com.bostoneo.bostoneosolutions.dtomapper;
 
 import com.bostoneo.bostoneosolutions.dto.IntakeFormDTO;
 import com.bostoneo.bostoneosolutions.model.IntakeForm;
-import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.model.Organization;
+import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -18,6 +20,7 @@ import java.util.Map;
 public class IntakeFormDTOMapper {
 
     private final ObjectMapper objectMapper;
+    private final OrganizationRepository organizationRepository;
 
     public IntakeFormDTO toDTO(IntakeForm form) {
         if (form == null) {
@@ -51,13 +54,28 @@ public class IntakeFormDTOMapper {
         if (form.getFormConfig() != null) {
             try {
                 Map<String, Object> formConfig = objectMapper.readValue(
-                    form.getFormConfig(), 
+                    form.getFormConfig(),
                     new TypeReference<Map<String, Object>>() {}
                 );
                 dto.setFormConfig(formConfig);
             } catch (Exception e) {
                 log.error("Error parsing form config JSON for form ID: {}", form.getId(), e);
                 dto.setFormConfig(new HashMap<>());
+            }
+        }
+
+        // Populate organization branding
+        if (form.getOrganizationId() != null) {
+            try {
+                Optional<Organization> org = organizationRepository.findById(form.getOrganizationId());
+                org.ifPresent(o -> {
+                    dto.setOrganizationName(o.getName());
+                    dto.setOrganizationPhone(o.getPhone());
+                    dto.setOrganizationEmail(o.getEmail());
+                    dto.setOrganizationLogoUrl(o.getLogoUrl());
+                });
+            } catch (Exception e) {
+                log.warn("Could not load organization for form ID: {}", form.getId(), e);
             }
         }
 

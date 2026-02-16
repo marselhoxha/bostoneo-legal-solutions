@@ -1,518 +1,420 @@
 <!-- Loading State -->
-<div class="row" *ngIf="isLoading">
-  <div class="col-12">
-    <div class="card shadow-sm">
-      <div class="card-body text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading form...</span>
-        </div>
-        <p class="mt-3 text-muted">Loading intake form...</p>
+<div class="intake-loading" *ngIf="isLoading">
+  <div class="card shadow-sm">
+    <div class="card-body text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading form...</span>
       </div>
+      <p class="mt-3 text-muted">Loading intake form...</p>
     </div>
   </div>
 </div>
 
 <!-- Error State -->
-<div class="row" *ngIf="error && !isLoading && !intakeForm">
-  <div class="col-12">
-    <div class="card shadow-sm">
-      <div class="card-body text-center py-5">
-        <div class="avatar-lg mx-auto mb-4">
-          <div class="avatar-title rounded-circle bg-danger-subtle text-danger">
-            <i class="ri-error-warning-line display-6"></i>
-          </div>
+<div class="intake-error" *ngIf="error && !isLoading && !intakeForm && !showPracticeAreaStep">
+  <div class="card shadow-sm">
+    <div class="card-body text-center py-5">
+      <div class="avatar-lg mx-auto mb-4">
+        <div class="avatar-title rounded-circle bg-danger-subtle text-danger">
+          <i class="ri-error-warning-line display-6"></i>
         </div>
-        <h5 class="mb-3 text-danger">Form Not Available</h5>
-        <p class="text-muted mb-4">{{ error }}</p>
-        <div class="d-flex gap-2 justify-content-center">
-          <a routerLink="/public/intake-forms" class="btn btn-primary btn-animation waves-effect waves-light">
-            <i class="ri-arrow-left-line me-1"></i>View All Forms
-          </a>
-          <button class="btn btn-soft-primary btn-animation waves-effect waves-light" (click)="loadForm()">
-            <i class="ri-refresh-line me-1"></i>Try Again
-          </button>
-        </div>
+      </div>
+      <h5 class="mb-3 text-danger">Form Not Available</h5>
+      <p class="text-muted mb-4">{{ error }}</p>
+      <div class="d-flex gap-2 justify-content-center">
+        <a routerLink="/public/intake-forms" class="btn btn-primary">
+          <i class="ri-arrow-left-line me-1"></i>View All Forms
+        </a>
+        <button class="btn btn-soft-primary" (click)="loadForm()">
+          <i class="ri-refresh-line me-1"></i>Try Again
+        </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Form Content -->
-<div class="row" *ngIf="!isLoading && intakeForm">
-  <div class="col-lg-10 mx-auto">
-    <!-- Hero Section with Professional Header -->
-    <div class="hero-section mb-5">
-      <div class="card border-0 shadow-lg">
-        <div class="card-body bg-primary text-center py-5 rounded">
-          <div class="row align-items-center">
-            <div class="col-lg-8 mx-auto">
-              <div class="avatar-xl mx-auto mb-4">
-                <div class="avatar-title rounded-circle bg-white text-primary shadow-sm">
-                  <i class="ri-scales-3-line display-5"></i>
-                </div>
-              </div>
-              <h2 class="text-white fw-bold mb-3">Get Your Free Legal Consultation</h2>
-              <p class="text-white-50 fs-16 mb-2">
-                Connect with experienced attorneys who will fight for your rights. No fees unless we win your case.
-              </p>
-              <!-- Practice Area Specific Urgency -->
-              <div class="alert alert-warning bg-warning bg-opacity-20 border-warning text-white mb-4">
-                <div class="d-flex align-items-center">
-                  <i class="ri-alarm-warning-line me-2 fs-18"></i>
-                  <span class="fs-15">{{ getPracticeAreaSpecificMessage() }}</span>
-                </div>
-              </div>
-              <div class="d-flex justify-content-center gap-4 mb-4">
-                <div class="text-center">
-                  <div class="badge bg-white bg-opacity-20 text-white fs-14 px-3 py-2 rounded-pill">
-                    <i class="ri-shield-check-line me-2"></i>100% Confidential
-                  </div>
-                </div>
-                <div class="text-center">
-                  <div class="badge bg-white bg-opacity-20 text-white fs-14 px-3 py-2 rounded-pill">
-                    <i class="ri-time-line me-2"></i>24 Hour Response
-                  </div>
-                </div>
-                <div class="text-center">
-                  <div class="badge bg-white bg-opacity-20 text-white fs-14 px-3 py-2 rounded-pill">
-                    <i class="ri-award-line me-2"></i>No Win, No Fee
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+<!-- Main Intake Form -->
+<div class="intake-wrapper" *ngIf="!isLoading && (intakeForm || showPracticeAreaStep)">
+  <div class="col-lg-10 col-xl-8 mx-auto">
+
+    <!-- Hero Banner -->
+    <div class="intake-hero mb-4">
+      <div class="intake-hero-content">
+        <div class="intake-hero-icon">
+          <i class="ri-scales-3-line"></i>
+        </div>
+        <h6 *ngIf="orgName" class="intake-hero-org">{{ orgName }}</h6>
+        <h2>Free Legal Consultation</h2>
+        <p>Connect with experienced attorneys who can help with your legal matter.</p>
+        <div class="intake-hero-pills">
+          <span class="intake-pill">
+            <i class="ri-shield-check-line"></i> Confidential
+          </span>
+          <span class="intake-pill">
+            <i class="ri-time-line"></i> 24hr Response
+          </span>
+          <span class="intake-pill">
+            <i class="ri-lock-line"></i> Encrypted
+          </span>
         </div>
       </div>
     </div>
 
-    <!-- Multi-Step Progress Bar -->
-    <div class="card shadow-sm mb-4" role="progressbar" [attr.aria-valuenow]="currentStep" [attr.aria-valuemax]="totalSteps" aria-label="Form progress">
-      <div class="card-body p-4">
-        <div class="row">
-          <div class="col-12">
-            <div class="step-progress-bar mb-4">
-              <div class="progress-container">
-                <div class="progress bg-light" style="height: 8px;">
-                  <div class="progress-bar bg-gradient-primary" 
-                       role="progressbar" 
-                       [style.width.%]="getProgressPercentage()"
-                       [attr.aria-valuenow]="getProgressPercentage()" 
-                       aria-valuemin="0" 
-                       aria-valuemax="100">
-                  </div>
-                </div>
-                <div class="step-indicators mt-3">
-                  <div class="d-flex justify-content-between">
-                    <div class="step-item" 
-                         *ngFor="let step of [1,2,3]; let i = index"
-                         [class.active]="currentStep === step"
-                         [class.completed]="isStepCompleted(step)"
-                         [class.accessible]="isStepAccessible(step)"
-                         (click)="isStepAccessible(step) ? goToStep(step) : null"
-                         [style.cursor]="isStepAccessible(step) ? 'pointer' : 'not-allowed'">
-                      <div class="step-circle">
-                        <span *ngIf="!isStepCompleted(step)">{{ step }}</span>
-                        <i class="ri-check-line" *ngIf="isStepCompleted(step)"></i>
-                      </div>
-                      <div class="step-label mt-2">
-                        <small class="text-muted" *ngIf="step === 1">Basic Info</small>
-                        <small class="text-muted" *ngIf="step === 2">Case Details</small>
-                        <small class="text-muted" *ngIf="step === 3">Final Details</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Current Step Info -->
-            <div class="text-center">
-              <h5 class="text-primary fw-semibold mb-2">{{ getStepTitle() }}</h5>
-              <p class="text-muted fs-14">{{ getStepDescription() }}</p>
-              
-              <!-- Completion Status -->
-              <div class="mt-3">
-                <div class="d-flex justify-content-center align-items-center gap-3">
-                  <small class="text-muted">
-                    <i class="ri-checkbox-circle-line me-1 text-success"></i>
-                    {{ getCurrentStepCompletionPercentage() }}% Complete
-                  </small>
-                  <small class="text-success" style="opacity: 0.7;">
-                    <i class="ri-save-line me-1"></i>Auto-saved
-                  </small>
-                </div>
-              </div>
-            </div>
+    <!-- Step Progress -->
+    <div class="intake-stepper mb-4">
+      <div class="stepper-track">
+        <div class="stepper-fill" [style.width.%]="((currentStep - 1) / (totalSteps - 1)) * 100"></div>
+      </div>
+      <div class="stepper-steps">
+        <div class="stepper-step"
+             *ngFor="let step of stepNumbers"
+             [class.active]="currentStep === step"
+             [class.completed]="isStepCompleted(step)"
+             [class.accessible]="isStepAccessible(step)"
+             (click)="isStepAccessible(step) ? goToStep(step) : null"
+             [style.cursor]="isStepAccessible(step) ? 'pointer' : 'default'">
+          <div class="stepper-circle">
+            <span *ngIf="!isStepCompleted(step)">{{ step }}</span>
+            <i class="ri-check-line" *ngIf="isStepCompleted(step)"></i>
           </div>
+          <span class="stepper-label d-none d-md-block">{{ getStepLabel(step) }}</span>
         </div>
       </div>
     </div>
 
-    <!-- Main Form -->
-    <div class="card shadow-sm">
-      <div class="card-header bg-light-subtle border-bottom-dashed py-4">
+    <!-- Form Card -->
+    <div class="card intake-card shadow-sm">
+      <!-- Card Header -->
+      <div class="card-header intake-card-header">
         <div class="d-flex justify-content-between align-items-center">
-          <h1 class="card-title mb-0 h5" id="step-title">
-            <i class="ri-edit-line me-2 text-primary" aria-hidden="true"></i>{{ getStepTitle() }}
-          </h1>
-          <div class="step-counter">
-            <span class="badge bg-primary fs-13" role="status" aria-live="polite">Step {{ currentStep }} of {{ totalSteps }}</span>
+          <div>
+            <h5 class="mb-1">{{ getStepTitle() }}</h5>
+            <p class="text-muted fs-13 mb-0">{{ getStepDescription() }}</p>
           </div>
+          <span class="badge bg-primary-subtle text-primary fs-12">Step {{ currentStep }} of {{ totalSteps }}</span>
         </div>
       </div>
+
       <div class="card-body p-4">
         <!-- Error Alert -->
         <div class="alert alert-danger" *ngIf="error && intakeForm" role="alert">
-          <i class="ri-error-warning-line me-2"></i>
-          {{ error }}
+          <i class="ri-error-warning-line me-2"></i>{{ error }}
         </div>
 
-        <form [formGroup]="submissionForm" (ngSubmit)="currentStep === totalSteps ? onSubmit() : nextStep()" 
-              role="form" [attr.aria-labelledby]="'step-title'">
-          <!-- Dynamic Form Fields for Current Step -->
-          <div class="row g-4" *ngFor="let field of getCurrentStepFields(); let i = index">
-            <div [ngClass]="{
-              'col-12': field.type === 'textarea' || field.fullWidth,
-              'col-md-6': field.type !== 'textarea' && !field.fullWidth
-            }">
-              <!-- Text Input -->
-              <div class="mb-3" *ngIf="field.type === 'text' || field.type === 'email' || field.type === 'tel' || field.type === 'date'">
-                <label [for]="field.name" class="form-label fw-semibold text-white-dark">
-                  {{ field.label }}
-                  <span class="text-danger" *ngIf="field.required">*</span>
-                </label>
-                <input 
-                  [type]="field.type" 
-                  class="form-control"
-                  [class.is-invalid]="hasFieldError(field.name)"
-                  [id]="field.name"
-                  [formControlName]="field.name"
-                  [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()">
-                <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
-                  {{ getFieldError(field.name) }}
-                </div>
-              </div>
-
-              <!-- Textarea -->
-              <div class="mb-3" *ngIf="field.type === 'textarea'">
-                <label [for]="field.name" class="form-label fw-semibold text-white-dark">
-                  {{ field.label }}
-                  <span class="text-danger" *ngIf="field.required">*</span>
-                </label>
-                <textarea 
-                  class="form-control"
-                  [class.is-invalid]="hasFieldError(field.name)"
-                  [id]="field.name"
-                  [formControlName]="field.name"
-                  [rows]="field.rows || 3"
-                  [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()">
-                </textarea>
-                <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
-                  {{ getFieldError(field.name) }}
-                </div>
-              </div>
-
-              <!-- Select Dropdown -->
-              <div class="mb-3" *ngIf="field.type === 'select'">
-                <label [for]="field.name" class="form-label fw-semibold text-white-dark">
-                  {{ field.label }}
-                  <span class="text-danger" *ngIf="field.required">*</span>
-                </label>
-                <select 
-                  class="form-select"
-                  [class.is-invalid]="hasFieldError(field.name)"
-                  [id]="field.name"
-                  [formControlName]="field.name">
-                  <option value="">Select {{ field.label.toLowerCase() }}</option>
-                  <option *ngFor="let option of field.options" [value]="option">
-                    {{ option }}
-                  </option>
-                </select>
-                <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
-                  {{ getFieldError(field.name) }}
-                </div>
-              </div>
-
-              <!-- Radio Buttons -->
-              <div class="mb-3" *ngIf="field.type === 'radio'">
-                <label class="form-label fw-semibold text-white-dark">
-                  {{ field.label }}
-                  <span class="text-danger" *ngIf="field.required">*</span>
-                </label>
-                <div class="mt-2" [class.is-invalid]="hasFieldError(field.name)">
-                  <div class="form-check" *ngFor="let option of field.options">
-                    <input 
-                      class="form-check-input" 
-                      type="radio" 
-                      [id]="field.name + '_' + option.value"
-                      [formControlName]="field.name"
-                      [value]="option.value">
-                    <label class="form-check-label" [for]="field.name + '_' + option.value">
-                      {{ option.label }}
-                    </label>
+        <!-- ===================== -->
+        <!-- STEP 1: Practice Area (only when showPracticeAreaStep) -->
+        <!-- ===================== -->
+        <div *ngIf="showPracticeAreaStep && currentStep === 1">
+          <div class="row g-3">
+            <div class="col-lg-4 col-md-6" *ngFor="let area of practiceAreas">
+              <div class="practice-area-card"
+                   [class.selected]="selectedPracticeArea === area.key"
+                   (click)="selectPracticeArea(area.key)">
+                <div class="practice-area-card-inner">
+                  <div class="practice-area-icon">
+                    <i [ngClass]="area.icon"></i>
                   </div>
-                </div>
-                <div class="text-danger fs-12 mt-1" *ngIf="hasFieldError(field.name)">
-                  {{ getFieldError(field.name) }}
+                  <h6 class="practice-area-title">{{ area.key }}</h6>
+                  <p class="practice-area-desc">{{ area.description }}</p>
+                  <div class="practice-area-check">
+                    <i class="ri-check-line"></i>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- SMS Consent Section - A2P 10DLC Compliant (visible on all steps) -->
-          <div class="sms-consent-section mt-4 mb-4">
-            <div class="card border-0 shadow-sm">
-              <div class="card-header bg-primary bg-opacity-10 border-0">
-                <h6 class="mb-0 text-primary">
-                  <i class="ri-message-2-line me-2"></i>SMS Communication Preferences
-                </h6>
-              </div>
-              <div class="card-body p-4">
-                <div class="form-check mb-3">
+        <!-- ===================== -->
+        <!-- FORM FIELD STEPS (Basic Info, Case Details, Review & Submit) -->
+        <!-- ===================== -->
+        <form [formGroup]="submissionForm"
+              (ngSubmit)="currentStep === totalSteps ? onSubmit() : nextStep()"
+              *ngIf="intakeForm && !(showPracticeAreaStep && currentStep === 1)">
+
+          <!-- Dynamic Form Fields -->
+          <div class="row g-3">
+            <ng-container *ngFor="let field of getCurrentStepFields()">
+              <div [ngClass]="{
+                'col-12': field.type === 'textarea' || field.fullWidth,
+                'col-md-6': field.type !== 'textarea' && !field.fullWidth
+              }">
+                <!-- Text / Email / Date Input -->
+                <div class="intake-field" *ngIf="(field.type === 'text' || field.type === 'email' || field.type === 'date') && field.name !== 'phone'">
+                  <label [for]="field.name" class="form-label fw-medium">
+                    {{ field.label }}
+                    <span class="text-danger" *ngIf="field.required">*</span>
+                  </label>
                   <input
-                    type="checkbox"
-                    class="form-check-input"
-                    id="smsConsent"
-                    formControlName="smsConsent"
-                    style="width: 1.25em; height: 1.25em;">
-                  <label class="form-check-label fw-semibold ms-2" for="smsConsent">
-                    Yes, I consent to receive SMS text messages (Optional)
+                    [type]="field.type"
+                    class="form-control"
+                    [class.is-invalid]="hasFieldError(field.name)"
+                    [class.is-valid]="isFieldValid(field.name)"
+                    [id]="field.name"
+                    [formControlName]="field.name"
+                    [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()">
+                  <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
+                    {{ getFieldError(field.name) }}
+                  </div>
+                </div>
+
+                <!-- Phone Input with mask -->
+                <div class="intake-field" *ngIf="field.type === 'tel' || field.name === 'phone'">
+                  <label [for]="field.name" class="form-label fw-medium">
+                    {{ field.label }}
+                    <span class="text-danger" *ngIf="field.required">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    class="form-control"
+                    [class.is-invalid]="hasFieldError(field.name)"
+                    [class.is-valid]="isFieldValid(field.name)"
+                    [id]="field.name"
+                    [formControlName]="field.name"
+                    placeholder="(555) 123-4567"
+                    (input)="onPhoneInput($event)"
+                    maxlength="14">
+                  <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
+                    {{ getFieldError(field.name) }}
+                  </div>
+                </div>
+
+                <!-- Textarea -->
+                <div class="intake-field" *ngIf="field.type === 'textarea'">
+                  <label [for]="field.name" class="form-label fw-medium">
+                    {{ field.label }}
+                    <span class="text-danger" *ngIf="field.required">*</span>
+                  </label>
+                  <textarea
+                    class="form-control"
+                    [class.is-invalid]="hasFieldError(field.name)"
+                    [class.is-valid]="isFieldValid(field.name)"
+                    [id]="field.name"
+                    [formControlName]="field.name"
+                    [rows]="field.rows || 3"
+                    [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()">
+                  </textarea>
+                  <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
+                    {{ getFieldError(field.name) }}
+                  </div>
+                </div>
+
+                <!-- Select Dropdown -->
+                <div class="intake-field" *ngIf="field.type === 'select'">
+                  <label [for]="field.name" class="form-label fw-medium">
+                    {{ field.label }}
+                    <span class="text-danger" *ngIf="field.required">*</span>
+                  </label>
+                  <select
+                    class="form-select"
+                    [class.is-invalid]="hasFieldError(field.name)"
+                    [class.is-valid]="isFieldValid(field.name)"
+                    [id]="field.name"
+                    [formControlName]="field.name">
+                    <option value="">Select {{ field.label.toLowerCase() }}</option>
+                    <option *ngFor="let option of field.options" [value]="option">
+                      {{ option }}
+                    </option>
+                  </select>
+                  <div class="invalid-feedback" *ngIf="hasFieldError(field.name)">
+                    {{ getFieldError(field.name) }}
+                  </div>
+                </div>
+
+                <!-- Radio Buttons -->
+                <div class="intake-field" *ngIf="field.type === 'radio'">
+                  <label class="form-label fw-medium">
+                    {{ field.label }}
+                    <span class="text-danger" *ngIf="field.required">*</span>
+                  </label>
+                  <div class="d-flex gap-3 mt-1">
+                    <div class="form-check" *ngFor="let option of field.options">
+                      <input
+                        class="form-check-input"
+                        type="radio"
+                        [id]="field.name + '_' + option.value"
+                        [formControlName]="field.name"
+                        [value]="option.value">
+                      <label class="form-check-label" [for]="field.name + '_' + option.value">
+                        {{ option.label }}
+                      </label>
+                    </div>
+                  </div>
+                  <div class="text-danger fs-12 mt-1" *ngIf="hasFieldError(field.name)">
+                    {{ getFieldError(field.name) }}
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+
+          <!-- ===================== -->
+          <!-- File Upload (Final Step Only) -->
+          <!-- ===================== -->
+          <div *ngIf="currentStep === totalSteps" class="file-upload-section mt-4">
+            <h6 class="fw-semibold mb-3">
+              <i class="ri-attachment-line me-1"></i>Supporting Documents
+              <span class="text-muted fw-normal fs-12 ms-1">(Optional)</span>
+            </h6>
+
+            <div class="file-upload-zone"
+                 (drop)="onFileDrop($event)"
+                 (dragover)="onDragOver($event)"
+                 (dragleave)="$event.preventDefault()"
+                 (click)="fileInput.click()">
+              <input type="file" #fileInput hidden
+                     (change)="onFileSelected($event)"
+                     accept=".pdf,.jpg,.jpeg,.png,.docx"
+                     multiple>
+              <div class="file-upload-content" *ngIf="!isUploading">
+                <i class="ri-upload-cloud-2-line"></i>
+                <p class="mb-1 fw-medium">Drag & drop files here or click to browse</p>
+                <small class="text-muted">PDF, JPG, PNG, DOCX — Max 10MB per file, up to {{ maxFiles }} files</small>
+              </div>
+              <div class="file-upload-content" *ngIf="isUploading">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <p class="mb-0 mt-2 text-muted">Uploading...</p>
+              </div>
+            </div>
+
+            <div class="text-danger fs-12 mt-2" *ngIf="uploadError">
+              <i class="ri-error-warning-line me-1"></i>{{ uploadError }}
+            </div>
+
+            <div class="file-list mt-2" *ngIf="uploadedFiles.length > 0">
+              <div class="file-item" *ngFor="let file of uploadedFiles; let i = index">
+                <div class="file-info">
+                  <i [ngClass]="getFileIcon(file.contentType)" class="file-icon"></i>
+                  <div>
+                    <span class="file-name">{{ file.fileName }}</span>
+                    <small class="file-size text-muted">{{ formatFileSize(file.fileSize) }}</small>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-soft-danger file-remove" (click)="removeFile(i)">
+                  <i class="ri-close-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===================== -->
+          <!-- Consent Sections (Final Step Only) -->
+          <!-- ===================== -->
+          <div *ngIf="currentStep === totalSteps" class="consent-sections mt-4">
+            <!-- SMS Consent -->
+            <div class="consent-block">
+              <div class="consent-header">
+                <i class="ri-message-2-line"></i>
+                <div>
+                  <h6 class="mb-0">SMS Communication Preferences</h6>
+                  <small class="text-muted">Stay informed about your case via text</small>
+                </div>
+              </div>
+              <div class="consent-body">
+                <p class="text-muted fs-13 mb-3">
+                  By opting in, you consent to receive SMS text messages regarding your legal matter,
+                  including appointment reminders, case status updates, document requests, and important notifications.
+                </p>
+                <div class="consent-notice mb-3">
+                  <i class="ri-information-line"></i>
+                  <span>Message frequency varies. <strong>Message and data rates may apply.</strong>
+                  Reply <strong>STOP</strong> to unsubscribe. Reply <strong>HELP</strong> for assistance.</span>
+                </div>
+                <div class="form-check">
+                  <input type="checkbox" class="form-check-input" id="smsConsent" formControlName="smsConsent">
+                  <label class="form-check-label fw-medium" for="smsConsent">
+                    Yes, I consent to receive SMS text messages
                   </label>
                 </div>
-                <div class="consent-disclosure ms-4 ps-2 border-start border-2 border-primary border-opacity-25">
-                  <p class="text-muted mb-2 fs-13">
-                    By checking this box, I consent to receive SMS text messages from <strong>Bostoneo Solutions</strong>
-                    regarding my legal matter, including:
-                  </p>
-                  <div class="row mb-3">
-                    <div class="col-6">
-                      <ul class="text-muted fs-13 mb-0 list-unstyled">
-                        <li><i class="ri-checkbox-circle-line text-success me-1"></i>Appointment reminders</li>
-                        <li><i class="ri-checkbox-circle-line text-success me-1"></i>Case status updates</li>
-                      </ul>
-                    </div>
-                    <div class="col-6">
-                      <ul class="text-muted fs-13 mb-0 list-unstyled">
-                        <li><i class="ri-checkbox-circle-line text-success me-1"></i>Document requests</li>
-                        <li><i class="ri-checkbox-circle-line text-success me-1"></i>Important notifications</li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div class="alert alert-light border py-2 px-3 mb-2">
-                    <p class="text-muted fs-12 mb-0">
-                      <i class="ri-information-line me-1 text-info"></i>
-                      Message frequency varies. <strong>Message and data rates may apply.</strong>
-                      Reply <strong>STOP</strong> to unsubscribe. Reply <strong>HELP</strong> for assistance.
-                    </p>
-                  </div>
-                  <p class="text-muted fs-12 mb-2">
-                    View our <a href="/public/privacy-policy" target="_blank" class="text-primary fw-medium">Privacy Policy</a> and
-                    <a href="/public/terms-of-service" target="_blank" class="text-primary fw-medium">Terms of Service</a>.
-                  </p>
-                  <p class="fs-12 mb-0">
-                    <span class="badge bg-success-subtle text-success">
-                      <i class="ri-shield-check-line me-1"></i>Consent is NOT required to receive legal services
-                    </span>
-                  </p>
+                <div class="mt-2 ms-4">
+                  <span class="badge bg-success-subtle text-success fs-11">
+                    <i class="ri-information-line me-1"></i>Consent is NOT required to receive legal services
+                  </span>
+                  <a href="/public/privacy-policy" target="_blank" class="text-primary fw-medium fs-12 ms-2">Privacy Policy</a>
+                  <span class="text-muted fs-12 mx-1">&middot;</span>
+                  <a href="/public/terms-of-service" target="_blank" class="text-primary fw-medium fs-12">Terms of Service</a>
                 </div>
+              </div>
+            </div>
+
+            <!-- AI Disclosure -->
+            <div class="consent-block mt-3">
+              <div class="consent-header ai">
+                <i class="ri-robot-line"></i>
+                <div>
+                  <h6 class="mb-0">AI Technology Disclosure</h6>
+                  <small class="text-muted">In accordance with ABA Model Rule 1.4</small>
+                </div>
+              </div>
+              <div class="consent-body">
+                <p class="text-muted fs-13 mb-3">
+                  Our firm may use AI-assisted technology in connection with your legal matter, including for
+                  legal research, document analysis, drafting assistance, and case law review.
+                </p>
+                <div class="consent-notice mb-3">
+                  <i class="ri-user-star-line"></i>
+                  <span><strong>All AI-generated output is reviewed and verified by a licensed attorney</strong>
+                  before being used in your case. AI tools do not replace professional legal judgment.</span>
+                </div>
+                <div class="form-check">
+                  <input type="checkbox" class="form-check-input" id="aiConsent" formControlName="aiConsent">
+                  <label class="form-check-label fw-medium" for="aiConsent">
+                    I acknowledge the use of AI-assisted tools
+                  </label>
+                </div>
+                <span class="badge bg-success-subtle text-success fs-11 mt-2 ms-4">
+                  <i class="ri-information-line me-1"></i>Consent is NOT required to receive legal services
+                </span>
               </div>
             </div>
           </div>
 
-          <!-- Navigation Buttons -->
-          <div class="row mt-5">
-            <div class="col-12">
-              <div class="d-flex justify-content-between align-items-center">
-                <!-- Previous Button -->
-                <button 
-                  type="button" 
-                  class="btn btn-soft-secondary btn-animation"
-                  [disabled]="currentStep === 1"
-                  (click)="previousStep()"
-                  *ngIf="currentStep > 1">
-                  <i class="ri-arrow-left-line me-1"></i>Previous
-                </button>
-                
-                <!-- Back to Forms Link (only on first step) -->
-                <a routerLink="/public/intake-forms" 
-                   class="btn btn-soft-secondary btn-animation waves-effect waves-light"
-                   *ngIf="currentStep === 1">
-                  <i class="ri-arrow-left-line me-1"></i>Back to Forms
-                </a>
+          <!-- Navigation Buttons (inside form for submit) -->
+          <div class="intake-nav mt-4">
+            <button type="button" class="btn btn-soft-secondary" (click)="previousStep()" *ngIf="currentStep > 1">
+              <i class="ri-arrow-left-line me-1"></i>Previous
+            </button>
+            <div *ngIf="currentStep === 1 && !showPracticeAreaStep"></div>
 
-                <!-- Next/Submit Button -->
-                <button 
-                  type="submit" 
-                  class="btn btn-primary btn-animation waves-effect waves-light btn-lg"
-                  [disabled]="(currentStep === totalSteps && (!submissionForm.valid || isSubmitting))">
-                  
-                  <!-- Next Step Button -->
-                  <span *ngIf="currentStep < totalSteps">
-                    <i class="ri-arrow-right-line me-1"></i>{{ getCallToActionText() }}
-                  </span>
-                  
-                  <!-- Final Submit Button -->
-                  <span *ngIf="currentStep === totalSteps && !isSubmitting">
-                    <i class="ri-send-plane-line me-1"></i>{{ getCallToActionText() }}
-                  </span>
-                  
-                  <!-- Loading State -->
-                  <span *ngIf="currentStep === totalSteps && isSubmitting">
-                    <i class="ri-loader-line animate-spin me-1"></i>Submitting Your Request...
-                  </span>
-                </button>
-              </div>
-              
-              <!-- Progress Text & Motivation -->
-              <div class="text-center mt-3">
-                <div class="mb-2" *ngIf="currentStep < totalSteps">
-                  <small class="text-muted">
-                    <i class="ri-time-line me-1"></i>This should take about {{ currentStep === 1 ? '2' : currentStep === 2 ? '3' : '2' }} minutes
-                  </small>
-                </div>
-                
-                <!-- Motivational Message -->
-                <div class="alert alert-success bg-success-subtle border-success py-2 mb-3" 
-                     *ngIf="getFormCompletionPercentage() > 20">
-                  <small class="text-success fw-semibold">{{ getMotivationalMessage() }}</small>
-                </div>
-
-                <!-- Time-based Urgency -->
-                <div class="alert alert-info bg-info-subtle border-info py-2 mb-0">
-                  <small class="text-info">{{ getTimeBasedUrgency() }}</small>
-                </div>
-              </div>
-            </div>
+            <button type="submit" class="btn btn-primary btn-lg ms-auto"
+                    [disabled]="currentStep === totalSteps && (!submissionForm.valid || isSubmitting)">
+              <span *ngIf="currentStep < totalSteps">
+                Continue <i class="ri-arrow-right-line ms-1"></i>
+              </span>
+              <span *ngIf="currentStep === totalSteps && !isSubmitting">
+                <i class="ri-send-plane-line me-1"></i>Submit Your Request
+              </span>
+              <span *ngIf="currentStep === totalSteps && isSubmitting">
+                <i class="ri-loader-line animate-spin me-1"></i>Submitting...
+              </span>
+            </button>
           </div>
         </form>
-      </div>
-    </div>
 
-    <!-- Professional Trust Section -->
-    <div class="row mt-5">
-      <!-- Attorney Credentials -->
-      <div class="col-lg-4 mb-4">
-        <div class="card border-0 shadow-sm bg-light-subtle h-100">
-          <div class="card-body text-center p-4">
-            <div class="avatar-md mx-auto mb-3">
-              <div class="avatar-title rounded-circle bg-primary text-white">
-                <i class="ri-award-line fs-20"></i>
-              </div>
-            </div>
-            <h6 class="fw-bold mb-2">Experienced Attorneys</h6>
-            <p class="text-muted mb-0 fs-13">Our team has over 50+ years combined experience in {{ intakeForm.practiceArea }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Success Rate -->
-      <div class="col-lg-4 mb-4">
-        <div class="card border-0 shadow-sm bg-light-subtle h-100">
-          <div class="card-body text-center p-4">
-            <div class="avatar-md mx-auto mb-3">
-              <div class="avatar-title rounded-circle bg-success text-white">
-                <i class="ri-trophy-line fs-20"></i>
-              </div>
-            </div>
-            <h6 class="fw-bold mb-2">95% Success Rate</h6>
-            <p class="text-muted mb-0 fs-13">We have successfully resolved thousands of cases similar to yours</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- No Fee Guarantee -->
-      <div class="col-lg-4 mb-4">
-        <div class="card border-0 shadow-sm bg-light-subtle h-100">
-          <div class="card-body text-center p-4">
-            <div class="avatar-md mx-auto mb-3">
-              <div class="avatar-title rounded-circle bg-info text-white">
-                <i class="ri-shield-check-line fs-20"></i>
-              </div>
-            </div>
-            <h6 class="fw-bold mb-2">No Win, No Fee</h6>
-            <p class="text-muted mb-0 fs-13">You don't pay attorney fees unless we win your case</p>
-          </div>
+        <!-- Navigation for Practice Area Step (outside form) -->
+        <div class="intake-nav mt-4" *ngIf="showPracticeAreaStep && currentStep === 1">
+          <div></div>
+          <button type="button" class="btn btn-primary btn-lg ms-auto"
+                  [disabled]="!selectedPracticeArea"
+                  (click)="nextStep()">
+            Continue <i class="ri-arrow-right-line ms-1"></i>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Contact & Support Information -->
-    <div class="card shadow-sm mt-4">
-      <div class="card-body p-4">
-        <div class="row align-items-center">
-          <div class="col-lg-8">
-            <div class="row">
-              <div class="col-md-6 mb-3 mb-md-0">
-                <div class="d-flex align-items-center">
-                  <div class="avatar-xs me-3">
-                    <div class="avatar-title rounded-circle bg-success-subtle text-success">
-                      <i class="ri-phone-line fs-14"></i>
-                    </div>
-                  </div>
-                  <div>
-                    <h6 class="mb-0">24/7 Support</h6>
-                    <p class="text-muted mb-0 fs-13">
-                      <a href="tel:+15551234567" class="text-decoration-none">(555) 123-4567</a>
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="d-flex align-items-center">
-                  <div class="avatar-xs me-3">
-                    <div class="avatar-title rounded-circle bg-info-subtle text-info">
-                      <i class="ri-time-line fs-14"></i>
-                    </div>
-                  </div>
-                  <div>
-                    <h6 class="mb-0">Fast Response</h6>
-                    <p class="text-muted mb-0 fs-13">We respond within 24 hours guaranteed</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-lg-4 text-lg-end">
-            <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
-              <span class="badge bg-primary-subtle text-primary fs-12 px-3 py-2">
-                <i class="ri-star-fill me-1"></i>5.0 Rating
-              </span>
-              <span class="badge bg-success-subtle text-success fs-12 px-3 py-2">
-                <i class="ri-user-line me-1"></i>10,000+ Clients
-              </span>
-            </div>
-          </div>
-        </div>
+    <!-- Privacy Footer -->
+    <div class="intake-privacy-footer mt-3 mb-5">
+      <div class="privacy-line">
+        <i class="ri-lock-line"></i>
+        <span>Your information is encrypted and protected by attorney-client privilege.</span>
+      </div>
+      <div class="org-contact-line" *ngIf="orgPhone || orgEmail">
+        <span *ngIf="orgPhone"><i class="ri-phone-line"></i> {{ orgPhone }}</span>
+        <span *ngIf="orgPhone && orgEmail" class="mx-2">&middot;</span>
+        <span *ngIf="orgEmail"><i class="ri-mail-line"></i> {{ orgEmail }}</span>
       </div>
     </div>
 
-    <!-- Final Privacy Notice -->
-    <div class="card border-0 bg-primary-subtle mt-4">
-      <div class="card-body p-4">
-        <div class="row align-items-center">
-          <div class="col-lg-1 text-center">
-            <i class="ri-shield-check-line text-primary display-6"></i>
-          </div>
-          <div class="col-lg-11">
-            <h6 class="text-primary fw-bold mb-2">Your Information is Protected</h6>
-            <p class="text-muted mb-2 fs-14">
-              All communications are protected by attorney-client privilege. Your information is encrypted and secure.
-              We will never share your details with third parties.
-            </p>
-            <div class="d-flex flex-wrap gap-3">
-              <small class="text-muted">
-                <i class="ri-lock-line me-1 text-primary"></i>256-bit SSL Encryption
-              </small>
-              <small class="text-muted">
-                <i class="ri-shield-line me-1 text-primary"></i>HIPAA Compliant
-              </small>
-              <small class="text-muted">
-                <i class="ri-file-shield-line me-1 text-primary"></i>Attorney-Client Privilege
-              </small>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </div>

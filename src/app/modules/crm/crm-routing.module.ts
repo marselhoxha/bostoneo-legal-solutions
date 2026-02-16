@@ -5,7 +5,6 @@ import { CrmDashboardComponent } from './components/crm-dashboard/crm-dashboard.
 import { LeadsDashboardComponent } from './components/leads-dashboard/leads-dashboard.component';
 import { IntakeSubmissionsComponent } from './components/intake-submissions/intake-submissions.component';
 import { ConflictChecksListComponent } from './components/conflict-checks-list/conflict-checks-list.component';
-
 const routes: Routes = [
   {
     path: '',

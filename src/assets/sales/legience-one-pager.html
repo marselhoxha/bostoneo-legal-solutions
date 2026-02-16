@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Legience for Personal Injury Attorneys</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --navy: #1a2b4a;
+      --navy-dark: #0f1d33;
+      --indigo: #405189;
+      --green: #13c56b;
+      --green-dark: #0fa858;
+      --red: #ed5e5e;
+      --orange: #f7b84b;
+      --blue: #3577f1;
+      --cyan: #299cdb;
+      --light: #f8f9fa;
+      --border: #e9ebec;
+      --text: #212529;
+      --text-secondary: #495057;
+      --text-muted: #878a99;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', -apple-system, sans-serif; color: var(--text); background: #fff; line-height: 1.6; font-size: 15px; }
+    h1, h2, h3, h4, h5 { font-family: 'Montserrat', sans-serif; line-height: 1.3; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+
+    /* ── STICKY NAV ── */
+    .topbar { position: sticky; top: 0; z-index: 100; background: var(--navy); padding: 12px 0; box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+    .topbar .container { display: flex; justify-content: space-between; align-items: center; }
+    .topbar-logo { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 20px; color: #fff; letter-spacing: 2.5px; }
+    .topbar-links { display: flex; gap: 20px; align-items: center; }
+    .topbar-links a { color: rgba(255,255,255,.7); text-decoration: none; font-size: 13px; font-weight: 500; transition: color .2s; }
+    .topbar-links a:hover { color: #fff; }
+    .topbar-cta { background: var(--green); color: #fff !important; padding: 7px 20px; border-radius: 6px; font-weight: 600; font-size: 13px; text-decoration: none; transition: background .2s; }
+    .topbar-cta:hover { background: var(--green-dark); }
+
+    /* ── HERO ── */
+    .hero { background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 50%, var(--indigo) 100%); padding: 80px 0 70px; text-align: center; position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 20%, rgba(64,81,137,.3) 0%, transparent 60%), radial-gradient(ellipse at 70% 80%, rgba(19,197,107,.1) 0%, transparent 50%); }
+    .hero .container { position: relative; z-index: 1; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 24px; padding: 6px 20px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,.8); margin-bottom: 24px; }
+    .hero-badge i { color: var(--green); }
+    .hero h1 { font-size: 44px; font-weight: 800; color: #fff; margin-bottom: 20px; letter-spacing: -0.5px; }
+    .hero h1 span { color: var(--green); }
+    .hero .subhead { font-size: 18px; color: rgba(255,255,255,.7); max-width: 720px; margin: 0 auto 32px; line-height: 1.7; }
+    .hero-stats { display: flex; justify-content: center; gap: 40px; margin-bottom: 36px; }
+    .hero-stat { text-align: center; }
+    .hero-stat-value { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 32px; color: var(--green); display: block; }
+    .hero-stat-label { font-size: 12px; color: rgba(255,255,255,.55); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+    .hero-cta { display: inline-flex; align-items: center; gap: 10px; background: var(--green); color: #fff; padding: 14px 36px; border-radius: 8px; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 16px; text-decoration: none; transition: all .2s; box-shadow: 0 4px 20px rgba(19,197,107,.3); }
+    .hero-cta:hover { background: var(--green-dark); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(19,197,107,.4); }
+
+    /* ── SECTION ── */
+    .section { padding: 72px 0; }
+    .section-alt { background: var(--light); }
+    .section-navy { background: var(--navy); color: #fff; }
+    .section-title { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+    .section-subtitle { font-size: 16px; color: var(--text-secondary); margin-bottom: 40px; max-width: 660px; line-height: 1.65; }
+    .section-center { text-align: center; }
+    .section-center .section-subtitle { margin-left: auto; margin-right: auto; }
+
+    /* ── PAIN SECTION ── */
+    .pain-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .pain-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 24px; transition: transform .2s, box-shadow .2s; }
+    .pain-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+    .pain-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 14px; }
+    .pain-icon.red { background: rgba(237,94,94,.1); color: var(--red); }
+    .pain-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .pain-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+    .pain-cost { display: inline-block; background: rgba(237,94,94,.08); color: var(--red); font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 4px; margin-top: 10px; }
+
+    /* ── FEATURE DEEP DIVE ── */
+    .feature-block { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; padding: 56px 0; border-bottom: 1px solid var(--border); }
+    .feature-block:last-child { border-bottom: none; }
+    .feature-block.reverse { direction: rtl; }
+    .feature-block.reverse > * { direction: ltr; }
+    .feature-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px; padding: 4px 12px; border-radius: 4px; }
+    .feature-badge.ai { background: rgba(64,81,137,.1); color: var(--indigo); }
+    .feature-badge.core { background: rgba(19,197,107,.1); color: var(--green); }
+    .feature-badge.pi { background: rgba(247,184,75,.1); color: #d97706; }
+    .feature-content h3 { font-size: 24px; font-weight: 700; margin-bottom: 14px; color: var(--navy); }
+    .feature-content > p { font-size: 14.5px; color: var(--text-secondary); margin-bottom: 18px; line-height: 1.7; }
+    .feature-list { list-style: none; }
+    .feature-list li { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 13.5px; line-height: 1.55; }
+    .feature-list li i { color: var(--green); font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .feature-list li strong { color: var(--navy); }
+    .workflow-steps { background: rgba(64,81,137,.04); border: 1px solid rgba(64,81,137,.12); border-radius: 8px; padding: 16px 18px; margin-top: 16px; }
+    .workflow-steps h5 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--indigo); margin-bottom: 10px; }
+    .workflow-steps ol { list-style: none; counter-reset: step; }
+    .workflow-steps ol li { counter-increment: step; font-size: 12.5px; color: var(--text-secondary); padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+    .workflow-steps ol li::before { content: counter(step); width: 20px; height: 20px; border-radius: 50%; background: var(--indigo); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* Feature visual mock */
+    .feature-visual { background: var(--light); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .fv-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+    .fv-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .fv-dot.red { background: #ff5f57; }
+    .fv-dot.yellow { background: #ffbd2e; }
+    .fv-dot.green { background: #28c840; }
+    .fv-title { font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 12px; color: var(--text-muted); margin-left: 8px; }
+    .fv-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
+    .fv-stat { background: #fff; border-radius: 8px; padding: 10px 12px; border: 1px solid var(--border); }
+    .fv-stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); font-weight: 600; }
+    .fv-stat-value { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 18px; color: var(--navy); margin-top: 2px; }
+    .fv-stat-value.green { color: var(--green); }
+    .fv-stat-value.blue { color: var(--blue); }
+    .fv-stat-value.orange { color: var(--orange); }
+    .fv-stat-value.red { color: var(--red); }
+    .fv-tabs { display: flex; gap: 5px; margin-bottom: 12px; flex-wrap: wrap; }
+    .fv-tab { font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 6px; background: #fff; border: 1px solid var(--border); color: var(--text-muted); }
+    .fv-tab.active { background: var(--indigo); color: #fff; border-color: var(--indigo); }
+    .fv-items { display: flex; flex-direction: column; gap: 6px; }
+    .fv-item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; display: flex; align-items: center; gap: 9px; font-size: 11.5px; }
+    .fv-item-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+    .fv-item-icon.primary { background: rgba(64,81,137,.1); color: var(--indigo); }
+    .fv-item-icon.success { background: rgba(19,197,107,.1); color: var(--green); }
+    .fv-item-icon.warning { background: rgba(247,184,75,.1); color: var(--orange); }
+    .fv-item-icon.danger { background: rgba(237,94,94,.1); color: var(--red); }
+    .fv-item-icon.info { background: rgba(41,156,219,.1); color: var(--cyan); }
+    .fv-item-name { font-weight: 600; color: var(--text); }
+    .fv-item-desc { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; }
+    .fv-item-meta { color: var(--text-muted); font-size: 10.5px; margin-left: auto; white-space: nowrap; }
+    .fv-item-badge { font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 4px; margin-left: auto; white-space: nowrap; }
+    .fv-item-badge.green { background: rgba(19,197,107,.1); color: var(--green); }
+    .fv-item-badge.orange { background: rgba(247,184,75,.1); color: #d97706; }
+    .fv-item-badge.blue { background: rgba(53,119,241,.1); color: var(--blue); }
+    .fv-item-badge.red { background: rgba(237,94,94,.1); color: var(--red); }
+    .fv-range { margin-top: 12px; }
+    .fv-range-label { display: flex; justify-content: space-between; font-size: 9px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: .5px; margin-bottom: 5px; }
+    .fv-range-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--orange) 0%, var(--green) 50%, var(--blue) 100%); position: relative; }
+    .fv-range-marker { position: absolute; top: -5px; width: 3px; height: 18px; background: var(--navy); border-radius: 2px; }
+    .fv-section-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 12px 0 6px; }
+
+    /* ── CALLOUT BOX ── */
+    .callout { background: rgba(19,197,107,.04); border: 1px solid rgba(19,197,107,.2); border-radius: 10px; padding: 18px 20px; margin-top: 18px; display: flex; align-items: flex-start; gap: 12px; }
+    .callout i { color: var(--green); font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+    .callout p { font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.6; }
+    .callout strong { color: var(--navy); }
+    .callout-red { background: rgba(237,94,94,.04); border-color: rgba(237,94,94,.2); }
+    .callout-red i { color: var(--red); }
+
+    /* ── COMPARISON TABLE ── */
+    .comparison-table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+    .comparison-table th { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 13px; padding: 12px 14px; text-align: left; border-bottom: 2px solid var(--border); }
+    .comparison-table th:first-child { width: 28%; }
+    .comparison-table th.legience { color: var(--green); }
+    .comparison-table td { padding: 10px 14px; font-size: 12.5px; border-bottom: 1px solid #f0f1f3; vertical-align: top; }
+    .comparison-table tr:last-child td { border-bottom: none; }
+    .comparison-table td:first-child { font-weight: 600; color: var(--navy); }
+    .check { color: var(--green); font-weight: 700; }
+    .cross { color: var(--red); font-weight: 700; }
+    .partial { color: var(--orange); font-weight: 700; }
+
+    /* ── VERSUS CARDS ── */
+    .vs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .vs-card { border: 1px solid var(--border); border-radius: 12px; padding: 28px; background: #fff; transition: transform .2s, box-shadow .2s; }
+    .vs-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,.08); }
+    .vs-card h4 { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+    .vs-card .vs-tag { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 14px; display: block; }
+    .vs-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+    .vs-card .vs-highlight { background: rgba(19,197,107,.06); border-left: 3px solid var(--green); padding: 10px 14px; margin-top: 14px; border-radius: 0 6px 6px 0; font-size: 12.5px; font-weight: 600; color: var(--green-dark); line-height: 1.5; }
+    .vs-card .vs-missing { margin-top: 12px; }
+    .vs-card .vs-missing span { display: inline-block; font-size: 11px; background: rgba(237,94,94,.08); color: var(--red); padding: 2px 8px; border-radius: 4px; margin: 2px 3px 2px 0; font-weight: 600; }
+
+    /* ── DASHBOARD GRID ── */
+    .dash-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 24px; }
+    .dash-card { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 18px 14px; text-align: center; transition: background .2s; }
+    .dash-card:hover { background: rgba(255,255,255,.1); }
+    .dash-card i { font-size: 26px; color: var(--green); display: block; margin-bottom: 6px; }
+    .dash-card span { font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,.85); display: block; }
+    .dash-card small { font-size: 10px; color: rgba(255,255,255,.4); display: block; margin-top: 4px; line-height: 1.3; }
+
+    /* ── DOC TYPES GRID ── */
+    .doc-categories { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .doc-cat { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+    .doc-cat h5 { font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .doc-cat ul { list-style: none; }
+    .doc-cat ul li { font-size: 12px; color: var(--text-secondary); padding: 3px 0; display: flex; align-items: center; gap: 6px; }
+    .doc-cat ul li i { color: var(--green); font-size: 12px; }
+
+    /* ── PRACTICE AREA PILLS ── */
+    .practice-pills { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+    .practice-pill { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.18); border-radius: 24px; padding: 8px 20px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.85); }
+
+    /* ── CTA ── */
+    .cta-section { background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 60%, var(--indigo) 100%); padding: 80px 0; text-align: center; position: relative; }
+    .cta-section::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(19,197,107,.08) 0%, transparent 60%); }
+    .cta-section .container { position: relative; z-index: 1; }
+    .cta-section h2 { font-size: 36px; font-weight: 800; color: #fff; margin-bottom: 16px; }
+    .cta-section p { font-size: 17px; color: rgba(255,255,255,.65); margin-bottom: 32px; max-width: 560px; margin-left: auto; margin-right: auto; line-height: 1.65; }
+    .cta-big { display: inline-flex; align-items: center; gap: 10px; background: var(--green); color: #fff; padding: 16px 44px; border-radius: 10px; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 17px; text-decoration: none; transition: all .2s; box-shadow: 0 4px 24px rgba(19,197,107,.35); }
+    .cta-big:hover { background: var(--green-dark); transform: translateY(-2px); }
+    .cta-detail { font-size: 13px; color: rgba(255,255,255,.45); margin-top: 16px; }
+    .cta-footer-bar { margin-top: 48px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.1); font-size: 12px; color: rgba(255,255,255,.3); }
+    .cta-footer-bar a { color: rgba(255,255,255,.4); text-decoration: none; }
+
+    /* ── DATA FLOW ── */
+    .data-flow { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 24px; padding: 18px; background: rgba(64,81,137,.03); border: 1px dashed rgba(64,81,137,.2); border-radius: 10px; }
+    .df-node { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 11px; font-weight: 600; color: var(--navy); display: flex; align-items: center; gap: 6px; }
+    .df-node i { font-size: 14px; }
+    .df-arrow { color: var(--green); font-size: 18px; font-weight: 700; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 30px; }
+      .hero-stats { gap: 20px; }
+      .hero-stat-value { font-size: 24px; }
+      .pain-grid, .vs-grid, .doc-categories { grid-template-columns: 1fr; }
+      .feature-block, .feature-block.reverse { grid-template-columns: 1fr; gap: 28px; }
+      .feature-block.reverse { direction: ltr; }
+      .dash-grid { grid-template-columns: repeat(2, 1fr); }
+      .topbar-links { display: none; }
+      .data-flow { flex-direction: column; }
+    }
+
+    /* ── PRINT ── */
+    @media print {
+      .topbar { display: none; }
+      body { font-size: 11px; }
+      .hero { padding: 40px 0 30px; }
+      .hero h1 { font-size: 28px; }
+      .section { padding: 30px 0; }
+      .feature-block { gap: 24px; padding: 24px 0; }
+      .cta-section { padding: 40px 0; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ STICKY NAV ═══════════════ -->
+<nav class="topbar">
+  <div class="container">
+    <div class="topbar-logo">LEGIENCE</div>
+    <div class="topbar-links">
+      <a href="#problem">The Problem</a>
+      <a href="#pi-workspace">PI Workspace</a>
+      <a href="#ai-tools">AI Tools</a>
+      <a href="#firm-ops">Firm Operations</a>
+      <a href="#comparison">Comparison</a>
+      <a href="#demo" class="topbar-cta">Schedule Demo</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge"><i class="ri-robot-2-line"></i> Built with AI from Day One &mdash; Not Bolted On</div>
+    <h1>Stop Paying for 5 Tools.<br><span>Start Using One.</span></h1>
+    <p class="subhead">
+      Legience replaces Clio, EvenUp, Westlaw, DocuSign, and your spreadsheets
+      with a single AI-native platform purpose-built for personal injury attorneys.
+      Every feature is connected. Every workflow is automated. No copy-pasting between apps.
+    </p>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="hero-stat-value">30+</span><span class="hero-stat-label">AI Document Types</span></div>
+      <div class="hero-stat"><span class="hero-stat-value">10</span><span class="hero-stat-label">Role Dashboards</span></div>
+      <div class="hero-stat"><span class="hero-stat-value">6</span><span class="hero-stat-label">Practice Areas</span></div>
+      <div class="hero-stat"><span class="hero-stat-value">0</span><span class="hero-stat-label">Per-Case Fees</span></div>
+    </div>
+    <a href="#demo" class="hero-cta"><i class="ri-play-circle-line"></i> Schedule a Live Demo</a>
+  </div>
+</section>
+
+<!-- ═══════════════ THE PROBLEM ═══════════════ -->
+<section class="section section-alt" id="problem">
+  <div class="container">
+    <div class="section-center">
+      <div class="section-title">Your Current Tool Stack Is Bleeding Money</div>
+      <p class="section-subtitle">Every PI firm we talk to is juggling 4&ndash;6 disconnected tools. None of them talk to each other. You re-enter the same client name a dozen times a week. Your paralegal's job is 50% data janitor. Here's what that costs you:</p>
+    </div>
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-icon red"><i class="ri-money-dollar-circle-line"></i></div>
+        <h4>Clio + Clio Duo AI</h4>
+        <p>$159/user/month for case management. Then Clio charges another $49/user/month for their AI add-on &mdash; which can summarize documents and draft basic emails, but can't calculate damages, generate demand letters, or do citation-verified legal research. For a 5-attorney firm, that's $12,480/year just for case management with a generic AI chatbot.</p>
+        <span class="pain-cost">$208/user/mo</span>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon red"><i class="ri-file-text-line"></i></div>
+        <h4>EvenUp Demand Letters</h4>
+        <p>$300&ndash;$800 per demand letter. You upload medical records, wait days for them to process, then get a letter you often have to heavily edit anyway. And EvenUp is only a demand letter tool &mdash; no case management, no research, no billing. A firm handling 30 PI cases a year is spending $9,000&ndash;$24,000 on demand letters alone.</p>
+        <span class="pain-cost">$300&ndash;$800/case</span>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon red"><i class="ri-search-2-line"></i></div>
+        <h4>Westlaw / LexisNexis</h4>
+        <p>$200+/month for what is essentially a search engine with a paywall. You type a query, get 200 results, and spend hours reading through cases to find the 3 that actually matter. No AI analysis. No strategic recommendations. No citation verification. Just a list of results and a bill.</p>
+        <span class="pain-cost">$200+/mo</span>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon red"><i class="ri-quill-pen-line"></i></div>
+        <h4>DocuSign</h4>
+        <p>$25+/month per user for e-signatures that don't connect to your cases. Every retainer agreement, settlement release, and medical authorization requires you to leave your case management tool, upload to DocuSign, send, then manually track status. Another login, another subscription, another silo.</p>
+        <span class="pain-cost">$25+/user/mo</span>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon red"><i class="ri-table-line"></i></div>
+        <h4>Spreadsheets for PI Work</h4>
+        <p>You're tracking medical records in Excel. Calculating damages in a spreadsheet your associate built 3 years ago. Monitoring settlement negotiations in email threads. There's no version control, no audit trail, and when the formula breaks, nobody knows until the demand letter goes out with wrong numbers.</p>
+        <span class="pain-cost">Countless hours lost</span>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon red"><i class="ri-apps-line"></i></div>
+        <h4>The Hidden Cost: Context-Switching</h4>
+        <p>Your paralegal opens Clio to check case status, switches to EvenUp to check demand letter progress, opens a spreadsheet to update medical totals, logs into DocuSign to check if the retainer was signed, then goes back to Clio to update the notes. That's 5 apps and 20 minutes for what should be a 2-minute task. Multiply by every case, every day.</p>
+        <span class="pain-cost">$500&ndash;$1,200+/mo total</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ PI WORKSPACE ═══════════════ -->
+<section class="section" id="pi-workspace">
+  <div class="container">
+    <div class="section-center">
+      <div class="section-title">Your PI Command Center</div>
+      <p class="section-subtitle">Legience doesn't just store your PI cases &mdash; it gives you a dedicated workspace where every PI-specific tool is connected: damage calculators, demand letters, medical records, settlement tracking, document checklists, and provider directories. All feeding data to each other automatically.</p>
+    </div>
+
+    <!-- How data flows -->
+    <div class="data-flow">
+      <div class="df-node"><i class="ri-hospital-line"></i> Medical Records</div>
+      <span class="df-arrow"><i class="ri-arrow-right-line"></i></span>
+      <div class="df-node"><i class="ri-calculator-line"></i> Damage Calculator</div>
+      <span class="df-arrow"><i class="ri-arrow-right-line"></i></span>
+      <div class="df-node"><i class="ri-file-text-line"></i> Demand Letter</div>
+      <span class="df-arrow"><i class="ri-arrow-right-line"></i></span>
+      <div class="df-node"><i class="ri-scales-3-line"></i> Settlement Tracker</div>
+      <span class="df-arrow"><i class="ri-arrow-right-line"></i></span>
+      <div class="df-node"><i class="ri-money-dollar-circle-line"></i> Case Resolution</div>
+    </div>
+
+    <!-- 1. Portfolio Dashboard -->
+    <div class="feature-block">
+      <div class="feature-content">
+        <span class="feature-badge pi"><i class="ri-dashboard-line"></i> PI MODULE</span>
+        <h3>PI Portfolio Dashboard</h3>
+        <p>When you log into Legience and navigate to the Personal Injury module, the first thing you see is your entire PI practice laid out in a single dashboard. Not a list of cases &mdash; a real-time command center that shows you the health of your entire PI portfolio.</p>
+        <p>At the top, four stat cards show you your <strong>active case count</strong>, <strong>total portfolio value</strong> (the sum of every estimated case value across all your PI cases), <strong>pending demands</strong> (how many demand letters are waiting for a response), and your <strong>average case value</strong>. Below that is your case table &mdash; every PI case with its status, estimated value, total medical expenses, and how many days it's been open.</p>
+        <ul class="feature-list">
+          <li><i class="ri-check-line"></i> <strong>Filter chips</strong> &mdash; click "All," "Open," "Pending," or "In Settlement" to instantly filter your case table. Looking for cases that are in active negotiation? One click.</li>
+          <li><i class="ri-check-line"></i> <strong>Search</strong> &mdash; type a client name, case number, or defendant to find any case instantly</li>
+          <li><i class="ri-check-line"></i> <strong>Click to open workspace</strong> &mdash; clicking any case opens the full PI workspace with 6 tabs: Summary, Valuation, Documents, Settlement, Medical, and Medical Summary</li>
+          <li><i class="ri-check-line"></i> <strong>Case summary tab</strong> &mdash; shows client info, defendant, insurance carrier, injury date, days since injury, and quick-nav cards for case value, medical bills, document completeness, and settlement demand</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">Personal Injury Portfolio</span></div>
+        <div class="fv-stats">
+          <div class="fv-stat"><div class="fv-stat-label">Active Cases</div><div class="fv-stat-value">24</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Portfolio Value</div><div class="fv-stat-value green">$3.2M</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Pending Demands</div><div class="fv-stat-value orange">8</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Avg Case Value</div><div class="fv-stat-value blue">$133K</div></div>
+        </div>
+        <div class="fv-tabs">
+          <span class="fv-tab active">All</span><span class="fv-tab">Open</span><span class="fv-tab">Pending</span><span class="fv-tab">Settlement</span>
+        </div>
+        <div class="fv-items">
+          <div class="fv-item">
+            <div class="fv-item-icon success"><i class="ri-folder-3-line"></i></div>
+            <div><div class="fv-item-name">Martinez v. State Farm</div><div class="fv-item-desc">MVA &mdash; Rear-end collision &mdash; 142 days open</div></div>
+            <div class="fv-item-badge green">Open</div>
+            <div class="fv-item-meta">$245K</div>
+          </div>
+          <div class="fv-item">
+            <div class="fv-item-icon warning"><i class="ri-folder-3-line"></i></div>
+            <div><div class="fv-item-name">Johnson v. GEICO</div><div class="fv-item-desc">Slip &amp; fall &mdash; Counter-offer pending &mdash; 89 days</div></div>
+            <div class="fv-item-badge orange">Settlement</div>
+            <div class="fv-item-meta">$89K</div>
+          </div>
+          <div class="fv-item">
+            <div class="fv-item-icon primary"><i class="ri-folder-3-line"></i></div>
+            <div><div class="fv-item-name">Williams v. Progressive</div><div class="fv-item-desc">T-bone accident &mdash; Medical ongoing &mdash; 67 days</div></div>
+            <div class="fv-item-badge blue">In Progress</div>
+            <div class="fv-item-meta">$156K</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Damage Calculator -->
+    <div class="feature-block reverse">
+      <div class="feature-content">
+        <span class="feature-badge ai"><i class="ri-robot-2-line"></i> AI-POWERED</span>
+        <h3>Case Valuation &amp; Damage Calculator</h3>
+        <p>This is where Legience replaces your spreadsheets. The Valuation tab gives you a comprehensive damage calculator that breaks down every element of your case value &mdash; and then uses AI to analyze comparable cases, score your case strength, and estimate a settlement range.</p>
+        <p>You start by adding individual damage elements. Legience supports <strong>8 damage categories</strong>: past medical expenses, future medical expenses, lost wages, loss of earning capacity, household services, pain &amp; suffering, mileage (using the current IRS rate), and other damages. For each element, you specify the amount, calculation method, and confidence level.</p>
+        <p>When you click <strong>"Calculate &amp; Analyze,"</strong> the AI does three things: it calculates your economic and non-economic damages with a multiplier, it scores your case strength on a 1&ndash;10 scale, and it generates a settlement range (Low, Likely, High) with a visual bar chart. If the medical expenses exceed 60% of the policy limit, it automatically flags the case as underinsured with strategy recommendations.</p>
+        <ul class="feature-list">
+          <li><i class="ri-check-line"></i> <strong>4 calculation methods</strong> per element &mdash; Actual amount, Formula-based (multiplier), Scheduled (standard rates), Expert opinion</li>
+          <li><i class="ri-check-line"></i> <strong>Confidence levels</strong> &mdash; mark each element as High, Medium, or Low confidence to weight the analysis</li>
+          <li><i class="ri-check-line"></i> <strong>Sync from medical records</strong> &mdash; one click pulls all medical billing data into the calculator, no re-entering</li>
+          <li><i class="ri-check-line"></i> <strong>Comparable case analysis</strong> &mdash; AI analyzes similar cases by injury type and jurisdiction</li>
+          <li><i class="ri-check-line"></i> <strong>Comparative negligence</strong> &mdash; apply a percentage reduction and see the adjusted total instantly</li>
+        </ul>
+        <div class="workflow-steps">
+          <h5>How data flows</h5>
+          <ol>
+            <li>Add medical records in the Medical tab (or let AI scan your documents)</li>
+            <li>Click "Sync Medical" in the Valuation tab &mdash; billing totals auto-populate</li>
+            <li>Add other damage elements (lost wages, future medical, P&amp;S)</li>
+            <li>Click "Calculate &amp; Analyze" &mdash; AI scores the case and generates settlement range</li>
+            <li>Those values auto-fill the Demand Letter generator</li>
+          </ol>
+        </div>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">Case Valuation &mdash; Martinez v. State Farm</span></div>
+        <div class="fv-stats">
+          <div class="fv-stat"><div class="fv-stat-label">Case Strength</div><div class="fv-stat-value blue">8/10</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Economic</div><div class="fv-stat-value">$87K</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Non-Economic</div><div class="fv-stat-value">$158K</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Multiplier</div><div class="fv-stat-value green">2.8x</div></div>
+        </div>
+        <div class="fv-section-label">Damage Elements</div>
+        <div class="fv-items">
+          <div class="fv-item"><div class="fv-item-icon danger"><i class="ri-hospital-line"></i></div><div><div class="fv-item-name">Past Medical</div><div class="fv-item-desc">Mass General ER + Back Bay PT + 3 more</div></div><div class="fv-item-meta" style="font-weight:600;">$42,850</div></div>
+          <div class="fv-item"><div class="fv-item-icon warning"><i class="ri-hospital-line"></i></div><div><div class="fv-item-name">Future Medical</div><div class="fv-item-desc">Estimated 12mo PT + surgical consult</div></div><div class="fv-item-meta" style="font-weight:600;">$24,000</div></div>
+          <div class="fv-item"><div class="fv-item-icon info"><i class="ri-briefcase-line"></i></div><div><div class="fv-item-name">Lost Wages</div><div class="fv-item-desc">8 weeks missed &mdash; employer verified</div></div><div class="fv-item-meta" style="font-weight:600;">$18,400</div></div>
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-heart-pulse-line"></i></div><div><div class="fv-item-name">Pain &amp; Suffering</div><div class="fv-item-desc">2.8x multiplier &mdash; soft tissue + disc</div></div><div class="fv-item-meta" style="font-weight:600;">$158,270</div></div>
+        </div>
+        <div class="fv-range">
+          <div class="fv-range-label"><span>Low: $165K</span><span>Likely: $245K</span><span>High: $340K</span></div>
+          <div class="fv-range-track"><div class="fv-range-marker" style="left: 65%;"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Demand Letter Generator -->
+    <div class="feature-block">
+      <div class="feature-content">
+        <span class="feature-badge ai"><i class="ri-robot-2-line"></i> AI-POWERED</span>
+        <h3>Demand Letter Generator</h3>
+        <p>This is the feature that makes EvenUp irrelevant. The Documents tab in your PI workspace has two sub-tabs: Document Checklist and <strong>Demand Letter</strong>. The demand letter form has five sections that auto-fill from your case data:</p>
+        <p><strong>Party Information</strong> &mdash; client name, defendant name. <strong>Insurance Information</strong> &mdash; insurance company, adjuster name, claim number. <strong>Accident Details</strong> &mdash; date, location, liability narrative. <strong>Injury Details</strong> &mdash; injury type, policy limit, injury description, liability details. <strong>Damages</strong> &mdash; medical expenses, lost wages, future medical, and pain &amp; suffering multiplier. All of this data is pulled from the case record and the damage calculator.</p>
+        <p>When you click <strong>"Generate Letter,"</strong> Claude AI drafts a comprehensive demand letter with a full liability narrative, itemized damage breakdown, and demand amount. The letter appears in a preview panel where you can:</p>
+        <ul class="feature-list">
+          <li><i class="ri-check-line"></i> <strong>Edit in AI Workspace</strong> &mdash; opens the letter in the full document editor where you can refine it using natural language ("make the liability section more aggressive," "add a section about loss of consortium," "shorten the medical narrative")</li>
+          <li><i class="ri-check-line"></i> <strong>Track every version</strong> &mdash; each edit creates a new version with word count, transformation type, and timestamp. Restore any previous version with one click.</li>
+          <li><i class="ri-check-line"></i> <strong>Save to case</strong> &mdash; saves the demand amount, settlement data, and letter content back to the case record</li>
+          <li><i class="ri-check-line"></i> <strong>Export as PDF</strong> &mdash; formatted and ready to mail to the insurance company</li>
+          <li><i class="ri-check-line"></i> <strong>7 transformation modes</strong> &mdash; Simplify, Condense, Expand, Formalize, make Persuasive, Redraft entirely, or Manual Edit with AI assistance</li>
+        </ul>
+        <div class="callout">
+          <i class="ri-funds-line"></i>
+          <p><strong>The math:</strong> EvenUp charges $300&ndash;$800 per demand letter. If you handle 30 PI cases a year, that's $9,000&ndash;$24,000 annually on demand letters alone. With Legience, demand letters are unlimited &mdash; included in your subscription. Generate 5 drafts per case if you want. Revise them 20 times. No per-case fees, ever.</p>
+        </div>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">Demand Letter Generator</span></div>
+        <div class="fv-tabs"><span class="fv-tab">Document Checklist</span><span class="fv-tab active">Demand Letter</span></div>
+        <div class="fv-section-label">Auto-filled from case</div>
+        <div class="fv-items">
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-user-line"></i></div><div><div class="fv-item-name">Party Information</div><div class="fv-item-desc">Client: Maria Martinez &bull; Defendant: John Smith</div></div><div class="fv-item-badge green">Filled</div></div>
+          <div class="fv-item"><div class="fv-item-icon info"><i class="ri-shield-check-line"></i></div><div><div class="fv-item-name">Insurance</div><div class="fv-item-desc">State Farm &bull; Adj: J. Williams &bull; Claim #SF-2024-84923</div></div><div class="fv-item-badge green">Filled</div></div>
+          <div class="fv-item"><div class="fv-item-icon warning"><i class="ri-car-line"></i></div><div><div class="fv-item-name">Accident Details</div><div class="fv-item-desc">Jan 15, 2025 &bull; Mass Ave &amp; Huntington, Boston</div></div><div class="fv-item-badge green">Filled</div></div>
+          <div class="fv-item"><div class="fv-item-icon danger"><i class="ri-heart-pulse-line"></i></div><div><div class="fv-item-name">Damages</div><div class="fv-item-desc">$42.8K medical + $18.4K wages + 2.8x P&amp;S</div></div><div class="fv-item-badge green">Synced</div></div>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="fv-item" style="background:var(--indigo);border-color:var(--indigo);">
+            <div class="fv-item-icon" style="background:rgba(255,255,255,.15);color:#fff;"><i class="ri-quill-pen-line"></i></div>
+            <div style="color:#fff;"><div class="fv-item-name" style="color:#fff;">Generate Demand Letter</div><div style="font-size:10.5px;color:rgba(255,255,255,.7);">Total demand: $245,520 &bull; Estimated 8&ndash;12 pages</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Medical Records -->
+    <div class="feature-block reverse">
+      <div class="feature-content">
+        <span class="feature-badge pi"><i class="ri-hospital-line"></i> PI MODULE</span>
+        <h3>Medical Records &amp; AI Summaries</h3>
+        <p>The Medical tab has two sub-tabs: <strong>Medical Records</strong> and <strong>Medical Summary</strong>.</p>
+        <p>In Medical Records, you track every provider, every visit, every bill. Each record captures the provider name and type (Legience supports <strong>12 provider types</strong>: hospital, clinic, imaging center, urgent care, physical therapy, chiropractic, pharmacy, specialist, laboratory, dental, mental health, and other), the record type (<strong>13 types</strong>: initial consultation, imaging, treatment plan, surgical report, therapy session, medication record, discharge summary, follow-up, hospital records, pharmacy records, specialist notes, diagnostic results, and other), treatment dates, billed amount, paid amount, key findings, and diagnoses.</p>
+        <p>A sidebar shows real-time summaries: total records, unique providers, total billed, total paid, outstanding balance, and treatment period. All of this syncs automatically to the damage calculator and demand letter.</p>
+        <p>The <strong>"Scan"</strong> button uses AI to read uploaded case documents and automatically extract medical records &mdash; provider names, dates, amounts, and diagnoses &mdash; without manual entry. The <strong>Medical Summary</strong> sub-tab generates an AI-powered narrative summary with treatment timeline, categorized diagnoses, treatment gaps, red flags (inconsistencies), causation analysis, and a completeness score showing how thorough your medical documentation is.</p>
+        <ul class="feature-list">
+          <li><i class="ri-check-line"></i> <strong>Quick Add modal</strong> &mdash; add a new record in seconds with provider type auto-detection</li>
+          <li><i class="ri-check-line"></i> <strong>Provider cards</strong> &mdash; visual grid showing each provider with specialty icon, treatment dates, and total billed</li>
+          <li><i class="ri-check-line"></i> <strong>AI diagnosis extraction</strong> &mdash; paste raw medical text and AI identifies and categorizes diagnoses</li>
+          <li><i class="ri-check-line"></i> <strong>Treatment gap detection</strong> &mdash; AI flags gaps in treatment history that defense attorneys could exploit</li>
+          <li><i class="ri-check-line"></i> <strong>Completeness score</strong> &mdash; visual ring showing what percentage of your medical documentation is complete, with specific recommendations for what's missing</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">Medical Records &mdash; 7 Providers</span></div>
+        <div class="fv-stats">
+          <div class="fv-stat"><div class="fv-stat-label">Total Records</div><div class="fv-stat-value">14</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Total Billed</div><div class="fv-stat-value green">$42,850</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Paid</div><div class="fv-stat-value blue">$38,200</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Outstanding</div><div class="fv-stat-value orange">$4,650</div></div>
+        </div>
+        <div class="fv-tabs"><span class="fv-tab active">Records</span><span class="fv-tab">Summary</span></div>
+        <div class="fv-items">
+          <div class="fv-item"><div class="fv-item-icon danger"><i class="ri-hospital-line"></i></div><div><div class="fv-item-name">Mass General ER</div><div class="fv-item-desc">Jan 15 &mdash; Initial Consultation &bull; C-spine, lumbar MRI</div></div><div class="fv-item-meta">$12,400</div></div>
+          <div class="fv-item"><div class="fv-item-icon info"><i class="ri-scan-line"></i></div><div><div class="fv-item-name">Boston Imaging Center</div><div class="fv-item-desc">Jan 18 &mdash; MRI Lumbar Spine &bull; Disc herniation L4-L5</div></div><div class="fv-item-meta">$3,200</div></div>
+          <div class="fv-item"><div class="fv-item-icon success"><i class="ri-heart-pulse-line"></i></div><div><div class="fv-item-name">Back Bay Physical Therapy</div><div class="fv-item-desc">Feb 1 &ndash; Jun 15 &mdash; 24 sessions &bull; Range of motion improving</div></div><div class="fv-item-meta">$18,600</div></div>
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-stethoscope-line"></i></div><div><div class="fv-item-name">Dr. Chen &mdash; Orthopedic</div><div class="fv-item-desc">Mar 5 &mdash; Follow-up &bull; Epidural injection recommended</div></div><div class="fv-item-meta">$4,800</div></div>
+          <div class="fv-item"><div class="fv-item-icon warning"><i class="ri-capsule-line"></i></div><div><div class="fv-item-name">CVS Pharmacy</div><div class="fv-item-desc">Jan&ndash;Jun &mdash; Gabapentin, Ibuprofen, Cyclobenzaprine</div></div><div class="fv-item-meta">$1,240</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Settlement Tracker -->
+    <div class="feature-block">
+      <div class="feature-content">
+        <span class="feature-badge pi"><i class="ri-scales-3-line"></i> PI MODULE</span>
+        <h3>Settlement Tracker</h3>
+        <p>The Settlement tab gives you a complete negotiation command center. On the left, a form lets you log every event in the negotiation: demand amount, offer amount, counter-offer, date, and notes. On the right, a visual timeline shows the full history of every negotiation event with colored connectors, date badges, and amount pills.</p>
+        <p>Between them, a <strong>negotiation gap visualization</strong> shows you the distance between your demand and their offer with horizontal bars &mdash; making it immediately obvious how far apart you are. As the negotiation progresses and the gap narrows, you can see the movement at a glance.</p>
+        <p>Every settlement event you log is saved with timestamps, and you can save the current demand/offer data back to the case record with one click. No more digging through emails to find what the last offer was. No more sticky notes on your monitor. The entire negotiation history is documented, searchable, and attached to the case.</p>
+        <ul class="feature-list">
+          <li><i class="ri-check-line"></i> <strong>Log demand, offer, counter-offer</strong> in a single form with date and notes</li>
+          <li><i class="ri-check-line"></i> <strong>Visual gap tracker</strong> &mdash; horizontal bars showing how far apart demand and offer are</li>
+          <li><i class="ri-check-line"></i> <strong>Timeline with connectors</strong> &mdash; every event shown chronologically with colored dots</li>
+          <li><i class="ri-check-line"></i> <strong>Save to case</strong> &mdash; settlement data is permanently attached to the case record</li>
+          <li><i class="ri-check-line"></i> <strong>Case stats integration</strong> &mdash; settlement gap shows in the workspace header alongside case value and medical total</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">Settlement Tracker &mdash; 4 Events</span></div>
+        <div class="fv-items">
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-arrow-up-line"></i></div><div><div class="fv-item-name">Demand Sent</div><div class="fv-item-desc">Mar 15 &mdash; Initial demand based on damage analysis</div></div><div class="fv-item-meta" style="color:var(--indigo);font-weight:700;">$245,000</div></div>
+          <div class="fv-item"><div class="fv-item-icon warning"><i class="ri-arrow-down-line"></i></div><div><div class="fv-item-name">Initial Offer</div><div class="fv-item-desc">Apr 2 &mdash; "Liability contested, specials excessive"</div></div><div class="fv-item-meta" style="color:var(--orange);font-weight:700;">$65,000</div></div>
+          <div class="fv-item"><div class="fv-item-icon success"><i class="ri-reply-line"></i></div><div><div class="fv-item-name">Counter Offer Sent</div><div class="fv-item-desc">Apr 10 &mdash; Reduced to reflect policy limit strategy</div></div><div class="fv-item-meta" style="color:var(--green);font-weight:700;">$195,000</div></div>
+          <div class="fv-item"><div class="fv-item-icon warning"><i class="ri-arrow-down-line"></i></div><div><div class="fv-item-name">Second Offer</div><div class="fv-item-desc">Apr 22 &mdash; Increased but still below calculable damages</div></div><div class="fv-item-meta" style="color:var(--orange);font-weight:700;">$110,000</div></div>
+        </div>
+        <div class="fv-range" style="margin-top:12px;">
+          <div class="fv-range-label"><span>Their offer: $110K</span><span style="color:var(--red);font-weight:700;">Gap: $85K</span><span>Your counter: $195K</span></div>
+          <div class="fv-range-track" style="background: linear-gradient(90deg, var(--orange) 0%, var(--red) 50%, var(--green) 100%);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Document Checklist & Provider Directory -->
+    <div class="feature-block reverse">
+      <div class="feature-content">
+        <span class="feature-badge pi"><i class="ri-checkbox-multiple-line"></i> PI MODULE</span>
+        <h3>Document Checklist &amp; Provider Directory</h3>
+        <p>Every PI case requires a mountain of documents: medical records, police reports, incident photos, insurance forms, property damage estimates, employment records, wage loss documentation, pharmacy records, medical bills, expert reports, deposition transcripts, and more. Legience auto-initializes a checklist with <strong>14 standard PI document categories</strong> the moment you create a case.</p>
+        <p>Each item tracks its status (Pending, Received, Complete, Missing), due date, received date, source provider, and notes. A <strong>completeness score</strong> at the top shows you what percentage of documents you have &mdash; so you know at a glance whether a case is ready for demand or still missing critical evidence.</p>
+        <p>The <strong>Provider Directory</strong> is a firm-wide database of medical providers, hospitals, imaging centers, and other entities you frequently request records from. For each provider, you store their main contact, records department contact, billing department contact (each with separate phone, email, and fax), NPI number, base fee, per-page fee, and rush fee. When it's time to request records, the <strong>Bulk Request Wizard</strong> lets you select multiple checklist items and send requests to multiple providers at once via email, SMS, or fax &mdash; with pre-built request templates.</p>
+        <ul class="feature-list">
+          <li><i class="ri-check-line"></i> <strong>14 document categories</strong> auto-initialized per case &mdash; medical records, police report, incident photos, insurance docs, property damage, employment records, wage loss, pharmacy, medical bills, expert reports, deposition transcripts, demand letter, settlement agreement, other</li>
+          <li><i class="ri-check-line"></i> <strong>Bulk request wizard</strong> &mdash; select 5 missing items, pick providers, choose channel (email/SMS/fax), and send all at once</li>
+          <li><i class="ri-check-line"></i> <strong>Request tracking</strong> &mdash; see which requests have been sent, when, and whether they've been fulfilled</li>
+          <li><i class="ri-check-line"></i> <strong>Smart recipient resolution</strong> &mdash; automatically suggests the correct contact from your provider directory</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">Document Checklist &mdash; 72% Complete</span></div>
+        <div class="fv-items">
+          <div class="fv-item"><div class="fv-item-icon success"><i class="ri-checkbox-circle-fill"></i></div><div><div class="fv-item-name">Medical Records</div><div class="fv-item-desc">All 7 providers received &bull; Feb 28</div></div><div class="fv-item-badge green">Complete</div></div>
+          <div class="fv-item"><div class="fv-item-icon success"><i class="ri-checkbox-circle-fill"></i></div><div><div class="fv-item-name">Police Report</div><div class="fv-item-desc">BPD Report #2025-01847 &bull; Jan 20</div></div><div class="fv-item-badge green">Received</div></div>
+          <div class="fv-item"><div class="fv-item-icon success"><i class="ri-checkbox-circle-fill"></i></div><div><div class="fv-item-name">Insurance Documents</div><div class="fv-item-desc">Policy declarations + claim file &bull; Feb 5</div></div><div class="fv-item-badge green">Received</div></div>
+          <div class="fv-item"><div class="fv-item-icon warning"><i class="ri-time-fill"></i></div><div><div class="fv-item-name">Wage Loss Documentation</div><div class="fv-item-desc">Requested from employer Mar 1 &bull; Due Mar 15</div></div><div class="fv-item-badge orange">Pending</div></div>
+          <div class="fv-item"><div class="fv-item-icon danger"><i class="ri-close-circle-fill"></i></div><div><div class="fv-item-name">Expert Reports</div><div class="fv-item-desc">Orthopedic IME not yet scheduled</div></div><div class="fv-item-badge red">Missing</div></div>
+          <div class="fv-item"><div class="fv-item-icon danger"><i class="ri-close-circle-fill"></i></div><div><div class="fv-item-name">Property Damage Estimates</div><div class="fv-item-desc">Body shop estimate not received</div></div><div class="fv-item-badge red">Missing</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ AI TOOLS ═══════════════ -->
+<section class="section section-alt" id="ai-tools">
+  <div class="container">
+    <div class="section-center">
+      <div class="section-title">AI That Actually Does Legal Work</div>
+      <p class="section-subtitle">Not a chatbot. Not a summarizer. Legience's AI conducts legal research with verified citations, drafts 30+ document types with jurisdiction-aware formatting, and analyzes uploaded documents to extract metadata and flag risks &mdash; all from a single workspace.</p>
+    </div>
+
+    <!-- AI Legal Research -->
+    <div class="feature-block">
+      <div class="feature-content">
+        <span class="feature-badge ai"><i class="ri-robot-2-line"></i> AI-POWERED</span>
+        <h3>AI Legal Research</h3>
+        <p>Westlaw gives you a search engine. Legience gives you a research associate.</p>
+        <p>Type a natural language question like <em>"What is the standard for pain and suffering multipliers in Massachusetts motor vehicle accident cases?"</em> and Legience doesn't return a list of 200 results. It returns a <strong>written analysis</strong> &mdash; a structured answer that cites specific cases, explains the legal standard, summarizes the relevant holdings, and gives you strategic recommendations. Every citation is verified against CourtListener's database of 50,000+ legal documents to ensure the case actually exists and says what the AI claims it says.</p>
+        <p>You get two research modes: <strong>Fast</strong> (15-second answers for quick questions) and <strong>Thorough</strong> (60&ndash;180 seconds for comprehensive, lawyer-grade analysis with full citation verification). Advanced filters let you narrow by court level (Superior, District, Probate, Appeals, SJC), date range, practice area, and document type. You can search for statutes, regulations, rules, and Federal Register documents. Every search is saved in your history, and you can bookmark important results for quick access later.</p>
+        <ul class="feature-list">
+          <li><i class="ri-check-line"></i> <strong>Natural language queries</strong> &mdash; ask legal questions in plain English, get structured analyses with citations</li>
+          <li><i class="ri-check-line"></i> <strong>Citation verification</strong> &mdash; every cited case validated against CourtListener. No hallucinated citations.</li>
+          <li><i class="ri-check-line"></i> <strong>Case-linked research</strong> &mdash; attach research to a specific case so it appears in the case's Research tab</li>
+          <li><i class="ri-check-line"></i> <strong>Export as PDF</strong> &mdash; properly formatted with citations for court filings and client memos</li>
+          <li><i class="ri-check-line"></i> <strong>Conversation context</strong> &mdash; ask follow-up questions and the AI remembers your previous queries</li>
+          <li><i class="ri-check-line"></i> <strong>Quick citations sidebar</strong> &mdash; browse statutes and cases organized by court level</li>
+        </ul>
+        <div class="callout">
+          <i class="ri-lightbulb-flash-line"></i>
+          <p><strong>Westlaw charges $200+/month</strong> and gives you a search box. You read 20 cases to find 3 that matter. Legience reads them for you, synthesizes the analysis, verifies every citation, and delivers a written memo &mdash; in under 3 minutes. That's not a research tool. That's a research associate.</p>
+        </div>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">Legal Research Assistant</span></div>
+        <div class="fv-stats">
+          <div class="fv-stat"><div class="fv-stat-label">Legal Database</div><div class="fv-stat-value">50K+</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Citation Accuracy</div><div class="fv-stat-value green">95%</div></div>
+        </div>
+        <div class="fv-tabs"><span class="fv-tab active">Thorough</span><span class="fv-tab">Fast</span></div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text-secondary);margin-bottom:10px;">
+          <div style="color:var(--text-muted);font-size:9px;font-weight:600;text-transform:uppercase;margin-bottom:3px;">Query</div>
+          "What is the standard for pain and suffering multipliers in Massachusetts MVA cases?"
+        </div>
+        <div class="fv-section-label">Verified Citations</div>
+        <div class="fv-items">
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-bookmark-line"></i></div><div><div class="fv-item-name">Sullivan v. Boston Gas Co.</div><div class="fv-item-desc">SJC &bull; Established P&amp;S multiplier framework</div></div><div class="fv-item-badge green">Verified</div></div>
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-bookmark-line"></i></div><div><div class="fv-item-name">Haddad v. Wal-Mart Stores</div><div class="fv-item-desc">Appeals Court &bull; Soft tissue multiplier range</div></div><div class="fv-item-badge green">Verified</div></div>
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-bookmark-line"></i></div><div><div class="fv-item-name">M.G.L. c. 231, &sect; 6D</div><div class="fv-item-desc">Statute &bull; Evidence of medical bills</div></div><div class="fv-item-badge green">Verified</div></div>
+        </div>
+        <div class="fv-section-label">AI Analysis</div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text-secondary);line-height:1.6;">
+          Massachusetts courts typically apply a multiplier of 1.5x&ndash;5x of economic damages for pain and suffering, with the range determined by injury severity, treatment duration, and impact on daily activities. For soft tissue injuries with full recovery, courts generally approve 1.5x&ndash;2.5x. For disc herniations requiring surgery&hellip;
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Document Drafting -->
+    <div class="feature-block reverse">
+      <div class="feature-content">
+        <span class="feature-badge ai"><i class="ri-robot-2-line"></i> AI-POWERED</span>
+        <h3>AI Document Drafting &amp; Analysis</h3>
+        <p>The AI Workspace is Legience's central document hub. It's not a simple text box &mdash; it's a full-featured legal document workstation with four modes:</p>
+        <p><strong>Ask a Question</strong> &mdash; ask any legal question and get a cited analysis (similar to the Research tool, but more conversational). <strong>Generate a Draft</strong> &mdash; select from 30+ document types across 7 categories and the AI generates a complete first draft from your prompt. <strong>Analyze Document</strong> &mdash; upload any PDF, Word doc, or image and the AI identifies the document type, extracts metadata, flags risks, and provides a structured analysis. <strong>Case Workflow</strong> &mdash; create multi-step document workflows where each step builds on the previous one.</p>
+        <p>Every document you generate has full version history. You can transform any document using 7 modes: Simplify (plain language), Condense (shorter), Expand (more detail), Formalize (legal tone), make Persuasive (advocacy language), Redraft (start over), or Manual Edit with AI assistance. You can apply transformations to the full document or just a selected paragraph.</p>
+        <p>Drafts can be linked to cases, exported as DOCX or PDF, and appear in the case's AI Documents tab. The workspace remembers your conversation history for each document, so you can refine over multiple sessions.</p>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">AI Workspace</span></div>
+        <div class="fv-tabs">
+          <span class="fv-tab active">Ask a Question</span><span class="fv-tab">Generate Draft</span><span class="fv-tab">Analyze Doc</span><span class="fv-tab">Workflow</span>
+        </div>
+        <div class="fv-section-label">Recent Work</div>
+        <div class="fv-items">
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-file-edit-line"></i></div><div><div class="fv-item-name">Motion to Compel Discovery</div><div class="fv-item-desc">v3 &bull; Expanded + Formalized &bull; 2,840 words &bull; Linked to Martinez</div></div><div class="fv-item-badge blue">Active</div></div>
+          <div class="fv-item"><div class="fv-item-icon success"><i class="ri-file-text-line"></i></div><div><div class="fv-item-name">Analysis: Settlement Release Draft</div><div class="fv-item-desc">3 risks flagged &bull; Missing indemnification clause &bull; Ambiguous scope</div></div><div class="fv-item-badge green">Complete</div></div>
+          <div class="fv-item"><div class="fv-item-icon warning"><i class="ri-question-answer-line"></i></div><div><div class="fv-item-name">Q: Statute of limitations for MVA in MA</div><div class="fv-item-desc">3 citations &bull; 3-year SOL with discovery rule exceptions</div></div><div class="fv-item-badge green">Answered</div></div>
+          <div class="fv-item"><div class="fv-item-icon info"><i class="ri-flow-chart"></i></div><div><div class="fv-item-name">Workflow: PI Litigation Package</div><div class="fv-item-desc">Complaint + Interrogatories + RFP &bull; 3/3 steps done</div></div><div class="fv-item-badge green">Complete</div></div>
+        </div>
+        <div class="fv-section-label">Transformation Modes</div>
+        <div class="fv-tabs">
+          <span class="fv-tab">Simplify</span><span class="fv-tab">Condense</span><span class="fv-tab active">Expand</span><span class="fv-tab">Formalize</span><span class="fv-tab">Persuasive</span><span class="fv-tab">Redraft</span><span class="fv-tab">Edit</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document Types -->
+    <div style="margin-top: 40px;">
+      <h3 style="font-size:20px;font-weight:700;margin-bottom:8px;text-align:center;color:var(--navy);">30+ Document Types You Can Draft Instantly</h3>
+      <p style="font-size:14px;color:var(--text-secondary);text-align:center;margin-bottom:24px;max-width:600px;margin-left:auto;margin-right:auto;">Select a document type, describe what you need, and AI generates a jurisdiction-aware first draft in minutes. Every category includes prompt examples to guide you.</p>
+      <div class="doc-categories">
+        <div class="doc-cat"><h5><span style="font-size:15px;">&#x1f4cb;</span> Pleadings</h5><ul><li><i class="ri-check-line"></i> Complaint</li><li><i class="ri-check-line"></i> Answer</li><li><i class="ri-check-line"></i> Counterclaim</li></ul></div>
+        <div class="doc-cat"><h5><span style="font-size:15px;">&#x2696;&#xfe0f;</span> Motions</h5><ul><li><i class="ri-check-line"></i> Motion to Dismiss</li><li><i class="ri-check-line"></i> Summary Judgment</li><li><i class="ri-check-line"></i> Motion to Compel</li><li><i class="ri-check-line"></i> Motion to Suppress</li><li><i class="ri-check-line"></i> Protective Order</li></ul></div>
+        <div class="doc-cat"><h5><span style="font-size:15px;">&#x1f50d;</span> Discovery</h5><ul><li><i class="ri-check-line"></i> Interrogatories</li><li><i class="ri-check-line"></i> Request for Production</li><li><i class="ri-check-line"></i> Request for Admission</li><li><i class="ri-check-line"></i> Deposition Notice</li><li><i class="ri-check-line"></i> Subpoena</li></ul></div>
+        <div class="doc-cat"><h5><span style="font-size:15px;">&#x1f4dd;</span> Correspondence</h5><ul><li><i class="ri-check-line"></i> Demand Letter</li><li><i class="ri-check-line"></i> Settlement Offer</li><li><i class="ri-check-line"></i> Opinion Letter</li><li><i class="ri-check-line"></i> Client Email</li><li><i class="ri-check-line"></i> Letter to Counsel</li></ul></div>
+        <div class="doc-cat"><h5><span style="font-size:15px;">&#x1f4c4;</span> Contracts</h5><ul><li><i class="ri-check-line"></i> Employment Agreement</li><li><i class="ri-check-line"></i> NDA</li><li><i class="ri-check-line"></i> Purchase Agreement</li><li><i class="ri-check-line"></i> Service Agreement</li><li><i class="ri-check-line"></i> Contract Amendment</li><li><i class="ri-check-line"></i> Contract Clause</li></ul></div>
+        <div class="doc-cat"><h5><span style="font-size:15px;">&#x1f3db;&#xfe0f;</span> Appellate &amp; Other</h5><ul><li><i class="ri-check-line"></i> Appellate Brief</li><li><i class="ri-check-line"></i> Reply Brief</li><li><i class="ri-check-line"></i> Legal Memo</li><li><i class="ri-check-line"></i> Affidavit</li><li><i class="ri-check-line"></i> Legal Argument</li></ul></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FIRM OPERATIONS ═══════════════ -->
+<section class="section" id="firm-ops">
+  <div class="container">
+    <div class="section-center">
+      <div class="section-title">Everything Else a Firm Needs</div>
+      <p class="section-subtitle">The PI workspace is what makes Legience unique &mdash; but underneath it is a complete practice management platform with case management, time tracking, invoicing, e-signatures, client portal, calendar, messaging, file management, and CRM. All connected. All in one login.</p>
+    </div>
+
+    <!-- Case Management -->
+    <div class="feature-block">
+      <div class="feature-content">
+        <span class="feature-badge core"><i class="ri-briefcase-line"></i> CORE</span>
+        <h3>Case Management</h3>
+        <p>Every case in Legience has <strong>9 dedicated tabs</strong>, each serving a specific purpose in the case lifecycle:</p>
+        <p><strong>Details</strong> &mdash; client info, defendant, court information (county, judge, courtroom), important dates (filing, next hearing, trial, estimated completion), priority level, and status. <strong>Research</strong> &mdash; AI research linked to this specific case. <strong>Notes</strong> &mdash; rich-text case notes with timestamps. <strong>Documents</strong> &mdash; all files uploaded to this case with version history. <strong>Timeline</strong> &mdash; auto-generated activity feed of every action taken on this case (document uploads, status changes, assignments, note additions). <strong>Case Manager</strong> &mdash; task management with assignment, deadlines, and progress tracking. <strong>Events</strong> &mdash; hearings, depositions, mediations linked to the calendar. <strong>Time Entries</strong> &mdash; all billable time recorded for this case. <strong>Team</strong> &mdash; assigned attorneys, paralegals, and staff with workload balancing.</p>
+        <ul class="feature-list">
+          <li><i class="ri-check-line"></i> <strong>Practice-area-aware case creation</strong> &mdash; when you create a PI case, Legience adds PI-specific fields (injury date, accident location, insurance company, defendant, injury type)</li>
+          <li><i class="ri-check-line"></i> <strong>Priority levels</strong> &mdash; Low, Medium, High, Urgent with visual indicators</li>
+          <li><i class="ri-check-line"></i> <strong>Team assignment with workload balancing</strong> &mdash; see how many cases each attorney has before assigning</li>
+          <li><i class="ri-check-line"></i> <strong>Real-time activity feed</strong> &mdash; every create, update, upload, assignment is automatically logged</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">Case Detail &mdash; Martinez v. State Farm</span></div>
+        <div class="fv-tabs">
+          <span class="fv-tab active">Details</span><span class="fv-tab">Research</span><span class="fv-tab">Notes</span><span class="fv-tab">Docs</span><span class="fv-tab">Timeline</span><span class="fv-tab">Tasks</span><span class="fv-tab">Events</span><span class="fv-tab">Time</span><span class="fv-tab">Team</span>
+        </div>
+        <div class="fv-items">
+          <div class="fv-item"><div class="fv-item-icon success"><i class="ri-flag-line"></i></div><div><div class="fv-item-name">Status: Active</div><div class="fv-item-desc">Filed Jan 15, 2025 &bull; Trial set Aug 12, 2025</div></div><div class="fv-item-badge green">High Priority</div></div>
+          <div class="fv-item"><div class="fv-item-icon info"><i class="ri-building-line"></i></div><div><div class="fv-item-name">Suffolk County Superior Court</div><div class="fv-item-desc">Judge: Hon. Patricia Chen &bull; Courtroom 906</div></div></div>
+          <div class="fv-item"><div class="fv-item-icon warning"><i class="ri-calendar-line"></i></div><div><div class="fv-item-name">Next Hearing: Mar 22, 2025</div><div class="fv-item-desc">Motion hearing &bull; 14 days away</div></div><div class="fv-item-badge orange">Upcoming</div></div>
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-team-line"></i></div><div><div class="fv-item-name">Team: 2 Attorneys, 1 Paralegal</div><div class="fv-item-desc">Lead: David Altman &bull; Workload: Balanced</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Time & Billing -->
+    <div class="feature-block reverse">
+      <div class="feature-content">
+        <span class="feature-badge core"><i class="ri-time-line"></i> CORE</span>
+        <h3>Time Tracking &amp; Invoicing</h3>
+        <p>Legience has a complete time-to-payment pipeline: track time, submit for approval, generate invoices, and collect payments &mdash; all without leaving the platform.</p>
+        <p><strong>Track time</strong> with a live timer widget (start/stop from any page) or manual entries with date, hours, rate, and description. Each entry is linked to a case and marked as billable or non-billable. <strong>Submit for approval</strong> through a multi-step workflow: Draft &rarr; Submitted &rarr; Approved &rarr; Billed &rarr; Invoiced. Managers can approve or reject entries with notes. <strong>Generate invoices</strong> from approved time entries with customizable templates and your firm's branding. <strong>Accept payments</strong> online via Stripe integration. <strong>Track revenue</strong> with analytics dashboards showing billing trends, collection rates, outstanding balances, and revenue by attorney/practice area.</p>
+        <ul class="feature-list">
+          <li><i class="ri-check-line"></i> <strong>Timesheet views</strong> &mdash; weekly and monthly views of all time entries with totals</li>
+          <li><i class="ri-check-line"></i> <strong>Billing rate management</strong> &mdash; set rates by attorney, practice area, or client</li>
+          <li><i class="ri-check-line"></i> <strong>Invoice templates</strong> &mdash; custom templates with your firm's logo, payment terms, and formatting</li>
+          <li><i class="ri-check-line"></i> <strong>Invoice workflows</strong> &mdash; automated approval steps before invoices are sent</li>
+          <li><i class="ri-check-line"></i> <strong>Payment dashboard</strong> &mdash; see all outstanding invoices, aging reports, and collection metrics</li>
+          <li><i class="ri-check-line"></i> <strong>Revenue analytics</strong> &mdash; charts showing billing trends, realization rates, and revenue by matter</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">Time &amp; Billing Dashboard</span></div>
+        <div class="fv-stats">
+          <div class="fv-stat"><div class="fv-stat-label">This Month</div><div class="fv-stat-value">142h</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Billable</div><div class="fv-stat-value green">$38.4K</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Invoiced</div><div class="fv-stat-value blue">$32.1K</div></div>
+          <div class="fv-stat"><div class="fv-stat-label">Collected</div><div class="fv-stat-value orange">$28.5K</div></div>
+        </div>
+        <div class="fv-section-label">Active Timers</div>
+        <div class="fv-items">
+          <div class="fv-item"><div class="fv-item-icon success"><i class="ri-timer-flash-line"></i></div><div><div class="fv-item-name">Martinez case &mdash; Legal research</div><div class="fv-item-desc">Running &bull; 1h 23m &bull; $350/hr</div></div><div class="fv-item-badge green">Live</div></div>
+        </div>
+        <div class="fv-section-label">Workflow Pipeline</div>
+        <div class="fv-tabs">
+          <span class="fv-tab">Draft (4)</span><span class="fv-tab active">Submitted (7)</span><span class="fv-tab">Approved (12)</span><span class="fv-tab">Invoiced (8)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- E-Signatures -->
+    <div class="feature-block">
+      <div class="feature-content">
+        <span class="feature-badge core"><i class="ri-quill-pen-line"></i> CORE</span>
+        <h3>E-Signatures (via BoldSign)</h3>
+        <p>Stop paying for DocuSign. Legience has full e-signature capabilities built in via BoldSign integration. Upload a document, add signers (with sequential signing order for multi-party agreements), set an expiration date, and send. The dashboard shows you real-time status for every document: Pending, Viewed, Signed, Declined, or Expired.</p>
+        <p>Each signature request tracks when it was sent, when it was first viewed, when it was signed or declined (with the decline reason), and provides the signed document URL for download. You can send reminders via <strong>email, SMS, or WhatsApp</strong>. Create reusable <strong>templates</strong> for documents you send repeatedly (retainer agreements, medical authorizations, settlement releases). Clients can sign directly from the <strong>Client Portal</strong> using embedded signing &mdash; no external accounts needed. Custom branding lets you add your firm's logo and colors to the signing experience.</p>
+        <ul class="feature-list">
+          <li><i class="ri-check-line"></i> <strong>4 signature statuses</strong> with filtering &mdash; Waiting for Me, Waiting for Others, Completed, Expiring Soon</li>
+          <li><i class="ri-check-line"></i> <strong>Sequential signing</strong> &mdash; Signer 1 signs first, then Signer 2 gets notified</li>
+          <li><i class="ri-check-line"></i> <strong>Embedded signing in Client Portal</strong> &mdash; clients sign without leaving your platform</li>
+          <li><i class="ri-check-line"></i> <strong>Template library</strong> &mdash; pre-configure retainer agreements, medical authorizations, releases</li>
+          <li><i class="ri-check-line"></i> <strong>Custom branding</strong> &mdash; your firm's logo and colors on the signing experience</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">E-Signatures</span></div>
+        <div class="fv-tabs"><span class="fv-tab active">Documents</span><span class="fv-tab">Send New</span><span class="fv-tab">Templates</span><span class="fv-tab">Branding</span></div>
+        <div class="fv-items">
+          <div class="fv-item"><div class="fv-item-icon success"><i class="ri-checkbox-circle-fill"></i></div><div><div class="fv-item-name">Retainer Agreement &mdash; Martinez</div><div class="fv-item-desc">Signed Feb 2 &bull; 2 signers complete</div></div><div class="fv-item-badge green">Signed</div></div>
+          <div class="fv-item"><div class="fv-item-icon warning"><i class="ri-eye-line"></i></div><div><div class="fv-item-name">Medical Authorization &mdash; Johnson</div><div class="fv-item-desc">Viewed Mar 5 &bull; Awaiting signature</div></div><div class="fv-item-badge orange">Viewed</div></div>
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-mail-send-line"></i></div><div><div class="fv-item-name">Settlement Release &mdash; Thompson</div><div class="fv-item-desc">Sent Mar 7 &bull; Expires Mar 21</div></div><div class="fv-item-badge blue">Pending</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Client Portal -->
+    <div class="feature-block reverse">
+      <div class="feature-content">
+        <span class="feature-badge core"><i class="ri-user-3-line"></i> CORE</span>
+        <h3>Client Portal</h3>
+        <p>Your clients get their own login to a branded portal where they can see everything relevant to their case &mdash; without calling your office. The Client Portal has 6 sections:</p>
+        <p><strong>Dashboard</strong> &mdash; countdown timers to upcoming events, case status overview, recent activity feed, and urgent notifications. <strong>My Cases</strong> &mdash; view all their cases with current status, assigned attorney, and key dates. Click into any case for a timeline of events and status updates. <strong>Documents</strong> &mdash; access documents your team has shared with them (view-only, with preview). <strong>Invoices</strong> &mdash; view current and past invoices, check payment status, and make payments online. <strong>Appointments</strong> &mdash; see scheduled meetings, consultations, and depositions. <strong>Messages</strong> &mdash; secure messaging with their attorney via the portal, without exposing personal phone numbers or email threads.</p>
+        <p>For PI clients specifically, this means they can check on their case status at 10pm on a Sunday without calling you. They can see if their retainer agreement has been received, check whether their next appointment is confirmed, and message you with a question &mdash; all from their phone.</p>
+        <ul class="feature-list">
+          <li><i class="ri-check-line"></i> <strong>Messaging</strong> &mdash; supports SMS, email, and portal channels in a unified inbox on your side</li>
+          <li><i class="ri-check-line"></i> <strong>Thread-based conversations</strong> &mdash; organized by case with read receipts and priority levels</li>
+          <li><i class="ri-check-line"></i> <strong>Embedded e-signing</strong> &mdash; clients sign documents directly in the portal</li>
+          <li><i class="ri-check-line"></i> <strong>Reduces "where's my case?" calls</strong> by 80% &mdash; clients self-serve for status updates</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="fv-header"><span class="fv-dot red"></span><span class="fv-dot yellow"></span><span class="fv-dot green"></span><span class="fv-title">Client Portal &mdash; What Your Client Sees</span></div>
+        <div class="fv-items">
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-dashboard-line"></i></div><div><div class="fv-item-name">Dashboard</div><div class="fv-item-desc">Case status, countdown timers, recent activity, notifications</div></div></div>
+          <div class="fv-item"><div class="fv-item-icon success"><i class="ri-briefcase-line"></i></div><div><div class="fv-item-name">My Cases</div><div class="fv-item-desc">View case details, status updates, timeline of events</div></div></div>
+          <div class="fv-item"><div class="fv-item-icon info"><i class="ri-folder-3-line"></i></div><div><div class="fv-item-name">Documents</div><div class="fv-item-desc">View shared documents, sign agreements, preview files</div></div></div>
+          <div class="fv-item"><div class="fv-item-icon warning"><i class="ri-money-dollar-circle-line"></i></div><div><div class="fv-item-name">Invoices &amp; Payments</div><div class="fv-item-desc">View invoices, payment history, pay online via Stripe</div></div></div>
+          <div class="fv-item"><div class="fv-item-icon danger"><i class="ri-calendar-check-line"></i></div><div><div class="fv-item-name">Appointments</div><div class="fv-item-desc">Upcoming meetings, consultations, deposition dates</div></div></div>
+          <div class="fv-item"><div class="fv-item-icon primary"><i class="ri-message-3-line"></i></div><div><div class="fv-item-name">Messages</div><div class="fv-item-desc">Secure messaging with attorney &mdash; SMS, email, or portal</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ DASHBOARDS ═══════════════ -->
+<section class="section section-navy">
+  <div class="container section-center">
+    <div class="section-title" style="color:#fff;">10 Role-Based Dashboards</div>
+    <p class="section-subtitle" style="color:rgba(255,255,255,.6);">Every person in your firm &mdash; from the managing partner to the receptionist &mdash; gets a dashboard designed specifically for their role. Attorneys see their caseload and deadlines. The CFO sees revenue and collections. Paralegals see task assignments. No one has to wade through data that isn't relevant to them.</p>
+    <div class="dash-grid">
+      <div class="dash-card"><i class="ri-scales-3-line"></i><span>Attorney</span><small>Cases, deadlines, time tracked, AI tools</small></div>
+      <div class="dash-card"><i class="ri-user-star-line"></i><span>Managing Partner</span><small>Firm metrics, revenue, workload distribution</small></div>
+      <div class="dash-card"><i class="ri-vip-crown-line"></i><span>Senior Partner</span><small>Portfolio overview, high-value cases, KPIs</small></div>
+      <div class="dash-card"><i class="ri-bar-chart-2-line"></i><span>CFO</span><small>Revenue, billing, collections, aging reports</small></div>
+      <div class="dash-card"><i class="ri-settings-3-line"></i><span>Manager</span><small>Team performance, approvals, operations</small></div>
+      <div class="dash-card"><i class="ri-file-list-3-line"></i><span>Paralegal</span><small>Task queue, document prep, deadlines</small></div>
+      <div class="dash-card"><i class="ri-customer-service-line"></i><span>Secretary</span><small>Calendar, calls, appointments, intake</small></div>
+      <div class="dash-card"><i class="ri-money-dollar-box-line"></i><span>Billing</span><small>Invoices, payments, outstanding balances</small></div>
+      <div class="dash-card"><i class="ri-admin-line"></i><span>Admin</span><small>Users, roles, permissions, audit logs</small></div>
+      <div class="dash-card"><i class="ri-user-3-line"></i><span>Client</span><small>Case status, documents, invoices, messages</small></div>
+    </div>
+    <div style="margin-top:48px;">
+      <h3 style="font-size:22px;font-weight:700;color:#fff;margin-bottom:12px;">6 Specialized Practice Areas</h3>
+      <p style="color:rgba(255,255,255,.55);margin-bottom:20px;max-width:560px;margin-left:auto;margin-right:auto;">Each practice area has its own AI-powered workspace with specialized tools, document templates, jurisdiction-specific research capabilities, and tailored workflows. PI is the most feature-rich, but every area gets dedicated attention.</p>
+      <div class="practice-pills">
+        <span class="practice-pill"><i class="ri-car-washing-line" style="margin-right:6px;"></i> Personal Injury</span>
+        <span class="practice-pill"><i class="ri-shield-keyhole-line" style="margin-right:6px;"></i> Criminal Defense</span>
+        <span class="practice-pill"><i class="ri-parent-line" style="margin-right:6px;"></i> Family Law</span>
+        <span class="practice-pill"><i class="ri-passport-line" style="margin-right:6px;"></i> Immigration</span>
+        <span class="practice-pill"><i class="ri-lightbulb-line" style="margin-right:6px;"></i> Intellectual Property</span>
+        <span class="practice-pill"><i class="ri-home-4-line" style="margin-right:6px;"></i> Real Estate</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ COMPARISON ═══════════════ -->
+<section class="section" id="comparison">
+  <div class="container">
+    <div class="section-center">
+      <div class="section-title">Head-to-Head Comparison</div>
+      <p class="section-subtitle">Here's exactly what you get with Legience versus what you're paying for today. Every green checkmark is a feature that's included &mdash; no add-ons, no per-case fees, no surprises.</p>
+    </div>
+
+    <table class="comparison-table">
+      <thead><tr><th>Feature</th><th>Clio + Duo AI</th><th>EvenUp</th><th>PracticePanther</th><th class="legience">Legience</th></tr></thead>
+      <tbody>
+        <tr><td>Case Management</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td><td class="check">&#10003; 9 tabs per case</td></tr>
+        <tr><td>AI Legal Research</td><td class="cross">&#10007;</td><td class="cross">&#10007;</td><td class="cross">&#10007;</td><td class="check">&#10003; Citation-verified</td></tr>
+        <tr><td>AI Document Drafting</td><td class="partial">Basic (generic)</td><td class="cross">&#10007;</td><td class="cross">&#10007;</td><td class="check">&#10003; 30+ types, 7 modes</td></tr>
+        <tr><td>AI Demand Letters</td><td class="cross">&#10007;</td><td class="check">&#10003; ($300-800/ea)</td><td class="cross">&#10007;</td><td class="check">&#10003; Unlimited</td></tr>
+        <tr><td>PI Damage Calculator</td><td class="cross">&#10007;</td><td class="partial">Partial</td><td class="cross">&#10007;</td><td class="check">&#10003; 8 types, AI scoring</td></tr>
+        <tr><td>Medical Records Mgmt</td><td class="cross">&#10007;</td><td class="partial">Input only</td><td class="cross">&#10007;</td><td class="check">&#10003; 12 provider types</td></tr>
+        <tr><td>AI Medical Summary</td><td class="cross">&#10007;</td><td class="partial">Partial</td><td class="cross">&#10007;</td><td class="check">&#10003; Full narrative</td></tr>
+        <tr><td>Settlement Tracker</td><td class="cross">&#10007;</td><td class="cross">&#10007;</td><td class="cross">&#10007;</td><td class="check">&#10003; Gap visualization</td></tr>
+        <tr><td>Document Checklist</td><td class="cross">&#10007;</td><td class="cross">&#10007;</td><td class="cross">&#10007;</td><td class="check">&#10003; 14 categories</td></tr>
+        <tr><td>Provider Directory</td><td class="cross">&#10007;</td><td class="cross">&#10007;</td><td class="cross">&#10007;</td><td class="check">&#10003; NPI, contacts, fees</td></tr>
+        <tr><td>Document Analysis (AI)</td><td class="partial">Basic</td><td class="cross">&#10007;</td><td class="cross">&#10007;</td><td class="check">&#10003; Risk flagging</td></tr>
+        <tr><td>E-Signatures</td><td class="partial">Add-on ($)</td><td class="cross">&#10007;</td><td class="partial">Add-on ($)</td><td class="check">&#10003; Built-in</td></tr>
+        <tr><td>Client Portal</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td><td class="check">&#10003; 6 sections</td></tr>
+        <tr><td>Multi-Channel Messaging</td><td class="partial">Portal only</td><td class="cross">&#10007;</td><td class="partial">Limited</td><td class="check">&#10003; SMS + Email + Portal</td></tr>
+        <tr><td>Time Tracking &amp; Billing</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td><td class="check">&#10003; Full pipeline</td></tr>
+        <tr><td>Role-Based Dashboards</td><td class="partial">3 roles</td><td class="cross">&#10007;</td><td class="partial">Basic</td><td class="check">&#10003; 10 dashboards</td></tr>
+        <tr><td>Practice Area Modules</td><td class="cross">&#10007;</td><td class="partial">PI only (demand)</td><td class="cross">&#10007;</td><td class="check">&#10003; 6 areas with AI</td></tr>
+        <tr><td>CRM &amp; Client Intake</td><td class="check">&#10003;</td><td class="cross">&#10007;</td><td class="check">&#10003;</td><td class="check">&#10003; Lead scoring</td></tr>
+        <tr><td>AI Pricing</td><td>+$49/user/mo</td><td>$300-800/case</td><td>N/A</td><td style="color:var(--green);font-weight:700;">Included</td></tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top: 56px;">
+      <div class="vs-grid">
+        <div class="vs-card">
+          <h4>vs. Clio + Clio Duo</h4>
+          <span class="vs-tag">$208/user/month</span>
+          <p>Clio is solid case management &mdash; but it wasn't built for PI. There's no damage calculator. No medical records module. No settlement tracker. No demand letter generator. Their AI add-on ($49/user) can summarize documents and draft basic emails, but it can't do citation-verified legal research, generate PI-specific documents, or analyze uploaded contracts for risk. You're paying $208/user/month for generic case management with a chatbot bolted on.</p>
+          <div class="vs-highlight">Legience was built AI-native. Research, drafting, and analysis are woven into the case workflow &mdash; not sitting in a separate chat window.</div>
+          <div class="vs-missing"><span>No damage calc</span><span>No medical tracking</span><span>No settlement tracker</span><span>No demand letters</span><span>No citation verification</span></div>
+        </div>
+        <div class="vs-card">
+          <h4>vs. EvenUp</h4>
+          <span class="vs-tag">$300&ndash;$800 per demand letter</span>
+          <p>EvenUp does one thing: generate demand letters from medical records. And they charge $300&ndash;$800 for each one. There's no case management. No time tracking. No billing. No client portal. No e-signatures. No legal research. A 30-case firm is spending $9,000&ndash;$24,000/year on EvenUp and still needs Clio on top of it. That's $15,000&ndash;$30,000/year for two tools that don't even talk to each other.</p>
+          <div class="vs-highlight">Legience gives you unlimited AI demand letters that auto-fill from your case data, plus the entire practice management platform. No per-case fees, ever.</div>
+          <div class="vs-missing"><span>No case management</span><span>No billing</span><span>No e-signatures</span><span>No client portal</span><span>No research</span></div>
+        </div>
+        <div class="vs-card">
+          <h4>vs. Harvey AI</h4>
+          <span class="vs-tag">$1,200/user/month &bull; 20-seat minimum</span>
+          <p>Harvey is an impressive AI platform &mdash; but it's built for BigLaw. It costs $1,200/user/month with a 20-seat minimum, meaning you need a $288,000/year budget just to get in the door. Harvey is an AI tool, not a practice management platform. There's no case management, no billing, no client portal. And the entire product assumes you have a team of associates doing the operational work the software should be doing for you.</p>
+          <div class="vs-highlight">Legience delivers the same caliber AI &mdash; Claude-powered research, document drafting, and analysis &mdash; at a price solo attorneys and small firms can actually afford. Plus everything else you need to run a practice.</div>
+          <div class="vs-missing"><span>$288K/yr minimum</span><span>No case management</span><span>No billing</span><span>No client portal</span><span>Not for small firms</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ CTA ═══════════════ -->
+<section class="cta-section" id="demo">
+  <div class="container">
+    <h2>Ready to see it live?</h2>
+    <p>Schedule a 30-minute demo and we'll walk you through exactly how Legience handles your PI cases &mdash; from the first intake call to the settlement check. We'll use your actual workflow, not a canned script.</p>
+    <a href="mailto:info@legience.com?subject=Demo%20Request%20-%20Personal%20Injury" class="cta-big"><i class="ri-calendar-check-line"></i> Schedule a Live Demo</a>
+    <p class="cta-detail">Free trial &bull; No credit card required &bull; Contact for pricing</p>
+    <div class="cta-footer-bar">
+      Bostoneo Legal Solutions &nbsp;&bull;&nbsp; <a href="https://legience.com">legience.com</a> &nbsp;&bull;&nbsp; <a href="mailto:info@legience.com">info@legience.com</a>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

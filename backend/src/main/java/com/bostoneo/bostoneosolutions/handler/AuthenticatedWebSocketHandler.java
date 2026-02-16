@@ -199,6 +199,40 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
         log.info("Broadcast sent to {} sessions in org {}", sentCount, organizationId);
     }
 
+    /**
+     * Broadcast message to all users in an organization EXCEPT the specified user.
+     * Used to avoid notifying the user who triggered the action.
+     */
+    public void broadcastToOrganizationExcluding(Long organizationId, Object message, Long excludeUserId) {
+        if (organizationId == null) {
+            log.warn("broadcastToOrganizationExcluding called with null organizationId");
+            return;
+        }
+
+        String excludeUserIdStr = excludeUserId != null ? excludeUserId.toString() : null;
+        String messageStr = createMessage("broadcast", message);
+        int sentCount = 0;
+
+        for (Map.Entry<String, WebSocketSession> entry : allSessions.entrySet()) {
+            String sessionId = entry.getKey();
+            WebSocketSession session = entry.getValue();
+            Long sessionOrgId = sessionOrganizations.get(sessionId);
+            String sessionUserId = sessionUsers.get(sessionId);
+
+            if (session.isOpen() && organizationId.equals(sessionOrgId)
+                    && (excludeUserIdStr == null || !excludeUserIdStr.equals(sessionUserId))) {
+                try {
+                    sendMessage(session, messageStr);
+                    sentCount++;
+                } catch (Exception e) {
+                    log.error("Failed to send to session {}: {}", sessionId, e.getMessage());
+                }
+            }
+        }
+
+        log.info("Broadcast sent to {} sessions in org {} (excluded user {})", sentCount, organizationId, excludeUserId);
+    }
+
     private String extractTokenFromSession(WebSocketSession session) {
         // Check query parameters for token
         String query = session.getUri().getQuery();

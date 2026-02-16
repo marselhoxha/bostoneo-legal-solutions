@@ -291,6 +291,11 @@
                               <button class="btn btn-sm" title="Not Helpful">
                                 <i class="ri-thumb-down-line"></i>
                               </button>
+                              <button class="btn btn-sm" [class.text-success]="message.reviewedAt"
+                                      (click)="markAsReviewed(message)"
+                                      [title]="message.reviewedAt ? 'Reviewed on ' + (message.reviewedAt | date:'short') : 'Mark as Reviewed'">
+                                <i class="ri-checkbox-circle-line"></i>
+                              </button>
                             </div>
                           </div>
                         </div>

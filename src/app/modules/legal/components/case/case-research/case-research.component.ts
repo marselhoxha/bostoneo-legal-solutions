@@ -23,7 +23,7 @@ interface Conversation {
   sessionId: number; // Backend session ID
   createdAt: Date;
   lastUpdated: Date;
-  messages: { role: 'user' | 'assistant'; content: string; timestamp: Date; isTyping?: boolean; collapsed?: boolean; researchMode?: 'FAST' | 'THOROUGH' }[];
+  messages: { id?: number; role: 'user' | 'assistant'; content: string; timestamp: Date; isTyping?: boolean; collapsed?: boolean; researchMode?: 'FAST' | 'THOROUGH'; reviewedBy?: number; reviewedAt?: Date }[];
   followUpQuestions: string[];
   messageCount: number; // Message count from backend
   researchMode?: 'FAST' | 'THOROUGH'; // Research mode used for this conversation
@@ -2080,5 +2080,17 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     this.searchError = event.message || 'An error occurred during research';
     this.closeSSEConnection();
     this.cdr.detectChanges();
+  }
+
+  markAsReviewed(message: any): void {
+    if (!message.id || message.reviewedAt) return;
+    this.legalResearchService.markAsReviewed(message.id).subscribe({
+      next: (updated) => {
+        message.reviewedBy = updated.reviewedBy;
+        message.reviewedAt = updated.reviewedAt;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Failed to mark as reviewed:', err)
+    });
   }
 }

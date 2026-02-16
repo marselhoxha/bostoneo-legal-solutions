@@ -1,7 +1,21 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { IntakeFormService, IntakeForm, SubmissionResponse } from '../../services/intake-form.service';
+import { IntakeFormService, IntakeForm, SubmissionResponse, FileUploadResponse } from '../../services/intake-form.service';
+import { INTAKE_FIELD_DEFINITIONS } from '../../constants/intake-field-definitions';
+
+interface PracticeAreaOption {
+  key: string;
+  icon: string;
+  description: string;
+}
+
+interface UploadedFile {
+  fileKey: string;
+  fileName: string;
+  fileSize: number;
+  contentType: string;
+}
 
 @Component({
   selector: 'app-intake-form',
@@ -11,130 +25,39 @@ import { IntakeFormService, IntakeForm, SubmissionResponse } from '../../service
 export class IntakeFormComponent implements OnInit, OnDestroy {
   intakeForm: IntakeForm | null = null;
   submissionForm: FormGroup;
-  isLoading = true;
+  isLoading = false;
   isSubmitting = false;
   error: string = '';
   formUrl: string = '';
+
+  // Practice area selection (Step 1 when no formUrl)
+  showPracticeAreaStep = false;
+  selectedPracticeArea: string = '';
+
+  practiceAreas: PracticeAreaOption[] = [
+    { key: 'Personal Injury', icon: 'ri-heart-pulse-line', description: 'Accidents, medical malpractice, injury claims' },
+    { key: 'Family Law', icon: 'ri-user-heart-line', description: 'Divorce, child custody, family matters' },
+    { key: 'Criminal Defense', icon: 'ri-shield-check-line', description: 'Criminal charges and legal defense' },
+    { key: 'Business Law', icon: 'ri-briefcase-4-line', description: 'Corporate law, contracts, business matters' },
+    { key: 'Real Estate Law', icon: 'ri-home-4-line', description: 'Property transactions, real estate issues' },
+    { key: 'Immigration Law', icon: 'ri-earth-line', description: 'Visas, citizenship, immigration matters' }
+  ];
 
   // Multi-step form properties
   currentStep = 1;
   totalSteps = 3;
   stepFields: { [key: number]: any[] } = {};
   completedSteps: Set<number> = new Set();
-  
+
   // Auto-save functionality
   private autoSaveKey = 'intake_form_draft';
   autoSaveInterval: any;
-  
-  // Urgency and conversion optimization
-  showUrgencyMessage = false;
-  timeSpentOnForm = 0;
-  formStartTime = new Date();
 
   // Dynamic form fields based on form configuration
   formFields: any[] = [];
-  
-  // Default form structure for practice areas
-  defaultFields = {
-    'Personal Injury': [
-      { name: 'firstName', label: 'First Name', type: 'text', required: true },
-      { name: 'lastName', label: 'Last Name', type: 'text', required: true },
-      { name: 'email', label: 'Email Address', type: 'email', required: true },
-      { name: 'phone', label: 'Phone Number', type: 'tel', required: true },
-      { name: 'incidentDate', label: 'Date of Incident', type: 'date', required: true },
-      { name: 'incidentLocation', label: 'Location of Incident', type: 'text', required: true },
-      { name: 'injuryType', label: 'Type of Injury', type: 'select', required: true, 
-        options: ['Motor Vehicle Accident', 'Slip and Fall', 'Medical Malpractice', 'Product Liability', 'Other'] },
-      { name: 'medicalTreatment', label: 'Did you receive medical treatment?', type: 'radio', required: true,
-        options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }] },
-      { name: 'description', label: 'Describe the incident and injuries', type: 'textarea', required: true, rows: 4 },
-      { name: 'urgency', label: 'Urgency Level', type: 'select', required: true,
-        options: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] }
-    ],
-    'Family Law': [
-      { name: 'firstName', label: 'First Name', type: 'text', required: true },
-      { name: 'lastName', label: 'Last Name', type: 'text', required: true },
-      { name: 'email', label: 'Email Address', type: 'email', required: true },
-      { name: 'phone', label: 'Phone Number', type: 'tel', required: true },
-      { name: 'caseType', label: 'Type of Case', type: 'select', required: true,
-        options: ['Divorce', 'Child Custody', 'Child Support', 'Adoption', 'Domestic Violence', 'Prenuptial Agreement', 'Other'] },
-      { name: 'maritalStatus', label: 'Current Marital Status', type: 'select', required: true,
-        options: ['Married', 'Separated', 'Divorced', 'Single', 'Widowed'] },
-      { name: 'hasChildren', label: 'Do you have children?', type: 'radio', required: true,
-        options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }] },
-      { name: 'childrenAges', label: 'Ages of children (if applicable)', type: 'text', required: false },
-      { name: 'description', label: 'Describe your legal matter', type: 'textarea', required: true, rows: 4 },
-      { name: 'urgency', label: 'Urgency Level', type: 'select', required: true,
-        options: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] }
-    ],
-    'Criminal Defense': [
-      { name: 'firstName', label: 'First Name', type: 'text', required: true },
-      { name: 'lastName', label: 'Last Name', type: 'text', required: true },
-      { name: 'email', label: 'Email Address', type: 'email', required: true },
-      { name: 'phone', label: 'Phone Number', type: 'tel', required: true },
-      { name: 'chargeType', label: 'Type of Charges', type: 'select', required: true,
-        options: ['DUI/DWI', 'Drug Charges', 'Theft', 'Assault', 'Fraud', 'Traffic Violations', 'Other'] },
-      { name: 'courtDate', label: 'Next Court Date (if known)', type: 'date', required: false },
-      { name: 'arrestDate', label: 'Date of Arrest', type: 'date', required: false },
-      { name: 'location', label: 'Location of Incident', type: 'text', required: false },
-      { name: 'isIncarcerated', label: 'Are you currently in custody?', type: 'radio', required: true,
-        options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }] },
-      { name: 'description', label: 'Describe the charges and circumstances', type: 'textarea', required: true, rows: 4 },
-      { name: 'urgency', label: 'Urgency Level', type: 'select', required: true,
-        options: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] }
-    ],
-    'Business Law': [
-      { name: 'firstName', label: 'First Name', type: 'text', required: true },
-      { name: 'lastName', label: 'Last Name', type: 'text', required: true },
-      { name: 'email', label: 'Email Address', type: 'email', required: true },
-      { name: 'phone', label: 'Phone Number', type: 'tel', required: true },
-      { name: 'company', label: 'Company/Business Name', type: 'text', required: false },
-      { name: 'businessType', label: 'Type of Business Matter', type: 'select', required: true,
-        options: ['Contract Dispute', 'Business Formation', 'Employment Law', 'Intellectual Property', 'Mergers & Acquisitions', 'Compliance', 'Other'] },
-      { name: 'industry', label: 'Industry', type: 'text', required: false },
-      { name: 'businessSize', label: 'Number of Employees', type: 'select', required: false,
-        options: ['1-10', '11-50', '51-200', '201-1000', '1000+'] },
-      { name: 'description', label: 'Describe your business legal matter', type: 'textarea', required: true, rows: 4 },
-      { name: 'urgency', label: 'Urgency Level', type: 'select', required: true,
-        options: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] }
-    ],
-    'Real Estate Law': [
-      { name: 'firstName', label: 'First Name', type: 'text', required: true },
-      { name: 'lastName', label: 'Last Name', type: 'text', required: true },
-      { name: 'email', label: 'Email Address', type: 'email', required: true },
-      { name: 'phone', label: 'Phone Number', type: 'tel', required: true },
-      { name: 'propertyType', label: 'Type of Property', type: 'select', required: true,
-        options: ['Residential', 'Commercial', 'Industrial', 'Land/Vacant'] },
-      { name: 'transactionType', label: 'Type of Transaction', type: 'select', required: true,
-        options: ['Purchase', 'Sale', 'Lease', 'Refinancing', 'Dispute', 'Title Issue', 'Other'] },
-      { name: 'propertyAddress', label: 'Property Address', type: 'text', required: false },
-      { name: 'propertyValue', label: 'Estimated Property Value', type: 'select', required: false,
-        options: ['Under $100K', '$100K - $250K', '$250K - $500K', '$500K - $1M', 'Over $1M'] },
-      { name: 'timeline', label: 'Expected Timeline', type: 'select', required: false,
-        options: ['Within 30 days', '1-3 months', '3-6 months', '6+ months', 'No specific timeline'] },
-      { name: 'description', label: 'Describe your real estate matter', type: 'textarea', required: true, rows: 4 },
-      { name: 'urgency', label: 'Urgency Level', type: 'select', required: true,
-        options: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] }
-    ],
-    'Immigration Law': [
-      { name: 'firstName', label: 'First Name', type: 'text', required: true },
-      { name: 'lastName', label: 'Last Name', type: 'text', required: true },
-      { name: 'email', label: 'Email Address', type: 'email', required: true },
-      { name: 'phone', label: 'Phone Number', type: 'tel', required: true },
-      { name: 'countryOfOrigin', label: 'Country of Origin', type: 'text', required: true },
-      { name: 'currentStatus', label: 'Current Immigration Status', type: 'select', required: true,
-        options: ['US Citizen', 'Permanent Resident', 'Work Visa', 'Student Visa', 'Tourist/Visitor', 'Asylum Seeker', 'Undocumented', 'Other'] },
-      { name: 'caseType', label: 'Type of Immigration Matter', type: 'select', required: true,
-        options: ['Green Card/Permanent Residency', 'Citizenship/Naturalization', 'Work Visa', 'Family Visa', 'Asylum/Refugee', 'Deportation Defense', 'Other'] },
-      { name: 'familyInUS', label: 'Do you have family members in the US?', type: 'radio', required: true,
-        options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }] },
-      { name: 'hasDeadline', label: 'Do you have any upcoming immigration deadlines?', type: 'radio', required: true,
-        options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }] },
-      { name: 'description', label: 'Describe your immigration situation', type: 'textarea', required: true, rows: 4 },
-      { name: 'urgency', label: 'Urgency Level', type: 'select', required: true,
-        options: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] }
-    ]
-  };
+
+  // Default form structure for practice areas (imported from shared constants)
+  defaultFields = INTAKE_FIELD_DEFINITIONS;
 
   constructor(
     private fb: FormBuilder,
@@ -147,10 +70,56 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.route.params.subscribe(params => {
-      this.formUrl = params['formUrl'];
-      this.loadForm();
+      this.formUrl = params['formUrl'] || '';
+
+      if (this.formUrl) {
+        // Direct form URL — load from backend, skip practice area step
+        this.showPracticeAreaStep = false;
+        this.totalSteps = 3;
+        this.loadForm();
+      } else {
+        // No formUrl — show practice area selection as Step 1
+        this.showPracticeAreaStep = true;
+        this.totalSteps = 4;
+        this.isLoading = false;
+      }
     });
   }
+
+  // ---- Practice area selection (Step 1) ----
+
+  selectPracticeArea(area: string): void {
+    this.selectedPracticeArea = area;
+  }
+
+  confirmPracticeArea(): void {
+    if (!this.selectedPracticeArea) return;
+
+    // Build a local IntakeForm-like object for the selected practice area
+    this.intakeForm = {
+      id: 0,
+      name: `${this.selectedPracticeArea} Consultation`,
+      description: '',
+      formType: 'INTAKE',
+      status: 'PUBLISHED',
+      isPublic: true,
+      publicUrl: '',
+      formConfig: null,
+      successMessage: '',
+      redirectUrl: '',
+      practiceArea: this.selectedPracticeArea,
+      submissionCount: 0,
+      conversionRate: 0,
+      createdAt: new Date(),
+      publishedAt: new Date()
+    } as IntakeForm;
+
+    this.buildForm();
+    this.completedSteps.add(1);
+    this.currentStep = 2;
+  }
+
+  // ---- Form loading (when formUrl is provided) ----
 
   loadForm(): void {
     this.isLoading = true;
@@ -159,6 +128,7 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
     this.intakeFormService.getFormByUrl(this.formUrl).subscribe({
       next: (form) => {
         this.intakeForm = form;
+        this.selectedPracticeArea = form.practiceArea;
         this.buildForm();
         this.isLoading = false;
       },
@@ -170,17 +140,17 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ---- Form building ----
+
   buildForm(): void {
     if (!this.intakeForm) return;
 
-    // Use form configuration if available, otherwise use default fields
     if (this.intakeForm.formConfig && this.intakeForm.formConfig.fields) {
       this.formFields = this.intakeForm.formConfig.fields;
     } else {
       this.formFields = this.getDefaultFields(this.intakeForm.practiceArea);
     }
 
-    // Build FormGroup
     const formControls: { [key: string]: any } = {};
 
     this.formFields.forEach(field => {
@@ -191,96 +161,92 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
       if (field.type === 'email') {
         validators.push(Validators.email);
       }
+      if (field.type === 'tel') {
+        validators.push(Validators.pattern(/^\(\d{3}\)\s\d{3}-\d{4}$/));
+      }
 
       formControls[field.name] = [field.defaultValue || '', validators];
     });
 
-    // Add SMS consent control (MUST default to false - unchecked for A2P 10DLC compliance)
+    // Consent controls (shown only on final step)
     formControls['smsConsent'] = [false];
+    formControls['aiConsent'] = [false];
 
     this.submissionForm = this.fb.group(formControls);
-    
-    // Organize fields into steps after building the form
+
     this.organizeFieldsIntoSteps();
-    
-    // Load saved draft and setup auto-save
     this.loadFormDraft();
     this.setupAutoSave();
   }
 
   getDefaultFields(practiceArea: string): any[] {
-    return this.defaultFields[practiceArea as keyof typeof this.defaultFields] || this.defaultFields['Personal Injury'];
+    return this.defaultFields[practiceArea] || this.defaultFields['Personal Injury'];
   }
 
-  onSubmit(): void {
-    if (this.submissionForm.valid && this.intakeForm) {
-      this.isSubmitting = true;
-      
-      const submissionData = {
-        ...this.submissionForm.value,
-        practiceArea: this.intakeForm.practiceArea,
-        formId: this.intakeForm.id,
-        submittedAt: new Date().toISOString()
-      };
+  // ---- Step navigation ----
 
-      this.intakeFormService.submitFormByUrl(this.formUrl, submissionData).subscribe({
-        next: (response: SubmissionResponse) => {
-          this.isSubmitting = false;
-          if (response.success) {
-            // Clear the saved draft on successful submission
-            this.clearFormDraft();
-            
-            // Navigate to success page
-            this.router.navigate(['/public/success'], {
-              queryParams: {
-                submissionId: response.submissionId,
-                message: response.message,
-                redirectUrl: response.redirectUrl
-              }
-            });
-          } else {
-            this.error = response.message || 'Failed to submit form. Please try again.';
-          }
-        },
-        error: (error) => {
-          console.error('Error submitting form:', error);
-          this.error = 'Failed to submit form. Please check your information and try again.';
-          this.isSubmitting = false;
-        }
-      });
+  /** The first form-field step number (2 if practice area step is shown, 1 otherwise) */
+  get firstFieldStep(): number {
+    return this.showPracticeAreaStep ? 2 : 1;
+  }
+
+  getStepTitle(): string {
+    if (this.showPracticeAreaStep && this.currentStep === 1) {
+      return 'Select Practice Area';
+    }
+    const fieldStep = this.currentStep - this.firstFieldStep + 1;
+    switch (fieldStep) {
+      case 1: return 'Basic Information';
+      case 2: return 'Case Details';
+      case 3: return 'Review & Submit';
+      default: return 'Step ' + this.currentStep;
+    }
+  }
+
+  getStepDescription(): string {
+    if (this.showPracticeAreaStep && this.currentStep === 1) {
+      return 'Choose the area of law that best fits your legal matter.';
+    }
+    const fieldStep = this.currentStep - this.firstFieldStep + 1;
+    switch (fieldStep) {
+      case 1: return 'Tell us how to reach you and what type of legal matter you need help with.';
+      case 2: return 'Please provide details about your specific legal situation.';
+      case 3: return 'Review your information and submit your consultation request.';
+      default: return '';
+    }
+  }
+
+  getStepLabel(step: number): string {
+    if (this.showPracticeAreaStep) {
+      switch (step) {
+        case 1: return 'Practice Area';
+        case 2: return 'Basic Info';
+        case 3: return 'Case Details';
+        case 4: return 'Review & Submit';
+        default: return '';
+      }
     } else {
-      // Mark all fields as touched to show validation errors
-      this.markFormGroupTouched(this.submissionForm);
-    }
-  }
-
-  private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
-      const control = formGroup.get(key);
-      control?.markAsTouched();
-    });
-  }
-
-  getFieldError(fieldName: string): string {
-    const control = this.submissionForm.get(fieldName);
-    if (control?.errors && control.touched) {
-      if (control.errors['required']) {
-        return 'This field is required';
-      }
-      if (control.errors['email']) {
-        return 'Please enter a valid email address';
+      switch (step) {
+        case 1: return 'Basic Info';
+        case 2: return 'Case Details';
+        case 3: return 'Review & Submit';
+        default: return '';
       }
     }
-    return '';
   }
 
-  hasFieldError(fieldName: string): boolean {
-    const control = this.submissionForm.get(fieldName);
-    return !!(control?.errors && control.touched);
+  get stepNumbers(): number[] {
+    return Array.from({ length: this.totalSteps }, (_, i) => i + 1);
   }
 
-  // Multi-step form navigation methods
   nextStep(): void {
+    // Practice area step validation
+    if (this.showPracticeAreaStep && this.currentStep === 1) {
+      if (!this.selectedPracticeArea) return;
+      this.confirmPracticeArea();
+      return;
+    }
+
     if (this.validateCurrentStep()) {
       this.completedSteps.add(this.currentStep);
       if (this.currentStep < this.totalSteps) {
@@ -299,7 +265,6 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
 
   goToStep(step: number): void {
     if (step >= 1 && step <= this.totalSteps) {
-      // Only allow going to previous steps or next step if current is valid
       if (step < this.currentStep || this.validateCurrentStep()) {
         if (step > this.currentStep) {
           this.completedSteps.add(this.currentStep);
@@ -310,6 +275,11 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
   }
 
   validateCurrentStep(): boolean {
+    // Practice area step
+    if (this.showPracticeAreaStep && this.currentStep === 1) {
+      return !!this.selectedPracticeArea;
+    }
+
     const currentStepFields = this.getCurrentStepFields();
     for (const field of currentStepFields) {
       const control = this.submissionForm.get(field.name);
@@ -329,35 +299,27 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
   }
 
   getCurrentStepFields(): any[] {
-    const stepFields = this.stepFields[this.currentStep] || [];
+    // Map step number to field-step index
+    const fieldStepIndex = this.currentStep - this.firstFieldStep + 1;
+    const stepFields = this.stepFields[fieldStepIndex] || [];
     return stepFields.filter(field => this.shouldShowField(field));
   }
 
   shouldShowField(field: any): boolean {
-    // Implement conditional logic based on previous field values
     const formValue = this.submissionForm.value;
 
-    // Hide children ages if no children
     if (field.name === 'childrenAges' && formValue.hasChildren === 'no') {
       return false;
     }
-
-    // Show court date only if in custody or has charges
     if (field.name === 'courtDate' && formValue.isIncarcerated === 'no') {
       return false;
     }
-
-    // Show timeline fields only for specific transaction types
     if (field.name === 'timeline' && !['Purchase', 'Sale', 'Refinancing'].includes(formValue.transactionType)) {
       return false;
     }
-
-    // Show business size only if company name is provided
     if (field.name === 'businessSize' && !formValue.company) {
       return false;
     }
-
-    // Show family related questions only if family is in US
     if (field.name.includes('family') && formValue.familyInUS === 'no') {
       return false;
     }
@@ -374,9 +336,7 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
   }
 
   isStepAccessible(step: number): boolean {
-    // First step is always accessible
     if (step === 1) return true;
-    // Other steps are accessible if previous steps are completed
     for (let i = 1; i < step; i++) {
       if (!this.completedSteps.has(i)) {
         return false;
@@ -385,67 +345,49 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  getStepTitle(): string {
-    switch (this.currentStep) {
-      case 1: return 'Basic Information';
-      case 2: return 'Case Details';
-      case 3: return 'Additional Information';
-      default: return 'Step ' + this.currentStep;
-    }
-  }
-
-  getStepDescription(): string {
-    switch (this.currentStep) {
-      case 1: return 'Let us know how to contact you and what type of legal matter you need help with.';
-      case 2: return 'Please provide details about your specific legal situation.';
-      case 3: return 'Help us better understand your needs and priorities.';
-      default: return '';
-    }
-  }
-
   organizeFieldsIntoSteps(): void {
     if (!this.formFields.length) return;
 
-    // Step 1: Basic contact info and case type selection
+    // Field-step 1: Basic contact info + case type selects
     const basicFields = ['firstName', 'lastName', 'email', 'phone'];
-    const caseTypeFields = this.formFields.filter(f => 
+    const caseTypeFields = this.formFields.filter(f =>
       f.type === 'select' && (f.name.includes('Type') || f.name.includes('caseType') || f.name.includes('businessType') || f.name.includes('chargeType') || f.name.includes('propertyType') || f.name.includes('transactionType'))
     );
-    
+
     this.stepFields[1] = [
       ...this.formFields.filter(f => basicFields.includes(f.name)),
       ...caseTypeFields
     ];
 
-    // Step 2: Detailed case information
-    const detailFields = this.formFields.filter(f => 
-      f.type === 'textarea' || 
-      f.name.includes('Date') || 
-      f.name.includes('Location') || 
-      f.name.includes('Address') || 
-      f.name.includes('Treatment') || 
-      f.name.includes('Status') || 
-      f.name.includes('Children') || 
-      f.name.includes('Incarcerated') || 
-      f.name.includes('Family') || 
+    // Field-step 2: Detailed case information
+    const detailFields = this.formFields.filter(f =>
+      f.type === 'textarea' ||
+      f.name.includes('Date') ||
+      f.name.includes('Location') ||
+      f.name.includes('Address') ||
+      f.name.includes('Treatment') ||
+      f.name.includes('Status') ||
+      f.name.includes('Children') ||
+      f.name.includes('Incarcerated') ||
+      f.name.includes('Family') ||
       f.name.includes('Deadline')
     );
-    
+
     this.stepFields[2] = detailFields;
 
-    // Step 3: Additional information and priority
-    const remainingFields = this.formFields.filter(f => 
-      !this.stepFields[1].some(sf => sf.name === f.name) &&
-      !this.stepFields[2].some(sf => sf.name === f.name)
+    // Field-step 3: Remaining fields (urgency, etc.)
+    const remainingFields = this.formFields.filter(f =>
+      !this.stepFields[1].some((sf: any) => sf.name === f.name) &&
+      !this.stepFields[2].some((sf: any) => sf.name === f.name)
     );
-    
+
     this.stepFields[3] = remainingFields;
 
-    // Ensure all fields are assigned to a step
+    // Ensure every field is assigned
     this.formFields.forEach(field => {
       let assigned = false;
       for (let step = 1; step <= 3; step++) {
-        if (this.stepFields[step].some(sf => sf.name === field.name)) {
+        if (this.stepFields[step].some((sf: any) => sf.name === field.name)) {
           assigned = true;
           break;
         }
@@ -456,14 +398,214 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Auto-save functionality
+  // ---- Validation helpers ----
+
+  hasFieldError(fieldName: string): boolean {
+    const control = this.submissionForm.get(fieldName);
+    return !!(control?.errors && (control.dirty || control.touched));
+  }
+
+  isFieldValid(fieldName: string): boolean {
+    const control = this.submissionForm.get(fieldName);
+    return !!(control && control.dirty && !control.errors && control.value);
+  }
+
+  getFieldError(fieldName: string): string {
+    const control = this.submissionForm.get(fieldName);
+    if (control?.errors && (control.dirty || control.touched)) {
+      if (control.errors['required']) {
+        return 'This field is required';
+      }
+      if (control.errors['email']) {
+        return 'Please enter a valid email address';
+      }
+      if (control.errors['pattern']) {
+        return 'Please enter a valid phone number';
+      }
+    }
+    return '';
+  }
+
+  // ---- Phone mask ----
+
+  onPhoneInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let digits = input.value.replace(/\D/g, '');
+    if (digits.length > 10) digits = digits.substring(0, 10);
+
+    let formatted = '';
+    if (digits.length > 0) formatted = '(' + digits.substring(0, 3);
+    if (digits.length >= 3) formatted += ') ';
+    if (digits.length > 3) formatted += digits.substring(3, 6);
+    if (digits.length >= 6) formatted += '-' + digits.substring(6, 10);
+
+    input.value = formatted;
+    this.submissionForm.get('phone')?.setValue(formatted, { emitEvent: false });
+  }
+
+  // ---- File upload ----
+
+  uploadedFiles: UploadedFile[] = [];
+  isUploading = false;
+  uploadError = '';
+  maxFiles = 3;
+  maxFileSize = 10 * 1024 * 1024; // 10MB
+  allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'docx'];
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+
+    Array.from(input.files).forEach(file => this.uploadFile(file));
+    input.value = ''; // reset input so same file can be re-selected
+  }
+
+  onFileDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!event.dataTransfer?.files?.length) return;
+
+    Array.from(event.dataTransfer.files).forEach(file => this.uploadFile(file));
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  private uploadFile(file: File): void {
+    if (this.uploadedFiles.length >= this.maxFiles) {
+      this.uploadError = `Maximum ${this.maxFiles} files allowed.`;
+      return;
+    }
+
+    if (file.size > this.maxFileSize) {
+      this.uploadError = `"${file.name}" exceeds the 10MB size limit.`;
+      return;
+    }
+
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!this.allowedExtensions.includes(ext)) {
+      this.uploadError = `"${file.name}" is not a supported file type. Use PDF, JPG, PNG, or DOCX.`;
+      return;
+    }
+
+    this.uploadError = '';
+    this.isUploading = true;
+
+    this.intakeFormService.uploadFile(file).subscribe({
+      next: (response: FileUploadResponse) => {
+        if (response.success) {
+          this.uploadedFiles.push({
+            fileKey: response.fileKey,
+            fileName: response.fileName,
+            fileSize: response.fileSize,
+            contentType: response.contentType
+          });
+        } else {
+          this.uploadError = 'Failed to upload file. Please try again.';
+        }
+        this.isUploading = false;
+      },
+      error: () => {
+        this.uploadError = 'Failed to upload file. Please try again.';
+        this.isUploading = false;
+      }
+    });
+  }
+
+  removeFile(index: number): void {
+    this.uploadedFiles.splice(index, 1);
+    this.uploadError = '';
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  getFileIcon(contentType: string): string {
+    if (contentType.includes('pdf')) return 'ri-file-pdf-line';
+    if (contentType.includes('image')) return 'ri-image-line';
+    if (contentType.includes('word') || contentType.includes('docx')) return 'ri-file-word-line';
+    return 'ri-file-line';
+  }
+
+  // ---- Organization branding helpers ----
+
+  get orgName(): string {
+    return this.intakeForm?.organizationName || '';
+  }
+
+  get orgPhone(): string {
+    return this.intakeForm?.organizationPhone || '';
+  }
+
+  get orgEmail(): string {
+    return this.intakeForm?.organizationEmail || '';
+  }
+
+  // ---- Submission ----
+
+  onSubmit(): void {
+    if (this.submissionForm.valid && this.intakeForm) {
+      this.isSubmitting = true;
+
+      const submissionData = {
+        ...this.submissionForm.value,
+        practiceArea: this.intakeForm.practiceArea || this.selectedPracticeArea,
+        formId: this.intakeForm.id || null,
+        submittedAt: new Date().toISOString(),
+        uploadedFiles: this.uploadedFiles.length > 0 ? this.uploadedFiles : undefined
+      };
+
+      // Use appropriate submit method based on whether we have a formUrl
+      const submit$ = this.formUrl
+        ? this.intakeFormService.submitFormByUrl(this.formUrl, submissionData)
+        : this.intakeFormService.submitIntakeForm(submissionData);
+
+      submit$.subscribe({
+        next: (response: SubmissionResponse) => {
+          this.isSubmitting = false;
+          if (response.success) {
+            this.clearFormDraft();
+            this.router.navigate(['/public/success'], {
+              queryParams: {
+                submissionId: response.submissionId,
+                message: response.message,
+                redirectUrl: response.redirectUrl
+              }
+            });
+          } else {
+            this.error = response.message || 'Failed to submit form. Please try again.';
+          }
+        },
+        error: (error) => {
+          console.error('Error submitting form:', error);
+          this.error = 'Failed to submit form. Please check your information and try again.';
+          this.isSubmitting = false;
+        }
+      });
+    } else {
+      this.markFormGroupTouched(this.submissionForm);
+    }
+  }
+
+  private markFormGroupTouched(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      control?.markAsTouched();
+    });
+  }
+
+  // ---- Auto-save ----
+
   setupAutoSave(): void {
-    // Auto-save every 30 seconds
     this.autoSaveInterval = setInterval(() => {
       this.saveFormDraft();
     }, 30000);
 
-    // Also save when form value changes (debounced)
     this.submissionForm.valueChanges.subscribe(() => {
       this.debouncedSave();
     });
@@ -478,9 +620,10 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
   }
 
   saveFormDraft(): void {
-    if (this.submissionForm.dirty && this.formUrl) {
+    if (this.submissionForm.dirty) {
       const draftData = {
         formUrl: this.formUrl,
+        practiceArea: this.selectedPracticeArea,
         currentStep: this.currentStep,
         formValue: this.submissionForm.value,
         completedSteps: Array.from(this.completedSteps),
@@ -493,18 +636,18 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
   loadFormDraft(): void {
     try {
       const savedDraft = localStorage.getItem(this.autoSaveKey);
-      if (savedDraft && this.formUrl) {
+      if (savedDraft) {
         const draftData = JSON.parse(savedDraft);
-        
-        // Only load draft if it's for the same form and not too old (7 days)
+
         const draftAge = new Date().getTime() - new Date(draftData.timestamp).getTime();
-        const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-        
-        if (draftData.formUrl === this.formUrl && draftAge < maxAge) {
-          this.currentStep = draftData.currentStep || 1;
-          this.completedSteps = new Set(draftData.completedSteps || []);
-          
-          // Patch form values
+        const maxAge = 7 * 24 * 60 * 60 * 1000;
+
+        // Match draft by formUrl or practiceArea
+        const matchesForm = this.formUrl
+          ? draftData.formUrl === this.formUrl
+          : draftData.practiceArea === this.selectedPracticeArea;
+
+        if (matchesForm && draftAge < maxAge) {
           Object.keys(draftData.formValue).forEach(key => {
             if (this.submissionForm.get(key)) {
               this.submissionForm.get(key)?.setValue(draftData.formValue[key]);
@@ -521,6 +664,24 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
     localStorage.removeItem(this.autoSaveKey);
   }
 
+  // ---- Completion tracking ----
+
+  getFormCompletionPercentage(): number {
+    const totalFields = this.formFields.length;
+    let completedFields = 0;
+
+    this.formFields.forEach(field => {
+      const control = this.submissionForm.get(field.name);
+      if (control?.value && control.value.toString().trim() !== '') {
+        completedFields++;
+      }
+    });
+
+    return totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0;
+  }
+
+  // ---- Lifecycle ----
+
   ngOnDestroy(): void {
     if (this.autoSaveInterval) {
       clearInterval(this.autoSaveInterval);
@@ -528,103 +689,6 @@ export class IntakeFormComponent implements OnInit, OnDestroy {
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
     }
-    
-    // Save final draft before component is destroyed
     this.saveFormDraft();
-  }
-
-  // Enhanced form completion tracking
-  getFormCompletionPercentage(): number {
-    const totalFields = this.formFields.length;
-    let completedFields = 0;
-    
-    this.formFields.forEach(field => {
-      const control = this.submissionForm.get(field.name);
-      if (control?.value && control.value.toString().trim() !== '') {
-        completedFields++;
-      }
-    });
-    
-    return Math.round((completedFields / totalFields) * 100);
-  }
-
-  getCurrentStepCompletionPercentage(): number {
-    const currentFields = this.getCurrentStepFields();
-    let completedFields = 0;
-    
-    currentFields.forEach(field => {
-      const control = this.submissionForm.get(field.name);
-      if (control?.value && control.value.toString().trim() !== '') {
-        completedFields++;
-      }
-    });
-    
-    return currentFields.length ? Math.round((completedFields / currentFields.length) * 100) : 0;
-  }
-
-  // Urgency and conversion optimization methods
-  getUrgencyMessage(): string {
-    const messages = [
-      "⚡ Free consultations are filling up fast - secure your spot today!",
-      "🔥 Don't wait - statute of limitations may be running out on your case!",
-      "⏰ Our attorneys are reviewing cases now - submit yours while spots are available!",
-      "💪 Join thousands who got justice - your case review is FREE and takes 2 minutes!",
-      "🎯 Time-sensitive cases require immediate action - get expert legal help now!"
-    ];
-    return messages[Math.floor(Math.random() * messages.length)];
-  }
-
-  getCallToActionText(): string {
-    const timeSpent = Math.floor((new Date().getTime() - this.formStartTime.getTime()) / 1000);
-    
-    if (this.currentStep === this.totalSteps) {
-      if (timeSpent > 300) { // More than 5 minutes
-        return "Complete Your Free Case Review Now!";
-      }
-      return "Get My Free Legal Consultation";
-    } else if (this.currentStep === 1) {
-      return `Continue to Case Details (${this.getCurrentStepCompletionPercentage()}% done)`;
-    } else {
-      return `Continue to Final Details (${this.getFormCompletionPercentage()}% complete)`;
-    }
-  }
-
-  getMotivationalMessage(): string {
-    const completion = this.getFormCompletionPercentage();
-    
-    if (completion >= 80) {
-      return "🏁 You're almost done! Complete your consultation request now.";
-    } else if (completion >= 50) {
-      return "💪 Great progress! You're halfway to getting legal help.";
-    } else if (completion >= 25) {
-      return "✨ You're doing great! Keep going to get your free consultation.";
-    } else {
-      return "🎯 Take the first step towards justice - complete your consultation request.";
-    }
-  }
-
-  getPracticeAreaSpecificMessage(): string {
-    if (!this.intakeForm?.practiceArea) return '';
-    
-    const messages: { [key: string]: string } = {
-      'Personal Injury': '🏥 Medical bills piling up? You may be entitled to compensation!',
-      'Family Law': '👨‍👩‍👧‍👦 Protect your family\'s future with experienced legal representation.',
-      'Criminal Defense': '⚖️ Your freedom is at stake - every minute counts in criminal cases.',
-      'Business Law': '💼 Protect your business interests with expert legal guidance.',
-      'Real Estate Law': '🏠 Real estate transactions require careful legal review - don\'t risk costly mistakes.',
-      'Immigration Law': '🌟 Achieve your American dream with experienced immigration attorneys.'
-    };
-    
-    return messages[this.intakeForm.practiceArea] || '⚖️ Get the legal help you deserve - consultation is FREE!';
-  }
-
-  getTimeBasedUrgency(): string {
-    const hour = new Date().getHours();
-    
-    if (hour >= 9 && hour <= 17) {
-      return "📞 Our legal team is online NOW - submit your case for immediate review!";
-    } else {
-      return "🌙 Submit tonight and we'll review your case first thing tomorrow morning!";
-    }
   }
 }

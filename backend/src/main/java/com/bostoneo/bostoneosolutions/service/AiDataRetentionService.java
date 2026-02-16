@@ -7,7 +7,11 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,6 +30,9 @@ public class AiDataRetentionService {
     @Value("${ai.data-retention.days:90}")
     private int retentionDays;
 
+    @Value("${app.documents.output-path:uploads/documents}")
+    private String documentsOutputPath;
+
     /**
      * Runs daily at 2:00 AM. Deletes AI data older than the retention period.
      */
@@ -37,6 +44,7 @@ public class AiDataRetentionService {
         cleanupResearchCache(cutoff);
         cleanupConversationMessages(cutoff);
         cleanupConversationSessions(cutoff);
+        cleanupDocumentAnalyses(cutoff);
 
         log.info("AI data retention cleanup complete");
     }
@@ -88,6 +96,50 @@ public class AiDataRetentionService {
             }
         } catch (Exception e) {
             log.error("Failed to clean ai_conversation_sessions: {}", e.getMessage());
+        }
+    }
+
+    private void cleanupDocumentAnalyses(LocalDateTime cutoff) {
+        try {
+            // Find archived analyses older than retention period — get file names for physical deletion
+            List<Map<String, Object>> rows = jdbc.queryForList("""
+                    SELECT id, file_name FROM ai_document_analysis
+                    WHERE is_archived = true AND created_at < :cutoff
+                    """, Map.of("cutoff", cutoff));
+
+            if (rows.isEmpty()) {
+                return;
+            }
+
+            // Delete physical files
+            Path uploadDir = Paths.get(documentsOutputPath);
+            int filesDeleted = 0;
+            for (Map<String, Object> row : rows) {
+                String fileName = (String) row.get("file_name");
+                if (fileName != null && !fileName.isEmpty()) {
+                    try {
+                        Path filePath = uploadDir.resolve(fileName);
+                        if (Files.deleteIfExists(filePath)) {
+                            filesDeleted++;
+                        }
+                    } catch (Exception e) {
+                        log.warn("Failed to delete document file {}: {}", fileName, e.getMessage());
+                    }
+                }
+            }
+
+            // Delete DB records
+            int deleted = jdbc.update("""
+                    DELETE FROM ai_document_analysis
+                    WHERE is_archived = true AND created_at < :cutoff
+                    """, Map.of("cutoff", cutoff));
+
+            if (deleted > 0) {
+                log.info("Deleted {} old archived document analyses ({} physical files)", deleted, filesDeleted);
+                aiAuditLogService.logRetentionDeletion("ai_document_analysis", deleted, retentionDays);
+            }
+        } catch (Exception e) {
+            log.error("Failed to clean ai_document_analysis: {}", e.getMessage());
         }
     }
 }

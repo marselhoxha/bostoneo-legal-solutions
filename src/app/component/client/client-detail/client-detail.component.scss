@@ -335,6 +335,58 @@
 }
 
 // ========================================
+// Original Intake Data
+// ========================================
+.intake-data-item {
+  label {
+    display: block;
+    margin-bottom: 2px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  p {
+    color: #333;
+  }
+}
+
+// ========================================
+// AI Consent Card
+// ========================================
+.ai-consent-card {
+  .card-header {
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.35rem 0.65rem;
+    }
+  }
+}
+
+.ai-consent-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+
+  &.granted {
+    background: rgba(10, 179, 156, 0.1);
+    color: #0ab39c;
+  }
+
+  &.pending {
+    background: rgba(64, 81, 137, 0.1);
+    color: #405189;
+  }
+}
+
+.ai-consent-granted {
+  padding: 0.25rem 0;
+}
+
+// ========================================
 // Responsive
 // ========================================
 @media (max-width: 991.98px) {

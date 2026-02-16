@@ -254,6 +254,29 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
     return statusMap[status] || status;
   }
 
+  changeLeadStatus(lead: LeadDTO, newStatus: string): void {
+    const displayName = this.getStatusDisplayName(newStatus);
+    Swal.fire({
+      title: `Change status to ${displayName}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Change Status',
+      confirmButtonColor: '#405189'
+    }).then((result: any) => {
+      if (result.isConfirmed) {
+        this.crmService.advanceLeadInPipeline(lead.id, newStatus).subscribe({
+          next: () => {
+            lead.status = newStatus;
+            this.cdr.detectChanges();
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success',
+              title: `Status changed to ${displayName}`, showConfirmButton: false, timer: 2000 });
+          },
+          error: () => Swal.fire('Error', 'Failed to change status.', 'error')
+        });
+      }
+    });
+  }
+
   getFormattedNextStatuses(currentStatus: string): string {
     const nextStatuses = this.getValidNextStatuses(currentStatus);
     return nextStatuses.map(status => this.getStatusDisplayName(status)).join(' • ');

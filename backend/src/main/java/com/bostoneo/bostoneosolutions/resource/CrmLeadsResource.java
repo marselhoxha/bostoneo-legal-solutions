@@ -115,9 +115,11 @@ public class CrmLeadsResource {
         
         String newStatus = (String) pipelineData.get("newStatus");
         String notes = (String) pipelineData.get("notes");
-        
-        log.info("Advancing lead {} to status: {} by user: {}", id, newStatus, userDetails.getUsername());
-        
+
+        // Handle null userDetails gracefully
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Advancing lead {} to status: {} by user: {}", id, newStatus, username);
+
         Long userId = 1L; // Extract from userDetails in real implementation
         Lead lead = leadService.advanceInPipeline(id, newStatus, userId, notes);
         LeadDTO leadDTO = leadDTOMapper.toDTO(lead);
@@ -133,9 +135,11 @@ public class CrmLeadsResource {
         
         Long stageId = ((Number) stageData.get("stageId")).longValue();
         String notes = (String) stageData.get("notes");
-        
-        log.info("Moving lead {} to stage {} by user: {}", id, stageId, userDetails.getUsername());
-        
+
+        // Handle null userDetails gracefully
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Moving lead {} to stage {} by user: {}", id, stageId, username);
+
         Long userId = 1L; // Extract from userDetails in real implementation
         Lead lead = leadService.moveToStage(id, stageId, userId, notes);
         LeadDTO leadDTO = leadDTOMapper.toDTO(lead);
@@ -229,8 +233,10 @@ public class CrmLeadsResource {
         String title = activityData.get("title");
         String description = activityData.get("description");
         
-        log.info("Adding activity to lead {} by user: {}", id, userDetails.getUsername());
-        
+        // Handle null userDetails gracefully
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Adding activity to lead {} by user: {}", id, username);
+
         Long userId = 1L; // Extract from userDetails in real implementation
         leadService.addActivity(id, activityType, title, description, userId);
         

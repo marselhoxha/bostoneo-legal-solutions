@@ -8347,4 +8347,16 @@ You can:
     }
   }
 
+  markAsReviewed(message: any): void {
+    if (!message.id || message.reviewedAt) return;
+    this.legalResearchService.markAsReviewed(message.id).subscribe({
+      next: (updated) => {
+        message.reviewedBy = updated.reviewedBy;
+        message.reviewedAt = updated.reviewedAt;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Failed to mark as reviewed:', err)
+    });
+  }
+
 }

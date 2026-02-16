@@ -65,6 +65,13 @@ export class ClientService {
                 catchError(this.handleError)
             );
 
+    sendAiConsent$ = (clientId: number, email?: string) => <Observable<CustomHttpResponse<any>>>
+        this.http.post<CustomHttpResponse<any>>
+            (`${this.server}/client/${clientId}/send-ai-consent${email ? '?email=' + encodeURIComponent(email) : ''}`, {})
+            .pipe(
+                catchError(this.handleError)
+            );
+
     deleteClient$ = (clientId: number): Observable<void> =>
         this.http.delete<void>(`${this.server}/client/delete/${clientId}`, {
         })

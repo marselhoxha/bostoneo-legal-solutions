@@ -1,12 +1,12 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
-import { IntakeFormListComponent } from './components/intake-form-list/intake-form-list.component';
 import { IntakeFormComponent } from './components/intake-form/intake-form.component';
 import { SuccessPageComponent } from './components/success-page/success-page.component';
 import { PrivacyPolicyComponent } from './components/privacy-policy/privacy-policy.component';
 import { TermsOfServiceComponent } from './components/terms-of-service/terms-of-service.component';
 import { SmsComplianceComponent } from './components/sms-compliance/sms-compliance.component';
+import { AiConsentComponent } from './components/ai-consent/ai-consent.component';
 
 const routes: Routes = [
   {
@@ -16,13 +16,8 @@ const routes: Routes = [
   },
   {
     path: 'intake-forms',
-    component: IntakeFormListComponent,
+    component: IntakeFormComponent,
     data: { title: 'Legal Intake Forms' }
-  },
-  {
-    path: 'intake-forms/practice-area/:practiceArea',
-    component: IntakeFormListComponent,
-    data: { title: 'Practice Area Forms' }
   },
   {
     path: 'intake-forms/:formUrl',
@@ -48,6 +43,11 @@ const routes: Routes = [
     path: 'sms-compliance',
     component: SmsComplianceComponent,
     data: { title: 'SMS Compliance Documentation' }
+  },
+  {
+    path: 'ai-consent/:token',
+    component: AiConsentComponent,
+    data: { title: 'AI Technology Disclosure' }
   }
 ];
 

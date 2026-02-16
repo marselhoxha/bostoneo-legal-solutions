@@ -4,18 +4,22 @@ import com.bostoneo.bostoneosolutions.dto.IntakeFormDTO;
 import com.bostoneo.bostoneosolutions.dtomapper.IntakeFormDTOMapper;
 import com.bostoneo.bostoneosolutions.model.IntakeForm;
 import com.bostoneo.bostoneosolutions.model.IntakeSubmission;
+import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import com.bostoneo.bostoneosolutions.service.IntakeFormService;
 import com.bostoneo.bostoneosolutions.service.IntakeSubmissionService;
+import com.bostoneo.bostoneosolutions.service.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/public/intake-forms")
@@ -26,6 +30,11 @@ public class IntakeFormResource {
     private final IntakeFormService intakeFormService;
     private final IntakeSubmissionService intakeSubmissionService;
     private final IntakeFormDTOMapper intakeFormDTOMapper;
+    private final FileStorageService fileStorageService;
+    private final EmailService emailService;
+
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("pdf", "jpg", "jpeg", "png", "docx");
 
     @GetMapping
     public ResponseEntity<List<IntakeFormDTO>> getPublicForms() {
@@ -115,8 +124,11 @@ public class IntakeFormResource {
             response.put("success", true);
             response.put("message", form.getSuccessMessage() != null ? form.getSuccessMessage() : "Thank you for your submission!");
             response.put("submissionId", submission.getId());
-            response.put("redirectUrl", form.getRedirectUrl()); // This can be null
-            
+            response.put("redirectUrl", form.getRedirectUrl());
+
+            // Send confirmation email asynchronously
+            sendConfirmationEmail(submissionData, submission.getId(), form);
+
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
@@ -197,7 +209,10 @@ public class IntakeFormResource {
             response.put("success", true);
             response.put("message", "Thank you for your submission! We will contact you within 24 hours.");
             response.put("submissionId", submission.getId());
-            
+
+            // Send confirmation email asynchronously
+            sendConfirmationEmail(submissionData, submission.getId(), practiceAreaForm);
+
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
@@ -205,6 +220,51 @@ public class IntakeFormResource {
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", "There was an error processing your submission. Please try again."
+            ));
+        }
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file) {
+        log.info("Receiving file upload: {}, size: {}", file.getOriginalFilename(), file.getSize());
+
+        // Validate file size
+        if (file.getSize() > MAX_FILE_SIZE) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "File exceeds maximum size of 10MB"
+            ));
+        }
+
+        // Validate file extension
+        String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown";
+        String extension = originalName.contains(".")
+            ? originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase()
+            : "";
+
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "File type not allowed. Accepted: PDF, JPG, PNG, DOCX"
+            ));
+        }
+
+        try {
+            String fileKey = fileStorageService.storeFile(file, "intake-uploads");
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("fileKey", fileKey);
+            response.put("fileName", originalName);
+            response.put("fileSize", file.getSize());
+            response.put("contentType", file.getContentType());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error uploading file", e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "Failed to upload file. Please try again."
             ));
         }
     }
@@ -221,6 +281,51 @@ public class IntakeFormResource {
         }
         
         return request.getRemoteAddr();
+    }
+
+    private void sendConfirmationEmail(Map<String, Object> submissionData, Long submissionId, IntakeForm form) {
+        try {
+            Object emailObj = submissionData.get("email");
+            Object firstNameObj = submissionData.get("firstName");
+
+            if (emailObj == null) return;
+
+            String toEmail = emailObj.toString();
+            String firstName = firstNameObj != null ? firstNameObj.toString() : "Client";
+            String practiceArea = form.getPracticeArea() != null ? form.getPracticeArea() : "Legal";
+
+            // Get org name from DTO mapper for branding
+            IntakeFormDTO formDto = intakeFormDTOMapper.toDTO(form);
+            String orgName = formDto.getOrganizationName() != null ? formDto.getOrganizationName() : "Our Firm";
+
+            String subject = orgName + " - Consultation Request Received (#" + submissionId + ")";
+
+            String body = "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>"
+                + "<div style='background: #f9fafb; border-bottom: 2px solid #e5e7eb; padding: 24px; text-align: center;'>"
+                + "<h2 style='margin: 0; color: #1f2937;'>" + orgName + "</h2>"
+                + "</div>"
+                + "<div style='padding: 24px;'>"
+                + "<p>Hello " + firstName + ",</p>"
+                + "<p>Thank you for submitting your <strong>" + practiceArea + "</strong> consultation request. "
+                + "We have received your information and a member of our legal team will review your case promptly.</p>"
+                + "<div style='background: #f9fafb; border-left: 3px solid #d1d5db; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;'>"
+                + "<p style='margin: 0 0 8px 0; font-size: 14px;'><strong>Submission ID:</strong> #" + submissionId + "</p>"
+                + "<p style='margin: 0 0 8px 0; font-size: 14px;'><strong>Practice Area:</strong> " + practiceArea + "</p>"
+                + "<p style='margin: 0; font-size: 14px;'><strong>Expected Response:</strong> Within 24 hours</p>"
+                + "</div>"
+                + "<p style='font-size: 14px; color: #6b7280;'>If you have any urgent questions, please don't hesitate to contact us directly.</p>"
+                + "<p>Best regards,<br><strong>" + orgName + " Legal Team</strong></p>"
+                + "</div>"
+                + "<div style='background: #f9fafb; padding: 16px; text-align: center; font-size: 12px; color: #9ca3af;'>"
+                + "This is an automated confirmation. Your information is protected by attorney-client privilege."
+                + "</div>"
+                + "</div>";
+
+            emailService.sendEmail(toEmail, subject, body);
+            log.info("Confirmation email sent to {} for submission {}", toEmail, submissionId);
+        } catch (Exception e) {
+            log.warn("Failed to send confirmation email for submission {}: {}", submissionId, e.getMessage());
+        }
     }
 
     private String objectMapperToJson(Map<String, Object> data) {

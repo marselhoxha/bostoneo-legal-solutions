@@ -270,6 +270,30 @@ public class IntakeSubmissionResource {
         ));
     }
 
+    // Find submissions matching a client email (for client detail page)
+    @GetMapping("/by-email")
+    public ResponseEntity<List<IntakeSubmissionDTO>> getSubmissionsByEmail(
+            @RequestParam String email) {
+        log.info("Fetching intake submissions for email: {}", email);
+
+        // Load all submissions, filter by email in the JSON submission data
+        Page<IntakeSubmission> allSubmissions = intakeSubmissionService.findAll(
+            PageRequest.of(0, 500, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+
+        List<IntakeSubmissionDTO> matched = allSubmissions.getContent().stream()
+            .filter(s -> {
+                String data = s.getSubmissionData();
+                if (data == null) return false;
+                // Simple check: the JSON contains the email string
+                return data.toLowerCase().contains("\"" + email.toLowerCase() + "\"");
+            })
+            .map(intakeSubmissionDTOMapper::toDTO)
+            .toList();
+
+        return ResponseEntity.ok(matched);
+    }
+
     // Analytics endpoints for attorney dashboard
     @GetMapping("/analytics/summary")
     public ResponseEntity<Map<String, Object>> getSubmissionSummary() {

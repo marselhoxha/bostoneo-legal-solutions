@@ -807,26 +807,36 @@ public class LeadServiceImpl implements LeadService {
 
     private void recordPipelineTransition(Long leadId, String fromStatus, String toStatus, Long userId, String notes) {
         Long orgId = getRequiredOrganizationId();
-        // Map status to stage IDs - this is a temporary solution
-        // In a production system, you'd have a proper mapping table
+
+        // Check if pipeline stages exist before attempting to record history
+        // If pipeline_stages table is empty, skip recording to avoid FK violations
+        // that would poison the Hibernate transaction
         Long fromStageId = mapStatusToStageId(fromStatus);
         Long toStageId = mapStatusToStageId(toStatus);
-
-        LeadPipelineHistory history = LeadPipelineHistory.builder()
-            .organizationId(orgId)
-            .leadId(leadId)
-            .fromStageId(fromStageId)
-            .toStageId(toStageId)
-            .movedBy(userId)
-            .notes(notes)
-            .automated(false)
-            .build();
+        if (fromStageId == null || toStageId == null) {
+            log.debug("Skipping pipeline history for lead {} — pipeline stages not configured", leadId);
+            return;
+        }
 
         try {
+            if (!pipelineStageRepository.existsById(fromStageId) || !pipelineStageRepository.existsById(toStageId)) {
+                log.debug("Skipping pipeline history for lead {} — stage IDs {}/{} not found in database", leadId, fromStageId, toStageId);
+                return;
+            }
+
+            LeadPipelineHistory history = LeadPipelineHistory.builder()
+                .organizationId(orgId)
+                .leadId(leadId)
+                .fromStageId(fromStageId)
+                .toStageId(toStageId)
+                .movedBy(userId)
+                .notes(notes)
+                .automated(false)
+                .build();
+
             leadPipelineHistoryRepository.save(history);
         } catch (Exception e) {
             log.error("Failed to save pipeline history for lead {}: {}", leadId, e.getMessage());
-            // Don't fail the main operation if history recording fails
         }
     }
     
@@ -1046,8 +1056,8 @@ public class LeadServiceImpl implements LeadService {
                 "timestamp", System.currentTimeMillis()
             );
             
-            // SECURITY: Send via WebSocket only to users in the same organization
-            webSocketHandler.broadcastToOrganization(lead.getOrganizationId(), notificationData);
+            // SECURITY: Send via WebSocket only to users in the same organization, excluding the actor
+            webSocketHandler.broadcastToOrganizationExcluding(lead.getOrganizationId(), notificationData, assignedBy);
 
             // ALSO send via FCM - specifically to the assigned user for offline notifications
             notificationService.sendCrmNotification(title, message, assignedTo, notificationType, notificationData);
@@ -1090,8 +1100,8 @@ public class LeadServiceImpl implements LeadService {
                 "timestamp", System.currentTimeMillis()
             );
             
-            // SECURITY: Send via WebSocket only to users in the same organization
-            webSocketHandler.broadcastToOrganization(lead.getOrganizationId(), notificationData);
+            // SECURITY: Send via WebSocket only to users in the same organization, excluding the actor
+            webSocketHandler.broadcastToOrganizationExcluding(lead.getOrganizationId(), notificationData, userId);
 
             // Collect users to notify (like case status change pattern)
             Set<Long> notificationUserIds = new HashSet<>();

@@ -55,6 +55,8 @@ export interface AiConversationMessage {
   userRating?: number;
   userFeedback?: string;
   wasHelpful?: boolean;
+  reviewedBy?: number;
+  reviewedAt?: Date;
   createdAt?: Date;
   isTyping?: boolean;
   collapsed?: boolean;
@@ -779,6 +781,24 @@ export class LegalResearchService {
     ).pipe(
       catchError(error => {
         console.error('Failed to cancel conversation:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Mark an AI message as reviewed by an attorney (ABA Opinion 512)
+   */
+  markAsReviewed(messageId: number): Observable<AiConversationMessage> {
+    const userId = this.getUserId();
+    return this.http.patch<any>(
+      `${this.conversationApiUrl}/messages/${messageId}/review`,
+      { userId },
+      { withCredentials: true }
+    ).pipe(
+      map(response => response.data.message),
+      catchError(error => {
+        console.error('Failed to mark message as reviewed:', error);
         return throwError(() => error);
       })
     );

@@ -1,0 +1,159 @@
+<div class="consent-container">
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-card">
+    <div class="spinner-border text-primary mb-3" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="text-muted mb-0">Validating your link...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="!isLoading && error && !isValid" class="error-card">
+    <div class="error-icon">
+      <i class="ri-link-unlink"></i>
+    </div>
+    <h5 class="mb-2 fw-bold">Link Not Valid</h5>
+    <p class="text-muted mb-0">{{ error }}</p>
+  </div>
+
+  <!-- Success State -->
+  <div *ngIf="!isLoading && isAcknowledged" class="success-container">
+    <div class="success-card">
+      <div class="success-header">
+        <div class="success-icon">
+          <i class="ri-check-line"></i>
+        </div>
+        <h2>Thank You!</h2>
+        <p>Your acknowledgment has been recorded successfully.</p>
+      </div>
+      <div class="success-body">
+        <p class="success-message">
+          We have recorded your acknowledgment of our AI technology disclosure.
+          This will be kept on file with your client record.
+        </p>
+        <div class="success-badge">
+          <i class="ri-shield-check-line"></i>
+          You may close this page. No further action is required.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Consent Form -->
+  <div *ngIf="!isLoading && isValid && !isAcknowledged">
+
+    <!-- Header -->
+    <div class="consent-header">
+      <div class="consent-header-icon">
+        <i class="ri-robot-line"></i>
+      </div>
+      <h2>AI Technology Disclosure</h2>
+      <p>{{ organizationName }}</p>
+    </div>
+
+    <!-- Content Card -->
+    <div class="consent-content">
+      <div class="consent-body">
+
+        <p class="consent-greeting" *ngIf="clientName">
+          Dear <strong>{{ clientName }}</strong>,
+        </p>
+
+        <p class="consent-intro">
+          In accordance with our professional obligations under ABA Model Rule 1.4, we want to inform
+          you that our firm may use AI-assisted technology in connection with your legal matter.
+        </p>
+
+        <!-- AI Uses -->
+        <h6 class="fw-semibold mb-3" style="font-size: 0.9rem; color: #495057;">
+          AI tools may be used for:
+        </h6>
+
+        <div class="ai-uses-grid">
+          <div class="ai-use-item">
+            <div class="ai-use-icon research">
+              <i class="ri-search-eye-line"></i>
+            </div>
+            <span class="ai-use-label">Legal Research</span>
+          </div>
+          <div class="ai-use-item">
+            <div class="ai-use-icon document">
+              <i class="ri-file-search-line"></i>
+            </div>
+            <span class="ai-use-label">Document Analysis</span>
+          </div>
+          <div class="ai-use-item">
+            <div class="ai-use-icon drafting">
+              <i class="ri-draft-line"></i>
+            </div>
+            <span class="ai-use-label">Drafting Assistance</span>
+          </div>
+          <div class="ai-use-item">
+            <div class="ai-use-icon review">
+              <i class="ri-scales-3-line"></i>
+            </div>
+            <span class="ai-use-label">Case Law Review</span>
+          </div>
+        </div>
+
+        <!-- Attorney review notice -->
+        <div class="attorney-notice">
+          <div class="attorney-notice-icon">
+            <i class="ri-user-star-line"></i>
+          </div>
+          <div class="attorney-notice-text">
+            <strong>All AI-generated output is reviewed and verified by a licensed attorney</strong>
+            before being used in your case. AI tools do not replace professional legal judgment.
+          </div>
+        </div>
+
+        <!-- Optional notice -->
+        <div class="optional-notice">
+          <i class="ri-information-line"></i>
+          Acknowledging this disclosure is not required to receive legal services.
+        </div>
+
+      </div>
+
+      <!-- Error during acknowledgment -->
+      <div *ngIf="error && isValid" class="px-4 pb-2">
+        <div class="alert alert-danger d-flex align-items-center py-2 mb-0">
+          <i class="ri-error-warning-line me-2"></i>{{ error }}
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="consent-cta">
+        <button
+          class="consent-btn"
+          (click)="acknowledge()"
+          [disabled]="isSubmitting">
+          <span *ngIf="!isSubmitting">
+            <i class="ri-checkbox-circle-line"></i>
+            I Acknowledge This Disclosure
+          </span>
+          <span *ngIf="isSubmitting" class="d-flex align-items-center gap-2">
+            <span class="spinner-border spinner-border-sm"></span>
+            Processing...
+          </span>
+        </button>
+        <p class="consent-cta-note">
+          By clicking this button, you confirm that you have read and understand the above disclosure.
+        </p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="consent-footer">
+      <div class="consent-footer-icon">
+        <i class="ri-shield-keyhole-line"></i>
+      </div>
+      <div class="consent-footer-text">
+        <h6>Your Information is Protected</h6>
+        <p>All communications are protected by attorney-client privilege.</p>
+      </div>
+    </div>
+
+  </div>
+</div>

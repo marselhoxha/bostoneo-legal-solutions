@@ -19,6 +19,11 @@ export interface IntakeForm {
   conversionRate: number;
   createdAt: Date;
   publishedAt: Date;
+  // Organization branding
+  organizationName?: string;
+  organizationPhone?: string;
+  organizationEmail?: string;
+  organizationLogoUrl?: string;
 }
 
 export interface SubmissionResponse {
@@ -75,4 +80,21 @@ export class IntakeFormService {
   submitIntakeForm(submissionData: any): Observable<SubmissionResponse> {
     return this.http.post<SubmissionResponse>(`${this.apiUrl}/submit-general`, submissionData);
   }
+
+  // Upload file for intake form
+  uploadFile(file: File): Observable<FileUploadResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<FileUploadResponse>(`${this.apiUrl}/upload`, formData, {
+      reportProgress: true
+    });
+  }
+}
+
+export interface FileUploadResponse {
+  success: boolean;
+  fileKey: string;
+  fileName: string;
+  fileSize: number;
+  contentType: string;
 }

@@ -61,4 +61,10 @@ public class IntakeFormDTO {
     private Timestamp updatedAt;
 
     private Timestamp publishedAt;
+
+    // Organization branding (populated from join with organizations table)
+    private String organizationName;
+    private String organizationPhone;
+    private String organizationEmail;
+    private String organizationLogoUrl;
 }

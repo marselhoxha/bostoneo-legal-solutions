@@ -1,0 +1,468 @@
+// ========================================
+// AI Consent Page
+// ========================================
+:host {
+  display: block;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  padding: 2rem 1rem 3rem;
+}
+
+.consent-container {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+// ========================================
+// Header Card
+// ========================================
+.consent-header {
+  background: linear-gradient(135deg, #405189 0%, #0ab39c 100%);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 50%;
+  }
+}
+
+.consent-header-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  font-size: 2rem;
+  backdrop-filter: blur(4px);
+}
+
+.consent-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.consent-header p {
+  opacity: 0.8;
+  font-size: 0.95rem;
+  margin-bottom: 0;
+}
+
+// ========================================
+// Content Card
+// ========================================
+.consent-content {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  margin-top: -1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.consent-body {
+  padding: 2rem;
+}
+
+.consent-greeting {
+  font-size: 1rem;
+  color: #495057;
+  margin-bottom: 1rem;
+
+  strong {
+    color: #333;
+  }
+}
+
+.consent-intro {
+  font-size: 0.925rem;
+  color: #6c757d;
+  line-height: 1.65;
+  margin-bottom: 1.75rem;
+}
+
+// ========================================
+// AI Uses Grid
+// ========================================
+.ai-uses-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+
+.ai-use-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: #f8f9fa;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #f0f2f5;
+  }
+}
+
+.ai-use-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+
+  &.research {
+    background: rgba(41, 156, 219, 0.12);
+    color: #299cdb;
+  }
+
+  &.document {
+    background: rgba(10, 179, 156, 0.12);
+    color: #0ab39c;
+  }
+
+  &.drafting {
+    background: rgba(247, 184, 75, 0.15);
+    color: #e0a800;
+  }
+
+  &.review {
+    background: rgba(64, 81, 137, 0.12);
+    color: #405189;
+  }
+}
+
+.ai-use-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+// ========================================
+// Notice boxes
+// ========================================
+.attorney-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1rem 1.25rem;
+  background: rgba(41, 156, 219, 0.06);
+  border-left: 3px solid #299cdb;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 1.25rem;
+}
+
+.attorney-notice-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(41, 156, 219, 0.12);
+  color: #299cdb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.attorney-notice-text {
+  font-size: 0.875rem;
+  color: #495057;
+  line-height: 1.55;
+
+  strong {
+    color: #333;
+  }
+}
+
+.optional-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: rgba(10, 179, 156, 0.06);
+  border-radius: 8px;
+  margin-bottom: 1.75rem;
+  font-size: 0.8125rem;
+  color: #0ab39c;
+  font-weight: 500;
+}
+
+// ========================================
+// CTA Section
+// ========================================
+.consent-cta {
+  text-align: center;
+  padding: 1.75rem 2rem;
+  background: #f8f9fa;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.consent-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 50px;
+  color: #fff;
+  background: linear-gradient(135deg, #405189 0%, #0ab39c 100%);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 15px rgba(64, 81, 137, 0.3);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(64, 81, 137, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  i {
+    font-size: 1.15rem;
+  }
+}
+
+.consent-cta-note {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin: 1rem 0 0;
+}
+
+// ========================================
+// Footer
+// ========================================
+.consent-footer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 2rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+  margin-top: 1rem;
+}
+
+.consent-footer-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(64, 81, 137, 0.08);
+  color: #405189;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.consent-footer-text {
+  flex: 1;
+
+  h6 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #405189;
+    margin-bottom: 0.15rem;
+  }
+
+  p {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin: 0;
+  }
+}
+
+// ========================================
+// Success State
+// ========================================
+.success-container {
+  text-align: center;
+}
+
+.success-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.success-header {
+  background: linear-gradient(135deg, #0ab39c 0%, #2dcb73 100%);
+  padding: 3rem 2rem 2.5rem;
+  color: #fff;
+}
+
+.success-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  font-size: 2.5rem;
+  animation: successPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s both;
+}
+
+@keyframes successPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.success-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.success-header p {
+  opacity: 0.85;
+  font-size: 0.95rem;
+  margin-bottom: 0;
+}
+
+.success-body {
+  padding: 2rem;
+}
+
+.success-message {
+  font-size: 0.925rem;
+  color: #6c757d;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.success-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: rgba(10, 179, 156, 0.08);
+  color: #0ab39c;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+// ========================================
+// Error State
+// ========================================
+.error-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.error-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(240, 101, 72, 0.1);
+  color: #f06548;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  font-size: 2rem;
+}
+
+// ========================================
+// Loading State
+// ========================================
+.loading-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+// ========================================
+// Responsive
+// ========================================
+@media (max-width: 575.98px) {
+  :host {
+    padding: 1rem 0.75rem 2rem;
+  }
+
+  .consent-header {
+    padding: 2rem 1.5rem;
+    border-radius: 12px;
+  }
+
+  .consent-body {
+    padding: 1.5rem;
+  }
+
+  .ai-uses-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .consent-cta {
+    padding: 1.5rem;
+  }
+
+  .consent-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.875rem 1.5rem;
+  }
+
+  .consent-footer {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+  }
+}

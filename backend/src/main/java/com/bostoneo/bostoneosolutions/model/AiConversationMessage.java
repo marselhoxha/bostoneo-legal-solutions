@@ -76,6 +76,13 @@ public class AiConversationMessage {
     @Column(name = "organization_id")
     private Long organizationId;
 
+    // ABA Opinion 512: Attorney verification of AI output
+    @Column(name = "reviewed_by")
+    private Long reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

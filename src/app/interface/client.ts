@@ -10,5 +10,8 @@ export interface Client {
     imageUrl: string;
     phone: string;
     createdAt: Date;
+    aiConsentGiven?: boolean;
+    aiConsentDate?: Date;
+    aiConsentNotes?: string;
     invoices?: Invoice[];
 }

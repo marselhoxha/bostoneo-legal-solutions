@@ -90,6 +90,9 @@ public interface ClientRepository extends PagingAndSortingRepository<Client, Lon
 
     boolean existsByIdAndOrganizationId(Long id, Long organizationId);
 
+    @Query("SELECT c FROM Client c WHERE c.aiConsentToken = :token")
+    java.util.Optional<Client> findByAiConsentToken(@Param("token") String token);
+
     /**
      * SECURITY: Check if client exists by user ID within organization
      */

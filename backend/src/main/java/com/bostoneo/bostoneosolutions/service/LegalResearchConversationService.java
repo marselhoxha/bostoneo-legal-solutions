@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AiConversationMessageRepository;
 import com.bostoneo.bostoneosolutions.repository.AiConversationSessionRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
+import com.bostoneo.bostoneosolutions.utils.PiiDetector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -117,11 +118,14 @@ public class LegalResearchConversationService {
             }
         }
 
+        // ABA Compliance: Redact PII from user messages before storing in DB
+        String safeContent = "user".equals(role) ? PiiDetector.redact(content) : content;
+
         AiConversationMessage message = AiConversationMessage.builder()
                 .session(session)
                 .organizationId(session.getOrganizationId())
                 .role(role)
-                .content(content)
+                .content(safeContent)
                 .metadata(metadataMap)
                 .ragContextUsed(false)
                 .researchMode(researchMode) // Store research mode per message for badge display
@@ -353,12 +357,15 @@ public class LegalResearchConversationService {
         AiConversationSession session = sessionRepository.findByIdAndUserIdAndOrganizationId(sessionId, userId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found or access denied"));
 
+        // ABA Compliance: Redact PII from user message before storing in DB
+        String safeQuery = PiiDetector.redact(query);
+
         // Save user message
         AiConversationMessage userMessage = AiConversationMessage.builder()
                 .session(session)
                 .organizationId(session.getOrganizationId())
                 .role("user")
-                .content(query)
+                .content(safeQuery)
                 .ragContextUsed(false)
                 .build();
         messageRepository.save(userMessage);
@@ -567,5 +574,25 @@ public class LegalResearchConversationService {
             log.error("❌ THOROUGH mode research failed for session {}: {}", sessionId, e.getMessage(), e);
             throw new RuntimeException("THOROUGH mode research failed: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Mark an AI message as reviewed by an attorney - ABA Opinion 512 compliance
+     * TENANT FILTERED
+     */
+    @Transactional
+    public AiConversationMessage markAsReviewed(Long messageId, Long userId) {
+        Long orgId = getRequiredOrganizationId();
+        AiConversationMessage message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message not found"));
+
+        // Tenant isolation check
+        if (!orgId.equals(message.getOrganizationId())) {
+            throw new IllegalArgumentException("Message not found or access denied");
+        }
+
+        message.setReviewedBy(userId);
+        message.setReviewedAt(java.time.LocalDateTime.now());
+        return messageRepository.save(message);
     }
 }

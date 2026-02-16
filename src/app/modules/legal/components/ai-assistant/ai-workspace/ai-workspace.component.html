@@ -1667,6 +1667,16 @@
                         (accept)="acceptTransformation($event)"
                         (reject)="rejectTransformation($event)">
                       </app-transformation-preview>
+
+                      <!-- Attorney Review Button (ABA Opinion 512) -->
+                      <div class="d-flex align-items-center gap-2 mt-2" *ngIf="message.id">
+                        <button class="btn btn-sm" [class.text-success]="message.reviewedAt"
+                                (click)="markAsReviewed(message)"
+                                [title]="message.reviewedAt ? 'Reviewed on ' + (message.reviewedAt | date:'short') : 'Mark as Reviewed'">
+                          <i class="ri-checkbox-circle-line"></i>
+                          <span class="ms-1 small" *ngIf="message.reviewedAt">Reviewed</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1873,6 +1883,16 @@
                           Summarize case authority
                         </button>
                       </div>
+                    </div>
+
+                    <!-- Attorney Review Button (ABA Opinion 512) -->
+                    <div class="d-flex align-items-center gap-2 mt-2" *ngIf="message.id">
+                      <button class="btn btn-sm" [class.text-success]="message.reviewedAt"
+                              (click)="markAsReviewed(message)"
+                              [title]="message.reviewedAt ? 'Reviewed on ' + (message.reviewedAt | date:'short') : 'Mark as Reviewed'">
+                        <i class="ri-checkbox-circle-line"></i>
+                        <span class="ms-1 small" *ngIf="message.reviewedAt">Reviewed</span>
+                      </button>
                     </div>
 
                     <!-- Follow-up Questions -->

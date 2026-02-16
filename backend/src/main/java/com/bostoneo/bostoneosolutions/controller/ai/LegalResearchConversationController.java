@@ -501,10 +501,54 @@ public class LegalResearchConversationController {
         }
     }
 
+    /**
+     * Mark an AI message as reviewed by an attorney (ABA Opinion 512)
+     * PATCH /api/legal/research/conversations/messages/{messageId}/review
+     */
+    @PatchMapping("/messages/{messageId}/review")
+    public ResponseEntity<HttpResponse> markAsReviewed(
+            @PathVariable Long messageId,
+            @RequestBody ReviewRequest request
+    ) {
+        try {
+            AiConversationMessage message = conversationService.markAsReviewed(messageId, request.userId());
+
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(Map.of("message", message))
+                            .message("Message marked as reviewed")
+                            .status(HttpStatus.OK)
+                            .statusCode(HttpStatus.OK.value())
+                            .build()
+            );
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message(e.getMessage())
+                            .status(HttpStatus.NOT_FOUND)
+                            .statusCode(HttpStatus.NOT_FOUND.value())
+                            .build());
+
+        } catch (Exception e) {
+            log.error("Error marking message {} as reviewed", messageId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("Failed to mark as reviewed: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build());
+        }
+    }
+
     // Request DTOs
     record SessionRequest(Long sessionId, Long userId, Long caseId, String title) {}
     record MessageRequest(Long userId, String role, String content, String metadata, String researchMode) {}
     record UpdateTitleRequest(Long userId, String title) {}
     record CreateConversationRequest(Long userId, String title, String researchMode, String taskType, String documentType, String jurisdiction) {}
     record QueryRequest(Long userId, String query, String researchMode) {}
+    record ReviewRequest(Long userId) {}
 }

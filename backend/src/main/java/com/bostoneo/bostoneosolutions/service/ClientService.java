@@ -40,5 +40,10 @@ public interface ClientService {
 
     void deleteClient(Long id);
 
+    // AI Consent flow
+    void sendAiConsentEmail(Long clientId, String emailOverride);
+    void acknowledgeAiConsent(String token);
+    Client getClientByConsentToken(String token);
+
     Stats getStats();
 }

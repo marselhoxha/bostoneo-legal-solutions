@@ -72,6 +72,21 @@ public class Client {
         createdAt = new Date();
     }
 
+    // ABA Rule 1.4: AI Disclosure Consent tracking
+    @Column(name = "ai_consent_given")
+    private Boolean aiConsentGiven;
+
+    @Column(name = "ai_consent_date")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date aiConsentDate;
+
+    @Column(name = "ai_consent_notes", columnDefinition = "TEXT")
+    private String aiConsentNotes;
+
+    @Column(name = "ai_consent_token", length = 255)
+    @JsonIgnore
+    private String aiConsentToken;
+
     @OneToMany(mappedBy = "client", fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JsonIgnoreProperties("client")
     private Collection<Invoice> invoices;

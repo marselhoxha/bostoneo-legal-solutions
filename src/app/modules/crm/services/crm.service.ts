@@ -145,6 +145,13 @@ export class CrmService {
     });
   }
 
+  // Find intake submissions by client email
+  getSubmissionsByEmail(email: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/intake-submissions/by-email`, {
+      params: { email }
+    });
+  }
+
   // Lead Management
   getLeads(params?: any): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/leads`, { params });
