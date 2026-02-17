@@ -46,6 +46,15 @@ import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.io.font.constants.StandardFonts;
+import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.geom.Rectangle;
+import com.itextpdf.kernel.events.Event;
+import com.itextpdf.kernel.events.IEventHandler;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
+import com.itextpdf.kernel.pdf.PdfPage;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
+import com.itextpdf.layout.element.LineSeparator;
+import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
 
 @Service
 @RequiredArgsConstructor
@@ -1175,6 +1184,10 @@ public class AiWorkspaceDocumentService {
         prompt.append("- Use numbered lists (1. 2. 3.) for sequential items\n");
         prompt.append("- Use bullet lists (- ) for non-sequential items\n");
         prompt.append("- Use proper paragraph breaks for readability\n");
+        prompt.append("- Keep sections balanced in length — avoid very short (1-2 sentence) sections followed by very long ones\n");
+        prompt.append("- Each major section (##) should be substantive enough to stand on its own\n");
+        prompt.append("- Group related short clauses under a single section header rather than giving each its own ## header\n");
+        prompt.append("- Place signature blocks and closing sections together — do not split them across separate sections\n");
 
         // MANDATORY RULE: COMPLETE ALL LISTS WITH PLACEHOLDERS
         prompt.append("\n**⚠️ MANDATORY RULE - COMPLETE ALL LISTS WITH PLACEHOLDERS**:\n");
@@ -1914,29 +1927,35 @@ public class AiWorkspaceDocumentService {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfWriter writer = new PdfWriter(baos);
             PdfDocument pdfDoc = new PdfDocument(writer);
-            Document document = new Document(pdfDoc);
+            Document document = new Document(pdfDoc, PageSize.LETTER);
+            document.setMargins(72, 72, 72, 72);
 
             // Create fonts
-            PdfFont titleFont = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
-            PdfFont headerFont = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
-            PdfFont normalFont = PdfFontFactory.createFont(StandardFonts.TIMES_ROMAN);
+            PdfFont titleFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+            PdfFont headerFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+            PdfFont normalFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
 
-            // Only add title if content doesn't already have a markdown title
-            // This prevents user prompt from appearing in the document
-            if (!contentHasMarkdownTitle(content)) {
-                log.info("Content has no markdown title, adding document title: {}", title);
-                Paragraph titleParagraph = new Paragraph(title)
-                        .setFont(titleFont)
-                        .setFontSize(18)
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setMarginBottom(20);
-                document.add(titleParagraph);
-            } else {
-                log.info("Content has markdown title, skipping title injection");
-            }
+            // Add page numbers to every page
+            addPageNumberHandler(pdfDoc);
 
-            // Convert Markdown content to PDF
-            convertMarkdownToPdf(content, document, headerFont, normalFont);
+            // Always inject the title — the first H1 in markdown will be skipped
+            Paragraph titleParagraph = new Paragraph(title)
+                    .setFont(titleFont)
+                    .setFontSize(13)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMultipliedLeading(1.15f)
+                    .setMarginBottom(6);
+            document.add(titleParagraph);
+
+            // Thin horizontal rule under title
+            SolidLine titleLine = new SolidLine(0.5f);
+            titleLine.setColor(new DeviceRgb(180, 180, 180));
+            LineSeparator titleRule = new LineSeparator(titleLine);
+            titleRule.setMarginBottom(10);
+            document.add(titleRule);
+
+            // Convert Markdown content to PDF, skipping the first H1 (title already rendered above)
+            convertMarkdownToPdf(content, document, headerFont, normalFont, true);
 
             // Add metadata footer if requested
             if (includeMetadata) {
@@ -2015,28 +2034,35 @@ public class AiWorkspaceDocumentService {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfWriter writer = new PdfWriter(baos);
             PdfDocument pdfDoc = new PdfDocument(writer);
-            Document document = new Document(pdfDoc);
+            Document document = new Document(pdfDoc, PageSize.LETTER);
+            document.setMargins(72, 72, 72, 72);
 
             // Create fonts
-            PdfFont titleFont = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
-            PdfFont headerFont = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
-            PdfFont normalFont = PdfFontFactory.createFont(StandardFonts.TIMES_ROMAN);
+            PdfFont titleFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+            PdfFont headerFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+            PdfFont normalFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
 
-            // Only add title if content doesn't already have a markdown title
-            if (!contentHasMarkdownTitle(content)) {
-                log.info("Content has no markdown title, adding document title: {}", title);
-                Paragraph titleParagraph = new Paragraph(title)
-                        .setFont(titleFont)
-                        .setFontSize(18)
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setMarginBottom(20);
-                document.add(titleParagraph);
-            } else {
-                log.info("Content has markdown title, skipping title injection");
-            }
+            // Add page numbers to every page
+            addPageNumberHandler(pdfDoc);
 
-            // Convert Markdown content to PDF
-            convertMarkdownToPdf(content, document, headerFont, normalFont);
+            // Always inject the title — the first H1 in markdown will be skipped
+            Paragraph titleParagraph = new Paragraph(title)
+                    .setFont(titleFont)
+                    .setFontSize(13)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMultipliedLeading(1.15f)
+                    .setMarginBottom(6);
+            document.add(titleParagraph);
+
+            // Thin horizontal rule under title
+            SolidLine titleLine = new SolidLine(0.5f);
+            titleLine.setColor(new DeviceRgb(180, 180, 180));
+            LineSeparator titleRule = new LineSeparator(titleLine);
+            titleRule.setMarginBottom(10);
+            document.add(titleRule);
+
+            // Convert Markdown content to PDF, skipping the first H1 (title already rendered above)
+            convertMarkdownToPdf(content, document, headerFont, normalFont, true);
 
             document.close();
 
@@ -2054,7 +2080,7 @@ public class AiWorkspaceDocumentService {
      * Handles headers, lists, tables, bold/italic formatting, and links
      * Automatically detects HTML content and converts it appropriately
      */
-    private void convertMarkdownToPdf(String content, Document document, PdfFont headerFont, PdfFont normalFont) throws IOException {
+    private void convertMarkdownToPdf(String content, Document document, PdfFont headerFont, PdfFont normalFont, boolean skipFirstH1) throws IOException {
         if (content == null || content.isEmpty()) {
             return;
         }
@@ -2081,6 +2107,17 @@ public class AiWorkspaceDocumentService {
         String[] lines = processedContent.split("\n");
         List<String> tableRows = new ArrayList<>();
         boolean inTable = false;
+        boolean isFirstH1 = true;
+
+        // Detect H1 title text to skip duplicate headers
+        String h1TitleText = null;
+        for (String l : lines) {
+            String t = l.trim();
+            if (t.startsWith("# ") && !t.startsWith("## ")) {
+                h1TitleText = processInlineFormatting(t.substring(2).trim());
+                break;
+            }
+        }
 
         for (int lineIndex = 0; lineIndex < lines.length; lineIndex++) {
             String line = lines[lineIndex];
@@ -2108,6 +2145,7 @@ public class AiWorkspaceDocumentService {
             }
 
             if (trimmed.isEmpty()) {
+                document.add(new Paragraph("").setMarginBottom(6).setFontSize(6));
                 continue;
             }
 
@@ -2119,14 +2157,49 @@ public class AiWorkspaceDocumentService {
                 }
 
                 String headerText = processInlineFormatting(trimmed.substring(level).trim());
-                float fontSize = level == 1 ? 16 : (level == 2 ? 14 : 12);
+
+                // Skip duplicate: if an H2/H3 text matches the H1 title, skip it
+                if (level >= 2 && h1TitleText != null && headerText.equalsIgnoreCase(h1TitleText)) {
+                    continue;
+                }
+
+                float fontSize;
+                float marginTop;
+                float marginBottom;
+
+                if (level == 1 && isFirstH1) {
+                    isFirstH1 = false;
+                    // Skip the first H1 entirely if title was already injected
+                    if (skipFirstH1) {
+                        continue;
+                    }
+                    // First H1 = document title: 13pt centered, no top margin
+                    fontSize = 13;
+                    marginTop = 0;
+                    marginBottom = 10;
+                } else if (level == 1) {
+                    fontSize = 12;
+                    marginTop = 20;
+                    marginBottom = 8;
+                } else if (level == 2) {
+                    fontSize = 11;
+                    marginTop = 14;
+                    marginBottom = 6;
+                } else {
+                    fontSize = 10;
+                    marginTop = 8;
+                    marginBottom = 4;
+                }
 
                 Paragraph para = new Paragraph(headerText)
                         .setFont(headerFont)
                         .setFontSize(fontSize)
-                        .setMarginTop(level == 1 ? 20 : 15)
-                        .setMarginBottom(10)
-                        .setKeepTogether(true);
+                        .setMultipliedLeading(1.3f)
+                        .setMarginTop(marginTop)
+                        .setMarginBottom(marginBottom)
+                        .setKeepTogether(true)
+                        .setKeepWithNext(level >= 3);
+
                 document.add(para);
                 continue;
             }
@@ -2136,9 +2209,10 @@ public class AiWorkspaceDocumentService {
                 String itemText = trimmed.replaceFirst("^\\d+\\.\\s+", "");
                 Paragraph para = new Paragraph(processInlineFormatting(itemText))
                         .setFont(normalFont)
-                        .setFontSize(12)
+                        .setFontSize(11)
+                        .setMultipliedLeading(1.4f)
                         .setMarginLeft(20)
-                        .setMarginBottom(5);
+                        .setMarginBottom(3);
                 document.add(para);
                 continue;
             }
@@ -2146,11 +2220,12 @@ public class AiWorkspaceDocumentService {
             // Check for bullet lists (- Item or * Item) - but not if it looks like a table separator
             if ((trimmed.startsWith("- ") || trimmed.startsWith("* ")) && !trimmed.contains("|")) {
                 String itemText = trimmed.substring(2).trim();
-                Paragraph para = new Paragraph("• " + processInlineFormatting(itemText))
+                Paragraph para = new Paragraph("\u2022 " + processInlineFormatting(itemText))
                         .setFont(normalFont)
-                        .setFontSize(12)
+                        .setFontSize(11)
+                        .setMultipliedLeading(1.4f)
                         .setMarginLeft(20)
-                        .setMarginBottom(5);
+                        .setMarginBottom(3);
                 document.add(para);
                 continue;
             }
@@ -2230,8 +2305,9 @@ public class AiWorkspaceDocumentService {
 
         Paragraph para = new Paragraph()
                 .setFont(normalFont)
-                .setFontSize(12)
-                .setMarginBottom(10)
+                .setFontSize(11)
+                .setMultipliedLeading(1.4f)
+                .setMarginBottom(6)
                 .setTextAlignment(TextAlignment.JUSTIFIED);
 
         // Process bold formatting (**text**)
@@ -2245,7 +2321,7 @@ public class AiWorkspaceDocumentService {
             } else {
                 // Bold text
                 try {
-                    PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
+                    PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
                     para.add(new Text(parts[i]).setFont(boldFont));
                 } catch (IOException e) {
                     para.add(new Text(parts[i]).setFont(normalFont));
@@ -2278,6 +2354,37 @@ public class AiWorkspaceDocumentService {
                 .setTextAlignment(TextAlignment.CENTER);
 
         document.add(footer);
+    }
+
+    /**
+     * Add centered page numbers at the bottom of every page
+     */
+    private void addPageNumberHandler(PdfDocument pdfDoc) {
+        pdfDoc.addEventHandler(PdfDocumentEvent.END_PAGE, new IEventHandler() {
+            @Override
+            public void handleEvent(Event event) {
+                PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
+                PdfPage page = docEvent.getPage();
+                int pageNumber = docEvent.getDocument().getPageNumber(page);
+                Rectangle pageSize = page.getPageSize();
+
+                try {
+                    PdfFont font = PdfFontFactory.createFont(StandardFonts.HELVETICA);
+                    PdfCanvas canvas = new PdfCanvas(page);
+                    String pageText = String.valueOf(pageNumber);
+                    float textWidth = font.getWidth(pageText, 9);
+
+                    canvas.beginText()
+                            .setFontAndSize(font, 9)
+                            .moveText((pageSize.getWidth() - textWidth) / 2, 36)
+                            .showText(pageText)
+                            .endText();
+                    canvas.release();
+                } catch (IOException e) {
+                    log.error("Error adding page number", e);
+                }
+            }
+        });
     }
 
     // ========================================
@@ -2798,6 +2905,86 @@ public class AiWorkspaceDocumentService {
         result.put("transformationScope", "FULL_DOCUMENT");
 
         return result;
+    }
+
+    /**
+     * Enhance a rough user prompt into a detailed, structured legal document prompt.
+     * Stateless — no DB writes. Just calls Claude with a prompt-engineering system message.
+     */
+    public String enhancePrompt(String roughPrompt, String documentType, String jurisdiction) {
+        getRequiredOrganizationId(); // tenant guard
+
+        String systemMessage = buildPromptEnhancerSystemMessage(documentType, jurisdiction);
+        String userMessage = "Transform this rough idea into a detailed, structured prompt for generating a legal document:\n\n" + roughPrompt;
+
+        CompletableFuture<String> result = claudeService.generateCompletion(userMessage, systemMessage, false, null);
+        return result.join();
+    }
+
+    /**
+     * Build system message for the prompt enhancer.
+     * Instructs Claude to refine a rough idea into a structured prompt — NOT to generate the document itself.
+     */
+    private String buildPromptEnhancerSystemMessage(String documentType, String jurisdiction) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("You are an expert legal document specialist helping attorneys structure their document generation requests.\n\n");
+
+        sb.append("YOUR TASK: Transform the attorney's rough idea into a detailed, well-structured prompt that will produce a high-quality legal document. ");
+        sb.append("You are NOT generating the document itself — you are crafting the perfect instruction for another AI to generate it.\n\n");
+
+        sb.append("OUTPUT RULES:\n");
+        sb.append("- Output ONLY the enhanced prompt text, no preamble or explanation\n");
+        sb.append("- Use [PLACEHOLDER] format for names, dates, amounts, and case-specific details (e.g., [Client Name], [Opposing Party], [Date of Incident])\n");
+        sb.append("- Keep under 400 words\n");
+        sb.append("- Be specific and actionable\n");
+        sb.append("- Include relevant legal elements specific to the document type\n");
+        sb.append("- Structure the prompt so it reads as a clear instruction\n\n");
+
+        if (jurisdiction != null && !jurisdiction.isEmpty()) {
+            sb.append("JURISDICTION: ").append(jurisdiction).append("\n");
+            sb.append("Include jurisdiction-specific considerations where relevant.\n\n");
+        }
+
+        if (documentType != null && !documentType.isEmpty()) {
+            sb.append("DOCUMENT TYPE: ").append(documentType).append("\n");
+            sb.append(getDocumentTypeHints(documentType));
+            sb.append("\n");
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Returns document-type-specific hints for the prompt enhancer.
+     */
+    private String getDocumentTypeHints(String documentType) {
+        String type = documentType.toLowerCase().replaceAll("[^a-z]", "");
+
+        return switch (type) {
+            case "nda", "nondisclosureagreement" ->
+                "Key elements to address: mutual vs one-way, definition of confidential information, term/duration, exclusions from confidentiality, permitted disclosures, remedies for breach, return/destruction of materials.";
+            case "motion", "motiontodismiss", "motionfordefaultjudgment", "motionforsummaryjudgment", "motiontocompel", "motioninsupportof" ->
+                "Key elements to address: relief sought, legal standard, factual basis, supporting authorities, procedural history, argument structure.";
+            case "demandletter" ->
+                "Key elements to address: liability theory, factual narrative, damages breakdown (medical, lost wages, pain/suffering), settlement demand amount, response deadline.";
+            case "contract", "serviceagreement", "employmentagreement" ->
+                "Key elements to address: parties and roles, scope of services/obligations, payment terms, term and termination, representations and warranties, indemnification, dispute resolution.";
+            case "complaint" ->
+                "Key elements to address: parties, jurisdiction and venue, factual allegations, causes of action, damages sought, prayer for relief.";
+            case "brief", "legalmemorandum", "memo" ->
+                "Key elements to address: question presented, short answer, statement of facts, argument with authorities, conclusion.";
+            case "interrogatories" ->
+                "Key elements to address: number of interrogatories, topics to cover (liability, damages, witnesses, insurance), instructions and definitions.";
+            case "discovery", "requestforproduction" ->
+                "Key elements to address: categories of documents, time period, relevant custodians, format specifications.";
+            case "settlement", "settlementagreement" ->
+                "Key elements to address: settlement amount, payment terms, release scope, confidentiality, dismissal with prejudice.";
+            case "lease", "leasereview" ->
+                "Key elements to address: premises description, term, rent and escalation, maintenance responsibilities, permitted use, default provisions.";
+            default ->
+                "Include all standard legal elements appropriate for this document type. Address parties, key terms, obligations, and any jurisdiction-specific requirements.";
+        };
     }
 
     /**
