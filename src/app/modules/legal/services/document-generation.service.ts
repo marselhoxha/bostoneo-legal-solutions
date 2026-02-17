@@ -97,6 +97,17 @@ export interface DocumentTransformResponse {
   useDiffMode?: boolean;
 }
 
+export interface PromptEnhanceRequest {
+  prompt: string;
+  documentType?: string;
+  jurisdiction?: string;
+}
+
+export interface PromptEnhanceResponse {
+  enhancedPrompt: string;
+  originalPrompt: string;
+}
+
 export interface DraftGenerationRequest {
   userId: number;
   caseId?: number | null;
@@ -208,6 +219,16 @@ export class DocumentGenerationService {
   generateDraftWithConversation(request: DraftGenerationRequest): Observable<DraftGenerationResponse> {
     return this.http.post<DraftGenerationResponse>(
       `${environment.apiUrl}/api/legal/ai-workspace/drafts/generate`,
+      request
+    );
+  }
+
+  /**
+   * Enhance a rough prompt into a detailed, structured legal document prompt
+   */
+  enhancePrompt(request: PromptEnhanceRequest): Observable<PromptEnhanceResponse> {
+    return this.http.post<PromptEnhanceResponse>(
+      `${environment.apiUrl}/api/legal/ai-workspace/drafts/enhance-prompt`,
       request
     );
   }

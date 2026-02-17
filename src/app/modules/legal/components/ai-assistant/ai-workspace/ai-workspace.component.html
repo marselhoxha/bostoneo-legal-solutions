@@ -1268,6 +1268,22 @@
               [placeholder]="promptPlaceholder"
               rows="3"></textarea>
 
+            <!-- Enhance Prompt (Draft mode only, when textarea has content) -->
+            <div class="enhance-prompt-section" *ngIf="selectedTask === 'draft' && customPrompt && customPrompt.trim().length > 0">
+              <div class="enhance-prompt-row" *ngIf="!isEnhancingPrompt">
+                <button type="button" class="btn btn-enhance-prompt" (click)="enhanceCurrentPrompt()">
+                  <i class="ri-magic-line"></i> Enhance Prompt
+                </button>
+                <span class="enhance-success-badge" *ngIf="promptWasEnhanced">
+                  <i class="ri-check-line"></i> Enhanced
+                </span>
+              </div>
+              <div class="enhance-loading" *ngIf="isEnhancingPrompt">
+                <span class="spinner-border spinner-border-sm"></span>
+                <span>Structuring your prompt...</span>
+              </div>
+            </div>
+
             <!-- Case Selector (Draft task only) -->
             <div class="case-selector-section" *ngIf="selectedTask === 'draft'" style="margin-top: 1rem; margin-bottom: 1rem;">
               <label class="form-label" style="font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem;">

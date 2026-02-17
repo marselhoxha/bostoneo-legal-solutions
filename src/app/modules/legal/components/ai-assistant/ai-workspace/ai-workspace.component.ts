@@ -346,6 +346,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   customPrompt = '';
   followUpMessage = '';
 
+  // Prompt enhancement state
+  isEnhancingPrompt = false;
+  promptWasEnhanced = false;
+
   // Follow-up questions (migrated to observable from StateService)
   followUpQuestions$ = this.stateService.followUpQuestions$;
 
@@ -5790,6 +5794,41 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.notificationService.error('Error', 'Failed to create conversation for document analysis');
         }
       });
+  }
+
+  /**
+   * Enhance the current prompt using AI to add legal structure and detail
+   */
+  enhanceCurrentPrompt(): void {
+    if (!this.customPrompt?.trim() || this.isEnhancingPrompt) return;
+
+    this.isEnhancingPrompt = true;
+    this.promptWasEnhanced = false;
+    this.cdr.detectChanges();
+
+    // Determine document type from selected pill
+    let documentType: string | undefined;
+    if (this.selectedDocTypePill) {
+      documentType = this.selectedDocTypePill;
+    }
+
+    this.documentGenerationService.enhancePrompt({
+      prompt: this.customPrompt.trim(),
+      documentType: documentType,
+      jurisdiction: this.selectedJurisdiction
+    }).subscribe({
+      next: (response) => {
+        this.customPrompt = response.enhancedPrompt;
+        this.promptWasEnhanced = true;
+        this.isEnhancingPrompt = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        // Silently fail — original prompt preserved
+        this.isEnhancingPrompt = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   startCustomDraft(): void {

@@ -20,6 +20,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 
@@ -488,6 +490,45 @@ public class AiWorkspaceController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } catch (Exception e) {
             log.error("Error generating draft: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Enhance a rough prompt into a detailed, structured legal document prompt.
+     * POST /api/legal/ai-workspace/drafts/enhance-prompt
+     */
+    @PostMapping("/drafts/enhance-prompt")
+    public ResponseEntity<Map<String, Object>> enhancePrompt(
+        @RequestBody Map<String, String> request,
+        @AuthenticationPrincipal UserDTO userDto
+    ) {
+        try {
+            if (userDto == null || userDto.getId() == null) {
+                log.error("No user available for prompt enhancement");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            String prompt = request.get("prompt");
+            String documentType = request.get("documentType");
+            String jurisdiction = request.get("jurisdiction");
+
+            if (prompt == null || prompt.trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            log.info("Enhancing prompt for user={}, docType={}, jurisdiction={}", userDto.getId(), documentType, jurisdiction);
+
+            String enhancedPrompt = documentService.enhancePrompt(prompt.trim(), documentType, jurisdiction);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("enhancedPrompt", enhancedPrompt);
+            response.put("originalPrompt", prompt);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error enhancing prompt: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
