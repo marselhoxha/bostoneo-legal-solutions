@@ -236,6 +236,10 @@ jobs:
           spring:
             profiles:
               active: ${SPRING_PROFILES_ACTIVE:staging}
+            autoconfigure:
+              exclude:
+                - org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration
+                - org.springframework.boot.actuate.autoconfigure.data.redis.RedisReactiveHealthContributorAutoConfiguration
             mvc:
               async:
                 request-timeout: 120000
