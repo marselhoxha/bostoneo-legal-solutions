@@ -302,6 +302,9 @@ jobs:
             endpoint:
               health:
                 show-details: never
+            health:
+              redis:
+                enabled: false
           firebase:
             config:
               path: ${FIREBASE_CONFIG_PATH:firebase-service-account.json}
