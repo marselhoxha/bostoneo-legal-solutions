@@ -117,7 +117,7 @@ public class EnhancedSecurityConfig {
             .requestMatchers(OPTIONS).permitAll()
             .requestMatchers(PUBLIC_URLS).permitAll()
             .requestMatchers("/ws/**").permitAll()  // WebSocket has its own token validation
-            .requestMatchers("/actuator/health").permitAll()  // Health check for load balancers
+            .requestMatchers("/health", "/actuator/health").permitAll()  // Health check for load balancers
             .requestMatchers("/api/public/**").permitAll()  // Explicitly public endpoints only
             // Static resources and error pages
             .requestMatchers("/error", "/error/**").permitAll()

@@ -442,7 +442,7 @@ jobs:
             TG_NAME="legience-staging-api-tg"
           fi
           TG_ARN=$(aws elbv2 describe-target-groups --names $TG_NAME --query 'TargetGroups[0].TargetGroupArn' --output text)
-          aws elbv2 modify-target-group --target-group-arn $TG_ARN --health-check-path /actuator/health --matcher HttpCode=200
+          aws elbv2 modify-target-group --target-group-arn $TG_ARN --health-check-path /health --matcher HttpCode=200
 
       - name: Deploy to ECS
         run: |
