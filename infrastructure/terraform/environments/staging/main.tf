@@ -465,6 +465,130 @@ module "ecs" {
 }
 
 # -----------------------------------------------------------------------------
+# GitHub Actions OIDC Role (shared across staging/production)
+# -----------------------------------------------------------------------------
+data "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+}
+
+resource "aws_iam_role" "github_actions" {
+  name = "GitHubActionsRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = data.aws_iam_openid_connect_provider.github.arn
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" = "repo:marselhoxha/bostoneo-legal-solutions:*"
+          }
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "GitHubActionsRole"
+    Environment = "shared"
+    Project     = "legience"
+  }
+}
+
+resource "aws_iam_role_policy" "github_actions_deploy" {
+  name = "GitHubActionsDeployPolicy"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ECRAuth"
+        Effect = "Allow"
+        Action = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Sid    = "ECRPush"
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload"
+        ]
+        Resource = "arn:aws:ecr:us-east-1:724629565287:repository/legience-api"
+      },
+      {
+        Sid    = "ECS"
+        Effect = "Allow"
+        Action = [
+          "ecs:UpdateService",
+          "ecs:DescribeServices",
+          "ecs:DescribeClusters"
+        ]
+        Resource = [
+          "arn:aws:ecs:us-east-1:724629565287:cluster/legience-*",
+          "arn:aws:ecs:us-east-1:724629565287:service/legience-*/*"
+        ]
+      },
+      {
+        Sid    = "ALBHealthCheckDescribe"
+        Effect = "Allow"
+        Action = ["elasticloadbalancing:DescribeTargetGroups"]
+        Resource = "*"
+      },
+      {
+        Sid    = "ALBHealthCheckModify"
+        Effect = "Allow"
+        Action = ["elasticloadbalancing:ModifyTargetGroup"]
+        Resource = "arn:aws:elasticloadbalancing:us-east-1:724629565287:targetgroup/legience-*/*"
+      },
+      {
+        Sid    = "S3Frontend"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::legience-*-frontend-*",
+          "arn:aws:s3:::legience-*-frontend-*/*",
+          "arn:aws:s3:::app-staging.legience.com",
+          "arn:aws:s3:::app-staging.legience.com/*",
+          "arn:aws:s3:::app.legience.com",
+          "arn:aws:s3:::app.legience.com/*"
+        ]
+      },
+      {
+        Sid    = "CloudFrontInvalidation"
+        Effect = "Allow"
+        Action = ["cloudfront:CreateInvalidation"]
+        Resource = "arn:aws:cloudfront::724629565287:distribution/E1UWEPT9HA7VQX"
+      },
+      {
+        Sid    = "SecretsRead"
+        Effect = "Allow"
+        Action = ["secretsmanager:GetSecretValue"]
+        Resource = "arn:aws:secretsmanager:us-east-1:724629565287:secret:legience/*"
+      }
+    ]
+  })
+}
+
+# -----------------------------------------------------------------------------
 # Outputs
 # -----------------------------------------------------------------------------
 output "alb_dns_name" {
