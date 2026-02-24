@@ -18,6 +18,9 @@ const routes: Routes = [
 
   // Public routes (no auth required)
   { path: 'public', loadChildren: () => import('./modules/public/public.module').then(m => m.PublicModule) },
+
+  // Marketing website (no auth required)
+  { path: 'website', loadChildren: () => import('./modules/website/website.module').then(m => m.WebsiteModule) },
   
   // Main app routes (with layout)
   {

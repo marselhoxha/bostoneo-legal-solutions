@@ -92,8 +92,9 @@ public class AILegalResearchService {
         // NEW: Extract conversation history for context-aware responses
         List<ConversationMessage> conversationHistory = extractConversationHistory(searchRequest);
 
-        // Phase 4: Query validation
-        QueryValidationService.ValidationResult validation = queryValidationService.validateQuery(query, researchModeStr);
+        // Phase 4: Query validation (relaxed for conversation follow-ups)
+        boolean hasHistory = conversationHistory != null && !conversationHistory.isEmpty();
+        QueryValidationService.ValidationResult validation = queryValidationService.validateQuery(query, researchModeStr, hasHistory);
         if (!validation.isValid) {
             log.warn("❌ Query validation failed: {}", validation.errorMessage);
             Map<String, Object> validationError = new HashMap<>();
@@ -522,10 +523,17 @@ public class AILegalResearchService {
         // LEGAL CITATION DISCLAIMER
         system.append("**CRITICAL - LEGAL CITATION DISCLAIMER**:\n");
         system.append("⚠️ IMPORTANT: When citing any cases, statutes, or legal authorities:\n");
-        system.append("   - Include this exact disclaimer: \"⚠️ VERIFY ALL CASE CITATIONS: I cannot guarantee the accuracy of specific case citations, pin cites, or holdings. Always independently verify any cases, statutes, or legal authorities cited before relying on them in court filings or legal advice.\"\n");
+        system.append("   - Include this exact disclaimer: \"⚠️ VERIFY ALL CASE CITATIONS: I cannot guarantee the accuracy of specific case citations, pin cites, or holdings. Always verify citations in Westlaw or LexisNexis before relying on them in court filings or legal advice.\"\n");
         system.append("   - Use cautious phrasing: \"Research cases such as [Case Name]\" or \"Cases addressing this issue include...\" rather than definitive statements\n");
         system.append("   - If uncertain: \"Consult Westlaw/Lexis to find controlling authority on [issue]\"\n");
         system.append("   - NEVER fabricate case names, citations, or holdings\n\n");
+
+        // CITATION AUTHORITY HIERARCHY
+        system.append("**CITATION AUTHORITY HIERARCHY** (always prefer higher tiers):\n");
+        system.append("   1. **BINDING AUTHORITY** — Same jurisdiction appellate court decisions, controlling statutes, constitutional provisions\n");
+        system.append("   2. **PERSUASIVE AUTHORITY** — Other circuit/state court decisions, Restatements, influential treatises\n");
+        system.append("   3. **SECONDARY AUTHORITY** — Law reviews, treatises, older or out-of-jurisdiction cases\n");
+        system.append("   When citing, identify the tier implicitly through your analysis (e.g., \"The First Circuit held...\" vs \"A district court in another jurisdiction noted...\").\n\n");
 
         // ADMINISTRATIVE PRECEDENTS
         system.append("**ADMINISTRATIVE PRECEDENTS - CITE WHERE APPLICABLE**:\n");
@@ -543,6 +551,105 @@ public class AILegalResearchService {
         system.append("   - Follow: Court rules, professional standards, proper formatting with numbered paragraphs and headings\n");
         system.append("   - Provide: Signature blocks and certificates of service when appropriate\n");
         system.append("   - For questions (non-drafting): Provide detailed analysis with structure, legal standards, key arguments, and strategic considerations\n\n");
+
+        // RESPONSE FORMATTING - VISUAL ELEMENTS
+        system.append("**RESPONSE FORMATTING - VISUAL ELEMENTS**:\n");
+        system.append("The UI renders rich visual elements. Use them to make responses clearer and more actionable.\n\n");
+
+        // Charts
+        system.append("📊 **CHARTS** (use ONLY for numeric/quantitative data):\n");
+        system.append("   - **Bar Chart** — comparing numeric values across categories:\n");
+        system.append("     ```\n");
+        system.append("     CHART:BAR\n");
+        system.append("     | Category | Amount |\n");
+        system.append("     |----------|--------|\n");
+        system.append("     | Filing Fees | $400 |\n");
+        system.append("     | Expert Witness | $25,000 |\n");
+        system.append("     | Discovery | $15,000 |\n");
+        system.append("     ```\n");
+        system.append("   - **Pie Chart** — showing proportional breakdown:\n");
+        system.append("     ```\n");
+        system.append("     CHART:PIE\n");
+        system.append("     - Attorney Fees: 60%\n");
+        system.append("     - Expert Costs: 25%\n");
+        system.append("     - Filing/Court: 15%\n");
+        system.append("     ```\n");
+        system.append("   - **Line Chart** — showing trends over time:\n");
+        system.append("     ```\n");
+        system.append("     CHART:LINE\n");
+        system.append("     | Year | Settlements |\n");
+        system.append("     |------|-------------|\n");
+        system.append("     | 2020 | $1.2M |\n");
+        system.append("     | 2021 | $1.5M |\n");
+        system.append("     | 2022 | $1.8M |\n");
+        system.append("     ```\n");
+        system.append("   - **Donut Chart** — similar to pie, for proportional data:\n");
+        system.append("     ```\n");
+        system.append("     CHART:DONUT\n");
+        system.append("     - Successful Motions: 65%\n");
+        system.append("     - Denied Motions: 35%\n");
+        system.append("     ```\n");
+        system.append("   - Note: Bar and Line charts use markdown table syntax; Pie and Donut charts use bullet list syntax.\n");
+        system.append("   - ⚠️ Charts are for NUMBERS only. For text comparisons, use markdown tables instead.\n\n");
+
+        // Timelines
+        system.append("📅 **TIMELINES** (use for procedural steps, case milestones, deadline sequences):\n");
+        system.append("   Format: Start with `TIMELINE:` on its own line, then date-prefixed bullet points:\n");
+        system.append("   ```\n");
+        system.append("   TIMELINE:\n");
+        system.append("   - **Day 0**: File complaint and summons\n");
+        system.append("   - **Day 20**: Defendant's answer due (Mass. R. Civ. P. 12(a))\n");
+        system.append("   - **Day 30-60**: Initial case management conference\n");
+        system.append("   - **Month 6-12**: Discovery period\n");
+        system.append("   - **Month 12-18**: Summary judgment motions\n");
+        system.append("   - **Month 18-30**: Trial\n");
+        system.append("   ```\n\n");
+
+        // Severity / Risk indicators
+        system.append("⚠️ **SEVERITY & RISK INDICATORS** (use for risk assessments, compliance issues):\n");
+        system.append("   Format: `⚠️ [CATEGORY - LEVEL]:` followed by explanation\n");
+        system.append("   Levels:\n");
+        system.append("   - `⚠️ CRITICAL:` — Immediate action required, severe consequences\n");
+        system.append("   - `⚠️ HIGH:` — Significant risk, prompt attention needed\n");
+        system.append("   - `⚠️ MEDIUM:` — Moderate risk, should be addressed\n");
+        system.append("   - `⚠️ LOW:` — Minor risk, monitor situation\n\n");
+
+        // Tables
+        system.append("📋 **MARKDOWN TABLES** (use for categorical/text comparisons, side-by-side analysis):\n");
+        system.append("   Use standard markdown table syntax for comparing non-numeric data:\n");
+        system.append("   ```\n");
+        system.append("   | Claim Type | Statute of Limitations | Key Statute |\n");
+        system.append("   |------------|----------------------|-------------|\n");
+        system.append("   | Personal Injury | 3 years | G.L. c. 260, § 2A |\n");
+        system.append("   | Contract | 6 years | G.L. c. 260, § 2 |\n");
+        system.append("   | Medical Malpractice | 3 years | G.L. c. 260, § 4 |\n");
+        system.append("   ```\n");
+        system.append("   Rule: Use tables for TEXT comparisons, charts for NUMBER comparisons.\n\n");
+
+        // Outcome badges
+        system.append("🏷️ **OUTCOME BADGES** (use when discussing case outcomes, motion results, likelihood):\n");
+        system.append("   - `✅ Favorable` — positive outcome or strong position\n");
+        system.append("   - `❌ Unfavorable` — negative outcome or weak position\n");
+        system.append("   Examples:\n");
+        system.append("   - \"Motion to Suppress: ✅ Favorable — Strong Fourth Amendment argument based on warrantless entry\"\n");
+        system.append("   - \"Summary Judgment: ❌ Unfavorable — Genuine dispute of material fact exists regarding causation\"\n\n");
+
+        // STRUCTURED RESPONSE MARKERS (KEY_ELEMENTS + SOURCES)
+        system.append("📌 **STRUCTURED MARKERS** (MANDATORY on every response):\n");
+        system.append("Every response MUST end with these two markers, placed AFTER your analysis but BEFORE '## Follow-up Questions':\n\n");
+        system.append("Format:\n");
+        system.append("KEY_ELEMENTS: Element 1 | Element 2 | Element 3 | Element 4\n");
+        system.append("SOURCES: Case or Statute 1 | Case or Statute 2 | Case or Statute 3\n\n");
+        system.append("Rules:\n");
+        system.append("- KEY_ELEMENTS: List 3-6 core legal elements/concepts relevant to the answer, separated by |\n");
+        system.append("- SOURCES: List ALL cases, statutes, and regulations you cited in your answer, separated by |\n");
+        system.append("- Each marker must be on its own line\n");
+        system.append("- Use the same citation format as in your prose (e.g., 'Brune v. Belinkoff, 354 Mass. 102')\n");
+        system.append("- Do NOT wrap these in markdown headings or bullet points\n");
+        system.append("- Do NOT duplicate key elements as a separate '## Key Points' section — the KEY_ELEMENTS marker replaces it\n\n");
+        system.append("Example:\n");
+        system.append("KEY_ELEMENTS: Duty of care | Breach | Proximate cause | Damages\n");
+        system.append("SOURCES: Brune v. Belinkoff, 354 Mass. 102 | M.G.L. c. 231 § 60B | Lech v. Boisvert\n\n");
 
         // MANDATORY FOLLOW-UP QUESTIONS SECTION
         system.append("**MANDATORY - FOLLOW-UP QUESTIONS SECTION**:\n");
@@ -1603,11 +1710,7 @@ public class AILegalResearchService {
             prompt.append("- Key points specific to ").append(jurisdiction).append(" law\n");
             prompt.append("- Any critical deadlines, procedures, or requirements\n\n");
 
-            prompt.append("## Key Points\n");
-            prompt.append("List 3-5 essential points as bullet items:\n");
-            prompt.append("- Most important statutes, rules, or regulations\n");
-            prompt.append("- Critical procedural requirements or deadlines\n");
-            prompt.append("- Practical considerations for practitioners\n\n");
+            prompt.append("(Key points go in the KEY_ELEMENTS marker at the end — do NOT create a separate Key Points heading)\n\n");
 
             prompt.append("## Client Communication Note (when applicable)\n");
             prompt.append("When discussing strategic options, plea deals, motion outcomes, or key decisions:\n");
@@ -2205,32 +2308,7 @@ public class AILegalResearchService {
         return combined;
     }
 
-    private void cacheAIResult(String queryHash, String query, String searchType, String jurisdiction, String caseId, String aiResponse) {
-        try {
-            QueryType queryTypeEnum = QueryType.valueOf(searchType.toUpperCase());
 
-            AIResearchCache cache = AIResearchCache.builder()
-                .queryHash(queryHash)
-                .queryText(query)
-                .queryType(queryTypeEnum)
-                .jurisdiction(jurisdiction)
-                .researchMode("FAST")
-                .caseId(caseId)
-                .aiResponse(aiResponse)
-                .aiModelUsed("claude-sonnet-4.5")
-                .confidenceScore(new BigDecimal("0.85"))
-                .usageCount(1)
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .isValid(true)
-                .build();
-
-            cacheRepository.save(cache);
-            log.info("Cached AI result for query hash: {} (caseId: {})", queryHash, caseId != null ? caseId : "general");
-
-        } catch (Exception e) {
-            log.error("Failed to cache AI result: ", e);
-        }
-    }
 
     private void saveSearchHistory(Long userId, String sessionId, String query, String searchType,
                                    Integer resultsCount, Long executionTime) {
@@ -3078,11 +3156,9 @@ public class AILegalResearchService {
      * Build prompt for agentic/thorough mode research
      * This prompt tells Claude to use tools for research instead of relying on pre-fetched documents
      */
-    private String buildAgenticPrompt(String query, String caseId, List<ConversationMessage> conversationHistory) {
+    private String buildAgenticPrompt(String query, String caseId, List<ConversationMessage> conversationHistory, QuestionType questionType) {
         StringBuilder prompt = new StringBuilder();
 
-        // Detect question type for adaptive response formatting
-        QuestionType questionType = detectQuestionType(query, conversationHistory);
         log.info("🎯 THOROUGH mode - Question type: {} for query: {}", questionType, query.substring(0, Math.min(50, query.length())));
 
         // Detect jurisdiction
@@ -3124,13 +3200,37 @@ public class AILegalResearchService {
                 break;
         }
 
-        prompt.append("**TOOLS**: search_case_law, get_cfr_text, verify_citation, read_case_document\n\n");
-
-        prompt.append("**TOOL USAGE**:\n");
-        prompt.append("1. Use search_case_law 1-2 times with broad terms to find controlling precedents\n");
-        prompt.append("2. Verify your top 3-5 citations using verify_citation (batch in one round)\n");
-        prompt.append("3. Complete ALL research in 3-5 rounds max. Don't over-research.\n");
-        prompt.append("4. Verified citations: '✓ [Case Name, Citation](URL)'. Unverified: '⚠️ Case Name, Citation'\n\n");
+        // Question-type-aware tool instructions — reduces API rounds for non-strategy queries
+        switch (questionType) {
+            case INITIAL_STRATEGY:
+                prompt.append("**TOOLS**: search_case_law, get_cfr_text, verify_citation, read_case_document\n\n");
+                prompt.append("**TOOL USAGE**:\n");
+                prompt.append("1. Use search_case_law 1-2 times with broad terms to find controlling precedents\n");
+                prompt.append("2. Verify your top 3-5 citations using verify_citation (batch in one round)\n");
+                prompt.append("3. Complete ALL research in 3-5 rounds max. Don't over-research.\n");
+                prompt.append("4. Verified citations: '✓ [Case Name, Citation](URL)'. Unverified: '⚠️ Case Name, Citation'\n\n");
+                break;
+            case PROCEDURAL_GUIDANCE:
+                prompt.append("**TOOLS**: get_cfr_text, read_case_document\n\n");
+                prompt.append("**TOOL USAGE**:\n");
+                prompt.append("1. Use get_cfr_text if a specific federal regulation applies\n");
+                prompt.append("2. Cite procedural rules from your training data — do NOT search for case law\n");
+                prompt.append("3. Complete in 1-2 rounds max.\n\n");
+                break;
+            case NARROW_TECHNICAL:
+                prompt.append("**TOOLS**: get_cfr_text, read_case_document\n\n");
+                prompt.append("**TOOL USAGE**:\n");
+                prompt.append("1. Provide a direct answer. Use get_cfr_text only if looking up exact regulation text\n");
+                prompt.append("2. Complete in 1-2 rounds max.\n\n");
+                break;
+            case FOLLOW_UP_CLARIFICATION:
+                prompt.append("**TOOLS**: read_case_document\n\n");
+                prompt.append("**TOOL USAGE**:\n");
+                prompt.append("1. Answer from conversation context. Do NOT use research tools.\n");
+                prompt.append("2. Use read_case_document only if the user asks about a specific document.\n");
+                prompt.append("3. Complete in 1 round.\n\n");
+                break;
+        }
 
         // Add comprehensive case context if available (ported from buildAIPrompt for full document-informed research)
         String[] caseTypeHolder = new String[1]; // To capture case type from lambda
@@ -3474,8 +3574,11 @@ public class AILegalResearchService {
                     10);
             }
 
-            // Build agentic prompt with case context, conversation history, and tool instructions
-            String prompt = buildAgenticPrompt(query, caseId, conversationHistory);
+            // Detect question type once — used for both prompt building and tool filtering
+            QuestionType questionType = detectQuestionType(query, conversationHistory);
+
+            // Build agentic prompt with case context, conversation history, and question-type-aware tool instructions
+            String prompt = buildAgenticPrompt(query, caseId, conversationHistory, questionType);
 
             // Set document context for read_case_document tool
             Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
@@ -3487,8 +3590,8 @@ public class AILegalResearchService {
 
             String aiResponse;
             try {
-                // Call agentic Claude with tools (progress will be published by ClaudeSonnet4Service for each tool execution)
-                aiResponse = claudeService.generateWithTools(prompt, true, sessionId).get();
+                // Call agentic Claude with question-type-filtered tools
+                aiResponse = claudeService.generateWithTools(prompt, buildSystemMessage(), true, sessionId, questionType).get();
             } finally {
                 // Always clear context after research completes
                 legalResearchTools.clearResearchContext();
@@ -3537,9 +3640,9 @@ public class AILegalResearchService {
                 qualityScorer.scoreResponse(aiResponse, query, "THOROUGH");
             result.put("qualityScore", qualityScore.toMap());
 
-            // Counsel-ready check
+            // Counsel-ready check (question-type-aware)
             ResponseQualityScorer.CounselReadyCheck counselCheck =
-                qualityScorer.checkCounselReady(aiResponse, "THOROUGH");
+                qualityScorer.checkCounselReady(aiResponse, "THOROUGH", questionType.name());
             result.put("counselReadyCheck", counselCheck.toMap());
 
             // Log counsel-ready status
@@ -3549,6 +3652,16 @@ public class AILegalResearchService {
                 log.warn("⚠️ Response NOT counsel-ready (score: {}/5)", counselCheck.score);
                 counselCheck.issues.forEach(issue -> log.warn("  {}", issue));
                 counselCheck.warnings.forEach(warning -> log.warn("  {}", warning));
+            }
+
+            // Quality gate: Prepend warning for low-quality responses (grade F)
+            if (qualityScore.overallScore < 0.4) {
+                String warning = "⚠️ **Research Confidence: Low** — This response may have limited authority "
+                    + "for your jurisdiction. Consider rephrasing with more specifics about the legal issue "
+                    + "and jurisdiction.\n\n---\n\n";
+                processedResponse = warning + processedResponse;
+                result.put("aiAnalysis", processedResponse);
+                log.warn("⚠️ Quality gate: Prepended low-confidence warning (score: {})", qualityScore.overallScore);
             }
 
             // Add validation metadata
@@ -3572,21 +3685,12 @@ public class AILegalResearchService {
             if (shouldCache) {
                 try {
                     int cacheDays = (caseId != null && !caseId.isEmpty()) ? 1 : 7;
-                    AIResearchCache cache = AIResearchCache.builder()
-                        .queryHash(queryHash)
-                        .queryText(query)
-                        .queryType(QueryType.valueOf(searchType.toUpperCase()))
-                        .jurisdiction(jurisdiction)
-                        .researchMode("THOROUGH")
-                        .caseId(caseId)
-                        .aiResponse(aiResponse)
-                        .aiModelUsed("claude-sonnet-4.5")
-                        .confidenceScore(new BigDecimal("0.90")) // Higher confidence for THOROUGH mode
-                        .usageCount(1)
-                        .expiresAt(LocalDateTime.now().plusDays(cacheDays))
-                        .isValid(true)
-                        .build();
-                    cacheRepository.save(cache);
+                    cacheRepository.upsertCache(
+                        currentOrgId, queryHash, query, searchType.toUpperCase(),
+                        jurisdiction, "THOROUGH", caseId, aiResponse,
+                        "claude-sonnet-4.5", new BigDecimal("0.90"),
+                        LocalDateTime.now().plusDays(cacheDays)
+                    );
                     log.info("✓ Cached THOROUGH result (TTL: {} days, quality: {}/10): {}", cacheDays, scoreOutOf10, queryHash.substring(0, 16) + "...");
                 } catch (Exception e) {
                     log.warn("Failed to cache THOROUGH result: {}", e.getMessage());
@@ -3610,14 +3714,21 @@ public class AILegalResearchService {
             long totalTime = System.currentTimeMillis() - startTime;
             log.error("❌ Thorough research failed after {}ms: {}", totalTime, e.getMessage(), e);
 
+            // Sanitize error message — never expose raw DB/internal errors to users
+            String rawMsg = e.getMessage() != null ? e.getMessage() : "";
+            String userMessage = (rawMsg.contains("duplicate key") || rawMsg.contains("unique constraint") ||
+                rawMsg.contains("SQL") || rawMsg.contains("JDBC") || rawMsg.contains("PSQLException"))
+                ? "A temporary issue occurred. Please try your question again."
+                : "Research encountered an issue. Please try again.";
+
             // Publish error event
             if (sessionId != null) {
-                progressPublisher.publishError(sessionId, "Thorough research failed: " + e.getMessage());
+                progressPublisher.publishError(sessionId, userMessage);
             }
 
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("success", false);
-            errorResult.put("error", "Thorough research failed: " + e.getMessage());
+            errorResult.put("error", userMessage);
             errorResult.put("results", Collections.emptyList());
             errorResult.put("totalResults", 0);
             errorResult.put("searchQuery", query);

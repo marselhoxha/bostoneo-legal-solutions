@@ -1,0 +1,18 @@
+<nav class="w-navbar" [class.scrolled]="scrolled">
+  <div class="w-container">
+    <a routerLink="/website" class="w-navbar-logo" (click)="closeMobileMenu()">LEGIENCE</a>
+
+    <button class="w-navbar-toggle" (click)="toggleMobileMenu()" aria-label="Toggle navigation">
+      <i [class]="mobileMenuOpen ? 'ri-close-line' : 'ri-menu-line'"></i>
+    </button>
+
+    <div class="w-navbar-links" [class.open]="mobileMenuOpen">
+      <a routerLink="/website/features" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" (click)="closeMobileMenu()">Features</a>
+      <a routerLink="/website/ai" routerLinkActive="active" (click)="closeMobileMenu()">AI</a>
+      <a routerLink="/website/personal-injury" routerLinkActive="active" (click)="closeMobileMenu()">Personal Injury</a>
+      <a routerLink="/website/pricing" routerLinkActive="active" (click)="closeMobileMenu()">Pricing</a>
+      <a routerLink="/login" class="w-navbar-login" (click)="closeMobileMenu()">Login</a>
+      <a routerLink="/website/demo" class="w-navbar-cta" (click)="closeMobileMenu()">Book a Demo</a>
+    </div>
+  </div>
+</nav>

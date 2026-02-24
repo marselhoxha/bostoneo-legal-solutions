@@ -1,0 +1,64 @@
+@import '../../../styles/variables';
+
+.w-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 24px;
+
+  &.dark .w-stat-card {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    .stat-value { color: $w-green; }
+    .stat-label { color: rgba(255, 255, 255, 0.5); }
+    .stat-detail { color: rgba(255, 255, 255, 0.35); }
+  }
+
+  &.light .w-stat-card {
+    background: $w-bg-alt;
+    border: 1px solid $w-border;
+
+    .stat-value { color: $w-green; }
+    .stat-label { color: $w-text-secondary; }
+    .stat-detail { color: $w-text-muted; }
+  }
+}
+
+.w-stat-card {
+  border-radius: $w-radius-lg;
+  padding: 24px;
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-family: $w-font-heading;
+  font-weight: 800;
+  font-size: 36px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.stat-detail {
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .w-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stat-value {
+    font-size: 28px;
+  }
+}

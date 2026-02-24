@@ -1,0 +1,143 @@
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero">
+  <div class="w-container">
+    <h1>See Legience in Action</h1>
+    <p class="hero-subhead">
+      30-minute personalized demo using your actual workflow &mdash; not a canned script.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════ FORM + SIDEBAR ═══════════════ -->
+<section class="w-section demo-section">
+  <div class="w-container">
+
+    <!-- SUCCESS STATE -->
+    <div class="success-card" *ngIf="submitted" wScrollAnimate>
+      <div class="success-icon">
+        <i class="ri-checkbox-circle-fill"></i>
+      </div>
+      <h2>Thank you!</h2>
+      <p>We'll be in touch within 24 hours to schedule your personalized demo.</p>
+      <a routerLink="/website/features" class="w-btn-primary success-link">
+        In the meantime, explore our features <i class="ri-arrow-right-line"></i>
+      </a>
+    </div>
+
+    <!-- FORM LAYOUT -->
+    <div class="demo-grid" *ngIf="!submitted">
+
+      <!-- LEFT: Contact Form -->
+      <div class="demo-form-col" wScrollAnimate>
+        <h2>Request a Demo</h2>
+        <p class="form-intro">Fill out the form and we'll reach out to schedule a time that works for you.</p>
+
+        <form [formGroup]="demoForm" (ngSubmit)="onSubmit()" novalidate>
+
+          <!-- Full Name -->
+          <div class="form-field">
+            <label for="name">Full Name <span class="required">*</span></label>
+            <input id="name" type="text" formControlName="name" placeholder="Jane Smith" />
+            <div class="field-error" *ngIf="f['name'].touched && f['name'].hasError('required')">
+              Full name is required.
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="form-field">
+            <label for="email">Email <span class="required">*</span></label>
+            <input id="email" type="email" formControlName="email" placeholder="jane@smithlaw.com" />
+            <div class="field-error" *ngIf="f['email'].touched && f['email'].hasError('required')">
+              Email is required.
+            </div>
+            <div class="field-error" *ngIf="f['email'].touched && f['email'].hasError('email') && !f['email'].hasError('required')">
+              Please enter a valid email address.
+            </div>
+          </div>
+
+          <!-- Firm Name -->
+          <div class="form-field">
+            <label for="firmName">Firm Name <span class="required">*</span></label>
+            <input id="firmName" type="text" formControlName="firmName" placeholder="Smith & Associates" />
+            <div class="field-error" *ngIf="f['firmName'].touched && f['firmName'].hasError('required')">
+              Firm name is required.
+            </div>
+          </div>
+
+          <!-- Firm Size -->
+          <div class="form-field">
+            <label for="firmSize">Firm Size <span class="required">*</span></label>
+            <select id="firmSize" formControlName="firmSize">
+              <option value="" disabled>Select firm size</option>
+              <option *ngFor="let opt of firmSizeOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+            <div class="field-error" *ngIf="f['firmSize'].touched && f['firmSize'].hasError('required')">
+              Please select your firm size.
+            </div>
+          </div>
+
+          <!-- Practice Areas -->
+          <div class="form-field" formGroupName="practiceAreas">
+            <label>Practice Areas <span class="required">*</span></label>
+            <div class="checkbox-grid">
+              <label class="checkbox-label" *ngFor="let area of practiceAreaOptions">
+                <input type="checkbox" [formControlName]="area" />
+                <span class="checkmark"></span>
+                {{ area }}
+              </label>
+            </div>
+            <div class="field-error" *ngIf="practiceAreasGroup.touched && practiceAreasGroup.hasError('atLeastOne')">
+              Please select at least one practice area.
+            </div>
+          </div>
+
+          <!-- Phone -->
+          <div class="form-field">
+            <label for="phone">Phone <span class="optional">(optional)</span></label>
+            <input id="phone" type="tel" formControlName="phone" placeholder="(555) 123-4567" />
+          </div>
+
+          <!-- Message -->
+          <div class="form-field">
+            <label for="message">Message <span class="optional">(optional)</span></label>
+            <textarea id="message" formControlName="message" rows="4"
+              placeholder="Tell us about your firm and what you'd like to see in the demo..."></textarea>
+          </div>
+
+          <!-- Error message -->
+          <div class="form-error" *ngIf="errorMessage">
+            <i class="ri-error-warning-line"></i> {{ errorMessage }}
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="w-btn-primary submit-btn" [disabled]="submitting">
+            <span class="spinner" *ngIf="submitting"></span>
+            <span *ngIf="!submitting">Request a Demo</span>
+            <span *ngIf="submitting">Sending...</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- RIGHT: What to Expect -->
+      <div class="demo-sidebar" wScrollAnimate>
+        <div class="expect-card">
+          <h3>What to Expect</h3>
+          <ul class="expect-list">
+            <li *ngFor="let item of expectItems">
+              <i class="ri-check-line"></i>
+              <span>{{ item }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="quick-stats">
+          <div class="quick-stat" *ngFor="let stat of quickStats">
+            <span class="stat-value">{{ stat.value }}</span>
+            <span class="stat-label">{{ stat.label }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>

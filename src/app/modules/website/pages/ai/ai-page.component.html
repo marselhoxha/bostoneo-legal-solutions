@@ -1,0 +1,174 @@
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero">
+  <div class="w-container">
+    <span class="w-badge ai hero-badge-pill"><i class="ri-robot-2-line"></i> AI-NATIVE PLATFORM</span>
+    <h1>Legal AI That<br><span class="green-text">Actually Works</span></h1>
+    <p class="hero-subhead">
+      Not a chatbot bolted onto case management. Legience was built with AI from day one &mdash;
+      legal research, document drafting, and case analysis are native capabilities, not add-ons.
+    </p>
+
+    <w-stats-bar [stats]="heroStats" theme="dark"></w-stats-bar>
+
+    <div class="hero-cta-wrap">
+      <a routerLink="/website/demo" class="w-btn-primary">
+        <i class="ri-play-circle-line"></i> Book a Demo
+      </a>
+      <a routerLink="/website/pricing" class="w-btn-secondary">
+        See Pricing <i class="ri-arrow-right-line"></i>
+      </a>
+    </div>
+    <p class="hero-detail">14-day free trial &bull; No credit card required</p>
+  </div>
+</section>
+
+<!-- ═══════════════ AI RESEARCH ═══════════════ -->
+<section class="w-section" id="research">
+  <div class="w-container">
+    <div class="feature-showcase" wScrollAnimate>
+      <div class="feature-text">
+        <span class="w-badge ai"><i class="ri-search-eye-line"></i> RESEARCH</span>
+        <h3>AI-Powered Legal Research</h3>
+        <p class="feature-desc">
+          Ask a legal question in plain English and get a structured, citation-verified research memo.
+          Powered by CourtListener integration and Claude, Legience AI conducts multi-turn legal
+          research conversations with persistent context &mdash; so follow-up questions build on
+          previous answers instead of starting from scratch.
+        </p>
+        <ul class="w-check-list">
+          <li *ngFor="let bullet of researchBullets">
+            <i class="ri-check-line"></i>
+            <span>{{ bullet }}</span>
+          </li>
+        </ul>
+      </div>
+      <div class="feature-img">
+        <w-app-window title="AI Legal Research" imageSrc="assets/sales/screenshots/ai-workspace-cropped.png" imageAlt="AI-powered legal research workspace with citation verification" [small]="true"></w-app-window>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ AI DOCUMENT DRAFTING ═══════════════ -->
+<section class="w-section w-section-alt" id="drafting">
+  <div class="w-container">
+    <div class="feature-showcase reverse" wScrollAnimate>
+      <div class="feature-text">
+        <span class="w-badge ai"><i class="ri-file-edit-line"></i> DRAFTING</span>
+        <h3>AI Document Drafting</h3>
+        <p class="feature-desc">
+          Generate practice-area-specific legal documents in minutes, not hours.
+          Select a practice area, choose a document type, provide case context, and
+          Legience AI produces a structured first draft ready for attorney review.
+        </p>
+
+        <div class="practice-grid">
+          <div class="practice-card" *ngFor="let area of practiceAreas">
+            <div class="practice-icon"><i [class]="area.icon"></i></div>
+            <h5>{{ area.name }}</h5>
+            <ul>
+              <li *ngFor="let doc of area.docs">{{ doc }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="feature-img">
+        <w-app-window title="Document Drafting" imageSrc="assets/sales/screenshots/ai-workspace-cropped.png" imageAlt="AI document drafting interface with practice area selection" [small]="true"></w-app-window>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ AI WORKSPACE ═══════════════ -->
+<section class="w-section" id="workspace">
+  <div class="w-container">
+    <div class="w-section-center" wScrollAnimate>
+      <span class="w-badge ai"><i class="ri-layout-masonry-line"></i> WORKSPACE</span>
+      <h2 class="w-section-title">The AI Workspace</h2>
+      <p class="w-section-subtitle">
+        Research, draft, refine, and export &mdash; all from a single workspace.
+        No switching tabs, no copy-pasting between tools.
+      </p>
+    </div>
+    <div class="workspace-screenshot" wScrollAnimate>
+      <w-app-window title="Legience — AI Workspace" imageSrc="assets/sales/screenshots/ai-workspace-cropped.png" imageAlt="Full AI Workspace with research and document drafting"></w-app-window>
+    </div>
+    <div class="workspace-features w-stagger" wScrollAnimate>
+      <div class="workspace-card" *ngFor="let feat of workspaceFeatures">
+        <div class="w-feature-icon green"><i [class]="feat.icon"></i></div>
+        <h4>{{ feat.title }}</h4>
+        <p>{{ feat.description }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ BEFORE / AFTER ═══════════════ -->
+<section class="w-section w-section-dark" id="comparison">
+  <div class="w-container">
+    <div class="w-section-center" wScrollAnimate>
+      <h2 class="w-section-title" style="color:#fff">Before Legience vs. After</h2>
+      <p class="w-section-subtitle" style="color:rgba(255,255,255,.55)">
+        See what changes when legal AI is built in, not bolted on.
+      </p>
+    </div>
+    <div class="before-after-grid" wScrollAnimate>
+      <div class="ba-column before">
+        <div class="ba-header">
+          <i class="ri-close-circle-line"></i>
+          <h4>BEFORE</h4>
+        </div>
+        <ul>
+          <li *ngFor="let item of beforeItems">
+            <i class="ri-close-line"></i>
+            <span>{{ item }}</span>
+          </li>
+        </ul>
+      </div>
+      <div class="ba-column after">
+        <div class="ba-header">
+          <i class="ri-checkbox-circle-line"></i>
+          <h4>AFTER</h4>
+        </div>
+        <ul>
+          <li *ngFor="let item of afterItems">
+            <i class="ri-check-line"></i>
+            <span>{{ item }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ PRICING CALLOUT ═══════════════ -->
+<section class="w-section w-section-alt" id="pricing-callout">
+  <div class="w-container">
+    <div class="w-section-center" wScrollAnimate>
+      <h2 class="w-section-title">AI Is Included in Every Plan</h2>
+      <p class="w-section-subtitle">No add-on fees. No per-query charges. No surprise invoices.</p>
+    </div>
+    <div class="pricing-compare-grid w-stagger" wScrollAnimate>
+      <div class="pricing-compare-card" *ngFor="let card of competitorCards" [class.highlighted]="card.highlighted">
+        <h4>{{ card.name }}</h4>
+        <div class="compare-price">
+          {{ card.price }}<span *ngIf="card.period">{{ card.period }}</span>
+        </div>
+        <div class="compare-label" *ngIf="!card.highlighted">AI add-on cost</div>
+        <div class="compare-label included" *ngIf="card.highlighted">in every plan</div>
+      </div>
+    </div>
+    <div class="pricing-callout-cta" wScrollAnimate>
+      <a routerLink="/website/pricing" class="w-btn-outline">
+        See Full Pricing <i class="ri-arrow-right-line"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FINAL CTA ═══════════════ -->
+<w-cta-section
+  heading="See Legience AI in Action"
+  subtext="Book a 30-minute demo and we'll show you AI research, document drafting, and the full workspace — using your practice area."
+  [showFeatures]="false">
+</w-cta-section>

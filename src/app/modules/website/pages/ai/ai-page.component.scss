@@ -1,0 +1,406 @@
+@import '../../styles/variables';
+@import '../../styles/base';
+@import '../../styles/animations';
+
+// ═══ HERO ═══
+.hero {
+  background: $w-hero-gradient;
+  padding: 140px 0 80px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(19, 197, 107, 0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 30% 70%, rgba(64, 81, 137, 0.25) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .w-container {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.hero-badge-pill {
+  margin-bottom: 28px;
+}
+
+.hero h1 {
+  font-size: 52px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 20px;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+}
+
+.green-text {
+  background: linear-gradient(135deg, $w-green, #45d98a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subhead {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 700px;
+  margin: 0 auto 36px;
+  line-height: 1.7;
+}
+
+::ng-deep .hero w-stats-bar .w-stats-grid {
+  max-width: 680px;
+  margin: 0 auto 36px;
+}
+
+.hero-cta-wrap {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.hero-detail {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 14px;
+}
+
+// ═══ FEATURE SHOWCASE (shared layout for Research & Drafting) ═══
+.feature-showcase {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 56px;
+  align-items: center;
+
+  &.reverse {
+    grid-template-columns: 1.15fr 1fr;
+    .feature-text { order: 2; }
+    .feature-img { order: 1; }
+  }
+}
+
+.feature-text {
+  h3 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: $w-navy;
+  }
+}
+
+.feature-desc {
+  font-size: 15px;
+  color: $w-text-secondary;
+  margin-bottom: 20px;
+  line-height: 1.7;
+}
+
+// ═══ PRACTICE AREA GRID ═══
+.practice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.practice-card {
+  background: #fff;
+  border: 1px solid $w-border;
+  border-radius: $w-radius;
+  padding: 18px;
+  transition: $w-transition-fast;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $w-shadow-sm;
+  }
+
+  h5 {
+    font-family: $w-font-heading;
+    font-size: 14px;
+    font-weight: 700;
+    color: $w-navy;
+    margin-bottom: 6px;
+  }
+
+  ul {
+    li {
+      font-size: 12px;
+      color: $w-text-muted;
+      padding: 1px 0;
+      line-height: 1.5;
+
+      &::before {
+        content: '\2022';
+        color: $w-green;
+        font-weight: 700;
+        margin-right: 6px;
+      }
+    }
+  }
+}
+
+.practice-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: $w-radius-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-bottom: 10px;
+  background: rgba(64, 81, 137, 0.08);
+  color: $w-indigo;
+}
+
+// ═══ AI WORKSPACE ═══
+.workspace-screenshot {
+  max-width: 960px;
+  margin: 0 auto 48px;
+}
+
+.workspace-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.workspace-card {
+  background: #fff;
+  border: 1px solid $w-border;
+  border-radius: $w-radius-lg;
+  padding: 28px;
+  transition: $w-transition;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: $w-shadow;
+  }
+
+  h4 {
+    font-size: 17px;
+    font-weight: 700;
+    color: $w-navy;
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 14px;
+    color: $w-text-secondary;
+    line-height: 1.65;
+  }
+}
+
+// ═══ BEFORE / AFTER ═══
+.before-after-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.ba-column {
+  border-radius: $w-radius-lg;
+  padding: 32px;
+  backdrop-filter: blur(12px);
+
+  &.before {
+    background: rgba(237, 94, 94, 0.08);
+    border: 1px solid rgba(237, 94, 94, 0.2);
+
+    .ba-header {
+      color: $w-red;
+    }
+
+    ul li i {
+      color: $w-red;
+    }
+  }
+
+  &.after {
+    background: rgba(19, 197, 107, 0.08);
+    border: 1px solid rgba(19, 197, 107, 0.2);
+
+    .ba-header {
+      color: $w-green;
+    }
+
+    ul li i {
+      color: $w-green;
+    }
+  }
+}
+
+.ba-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+
+  i {
+    font-size: 24px;
+  }
+
+  h4 {
+    font-family: $w-font-heading;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+  }
+}
+
+.ba-column ul li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  i {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+}
+
+// ═══ PRICING CALLOUT ═══
+.pricing-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.pricing-compare-card {
+  border: 1px solid $w-border;
+  border-radius: 14px;
+  padding: 32px 24px;
+  text-align: center;
+  background: #fff;
+  transition: $w-transition-fast;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: $w-shadow;
+  }
+
+  &.highlighted {
+    border-color: $w-green;
+    border-width: 2px;
+    box-shadow: 0 4px 24px rgba(19, 197, 107, 0.12);
+    position: relative;
+
+    &::before {
+      content: 'Best Value';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: $w-green;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 18px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .compare-price {
+      color: $w-green;
+    }
+  }
+
+  h4 {
+    font-family: $w-font-heading;
+    font-size: 16px;
+    font-weight: 700;
+    color: $w-navy;
+    margin-bottom: 12px;
+  }
+}
+
+.compare-price {
+  font-family: $w-font-heading;
+  font-weight: 800;
+  font-size: 36px;
+  color: $w-navy;
+  margin-bottom: 4px;
+
+  span {
+    font-size: 14px;
+    font-weight: 500;
+    color: $w-text-muted;
+  }
+}
+
+.compare-label {
+  font-size: 13px;
+  color: $w-text-muted;
+
+  &.included {
+    color: $w-green;
+    font-weight: 600;
+  }
+}
+
+.pricing-callout-cta {
+  text-align: center;
+  margin-top: 36px;
+}
+
+// ═══ RESPONSIVE ═══
+@media (max-width: 768px) {
+  .hero {
+    padding: 110px 0 56px;
+
+    h1 {
+      font-size: 34px;
+    }
+  }
+
+  .hero-subhead {
+    font-size: 15px;
+  }
+
+  .feature-showcase,
+  .feature-showcase.reverse {
+    grid-template-columns: 1fr;
+    gap: 32px;
+
+    .feature-text { order: 1 !important; }
+    .feature-img { order: 2 !important; }
+  }
+
+  .practice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-features {
+    grid-template-columns: 1fr;
+  }
+
+  .before-after-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pricing-compare-grid {
+    grid-template-columns: 1fr;
+    max-width: 320px;
+  }
+}
