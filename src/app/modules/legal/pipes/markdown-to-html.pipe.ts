@@ -16,17 +16,22 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       return '';
     }
 
+    // STEP 0: Extract structured markers BEFORE any processing
+    const keyElements = this.extractKeyElements(value);
+    const sources = this.extractSources(keyElements.remaining);
+    let markdown = sources.remaining;
+
     // STEP 1: Process checkmark citations BEFORE markdown conversion (while still markdown syntax)
-    let markdown = this.processCheckmarkCitations(value);
+    markdown = this.processCheckmarkCitations(markdown);
 
     // STEP 2: Convert markdown to HTML
     let html = this.convertMarkdownToHtml(markdown);
 
-    // STEP 3: CREATE LINKS DIRECTLY (emergency fix - backend not injecting URLs)
-    html = this.createCitationLinks(html);
-
-    // STEP 4: Apply legal highlighting to the HTML output (NOT checkmarks - already processed)
+    // STEP 3: Apply legal highlighting to the HTML output (NOT checkmarks - already processed)
     html = this.highlightLegalTerms(html);
+
+    // STEP 4: Append structured markers at the end
+    html = html + keyElements.html + sources.html;
 
     // IMPORTANT: Use bypassSecurityTrustHtml to allow our custom HTML/CSS classes
     return this.sanitizer.bypassSecurityTrustHtml(html);
@@ -37,139 +42,21 @@ export class MarkdownToHtmlPipe implements PipeTransform {
    * This ensures the checkmark and link stay together in one HTML element
    */
   private processCheckmarkCitations(markdown: string): string {
-    // Match ✓ followed by markdown link: ✓ [citation](url) or ✓ [citation - View →](url)
-    // Handles BOTH old format (no " - View →") and new format (with " - View →")
-    // This runs BEFORE markdown conversion, so we're matching markdown syntax
-    return markdown.replace(/✓\s*\[([^\]]+?)\]\(([^)]+)\)/gi,
+    // Handle markdown format: ✓ [citation](url) or ✓ [citation - View →](url)
+    markdown = markdown.replace(/✓\s*\[([^\]]+?)\]\(([^)]+)\)/gi,
       (_match, linkText, url) => {
-        // Remove " - View →" suffix if present (for consistency)
         const cleanText = linkText.replace(/\s*-\s*View\s*→\s*$/i, '').trim();
-        // Create complete HTML badge with link inside
-        // Return HTML directly (will NOT be processed by markdown converter since it's already HTML)
         return `<span class="citation-verified">✓ <a href="${url}" target="_blank" rel="noopener noreferrer">${cleanText}</a></span>`;
       });
-  }
 
-  /**
-   * EMERGENCY FIX: Create links directly in frontend since backend isn't injecting them
-   * This runs AFTER markdown conversion but BEFORE other highlighting
-   * Creates SPECIFIC URLs with section/rule numbers when possible
-   */
-  private createCitationLinks(html: string): string {
-    // IRC citations - extract section number for specific URL with subsection anchor
-    // Supports optional checkmark prefix
-    // Fixed: Added \s* before parentheses to handle spaces, use [^)]+ to capture to closing )
-    html = html.replace(/(?:✓\s*)?\bIRC\s*§\s*(\d+)(?:\s*\([^)]+\))*(?![<\w])/gi,
-      (match, section) => {
-        let url = `https://www.law.cornell.edu/uscode/text/26/${section}`;
-        // Extract first subsection: (h), (h)(3), etc. → h
-        const firstSubsection = match.match(/\(([a-zA-Z0-9]+)\)/);
-        if (firstSubsection) {
-          url += `#${firstSubsection[1]}`;
-        }
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
+    // Handle HTML format from backend: ✓ <a href="url" ...>citation</a>
+    markdown = markdown.replace(/✓\s*(<a\s[^>]*>)(.*?)<\/a>/gi,
+      (_match, openTag, linkText) => {
+        const cleanText = linkText.replace(/\s*-\s*View\s*→\s*$/i, '').trim();
+        return `<span class="citation-verified">✓ ${openTag}${cleanText}</a></span>`;
       });
 
-    // Treasury Regulations - use Cornell CFR with specific regulation number
-    // Supports "Treas. Reg.", "Treasury Reg.", "Treas. Regulation", "Treasury Regulation"
-    // Supports optional checkmark prefix
-    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
-    html = html.replace(/(?:✓\s*)?\b(?:Treas(?:ury)?\.?\s*(?:Reg\.|Regulation))\s*§\s*[\d.]+[A-Za-z]*(?:-[\d]+[A-Za-z]*)*(?:\s*\([^)]+\))*(?![<\w])/gi,
-      (match) => {
-        // Extract base regulation number (everything up to first opening parenthesis or end)
-        const regMatch = match.match(/§\s*([\d.]+[A-Za-z]*(?:-[\d]+[A-Za-z]*)*)/);
-        const regNumber = regMatch ? regMatch[1].trim() : '';
-        return `<a href="https://www.law.cornell.edu/cfr/text/26/${regNumber}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
-      });
-
-    // Tax Court Rules - no specific URL pattern available
-    // Supports optional checkmark prefix
-    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
-    html = html.replace(/(?:✓\s*)?\bTax Court Rule\s*\d+(?:\s*\([^)]+\))*(?![<\w])/gi,
-      (match) => {
-        return `<a href="https://www.ustaxcourt.gov/rules.html" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
-      });
-
-    // M.G.L. citations - extract chapter and section for specific URL
-    // Supports optional checkmark prefix
-    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
-    html = html.replace(/(?:✓\s*)?\bM\.G\.L\.\s*c\.\s*(\d+[AB]?)(?:,?\s*§\s*(\w+(?:\s*\([^)]+\))*))?(?![<\w])/gi,
-      (match, chapter, section) => {
-        if (section) {
-          // Both chapter and section - create full URL
-          return `<a href="https://malegislature.gov/Laws/GeneralLaws/Chapter${chapter}/Section${section}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
-        } else {
-          // Just chapter - link to chapter page
-          return `<a href="https://malegislature.gov/Laws/GeneralLaws/Chapter${chapter}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
-        }
-      });
-
-    // Mass. R. Crim. P. - link to specific rule pages with descriptive titles
-    // Supports optional checkmark prefix
-    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
-    html = html.replace(/(?:✓\s*)?\bMass\.\s*R\.\s*Crim\.\s*P\.(?:\s*(\d+(?:\.\d+)?)(?:\s*\([^)]+\))*)?(?![<\w])/gi,
-      (match, ruleNum) => {
-        // Mapping of common rule numbers to their URL slugs
-        const ruleUrlMap: {[key: string]: string} = {
-          '3': 'criminal-procedure-rule-3-the-complaint',
-          '4': 'criminal-procedure-rule-4-arrest-warrant-or-summons-on-a-complaint',
-          '7': 'criminal-procedure-rule-7-other-pleas',
-          '12': 'criminal-procedure-rule-12-pleas-and-pretrial-motions',
-          '14': 'criminal-procedure-rule-14-pretrial-discovery-from-the-prosecution',
-          '14.1': 'criminal-procedure-rule-141-pretrial-reciprocal-discovery-from-the-defense',
-          '14.2': 'criminal-procedure-rule-142-pretrial-discovery-procedures',
-          '17': 'criminal-procedure-rule-17-subpoena',
-          '30': 'criminal-procedure-rule-30-instructions',
-          '36': 'criminal-procedure-rule-36-stay-of-execution-bail-after-conviction'
-        };
-
-        if (ruleNum && ruleUrlMap[ruleNum]) {
-          return `<a href="https://www.mass.gov/rules-of-criminal-procedure/${ruleUrlMap[ruleNum]}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
-        } else {
-          // Fall back to general page for unmapped rules
-          return `<a href="https://www.mass.gov/law-library/massachusetts-rules-of-criminal-procedure" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
-        }
-      });
-
-    // Mass. R. Civ. P. - link to general page (specific URLs require rule titles we don't have)
-    // Supports optional checkmark prefix
-    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
-    html = html.replace(/(?:✓\s*)?\bMass\.\s*R\.\s*Civ\.\s*P\.(?:\s*\d+(?:\s*\([^)]+\))*)?(?![<\w])/gi,
-      (match) => {
-        return `<a href="https://www.mass.gov/law-library/massachusetts-rules-of-civil-procedure" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
-      });
-
-    // BMC Standing Orders - general page (no specific URLs available)
-    // Supports optional checkmark prefix
-    html = html.replace(/(?:✓\s*)?\bBMC\s+Standing\s+Order\s+\d+-\d+(?![<\w])/gi,
-      (match) => {
-        return `<a href="https://www.mass.gov/guides/massachusetts-rules-of-court-and-standing-orders" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
-      });
-
-    // BMC Local Rules - general page (no specific URLs available)
-    // Supports optional checkmark prefix
-    html = html.replace(/(?:✓\s*)?\bBMC\s+Local\s+Rule\s+\d+(?![<\w])/gi,
-      (match) => {
-        return `<a href="https://www.mass.gov/guides/massachusetts-rules-of-court-and-standing-orders" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
-      });
-
-    // Fed. R. Civ. P. - extract rule number for specific URL
-    // Supports optional checkmark prefix
-    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
-    html = html.replace(/(?:✓\s*)?\bFed\.\s*R\.\s*Civ\.\s*P\.\s*(\d+)(?:\s*\([^)]+\))*(?![<\w])/gi,
-      (match, rule) => {
-        return `<a href="https://www.law.cornell.edu/rules/frcp/rule_${rule}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
-      });
-
-    // Fed. R. Crim. P. - extract rule number for specific URL
-    // Supports optional checkmark prefix
-    // Fixed: Added \s* before parentheses, use [^)]+ to capture to closing )
-    html = html.replace(/(?:✓\s*)?\bFed\.\s*R\.\s*Crim\.\s*P\.\s*(\d+)(?:\s*\([^)]+\))*(?![<\w])/gi,
-      (match, rule) => {
-        return `<a href="https://www.law.cornell.edu/rules/frcrmp/rule_${rule}" target="_blank" rel="noopener noreferrer" class="legal-link">${match}</a>`;
-      });
-
-    return html;
+    return markdown;
   }
 
   private highlightLegalTerms(html: string): string {
@@ -179,9 +66,17 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     // Split by HTML tags to process only text content
     const parts = result.split(/(<[^>]*>)/);
 
+    let insideAnchor = false;
     for (let i = 0; i < parts.length; i++) {
-      // Skip HTML tags (they start with <)
-      if (parts[i].startsWith('<')) continue;
+      // Skip HTML tags, but track anchor open/close
+      if (parts[i].startsWith('<')) {
+        if (/^<a[\s>]/i.test(parts[i])) insideAnchor = true;
+        if (/^<\/a>/i.test(parts[i])) insideAnchor = false;
+        continue;
+      }
+
+      // Don't highlight text inside anchor tags — it breaks link styling
+      if (insideAnchor) continue;
 
       let text = parts[i];
 
@@ -308,15 +203,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       text = text.replace(/❌\s*\[?(SEVERITY|UNFAVORABLE|BAD|NEGATIVE|DENIED)\]?:?/gi,
         `<span class="outcome-negative"><i class="ri-close-circle-fill"></i> $1</span>`);
 
-      // REMOVED: Citation highlighting (redundant - citations are now clickable links)
-      // The following citation types are now handled by createCitationLinks() and styled as links:
-      // - Mass. R. Civ. P., Mass. R. Crim. P., M.G.L.
-      // - Treasury Regulations
-      // - IRC provisions
-      // - Tax Court Rules
-      // - Federal Rules (Civ. P. and Crim. P.)
-      // - U.S. Sentencing Guidelines
-      // - D. Mass. Local Rules
+      // Citation linking is handled by backend CitationUrlInjector (outputs <a> tags directly)
 
       // Judge and doctor names (Hon., Dr., Judge, Justice + Name)
       text = text.replace(/\b((?:Hon\.|Dr\.|Judge|Justice)\s+[A-Z][a-z]+(?:\s+[A-Z]'?[A-Z]?[a-z]+)*(?:'s)?)\b/g, (match) =>
@@ -369,8 +256,11 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     const headerRow = tableRows[0];
     const headerCells = this.parseTableRow(headerRow);
 
+    // Tables with 4+ columns are data tables (privilege logs, audit trails, etc.), not timelines
+    if (headerCells.length >= 4) return false;
+
     // Check if header contains timeline-related keywords
-    const timelineKeywords = /date|timeline|event|milestone|deadline|when|period/i;
+    const timelineKeywords = /timeline|event|milestone|deadline|when|period/i;
     const hasTimelineHeader = headerCells.some(cell => timelineKeywords.test(cell));
 
     // Check if first column of data rows contains dates
@@ -1059,6 +949,64 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     const configJson = JSON.stringify(config).replace(/"/g, '&quot;');
 
     return `<div class="card border-0 shadow my-3" style="border-radius: 10px; overflow: hidden;"><div class="card-body p-3"><div data-chart="${configJson}" style="min-height: 320px;"></div></div></div>`;
+  }
+
+  /**
+   * Extract KEY_ELEMENTS: marker from markdown and return as structured HTML.
+   * Removes the marker line from the markdown text.
+   */
+  private extractKeyElements(text: string): { html: string; remaining: string } {
+    const regex = /^KEY_ELEMENTS:\s*(.+)$/m;
+    const match = text.match(regex);
+    if (!match) {
+      return { html: '', remaining: text };
+    }
+
+    const items = match[1].split('|').map(s => s.trim()).filter(s => s.length > 0);
+    const itemsHtml = items
+      .map((item, i) => `<span class="ke-item">${i + 1}. ${item}</span>`)
+      .join(' ');
+
+    const html = `<div class="key-elements"><span class="ke-label">Key elements:</span> ${itemsHtml}</div>`;
+    const remaining = text.replace(regex, '').replace(/\n{3,}/g, '\n\n');
+
+    return { html, remaining };
+  }
+
+  /**
+   * Extract SOURCES: marker from markdown and return as structured HTML.
+   * Handles both plain text sources and [text](url) markdown links.
+   * Also handles HTML <a> tags from CitationUrlInjector.
+   */
+  private extractSources(text: string): { html: string; remaining: string } {
+    const regex = /^SOURCES:\s*(.+)$/m;
+    const match = text.match(regex);
+    if (!match) {
+      return { html: '', remaining: text };
+    }
+
+    const rawSources = match[1].split('|').map(s => s.trim()).filter(s => s.length > 0);
+    const chipsHtml = rawSources.map(source => {
+      // Check for HTML <a> tag (from CitationUrlInjector's convertMarkdownLinksToHtml)
+      const htmlLinkMatch = source.match(/<a\s+href="([^"]+)"[^>]*>([^<]+)<\/a>/);
+      if (htmlLinkMatch) {
+        return `<a href="${htmlLinkMatch[1]}" target="_blank" rel="noopener noreferrer" class="source-chip">${htmlLinkMatch[2]}</a>`;
+      }
+
+      // Check for markdown link [text](url)
+      const mdLinkMatch = source.match(/\[([^\]]+)\]\(([^)]+)\)/);
+      if (mdLinkMatch) {
+        return `<a href="${mdLinkMatch[2]}" target="_blank" rel="noopener noreferrer" class="source-chip">${mdLinkMatch[1]}</a>`;
+      }
+
+      // Plain text source (no URL available)
+      return `<span class="source-chip no-link">${source}</span>`;
+    }).join(' ');
+
+    const html = `<div class="sources-bar"><span class="sources-label">Sources:</span> ${chipsHtml}</div>`;
+    const remaining = text.replace(regex, '').replace(/\n{3,}/g, '\n\n');
+
+    return { html, remaining };
   }
 
   private convertMarkdownToHtml(text: string): string {
