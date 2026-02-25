@@ -35,11 +35,33 @@ export class ConversationOrchestrationService {
   private destroy$ = new Subject<void>();
 
   // Workflow step templates
-  private workflowStepTemplates = {
+  private workflowStepTemplates: Record<string, { id: number; icon: string; description: string; status: WorkflowStepStatus }[]> = {
+    // Question sub-types (matched to backend QuestionType)
+    question_strategy: [
+      { id: 1, icon: 'ri-search-2-line', description: 'Analyzing legal question...', status: WorkflowStepStatus.Pending },
+      { id: 2, icon: 'ri-scales-3-line', description: 'Searching case law & precedents...', status: WorkflowStepStatus.Pending },
+      { id: 3, icon: 'ri-book-open-line', description: 'Reviewing statutes & regulations...', status: WorkflowStepStatus.Pending },
+      { id: 4, icon: 'ri-file-text-line', description: 'Generating response...', status: WorkflowStepStatus.Pending }
+    ],
+    question_followup: [
+      { id: 1, icon: 'ri-chat-3-line', description: 'Reviewing conversation context...', status: WorkflowStepStatus.Pending },
+      { id: 2, icon: 'ri-file-text-line', description: 'Generating response...', status: WorkflowStepStatus.Pending }
+    ],
+    question_technical: [
+      { id: 1, icon: 'ri-search-2-line', description: 'Analyzing legal question...', status: WorkflowStepStatus.Pending },
+      { id: 2, icon: 'ri-book-open-line', description: 'Looking up statutes & regulations...', status: WorkflowStepStatus.Pending },
+      { id: 3, icon: 'ri-file-text-line', description: 'Generating response...', status: WorkflowStepStatus.Pending }
+    ],
+    question_procedural: [
+      { id: 1, icon: 'ri-search-2-line', description: 'Analyzing procedural requirements...', status: WorkflowStepStatus.Pending },
+      { id: 2, icon: 'ri-calendar-check-line', description: 'Checking rules & deadlines...', status: WorkflowStepStatus.Pending },
+      { id: 3, icon: 'ri-file-text-line', description: 'Generating step-by-step guidance...', status: WorkflowStepStatus.Pending }
+    ],
+    // Fallback: question defaults to strategy (full research)
     question: [
       { id: 1, icon: 'ri-search-2-line', description: 'Analyzing legal question...', status: WorkflowStepStatus.Pending },
-      { id: 2, icon: 'ri-scales-3-line', description: 'Searching case law...', status: WorkflowStepStatus.Pending },
-      { id: 3, icon: 'ri-book-open-line', description: 'Reviewing statutes...', status: WorkflowStepStatus.Pending },
+      { id: 2, icon: 'ri-scales-3-line', description: 'Searching case law & precedents...', status: WorkflowStepStatus.Pending },
+      { id: 3, icon: 'ri-book-open-line', description: 'Reviewing statutes & regulations...', status: WorkflowStepStatus.Pending },
       { id: 4, icon: 'ri-file-text-line', description: 'Generating response...', status: WorkflowStepStatus.Pending }
     ],
     draft: [
@@ -83,8 +105,8 @@ export class ConversationOrchestrationService {
   /**
    * Initialize workflow steps for a task type
    */
-  initializeWorkflowSteps(taskType: 'question' | 'draft' | 'summarize' | 'upload' | 'transform' | 'workflow'): WorkflowStep[] {
-    const template = this.workflowStepTemplates[taskType];
+  initializeWorkflowSteps(taskType: string): WorkflowStep[] {
+    const template = this.workflowStepTemplates[taskType] || this.workflowStepTemplates['question'];
     return template.map(step => ({ ...step }));
   }
 

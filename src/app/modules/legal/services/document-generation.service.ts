@@ -214,11 +214,33 @@ export class DocumentGenerationService {
   }
 
   /**
-   * Generate draft with conversation (combined endpoint)
+   * Generate draft with conversation (combined endpoint — non-streaming fallback)
    */
   generateDraftWithConversation(request: DraftGenerationRequest): Observable<DraftGenerationResponse> {
     return this.http.post<DraftGenerationResponse>(
       `${environment.apiUrl}/api/legal/ai-workspace/drafts/generate`,
+      request
+    );
+  }
+
+  /**
+   * Open SSE connection for draft token streaming.
+   * Must be called BEFORE triggerStreamingGeneration.
+   * EventSource can't send Authorization headers, so JWT is passed as query param.
+   */
+  openDraftStream(conversationId: number): EventSource {
+    const token = localStorage.getItem('[KEY] TOKEN') || '';
+    const url = `${environment.apiUrl}/api/legal/ai-workspace/drafts/stream?conversationId=${conversationId}&token=${encodeURIComponent(token)}`;
+    return new EventSource(url);
+  }
+
+  /**
+   * Trigger streaming draft generation. Returns 202 immediately.
+   * Tokens arrive via the SSE connection opened by openDraftStream().
+   */
+  triggerStreamingGeneration(request: DraftGenerationRequest): Observable<any> {
+    return this.http.post(
+      `${environment.apiUrl}/api/legal/ai-workspace/drafts/generate-streaming`,
       request
     );
   }

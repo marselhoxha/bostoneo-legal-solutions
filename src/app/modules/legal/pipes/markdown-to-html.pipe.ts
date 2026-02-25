@@ -16,10 +16,15 @@ export class MarkdownToHtmlPipe implements PipeTransform {
       return '';
     }
 
-    // STEP 0: Extract structured markers BEFORE any processing
-    const keyElements = this.extractKeyElements(value);
-    const sources = this.extractSources(keyElements.remaining);
-    let markdown = sources.remaining;
+    // Strip CHART: labels — tables render correctly on their own
+    value = value.replace(/CHART:(?:BAR|PIE|LINE)[ \t]*/gi, '');
+
+    // STEP 0: Extract SOURCES marker BEFORE any processing
+    // Strip any leftover KEY_ELEMENTS marker (no longer used)
+    value = value.replace(/^KEY_ELEMENTS:\s*.+$/m, '').replace(/\n{3,}/g, '\n\n');
+    const sources = this.extractSources(value);
+    // Remove trailing horizontal rules and whitespace left after marker extraction
+    let markdown = sources.remaining.replace(/\n*-{3,}\s*$/, '').trimEnd();
 
     // STEP 1: Process checkmark citations BEFORE markdown conversion (while still markdown syntax)
     markdown = this.processCheckmarkCitations(markdown);
@@ -30,8 +35,8 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     // STEP 3: Apply legal highlighting to the HTML output (NOT checkmarks - already processed)
     html = this.highlightLegalTerms(html);
 
-    // STEP 4: Append structured markers at the end
-    html = html + keyElements.html + sources.html;
+    // STEP 4: Append SOURCES bar at the end
+    html = html + sources.html;
 
     // IMPORTANT: Use bypassSecurityTrustHtml to allow our custom HTML/CSS classes
     return this.sanitizer.bypassSecurityTrustHtml(html);
@@ -717,17 +722,18 @@ export class MarkdownToHtmlPipe implements PipeTransform {
    */
   private convertChartsToHtml(text: string): string {
     // CHART:BAR pattern with table data
-    text = text.replace(/CHART:BAR\s*\n(\|[^\n]+\|\n)+/gi, (match) => {
+    // Allow multiple blank lines between CHART:BAR and table, last row may lack trailing \n
+    text = text.replace(/CHART:BAR[ \t]*\n+(\|[^\n]+\|(?:\n|$))+/gi, (match) => {
       return this.createBarChart(match);
     });
 
     // CHART:PIE pattern with percentage list
-    text = text.replace(/CHART:PIE\s*\n([-*]\s+[^:]+:\s*\d+%\s*\n)+/gi, (match) => {
+    text = text.replace(/CHART:PIE[ \t]*\n+([-*]\s+[^:]+:\s*\d+%\s*(?:\n|$))+/gi, (match) => {
       return this.createPieChart(match);
     });
 
     // CHART:LINE pattern with year/value pairs
-    text = text.replace(/CHART:LINE\s*\n([^\n]+\n)?(\d{4}:\s*\d+\s*\n)+/gi, (match) => {
+    text = text.replace(/CHART:LINE[ \t]*\n+([^\n]+\n)?(\d{4}:\s*\d+\s*(?:\n|$))+/gi, (match) => {
       return this.createLineChart(match);
     });
 
@@ -952,28 +958,6 @@ export class MarkdownToHtmlPipe implements PipeTransform {
   }
 
   /**
-   * Extract KEY_ELEMENTS: marker from markdown and return as structured HTML.
-   * Removes the marker line from the markdown text.
-   */
-  private extractKeyElements(text: string): { html: string; remaining: string } {
-    const regex = /^KEY_ELEMENTS:\s*(.+)$/m;
-    const match = text.match(regex);
-    if (!match) {
-      return { html: '', remaining: text };
-    }
-
-    const items = match[1].split('|').map(s => s.trim()).filter(s => s.length > 0);
-    const itemsHtml = items
-      .map((item, i) => `<span class="ke-item">${i + 1}. ${item}</span>`)
-      .join(' ');
-
-    const html = `<div class="key-elements"><span class="ke-label">Key elements:</span> ${itemsHtml}</div>`;
-    const remaining = text.replace(regex, '').replace(/\n{3,}/g, '\n\n');
-
-    return { html, remaining };
-  }
-
-  /**
    * Extract SOURCES: marker from markdown and return as structured HTML.
    * Handles both plain text sources and [text](url) markdown links.
    * Also handles HTML <a> tags from CitationUrlInjector.
@@ -1010,6 +994,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
   }
 
   private convertMarkdownToHtml(text: string): string {
+    // Strip CHART: labels — tables render correctly on their own
     // REMOVE STRAY BACKTICKS (formatting artifacts from AI responses)
     text = text.replace(/^`\s*/gm, ''); // Backticks at start of lines
     text = text.replace(/`{3,}/g, ''); // Triple+ backticks not in code blocks (already handled by inline code)
@@ -1048,7 +1033,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     text = text.replace(/^#{2}\s+(.*$)/gim, '<h2 style="margin-top: 2.25rem;">$1</h2>');
 
     // H1 - single # followed by space and NOT another # (do this last to avoid matching other levels)
-    text = text.replace(/^#\s+(?!#)(.*$)/gim, '<h1 style="margin-top: 0.15rem;">$1</h1>');
+    text = text.replace(/^#\s+(?!#)(.*$)/gim, '<h2 style="margin-top: 2.25rem;">$1</h2>');
 
     // Blockquotes
     text = text.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');

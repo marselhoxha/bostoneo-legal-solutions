@@ -116,10 +116,31 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
     }
 
     private String getToken(HttpServletRequest request) {
-        return ofNullable(request.getHeader(AUTHORIZATION))
+        // 1. Check Authorization header (standard path)
+        String headerToken = ofNullable(request.getHeader(AUTHORIZATION))
                 .filter(header -> header.startsWith(TOKEN_PREFIX))
                 .map(token -> token.replace(TOKEN_PREFIX, EMPTY))
                 .orElse(null);
+        if (headerToken != null) return headerToken;
+
+        // 2. Fallback: check "token" query parameter ONLY for SSE endpoints
+        //    (EventSource browser API cannot send Authorization headers)
+        if (isSseEndpoint(request)) {
+            String queryToken = ofNullable(request.getParameter("token"))
+                    .filter(t -> !t.isBlank())
+                    .orElse(null);
+            if (queryToken != null) {
+                log.debug("Using query parameter token for {} {}", request.getMethod(), request.getRequestURI());
+            }
+            return queryToken;
+        }
+        return null;
+    }
+
+    /** SSE endpoints that require query-param token auth (EventSource can't send headers) */
+    private boolean isSseEndpoint(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri.contains("/drafts/stream") || uri.contains("/progress-stream");
     }
 
 
@@ -140,10 +161,15 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
             return true;
         }
 
-        // Only skip for requests without Authorization header, OPTIONS, or public routes
-        // All authenticated endpoints (including /api/crm/) must go through the filter
-        return request.getHeader(AUTHORIZATION) == null || !request.getHeader(AUTHORIZATION).startsWith(TOKEN_PREFIX)
-            || request.getMethod().equalsIgnoreCase(HTTP_OPTIONS_METHOD) || asList(PUBLIC_ROUTES).contains(request.getRequestURI());
+        // Always skip OPTIONS and public routes
+        if (request.getMethod().equalsIgnoreCase(HTTP_OPTIONS_METHOD) || asList(PUBLIC_ROUTES).contains(request.getRequestURI())) {
+            return true;
+        }
+
+        // Skip if no token from any source (header or SSE query param)
+        boolean hasHeaderToken = request.getHeader(AUTHORIZATION) != null && request.getHeader(AUTHORIZATION).startsWith(TOKEN_PREFIX);
+        boolean hasQueryToken = isSseEndpoint(request) && request.getParameter("token") != null && !request.getParameter("token").isBlank();
+        return !hasHeaderToken && !hasQueryToken;
     }
 
     /**

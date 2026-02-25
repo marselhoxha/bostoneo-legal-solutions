@@ -1589,11 +1589,19 @@
                       <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
                     </div>
                     <div class="message-bubble ai-message flex-grow-1">
-                      <!-- Research Mode Badge -->
-                      <div class="research-mode-badge" *ngIf="message.researchMode">
+                      <!-- Research Mode Badge + Quality Score -->
+                      <div class="research-mode-badge d-flex align-items-center gap-2 flex-wrap" *ngIf="message.researchMode">
                         <span class="badge" [ngClass]="message.researchMode === 'THOROUGH' ? 'badge-thorough' : 'badge-fast'">
                           <i [class]="message.researchMode === 'THOROUGH' ? 'ri-search-eye-line' : 'ri-flashlight-line'"></i>
                           {{ message.researchMode === 'THOROUGH' ? 'Thorough' : 'Fast' }}
+                        </span>
+                        <!-- Quality Score Badge -->
+                        <span *ngIf="message.metadata?.qualityScore"
+                              class="badge quality-score-badge"
+                              [ngClass]="getQualityBadgeClass(message.metadata.qualityScore.grade)"
+                              [title]="getQualityTooltip(message.metadata.qualityScore)">
+                          <i class="ri-shield-check-line me-1"></i>
+                          Grade {{ message.metadata.qualityScore.grade }} · {{ message.metadata.qualityScore.scoreOutOf10 }}/10
                         </span>
                       </div>
 
@@ -1803,11 +1811,19 @@
                   </div>
 
                   <div class="message-bubble ai-message flex-grow-1">
-                    <!-- Research Mode Badge -->
-                    <div class="research-mode-badge" *ngIf="message.researchMode">
+                    <!-- Research Mode Badge + Quality Score -->
+                    <div class="research-mode-badge d-flex align-items-center gap-2 flex-wrap" *ngIf="message.researchMode">
                       <span class="badge" [ngClass]="message.researchMode === 'THOROUGH' ? 'badge-thorough' : 'badge-fast'">
                         <i [class]="message.researchMode === 'THOROUGH' ? 'ri-search-eye-line' : 'ri-flashlight-line'"></i>
                         {{ message.researchMode === 'THOROUGH' ? 'Thorough Research' : 'Fast Mode' }}
+                      </span>
+                      <!-- Quality Score Badge -->
+                      <span *ngIf="message.metadata?.qualityScore"
+                            class="badge quality-score-badge"
+                            [ngClass]="getQualityBadgeClass(message.metadata.qualityScore.grade)"
+                            [title]="getQualityTooltip(message.metadata.qualityScore)">
+                        <i class="ri-shield-check-line me-1"></i>
+                        Grade {{ message.metadata.qualityScore.grade }} · {{ message.metadata.qualityScore.scoreOutOf10 }}/10
                       </span>
                     </div>
 

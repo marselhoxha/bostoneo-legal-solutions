@@ -159,18 +159,39 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   workflowSteps$ = this.stateService.workflowSteps$;
 
   // Workflow step templates for different task types
-  private workflowStepTemplates = {
+  private workflowStepTemplates: Record<string, { id: number; icon: string; description: string; status: 'pending' }[]> = {
+    // Question sub-types (matched to backend QuestionType)
+    question_strategy: [
+      { id: 1, icon: 'ri-search-2-line', description: 'Analyzing legal question...', status: 'pending' as const },
+      { id: 2, icon: 'ri-scales-3-line', description: 'Searching case law & precedents...', status: 'pending' as const },
+      { id: 3, icon: 'ri-book-open-line', description: 'Reviewing statutes & regulations...', status: 'pending' as const },
+      { id: 4, icon: 'ri-file-text-line', description: 'Generating response...', status: 'pending' as const }
+    ],
+    question_followup: [
+      { id: 1, icon: 'ri-chat-3-line', description: 'Reviewing conversation context...', status: 'pending' as const },
+      { id: 2, icon: 'ri-file-text-line', description: 'Generating response...', status: 'pending' as const }
+    ],
+    question_technical: [
+      { id: 1, icon: 'ri-search-2-line', description: 'Analyzing legal question...', status: 'pending' as const },
+      { id: 2, icon: 'ri-book-open-line', description: 'Looking up statutes & regulations...', status: 'pending' as const },
+      { id: 3, icon: 'ri-file-text-line', description: 'Generating response...', status: 'pending' as const }
+    ],
+    question_procedural: [
+      { id: 1, icon: 'ri-search-2-line', description: 'Analyzing procedural requirements...', status: 'pending' as const },
+      { id: 2, icon: 'ri-calendar-check-line', description: 'Checking rules & deadlines...', status: 'pending' as const },
+      { id: 3, icon: 'ri-file-text-line', description: 'Generating step-by-step guidance...', status: 'pending' as const }
+    ],
+    // Fallback: question defaults to strategy (full research)
     question: [
       { id: 1, icon: 'ri-search-2-line', description: 'Analyzing legal question...', status: 'pending' as const },
-      { id: 2, icon: 'ri-scales-3-line', description: 'Searching case law...', status: 'pending' as const },
-      { id: 3, icon: 'ri-book-open-line', description: 'Reviewing statutes...', status: 'pending' as const },
+      { id: 2, icon: 'ri-scales-3-line', description: 'Searching case law & precedents...', status: 'pending' as const },
+      { id: 3, icon: 'ri-book-open-line', description: 'Reviewing statutes & regulations...', status: 'pending' as const },
       { id: 4, icon: 'ri-file-text-line', description: 'Generating response...', status: 'pending' as const }
     ],
     draft: [
-      { id: 1, icon: 'ri-file-search-line', description: 'Analyzing requirements...', status: 'pending' as const },
-      { id: 2, icon: 'ri-search-line', description: 'Retrieving precedents...', status: 'pending' as const },
-      { id: 3, icon: 'ri-book-line', description: 'Applying legal standards...', status: 'pending' as const },
-      { id: 4, icon: 'ri-file-edit-line', description: 'Drafting document...', status: 'pending' as const }
+      { id: 1, icon: 'ri-draft-line', description: 'Analyzing your request...', status: 'pending' as const },
+      { id: 2, icon: 'ri-quill-pen-line', description: 'Writing document...', status: 'pending' as const },
+      { id: 3, icon: 'ri-shield-check-line', description: 'Reviewing & finalizing...', status: 'pending' as const }
     ],
     summarize: [
       { id: 1, icon: 'ri-file-search-line', description: 'Reading case materials...', status: 'pending' as const },
@@ -388,6 +409,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Track setTimeout ID for content loading to prevent race conditions
   private contentLoadTimeoutId: number | null = null;
+
+  // Draft streaming SSE connection
+  private draftEventSource: EventSource | null = null;
+  // Word count tracker for streaming tokens
+  private streamWordCount = 0;
+  // Pending draft content to load into editor once created
+  private pendingDraftContent: string | null = null;
 
   get currentDocumentId(): string | number | null {
     return this.stateService.getCurrentDocument().id;
@@ -1034,8 +1062,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(user => {
         this.currentUser = user;
-        // Load user-specific data when user is available
+        // Scope background tasks to the current user
         if (user && user.id) {
+          this.backgroundTaskService.setCurrentUserId(user.id);
           this.loadUserCases();
           this.loadAnalysisHistoryOnce();
         }
@@ -2576,6 +2605,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Reset guard flag so history is loaded fresh on next navigation to this component
     this.analysisHistoryLoaded = false;
 
+    // Close draft streaming SSE if open
+    this.closeDraftStream();
+
     this.destroy$.next();
     this.destroy$.complete();
     this.cancelGeneration$.complete();
@@ -2639,13 +2671,44 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   // Initialize workflow steps based on task type (now uses StateService)
-  private initializeWorkflowSteps(taskType: 'question' | 'draft' | 'summarize' | 'upload' | 'transform' | 'workflow'): void {
-    const template = this.workflowStepTemplates[taskType];
+  private initializeWorkflowSteps(taskType: string): void {
+    const template = this.workflowStepTemplates[taskType] || this.workflowStepTemplates['question'];
     const steps = template.map(step => ({
       ...step,
       status: 'pending' as any
     }));
     this.stateService.setWorkflowSteps(steps);
+  }
+
+  // Classify a question to pick the right workflow step template
+  private classifyQuestion(query: string, hasConversationHistory: boolean): string {
+    const q = query.toLowerCase().trim();
+    const wordCount = q.split(/\s+/).length;
+
+    // Follow-up: short question with conversation context
+    if (hasConversationHistory) {
+      if (wordCount <= 10 && /elaborate|explain|clarify|mean by|tell me more|more about|more detail|specifically|example/.test(q)) {
+        return 'question_followup';
+      }
+      if (/what (is|does|are) (this|that|it|those)|about (this|that|it)|regarding (this|that)/.test(q)) {
+        return 'question_followup';
+      }
+    }
+
+    // Narrow technical: specific statute/citation question
+    if (/what (does|is)|define|definition of|meaning of|text of|cite|citation|section|statute|rule|regulation|irc|usc|cfr|§/.test(q)) {
+      if (!/strateg|argument|approach|defend|attack|challenge|motion|brief|position/.test(q)) {
+        return 'question_technical';
+      }
+    }
+
+    // Procedural guidance: how-to
+    if (/how (do|can|should) (i|we)|steps (for|to)|procedure|process|filing|deadline|timeline|schedule/.test(q)) {
+      return 'question_procedural';
+    }
+
+    // Default: initial strategy (full research)
+    return 'question_strategy';
   }
 
   // Animate workflow steps progressively (now works with StateService)
@@ -2687,6 +2750,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Stop generation
   stopGeneration(): void {
+    // Close draft streaming SSE connection
+    this.closeDraftStream();
+
     // Get active conversation to cancel backend request
     const activeConvId = this.stateService.getActiveConversationId();
     const conversations = this.stateService.getConversations();
@@ -2889,15 +2955,22 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               baseMessage.researchMode = msg.researchMode || conv.researchMode || 'FAST';
             }
 
-            // Detect DOCUMENT ANALYSIS messages (upload/analyze) - NOT legal research
-            // Only show strategic tabs when there's an analysisId from document analysis
-            // Do NOT use content keywords - they falsely trigger on thorough legal research responses
-            if (msg.metadata && typeof msg.metadata === 'object' && msg.role === 'assistant') {
-              const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
-              if (metadata.analysisId) {
-                baseMessage.hasStrategicAnalysis = true;
-                baseMessage.analysisId = metadata.analysisId;
-                baseMessage.parsedSections = this.parseStrategicSections(msg.content);
+            // Pass metadata through for quality score display and other features
+            if (msg.metadata && msg.role === 'assistant') {
+              try {
+                const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+                baseMessage.metadata = metadata;
+
+                // Detect DOCUMENT ANALYSIS messages (upload/analyze) - NOT legal research
+                // Only show strategic tabs when there's an analysisId from document analysis
+                // Do NOT use content keywords - they falsely trigger on thorough legal research responses
+                if (metadata.analysisId) {
+                  baseMessage.hasStrategicAnalysis = true;
+                  baseMessage.analysisId = metadata.analysisId;
+                  baseMessage.parsedSections = this.parseStrategicSections(msg.content);
+                }
+              } catch {
+                // Malformed metadata — skip gracefully
               }
             }
 
@@ -4245,6 +4318,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       // Add research mode for assistant messages (use message's own research mode from backend)
       if (msg.role === 'assistant') {
         baseMessage.researchMode = msg.researchMode || conv.researchMode || 'FAST';
+        // Pass metadata through for quality score display
+        if (msg.metadata) {
+          try {
+            baseMessage.metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+          } catch {
+            // Malformed metadata — skip gracefully
+          }
+        }
       }
       return baseMessage;
     });
@@ -4913,6 +4994,34 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  /**
+   * Get Velzon badge class for quality score grade
+   */
+  getQualityBadgeClass(grade: string): string {
+    switch (grade) {
+      case 'A': return 'bg-success-subtle text-success';
+      case 'B': return 'bg-success-subtle text-success';
+      case 'C': return 'bg-warning-subtle text-warning';
+      case 'D': return 'bg-danger-subtle text-danger';
+      case 'F': return 'bg-danger-subtle text-danger';
+      default: return 'bg-secondary-subtle text-secondary';
+    }
+  }
+
+  /**
+   * Build tooltip text showing quality score dimension breakdown
+   */
+  getQualityTooltip(qualityScore: any): string {
+    if (!qualityScore?.dimensions) return `Quality: ${qualityScore?.grade || '?'}`;
+    const d = qualityScore.dimensions;
+    return `Research Quality: ${qualityScore.grade} (${qualityScore.scoreOutOf10}/10)\n`
+      + `Completeness: ${Math.round((d.completeness || 0) * 100)}%\n`
+      + `Authority: ${Math.round((d.authority || 0) * 100)}%\n`
+      + `Structure: ${Math.round((d.structure || 0) * 100)}%\n`
+      + `Depth: ${Math.round((d.depth || 0) * 100)}%\n`
+      + `Actionability: ${Math.round((d.actionability || 0) * 100)}%`;
   }
 
   /**
@@ -5864,15 +5973,23 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.stateService.setIsGenerating(true);
 
     // Initialize workflow steps for the selected task
-    this.initializeWorkflowSteps(this.selectedTask);
-    this.animateWorkflowSteps();
+    if (this.selectedTask === 'question') {
+      // Classify question type for context-appropriate workflow steps
+      const hasHistory = this.stateService.getConversationMessages().length > 1;
+      const questionType = this.classifyQuestion(userPrompt, hasHistory);
+      this.initializeWorkflowSteps(questionType);
+    } else {
+      this.initializeWorkflowSteps(this.selectedTask);
+    }
 
     // FORK: Different logic for 'draft' task vs other tasks
     if (this.selectedTask === 'draft') {
-      // DOCUMENT GENERATION FLOW - Use document generation service
+      // Draft: drive steps from real SSE events, not timer animation
+      this.stateService.updateWorkflowStep(1, { status: 'active' as any });
       this.generateDocumentFlow(userPrompt);
     } else {
-      // Q&A CONVERSATION FLOW - Use existing conversation service
+      // Q&A: use timer-based workflow animation
+      this.animateWorkflowSteps();
       this.generateConversationFlow(userPrompt);
     }
   }
@@ -5925,157 +6042,208 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (initResponse) => {
+          const backendConversationId = initResponse.conversationId;
+
           // Update temp conversation with real backend ID
           const tempConvInList = this.stateService.getConversations().find(c => c.id === tempConvId);
           if (tempConvInList) {
-            tempConvInList.backendConversationId = initResponse.conversationId;
+            tempConvInList.backendConversationId = backendConversationId;
           }
-
-          // Now call the generate endpoint with the conversation ID so it reuses the same conversation
-          const draftRequestWithConversation = {
-            ...draftRequest,
-            conversationId: initResponse.conversationId
-          };
 
           // Register background task for draft generation
           const taskId = this.backgroundTaskService.registerTask(
             'draft',
             title,
             `Drafting: ${documentType}`,
-            { conversationId: tempConvId, backendConversationId: initResponse.conversationId }
+            { conversationId: tempConvId, backendConversationId: backendConversationId }
           );
           this.backgroundTaskService.startTask(taskId);
 
-          // Subscribe WITHOUT takeUntil(destroy$) so it continues in background
-          const subscription = this.documentGenerationService.generateDraftWithConversation(draftRequestWithConversation)
-            .pipe(takeUntil(this.cancelGeneration$))
-            .subscribe({
-              next: (response) => {
-          // Complete the background task
-          this.backgroundTaskService.completeTask(taskId, response);
+          // === STREAMING FLOW ===
+          // Stay in conversation view — user sees workflow steps during generation.
+          // Editor will open only when the document is fully ready (on 'complete' event).
+          this.streamWordCount = 0;
 
-          // Complete workflow steps
-          this.completeAllWorkflowSteps();
+          // Open SSE connection BEFORE triggering generation
+          this.closeDraftStream();
+          const eventSource = this.documentGenerationService.openDraftStream(backendConversationId);
+          this.draftEventSource = eventSource;
 
-          // Update the temporary conversation with real backend ID
-          const conversations = this.stateService.getConversations();
-          const tempConvIndex = conversations.findIndex(c => c.id === tempConvId);
+          // Handle token events — count words and update workflow step (no Quill insertion)
+          eventSource.addEventListener('token', (event: MessageEvent) => {
+            try {
+              const data = JSON.parse(event.data);
+              if (data.text) {
+                // First token: mark step 1 complete, step 2 active
+                if (this.streamWordCount === 0) {
+                  this.stateService.updateWorkflowStep(1, { status: 'completed' as any });
+                  this.stateService.updateWorkflowStep(2, { status: 'active' as any });
+                }
+                // Count words from token
+                const words = data.text.split(/\s+/).filter((w: string) => w.length > 0).length;
+                this.streamWordCount += words;
+                // Update step 2 description with live word count (throttle to every ~20 words)
+                if (this.streamWordCount < 10 || this.streamWordCount % 20 < words) {
+                  this.stateService.updateWorkflowStep(2, {
+                    description: `Writing document... (~${this.streamWordCount} words)`
+                  });
+                  this.cdr.detectChanges();
+                }
+              }
+            } catch (e) {
+              // Ignore parse errors on malformed events
+            }
+          });
 
-          if (tempConvIndex !== -1) {
-            // Update existing temp conversation with real data
-            conversations[tempConvIndex] = {
-              ...conversations[tempConvIndex],
-              id: `conv_${response.conversationId}`,
-              title: response.conversation.sessionName,
-              backendConversationId: response.conversationId,
-              relatedDraftId: response.documentId.toString(),
-              taskType: response.conversation.taskType as TaskType
-            };
+          // Handle post-processing status updates — transition to step 3
+          eventSource.addEventListener('post_processing', (event: MessageEvent) => {
+            try {
+              const data = JSON.parse(event.data);
+              this.stateService.updateWorkflowStep(2, { status: 'completed' as any });
+              this.stateService.updateWorkflowStep(3, { status: 'active' as any, description: data.message });
+              this.cdr.detectChanges();
+            } catch (e) {
+              // Ignore
+            }
+          });
 
-            // Update active conversation ID to the real one
-            this.stateService.setActiveConversationId(`conv_${response.conversationId}`);
-          }
+          // Handle complete event — enter drafting mode with final content
+          eventSource.addEventListener('complete', (event: MessageEvent) => {
+            try {
+              const data = JSON.parse(event.data);
+              this.closeDraftStream();
 
-          // Reload conversations from backend to ensure sidebar is up-to-date
-          // This is more reliable than relying on state updates alone
-          this.loadConversations();
+              // Complete background task
+              this.backgroundTaskService.completeTask(taskId, data);
+              this.completeAllWorkflowSteps();
 
-          // Trigger change detection to update sidebar with new conversation
-          this.cdr.detectChanges();
+              // Update conversation
+              const conversations = this.stateService.getConversations();
+              const tempConvIndex = conversations.findIndex(c => c.id === tempConvId);
+              if (tempConvIndex !== -1) {
+                conversations[tempConvIndex] = {
+                  ...conversations[tempConvIndex],
+                  id: `conv_${backendConversationId}`,
+                  title: title,
+                  backendConversationId: backendConversationId,
+                  relatedDraftId: data.documentId?.toString(),
+                  taskType: TaskType.GenerateDraft
+                };
+                this.stateService.setActiveConversationId(`conv_${backendConversationId}`);
+              }
 
-          // Store document metadata
-          this.currentDocumentId = response.document.id;
-          // Extract professional title from document content (first # heading) instead of using user prompt
-          this.activeDocumentTitle = this.extractTitleFromMarkdown(response.document.content) || title;
+              this.loadConversations();
 
-          this.currentDocumentWordCount = response.document.wordCount;
-          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(response.document.wordCount);
-          this.documentMetadata = {
-            tokensUsed: response.document.tokensUsed,
-            costEstimate: response.document.costEstimate,
-            generatedAt: new Date(response.document.generatedAt),
-            version: response.document.version
+              // Store document metadata
+              this.currentDocumentId = data.documentId;
+              this.activeDocumentTitle = this.extractTitleFromMarkdown(data.content) || title;
+              this.currentDocumentWordCount = data.wordCount || 0;
+              this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(data.wordCount || 0);
+              this.documentMetadata = {
+                tokensUsed: data.tokensUsed,
+                costEstimate: data.costEstimate,
+                generatedAt: new Date(),
+                version: data.version || 1
+              };
+
+              this.loadVersionHistory();
+
+              // Add assistant message
+              this.stateService.addConversationMessage({
+                role: 'assistant',
+                content: `I've generated your ${this.selectedDocTypePill || 'document'}${this.selectedCaseId ? ' for the selected case' : ''}. You can view it in the document preview panel.`,
+                timestamp: new Date()
+              });
+
+              this.stateService.setIsGenerating(false);
+
+              // Store pending content — will be loaded into Quill in onEditorCreated()
+              this.pendingDraftContent = data.content;
+
+              // NOW enter drafting mode — editor will render the final document
+              this.quillEditorInstance = null;
+              this.stateService.setDraftingMode(true);
+              this.showEditor = true;
+              this.setModeForDrafting();
+              this.cdr.detectChanges();
+            } catch (e) {
+              console.error('Error handling draft complete event:', e);
+            }
+          });
+
+          // Handle error events
+          eventSource.addEventListener('error', (event: MessageEvent) => {
+            try {
+              let errorMsg = 'Failed to generate document';
+              if (event.data) {
+                const data = JSON.parse(event.data);
+                errorMsg = data.message || errorMsg;
+              }
+
+              this.closeDraftStream();
+              this.backgroundTaskService.failTask(taskId, errorMsg);
+
+              // Remove temp conversation
+              const conversations = this.stateService.getConversations();
+              const tempIndex = conversations.findIndex(c => c.id === tempConvId);
+              if (tempIndex !== -1) {
+                conversations.splice(tempIndex, 1);
+              }
+
+              // Mark workflow as error
+              const steps = this.stateService.getWorkflowSteps();
+              if (steps.length > 0) {
+                this.stateService.updateWorkflowStep(steps[steps.length - 1].id, { status: 'error' as any });
+              }
+
+              this.stateService.addConversationMessage({
+                role: 'assistant',
+                content: `Sorry, I encountered an error generating the document: ${errorMsg}`,
+                timestamp: new Date()
+              });
+
+              this.stateService.setIsGenerating(false);
+              this.stateService.setShowBottomSearchBar(true);
+              this.stateService.setActiveConversationId(null);
+              this.cdr.detectChanges();
+            } catch (e) {
+              console.error('Error parsing SSE error event:', e);
+            }
+          });
+
+          // Handle SSE connection errors — close immediately to prevent auto-reconnect.
+          // Draft streaming is one-shot; reconnection would create a duplicate emitter.
+          eventSource.onerror = () => {
+            if (this.draftEventSource === eventSource) {
+              this.closeDraftStream();
+            }
           };
 
-          // Load version history for dropdown
-          this.loadVersionHistory();
+          // 3. Trigger streaming generation
+          const streamingRequest = {
+            ...draftRequest,
+            conversationId: backendConversationId
+          };
 
-          // CRITICAL: Cancel any pending content load from previous document
-          if (this.contentLoadTimeoutId !== null) {
-            clearTimeout(this.contentLoadTimeoutId);
-            this.contentLoadTimeoutId = null;
-          }
+          this.documentGenerationService.triggerStreamingGeneration(streamingRequest)
+            .pipe(takeUntil(this.cancelGeneration$))
+            .subscribe({
+              error: (error: any) => {
+                console.error('Error triggering streaming generation:', error);
+                this.closeDraftStream();
+                this.backgroundTaskService.failTask(taskId, error.message || 'Failed to start generation');
 
-          // Store content in pending property - will be loaded in onEditorCreated()
-          this.pendingDocumentContent = response.document.content || '';
+                this.stateService.addConversationMessage({
+                  role: 'assistant',
+                  content: 'Sorry, I encountered an error starting the draft generation. Please try again.',
+                  timestamp: new Date()
+                });
 
-          // Add assistant message
-          this.stateService.addConversationMessage({
-            role: 'assistant',
-            content: `I've generated your ${this.selectedDocTypePill || 'document'}${this.selectedCaseId ? ' for the selected case' : ''}. You can view it in the document preview panel.`,
-            timestamp: new Date()
-          });
-
-          // FORCE editor destruction and recreation
-          this.showEditor = false;
-          this.cdr.detectChanges();
-
-          // Recreate editor - content will load automatically in onEditorCreated()
-          // Use 50ms delay to ensure Angular fully destroys the old editor
-          setTimeout(() => {
-            // Clear editor instance BEFORE recreating component
-            this.quillEditorInstance = null;
-
-            // CRITICAL FIX: Set drafting mode FIRST so the container becomes visible
-            // The split-view-container has *ngIf="draftingMode$ | async"
-            // If we set showEditor=true before draftingMode, Quill won't be created
-            // because its parent container isn't in the DOM yet
-            this.stateService.setDraftingMode(true);
-            this.stateService.setIsGenerating(false);
-            this.cdr.detectChanges(); // Render the split-view-container first
-
-            // NOW set showEditor to true - the container exists, so Quill can be created
-            this.showEditor = true;
-
-            // Auto-switch to THOROUGH mode for drafting
-            this.setModeForDrafting();
-
-            this.cdr.detectChanges();
-          }, 50);
-        },
-        error: (error) => {
-          console.error('Error generating document:', error);
-
-          // Fail the background task
-          this.backgroundTaskService.failTask(taskId, error.message || 'Failed to generate document');
-
-          // Remove temp conversation if it still exists
-          const conversations = this.stateService.getConversations();
-          const tempIndex = conversations.findIndex(c => c.id === tempConvId);
-          if (tempIndex !== -1) {
-            conversations.splice(tempIndex, 1);
-          }
-
-          // Mark workflow as error
-          if (this.stateService.getWorkflowSteps().length > 0) {
-            const steps = this.stateService.getWorkflowSteps(); if (steps.length > 0) this.stateService.updateWorkflowStep(steps[steps.length - 1].id, { status: 'error' as any });
-          }
-
-          this.stateService.addConversationMessage({
-            role: 'assistant',
-            content: 'Sorry, I encountered an error generating the document. Please try again.',
-            timestamp: new Date()
-          });
-
-          this.stateService.setIsGenerating(false);
-          this.stateService.setShowBottomSearchBar(true);
-          this.stateService.setActiveConversationId(null);
-          this.cdr.detectChanges();
-        }
-      });
-
-          // Store subscription for cleanup
-          this.backgroundTaskService.storeSubscription(taskId, subscription);
+                this.stateService.setIsGenerating(false);
+                this.stateService.setShowBottomSearchBar(true);
+                this.cdr.detectChanges();
+              }
+            });
         },
         error: (error) => {
           console.error('Error initializing draft conversation:', error);
@@ -6099,6 +6267,17 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         }
       });
+  }
+
+  /**
+   * Close the draft streaming SSE connection if open.
+   */
+  private closeDraftStream(): void {
+    if (this.draftEventSource) {
+      this.draftEventSource.close();
+      this.draftEventSource = null;
+    }
+    this.streamWordCount = 0;
   }
 
   // EXISTING METHOD: Conversation flow for Q&A tasks (extracted from startCustomDraft)
@@ -6202,8 +6381,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                 error: (error) => {
                   console.error('Error getting AI response:', error);
 
+                  // Extract the actual error message from backend response
+                  const backendMessage = error?.error?.message || error?.message || '';
+                  const displayMessage = backendMessage
+                    ? backendMessage
+                    : 'Sorry, I encountered an error processing your request. Please try again.';
+
                   // Fail the background task
-                  this.backgroundTaskService.failTask(taskId, error.message || 'Failed to get AI response');
+                  this.backgroundTaskService.failTask(taskId, backendMessage || 'Failed to get AI response');
 
                   // Mark workflow as error
                   if (this.stateService.getWorkflowSteps().length > 0) {
@@ -6212,7 +6397,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
                   this.stateService.addConversationMessage({
                     role: 'assistant',
-                    content: 'Sorry, I encountered an error processing your request. Please try again.'
+                    content: displayMessage
                   });
                   this.stateService.setIsGenerating(false);
                   this.stateService.setShowBottomSearchBar(true);
@@ -6549,7 +6734,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
       // CRITICAL: Load content here if pending - this is the ONLY reliable place
       // onEditorCreated fires when editor is actually ready, not based on setTimeout guessing
-      if (this.pendingDocumentContent) {
+      if (this.pendingDraftContent) {
+        this.setQuillContentFromMarkdown(this.pendingDraftContent);
+        this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
+        this.pendingDraftContent = null;
+      } else if (this.pendingDocumentContent) {
         this.loadDocumentContent(this.pendingDocumentContent);
         this.pendingDocumentContent = null;
       }
@@ -7166,7 +7355,13 @@ You can:
     const researchMode = this.selectedResearchMode;
 
     // Initialize and animate workflow steps for the active task
-    this.initializeWorkflowSteps(this.activeTask);
+    if (this.activeTask === 'question') {
+      // Follow-up messages always have conversation history
+      const questionType = this.classifyQuestion(userMessage, true);
+      this.initializeWorkflowSteps(questionType);
+    } else {
+      this.initializeWorkflowSteps(this.activeTask);
+    }
     this.animateWorkflowSteps();
 
     // Capture conversation ID at request time to prevent race condition
@@ -7230,8 +7425,14 @@ You can:
         error: (error) => {
           console.error('Error sending message:', error);
 
+          // Extract the actual error message from backend response
+          const backendMessage = error?.error?.message || error?.message || '';
+          const displayMessage = backendMessage && !backendMessage.includes('Failed to process query')
+            ? backendMessage
+            : 'Sorry, I encountered an error processing your message. Please try again.';
+
           // Fail the background task
-          this.backgroundTaskService.failTask(taskId, error.message || 'Failed to send message');
+          this.backgroundTaskService.failTask(taskId, backendMessage || 'Failed to send message');
 
           // Mark workflow as error
           if (this.stateService.getWorkflowSteps().length > 0) {
@@ -7240,7 +7441,7 @@ You can:
 
           this.stateService.addConversationMessage({
             role: 'assistant',
-            content: 'Sorry, I encountered an error processing your message. Please try again.'
+            content: displayMessage
           });
           this.stateService.setIsGenerating(false);
           this.stateService.setShowBottomSearchBar(true);
@@ -7464,6 +7665,7 @@ You can:
         const questions = questionMatches
           .map(q => q.replace(/^[-•*\d+\.]\s*/, '').trim())
           .map(q => q.replace(/\*\*/g, '')) // Remove bold markdown
+          .map(q => q.replace(/<[^>]*>/g, '')) // Strip any residual HTML tags
           .filter(q => q.length > 0)
           .filter(q => this.isValidFollowUpQuestion(q)) // Validate question quality
           .slice(0, 3); // Limit to 3 questions

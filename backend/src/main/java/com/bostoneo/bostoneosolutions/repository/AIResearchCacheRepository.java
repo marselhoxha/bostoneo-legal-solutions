@@ -3,9 +3,11 @@ package com.bostoneo.bostoneosolutions.repository;
 import com.bostoneo.bostoneosolutions.model.AIResearchCache;
 import com.bostoneo.bostoneosolutions.enumeration.QueryType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -64,4 +66,33 @@ public interface AIResearchCacheRepository extends JpaRepository<AIResearchCache
      * SECURITY: Check existence with tenant isolation
      */
     boolean existsByIdAndOrganizationId(Long id, Long organizationId);
+
+    /**
+     * Atomic upsert: INSERT or UPDATE on query_hash conflict.
+     * Prevents duplicate key violations from race conditions.
+     */
+    @Modifying
+    @Transactional
+    @Query(value = "INSERT INTO ai_research_cache (organization_id, query_hash, query_text, query_type, " +
+        "jurisdiction, research_mode, case_id, ai_response, ai_model_used, confidence_score, " +
+        "usage_count, expires_at, is_valid, last_used, created_at) " +
+        "VALUES (:orgId, :queryHash, :queryText, :queryType, :jurisdiction, :researchMode, " +
+        ":caseId, :aiResponse, :aiModelUsed, :confidenceScore, 1, :expiresAt, true, NOW(), NOW()) " +
+        "ON CONFLICT (query_hash) DO UPDATE SET " +
+        "ai_response = :aiResponse, usage_count = ai_research_cache.usage_count + 1, " +
+        "expires_at = :expiresAt, is_valid = true, last_used = NOW()",
+        nativeQuery = true)
+    void upsertCache(
+        @Param("orgId") Long orgId,
+        @Param("queryHash") String queryHash,
+        @Param("queryText") String queryText,
+        @Param("queryType") String queryType,
+        @Param("jurisdiction") String jurisdiction,
+        @Param("researchMode") String researchMode,
+        @Param("caseId") String caseId,
+        @Param("aiResponse") String aiResponse,
+        @Param("aiModelUsed") String aiModelUsed,
+        @Param("confidenceScore") java.math.BigDecimal confidenceScore,
+        @Param("expiresAt") LocalDateTime expiresAt
+    );
 }

@@ -195,6 +195,7 @@ public class LegalResearchConversationService {
         // SECURITY: Use tenant-filtered query
         Optional<AiConversationSession> session = sessionRepository.findByIdAndUserIdAndOrganizationId(sessionId, userId, orgId);
         if (session.isPresent()) {
+            messageRepository.deleteBySessionId(sessionId);
             sessionRepository.delete(session.get());
             return true;
         }
@@ -542,11 +543,30 @@ public class LegalResearchConversationService {
             // Call AILegalResearchService for full agentic research with tools
             Map<String, Object> result = aiLegalResearchService.performSearch(searchRequest);
 
+            // Check for validation or rate limit errors returned by performSearch
+            if (Boolean.FALSE.equals(result.get("success"))) {
+                String errorMsg = (String) result.getOrDefault("error", "Research request failed");
+                String errorType = (String) result.getOrDefault("errorType", "UNKNOWN");
+                log.warn("⚠️ THOROUGH mode research returned error for session {}: [{}] {}", sessionId, errorType, errorMsg);
+                throw new RuntimeException(errorMsg);
+            }
+
             // Extract AI response from result
             String aiResponse = (String) result.get("aiAnalysis");
 
             if (aiResponse == null || aiResponse.isEmpty()) {
                 throw new RuntimeException("No AI response received from research service");
+            }
+
+            // Build metadata with quality score for frontend display
+            Map<String, Object> messageMetadata = new java.util.HashMap<>();
+            Object qualityScoreMap = result.get("qualityScore");
+            if (qualityScoreMap != null) {
+                messageMetadata.put("qualityScore", qualityScoreMap);
+            }
+            Object counselCheckMap = result.get("counselReadyCheck");
+            if (counselCheckMap != null) {
+                messageMetadata.put("counselReadyCheck", counselCheckMap);
             }
 
             // Save AI response to conversation with research mode
@@ -558,6 +578,7 @@ public class LegalResearchConversationService {
                     .ragContextUsed(true) // THOROUGH mode uses tools/research
                     .modelUsed("claude-sonnet-4-thorough")
                     .researchMode("THOROUGH") // Store research mode per message for badge display
+                    .metadata(messageMetadata.isEmpty() ? null : messageMetadata)
                     .build();
 
             AiConversationMessage savedMessage = messageRepository.save(assistantMessage);
@@ -572,7 +593,13 @@ public class LegalResearchConversationService {
 
         } catch (Exception e) {
             log.error("❌ THOROUGH mode research failed for session {}: {}", sessionId, e.getMessage(), e);
-            throw new RuntimeException("THOROUGH mode research failed: " + e.getMessage(), e);
+            // Sanitize: never expose raw DB/internal errors to users
+            String rawMsg = e.getMessage() != null ? e.getMessage() : "";
+            String userMessage = (rawMsg.contains("duplicate key") || rawMsg.contains("unique constraint") ||
+                rawMsg.contains("SQL") || rawMsg.contains("JDBC") || rawMsg.contains("PSQLException"))
+                ? "A temporary issue occurred. Please try your question again."
+                : rawMsg;
+            throw new RuntimeException(userMessage, e);
         }
     }
 

@@ -18,6 +18,7 @@ public class AIRequest {
     private Message[] messages;
     private List<ToolDefinition> tools;  // For tool-calling mode
     private Double temperature;  // 0.0 for deterministic responses, null for default
+    private Boolean stream;  // true to enable SSE streaming from Anthropic API
 
     @Data
     @NoArgsConstructor

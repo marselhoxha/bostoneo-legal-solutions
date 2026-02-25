@@ -3,6 +3,7 @@ package com.bostoneo.bostoneosolutions.service.ai;
 import com.bostoneo.bostoneosolutions.config.AIConfig;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.dto.ai.*;
+import com.bostoneo.bostoneosolutions.enumeration.QuestionType;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.service.AiAuditLogService;
@@ -1080,10 +1081,19 @@ public class ClaudeSonnet4Service implements AIService {
     }
 
     /**
-     * Agentic mode: Claude can use tools iteratively to research
+     * Agentic mode: Claude can use tools iteratively to research.
+     * Delegates to the QuestionType-aware overload with INITIAL_STRATEGY (full tools).
      */
-    public CompletableFuture<String> generateWithTools(String prompt, boolean useDeepThinking, String sessionId) {
-        log.info("Starting agentic research with tools (session: {})", sessionId);
+    public CompletableFuture<String> generateWithTools(String prompt, String systemMessage, boolean useDeepThinking, String sessionId) {
+        return generateWithTools(prompt, systemMessage, useDeepThinking, sessionId, QuestionType.INITIAL_STRATEGY);
+    }
+
+    /**
+     * Agentic mode with question-type-aware tool filtering.
+     * Only provides tools relevant to the question type, reducing API rounds and cost.
+     */
+    public CompletableFuture<String> generateWithTools(String prompt, String systemMessage, boolean useDeepThinking, String sessionId, QuestionType questionType) {
+        log.info("Starting agentic research with tools (session: {}, questionType: {})", sessionId, questionType);
 
         // Capture contexts from caller's thread before going async
         Long caseId = legalResearchTools.getCurrentCaseId();
@@ -1097,16 +1107,16 @@ public class ClaudeSonnet4Service implements AIService {
         }
         String redactedPromptTools = PiiDetector.redact(prompt);
 
-        List<ToolDefinition> toolDefs = legalResearchTools.getToolDefinitions();
-        log.info("Tool definitions loaded: {} tools", toolDefs != null ? toolDefs.size() : 0);
+        List<ToolDefinition> toolDefs = legalResearchTools.getToolDefinitions(questionType);
+        log.info("Tool definitions loaded: {} tools (filtered for {})", toolDefs.size(), questionType);
 
-        AIRequest request = createRequest(redactedPromptTools, useDeepThinking);
+        AIRequest request = createRequest(redactedPromptTools, systemMessage, useDeepThinking);
         request.setTools(toolDefs);
 
         List<AIRequest.Message> messageHistory = new ArrayList<>();
         messageHistory.add(request.getMessages()[0]);
 
-        return executeAgenticLoop(messageHistory, 0, sessionId, caseId, orgId).toFuture()
+        return executeAgenticLoop(messageHistory, systemMessage, 0, sessionId, caseId, orgId, questionType).toFuture()
                 .whenComplete((result, error) -> {
                     // Audit log the agentic research call
                     aiAuditLogService.logAiCall(
@@ -1118,9 +1128,16 @@ public class ClaudeSonnet4Service implements AIService {
     }
 
     /**
-     * Recursive tool-calling loop
+     * Recursive tool-calling loop (backward-compatible, uses full tools)
      */
-    private Mono<String> executeAgenticLoop(List<AIRequest.Message> messageHistory, int iteration, String sessionId, Long caseId, Long orgId) {
+    private Mono<String> executeAgenticLoop(List<AIRequest.Message> messageHistory, String systemMessage, int iteration, String sessionId, Long caseId, Long orgId) {
+        return executeAgenticLoop(messageHistory, systemMessage, iteration, sessionId, caseId, orgId, QuestionType.INITIAL_STRATEGY);
+    }
+
+    /**
+     * Recursive tool-calling loop with question-type-aware tool filtering
+     */
+    private Mono<String> executeAgenticLoop(List<AIRequest.Message> messageHistory, String systemMessage, int iteration, String sessionId, Long caseId, Long orgId, QuestionType questionType) {
         final int MAX_ITERATIONS = 5;  // Typical: search + verify + response = 3 rounds
 
         if (iteration >= MAX_ITERATIONS) {
@@ -1135,8 +1152,14 @@ public class ClaudeSonnet4Service implements AIService {
         request.setModel("claude-sonnet-4-5-20250929");
         request.setMax_tokens(4096); // Target 800-1200 words (~2K tokens), 4096 gives headroom
 
-        List<ToolDefinition> tools = legalResearchTools.getToolDefinitions();
-        log.info("🔧 Setting {} tools on request", tools != null ? tools.size() : 0);
+        if (systemMessage != null && !systemMessage.isEmpty()) {
+            String currentDate = java.time.LocalDate.now().toString();
+            request.setSystem("**CRITICAL: TODAY'S DATE IS " + currentDate + "**\n" +
+                "Use this date for all deadline calculations.\n\n" + systemMessage);
+        }
+
+        List<ToolDefinition> tools = legalResearchTools.getToolDefinitions(questionType);
+        log.info("🔧 Setting {} tools on request (questionType: {})", tools.size(), questionType);
         request.setTools(tools);
 
         request.setMessages(messageHistory.toArray(new AIRequest.Message[0]));
@@ -1304,8 +1327,8 @@ public class ClaudeSonnet4Service implements AIService {
                         toolResultMsg.setContent(toolResults);
                         messageHistory.add(toolResultMsg);
 
-                        // Continue loop (pass caseId/orgId through for document access)
-                        return executeAgenticLoop(messageHistory, iteration + 1, sessionId, caseId, orgId);
+                        // Continue loop (pass caseId/orgId/questionType through for document access)
+                        return executeAgenticLoop(messageHistory, systemMessage, iteration + 1, sessionId, caseId, orgId, questionType);
 
                     } else {
                         // Claude is done - return final answer
@@ -1404,6 +1427,11 @@ public class ClaudeSonnet4Service implements AIService {
                                        lowerPrompt.contains("counterclaim") ||
                                        lowerPrompt.contains("affirmative defense");
 
+        // Detect document transformation/revision - needs enough tokens to return full revised document
+        boolean isDocumentTransformation = lowerPrompt.contains("you are an expert legal document editor") ||
+                                           lowerPrompt.contains("complete revised document") ||
+                                           lowerPrompt.contains("return the complete modified document");
+
         // Detect THOROUGH mode in draft generation
         boolean isThoroughModeDraft = isDraftGeneration &&
                                      (prompt.contains("**tool usage requirements** (citation verification mandatory)") ||
@@ -1434,6 +1462,9 @@ public class ClaudeSonnet4Service implements AIService {
             maxTokens = lowerPrompt.contains("comprehensive") || lowerPrompt.contains("detailed") ||
                        lowerPrompt.contains("complete") || lowerPrompt.contains("thorough") ? 20000 : 16000;
             log.info("⚙️ Workflow generation/synthesis detected - allocating {} tokens for complete output", maxTokens);
+        } else if (isDocumentTransformation) {
+            maxTokens = 16000;
+            log.info("✏️ Document transformation detected - allocating {} tokens for complete revised document", maxTokens);
         } else if (useDeepThinking) {
             // Detect if query needs extra-long response
             boolean isComplexQuery = lowerPrompt.contains("comprehensive analysis") ||
@@ -1538,6 +1569,116 @@ public class ClaudeSonnet4Service implements AIService {
             case "web_search" -> "ri-global-line";
             default -> "ri-tools-line";
         };
+    }
+
+    // ===== STREAMING API =====
+
+    /**
+     * Generate completion via Anthropic streaming API.
+     * Tokens are relayed to tokenConsumer as they arrive.
+     * onComplete fires when the stream ends successfully (full text is accumulated externally).
+     * onError fires on any failure.
+     */
+    public void generateCompletionStreaming(
+            String prompt,
+            String systemMessage,
+            Long sessionId,
+            java.util.function.Consumer<String> tokenConsumer,
+            Runnable onComplete,
+            java.util.function.Consumer<Throwable> onError
+    ) {
+        // Check cancellation before starting
+        if (sessionId != null && cancellationService.isCancelled(sessionId)) {
+            log.warn("Streaming generation cancelled before API call for session {}", sessionId);
+            cancellationService.clearCancellation(sessionId);
+            onError.accept(new IllegalStateException("AI generation cancelled by user"));
+            return;
+        }
+
+        // PII redaction
+        String piiTypes = PiiDetector.detectPiiTypes(prompt);
+        if (!piiTypes.isEmpty()) {
+            log.warn("PII detected in streaming prompt: {}", piiTypes);
+        }
+        String redactedPrompt = PiiDetector.redact(prompt);
+        String redactedSystemMessage = PiiDetector.redact(systemMessage);
+
+        // Build request with stream=true
+        AIRequest request = createRequest(redactedPrompt, redactedSystemMessage, false, null);
+        request.setStream(true);
+
+        String apiKey = aiConfig.getApiKey();
+        AuditContext auditCtx = captureAuditContext();
+
+        log.info("Starting streaming request: model={}, maxTokens={}, sessionId={}",
+                request.getModel(), request.getMax_tokens(), sessionId);
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        // Use ParameterizedTypeReference<ServerSentEvent<String>> for proper SSE parsing.
+        // Anthropic returns text/event-stream with event: and data: lines.
+        reactor.core.Disposable subscription = anthropicWebClient
+                .post()
+                .uri("/v1/messages")
+                .header("x-api-key", apiKey)
+                .bodyValue(request)
+                .retrieve()
+                .bodyToFlux(new org.springframework.core.ParameterizedTypeReference<
+                        org.springframework.http.codec.ServerSentEvent<String>>() {})
+                .doOnNext(sse -> {
+                    // Check cancellation mid-stream
+                    if (sessionId != null && cancellationService.isCancelled(sessionId)) {
+                        throw new RuntimeException("AI generation cancelled by user");
+                    }
+
+                    String data = sse.data();
+                    if (data == null || data.isEmpty()) return;
+
+                    try {
+                        com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(data);
+                        String type = node.has("type") ? node.get("type").asText() : "";
+
+                        if ("content_block_delta".equals(type)) {
+                            com.fasterxml.jackson.databind.JsonNode delta = node.get("delta");
+                            if (delta != null && delta.has("text")) {
+                                String text = delta.get("text").asText();
+                                tokenConsumer.accept(text);
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.trace("Skipping non-parseable SSE data: {}", data);
+                    }
+                })
+                .doOnComplete(() -> {
+                    log.info("Streaming completed for session {}", sessionId);
+                    if (sessionId != null) {
+                        cancellationService.clearCancellation(sessionId);
+                    }
+                    aiAuditLogService.logAiCall(
+                            auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
+                            auditCtx.organizationId, "AI_COMPLETION_STREAM", "AI_QUERY",
+                            sessionId, auditCtx.ipAddress, auditCtx.userAgent,
+                            prompt, "(streamed)", true, null);
+                    onComplete.run();
+                })
+                .doOnError(error -> {
+                    log.error("Streaming failed for session {}: {}", sessionId, error.getMessage());
+                    if (sessionId != null) {
+                        cancellationService.clearCancellation(sessionId);
+                    }
+                    aiAuditLogService.logAiCall(
+                            auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
+                            auditCtx.organizationId, "AI_COMPLETION_STREAM", "AI_QUERY",
+                            sessionId, auditCtx.ipAddress, auditCtx.userAgent,
+                            prompt, null, false, error.getMessage());
+                    onError.accept(error);
+                })
+                .subscribe();
+
+        // Register subscription for cancellation support
+        if (sessionId != null) {
+            cancellationService.registerSubscription(sessionId, subscription);
+        }
     }
 
     // ===== AUDIT LOGGING HELPERS =====

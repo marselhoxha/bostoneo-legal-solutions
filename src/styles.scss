@@ -1158,20 +1158,3 @@ body > div > .dropdown-menu.user-profile-dropdown {
   }
 }
 
-// ==========================================
-// GLOBAL: Legience Marketing Website Override
-// ==========================================
-body.legience-website-active {
-  background: #fff !important;
-  overflow-x: hidden;
-
-  // Hide Velzon app chrome
-  #layout-wrapper,
-  app-sidebar,
-  app-topbar,
-  .app-menu,
-  .vertical-menu,
-  .topnav-hamburger {
-    display: none !important;
-  }
-}

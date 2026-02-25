@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.service.tools;
 
 import com.bostoneo.bostoneosolutions.dto.DeadlineInfo;
 import com.bostoneo.bostoneosolutions.dto.ai.ToolDefinition;
+import com.bostoneo.bostoneosolutions.enumeration.QuestionType;
 import com.bostoneo.bostoneosolutions.service.CaseDocumentService;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import com.bostoneo.bostoneosolutions.service.external.CourtListenerService;
@@ -97,6 +98,25 @@ public class LegalResearchTools {
             verifyCitationTool(),      // Citation validation
             readCaseDocumentTool()     // Read case file content for document-informed research
         );
+    }
+
+    /**
+     * Get filtered tool definitions based on question type.
+     * Reduces API cost by only providing tools relevant to each question type.
+     *
+     * INITIAL_STRATEGY: Full tools (search, verify, CFR, documents)
+     * PROCEDURAL_GUIDANCE / NARROW_TECHNICAL: CFR + documents only (no case law search)
+     * FOLLOW_UP_CLARIFICATION: Documents only (answer from conversation context)
+     */
+    public List<ToolDefinition> getToolDefinitions(QuestionType questionType) {
+        return switch (questionType) {
+            case INITIAL_STRATEGY -> List.of(
+                searchCaseLawTool(), getCFRTextTool(), verifyCitationTool(), readCaseDocumentTool());
+            case PROCEDURAL_GUIDANCE, NARROW_TECHNICAL -> List.of(
+                getCFRTextTool(), readCaseDocumentTool());
+            case FOLLOW_UP_CLARIFICATION -> List.of(
+                readCaseDocumentTool());
+        };
     }
 
     /**

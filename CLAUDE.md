@@ -37,6 +37,7 @@ Standard Workflow
 * All changes we make locally should be in the 'develop' branch. they should be tested there, then after commiting to that branch we can merge with 'staging' and 'production' branches
 *Don't check for diagostics or if the frontend has compiled, if it doesn't compile i will let you know
 *Don't do a compilation check in the frontend, there is no need
+* After every significant code change (new feature, bug fix, refactor), launch the code-reviewer agent to review the code for quality, best practices, potential bugs, and improvements before moving on to the next step.
 
 ## Database Migrations (Flyway)
 * Flyway is enabled for staging/prod deployments, disabled for local dev

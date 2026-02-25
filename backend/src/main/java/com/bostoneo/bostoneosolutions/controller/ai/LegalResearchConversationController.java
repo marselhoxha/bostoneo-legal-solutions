@@ -491,10 +491,12 @@ public class LegalResearchConversationController {
 
         } catch (Exception e) {
             log.error("Error sending query to session: {}", sessionId, e);
+            // Extract the root cause message for a clean user-facing error
+            String errorMessage = extractRootCauseMessage(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(HttpResponse.builder()
                             .timeStamp(now().toString())
-                            .message("Failed to process query: " + e.getMessage())
+                            .message(errorMessage)
                             .status(HttpStatus.INTERNAL_SERVER_ERROR)
                             .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
                             .build());
@@ -542,6 +544,34 @@ public class LegalResearchConversationController {
                             .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
                             .build());
         }
+    }
+
+    /**
+     * Extract the deepest meaningful error message from a chain of wrapped exceptions.
+     * Strips prefixes like "THOROUGH mode research failed:" to show the actual error.
+     */
+    private String extractRootCauseMessage(Throwable e) {
+        // Walk the cause chain to find the deepest message
+        Throwable root = e;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+
+        String message = root.getMessage();
+
+        // Never expose raw database/internal errors to users
+        if (message != null && !message.isBlank()) {
+            if (message.contains("duplicate key") || message.contains("unique constraint") ||
+                message.contains("violates") || message.contains("SQL") ||
+                message.contains("JDBC") || message.contains("DataIntegrity") ||
+                message.contains("ConstraintViolation") || message.contains("PSQLException")) {
+                log.warn("Suppressed internal DB error from user: {}", message);
+                return "A temporary issue occurred. Please try your question again.";
+            }
+            return message;
+        }
+
+        return "An unexpected error occurred. Please try again.";
     }
 
     // Request DTOs

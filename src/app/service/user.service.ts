@@ -10,6 +10,7 @@ import { HttpCacheService } from './http.cache.service';
 import { Router } from '@angular/router';
 import { PreloaderService } from './preloader.service';
 import { FileManagerService } from '../modules/file-manager/services/file-manager.service';
+import { BackgroundTaskService } from '../modules/legal/services/background-task.service';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -32,7 +33,8 @@ export class UserService {
     private httpCache: HttpCacheService,
     private router: Router,
     private preloaderService: PreloaderService,
-    private fileManagerService: FileManagerService
+    private fileManagerService: FileManagerService,
+    private backgroundTaskService: BackgroundTaskService
   ) { }
 
   setUserData(user: User) {
@@ -400,6 +402,7 @@ export class UserService {
     this.httpCache.evictAll();
     this.fileManagerService.clearCache();
     this.clearUserCache();
+    this.backgroundTaskService.clearAllTasks();
     localStorage.removeItem(Key.TOKEN);
     localStorage.removeItem(Key.REFRESH_TOKEN);
     this.preloaderService.hide();
@@ -414,6 +417,7 @@ export class UserService {
     this.httpCache.evictAll();
     this.fileManagerService.clearCache();
     this.clearUserCache();
+    this.backgroundTaskService.clearAllTasks();
     localStorage.removeItem(Key.TOKEN);
     localStorage.removeItem(Key.REFRESH_TOKEN);
     this.preloaderService.hide();
@@ -451,6 +455,7 @@ export class UserService {
     localStorage.removeItem(Key.TOKEN);
     localStorage.removeItem(Key.REFRESH_TOKEN);
     this.clearUserCache();
+    this.backgroundTaskService.clearAllTasks();
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
@@ -492,7 +497,13 @@ export class UserService {
 
   preloadUserData(): void {
     if (this.isAuthenticated() && !this.currentUser) {
-      this.profile$().subscribe();
+      this.profile$().subscribe({
+        error: () => {
+          // Profile fetch failed (backend down, invalid token, etc.)
+          // Don't show authenticated UI without valid user data
+          this.handleSessionExpired();
+        }
+      });
     }
   }
 }

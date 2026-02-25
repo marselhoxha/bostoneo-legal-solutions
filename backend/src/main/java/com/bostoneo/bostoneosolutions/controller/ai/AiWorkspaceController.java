@@ -8,7 +8,9 @@ import com.bostoneo.bostoneosolutions.dto.ai.DraftGenerationResponse;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocument;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocumentVersion;
 import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.AiWorkspaceDocumentService;
+import com.bostoneo.bostoneosolutions.service.DraftStreamingPublisher;
 import com.bostoneo.bostoneosolutions.service.GenerationCancellationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
 
@@ -28,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/legal/ai-workspace")
@@ -37,6 +41,7 @@ public class AiWorkspaceController {
 
     private final AiWorkspaceDocumentService documentService;
     private final GenerationCancellationService cancellationService;
+    private final DraftStreamingPublisher draftStreamingPublisher;
 
     /**
      * Transform document (full document or selection)
@@ -210,6 +215,74 @@ public class AiWorkspaceController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } catch (Exception e) {
             log.error("Error transforming document", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * SSE endpoint for draft streaming.
+     * Client connects BEFORE triggering generation.
+     * GET /api/legal/ai-workspace/drafts/stream?conversationId={id}
+     */
+    @GetMapping(value = "/drafts/stream", produces = "text/event-stream")
+    public SseEmitter streamDraft(@RequestParam Long conversationId) {
+        log.info("SSE connection opened for draft streaming, conversationId={}", conversationId);
+        return draftStreamingPublisher.createEmitter(conversationId);
+    }
+
+    /**
+     * Trigger streaming draft generation. Returns 202 Accepted immediately.
+     * POST /api/legal/ai-workspace/drafts/generate-streaming
+     */
+    @PostMapping("/drafts/generate-streaming")
+    public ResponseEntity<Map<String, Object>> generateDraftStreaming(
+            @RequestBody DraftGenerationRequest request,
+            @AuthenticationPrincipal User user
+    ) {
+        try {
+            Long userId = (user != null) ? user.getId() : request.getUserId();
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            Long conversationId = request.getConversationId();
+            if (conversationId == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "conversationId is required"));
+            }
+
+            // Capture tenant context before going async
+            Long orgId = TenantContext.getCurrentTenant();
+            if (orgId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            log.info("Triggering streaming draft generation: userId={}, conversationId={}, type={}",
+                    userId, conversationId, request.getDocumentType());
+
+            // Launch in background — the SSE emitter is already connected
+            final Long finalUserId = userId;
+            CompletableFuture.runAsync(() -> {
+                documentService.generateDraftStreaming(
+                        finalUserId,
+                        orgId,
+                        request.getCaseId(),
+                        request.getPrompt(),
+                        request.getDocumentType(),
+                        request.getJurisdiction(),
+                        request.getSessionName(),
+                        conversationId,
+                        request.getResearchMode()
+                );
+            });
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("conversationId", conversationId);
+            response.put("message", "Streaming generation started");
+
+            return ResponseEntity.accepted().body(response);
+
+        } catch (Exception e) {
+            log.error("Error triggering streaming draft generation: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

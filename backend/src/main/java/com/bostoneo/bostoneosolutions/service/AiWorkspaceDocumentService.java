@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.model.AiConversationSession;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocument;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocumentVersion;
 import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.repository.AiConversationSessionRepository;
 import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentRepository;
 import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentVersionRepository;
@@ -80,6 +81,8 @@ public class AiWorkspaceDocumentService {
     private final AILegalResearchService legalResearchService;  // For citation verification
     private final CitationUrlInjector citationUrlInjector;       // For URL injection
     private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
+    private final DraftStreamingPublisher draftStreamingPublisher;
+    private final org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -929,6 +932,223 @@ public class AiWorkspaceDocumentService {
                 .createdAt(conversation.getCreatedAt())
                 .build())
             .build();
+    }
+
+    /**
+     * Generate a draft via streaming. NOT @Transactional — the streaming call runs for minutes.
+     * Tokens are relayed to the SSE emitter as they arrive.
+     * Post-processing + DB save happen after the stream completes.
+     *
+     * Must be called from a background thread (CompletableFuture.runAsync).
+     * Caller must capture orgId/userId before going async and pass them explicitly.
+     */
+    public void generateDraftStreaming(
+            Long userId,
+            Long orgId,
+            Long caseId,
+            String prompt,
+            String documentType,
+            String jurisdiction,
+            String sessionName,
+            Long conversationId,
+            String researchMode
+    ) {
+        log.info("Starting streaming draft generation: userId={}, conversationId={}, type={}",
+                userId, conversationId, documentType);
+
+        // 1. Fetch case context
+        String caseContext = "";
+        LegalCase legalCase = null;
+        if (caseId != null) {
+            legalCase = caseRepository.findByIdAndOrganizationId(caseId, orgId).orElse(null);
+            if (legalCase != null) {
+                caseContext = buildCaseContext(legalCase);
+            }
+        }
+
+        // 2. Build prompt
+        String fullPrompt = buildDraftPromptWithCaseContext(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode);
+
+        // 3. Check cancellation
+        if (cancellationService.isCancelled(conversationId)) {
+            log.warn("Streaming generation cancelled before API call for conversation {}", conversationId);
+            cancellationService.clearCancellation(conversationId);
+            draftStreamingPublisher.sendError(conversationId, "Generation cancelled by user");
+            return;
+        }
+
+        // 4. Stream tokens
+        StringBuilder accumulated = new StringBuilder();
+        final LegalCase finalCase = legalCase;
+
+        claudeService.generateCompletionStreaming(
+                fullPrompt,
+                null, // systemMessage
+                conversationId,
+                // tokenConsumer: relay to SSE + accumulate
+                token -> {
+                    accumulated.append(token);
+                    draftStreamingPublisher.sendToken(conversationId, token);
+                },
+                // onComplete: dispatch to a blocking thread for post-processing + DB save
+                // (runs on Reactor Netty event loop — must not block)
+                () -> CompletableFuture.runAsync(() -> {
+                    TenantContext.setCurrentTenant(orgId);
+                    try {
+                        String content = accumulated.toString();
+
+                        // Post-processing: citation verification + URL injection
+                        content = postProcessDraftContent(content, documentType, conversationId);
+
+                        // Validate completeness (monitoring only)
+                        String validationWarning = validateDocumentCompleteness(content);
+                        if (validationWarning != null) {
+                            log.warn("Document quality check: {}", validationWarning);
+                        }
+
+                        // Save to DB via programmatic transaction
+                        Map<String, Object> savedDoc = saveDraftDocument(
+                                userId, orgId, caseId, conversationId, sessionName,
+                                documentType, jurisdiction, content, finalCase
+                        );
+
+                        // Send complete event with metadata
+                        Map<String, Object> completePayload = new HashMap<>();
+                        completePayload.put("documentId", savedDoc.get("documentId"));
+                        completePayload.put("conversationId", conversationId);
+                        completePayload.put("title", sessionName);
+                        completePayload.put("content", content);
+                        completePayload.put("wordCount", savedDoc.get("wordCount"));
+                        completePayload.put("version", 1);
+                        completePayload.put("tokensUsed", savedDoc.get("tokensUsed"));
+                        completePayload.put("costEstimate", savedDoc.get("costEstimate"));
+
+                        draftStreamingPublisher.sendComplete(conversationId, completePayload);
+
+                    } catch (Exception e) {
+                        log.error("Post-processing failed for conversation {}: {}", conversationId, e.getMessage(), e);
+                        draftStreamingPublisher.sendError(conversationId, "Post-processing failed: " + e.getMessage());
+                    } finally {
+                        TenantContext.clear();
+                    }
+                }),
+                // onError
+                error -> {
+                    log.error("Streaming generation failed for conversation {}: {}", conversationId, error.getMessage());
+                    draftStreamingPublisher.sendError(conversationId,
+                            error.getMessage() != null ? error.getMessage() : "AI service unavailable");
+                }
+        );
+    }
+
+    /**
+     * Post-process draft content: citation verification + URL injection.
+     * Extracted from generateDraftWithConversation for reuse in streaming path.
+     */
+    private String postProcessDraftContent(String content, String documentType, Long conversationId) {
+        CitationLevel postProcessingLevel = getCitationLevel(documentType);
+        log.info("POST-PROCESSING (streaming): Citation level for '{}' is {}", documentType, postProcessingLevel);
+
+        draftStreamingPublisher.sendPostProcessing(conversationId, "Verifying citations...");
+
+        switch (postProcessingLevel) {
+            case COMPREHENSIVE:
+                try {
+                    content = legalResearchService.verifyAllCitationsInResponse(content);
+                    log.info("Citation verification complete");
+                    draftStreamingPublisher.sendPostProcessing(conversationId, "Injecting citation URLs...");
+                    content = citationUrlInjector.inject(content);
+                    log.info("URL injection complete");
+                } catch (Exception e) {
+                    log.error("POST-PROCESSING failed: {}", e.getMessage(), e);
+                }
+                break;
+            case MINIMAL:
+                try {
+                    content = citationUrlInjector.inject(content);
+                    log.info("URL injection complete");
+                } catch (Exception e) {
+                    log.error("URL injection failed: {}", e.getMessage(), e);
+                }
+                break;
+            case NONE:
+                log.info("No citation processing for transactional document ({})", documentType);
+                break;
+        }
+
+        return content;
+    }
+
+    /**
+     * Save the draft document + version + update conversation in a single transaction.
+     * Uses TransactionTemplate programmatically because this method is called from
+     * async callbacks where @Transactional proxy interception does not work (self-invocation
+     * + non-Spring-managed threads).
+     */
+    private Map<String, Object> saveDraftDocument(
+            Long userId, Long orgId, Long caseId, Long conversationId,
+            String sessionName, String documentType, String jurisdiction,
+            String content, LegalCase legalCase
+    ) {
+        org.springframework.transaction.support.TransactionTemplate txTemplate =
+                new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+
+        return txTemplate.execute(status -> {
+            int tokensUsed = estimateTokens(content);
+            BigDecimal cost = calculateCost(tokensUsed);
+            int wordCount = countWords(content);
+
+            AiWorkspaceDocument document = AiWorkspaceDocument.builder()
+                    .userId(userId)
+                    .organizationId(orgId)
+                    .caseId(caseId)
+                    .sessionId(conversationId)
+                    .title(sessionName)
+                    .documentType(documentType)
+                    .jurisdiction(jurisdiction)
+                    .currentVersion(1)
+                    .status("DRAFT")
+                    .build();
+
+            AiWorkspaceDocument savedDocument = documentRepository.save(document);
+
+            AiWorkspaceDocumentVersion initialVersion = AiWorkspaceDocumentVersion.builder()
+                    .document(savedDocument)
+                    .organizationId(orgId)
+                    .versionNumber(1)
+                    .content(content)
+                    .wordCount(wordCount)
+                    .transformationType("INITIAL_GENERATION")
+                    .transformationScope("FULL_DOCUMENT")
+                    .createdByUser(false)
+                    .tokensUsed(tokensUsed)
+                    .costEstimate(cost)
+                    .build();
+
+            versionRepository.save(initialVersion);
+
+            // Update conversation with relatedDraftId
+            AiConversationSession conversation = conversationRepository.findByIdAndOrganizationId(conversationId, orgId)
+                    .orElse(null);
+            if (conversation != null) {
+                conversation.setRelatedDraftId(savedDocument.getId().toString());
+                conversationRepository.save(conversation);
+
+                String aiResponse = "I've generated your " + documentType +
+                        (caseId != null && legalCase != null ? " for Case #" + legalCase.getCaseNumber() : "") +
+                        ". You can view it in the document preview panel.";
+                conversationService.addMessage(conversation.getId(), userId, "assistant", aiResponse, null);
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("documentId", savedDocument.getId());
+            result.put("wordCount", wordCount);
+            result.put("tokensUsed", tokensUsed);
+            result.put("costEstimate", cost);
+
+            log.info("Saved streaming draft: documentId={}, wordCount={}", savedDocument.getId(), wordCount);
+            return result;
+        });
     }
 
     /**

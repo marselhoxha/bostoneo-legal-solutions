@@ -31,7 +31,7 @@ import { Key } from 'src/app/enum/key.enum';
 import { ClientPortalService, ClientMessageThread } from 'src/app/modules/client-portal/services/client-portal.service';
 import { TimerService, ActiveTimer } from 'src/app/modules/time-tracking/services/timer.service';
 import { LegalCaseService } from 'src/app/modules/legal/services/legal-case.service';
-import { BackgroundTask } from 'src/app/modules/legal/services/background-task.service';
+import { BackgroundTask, BackgroundTaskService } from 'src/app/modules/legal/services/background-task.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -114,7 +114,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
     private messagingService: MessagingService, private messagingStateService: MessagingStateService,
     private webSocketService: WebSocketService,
     private clientPortalService: ClientPortalService, private timerService: TimerService,
-    private legalCaseService: LegalCaseService) {
+    private legalCaseService: LegalCaseService, private backgroundTaskService: BackgroundTaskService) {
 
      }
 
@@ -143,6 +143,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
     this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe({
       next: (user) => {
         if (user) {
+          // Scope background tasks to the current user
+          this.backgroundTaskService.setCurrentUserId(user.id);
           // Update client role when user data changes
           this.isClientUser = user.roleName === 'ROLE_CLIENT' ||
                               user.roles?.some((role: string) => role === 'ROLE_CLIENT') || false;
@@ -957,6 +959,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
     this.notificationService.resetPushNotifications();
     // Clear the push notification BehaviorSubject to prevent replay on next login
     this.pushNotificationService.clearNotifications();
+    // Clear all background tasks to prevent cross-user data leakage
+    this.backgroundTaskService.clearAllTasks();
 
     this.userService.logOut();
     this.notificationService.onDefault('You\'ve been successfully logged out');

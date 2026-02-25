@@ -634,21 +634,17 @@ public class AILegalResearchService {
         system.append("   - \"Motion to Suppress: ✅ Favorable — Strong Fourth Amendment argument based on warrantless entry\"\n");
         system.append("   - \"Summary Judgment: ❌ Unfavorable — Genuine dispute of material fact exists regarding causation\"\n\n");
 
-        // STRUCTURED RESPONSE MARKERS (KEY_ELEMENTS + SOURCES)
-        system.append("📌 **STRUCTURED MARKERS** (MANDATORY on every response):\n");
-        system.append("Every response MUST end with these two markers, placed AFTER your analysis but BEFORE '## Follow-up Questions':\n\n");
+        // STRUCTURED SOURCES MARKER
+        system.append("📌 **SOURCES MARKER** (MANDATORY on every response):\n");
+        system.append("Every response MUST end with a SOURCES marker, placed AFTER your analysis but BEFORE '## Follow-up Questions':\n\n");
         system.append("Format:\n");
-        system.append("KEY_ELEMENTS: Element 1 | Element 2 | Element 3 | Element 4\n");
         system.append("SOURCES: Case or Statute 1 | Case or Statute 2 | Case or Statute 3\n\n");
         system.append("Rules:\n");
-        system.append("- KEY_ELEMENTS: List 3-6 core legal elements/concepts relevant to the answer, separated by |\n");
         system.append("- SOURCES: List ALL cases, statutes, and regulations you cited in your answer, separated by |\n");
-        system.append("- Each marker must be on its own line\n");
+        system.append("- The marker must be on its own line\n");
         system.append("- Use the same citation format as in your prose (e.g., 'Brune v. Belinkoff, 354 Mass. 102')\n");
-        system.append("- Do NOT wrap these in markdown headings or bullet points\n");
-        system.append("- Do NOT duplicate key elements as a separate '## Key Points' section — the KEY_ELEMENTS marker replaces it\n\n");
+        system.append("- Do NOT wrap in markdown headings or bullet points\n\n");
         system.append("Example:\n");
-        system.append("KEY_ELEMENTS: Duty of care | Breach | Proximate cause | Damages\n");
         system.append("SOURCES: Brune v. Belinkoff, 354 Mass. 102 | M.G.L. c. 231 § 60B | Lech v. Boisvert\n\n");
 
         // MANDATORY FOLLOW-UP QUESTIONS SECTION
@@ -1710,7 +1706,7 @@ public class AILegalResearchService {
             prompt.append("- Key points specific to ").append(jurisdiction).append(" law\n");
             prompt.append("- Any critical deadlines, procedures, or requirements\n\n");
 
-            prompt.append("(Key points go in the KEY_ELEMENTS marker at the end — do NOT create a separate Key Points heading)\n\n");
+            prompt.append("(Cited sources go in the SOURCES marker at the end)\n\n");
 
             prompt.append("## Client Communication Note (when applicable)\n");
             prompt.append("When discussing strategic options, plea deals, motion outcomes, or key decisions:\n");

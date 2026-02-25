@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Subject, Subscription } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
+import { map } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 /**
@@ -18,6 +19,7 @@ export type BackgroundTaskStatus = 'pending' | 'running' | 'waiting' | 'complete
  */
 export interface BackgroundTask {
   id: string;
+  userId?: number; // Owner of this task — used for user isolation
   type: BackgroundTaskType;
   title: string;
   description?: string;
@@ -52,9 +54,19 @@ export interface BackgroundTask {
 })
 export class BackgroundTaskService {
 
-  // Store all tasks
+  // Store all tasks (unfiltered — use tasks$ for user-scoped view)
   private tasksSubject = new BehaviorSubject<BackgroundTask[]>([]);
-  public tasks$ = this.tasksSubject.asObservable();
+
+  // Current user ID — tasks are filtered by this
+  private currentUserId: number | null = null;
+
+  // tasks$ only emits tasks belonging to the current user (empty if no user set)
+  public tasks$: Observable<BackgroundTask[]> = this.tasksSubject.pipe(
+    map(tasks => this.currentUserId
+      ? tasks.filter(t => t.userId === this.currentUserId)
+      : []
+    )
+  );
 
   // Active subscriptions (keyed by task ID)
   private activeSubscriptions = new Map<string, Subscription>();
@@ -70,6 +82,16 @@ export class BackgroundTaskService {
   private pendingNavigation: { conversationId?: string; backendConversationId?: number; workflowId?: number; taskType?: string; analysisIds?: Array<{id: string; databaseId: number; fileName: string}> } | null = null;
 
   constructor(private router: Router) {
+  }
+
+  /**
+   * Set the current user ID — called on login/user change.
+   * All task queries and new tasks are scoped to this user.
+   */
+  setCurrentUserId(userId: number | null): void {
+    this.currentUserId = userId;
+    // Re-emit so subscribers get the filtered list for the new user
+    this.tasksSubject.next(this.tasksSubject.value);
   }
 
   /**
@@ -99,6 +121,7 @@ export class BackgroundTaskService {
 
     const task: BackgroundTask = {
       id,
+      userId: this.currentUserId || undefined,
       type,
       title,
       description,
@@ -216,52 +239,60 @@ export class BackgroundTaskService {
   }
 
   /**
-   * Get a task by ID
+   * Get a task by ID (scoped to current user)
    */
   getTask(taskId: string): BackgroundTask | undefined {
-    return this.tasksSubject.value.find(t => t.id === taskId);
+    return this.getUserTasks().find(t => t.id === taskId);
+  }
+
+  /**
+   * Get tasks scoped to the current user (empty if no user set)
+   */
+  private getUserTasks(): BackgroundTask[] {
+    const all = this.tasksSubject.value;
+    return this.currentUserId ? all.filter(t => t.userId === this.currentUserId) : [];
   }
 
   /**
    * Get all tasks of a specific type
    */
   getTasksByType(type: BackgroundTaskType): BackgroundTask[] {
-    return this.tasksSubject.value.filter(t => t.type === type);
+    return this.getUserTasks().filter(t => t.type === type);
   }
 
   /**
    * Get a task by workflow ID (for workflow tasks only)
    */
   getTaskByWorkflowId(workflowId: number): BackgroundTask | undefined {
-    return this.tasksSubject.value.find(t => t.type === 'workflow' && t.workflowId === workflowId);
+    return this.getUserTasks().find(t => t.type === 'workflow' && t.workflowId === workflowId);
   }
 
   /**
    * Check if a task already exists for a workflow
    */
   hasWorkflowTask(workflowId: number): boolean {
-    return this.tasksSubject.value.some(t => t.type === 'workflow' && t.workflowId === workflowId);
+    return this.getUserTasks().some(t => t.type === 'workflow' && t.workflowId === workflowId);
   }
 
   /**
    * Get all running tasks
    */
   getRunningTasks(): BackgroundTask[] {
-    return this.tasksSubject.value.filter(t => t.status === 'running' || t.status === 'pending');
+    return this.getUserTasks().filter(t => t.status === 'running' || t.status === 'pending');
   }
 
   /**
    * Get completed tasks that haven't been acknowledged
    */
   getCompletedTasks(): BackgroundTask[] {
-    return this.tasksSubject.value.filter(t => t.status === 'completed');
+    return this.getUserTasks().filter(t => t.status === 'completed');
   }
 
   /**
    * Get completed tasks for a specific conversation
    */
   getCompletedTaskForConversation(conversationId: string): BackgroundTask | undefined {
-    return this.tasksSubject.value.find(
+    return this.getUserTasks().find(
       t => t.status === 'completed' && t.conversationId === conversationId
     );
   }
@@ -285,11 +316,28 @@ export class BackgroundTaskService {
    * Clear all completed tasks
    */
   clearCompletedTasks(): void {
-    const completedIds = this.tasksSubject.value
+    const completedIds = this.getUserTasks()
       .filter(t => t.status === 'completed' || t.status === 'failed')
       .map(t => t.id);
 
     completedIds.forEach(id => this.removeTask(id));
+  }
+
+  /**
+   * Clear ALL tasks and subscriptions (called on logout to prevent cross-user data leakage)
+   */
+  clearAllTasks(): void {
+    // Unsubscribe all active subscriptions
+    this.activeSubscriptions.forEach(sub => sub.unsubscribe());
+    this.activeSubscriptions.clear();
+
+    // Clear all tasks and reset user context
+    this.tasksSubject.next([]);
+    this.currentUserId = null;
+
+    // Clear pending navigation and workspace tracking
+    this.pendingNavigation = null;
+    this.isOnAiWorkspace = false;
   }
 
   /**

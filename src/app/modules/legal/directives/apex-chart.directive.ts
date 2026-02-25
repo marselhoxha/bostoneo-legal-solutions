@@ -1,5 +1,4 @@
 import { Directive, ElementRef, AfterViewInit, OnDestroy, inject } from '@angular/core';
-import * as ApexCharts from 'apexcharts';
 import { ApexOptions } from 'apexcharts';
 import { ChartSecurityService } from '../services/chart-security.service';
 
@@ -60,8 +59,9 @@ export class ApexChartDirective implements AfterViewInit, OnDestroy {
     const chartElements = this.el.nativeElement.querySelectorAll('[data-chart]');
     chartElements.forEach((element: HTMLElement) => {
       if (!element.hasAttribute('data-chart-initialized')) {
-        this.initializeChart(element);
+        // Set flag immediately to prevent duplicate init from MutationObserver
         element.setAttribute('data-chart-initialized', 'true');
+        this.initializeChart(element);
       }
     });
   }
@@ -89,7 +89,7 @@ export class ApexChartDirective implements AfterViewInit, OnDestroy {
    * Initialize a single chart element
    * SECURITY: Validates and sanitizes config before rendering
    */
-  private initializeChart(element: HTMLElement): void {
+  private async initializeChart(element: HTMLElement): Promise<void> {
     let configStr: string | null = null;
 
     try {
@@ -124,8 +124,9 @@ export class ApexChartDirective implements AfterViewInit, OnDestroy {
       // Build ApexCharts options based on chart type
       const options = this.buildChartOptions(config);
 
-      // Initialize chart
-      const chart = new (ApexCharts as any).default(element, options);
+      // Dynamic import (matches ng-apexcharts pattern for correct esbuild resolution)
+      const { default: ApexChartsConstructor } = await import('apexcharts');
+      const chart = new ApexChartsConstructor(element, options);
       chart.render();
 
       // Store chart reference for cleanup

@@ -1,11 +1,35 @@
-<div class="activity-steps" *ngIf="steps && steps.length > 0">
-  <div *ngFor="let step of steps"
-       class="activity-step"
+<div class="workflow-timeline" *ngIf="steps && steps.length > 0">
+  <div *ngFor="let step of steps; let i = index; let last = last"
+       class="timeline-step"
        [class.active]="step.status === WorkflowStepStatus.Active"
        [class.completed]="step.status === WorkflowStepStatus.Completed"
        [class.pending]="step.status === WorkflowStepStatus.Pending"
        [class.error]="step.status === WorkflowStepStatus.Error">
-    <i [class]="step.icon" class="step-icon"></i>
-    <span class="step-text">{{ step.description }}</span>
+
+    <!-- Circle indicator -->
+    <div class="step-indicator">
+      <!-- Spinner ring (active only) -->
+      <div class="spinner-ring" *ngIf="step.status === WorkflowStepStatus.Active"></div>
+      <div class="indicator-circle">
+        <!-- Completed: checkmark -->
+        <i class="ri-check-line" *ngIf="step.status === WorkflowStepStatus.Completed"></i>
+        <!-- Error: close -->
+        <i class="ri-close-line" *ngIf="step.status === WorkflowStepStatus.Error"></i>
+        <!-- Active: step icon -->
+        <i [class]="step.icon" *ngIf="step.status === WorkflowStepStatus.Active"></i>
+        <!-- Pending: step number -->
+        <span *ngIf="step.status === WorkflowStepStatus.Pending">{{ i + 1 }}</span>
+      </div>
+    </div>
+
+    <!-- Connector line (not on last step) -->
+    <div class="step-connector" *ngIf="!last"
+         [class.completed]="step.status === WorkflowStepStatus.Completed">
+    </div>
+
+    <!-- Step content -->
+    <div class="step-content">
+      <span class="step-text">{{ step.description }}</span>
+    </div>
   </div>
 </div>

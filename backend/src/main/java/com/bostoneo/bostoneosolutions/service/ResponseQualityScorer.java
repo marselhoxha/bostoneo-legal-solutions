@@ -250,10 +250,18 @@ public class ResponseQualityScorer {
     }
 
     /**
-     * Check if response meets counsel-ready standards
-     * Returns issues that prevent counsel-ready rating
+     * Check if response meets counsel-ready standards (backward-compatible)
      */
     public CounselReadyCheck checkCounselReady(String response, String mode) {
+        return checkCounselReady(response, mode, null);
+    }
+
+    /**
+     * Check if response meets counsel-ready standards.
+     * Question-type-aware: only INITIAL_STRATEGY requires case law citations.
+     * @param questionTypeName QuestionType name (e.g., "INITIAL_STRATEGY") or null for default behavior
+     */
+    public CounselReadyCheck checkCounselReady(String response, String mode, String questionTypeName) {
         List<String> issues = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
 
@@ -266,33 +274,74 @@ public class ResponseQualityScorer {
         int score = 0;
         int maxScore = 5;
 
-        // 1. Case law citations (2 points)
-        int caseCount = countCaseNames(response);
-        if (caseCount >= 5) {
+        // 1. Citation scoring (2 points) — adapted by question type
+        boolean isInitialStrategy = questionTypeName == null || "INITIAL_STRATEGY".equals(questionTypeName);
+        boolean isFollowUp = "FOLLOW_UP_CLARIFICATION".equals(questionTypeName);
+
+        if (isInitialStrategy) {
+            // INITIAL_STRATEGY: Require case law citations
+            int caseCount = countCaseNames(response);
+            if (caseCount >= 5) {
+                score += 2;
+            } else if (caseCount >= 3) {
+                score += 1;
+                warnings.add(String.format("Only %d case citations found. Counsel-ready requires 5-10 controlling precedents.", caseCount));
+            } else {
+                issues.add(String.format("❌ Insufficient case law: Only %d cases cited. Need minimum 5 controlling precedents with holdings.", caseCount));
+            }
+        } else if (isFollowUp) {
+            // FOLLOW_UP_CLARIFICATION: No citation requirement — always award points
             score += 2;
-        } else if (caseCount >= 3) {
-            score += 1;
-            warnings.add(String.format("Only %d case citations found. Counsel-ready requires 5-10 controlling precedents.", caseCount));
         } else {
-            issues.add(String.format("❌ Insufficient case law: Only %d cases cited. Need minimum 5 controlling precedents with holdings.", caseCount));
+            // PROCEDURAL_GUIDANCE / NARROW_TECHNICAL: Award points for statute/rule citations instead
+            int statuteCount = countStatutes(response);
+            String responseLower = response.toLowerCase();
+            boolean hasProceduralRules = responseLower.contains("frcp") || responseLower.contains("r. civ. p.") ||
+                                        responseLower.contains("r. crim. p.") || responseLower.contains("m.g.l.") ||
+                                        responseLower.contains("u.s.c.") || responseLower.contains("cfr");
+            if (statuteCount >= 3 || hasProceduralRules) {
+                score += 2;
+            } else if (statuteCount >= 1) {
+                score += 1;
+            }
         }
 
-        // 2. Required sections (1 point)
-        boolean hasControllingAuthority = response.contains("Controlling Legal Authority") ||
-                                         response.contains("Case Law") ||
-                                         response.contains("Precedents");
-        boolean hasStrategicAnalysis = response.contains("Strategic") ||
-                                      response.contains("Assessment") ||
-                                      (response.contains("strongest") && response.contains("weakest"));
-
-        if (hasControllingAuthority && hasStrategicAnalysis) {
+        // 2. Required sections (1 point) — adapted by question type
+        if (isFollowUp) {
+            // Follow-ups don't need formal sections
             score += 1;
-        } else {
-            if (!hasControllingAuthority) {
-                issues.add("❌ Missing 'Controlling Legal Authority' section with case analysis");
+        } else if (isInitialStrategy) {
+            // INITIAL_STRATEGY: Full section requirements
+            boolean hasControllingAuthority = response.contains("Controlling Legal Authority") ||
+                                             response.contains("Case Law") ||
+                                             response.contains("Precedents");
+            boolean hasStrategicAnalysis = response.contains("Strategic") ||
+                                          response.contains("Assessment") ||
+                                          (response.contains("strongest") && response.contains("weakest"));
+
+            if (hasControllingAuthority && hasStrategicAnalysis) {
+                score += 1;
+            } else {
+                if (!hasControllingAuthority) {
+                    issues.add("❌ Missing 'Controlling Legal Authority' section with case analysis");
+                }
+                if (!hasStrategicAnalysis) {
+                    warnings.add("⚠️ No strategic assessment ranking arguments by strength");
+                }
             }
-            if (!hasStrategicAnalysis) {
-                warnings.add("⚠️ No strategic assessment ranking arguments by strength");
+        } else {
+            // PROCEDURAL / NARROW_TECHNICAL: Award point if response has any structured sections
+            boolean hasControllingAuthority = response.contains("Controlling Legal Authority") ||
+                                             response.contains("Case Law") ||
+                                             response.contains("Precedents");
+            boolean hasStrategicAnalysis = response.contains("Strategic") ||
+                                          response.contains("Assessment") ||
+                                          (response.contains("strongest") && response.contains("weakest"));
+            if (hasControllingAuthority || hasStrategicAnalysis) {
+                score += 1;
+            } else {
+                // Only warn, don't add blocking issues
+                warnings.add("⚠️ Consider adding a section on controlling authority or procedural framework");
             }
         }
 

@@ -57,6 +57,14 @@ public class QueryValidationService {
      * Validate and sanitize a research query
      */
     public ValidationResult validateQuery(String query, String mode) {
+        return validateQuery(query, mode, false);
+    }
+
+    /**
+     * Validate and sanitize a research query, with conversation context awareness
+     * @param hasConversationHistory if true, relaxes minimum length since follow-ups are naturally shorter
+     */
+    public ValidationResult validateQuery(String query, String mode, boolean hasConversationHistory) {
         List<String> warnings = new ArrayList<>();
         List<String> suggestions = new ArrayList<>();
 
@@ -67,8 +75,8 @@ public class QueryValidationService {
 
         String sanitized = query.trim();
 
-        // Length validation
-        if (sanitized.length() < MIN_QUERY_LENGTH) {
+        // Length validation - skip for conversation follow-ups since AI has full context
+        if (!hasConversationHistory && sanitized.length() < MIN_QUERY_LENGTH) {
             return ValidationResult.invalid(
                 "Query too short (minimum " + MIN_QUERY_LENGTH + " characters). " +
                 "Please provide more detail for better results."
