@@ -1,9 +1,10 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { FormGroup, FormControl, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SuperAdminService } from '../../services/superadmin.service';
-import { OrganizationDetail, UserSummary, OrganizationFeatures } from '../../models/superadmin.models';
+import { OrganizationDetail, UserSummary, OrganizationFeatures, RoleSummary } from '../../models/superadmin.models';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -34,6 +35,12 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
 
   activeTab = 'overview';
 
+  // Add User modal
+  showAddUserModal = false;
+  addingUser = false;
+  availableRoles: RoleSummary[] = [];
+  addUserForm!: FormGroup;
+
   // Plan types for dropdown
   planTypes = ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'];
 
@@ -45,6 +52,13 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.addUserForm = new FormGroup({
+      firstName: new FormControl('', [Validators.required]),
+      lastName: new FormControl('', [Validators.required]),
+      email: new FormControl('', [Validators.required, Validators.email]),
+      roleName: new FormControl('', [Validators.required])
+    });
+
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       this.organizationId = +params['id'];
       this.loadOrganization();
@@ -230,6 +244,105 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
           }
         });
     }
+  }
+
+  async deleteOrganization(): Promise<void> {
+    if (!this.organization) return;
+
+    const result = await Swal.fire({
+      title: 'Delete Organization?',
+      html: `<p>This will permanently deactivate <strong>"${this.organization.name}"</strong> and disable all its users.</p>
+             <p class="text-danger fw-semibold">Type the organization name to confirm:</p>`,
+      input: 'text',
+      inputPlaceholder: this.organization.name,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f06548',
+      cancelButtonColor: '#878a99',
+      confirmButtonText: 'Delete Organization',
+      inputValidator: (value) => {
+        if (value !== this.organization!.name) {
+          return 'Organization name does not match';
+        }
+        return null;
+      }
+    });
+
+    if (result.isConfirmed) {
+      this.superAdminService.deleteOrganization(this.organizationId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            Swal.fire('Deleted!', `${this.organization!.name} has been deleted.`, 'success');
+            this.router.navigate(['/superadmin/organizations']);
+          },
+          error: (err) => {
+            Swal.fire('Error', err?.error?.reason || 'Failed to delete organization', 'error');
+          }
+        });
+    }
+  }
+
+  openAddUserModal(): void {
+    this.addUserForm.reset();
+    this.showAddUserModal = true;
+    this.superAdminService.getAvailableRoles()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (roles) => {
+          this.availableRoles = roles;
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Failed to load roles:', err)
+      });
+  }
+
+  closeAddUserModal(): void {
+    this.showAddUserModal = false;
+    this.cdr.markForCheck();
+  }
+
+  submitAddUser(): void {
+    this.addUserForm.markAllAsTouched();
+    if (this.addUserForm.invalid || !this.organization) return;
+    this.addingUser = true;
+    this.cdr.markForCheck();
+
+    const data = this.addUserForm.value;
+    this.superAdminService.addUserToOrganization(this.organization.id, data)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.addingUser = false;
+          this.showAddUserModal = false;
+          Swal.fire({
+            icon: 'success',
+            title: 'User Created',
+            html: `<p><strong>${data.firstName} ${data.lastName}</strong> has been added to the organization.</p>
+                   <div class="alert alert-warning mt-3 text-start">
+                     <small class="fw-semibold">Temporary Password</small>
+                     <div class="d-flex align-items-center gap-2 mt-1">
+                       <code class="fs-14">${result.tempPassword}</code>
+                     </div>
+                     <small class="text-muted d-block mt-1">Share this with the user. They will be prompted to change it on first login.</small>
+                   </div>`,
+            confirmButtonColor: '#405189',
+            confirmButtonText: 'Done'
+          });
+          this.loadUsers();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.addingUser = false;
+          this.cdr.markForCheck();
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: err?.error?.reason || err?.error?.message || 'Failed to add user',
+            confirmButtonColor: '#405189'
+          });
+        }
+      });
   }
 
   goBack(): void {

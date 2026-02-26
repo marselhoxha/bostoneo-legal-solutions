@@ -72,6 +72,7 @@ public class UserResource {
     private final ClientRepository clientRepository;
     private final FileStorageService fileStorageService;
     private final com.bostoneo.bostoneosolutions.repository.implementation.UserRepositoryImpl userRepositoryImpl;
+    private final com.bostoneo.bostoneosolutions.repository.OrganizationRepository organizationRepository;
     private final com.bostoneo.bostoneosolutions.service.TokenBlacklistService tokenBlacklistService;
 
     // Holds the UserPrincipal from authentication to avoid rebuilding it in sendResponse()
@@ -123,6 +124,10 @@ public class UserResource {
     @GetMapping("/profile")
     public ResponseEntity<HttpResponse> profile(Authentication authentication) {
         UserDTO user = userService.getUserByEmail(getAuthenticatedUser(authentication).getEmail());
+        if (user.getOrganizationId() != null) {
+            organizationRepository.findById(user.getOrganizationId())
+                .ifPresent(org -> user.setOrganizationName(org.getName()));
+        }
         return ResponseEntity.ok().body(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
@@ -542,6 +547,11 @@ public class UserResource {
     }
 
     private ResponseEntity<HttpResponse> sendResponse(UserDTO user) {
+        // Populate organization name for frontend display
+        if (user.getOrganizationId() != null) {
+            organizationRepository.findById(user.getOrganizationId())
+                .ifPresent(org -> user.setOrganizationName(org.getName()));
+        }
         // Reuse principal from authentication — avoids 5+ redundant DB queries
         UserPrincipal principal = authenticatedPrincipal.get();
         if (principal == null) {

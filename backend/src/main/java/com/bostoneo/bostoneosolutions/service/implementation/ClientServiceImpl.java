@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -38,6 +39,9 @@ public class ClientServiceImpl implements ClientService {
     private final InvoiceRepository invoiceRepository;
     private final NamedParameterJdbcTemplate jdbc;
     private final EntityManager entityManager;
+
+    @Value("${UI_APP_URL:http://localhost:4200}")
+    private String frontendBaseUrl;
     private final TenantService tenantService;
     private final com.bostoneo.bostoneosolutions.service.EmailService emailService;
 
@@ -271,7 +275,7 @@ public class ClientServiceImpl implements ClientService {
         clientRepository.save(client);
 
         // Build consent URL (frontend public route)
-        String consentUrl = "http://localhost:4200/public/ai-consent/" + token;
+        String consentUrl = frontendBaseUrl + "/public/ai-consent/" + token;
 
         // Build branded email body
         String htmlBody = buildAiConsentEmailHtml(client.getName(), consentUrl);

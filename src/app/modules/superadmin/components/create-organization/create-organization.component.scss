@@ -1,0 +1,99 @@
+.wizard-steps {
+  position: relative;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+  max-width: 160px;
+
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 16px;
+    left: calc(50% + 20px);
+    width: calc(100% - 40px);
+    height: 2px;
+    background-color: #e9ebec;
+    transition: background-color 0.3s ease;
+  }
+
+  &.completed:not(:last-child)::after {
+    background-color: #0ab39c;
+  }
+}
+
+.step-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  z-index: 1;
+  transition: all 0.3s ease;
+
+  &.active {
+    background-color: #405189;
+    color: #fff;
+  }
+
+  &.completed {
+    background-color: #0ab39c;
+    color: #fff;
+  }
+
+  &.pending {
+    background-color: #f3f6f9;
+    color: #878a99;
+    border: 1px solid #e9ebec;
+  }
+}
+
+.step-label {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #878a99;
+  text-align: center;
+  white-space: nowrap;
+
+  &.active {
+    color: #405189;
+    font-weight: 600;
+  }
+
+  &.completed {
+    color: #0ab39c;
+  }
+}
+
+.plan-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  &.selected {
+    border-color: #405189 !important;
+    box-shadow: 0 0 0 1px #405189;
+  }
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+// Override form-switch sizing for better alignment with multi-line labels
+.form-check.form-switch {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}

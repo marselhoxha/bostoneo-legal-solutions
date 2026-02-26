@@ -12,6 +12,7 @@ export interface User {
       notLocked: boolean;
       usingMFA: boolean;
       createdAt?: Date;
+      organizationName?: string;
       roleName: string;
       primaryRoleName?: string;
       roles?: string[];

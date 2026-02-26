@@ -187,6 +187,46 @@ public class SuperAdminController {
     }
 
     /**
+     * Add a user to an existing organization
+     */
+    @PostMapping("/organizations/{id}/users")
+    @AuditLog(action = "CREATE", entityType = "USER", description = "Added user to organization")
+    public ResponseEntity<HttpResponse> addUserToOrganization(
+            @PathVariable Long id,
+            @Valid @RequestBody CreateUserForOrgDTO dto) {
+        log.info("SUPERADMIN: Adding user {} to organization ID: {}", dto.getEmail(), id);
+        Map<String, Object> result = superAdminService.addUserToOrganization(id, dto);
+        return ResponseEntity.status(CREATED).body(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(result)
+                .message("User created successfully")
+                .status(CREATED)
+                .statusCode(CREATED.value())
+                .build()
+        );
+    }
+
+    /**
+     * Get all available roles for user assignment
+     */
+    @GetMapping("/roles")
+    @AuditLog(action = "VIEW", entityType = "ROLE", description = "Viewed available roles")
+    public ResponseEntity<HttpResponse> getAvailableRoles() {
+        log.info("SUPERADMIN: Fetching available roles");
+        var roles = superAdminService.getAvailableRoles();
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("roles", roles))
+                .message("Roles retrieved successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
      * Suspend an organization
      */
     @PutMapping("/organizations/{id}/suspend")
@@ -220,6 +260,26 @@ public class SuperAdminController {
             HttpResponse.builder()
                 .timeStamp(now().toString())
                 .message("Organization activated successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
+     * Soft-delete an organization
+     */
+    @DeleteMapping("/organizations/{id}")
+    @AuditLog(action = "DELETE", entityType = "ORGANIZATION", description = "Deleted organization")
+    public ResponseEntity<HttpResponse> deleteOrganization(@PathVariable Long id) {
+        log.info("SUPERADMIN: Deleting organization ID: {}", id);
+
+        superAdminService.deleteOrganization(id);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .message("Organization deleted successfully")
                 .status(OK)
                 .statusCode(OK.value())
                 .build()

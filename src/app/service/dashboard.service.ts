@@ -144,7 +144,7 @@ export class DashboardService {
    */
   private getFullMetrics(): Observable<DashboardMetrics> {
     return this.http.get<DashboardMetrics>(`${this.baseUrl}/full`).pipe(
-      catchError(() => of(this.getMockFullMetrics()))
+      catchError(() => of(this.getDefaultMetrics()))
     );
   }
 
@@ -153,7 +153,7 @@ export class DashboardService {
    */
   private getFinancialMetrics(): Observable<DashboardMetrics> {
     return this.http.get<DashboardMetrics>(`${this.baseUrl}/financial`).pipe(
-      catchError(() => of(this.getMockFinancialMetrics()))
+      catchError(() => of(this.getDefaultMetrics()))
     );
   }
 
@@ -162,7 +162,7 @@ export class DashboardService {
    */
   private getDepartmentMetrics(): Observable<DashboardMetrics> {
     return this.http.get<DashboardMetrics>(`${this.baseUrl}/department`).pipe(
-      catchError(() => of(this.getMockDepartmentMetrics()))
+      catchError(() => of(this.getDefaultMetrics()))
     );
   }
 
@@ -171,7 +171,7 @@ export class DashboardService {
    */
   private getPersonalMetrics(): Observable<DashboardMetrics> {
     return this.http.get<DashboardMetrics>(`${this.baseUrl}/personal`).pipe(
-      catchError(() => of(this.getMockPersonalMetrics()))
+      catchError(() => of(this.getDefaultMetrics()))
     );
   }
 
@@ -180,7 +180,7 @@ export class DashboardService {
    */
   private getSupportMetrics(): Observable<DashboardMetrics> {
     return this.http.get<DashboardMetrics>(`${this.baseUrl}/support`).pipe(
-      catchError(() => of(this.getMockSupportMetrics()))
+      catchError(() => of(this.getDefaultMetrics()))
     );
   }
 
@@ -189,7 +189,7 @@ export class DashboardService {
    */
   private getClientMetrics(): Observable<DashboardMetrics> {
     return this.http.get<DashboardMetrics>(`${this.baseUrl}/client`).pipe(
-      catchError(() => of(this.getMockClientMetrics()))
+      catchError(() => of(this.getDefaultMetrics()))
     );
   }
 
@@ -217,7 +217,7 @@ export class DashboardService {
    */
   getPracticeAreaMetrics(practiceArea: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/practice-area/${practiceArea}`).pipe(
-      catchError(() => of(this.getMockPracticeAreaMetrics(practiceArea)))
+      catchError(() => of(this.getDefaultMetrics()))
     );
   }
 
@@ -226,11 +226,11 @@ export class DashboardService {
    */
   getTimeBasedMetrics(period: 'daily' | 'weekly' | 'monthly' | 'yearly'): Observable<any> {
     return this.http.get(`${this.baseUrl}/trends/${period}`).pipe(
-      catchError(() => of(this.getMockTimeBasedMetrics(period)))
+      catchError(() => of(this.getDefaultMetrics()))
     );
   }
 
-  // Mock data methods for development/fallback
+  // Default empty metrics for error fallback
   private getDefaultMetrics(): DashboardMetrics {
     return {
       revenue: { totalRevenue: 0, monthlyRevenue: 0, quarterlyRevenue: 0, yearlyRevenue: 0, revenueGrowth: 0 },
@@ -239,181 +239,4 @@ export class DashboardService {
     };
   }
 
-  private getMockFullMetrics(): DashboardMetrics {
-    return {
-      revenue: {
-        totalRevenue: 8543750,
-        monthlyRevenue: 742500,
-        quarterlyRevenue: 2227500,
-        yearlyRevenue: 8543750,
-        revenueGrowth: 12,
-        revenueByPracticeArea: {
-          'Corporate Law': 2987312,
-          'Litigation': 2140937,
-          'Real Estate': 1711750,
-          'Tax Law': 854375,
-          'Family Law': 849376
-        }
-      },
-      clients: {
-        totalClients: 342,
-        activeClients: 198,
-        newClientsThisMonth: 12,
-        clientRetentionRate: 94,
-        clientSatisfactionScore: 4.7,
-        topClients: [
-          { id: 1, name: 'Tech Solutions Inc', revenue: 450000 },
-          { id: 2, name: 'Global Finance Corp', revenue: 380000 },
-          { id: 3, name: 'Healthcare Partners', revenue: 320000 }
-        ]
-      },
-      cases: {
-        totalCases: 523,
-        activeCases: 187,
-        closedCases: 336,
-        successRate: 92,
-        casesByStatus: { 'Active': 187, 'Closed': 336, 'On Hold': 12 },
-        upcomingDeadlines: 23
-      },
-      staff: {
-        totalStaff: 89,
-        attorneys: 34,
-        paralegals: 18,
-        supportStaff: 37,
-        utilizationRate: 87,
-        billableHours: 4832
-      },
-      financial: {
-        cashFlow: 523000,
-        accountsReceivable: 1234000,
-        accountsPayable: 234000,
-        workInProgress: 892000,
-        operatingExpenses: 423000,
-        grossMargin: 72,
-        netMargin: 34,
-        ebitda: 2890000,
-        collectionRate: 91,
-        averageCollectionDays: 35,
-        overdueInvoices: 23,
-        trustAccountBalance: 3456000
-      }
-    };
-  }
-
-  private getMockFinancialMetrics(): DashboardMetrics {
-    return {
-      revenue: {
-        totalRevenue: 8543750,
-        monthlyRevenue: 742500,
-        quarterlyRevenue: 2227500,
-        yearlyRevenue: 8543750,
-        revenueGrowth: 12
-      },
-      financial: {
-        cashFlow: 523000,
-        accountsReceivable: 1234000,
-        accountsPayable: 234000,
-        workInProgress: 892000,
-        operatingExpenses: 423000,
-        grossMargin: 72,
-        netMargin: 34,
-        ebitda: 2890000,
-        collectionRate: 91,
-        averageCollectionDays: 35,
-        overdueInvoices: 23,
-        trustAccountBalance: 3456000
-      }
-    };
-  }
-
-  private getMockDepartmentMetrics(): DashboardMetrics {
-    return {
-      revenue: {
-        totalRevenue: 2140937,
-        monthlyRevenue: 178411,
-        quarterlyRevenue: 535234,
-        yearlyRevenue: 2140937,
-        revenueGrowth: 15
-      },
-      clients: {
-        totalClients: 68,
-        activeClients: 42,
-        newClientsThisMonth: 3,
-        clientRetentionRate: 96,
-        clientSatisfactionScore: 4.8
-      },
-      cases: {
-        totalCases: 89,
-        activeCases: 34,
-        closedCases: 55,
-        successRate: 95,
-        upcomingDeadlines: 8
-      }
-    };
-  }
-
-  private getMockPersonalMetrics(): DashboardMetrics {
-    return {
-      revenue: {
-        totalRevenue: 450000,
-        monthlyRevenue: 37500,
-        quarterlyRevenue: 112500,
-        yearlyRevenue: 450000,
-        revenueGrowth: 8
-      },
-      cases: {
-        totalCases: 23,
-        activeCases: 12,
-        closedCases: 11,
-        successRate: 91,
-        upcomingDeadlines: 3
-      }
-    };
-  }
-
-  private getMockSupportMetrics(): DashboardMetrics {
-    return {
-      operations: {
-        taskCompletionRate: 94,
-        averageResponseTime: 2.3,
-        clientCommunications: 142,
-        documentsProcessed: 234,
-        complianceScore: 98
-      }
-    };
-  }
-
-  private getMockClientMetrics(): DashboardMetrics {
-    return {
-      cases: {
-        totalCases: 3,
-        activeCases: 2,
-        closedCases: 1,
-        successRate: 100,
-        upcomingDeadlines: 1
-      }
-    };
-  }
-
-  private getMockPracticeAreaMetrics(practiceArea: string): any {
-    return {
-      practiceArea,
-      revenue: 2140937,
-      cases: 89,
-      attorneys: 8,
-      utilizationRate: 92
-    };
-  }
-
-  private getMockTimeBasedMetrics(period: string): any {
-    return {
-      period,
-      data: [
-        { date: '2024-01', value: 650000 },
-        { date: '2024-02', value: 720000 },
-        { date: '2024-03', value: 680000 },
-        { date: '2024-04', value: 742500 }
-      ]
-    };
-  }
 }

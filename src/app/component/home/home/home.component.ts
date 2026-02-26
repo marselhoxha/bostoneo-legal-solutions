@@ -64,6 +64,12 @@ export class HomeComponent implements OnInit, OnDestroy {
    * Redirect users to their role-specific dashboard if needed
    */
   private redirectBasedOnRole(): void {
+    // Redirect SUPERADMIN users to the superadmin dashboard
+    if (this.userRole === 'SUPERADMIN') {
+      setTimeout(() => this.router.navigate(['/superadmin/dashboard']), 0);
+      return;
+    }
+
     // Redirect CLIENT users to the client portal dashboard
     if (this.userRole === 'CLIENT') {
       this.router.navigate(['/client/dashboard']);
@@ -258,6 +264,9 @@ export class HomeComponent implements OnInit, OnDestroy {
     
     // Map database roles to frontend dashboard types
     const roleMapping: { [key: string]: string } = {
+      // Superadmin role (platform-level)
+      'SUPERADMIN': 'SUPERADMIN',
+
       // Admin roles (highest priority) - EXPANDED LIST
       'ADMIN': 'ADMIN',
       'ROLE_ADMIN': 'ADMIN',
@@ -321,7 +330,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (roles.length === 1) return roles[0];
     
     // Role priority order (highest to lowest)
-    const rolePriority = ['ADMIN', 'MANAGER', 'ATTORNEY', 'SECRETARY', 'PARALEGAL', 'CLIENT'];
+    const rolePriority = ['SUPERADMIN', 'ADMIN', 'MANAGER', 'ATTORNEY', 'SECRETARY', 'PARALEGAL', 'CLIENT'];
     
     // Find the highest priority role
     for (const priority of rolePriority) {

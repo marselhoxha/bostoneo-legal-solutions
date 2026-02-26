@@ -377,3 +377,20 @@ export interface OrganizationFeatures {
   maxStorageBytes: number;
   planType: string;
 }
+
+// Role summary for user creation dropdown
+export interface RoleSummary {
+  id: number;
+  name: string;
+  displayName: string;
+  hierarchyLevel: number;
+  isSystemRole: boolean;
+}
+
+// Create user for organization
+export interface CreateUserForOrg {
+  firstName: string;
+  lastName: string;
+  email: string;
+  roleName: string;
+}

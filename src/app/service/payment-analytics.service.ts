@@ -71,12 +71,12 @@ export class PaymentAnalyticsService {
   getPaymentAnalytics(startDate: string, endDate: string): Observable<PaymentAnalytics> {
     return combineLatest([
       this.paymentService.getPaymentsByDateRange$(startDate, endDate, 0, 1000),
-      this.invoiceService.getInvoices$(0, 1000) // This might need filtering by date
+      this.invoiceService.getInvoices(0, 1000)
     ]).pipe(
       map(([paymentsResponse, invoicesResponse]) => {
         const payments = paymentsResponse.data?.content || [];
         const invoices = invoicesResponse.data?.content || [];
-        
+
         return this.calculateAnalytics(payments, invoices, startDate, endDate);
       })
     );

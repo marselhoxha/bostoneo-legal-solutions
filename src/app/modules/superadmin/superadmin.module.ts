@@ -15,6 +15,7 @@ import { AuditLogViewerComponent } from './components/audit-log-viewer/audit-log
 import { AnnouncementManagerComponent } from './components/announcement-manager/announcement-manager.component';
 import { IntegrationStatusComponent } from './components/integration-status/integration-status.component';
 import { SecurityDashboardComponent } from './components/security-dashboard/security-dashboard.component';
+import { CreateOrganizationComponent } from './components/create-organization/create-organization.component';
 
 @NgModule({
   declarations: [
@@ -28,7 +29,8 @@ import { SecurityDashboardComponent } from './components/security-dashboard/secu
     AuditLogViewerComponent,
     AnnouncementManagerComponent,
     IntegrationStatusComponent,
-    SecurityDashboardComponent
+    SecurityDashboardComponent,
+    CreateOrganizationComponent
   ],
   imports: [
     CommonModule,

@@ -31,19 +31,25 @@
                         <p class="text-muted">Sign in to continue to Bostoneo Solutions.</p>
                       </div>
   
+                      <!-- Invitation Banner -->
+                      <div *ngIf="isInvitation" class="alert alert-info mb-3">
+                        <i class="ri-mail-check-line me-1"></i>
+                        Welcome! Your credentials have been pre-filled. Click <strong>Sign In</strong> to access your account.
+                      </div>
+
                       <!-- Error Handling -->
                       <div *ngIf="state.dataState === DataState.ERROR" class="alert alert-danger text-center" role="alert">
                         {{ state.error }}
                       </div>
-  
+
                       <!-- Login Form -->
                       <form #loginForm="ngForm" (ngSubmit)="login(loginForm)">
                         <!-- Email Field -->
                         <div class="mb-3">
                           <label for="email" class="form-label">Email Address</label>
-                          <input [disabled]="state.dataState === DataState.LOADING" ngModel type="email" name="email" id="email" class="form-control" placeholder="Enter email" required>
+                          <input [disabled]="state.dataState === DataState.LOADING" [ngModel]="prefillEmail" type="email" name="email" id="email" class="form-control" placeholder="Enter email" required>
                         </div>
-  
+
                         <!-- Password Field -->
                         <div class="mb-3">
                           <div class="float-end">
@@ -51,7 +57,7 @@
                           </div>
                           <label class="form-label" for="password-input">Password</label>
                           <div class="position-relative auth-pass-inputgroup mb-3">
-                            <input [type]="fieldTextType ? 'text' : 'password'" class="form-control pe-5 password-input" placeholder="Enter password" id="password-input" name="password" ngModel [disabled]="state.dataState === DataState.LOADING" required>
+                            <input [type]="fieldTextType ? 'text' : 'password'" class="form-control pe-5 password-input" placeholder="Enter password" id="password-input" name="password" [ngModel]="prefillPassword" [disabled]="state.dataState === DataState.LOADING" required>
                             <button class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted password-addon material-shadow-none" type="button" id="password-addon" (click)="toggleFieldTextType()">
                               <i class="mdi align-middle" [ngClass]="{'mdi-eye-off-outline': !fieldTextType, 'mdi-eye-outline': fieldTextType }"></i>
                             </button>
@@ -66,7 +72,7 @@
   
                         <!-- Sign In Button -->
                         <div class="mt-4">
-                          <button [disabled]="state.dataState === DataState.LOADING || loginForm.invalid || loginForm.pristine" type="submit" class="btn btn-success w-100">
+                          <button [disabled]="state.dataState === DataState.LOADING || loginForm.invalid || (loginForm.pristine && !isInvitation)" type="submit" class="btn btn-success w-100">
                             <span *ngIf="state.dataState === DataState.LOADING" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right: 5px;"></span>
                             <span *ngIf="state.dataState === DataState.LOADING">Loading...</span>
                             <span *ngIf="!(state.dataState === DataState.LOADING)">Sign In</span>

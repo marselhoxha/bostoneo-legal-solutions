@@ -1,4 +1,4 @@
-import { MenuItem, UserRole, RoleMenuConfig } from './menu.model';
+import { MenuItem, UserRole, RoleMenuConfig, resolveMenuTier } from './menu.model';
 
 // ============================================================================
 // CLIENT MENU (ROLE_USER) - Simple portal access
@@ -448,61 +448,54 @@ export const ADMIN_MENU: MenuItem[] = [
 // SUPERADMIN MENU (ROLE_SUPERADMIN) - Platform administration ONLY
 // SUPERADMINs are platform-level administrators, NOT organization users.
 // They should NOT access tenant-specific routes (cases, clients, etc.)
+// Grouped into dropdowns: Organizations, Analytics, System
 // ============================================================================
 export const SUPERADMIN_MENU: MenuItem[] = [
   {
-    id: 'sa-dashboard',
-    label: 'Dashboard',
-    icon: 'ri-shield-star-line',
+    id: 'sa-overview',
+    label: 'Overview',
+    icon: 'ri-dashboard-2-line',
     link: '/superadmin/dashboard'
   },
   {
     id: 'sa-organizations',
     label: 'Organizations',
     icon: 'ri-building-2-line',
-    link: '/superadmin/organizations'
+    subItems: [
+      { id: 'sa-org-list', label: 'All Organizations', link: '/superadmin/organizations', parentId: 'sa-organizations' },
+      { id: 'sa-org-create', label: 'Create New', link: '/superadmin/organizations/new', parentId: 'sa-organizations' }
+    ]
   },
   {
     id: 'sa-users',
-    label: 'All Users',
-    icon: 'ri-user-line',
+    label: 'Users',
+    icon: 'ri-group-line',
     link: '/superadmin/users'
+  },
+  {
+    id: 'sa-analytics',
+    label: 'Analytics',
+    icon: 'ri-bar-chart-2-line',
+    subItems: [
+      { id: 'sa-analytics-platform', label: 'Platform Analytics', link: '/superadmin/analytics', parentId: 'sa-analytics' },
+      { id: 'sa-analytics-security', label: 'Security', link: '/superadmin/security', parentId: 'sa-analytics' }
+    ]
+  },
+  {
+    id: 'sa-system',
+    label: 'System',
+    icon: 'ri-settings-3-line',
+    subItems: [
+      { id: 'sa-system-health', label: 'System Health', link: '/superadmin/system-health', parentId: 'sa-system' },
+      { id: 'sa-system-audit', label: 'Audit Logs', link: '/superadmin/audit-logs', parentId: 'sa-system' },
+      { id: 'sa-system-integrations', label: 'Integrations', link: '/superadmin/integrations', parentId: 'sa-system' }
+    ]
   },
   {
     id: 'sa-announcements',
     label: 'Announcements',
     icon: 'ri-megaphone-line',
     link: '/superadmin/announcements'
-  },
-  {
-    id: 'sa-security',
-    label: 'Security',
-    icon: 'ri-shield-check-line',
-    link: '/superadmin/security'
-  },
-  {
-    id: 'sa-integrations',
-    label: 'Integrations',
-    icon: 'ri-plug-line',
-    link: '/superadmin/integrations'
-  },
-  {
-    id: 'sa-analytics',
-    label: 'Analytics',
-    icon: 'ri-bar-chart-box-line',
-    link: '/superadmin/analytics'
-  },
-  {
-    id: 'sa-system-health',
-    label: 'System Health',
-    icon: 'ri-heart-pulse-line',
-    link: '/superadmin/system-health'
-  },
-  {
-    id: 'sa-audit-logs',
-    label: 'Audit Logs',
-    icon: 'ri-file-list-3-line',
-    link: '/superadmin/audit-logs'
   }
 ];
 
@@ -551,6 +544,7 @@ export const ROLE_MENU_CONFIGS: { [key in UserRole]: RoleMenuConfig } = {
 // HELPER FUNCTION: Get menu for user role
 // ============================================================================
 export function getMenuForRole(role: string): MenuItem[] {
+  // First try exact match
   const normalizedRole = role?.toUpperCase() as UserRole;
   const config = ROLE_MENU_CONFIGS[normalizedRole];
 
@@ -558,8 +552,14 @@ export function getMenuForRole(role: string): MenuItem[] {
     return config.menu;
   }
 
-  // Default to client menu if role not recognized
-  console.warn(`Unknown role: ${role}, defaulting to client menu`);
+  // Resolve to the appropriate menu tier (e.g. MANAGING_PARTNER → ROLE_ADMIN)
+  const menuTier = resolveMenuTier(role);
+  const tierConfig = ROLE_MENU_CONFIGS[menuTier];
+
+  if (tierConfig) {
+    return tierConfig.menu;
+  }
+
   return CLIENT_MENU;
 }
 
@@ -567,11 +567,20 @@ export function getMenuForRole(role: string): MenuItem[] {
 // HELPER FUNCTION: Get default redirect for role
 // ============================================================================
 export function getDefaultRedirectForRole(role: string): string {
+  // First try exact match
   const normalizedRole = role?.toUpperCase() as UserRole;
   const config = ROLE_MENU_CONFIGS[normalizedRole];
 
   if (config) {
     return config.defaultRedirect;
+  }
+
+  // Resolve to the appropriate menu tier
+  const menuTier = resolveMenuTier(role);
+  const tierConfig = ROLE_MENU_CONFIGS[menuTier];
+
+  if (tierConfig) {
+    return tierConfig.defaultRedirect;
   }
 
   return '/client/dashboard';

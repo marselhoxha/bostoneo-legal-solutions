@@ -97,6 +97,10 @@
               <button class="btn btn-soft-secondary btn-sm" (click)="loadOrganizations()" [disabled]="isLoading">
                 <i class="ri-refresh-line" [class.spin]="isLoading"></i>
               </button>
+              <!-- Create Organization -->
+              <a class="btn btn-primary btn-sm" routerLink="/superadmin/organizations/new">
+                <i class="ri-add-line align-bottom me-1"></i> Create Organization
+              </a>
             </div>
           </div>
         </div>

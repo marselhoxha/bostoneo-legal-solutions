@@ -34,6 +34,9 @@ public class UserDTO {
     // Legacy field for backward compatibility with frontend - derived from roles
     private String roleName;
     
+    // Organization name for display
+    private String organizationName;
+
     // Permissions as a comma-separated string
     private String permissions;
     

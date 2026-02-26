@@ -84,18 +84,20 @@ export class RbacService {
   private _permissions$ = new BehaviorSubject<Permission[]>([]);
   private _caseRoles$ = new BehaviorSubject<CaseRole[]>([]);
 
-  // Simplified role definitions (6 core roles)
-  // ROLE_ADMIN (100), ROLE_ATTORNEY (70), ROLE_FINANCE (65), PARALEGAL (40), ROLE_SECRETARY (20), ROLE_USER (10)
+  // Role definitions — includes all DB roles mapped to their access tier
   private static readonly ADMIN_ROLES = [
-    'ROLE_ADMIN', 'ADMINISTRATOR'
+    'ROLE_ADMIN', 'ADMINISTRATOR', 'MANAGING_PARTNER', 'SENIOR_PARTNER',
+    'EQUITY_PARTNER', 'COO', 'CFO', 'IT_ADMIN', 'MANAGER'
   ];
 
   private static readonly MANAGEMENT_ROLES = [
-    'ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_FINANCE'
+    'ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_FINANCE',
+    'MANAGING_PARTNER', 'SENIOR_PARTNER', 'EQUITY_PARTNER', 'COO', 'CFO'
   ];
 
   private static readonly ATTORNEY_ROLES = [
-    'ROLE_ATTORNEY', 'ROLE_ADMIN'
+    'ROLE_ATTORNEY', 'ROLE_ADMIN', 'NON_EQUITY_PARTNER', 'OF_COUNSEL',
+    'SENIOR_ASSOCIATE', 'ASSOCIATE', 'JUNIOR_ASSOCIATE'
   ];
 
   private static readonly LEGAL_SUPPORT_ROLES = [
@@ -513,11 +515,12 @@ export class RbacService {
                        [currentUser.roleName, currentUser.primaryRoleName].filter(Boolean) ||
                        [];
       
-      // Simplified admin roles (ROLE_ADMIN and ROLE_ATTORNEY have full access)
-      const adminRoles = ['ROLE_ADMIN', 'ROLE_ATTORNEY', 'ADMINISTRATOR'];
-      const hasAdminRole = userRoles.some((role: any) =>
-        typeof role === 'string' && adminRoles.includes(role)
-      );
+      // Admin and attorney-level roles get full access
+      const bypassRoles = [...RbacService.ADMIN_ROLES, ...RbacService.ATTORNEY_ROLES];
+      const hasAdminRole = userRoles.some((role: any) => {
+        const roleName = typeof role === 'string' ? role.toUpperCase() : (role?.name || '').toUpperCase();
+        return bypassRoles.some(br => br.toUpperCase() === roleName);
+      });
       
       if (hasAdminRole) {
         return true;

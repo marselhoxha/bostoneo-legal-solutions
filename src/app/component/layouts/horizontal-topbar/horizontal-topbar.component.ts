@@ -4,7 +4,7 @@ import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 
 import { MENU, getMenuForRole, getDefaultRedirectForRole, ROLE_MENU_CONFIGS } from './menu';
-import { MenuItem, UserRole, ROLE_HIERARCHY } from './menu.model';
+import { MenuItem, UserRole, EXTENDED_ROLE_HIERARCHY, resolveMenuTier } from './menu.model';
 import { User } from 'src/app/interface/user';
 import { RbacService } from 'src/app/core/services/rbac.service';
 
@@ -78,9 +78,8 @@ export class HorizontalTopbarComponent implements OnInit, OnDestroy {
     if (isSuperAdmin) {
       this.menuItems = getMenuForRole('ROLE_SUPERADMIN');
       this.currentUserRole = 'ROLE_SUPERADMIN';
-    } else if (this.rbacService.isAdmin()) {
-      this.menuItems = getMenuForRole('ROLE_ADMIN');
     } else {
+      // getMenuForRole uses resolveMenuTier() to map any role to its correct menu
       this.menuItems = getMenuForRole(userRole);
     }
     this.menu = this.menuItems;
@@ -190,8 +189,8 @@ export class HorizontalTopbarComponent implements OnInit, OnDestroy {
     let highestLevel = 0;
 
     roles.forEach(role => {
-      const roleKey = role.toUpperCase() as UserRole;
-      const level = ROLE_HIERARCHY[roleKey] || 0;
+      const roleKey = role.toUpperCase();
+      const level = EXTENDED_ROLE_HIERARCHY[roleKey] || 0;
 
       if (level > highestLevel) {
         highestLevel = level;

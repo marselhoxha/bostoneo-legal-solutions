@@ -23,6 +23,9 @@ export class LoginComponent implements OnInit{
   private emailSubject = new BehaviorSubject<string | null>(null);
   readonly DataState = DataState;
   fieldTextType!: boolean;
+  prefillEmail: string = '';
+  prefillPassword: string = '';
+  isInvitation: boolean = false;
 
   constructor(
     private router: Router,
@@ -33,16 +36,22 @@ export class LoginComponent implements OnInit{
   ) { }
 
   ngOnInit(): void {
-    // Check for session expired query param
     this.route.queryParams.subscribe(params => {
       if (params['sessionExpired'] === 'true') {
         this.notificationService.onWarning('Session expired. Please log in again.');
-        // Clean up the URL
         this.router.navigate(['/login'], { replaceUrl: true });
+      }
+      // Auto-fill from invitation link
+      if (params['email'] && params['temp']) {
+        this.prefillEmail = params['email'];
+        this.prefillPassword = params['temp'];
+        this.isInvitation = true;
       }
     });
 
-    this.userService.isAuthenticated() ? this.router.navigate(['/']) : this.router.navigate(['/login']);
+    if (this.userService.isAuthenticated()) {
+      this.router.navigate(['/']);
+    }
   }
 
   login(loginForm: NgForm): void {

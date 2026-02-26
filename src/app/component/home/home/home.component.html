@@ -1,7 +1,17 @@
 <!-- Role-Based Dashboard Container -->
 <!-- Role-Based Dashboard Selection -->
 <div [ngSwitch]="userRole">
-      
+
+    <!-- SuperAdmin Redirect -->
+    <div *ngSwitchCase="'SUPERADMIN'">
+      <div class="d-flex justify-content-center align-items-center" style="min-height: 60vh;">
+        <div class="text-center">
+          <div class="spinner-grow text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+          <h5 class="text-primary">Redirecting to Command Center...</h5>
+        </div>
+      </div>
+    </div>
+
       <!-- Admin Dashboard -->
       <div *ngSwitchCase="'ADMIN'">
         <app-admin-dashboard 
@@ -61,7 +71,7 @@
                     <i class="ri-user-line"></i>
             </div>
               </div>
-                <h5 class="card-title">Welcome to Boston Neo Legal Solutions</h5>
+                <h5 class="card-title">Welcome to Legience</h5>
                 <p class="card-text text-muted">
                   Your role is being determined. Please wait a moment or contact your administrator if this persists.
                 </p>

@@ -6,6 +6,8 @@ import com.bostoneo.bostoneosolutions.model.Organization;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Map;
+
 /**
  * Service interface for SUPERADMIN operations.
  * Bypasses tenant filtering to provide cross-organization visibility.
@@ -66,6 +68,11 @@ public interface SuperAdminService {
      */
     void activateOrganization(Long organizationId);
 
+    /**
+     * Soft-delete an organization (set status to DELETED, disable all users)
+     */
+    void deleteOrganization(Long organizationId);
+
     // ==================== USERS ====================
 
     /**
@@ -103,6 +110,16 @@ public interface SuperAdminService {
      * Resend verification email to user
      */
     void resendVerificationEmail(Long userId);
+
+    /**
+     * Add a user to an existing organization
+     */
+    Map<String, Object> addUserToOrganization(Long organizationId, CreateUserForOrgDTO dto);
+
+    /**
+     * Get all available roles for user assignment
+     */
+    java.util.List<RoleSummaryDTO> getAvailableRoles();
 
     // ==================== AUDIT LOGS ====================
 

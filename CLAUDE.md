@@ -33,6 +33,7 @@ Standard Workflow
 * when creating sql files run the script manually as well
 * when creating the sql migration file always include the postgres name since we migrated from mysql to postgresql  
 * when creating new features in the backend keep in mind to consider the tenant filter with organization id
+* NEVER commit without explicit user permission. Always ask before committing. No exceptions.
 *When commiting make sure to add descriptive but short messages and DO NOT INLCUDE CLAUDE CO AUTHOR ON THE MESSAGE
 * All changes we make locally should be in the 'develop' branch. they should be tested there, then after commiting to that branch we can merge with 'staging' and 'production' branches
 *Don't check for diagostics or if the frontend has compiled, if it doesn't compile i will let you know

@@ -297,11 +297,49 @@
                 </div>
               </div>
             </div>
+
+            <!-- Danger Zone -->
+            <div class="col-12 mt-4">
+              <div class="info-card border-danger border-opacity-25">
+                <h6 class="info-card-title text-danger">
+                  <i class="ri-error-warning-line me-2"></i>Danger Zone
+                </h6>
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <p class="mb-0 fw-medium">Delete this organization</p>
+                    <small class="text-muted">Once deleted, all users will be disabled and the organization will be hidden from lists.</small>
+                  </div>
+                  <button class="btn btn-outline-danger btn-sm" (click)="deleteOrganization()">
+                    <i class="ri-delete-bin-line me-1"></i> Delete Organization
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Users Tab -->
         <div *ngIf="activeTab === 'users'">
+          <!-- Header with Add User button -->
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <h6 class="mb-0 text-muted fs-13">Organization Members</h6>
+              <span *ngIf="organization?.stats?.maxUsers" class="badge rounded-pill"
+                    [ngClass]="{
+                      'bg-success-subtle text-success': (organization.stats.userQuotaPercent || 0) < 70,
+                      'bg-warning-subtle text-warning': (organization.stats.userQuotaPercent || 0) >= 70 && (organization.stats.userQuotaPercent || 0) < 90,
+                      'bg-danger-subtle text-danger': (organization.stats.userQuotaPercent || 0) >= 90
+                    }">
+                {{ organization.stats.userCount }} / {{ organization.stats.maxUsers }} users
+              </span>
+            </div>
+            <button class="btn btn-primary btn-sm" (click)="openAddUserModal()"
+                    [disabled]="organization?.stats?.maxUsers && organization.stats.userCount >= organization.stats.maxUsers"
+                    [title]="organization?.stats?.maxUsers && organization.stats.userCount >= organization.stats.maxUsers ? 'User limit reached' : 'Add a new user'">
+              <i class="ri-user-add-line align-bottom me-1"></i> Add User
+            </button>
+          </div>
+
           <!-- Loading -->
           <div class="text-center py-5" *ngIf="isLoadingUsers">
             <div class="spinner-border text-primary" role="status"></div>
@@ -542,4 +580,60 @@
       </div>
     </div>
   </div>
+
+  <!-- Add User Modal -->
+  <div class="modal fade" [class.show]="showAddUserModal" [style.display]="showAddUserModal ? 'block' : 'none'" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add User to {{ organization?.name }}</h5>
+          <button type="button" class="btn-close" (click)="closeAddUserModal()"></button>
+        </div>
+        <div class="modal-body">
+          <form [formGroup]="addUserForm">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="firstName" placeholder="First name"
+                  [class.is-invalid]="addUserForm.get('firstName')?.invalid && addUserForm.get('firstName')?.touched">
+                <div class="invalid-feedback">First name is required.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="lastName" placeholder="Last name"
+                  [class.is-invalid]="addUserForm.get('lastName')?.invalid && addUserForm.get('lastName')?.touched">
+                <div class="invalid-feedback">Last name is required.</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Email <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" formControlName="email" placeholder="user@example.com"
+                  [class.is-invalid]="addUserForm.get('email')?.invalid && addUserForm.get('email')?.touched">
+                <div class="invalid-feedback" *ngIf="addUserForm.get('email')?.hasError('required')">Email is required.</div>
+                <div class="invalid-feedback" *ngIf="addUserForm.get('email')?.hasError('email')">Please enter a valid email.</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Role <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="roleName"
+                  [class.is-invalid]="addUserForm.get('roleName')?.invalid && addUserForm.get('roleName')?.touched">
+                  <option value="">Select a role...</option>
+                  <option *ngFor="let role of availableRoles" [value]="role.name">
+                    {{ role.displayName || role.name }}
+                  </option>
+                </select>
+                <div class="invalid-feedback">Please select a role.</div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-soft-danger" (click)="closeAddUserModal()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitAddUser()" [disabled]="addUserForm.invalid || addingUser">
+            <span *ngIf="addingUser" class="spinner-border spinner-border-sm me-1"></span>
+            {{ addingUser ? 'Creating...' : 'Create User' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" *ngIf="showAddUserModal" (click)="closeAddUserModal()"></div>
 </div>

@@ -36,7 +36,7 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
     private final TenantService tenantService;
     private final TaskExecutor taskExecutor;
 
-    @Value("${app.frontend.url:http://localhost:4200}")
+    @Value("${UI_APP_URL:http://localhost:4200}")
     private String frontendUrl;
 
     public OrganizationInvitationServiceImpl(

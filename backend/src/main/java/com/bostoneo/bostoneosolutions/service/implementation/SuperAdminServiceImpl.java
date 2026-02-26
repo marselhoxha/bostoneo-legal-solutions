@@ -15,6 +15,7 @@ import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.SuperAdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -54,6 +55,9 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private final EmailService emailService;
     private final NotificationService notificationService;
     private final BCryptPasswordEncoder passwordEncoder;
+
+    @Value("${UI_APP_URL:http://localhost:4200}")
+    private String frontendBaseUrl;
 
     // SQL queries for cross-organization user access
     private static final String SELECT_ALL_USERS_PAGINATED =
@@ -281,6 +285,36 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         organizationRepository.save(org);
 
         log.info("SUPERADMIN: Organization {} has been activated", org.getName());
+    }
+
+    @Override
+    @Transactional
+    public void deleteOrganization(Long organizationId) {
+        log.info("SUPERADMIN: Deleting (soft) organization ID: {}", organizationId);
+
+        // Prevent deleting default organization
+        if (organizationId == 1L) {
+            throw new ApiException("Cannot delete the default organization");
+        }
+
+        Organization org = organizationRepository.findById(organizationId)
+            .orElseThrow(() -> new ApiException("Organization not found with ID: " + organizationId));
+
+        // Set status to DELETED
+        jdbc.update(
+            "UPDATE organizations SET status = 'DELETED', updated_at = :now WHERE id = :id",
+            new MapSqlParameterSource()
+                .addValue("id", organizationId)
+                .addValue("now", LocalDateTime.now())
+        );
+
+        // Disable all users in the organization
+        int disabledCount = jdbc.update(
+            "UPDATE users SET enabled = false WHERE organization_id = :orgId",
+            new MapSqlParameterSource().addValue("orgId", organizationId)
+        );
+
+        log.info("SUPERADMIN: Organization '{}' soft-deleted. {} users disabled.", org.getName(), disabledCount);
     }
 
     @Override
@@ -688,40 +722,50 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         org = organizationRepository.save(org);
 
-        // Create admin user for the organization
+        // Check if admin email already exists
+        Long userId = null;
         String tempPassword = UUID.randomUUID().toString().substring(0, 8);
-        String encodedPassword = passwordEncoder.encode(tempPassword);
-
-        jdbc.update(
-            "INSERT INTO users (first_name, last_name, email, password, organization_id, enabled, non_locked, using_mfa, created_at) " +
-            "VALUES (:firstName, :lastName, :email, :password, :orgId, true, true, false, :createdAt)",
-            new MapSqlParameterSource()
-                .addValue("firstName", dto.getAdminFirstName())
-                .addValue("lastName", dto.getAdminLastName())
-                .addValue("email", dto.getAdminEmail())
-                .addValue("password", encodedPassword)
-                .addValue("orgId", org.getId())
-                .addValue("createdAt", LocalDateTime.now())
-        );
-
-        // Get the created user's ID
-        Long userId = jdbc.queryForObject(
-            "SELECT id FROM users WHERE email = :email",
-            new MapSqlParameterSource().addValue("email", dto.getAdminEmail()),
-            Long.class
-        );
-
-        // Assign ADMIN role to the user
-        if (userId != null) {
-            jdbc.update(
-                "INSERT INTO user_roles (user_id, role_id) SELECT :userId, id FROM roles WHERE name = 'ROLE_ADMIN'",
-                new MapSqlParameterSource().addValue("userId", userId)
+        try {
+            userId = jdbc.queryForObject(
+                "SELECT id FROM users WHERE email = :email",
+                new MapSqlParameterSource().addValue("email", dto.getAdminEmail()),
+                Long.class
             );
+            log.info("Admin email {} already exists (userId={}), skipping user creation", dto.getAdminEmail(), userId);
+        } catch (org.springframework.dao.EmptyResultDataAccessException ignored) {
+            // Email not found — create new user
+            String encodedPassword = passwordEncoder.encode(tempPassword);
+
+            jdbc.update(
+                "INSERT INTO users (first_name, last_name, email, password, organization_id, enabled, non_locked, using_mfa, created_at) " +
+                "VALUES (:firstName, :lastName, :email, :password, :orgId, true, true, false, :createdAt)",
+                new MapSqlParameterSource()
+                    .addValue("firstName", dto.getAdminFirstName())
+                    .addValue("lastName", dto.getAdminLastName())
+                    .addValue("email", dto.getAdminEmail())
+                    .addValue("password", encodedPassword)
+                    .addValue("orgId", org.getId())
+                    .addValue("createdAt", LocalDateTime.now())
+            );
+
+            userId = jdbc.queryForObject(
+                "SELECT id FROM users WHERE email = :email",
+                new MapSqlParameterSource().addValue("email", dto.getAdminEmail()),
+                Long.class
+            );
+
+            // Assign ADMIN role to the new user
+            if (userId != null) {
+                jdbc.update(
+                    "INSERT INTO user_roles (user_id, role_id) SELECT :userId, id FROM roles WHERE name = 'ROLE_ADMIN'",
+                    new MapSqlParameterSource().addValue("userId", userId)
+                );
+            }
         }
 
         // Send welcome email with invitation to set password
         try {
-            String inviteUrl = "https://app.bostoneo.com/login?email=" + dto.getAdminEmail() + "&temp=" + tempPassword;
+            String inviteUrl = frontendBaseUrl + "/login?email=" + dto.getAdminEmail() + "&temp=" + tempPassword;
             emailService.sendInvitationEmail(
                 dto.getAdminEmail(),
                 org.getName(),
@@ -862,7 +906,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         // Send reset email
         try {
-            String resetUrl = "https://app.bostoneo.com/reset-password?token=" + resetToken;
+            String resetUrl = frontendBaseUrl + "/reset-password?token=" + resetToken;
             emailService.sendVerificationEmail(user.getFirstName(), user.getEmail(), resetUrl, VerificationType.PASSWORD);
             log.info("SUPERADMIN: Password reset email sent to {}", user.getEmail());
         } catch (Exception e) {
@@ -904,7 +948,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         }
 
         // Generate verification URL and send email
-        String verificationUrl = "https://app.bostoneo.com/verify?token=" + UUID.randomUUID().toString();
+        String verificationUrl = frontendBaseUrl + "/verify?token=" + UUID.randomUUID().toString();
 
         try {
             emailService.sendVerificationEmail(user.getFirstName(), user.getEmail(), verificationUrl, VerificationType.ACCOUNT);
@@ -1404,5 +1448,132 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             .createdByName(createdByName)
             .createdAt(announcement.getCreatedAt())
             .build();
+    }
+
+    // ==================== ADD USER TO ORGANIZATION ====================
+
+    @Override
+    @Transactional
+    public Map<String, Object> addUserToOrganization(Long organizationId, CreateUserForOrgDTO dto) {
+        log.info("SUPERADMIN: Adding user {} to organization ID: {}", dto.getEmail(), organizationId);
+
+        // 1. Validate org exists and is ACTIVE
+        Organization org = organizationRepository.findById(organizationId)
+            .orElseThrow(() -> new ApiException("Organization not found with ID: " + organizationId));
+
+        if (org.getStatus() != Organization.OrganizationStatus.ACTIVE) {
+            throw new ApiException("Cannot add users to a non-active organization (status: " + org.getStatus() + ")");
+        }
+
+        // 2. Check email not already in use
+        try {
+            jdbc.queryForObject(
+                "SELECT id FROM users WHERE email = :email",
+                new MapSqlParameterSource().addValue("email", dto.getEmail()),
+                Long.class
+            );
+            throw new ApiException("A user with email '" + dto.getEmail() + "' already exists");
+        } catch (org.springframework.dao.EmptyResultDataAccessException ignored) {
+            // Good - email is available
+        }
+
+        // 3. Check user quota not exceeded
+        Integer currentUserCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM users WHERE organization_id = :orgId",
+            new MapSqlParameterSource().addValue("orgId", organizationId),
+            Integer.class
+        );
+        if (currentUserCount != null && currentUserCount >= org.getMaxUsers()) {
+            throw new ApiException("Organization has reached its maximum user limit (" + org.getMaxUsers() + ")");
+        }
+
+        // 4. Generate temp password and encode
+        String tempPassword = UUID.randomUUID().toString().substring(0, 8);
+        String encodedPassword = passwordEncoder.encode(tempPassword);
+
+        // 5. Insert user
+        jdbc.update(
+            "INSERT INTO users (first_name, last_name, email, password, organization_id, enabled, non_locked, using_mfa, created_at) " +
+            "VALUES (:firstName, :lastName, :email, :password, :orgId, true, true, false, :createdAt)",
+            new MapSqlParameterSource()
+                .addValue("firstName", dto.getFirstName())
+                .addValue("lastName", dto.getLastName())
+                .addValue("email", dto.getEmail())
+                .addValue("password", encodedPassword)
+                .addValue("orgId", organizationId)
+                .addValue("createdAt", LocalDateTime.now())
+        );
+
+        // Get the created user's ID
+        Long userId = jdbc.queryForObject(
+            "SELECT id FROM users WHERE email = :email",
+            new MapSqlParameterSource().addValue("email", dto.getEmail()),
+            Long.class
+        );
+
+        // 6. Look up role and assign (use exact name from roles table — no prefix manipulation)
+        String roleName = dto.getRoleName();
+        if (userId != null) {
+            int rowsInserted = jdbc.update(
+                "INSERT INTO user_roles (user_id, role_id) SELECT :userId, id FROM roles WHERE name = :roleName",
+                new MapSqlParameterSource()
+                    .addValue("userId", userId)
+                    .addValue("roleName", roleName)
+            );
+            if (rowsInserted == 0) {
+                throw new ApiException("Role '" + roleName.replace("ROLE_", "") + "' not found. User was not created.");
+            }
+        }
+
+        // 7. Send invitation email
+        try {
+            String inviteUrl = frontendBaseUrl + "/login?email=" + dto.getEmail() + "&temp=" + tempPassword;
+            emailService.sendInvitationEmail(
+                dto.getEmail(),
+                org.getName(),
+                roleName.replace("ROLE_", ""),
+                inviteUrl,
+                7
+            );
+        } catch (Exception e) {
+            log.error("Failed to send invitation email to {}: {}", dto.getEmail(), e.getMessage());
+        }
+
+        // 8. Build and return UserDTO
+        UserDTO userDTO = new UserDTO();
+        userDTO.setId(userId);
+        userDTO.setOrganizationId(organizationId);
+        userDTO.setFirstName(dto.getFirstName());
+        userDTO.setLastName(dto.getLastName());
+        userDTO.setEmail(dto.getEmail());
+        userDTO.setEnabled(true);
+        userDTO.setNotLocked(true);
+        userDTO.setUsingMFA(false);
+        userDTO.setRoleName(roleName);
+        userDTO.setRoles(List.of(roleName));
+        userDTO.setCreatedAt(LocalDateTime.now());
+
+        log.info("SUPERADMIN: User {} added to organization {} with role {}", dto.getEmail(), org.getName(), roleName);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("user", userDTO);
+        result.put("tempPassword", tempPassword);
+        return result;
+    }
+
+    @Override
+    public List<RoleSummaryDTO> getAvailableRoles() {
+        log.info("SUPERADMIN: Fetching available roles");
+        return jdbc.query(
+            "SELECT id, name, display_name, hierarchy_level, is_system_role FROM roles WHERE is_active = true AND name != 'ROLE_SUPERADMIN' ORDER BY hierarchy_level DESC",
+            new MapSqlParameterSource(),
+            (rs, rowNum) -> RoleSummaryDTO.builder()
+                .id(rs.getLong("id"))
+                .name(rs.getString("name"))
+                .displayName(rs.getString("display_name"))
+                .hierarchyLevel(rs.getInt("hierarchy_level"))
+                .isSystemRole(rs.getBoolean("is_system_role"))
+                .build()
+        );
     }
 }

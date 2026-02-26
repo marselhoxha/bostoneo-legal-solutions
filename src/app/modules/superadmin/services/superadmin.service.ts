@@ -19,7 +19,9 @@ import {
   IntegrationStatus,
   SecurityOverview,
   FailedLogin,
-  OrganizationFeatures
+  OrganizationFeatures,
+  RoleSummary,
+  CreateUserForOrg
 } from '../models/superadmin.models';
 
 interface ApiResponse<T> {
@@ -149,6 +151,15 @@ export class SuperAdminService {
   activateOrganization(id: number): Observable<void> {
     return this.http.put<ApiResponse<void>>(`${this.apiUrl}/organizations/${id}/activate`, {})
       .pipe(map(() => void 0));
+  }
+
+  /**
+   * Delete (soft-delete) an organization
+   */
+  deleteOrganization(organizationId: number): Observable<any> {
+    return this.http.delete<ApiResponse<any>>(
+      `${this.apiUrl}/organizations/${organizationId}`
+    );
   }
 
   /**
@@ -407,5 +418,25 @@ export class SuperAdminService {
     return this.http.put<ApiResponse<{ features: OrganizationFeatures }>>(
       `${this.apiUrl}/organizations/${organizationId}/features`, features
     ).pipe(map(response => response.data.features));
+  }
+
+  // ==================== USER CREATION ====================
+
+  /**
+   * Add a user to an organization
+   */
+  addUserToOrganization(organizationId: number, data: CreateUserForOrg): Observable<{ user: UserSummary; tempPassword: string }> {
+    return this.http.post<ApiResponse<{ user: UserSummary; tempPassword: string }>>(
+      `${this.apiUrl}/organizations/${organizationId}/users`, data
+    ).pipe(map(response => response.data));
+  }
+
+  /**
+   * Get available roles for user assignment
+   */
+  getAvailableRoles(): Observable<RoleSummary[]> {
+    return this.http.get<ApiResponse<{ roles: RoleSummary[] }>>(
+      `${this.apiUrl}/roles`
+    ).pipe(map(response => response.data.roles));
   }
 }
