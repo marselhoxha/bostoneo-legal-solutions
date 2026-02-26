@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SuperAdminService } from '../../services/superadmin.service';
-import { UserDetail } from '../../models/superadmin.models';
+import { UserDetail, RoleSummary, LoginSession } from '../../models/superadmin.models';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -19,6 +19,16 @@ export class UserDetailComponent implements OnInit, OnDestroy {
   user: UserDetail | null = null;
   isLoading = true;
   error: string | null = null;
+
+  // Role change
+  availableRoles: RoleSummary[] = [];
+  selectedRole = '';
+  changingRole = false;
+
+  // Sessions
+  sessions: LoginSession[] = [];
+  isLoadingSessions = false;
+  activeTab = 'activity';
 
   constructor(
     private route: ActivatedRoute,
@@ -49,15 +59,111 @@ export class UserDetailComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (user) => {
           this.user = user;
+          this.selectedRole = user.roleName;
           this.isLoading = false;
+          this.loadAvailableRoles();
           this.cdr.markForCheck();
         },
-        error: (err) => {
+        error: () => {
           this.error = 'Failed to load user details';
           this.isLoading = false;
           this.cdr.markForCheck();
         }
       });
+  }
+
+  loadAvailableRoles(): void {
+    this.superAdminService.getAvailableRoles()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (roles) => {
+          this.availableRoles = roles;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  async changeRole(): Promise<void> {
+    if (!this.user || !this.selectedRole || this.selectedRole === this.user.roleName) return;
+
+    const oldRole = this.user.roleName?.replace('ROLE_', '') || '';
+    const newRole = this.selectedRole?.replace('ROLE_', '') || '';
+
+    const result = await Swal.fire({
+      title: 'Change Role?',
+      html: `Change role from <strong>${oldRole}</strong> to <strong>${newRole}</strong>?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#405189',
+      confirmButtonText: 'Yes, change role'
+    });
+
+    if (result.isConfirmed) {
+      this.changingRole = true;
+      this.cdr.markForCheck();
+      this.superAdminService.changeUserRole(this.userId, this.selectedRole)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.changingRole = false;
+            Swal.fire('Updated!', `Role changed to ${newRole}`, 'success');
+            this.loadUser();
+          },
+          error: (err) => {
+            this.changingRole = false;
+            this.cdr.markForCheck();
+            Swal.fire('Error', err?.error?.reason || err?.error?.message || 'Failed to change role', 'error');
+          }
+        });
+    }
+  }
+
+  onTabChange(tab: string): void {
+    this.activeTab = tab;
+    if (tab === 'sessions' && this.sessions.length === 0) {
+      this.loadSessions();
+    }
+  }
+
+  loadSessions(): void {
+    this.isLoadingSessions = true;
+    this.cdr.markForCheck();
+    this.superAdminService.getUserSessions(this.userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (sessions) => {
+          this.sessions = sessions;
+          this.isLoadingSessions = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoadingSessions = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  async terminateSessions(): Promise<void> {
+    const result = await Swal.fire({
+      title: 'Terminate All Sessions?',
+      text: 'This will log the user out of all devices immediately.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f06548',
+      confirmButtonText: 'Yes, terminate all'
+    });
+
+    if (result.isConfirmed) {
+      this.superAdminService.terminateUserSessions(this.userId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            Swal.fire('Done!', 'All sessions terminated.', 'success');
+            this.loadSessions();
+          },
+          error: () => Swal.fire('Error', 'Failed to terminate sessions', 'error')
+        });
+    }
   }
 
   async toggleUserStatus(): Promise<void> {

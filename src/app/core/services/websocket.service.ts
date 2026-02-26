@@ -58,12 +58,27 @@ export class WebSocketService implements OnDestroy {
   constructor() {
     this.initializeAuthenticationWatcher();
 
+    // SUPERADMIN is platform-level — no org context, skip WebSocket
+    if (this.isSuperAdminFromToken()) return;
+
     // Try to connect if token already exists
     const token = localStorage.getItem(Key.TOKEN);
     if (token) {
       // Delay connection to allow app to initialize
       setTimeout(() => this.connect(), 2000);
     }
+  }
+
+  /**
+   * Check SUPERADMIN role from JWT token (synchronous)
+   */
+  private isSuperAdminFromToken(): boolean {
+    try {
+      const token = localStorage.getItem(Key.TOKEN);
+      if (!token) return false;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.roles?.includes('ROLE_SUPERADMIN') || false;
+    } catch { return false; }
   }
   
   /**
@@ -120,6 +135,9 @@ export class WebSocketService implements OnDestroy {
     if (this.socket$ && !this.socket$.closed) {
       return;
     }
+
+    // SUPERADMIN has no org context — skip WebSocket connection
+    if (this.isSuperAdminFromToken()) return;
 
     // Get authentication token
     const token = localStorage.getItem(Key.TOKEN);

@@ -33,7 +33,7 @@
 
   <!-- Analytics Dashboard -->
   <div *ngIf="analytics && !isLoading">
-    <!-- Active Users Cards -->
+    <!-- Active Users KPI Cards -->
     <div class="row mb-4">
       <div class="col-md-4">
         <div class="card card-animate">
@@ -88,6 +88,74 @@
       </div>
     </div>
 
+    <!-- Platform Growth Area Chart -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><i class="ri-line-chart-line me-2"></i>Platform Growth</h5>
+          </div>
+          <div class="card-body">
+            <apx-chart *ngIf="chartsReady"
+              [series]="growthChart.series"
+              [chart]="growthChart.chart"
+              [colors]="growthChart.colors"
+              [stroke]="growthChart.stroke"
+              [fill]="growthChart.fill"
+              [xaxis]="growthChart.xaxis"
+              [tooltip]="growthChart.tooltip"
+              [dataLabels]="growthChart.dataLabels">
+            </apx-chart>
+            <div *ngIf="!chartsReady" class="text-center text-muted py-4">No growth data available</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribution Charts (Donuts) -->
+    <div class="row mb-4">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><i class="ri-team-line me-2"></i>Users by Role</h5>
+          </div>
+          <div class="card-body">
+            <apx-chart *ngIf="chartsReady && usersByRoleChart.series?.length"
+              [series]="usersByRoleChart.series"
+              [chart]="usersByRoleChart.chart"
+              [labels]="usersByRoleChart.labels"
+              [colors]="usersByRoleChart.colors"
+              [legend]="usersByRoleChart.legend"
+              [dataLabels]="usersByRoleChart.dataLabels"
+              [plotOptions]="usersByRoleChart.plotOptions">
+            </apx-chart>
+            <div *ngIf="!chartsReady || !usersByRoleChart.series?.length"
+                 class="text-center text-muted py-4">No role data available</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><i class="ri-pie-chart-2-line me-2"></i>Organizations by Plan</h5>
+          </div>
+          <div class="card-body">
+            <apx-chart *ngIf="chartsReady && orgPlanChart.series?.length"
+              [series]="orgPlanChart.series"
+              [chart]="orgPlanChart.chart"
+              [labels]="orgPlanChart.labels"
+              [colors]="orgPlanChart.colors"
+              [legend]="orgPlanChart.legend"
+              [dataLabels]="orgPlanChart.dataLabels"
+              [plotOptions]="orgPlanChart.plotOptions">
+            </apx-chart>
+            <div *ngIf="!chartsReady || !orgPlanChart.series?.length"
+                 class="text-center text-muted py-4">No plan data available</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Top Organizations -->
     <div class="row">
       <div class="col-lg-6">
@@ -96,27 +164,17 @@
             <h5 class="card-title mb-0"><i class="ri-building-line me-2"></i>Top Organizations by Users</h5>
           </div>
           <div class="card-body">
-            <div class="table-responsive">
-              <table class="table table-borderless align-middle mb-0">
-                <tbody>
-                  <tr *ngFor="let org of analytics.topOrgsByUsers; let i = index">
-                    <td style="width: 40px;">
-                      <span class="badge rounded-pill"
-                            [ngClass]="{'bg-warning': i === 0, 'bg-secondary': i === 1, 'bg-dark': i === 2, 'bg-light text-dark': i > 2}">
-                        {{ i + 1 }}
-                      </span>
-                    </td>
-                    <td>{{ org.organizationName }}</td>
-                    <td class="text-end">
-                      <span class="badge bg-primary-subtle text-primary">{{ org.value }} users</span>
-                    </td>
-                  </tr>
-                  <tr *ngIf="!analytics.topOrgsByUsers?.length">
-                    <td colspan="3" class="text-center text-muted">No data available</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <apx-chart *ngIf="chartsReady && topOrgsChart.series?.[0]?.data?.length"
+              [series]="topOrgsChart.series"
+              [chart]="topOrgsChart.chart"
+              [colors]="topOrgsChart.colors"
+              [plotOptions]="topOrgsChart.plotOptions"
+              [xaxis]="topOrgsChart.xaxis"
+              [dataLabels]="topOrgsChart.dataLabels"
+              [fill]="topOrgsChart.fill">
+            </apx-chart>
+            <div *ngIf="!chartsReady || !topOrgsChart.series?.[0]?.data?.length"
+                 class="text-center text-muted py-4">No data available</div>
           </div>
         </div>
       </div>
@@ -124,89 +182,21 @@
       <div class="col-lg-6">
         <div class="card">
           <div class="card-header">
-            <h5 class="card-title mb-0"><i class="ri-briefcase-line me-2"></i>Top Organizations by Cases</h5>
+            <h5 class="card-title mb-0"><i class="ri-money-dollar-circle-line me-2"></i>Top Organizations by Revenue</h5>
           </div>
           <div class="card-body">
-            <div class="table-responsive">
-              <table class="table table-borderless align-middle mb-0">
-                <tbody>
-                  <tr *ngFor="let org of analytics.topOrgsByCases; let i = index">
-                    <td style="width: 40px;">
-                      <span class="badge rounded-pill"
-                            [ngClass]="{'bg-warning': i === 0, 'bg-secondary': i === 1, 'bg-dark': i === 2, 'bg-light text-dark': i > 2}">
-                        {{ i + 1 }}
-                      </span>
-                    </td>
-                    <td>{{ org.organizationName }}</td>
-                    <td class="text-end">
-                      <span class="badge bg-success-subtle text-success">{{ org.value }} cases</span>
-                    </td>
-                  </tr>
-                  <tr *ngIf="!analytics.topOrgsByCases?.length">
-                    <td colspan="3" class="text-center text-muted">No data available</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Distribution Charts -->
-    <div class="row">
-      <div class="col-lg-6">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0"><i class="ri-pie-chart-line me-2"></i>Cases by Status</h5>
-          </div>
-          <div class="card-body">
-            <div *ngIf="analytics.casesByStatus">
-              <div *ngFor="let status of getObjectKeys(analytics.casesByStatus)" class="mb-3">
-                <div class="d-flex justify-content-between mb-1">
-                  <span>{{ status }}</span>
-                  <span class="fw-medium">{{ analytics.casesByStatus[status] }}</span>
-                </div>
-                <div class="progress" style="height: 8px;">
-                  <div class="progress-bar"
-                       [ngClass]="{'bg-success': status === 'ACTIVE', 'bg-secondary': status === 'CLOSED', 'bg-warning': status === 'PENDING'}"
-                       [style.width.%]="(analytics.casesByStatus[status] / (analytics.topOrgsByCases[0]?.value || 1)) * 100">
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div *ngIf="!analytics.casesByStatus || getObjectKeys(analytics.casesByStatus).length === 0"
-                 class="text-center text-muted py-3">
-              No data available
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-6">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0"><i class="ri-pie-chart-2-line me-2"></i>Organizations by Plan</h5>
-          </div>
-          <div class="card-body">
-            <div *ngIf="analytics.organizationsByPlan">
-              <div *ngFor="let plan of getObjectKeys(analytics.organizationsByPlan)" class="mb-3">
-                <div class="d-flex justify-content-between mb-1">
-                  <span>{{ plan }}</span>
-                  <span class="fw-medium">{{ analytics.organizationsByPlan[plan] }}</span>
-                </div>
-                <div class="progress" style="height: 8px;">
-                  <div class="progress-bar"
-                       [ngClass]="{'bg-primary': plan === 'ENTERPRISE', 'bg-info': plan === 'PROFESSIONAL', 'bg-secondary': plan === 'STARTER'}"
-                       [style.width.%]="100">
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div *ngIf="!analytics.organizationsByPlan || getObjectKeys(analytics.organizationsByPlan).length === 0"
-                 class="text-center text-muted py-3">
-              No data available
-            </div>
+            <apx-chart *ngIf="chartsReady && topOrgsByRevenueChart.series?.[0]?.data?.length"
+              [series]="topOrgsByRevenueChart.series"
+              [chart]="topOrgsByRevenueChart.chart"
+              [colors]="topOrgsByRevenueChart.colors"
+              [plotOptions]="topOrgsByRevenueChart.plotOptions"
+              [xaxis]="topOrgsByRevenueChart.xaxis"
+              [dataLabels]="topOrgsByRevenueChart.dataLabels"
+              [fill]="topOrgsByRevenueChart.fill"
+              [tooltip]="topOrgsByRevenueChart.tooltip">
+            </apx-chart>
+            <div *ngIf="!chartsReady || !topOrgsByRevenueChart.series?.[0]?.data?.length"
+                 class="text-center text-muted py-4">No revenue data available</div>
           </div>
         </div>
       </div>

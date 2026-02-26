@@ -86,6 +86,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
   clientMessageThreads: ClientMessageThread[] = [];
   loadingMessages = false;
   isClientUser = false;
+  isSuperAdmin = false;
   private messagingStateSubscribed = false; // Guard to prevent duplicate subscriptions
   @ViewChild('messageDropdown') messageDropdown!: NgbDropdown;
 
@@ -145,9 +146,11 @@ export class TopbarComponent implements OnInit, OnDestroy {
         if (user) {
           // Scope background tasks to the current user
           this.backgroundTaskService.setCurrentUserId(user.id);
-          // Update client role when user data changes
+          // Update role flags when user data changes
           this.isClientUser = user.roleName === 'ROLE_CLIENT' ||
                               user.roles?.some((role: string) => role === 'ROLE_CLIENT') || false;
+          this.isSuperAdmin = user.roleName === 'ROLE_SUPERADMIN' ||
+                              user.roles?.some((role: string) => role === 'ROLE_SUPERADMIN') || false;
           // Force change detection when user data changes
           this.cdr.markForCheck();
           this.cdr.detectChanges();
@@ -167,27 +170,35 @@ export class TopbarComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       });
 
-    // Defer non-critical topbar services to avoid API call storm on login
-    // Messaging threads (badge count) — defer 2 seconds
-    setTimeout(() => {
-      this.subscribeToMessagingState();
-    }, 2000);
-
-    // Push notifications and backend notifications — defer 4 seconds
-    setTimeout(() => {
-      this.initializePushNotifications();
-      this.initializeBackendNotifications();
-    }, 4000);
-
-    // Detect user role (for UI display purposes only - messaging subscription already done above)
+    // Detect user role from JWT (available immediately, unlike async user data)
     this.detectUserRole();
+    this.detectUserRoleFromToken();
 
-    // Load case management data and time tracking only for non-client users
-    // Deferred to 5 seconds — these populate topbar dropdowns, not critical at first paint
-    if (!this.isClientUser) {
+    // SUPERADMIN is a platform-level role — skip all org-level services
+    // Check isSuperAdmin INSIDE each callback to handle race condition where
+    // detectUserRole() hasn't set the flag yet (user data loaded async)
+    if (!this.isSuperAdmin) {
+      // Defer non-critical topbar services to avoid API call storm on login
+      // Messaging threads (badge count) — defer 2 seconds
       setTimeout(() => {
-        this.loadCaseManagementData();
-        this.initializeTimeTracking();
+        if (!this.isSuperAdmin) { this.subscribeToMessagingState(); }
+      }, 2000);
+
+      // Push notifications and backend notifications — defer 4 seconds
+      setTimeout(() => {
+        if (!this.isSuperAdmin) {
+          this.initializePushNotifications();
+          this.initializeBackendNotifications();
+        }
+      }, 4000);
+
+      // Load case management data and time tracking only for non-client users
+      // Deferred to 5 seconds — these populate topbar dropdowns, not critical at first paint
+      setTimeout(() => {
+        if (!this.isSuperAdmin && !this.isClientUser) {
+          this.loadCaseManagementData();
+          this.initializeTimeTracking();
+        }
       }, 5000);
     }
   }
@@ -1138,8 +1149,26 @@ export class TopbarComponent implements OnInit, OnDestroy {
     if (currentUser) {
       this.isClientUser = currentUser.roleName === 'ROLE_CLIENT' ||
                           (currentUser as any).roles?.some((role: string) => role === 'ROLE_CLIENT') || false;
+      this.isSuperAdmin = currentUser.roleName === 'ROLE_SUPERADMIN' ||
+                          (currentUser as any).roles?.some((role: string) => role === 'ROLE_SUPERADMIN') || false;
       this.cdr.markForCheck();
     }
+  }
+
+  /**
+   * Detect SUPERADMIN role directly from JWT token (available immediately).
+   * This is a fallback for when getCurrentUser() hasn't loaded yet.
+   */
+  private detectUserRoleFromToken(): void {
+    if (this.isSuperAdmin) return; // Already detected
+    try {
+      const token = localStorage.getItem(Key.TOKEN);
+      if (!token) return;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.roles?.includes('ROLE_SUPERADMIN')) {
+        this.isSuperAdmin = true;
+      }
+    } catch { /* token parse error — will be caught by userData$ subscription later */ }
   }
 
   /**

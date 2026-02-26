@@ -124,23 +124,40 @@ export class AppComponent implements OnInit, OnDestroy {
   private initializeAuthenticatedServices(): void {
     this.userService.preloadUserData();
 
-    // Load organization context from JWT token
-    this.organizationService.loadCurrentOrganization();
+    // Check if user is SUPERADMIN (platform-level, no org context)
+    const isSuperAdmin = this.isSuperAdminUser();
 
-    // Defer deadline reminder and alert services by 10 seconds
-    // These are background monitoring — not needed immediately after login
-    setTimeout(() => {
-      this.reminderService.startReminders();
-      this.deadlineAlertService.startDeadlineMonitoring();
-    }, 10000);
+    // Skip org-level services for SUPERADMIN
+    if (!isSuperAdmin) {
+      // Load organization context from JWT token
+      this.organizationService.loadCurrentOrganization();
 
-    // Initialize WebSocket connection
-    this.initializeWebSocketNotifications();
+      // Defer deadline reminder and alert services by 10 seconds
+      // These are background monitoring — not needed immediately after login
+      setTimeout(() => {
+        this.reminderService.startReminders();
+        this.deadlineAlertService.startDeadlineMonitoring();
+      }, 10000);
+
+      // Initialize WebSocket connection
+      this.initializeWebSocketNotifications();
+    }
 
     // Defer proactive token refresh — token was just issued on login
     setTimeout(() => {
       this.startProactiveTokenRefresh();
     }, 30000);
+  }
+
+  private isSuperAdminUser(): boolean {
+    try {
+      const token = localStorage.getItem('[KEY] TOKEN');
+      if (!token) return false;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.roles?.includes('ROLE_SUPERADMIN') || false;
+    } catch {
+      return false;
+    }
   }
 
   private isExcludedRoute(url: string): boolean {

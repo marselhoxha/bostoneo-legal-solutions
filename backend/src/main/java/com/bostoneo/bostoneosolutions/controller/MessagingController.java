@@ -3,6 +3,7 @@ package com.bostoneo.bostoneosolutions.controller;
 import com.bostoneo.bostoneosolutions.dto.ClientPortalMessageDTO;
 import com.bostoneo.bostoneosolutions.dto.ClientPortalMessageThreadDTO;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.MessagingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +36,18 @@ public class MessagingController {
      */
     @GetMapping("/threads")
     public ResponseEntity<HttpResponse> getThreads(@AuthenticationPrincipal(expression = "id") Long userId) {
+        // SUPERADMIN has no org context — return empty results instead of 500 error
+        if (!TenantContext.isSet()) {
+            log.debug("No tenant context (SUPERADMIN) — returning empty threads for user {}", userId);
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(Map.of("threads", Collections.emptyList()))
+                            .message("Message threads retrieved")
+                            .status(OK)
+                            .statusCode(OK.value())
+                            .build());
+        }
         log.info("User {} fetching message threads", userId);
         List<ClientPortalMessageThreadDTO> threads = messagingService.getThreadsForAttorney(userId);
 
@@ -146,6 +160,17 @@ public class MessagingController {
      */
     @GetMapping("/unread-count")
     public ResponseEntity<HttpResponse> getUnreadCount(@AuthenticationPrincipal(expression = "id") Long userId) {
+        // SUPERADMIN has no org context — return 0 instead of 500 error
+        if (!TenantContext.isSet()) {
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(Map.of("unreadCount", 0))
+                            .message("Unread count retrieved")
+                            .status(OK)
+                            .statusCode(OK.value())
+                            .build());
+        }
         int count = messagingService.getUnreadCount(userId);
 
         return ResponseEntity.ok(

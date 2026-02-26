@@ -39,6 +39,7 @@ Standard Workflow
 *Don't check for diagostics or if the frontend has compiled, if it doesn't compile i will let you know
 *Don't do a compilation check in the frontend, there is no need
 * After every significant code change (new feature, bug fix, refactor), launch the code-reviewer agent to review the code for quality, best practices, potential bugs, and improvements before moving on to the next step.
+* For every code change, always consider and handle edge cases: null values, empty results, failed external calls (email, APIs), invalid states (suspended/deleted entities), transaction rollback implications, missing data, and concurrent access. Don't just handle the happy path.
 
 ## Database Migrations (Flyway)
 * Flyway is enabled for staging/prod deployments, disabled for local dev
@@ -49,3 +50,8 @@ Standard Workflow
 * All migration SQL must be idempotent where possible (`IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`)
 * Old historical migrations live in `db/migration-archive/` — do not touch
 * Flyway runs automatically on ECS container startup — no manual SSH/SQL needed
+* **Every SQL/schema change must include a proper Flyway migration file** — even data-only changes (INSERT, UPDATE, DELETE). No SQL change should go without a corresponding migration in `db/migration/`
+
+## Multi-Tenant User Queries
+* Always include `organization_id` when querying users, since different organizations can have users with the same names
+* When performing actions on a user within an org context (e.g., resend invitation), always verify the user belongs to that organization with `WHERE id = :userId AND organization_id = :orgId`

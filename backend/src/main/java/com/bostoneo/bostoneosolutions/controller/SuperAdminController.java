@@ -208,6 +208,28 @@ public class SuperAdminController {
     }
 
     /**
+     * Resend invitation email for a user in a specific organization
+     */
+    @PostMapping("/organizations/{orgId}/users/{userId}/resend-invitation")
+    @AuditLog(action = "UPDATE", entityType = "USER", description = "Resent invitation email")
+    public ResponseEntity<HttpResponse> resendInvitation(
+            @PathVariable Long orgId,
+            @PathVariable Long userId) {
+        log.info("SUPERADMIN: Resending invitation for user {} in org {}", userId, orgId);
+
+        superAdminService.resendInvitation(orgId, userId);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .message("Invitation email resent successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
      * Get all available roles for user assignment
      */
     @GetMapping("/roles")
@@ -430,6 +452,83 @@ public class SuperAdminController {
             HttpResponse.builder()
                 .timeStamp(now().toString())
                 .message("Verification email sent successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // ==================== CHANGE USER ROLE ====================
+
+    /**
+     * Change a user's role
+     */
+    @PutMapping("/users/{id}/role")
+    @AuditLog(action = "UPDATE", entityType = "USER", description = "Changed user role")
+    public ResponseEntity<HttpResponse> changeUserRole(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        String roleName = body.get("roleName");
+        if (roleName == null || roleName.isBlank()) {
+            return ResponseEntity.badRequest().body(
+                HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .message("roleName is required")
+                    .status(OK)
+                    .statusCode(OK.value())
+                    .build()
+            );
+        }
+
+        log.info("SUPERADMIN: Changing role for user {} to {}", id, roleName);
+        superAdminService.changeUserRole(id, roleName);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .message("Role updated successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    // ==================== SESSION MANAGEMENT ====================
+
+    /**
+     * Get recent login sessions for a user
+     */
+    @GetMapping("/users/{id}/sessions")
+    @AuditLog(action = "VIEW", entityType = "USER", description = "Viewed user sessions")
+    public ResponseEntity<HttpResponse> getUserSessions(@PathVariable Long id) {
+        log.info("SUPERADMIN: Fetching sessions for user {}", id);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("sessions", superAdminService.getUserSessions(id)))
+                .message("User sessions retrieved")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
+     * Terminate all active sessions for a user
+     */
+    @PostMapping("/users/{id}/terminate-sessions")
+    @AuditLog(action = "UPDATE", entityType = "USER", description = "Terminated user sessions")
+    public ResponseEntity<HttpResponse> terminateUserSessions(@PathVariable Long id) {
+        log.info("SUPERADMIN: Terminating all sessions for user {}", id);
+
+        superAdminService.terminateUserSessions(id);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .message("All sessions terminated successfully")
                 .status(OK)
                 .statusCode(OK.value())
                 .build()

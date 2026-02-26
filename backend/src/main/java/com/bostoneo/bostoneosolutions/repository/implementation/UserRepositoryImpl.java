@@ -121,7 +121,10 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         try {
             Long organizationId = TenantContext.getCurrentTenant();
             if (organizationId == null) {
-                throw new ApiException("Organization context required");
+                // SUPERADMIN has no org context — query without org filter
+                return jdbc.queryForObject(
+                    "SELECT * FROM users WHERE id = :id AND organization_id IS NULL",
+                    of("id", id), new UserRowMapper());
             }
             return jdbc.queryForObject(SELECT_USER_BY_ID_AND_ORG_QUERY,
                 of("id", id, "organizationId", organizationId), new UserRowMapper());
@@ -506,11 +509,16 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     public User findByIdWithRoles(Long id) {
         try {
             Long organizationId = TenantContext.getCurrentTenant();
+            User user;
             if (organizationId == null) {
-                throw new ApiException("Organization context required");
+                // SUPERADMIN users have no org — query by ID with NULL org check
+                user = jdbc.queryForObject(
+                    "SELECT * FROM users WHERE id = :id AND organization_id IS NULL",
+                    of("id", id), new UserRowMapper());
+            } else {
+                user = jdbc.queryForObject(SELECT_USER_BY_ID_AND_ORG_QUERY,
+                    of("id", id, "organizationId", organizationId), new UserRowMapper());
             }
-            User user = jdbc.queryForObject(SELECT_USER_BY_ID_AND_ORG_QUERY,
-                of("id", id, "organizationId", organizationId), new UserRowMapper());
             if (user != null) {
                 // Load roles for the user
                 Set<Role> roles = roleRepository.getRolesByUserId(user.getId());

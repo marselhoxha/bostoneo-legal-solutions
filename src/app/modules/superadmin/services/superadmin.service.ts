@@ -21,7 +21,8 @@ import {
   FailedLogin,
   OrganizationFeatures,
   RoleSummary,
-  CreateUserForOrg
+  CreateUserForOrg,
+  LoginSession
 } from '../models/superadmin.models';
 
 interface ApiResponse<T> {
@@ -425,10 +426,19 @@ export class SuperAdminService {
   /**
    * Add a user to an organization
    */
-  addUserToOrganization(organizationId: number, data: CreateUserForOrg): Observable<{ user: UserSummary; tempPassword: string }> {
-    return this.http.post<ApiResponse<{ user: UserSummary; tempPassword: string }>>(
+  addUserToOrganization(organizationId: number, data: CreateUserForOrg): Observable<{ user: UserSummary }> {
+    return this.http.post<ApiResponse<{ user: UserSummary }>>(
       `${this.apiUrl}/organizations/${organizationId}/users`, data
     ).pipe(map(response => response.data));
+  }
+
+  /**
+   * Resend invitation email to a user in a specific organization
+   */
+  resendInvitation(organizationId: number, userId: number): Observable<void> {
+    return this.http.post<ApiResponse<void>>(
+      `${this.apiUrl}/organizations/${organizationId}/users/${userId}/resend-invitation`, {}
+    ).pipe(map(() => void 0));
   }
 
   /**
@@ -438,5 +448,27 @@ export class SuperAdminService {
     return this.http.get<ApiResponse<{ roles: RoleSummary[] }>>(
       `${this.apiUrl}/roles`
     ).pipe(map(response => response.data.roles));
+  }
+
+  // ==================== ROLE CHANGE ====================
+
+  changeUserRole(userId: number, roleName: string): Observable<void> {
+    return this.http.put<ApiResponse<void>>(
+      `${this.apiUrl}/users/${userId}/role`, { roleName }
+    ).pipe(map(() => void 0));
+  }
+
+  // ==================== SESSION MANAGEMENT ====================
+
+  getUserSessions(userId: number): Observable<LoginSession[]> {
+    return this.http.get<ApiResponse<{ sessions: LoginSession[] }>>(
+      `${this.apiUrl}/users/${userId}/sessions`
+    ).pipe(map(response => response.data.sessions));
+  }
+
+  terminateUserSessions(userId: number): Observable<void> {
+    return this.http.post<ApiResponse<void>>(
+      `${this.apiUrl}/users/${userId}/terminate-sessions`, {}
+    ).pipe(map(() => void 0));
   }
 }

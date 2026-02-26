@@ -69,20 +69,23 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
             }
 
             if (isTokenValid){
-                // IMPORTANT: Set tenant context BEFORE calling getAuthentication()
-                // because getAuthentication() calls userService.getUserById() which requires org context
                 Long organizationId = tokenProvider.getOrganizationId(token);
-                log.debug("Extracted organizationId from token: {} for user: {}", organizationId, userId);
+                List<GrantedAuthority> authorities = tokenProvider.getAuthorities(token);
 
                 if (organizationId == null) {
-                    log.error("Token missing organizationId for user {}. User needs to re-login.", userId);
-                    throw new ApiException("Session invalid. Please login again.");
+                    // SUPERADMIN users have no org — allow them through without tenant context
+                    boolean isSuperAdmin = authorities.stream()
+                        .anyMatch(a -> "ROLE_SUPERADMIN".equals(a.getAuthority()));
+                    if (!isSuperAdmin) {
+                        log.error("Token missing organizationId for non-SUPERADMIN user {}. User needs to re-login.", userId);
+                        throw new ApiException("Session invalid. Please login again.");
+                    }
+                    log.info("REQUEST: {} {} - SUPERADMIN User: {}", request.getMethod(), request.getRequestURI(), userId);
+                } else {
+                    TenantContext.setCurrentTenant(organizationId);
+                    log.info("REQUEST: {} {} - User: {}, Org: {}", request.getMethod(), request.getRequestURI(), userId, organizationId);
                 }
 
-                TenantContext.setCurrentTenant(organizationId);
-                log.info("REQUEST: {} {} - User: {}, Org: {}", request.getMethod(), request.getRequestURI(), userId, organizationId);
-
-                List<GrantedAuthority> authorities = tokenProvider.getAuthorities(token);
                 Authentication authentication = tokenProvider.getAuthentication(userId, authorities, request);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } else {

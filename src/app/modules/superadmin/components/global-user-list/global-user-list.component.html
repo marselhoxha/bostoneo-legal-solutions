@@ -110,7 +110,8 @@
                     <span *ngIf="user.organizationId" class="text-primary">
                       Org #{{ user.organizationId }}
                     </span>
-                    <span *ngIf="!user.organizationId" class="text-muted">-</span>
+                    <span *ngIf="!user.organizationId && user.roleName === 'ROLE_SUPERADMIN'" class="badge bg-info-subtle text-info">Platform</span>
+                    <span *ngIf="!user.organizationId && user.roleName !== 'ROLE_SUPERADMIN'" class="text-muted">-</span>
                   </td>
                   <td>
                     <span *ngIf="user.enabled" class="badge bg-success-subtle text-success">Active</span>

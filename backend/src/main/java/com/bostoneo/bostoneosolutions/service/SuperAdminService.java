@@ -117,9 +117,29 @@ public interface SuperAdminService {
     Map<String, Object> addUserToOrganization(Long organizationId, CreateUserForOrgDTO dto);
 
     /**
+     * Resend invitation email for a user in a specific organization
+     */
+    void resendInvitation(Long organizationId, Long userId);
+
+    /**
      * Get all available roles for user assignment
      */
     java.util.List<RoleSummaryDTO> getAvailableRoles();
+
+    /**
+     * Change a user's role
+     */
+    void changeUserRole(Long userId, String roleName);
+
+    /**
+     * Get recent login sessions for a user
+     */
+    java.util.List<Map<String, Object>> getUserSessions(Long userId);
+
+    /**
+     * Terminate all active sessions for a user
+     */
+    void terminateUserSessions(Long userId);
 
     // ==================== AUDIT LOGS ====================
 

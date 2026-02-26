@@ -2,6 +2,7 @@ package com.bostoneo.bostoneosolutions.controller;
 
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import com.bostoneo.bostoneosolutions.dto.NotificationTokenDTO;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -127,18 +129,38 @@ public class NotificationController {
      * Get notifications for a specific user
      */
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY') or principal.id == #userId")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_SUPERADMIN') or principal.id == #userId")
     public ResponseEntity<HttpResponse> getUserNotifications(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
         log.info("Getting notifications for user: {}", userId);
-        
+
+        // SUPERADMIN has no org context — return empty results
+        if (!TenantContext.isSet()) {
+            return ResponseEntity.ok(
+                HttpResponse.builder()
+                    .timeStamp(LocalDateTime.now().toString())
+                    .statusCode(HttpStatus.OK.value())
+                    .status(HttpStatus.OK)
+                    .reason("Notifications retrieved successfully")
+                    .message("Retrieved 0 notifications")
+                    .data(Map.of(
+                        "notifications", Collections.emptyList(),
+                        "totalElements", 0L,
+                        "totalPages", 0,
+                        "currentPage", page,
+                        "pageSize", size
+                    ))
+                    .build()
+            );
+        }
+
         try {
             // Create pageable request
             Pageable pageable = PageRequest.of(page, size);
-            
+
             // Get notifications from service
             Page<Object> notificationPage = notificationService.getUserNotifications(userId, pageable)
                 .map(notification -> {

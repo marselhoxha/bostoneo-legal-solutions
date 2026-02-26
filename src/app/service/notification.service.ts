@@ -7,6 +7,7 @@ import { CustomHttpResponse } from '../interface/custom-http-response';
 import { UserNotification, NotificationAction, NotificationPreferences, NotificationDelivery } from '../interface/user-notification';
 import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
+import { Key } from '../enum/key.enum';
 
 // Interface for push notifications displayed in topbar
 export interface PushNotification {
@@ -79,6 +80,8 @@ export class NotificationService {
         this.userService.userData$.subscribe(user => {
             if (user?.id && this.currentUserId !== user.id) {
                 this.currentUserId = user.id;
+                // SUPERADMIN is platform-level — skip org-level notification loading
+                if (this.isSuperAdminFromToken()) return;
                 // Defer notification loading by 5s to avoid blocking login
                 setTimeout(() => {
                     this.loadUserNotifications();
@@ -86,6 +89,15 @@ export class NotificationService {
                 }, 5000);
             }
         });
+    }
+
+    private isSuperAdminFromToken(): boolean {
+        try {
+            const token = localStorage.getItem(Key.TOKEN);
+            if (!token) return false;
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.roles?.includes('ROLE_SUPERADMIN') || false;
+        } catch { return false; }
     }
 
     /**

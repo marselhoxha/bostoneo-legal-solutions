@@ -44,6 +44,11 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
   // Plan types for dropdown
   planTypes = ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'];
 
+  // Edit mode
+  isEditing = false;
+  isSavingOrg = false;
+  editForm: { [key: string]: any } = {};
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -319,13 +324,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
             icon: 'success',
             title: 'User Created',
             html: `<p><strong>${data.firstName} ${data.lastName}</strong> has been added to the organization.</p>
-                   <div class="alert alert-warning mt-3 text-start">
-                     <small class="fw-semibold">Temporary Password</small>
-                     <div class="d-flex align-items-center gap-2 mt-1">
-                       <code class="fs-14">${result.tempPassword}</code>
-                     </div>
-                     <small class="text-muted d-block mt-1">Share this with the user. They will be prompted to change it on first login.</small>
-                   </div>`,
+                   <p class="text-muted mt-2">An invitation email has been sent to <strong>${data.email}</strong> to set up their account.</p>`,
             confirmButtonColor: '#405189',
             confirmButtonText: 'Done'
           });
@@ -341,6 +340,94 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
             text: err?.error?.reason || err?.error?.message || 'Failed to add user',
             confirmButtonColor: '#405189'
           });
+        }
+      });
+  }
+
+  // ==================== RESEND INVITATION ====================
+
+  async resendInvitation(user: UserSummary): Promise<void> {
+    if (!this.organization) return;
+
+    const result = await Swal.fire({
+      title: 'Resend Invitation?',
+      html: `<p>A new invitation email will be sent to <strong>${user.email}</strong> with a link to set up their password.</p>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#405189',
+      cancelButtonColor: '#878a99',
+      confirmButtonText: 'Send Invitation'
+    });
+
+    if (result.isConfirmed) {
+      this.superAdminService.resendInvitation(this.organization.id, user.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            Swal.fire({
+              icon: 'success',
+              title: 'Invitation Sent',
+              text: `Invitation email has been resent to ${user.email}.`,
+              timer: 3000,
+              showConfirmButton: false
+            });
+          },
+          error: (err) => {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: err?.error?.reason || err?.error?.message || 'Failed to resend invitation',
+              confirmButtonColor: '#405189'
+            });
+          }
+        });
+    }
+  }
+
+  // ==================== EDIT ORGANIZATION ====================
+
+  startEditing(): void {
+    if (!this.organization) return;
+    this.editForm = {
+      name: this.organization.name,
+      slug: this.organization.slug,
+      phone: this.organization.phone || '',
+      address: this.organization.address || '',
+      website: this.organization.website || '',
+      planType: this.organization.planType || 'STARTER'
+    };
+    this.isEditing = true;
+    this.cdr.markForCheck();
+  }
+
+  cancelEditing(): void {
+    this.isEditing = false;
+    this.cdr.markForCheck();
+  }
+
+  saveOrganization(): void {
+    this.isSavingOrg = true;
+    this.cdr.markForCheck();
+
+    this.superAdminService.updateOrganization(this.organizationId, this.editForm)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.isSavingOrg = false;
+          this.isEditing = false;
+          Swal.fire({
+            icon: 'success',
+            title: 'Saved!',
+            text: 'Organization updated successfully.',
+            timer: 2000,
+            showConfirmButton: false
+          });
+          this.loadOrganization();
+        },
+        error: (err) => {
+          this.isSavingOrg = false;
+          this.cdr.markForCheck();
+          Swal.fire('Error', err?.error?.reason || err?.error?.message || 'Failed to update organization', 'error');
         }
       });
   }

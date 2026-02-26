@@ -13,6 +13,7 @@ import com.bostoneo.bostoneosolutions.rowmapper.UserRowMapper;
 import com.bostoneo.bostoneosolutions.service.EmailService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.SuperAdminService;
+import com.bostoneo.bostoneosolutions.service.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -55,6 +57,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private final EmailService emailService;
     private final NotificationService notificationService;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Value("${UI_APP_URL:http://localhost:4200}")
     private String frontendBaseUrl;
@@ -150,11 +153,31 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     public Page<OrganizationWithStatsDTO> getAllOrganizationsWithStats(Pageable pageable) {
         log.info("SUPERADMIN: Fetching all organizations with stats");
 
-        Page<Organization> orgsPage = organizationRepository.findAll(pageable);
+        // Check if sorting by a computed field (not a DB column)
+        boolean sortByUserCount = pageable.getSort().stream()
+            .anyMatch(order -> "userCount".equals(order.getProperty()));
+        Sort.Direction sortDirection = pageable.getSort().stream()
+            .filter(order -> "userCount".equals(order.getProperty()))
+            .map(Sort.Order::getDirection)
+            .findFirst().orElse(Sort.Direction.ASC);
+
+        // Strip non-column sort fields — use default sort for DB query
+        Pageable dbPageable = sortByUserCount
+            ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("id").ascending())
+            : pageable;
+
+        Page<Organization> orgsPage = organizationRepository.findAll(dbPageable);
 
         List<OrganizationWithStatsDTO> orgsWithStats = orgsPage.getContent().stream()
             .map(this::mapToOrganizationWithStats)
             .collect(Collectors.toList());
+
+        // Sort by computed userCount in-memory if requested
+        if (sortByUserCount) {
+            orgsWithStats.sort((a, b) -> sortDirection == Sort.Direction.DESC
+                ? Integer.compare(b.getUserCount(), a.getUserCount())
+                : Integer.compare(a.getUserCount(), b.getUserCount()));
+        }
 
         return new PageImpl<>(orgsWithStats, pageable, orgsPage.getTotalElements());
     }
@@ -613,17 +636,25 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             "SELECT o.id, o.name, COUNT(u.id) as value FROM organizations o LEFT JOIN users u ON u.organization_id = o.id GROUP BY o.id, o.name ORDER BY value DESC LIMIT 5"
         );
 
-        // Top orgs by cases
-        List<PlatformAnalyticsDTO.OrgMetric> topOrgsByCases = getTopOrganizations(
-            "SELECT o.id, o.name, COUNT(c.id) as value FROM organizations o LEFT JOIN legal_cases c ON c.organization_id = o.id GROUP BY o.id, o.name ORDER BY value DESC LIMIT 5"
-        );
-
-        // Cases by status
-        Map<String, Long> casesByStatus = new HashMap<>();
-        for (CaseStatus status : CaseStatus.values()) {
-            long count = legalCaseRepository.findByStatus(status).size();
-            casesByStatus.put(status.name(), count);
+        // Users by role
+        Map<String, Long> usersByRole = new HashMap<>();
+        try {
+            jdbc.query(
+                "SELECT r.name, COUNT(ur.user_id) as cnt FROM roles r LEFT JOIN user_roles ur ON ur.role_id = r.id WHERE r.name != 'ROLE_SUPERADMIN' GROUP BY r.name ORDER BY cnt DESC",
+                new MapSqlParameterSource(),
+                (rs, rowNum) -> {
+                    usersByRole.put(rs.getString("name").replace("ROLE_", ""), rs.getLong("cnt"));
+                    return null;
+                }
+            );
+        } catch (Exception e) {
+            log.warn("Error fetching users by role: {}", e.getMessage());
         }
+
+        // Top orgs by revenue
+        List<PlatformAnalyticsDTO.OrgMetric> topOrgsByRevenue = getTopOrganizations(
+            "SELECT o.id, o.name, COALESCE(SUM(i.total_amount), 0) as value FROM organizations o LEFT JOIN invoices i ON i.organization_id = o.id AND i.status = 'PAID' GROUP BY o.id, o.name HAVING COALESCE(SUM(i.total_amount), 0) > 0 ORDER BY value DESC LIMIT 5"
+        );
 
         // Plan distribution
         Map<String, Long> orgsByPlan = new HashMap<>();
@@ -649,8 +680,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             .userGrowth(userGrowth)
             .caseGrowth(caseGrowth)
             .topOrgsByUsers(topOrgsByUsers)
-            .topOrgsByCases(topOrgsByCases)
-            .casesByStatus(casesByStatus)
+            .topOrgsByRevenue(topOrgsByRevenue)
+            .usersByRole(usersByRole)
             .organizationsByPlan(orgsByPlan)
             .dailyActiveUsers(dau != null ? dau : 0)
             .weeklyActiveUsers(wau != null ? wau : 0)
@@ -763,9 +794,26 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             }
         }
 
+        // Generate a one-time setup token so the user can set their own password
+        if (userId == null) {
+            throw new ApiException("Failed to create admin user - could not retrieve user ID");
+        }
+        String setupToken = UUID.randomUUID().toString();
+        jdbc.update(
+            "DELETE FROM reset_password_verifications WHERE user_id = :userId",
+            new MapSqlParameterSource().addValue("userId", userId)
+        );
+        jdbc.update(
+            "INSERT INTO reset_password_verifications (user_id, url, expiration_date) VALUES (:userId, :url, :expirationDate)",
+            new MapSqlParameterSource()
+                .addValue("userId", userId)
+                .addValue("url", setupToken)
+                .addValue("expirationDate", LocalDateTime.now().plusDays(7))
+        );
+
         // Send welcome email with invitation to set password
         try {
-            String inviteUrl = frontendBaseUrl + "/login?email=" + dto.getAdminEmail() + "&temp=" + tempPassword;
+            String inviteUrl = frontendBaseUrl + "/user/verify/password/" + setupToken;
             emailService.sendInvitationEmail(
                 dto.getAdminEmail(),
                 org.getName(),
@@ -1525,9 +1573,26 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             }
         }
 
-        // 7. Send invitation email
+        // 7. Generate a one-time setup token so the user can set their own password
+        if (userId == null) {
+            throw new ApiException("Failed to create user - could not retrieve user ID");
+        }
+        String setupToken = UUID.randomUUID().toString();
+        jdbc.update(
+            "DELETE FROM reset_password_verifications WHERE user_id = :userId",
+            new MapSqlParameterSource().addValue("userId", userId)
+        );
+        jdbc.update(
+            "INSERT INTO reset_password_verifications (user_id, url, expiration_date) VALUES (:userId, :url, :expirationDate)",
+            new MapSqlParameterSource()
+                .addValue("userId", userId)
+                .addValue("url", setupToken)
+                .addValue("expirationDate", LocalDateTime.now().plusDays(7))
+        );
+
+        // 8. Send invitation email
         try {
-            String inviteUrl = frontendBaseUrl + "/login?email=" + dto.getEmail() + "&temp=" + tempPassword;
+            String inviteUrl = frontendBaseUrl + "/user/verify/password/" + setupToken;
             emailService.sendInvitationEmail(
                 dto.getEmail(),
                 org.getName(),
@@ -1539,7 +1604,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             log.error("Failed to send invitation email to {}: {}", dto.getEmail(), e.getMessage());
         }
 
-        // 8. Build and return UserDTO
+        // 9. Build and return UserDTO
         UserDTO userDTO = new UserDTO();
         userDTO.setId(userId);
         userDTO.setOrganizationId(organizationId);
@@ -1557,15 +1622,83 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("user", userDTO);
-        result.put("tempPassword", tempPassword);
         return result;
+    }
+
+    @Override
+    @Transactional
+    public void resendInvitation(Long organizationId, Long userId) {
+        log.info("SUPERADMIN: Resending invitation for user {} in organization {}", userId, organizationId);
+
+        // Verify org exists and is active
+        Organization org = organizationRepository.findById(organizationId)
+            .orElseThrow(() -> new ApiException("Organization not found with ID: " + organizationId));
+
+        if (org.getStatus() != Organization.OrganizationStatus.ACTIVE) {
+            throw new ApiException("Cannot resend invitations for a non-active organization (status: " + org.getStatus() + ")");
+        }
+
+        // Verify user exists AND belongs to this organization
+        Map<String, Object> userRow;
+        try {
+            userRow = jdbc.queryForMap(
+                "SELECT id, email, first_name, last_name FROM users WHERE id = :userId AND organization_id = :orgId",
+                new MapSqlParameterSource()
+                    .addValue("userId", userId)
+                    .addValue("orgId", organizationId)
+            );
+        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            throw new ApiException("User not found in this organization");
+        }
+
+        String email = (String) userRow.get("email");
+
+        // Get user's role for the email
+        String roleName = "User";
+        try {
+            roleName = jdbc.queryForObject(
+                "SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = :userId LIMIT 1",
+                new MapSqlParameterSource().addValue("userId", userId),
+                String.class
+            );
+            roleName = roleName.replace("ROLE_", "");
+        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            log.debug("No role found for user {}, using default 'User' in email", userId);
+        } catch (Exception e) {
+            log.warn("Error fetching role for user {}: {}", userId, e.getMessage());
+        }
+
+        // Generate new setup token
+        String setupToken = UUID.randomUUID().toString();
+        jdbc.update(
+            "DELETE FROM reset_password_verifications WHERE user_id = :userId",
+            new MapSqlParameterSource().addValue("userId", userId)
+        );
+        jdbc.update(
+            "INSERT INTO reset_password_verifications (user_id, url, expiration_date) VALUES (:userId, :url, :expirationDate)",
+            new MapSqlParameterSource()
+                .addValue("userId", userId)
+                .addValue("url", setupToken)
+                .addValue("expirationDate", LocalDateTime.now().plusDays(7))
+        );
+
+        // Send invitation email
+        try {
+            String inviteUrl = frontendBaseUrl + "/user/verify/password/" + setupToken;
+            emailService.sendInvitationEmail(email, org.getName(), roleName, inviteUrl, 7);
+        } catch (Exception e) {
+            log.error("Failed to send invitation email to {}: {}", email, e.getMessage());
+            throw new ApiException("Failed to send invitation email. Please try again.");
+        }
+
+        log.info("SUPERADMIN: Invitation resent to {} for organization {}", email, org.getName());
     }
 
     @Override
     public List<RoleSummaryDTO> getAvailableRoles() {
         log.info("SUPERADMIN: Fetching available roles");
         return jdbc.query(
-            "SELECT id, name, display_name, hierarchy_level, is_system_role FROM roles WHERE is_active = true AND name != 'ROLE_SUPERADMIN' ORDER BY hierarchy_level DESC",
+            "SELECT id, name, display_name, hierarchy_level, is_system_role FROM roles WHERE is_active = true AND name NOT IN ('ROLE_SUPERADMIN', 'ROLE_CLIENT') ORDER BY hierarchy_level DESC",
             new MapSqlParameterSource(),
             (rs, rowNum) -> RoleSummaryDTO.builder()
                 .id(rs.getLong("id"))
@@ -1575,5 +1708,131 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                 .isSystemRole(rs.getBoolean("is_system_role"))
                 .build()
         );
+    }
+
+    // ==================== CHANGE USER ROLE ====================
+
+    @Override
+    @Transactional
+    public void changeUserRole(Long userId, String roleName) {
+        log.info("SUPERADMIN: Changing role for user {} to {}", userId, roleName);
+
+        // Validate user exists
+        Integer userCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM users WHERE id = :userId",
+            new MapSqlParameterSource().addValue("userId", userId),
+            Integer.class
+        );
+        if (userCount == null || userCount == 0) {
+            throw new ApiException("User not found with ID: " + userId);
+        }
+
+        // Block SUPERADMIN assignment
+        if ("ROLE_SUPERADMIN".equalsIgnoreCase(roleName)) {
+            throw new ApiException("Cannot assign SUPERADMIN role through this endpoint");
+        }
+
+        // Block ROLE_CLIENT assignment — clients must be created through client intake flow
+        if ("ROLE_CLIENT".equalsIgnoreCase(roleName)) {
+            throw new ApiException("Cannot assign CLIENT role directly. Clients must be created through the client intake process.");
+        }
+
+        // Block changing a SUPERADMIN user's role (prevent accidental demotion)
+        try {
+            Integer isSuperAdmin = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = :userId AND r.name = 'ROLE_SUPERADMIN'",
+                new MapSqlParameterSource().addValue("userId", userId),
+                Integer.class
+            );
+            if (isSuperAdmin != null && isSuperAdmin > 0) {
+                throw new ApiException("Cannot change the role of a SUPERADMIN user");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error checking SUPERADMIN status for user {}: {}", userId, e.getMessage());
+            throw new ApiException("Unable to verify user role status. Please try again.");
+        }
+
+        // Validate role exists and is active
+        Long roleId;
+        try {
+            roleId = jdbc.queryForObject(
+                "SELECT id FROM roles WHERE name = :roleName AND is_active = true",
+                new MapSqlParameterSource().addValue("roleName", roleName),
+                Long.class
+            );
+        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            throw new ApiException("Role '" + roleName + "' not found or inactive");
+        }
+
+        // Get old role for audit trail
+        String oldRole = "NONE";
+        try {
+            oldRole = jdbc.queryForObject(
+                "SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = :userId AND ur.is_primary = true",
+                new MapSqlParameterSource().addValue("userId", userId),
+                String.class
+            );
+        } catch (Exception ignored) {}
+
+        // Delete existing roles and assign new one
+        jdbc.update(
+            "DELETE FROM user_roles WHERE user_id = :userId",
+            new MapSqlParameterSource().addValue("userId", userId)
+        );
+
+        jdbc.update(
+            "INSERT INTO user_roles (user_id, role_id, is_primary) VALUES (:userId, :roleId, true)",
+            new MapSqlParameterSource()
+                .addValue("userId", userId)
+                .addValue("roleId", roleId)
+        );
+
+        log.info("SUPERADMIN: Role changed from {} to {} for user {}", oldRole, roleName, userId);
+    }
+
+    // ==================== SESSION MANAGEMENT ====================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getUserSessions(Long userId) {
+        log.info("SUPERADMIN: Fetching sessions for user {}", userId);
+
+        Integer userCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM users WHERE id = :userId",
+            new MapSqlParameterSource().addValue("userId", userId),
+            Integer.class
+        );
+        if (userCount == null || userCount == 0) {
+            throw new ApiException("User not found with ID: " + userId);
+        }
+
+        return jdbc.queryForList(
+            "SELECT ue.device, ue.ip_address, ue.created_at as login_time, e.type as event_type " +
+            "FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "WHERE ue.user_id = :userId AND e.type = 'LOGIN_ATTEMPT_SUCCESS' " +
+            "ORDER BY ue.created_at DESC LIMIT 50",
+            new MapSqlParameterSource().addValue("userId", userId)
+        );
+    }
+
+    @Override
+    @Transactional
+    public void terminateUserSessions(Long userId) {
+        log.info("SUPERADMIN: Terminating all sessions for user {}", userId);
+
+        Integer count = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM users WHERE id = :userId",
+            new MapSqlParameterSource().addValue("userId", userId),
+            Integer.class
+        );
+        if (count == null || count == 0) {
+            throw new ApiException("User not found with ID: " + userId);
+        }
+
+        tokenBlacklistService.blacklistAllUserTokens(userId);
+        log.info("SUPERADMIN: All sessions terminated for user {}", userId);
     }
 }

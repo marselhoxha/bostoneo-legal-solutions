@@ -165,10 +165,17 @@
             <!-- Organization Info -->
             <div class="col-lg-6">
               <div class="info-card">
-                <h6 class="info-card-title">
-                  <i class="ri-building-2-line me-2 text-primary"></i>Organization Information
-                </h6>
-                <div class="info-list">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="info-card-title mb-0">
+                    <i class="ri-building-2-line me-2 text-primary"></i>Organization Information
+                  </h6>
+                  <button *ngIf="!isEditing" class="btn btn-sm btn-soft-primary" (click)="startEditing()">
+                    <i class="ri-edit-line me-1"></i>Edit
+                  </button>
+                </div>
+
+                <!-- Read Mode -->
+                <div class="info-list" *ngIf="!isEditing">
                   <div class="info-item">
                     <span class="info-label">Name</span>
                     <span class="info-value">{{ organization.name }}</span>
@@ -194,6 +201,43 @@
                   <div class="info-item" *ngIf="organization.address">
                     <span class="info-label">Address</span>
                     <span class="info-value">{{ organization.address }}</span>
+                  </div>
+                </div>
+
+                <!-- Edit Mode -->
+                <div *ngIf="isEditing">
+                  <div class="mb-3">
+                    <label class="form-label">Name</label>
+                    <input class="form-control" [(ngModel)]="editForm.name">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Slug</label>
+                    <input class="form-control" [(ngModel)]="editForm.slug">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Phone</label>
+                    <input class="form-control" [(ngModel)]="editForm.phone" placeholder="Phone number">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Address</label>
+                    <input class="form-control" [(ngModel)]="editForm.address" placeholder="Address">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Website</label>
+                    <input class="form-control" [(ngModel)]="editForm.website" placeholder="https://...">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Plan</label>
+                    <select class="form-select" [(ngModel)]="editForm.planType">
+                      <option *ngFor="let plan of planTypes" [value]="plan">{{ plan }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-primary" (click)="saveOrganization()" [disabled]="isSavingOrg">
+                      <span *ngIf="isSavingOrg" class="spinner-border spinner-border-sm me-1"></span>
+                      Save Changes
+                    </button>
+                    <button class="btn btn-secondary" (click)="cancelEditing()" [disabled]="isSavingOrg">Cancel</button>
                   </div>
                 </div>
               </div>
@@ -356,6 +400,7 @@
                   <th>Status</th>
                   <th>MFA</th>
                   <th>Created</th>
+                  <th class="text-end">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -401,9 +446,15 @@
                   <td>
                     <small class="text-muted">{{ formatDate(user.createdAt) }}</small>
                   </td>
+                  <td class="text-end">
+                    <button class="btn btn-soft-info btn-sm" (click)="resendInvitation(user)"
+                            title="Resend invitation email">
+                      <i class="ri-mail-send-line me-1"></i>Resend Invite
+                    </button>
+                  </td>
                 </tr>
                 <tr *ngIf="users.length === 0">
-                  <td colspan="5" class="text-center py-4 text-muted">
+                  <td colspan="6" class="text-center py-4 text-muted">
                     <i class="ri-user-line fs-2 d-block mb-2"></i>
                     No users found
                   </td>

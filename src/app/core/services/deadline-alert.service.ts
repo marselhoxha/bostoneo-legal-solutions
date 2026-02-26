@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, interval, Subscription } from 'rxjs';
 import { NotificationTriggerService } from './notification-trigger.service';
 import { environment } from '../../../environments/environment';
+import { Key } from '../../enum/key.enum';
 
 export interface Task {
   id: number;
@@ -50,6 +51,9 @@ export class DeadlineAlertService {
    * Start periodic deadline checking (every 4 hours)
    */
   startDeadlineMonitoring(): void {
+    // SUPERADMIN is platform-level — no org-level tasks to monitor
+    if (this.isSuperAdmin()) return;
+
     if (this.checkInterval) {
       this.checkInterval.unsubscribe();
     }
@@ -216,5 +220,16 @@ export class DeadlineAlertService {
         error: (error) => reject(error)
       });
     });
+  }
+
+  private isSuperAdmin(): boolean {
+    try {
+      const token = localStorage.getItem(Key.TOKEN);
+      if (!token) return false;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.roles?.includes('ROLE_SUPERADMIN') || false;
+    } catch {
+      return false;
+    }
   }
 }

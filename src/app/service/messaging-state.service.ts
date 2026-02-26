@@ -73,17 +73,20 @@ export class MessagingStateService implements OnDestroy {
     private userService: UserService,
     private ngZone: NgZone
   ) {
+    // SUPERADMIN is platform-level — no org context, skip messaging entirely
+    if (this.isSuperAdminFromToken()) return;
+
     // Defer initialization by 3 seconds to avoid blocking login with HTTP calls + WebSocket
     const token = localStorage.getItem(Key.TOKEN);
     if (token && !this.initialized) {
       setTimeout(() => {
-        if (!this.initialized) this.initialize();
+        if (!this.initialized && !this.isSuperAdminFromToken()) this.initialize();
       }, 3000);
     }
 
     // Also subscribe to user data changes for login/logout
     this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(user => {
-      if (user && !this.initialized) {
+      if (user && !this.initialized && !this.isSuperAdminFromToken()) {
         setTimeout(() => {
           if (!this.initialized) this.initialize();
         }, 3000);
@@ -91,6 +94,18 @@ export class MessagingStateService implements OnDestroy {
         this.reset();
       }
     });
+  }
+
+  /**
+   * Check SUPERADMIN role from JWT token (synchronous, available immediately)
+   */
+  private isSuperAdminFromToken(): boolean {
+    try {
+      const token = localStorage.getItem(Key.TOKEN);
+      if (!token) return false;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.roles?.includes('ROLE_SUPERADMIN') || false;
+    } catch { return false; }
   }
 
   /**

@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgApexchartsModule } from 'ng-apexcharts';
 
 import { SuperadminRoutingModule } from './superadmin-routing.module';
 import { SuperadminDashboardComponent } from './components/superadmin-dashboard/superadmin-dashboard.component';
@@ -16,6 +17,7 @@ import { AnnouncementManagerComponent } from './components/announcement-manager/
 import { IntegrationStatusComponent } from './components/integration-status/integration-status.component';
 import { SecurityDashboardComponent } from './components/security-dashboard/security-dashboard.component';
 import { CreateOrganizationComponent } from './components/create-organization/create-organization.component';
+import { ImageUrlPipe } from '../../pipes/image-url.pipe';
 
 @NgModule({
   declarations: [
@@ -37,7 +39,9 @@ import { CreateOrganizationComponent } from './components/create-organization/cr
     FormsModule,
     ReactiveFormsModule,
     NgbModule,
-    SuperadminRoutingModule
+    SuperadminRoutingModule,
+    NgApexchartsModule,
+    ImageUrlPipe
   ]
 })
 export class SuperadminModule { }

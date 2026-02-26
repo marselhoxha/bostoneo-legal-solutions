@@ -387,6 +387,14 @@ export interface RoleSummary {
   isSystemRole: boolean;
 }
 
+// Login session for session management
+export interface LoginSession {
+  device: string;
+  ip_address: string;
+  login_time: string;
+  event_type: string;
+}
+
 // Create user for organization
 export interface CreateUserForOrg {
   firstName: string;
