@@ -50,18 +50,62 @@
   border-radius: 12px;
   border: 1px solid var(--vz-border-color);
   margin-bottom: 1.5rem;
-  overflow: hidden;
 }
+
+.stats-row .stat-item:first-child { border-radius: 12px 0 0 12px; }
+.stats-row .stat-item:last-child { border-radius: 0 12px 12px 0; }
 
 .stat-item {
   flex: 1;
   padding: 1.25rem 1.5rem;
   border-right: 1px solid var(--vz-border-color);
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .stat-item:last-child { border-right: none; }
 .stat-item:hover { filter: brightness(0.97); }
+
+/* Tooltip chip on hover */
+.stat-item[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--vz-dark, #212529);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stat-item[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--vz-dark, #212529);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+
+.stat-item[data-tooltip]:hover::after,
+.stat-item[data-tooltip]:hover::before {
+  opacity: 1;
+}
 
 .stat-item:nth-child(1) { background: rgba(var(--vz-success-rgb), 0.08); }
 .stat-item:nth-child(2) { background: rgba(var(--vz-warning-rgb), 0.08); }

@@ -13,6 +13,7 @@ import { AnnouncementManagerComponent } from './components/announcement-manager/
 import { IntegrationStatusComponent } from './components/integration-status/integration-status.component';
 import { SecurityDashboardComponent } from './components/security-dashboard/security-dashboard.component';
 import { CreateOrganizationComponent } from './components/create-organization/create-organization.component';
+import { ApiDocsComponent } from './components/api-docs/api-docs.component';
 
 const routes: Routes = [
   {
@@ -83,6 +84,11 @@ const routes: Routes = [
         path: 'security',
         component: SecurityDashboardComponent,
         data: { title: 'Security Dashboard' }
+      },
+      {
+        path: 'api-docs',
+        component: ApiDocsComponent,
+        data: { title: 'API Documentation' }
       }
     ]
   }

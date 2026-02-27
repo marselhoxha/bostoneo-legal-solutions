@@ -449,8 +449,14 @@ public class LegalResearchConversationService {
                 + "2022: 1580\n\n"
                 + "Use these formats whenever you're presenting timelines, comparisons, statistics, or trends. "
                 + "The system will automatically convert them into beautiful visual charts.\n\n"
+                + "## Sources Citation\n"
+                + "At the VERY END of your response (after all content, before follow-up questions), "
+                + "include a SOURCES line listing ALL cases, statutes, and regulations you cited, separated by |.\n"
+                + "Format: SOURCES: Case Name, Citation | Statute Reference | Another Case\n"
+                + "Example: SOURCES: Brune v. Belinkoff, 354 Mass. 102 | M.G.L. c. 231 § 60B | Lech v. Boisvert\n"
+                + "This MUST be on its own line. Do NOT skip this.\n\n"
                 + "## Follow-up Questions\n"
-                + "After your main response, include a \"## Follow-up Questions\" section.\n\n"
+                + "After the SOURCES line, include a \"## Follow-up Questions\" section.\n\n"
                 + "⚠️⚠️⚠️ CRITICAL - QUESTION DIRECTION ⚠️⚠️⚠️\n"
                 + "These are clickable suggestions for the USER to ask YOU (the AI) for more research.\n"
                 + "The USER clicks them → they get sent to YOU → YOU answer them.\n"
@@ -604,11 +610,11 @@ public class LegalResearchConversationService {
     }
 
     /**
-     * Mark an AI message as reviewed by an attorney - ABA Opinion 512 compliance
-     * TENANT FILTERED
+     * Toggle bookmark on an AI message
+     * TENANT FILTERED + USER OWNERSHIP CHECK
      */
     @Transactional
-    public AiConversationMessage markAsReviewed(Long messageId, Long userId) {
+    public AiConversationMessage toggleBookmark(Long messageId, Long userId) {
         Long orgId = getRequiredOrganizationId();
         AiConversationMessage message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new IllegalArgumentException("Message not found"));
@@ -618,8 +624,24 @@ public class LegalResearchConversationService {
             throw new IllegalArgumentException("Message not found or access denied");
         }
 
-        message.setReviewedBy(userId);
-        message.setReviewedAt(java.time.LocalDateTime.now());
+        // User ownership check: bookmarks are personal, verify session belongs to user
+        AiConversationSession session = message.getSession();
+        if (!userId.equals(session.getUserId())) {
+            throw new IllegalArgumentException("Message not found or access denied");
+        }
+
+        // Toggle the bookmark
+        message.setBookmarked(!Boolean.TRUE.equals(message.getBookmarked()));
         return messageRepository.save(message);
+    }
+
+    /**
+     * Get general conversations with bookmarked messages, filtered by task type - TENANT FILTERED
+     */
+    @Transactional(readOnly = true)
+    public Page<AiConversationSession> getBookmarkedGeneralConversationsByTaskType(String taskType, Long userId, int page, int size) {
+        Long orgId = getRequiredOrganizationId();
+        Pageable pageable = PageRequest.of(page, size);
+        return sessionRepository.findBookmarkedGeneralConversationsByUserIdAndOrganizationIdAndTaskType(userId, orgId, taskType, pageable);
     }
 }

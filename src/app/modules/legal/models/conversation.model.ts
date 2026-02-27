@@ -12,6 +12,7 @@ export interface Message {
   parsedSections?: any;
   analysisId?: number; // For document analysis
   researchMode?: 'FAST' | 'THOROUGH'; // Research mode used for this response
+  bookmarked?: boolean;
 }
 
 /**

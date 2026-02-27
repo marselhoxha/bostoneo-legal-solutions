@@ -22,7 +22,20 @@ import {
   OrganizationFeatures,
   RoleSummary,
   CreateUserForOrg,
-  LoginSession
+  LoginSession,
+  OrgActiveUsers,
+  DrillDownUserActivity,
+  UserSessionItem,
+  OrgApiRequests,
+  EndpointBreakdown,
+  OrgStorage,
+  OrgErrors,
+  OrgSecurity,
+  EngagementMetrics,
+  DataGrowth,
+  FeatureAdoption,
+  ActiveSession,
+  LoginEvent
 } from '../models/superadmin.models';
 
 interface ApiResponse<T> {
@@ -212,6 +225,34 @@ export class SuperAdminService {
   getSystemHealth(): Observable<SystemHealth> {
     return this.http.get<ApiResponse<{ health: SystemHealth }>>(`${this.apiUrl}/system/health`)
       .pipe(map(response => response.data.health));
+  }
+
+  /**
+   * Get active sessions (users logged in within a time window)
+   */
+  getActiveSessions(window: string = '1h'): Observable<ActiveSession[]> {
+    const params = new HttpParams().set('window', window);
+    return this.http.get<ApiResponse<{ sessions: ActiveSession[] }>>(
+      `${this.apiUrl}/system/active-sessions`, { params }
+    ).pipe(map(response => response.data.sessions));
+  }
+
+  /**
+   * Get recent login events (paginated)
+   */
+  getLoginEvents(page: number = 0, size: number = 20): Observable<PageData<LoginEvent>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    return this.http.get<ApiResponse<{ loginEvents: LoginEvent[], page: any }>>(
+      `${this.apiUrl}/system/login-events`, { params }
+    ).pipe(
+      map(response => ({
+        content: response.data.loginEvents,
+        page: response.data.page
+      }))
+    );
   }
 
   // ==================== ANALYTICS ====================
@@ -470,5 +511,75 @@ export class SuperAdminService {
     return this.http.post<ApiResponse<void>>(
       `${this.apiUrl}/users/${userId}/terminate-sessions`, {}
     ).pipe(map(() => void 0));
+  }
+
+  // ==================== DASHBOARD DRILL-DOWNS ====================
+
+  getActiveUsersByOrg(): Observable<OrgActiveUsers[]> {
+    return this.http.get<ApiResponse<{ organizations: OrgActiveUsers[] }>>(
+      `${this.apiUrl}/dashboard/active-users-by-org`
+    ).pipe(map(r => r.data.organizations));
+  }
+
+  getActiveUsersForOrg(orgId: number): Observable<DrillDownUserActivity[]> {
+    return this.http.get<ApiResponse<{ users: DrillDownUserActivity[] }>>(
+      `${this.apiUrl}/dashboard/active-users-by-org/${orgId}/users`
+    ).pipe(map(r => r.data.users));
+  }
+
+  getUserSessionsDrillDown(orgId: number, userId: number): Observable<UserSessionItem[]> {
+    return this.http.get<ApiResponse<{ sessions: UserSessionItem[] }>>(
+      `${this.apiUrl}/dashboard/active-users-by-org/${orgId}/users/${userId}/sessions`
+    ).pipe(map(r => r.data.sessions));
+  }
+
+  getRequestsByOrg(timeWindow: string = '1h'): Observable<OrgApiRequests[]> {
+    const params = new HttpParams().set('timeWindow', timeWindow);
+    return this.http.get<ApiResponse<{ organizations: OrgApiRequests[] }>>(
+      `${this.apiUrl}/dashboard/requests-by-org`, { params }
+    ).pipe(map(r => r.data.organizations));
+  }
+
+  getRequestBreakdownForOrg(orgId: number, timeWindow: string = '1h'): Observable<EndpointBreakdown[]> {
+    const params = new HttpParams().set('timeWindow', timeWindow);
+    return this.http.get<ApiResponse<{ breakdown: EndpointBreakdown[] }>>(
+      `${this.apiUrl}/dashboard/requests-by-org/${orgId}/breakdown`, { params }
+    ).pipe(map(r => r.data.breakdown));
+  }
+
+  getStorageByOrg(): Observable<OrgStorage[]> {
+    return this.http.get<ApiResponse<{ organizations: OrgStorage[] }>>(
+      `${this.apiUrl}/dashboard/storage-by-org`
+    ).pipe(map(r => r.data.organizations));
+  }
+
+  getErrorsByOrg(): Observable<OrgErrors[]> {
+    return this.http.get<ApiResponse<{ organizations: OrgErrors[] }>>(
+      `${this.apiUrl}/dashboard/errors-by-org`
+    ).pipe(map(r => r.data.organizations));
+  }
+
+  getSecurityByOrg(): Observable<OrgSecurity[]> {
+    return this.http.get<ApiResponse<{ organizations: OrgSecurity[] }>>(
+      `${this.apiUrl}/dashboard/security-by-org`
+    ).pipe(map(r => r.data.organizations));
+  }
+
+  getEngagementMetrics(): Observable<EngagementMetrics> {
+    return this.http.get<ApiResponse<{ engagement: EngagementMetrics }>>(
+      `${this.apiUrl}/dashboard/engagement`
+    ).pipe(map(r => r.data.engagement));
+  }
+
+  getDataGrowth(): Observable<DataGrowth> {
+    return this.http.get<ApiResponse<{ growth: DataGrowth }>>(
+      `${this.apiUrl}/dashboard/data-growth`
+    ).pipe(map(r => r.data.growth));
+  }
+
+  getFeatureAdoption(): Observable<FeatureAdoption> {
+    return this.http.get<ApiResponse<{ adoption: FeatureAdoption }>>(
+      `${this.apiUrl}/dashboard/feature-adoption`
+    ).pipe(map(r => r.data.adoption));
   }
 }

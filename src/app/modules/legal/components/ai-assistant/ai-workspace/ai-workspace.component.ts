@@ -241,6 +241,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Filter for workflow status
   workflowFilter: 'all' | 'active' | 'pending' | 'completed' = 'all';
 
+  // Bookmark filter state
+  showBookmarkedOnly = false;
+
   // Search query for workflows
   workflowSearchQuery = '';
 
@@ -2859,7 +2862,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     let completedRequests = 0;
 
     taskTypes.forEach(backendTaskType => {
-      this.legalResearchService.getGeneralConversationsByTaskType(backendTaskType, 0, 50)
+      const bookmarkedFilter = backendTaskType === 'LEGAL_QUESTION' ? this.showBookmarkedOnly : undefined;
+      this.legalResearchService.getGeneralConversationsByTaskType(backendTaskType, 0, 50, bookmarkedFilter || undefined)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
@@ -2895,6 +2899,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           error: (error) => {
             console.error(`Error loading ${backendTaskType} conversations:`, error);
             completedRequests++;
+            // Still update state when all requests are complete (even on error) to avoid stale data
+            if (completedRequests === taskTypes.length) {
+              this.stateService.setConversations(allConversations);
+              this.cdr.detectChanges();
+            }
           }
         });
     });
@@ -2949,10 +2958,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               timestamp: new Date(msg.createdAt || new Date())
             };
 
-            // Add research mode for assistant messages (use message's own research mode from backend)
+            // Add bookmark, id, and metadata for assistant messages
             if (msg.role === 'assistant') {
-              // Prefer message-level researchMode, fall back to conversation's mode for legacy data
-              baseMessage.researchMode = msg.researchMode || conv.researchMode || 'FAST';
+              baseMessage.id = msg.id;
+              baseMessage.bookmarked = msg.bookmarked || false;
             }
 
             // Pass metadata through for quality score display and other features
@@ -3040,7 +3049,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               lastAssistantMsg.content = cleanedContent;
             }
 
-            this.stateService.setConversationMessages(messages);
+            // Filter to bookmarked responses only when "Saved" tab is active
+            const displayMessages = this.showBookmarkedOnly
+              ? this.filterBookmarkedMessages(messages)
+              : messages;
+
+            this.stateService.setConversationMessages(displayMessages);
 
             // Add another setTimeout to ensure Angular has time to process
             setTimeout(() => {
@@ -4315,9 +4329,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         content: msg.content,
         timestamp: new Date(msg.createdAt || new Date())
       };
-      // Add research mode for assistant messages (use message's own research mode from backend)
+      // Add bookmark and metadata for assistant messages
       if (msg.role === 'assistant') {
-        baseMessage.researchMode = msg.researchMode || conv.researchMode || 'FAST';
+        baseMessage.bookmarked = msg.bookmarked || false;
+        baseMessage.id = msg.id;
         // Pass metadata through for quality score display
         if (msg.metadata) {
           try {
@@ -4330,7 +4345,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return baseMessage;
     });
 
-    this.stateService.setConversationMessages(messages);
+    // Filter to bookmarked responses only when "Saved" tab is active
+    const displayMessages = this.showBookmarkedOnly
+      ? this.filterBookmarkedMessages(messages)
+      : messages;
+
+    this.stateService.setConversationMessages(displayMessages);
     this.stateService.setShowChat(true);
     this.cdr.detectChanges();
   }
@@ -4494,6 +4514,41 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   setWorkflowFilter(filter: 'all' | 'active' | 'pending' | 'completed'): void {
     this.workflowFilter = filter;
     this.cdr.detectChanges();
+  }
+
+  setBookmarkFilter(bookmarked: boolean): void {
+    this.showBookmarkedOnly = bookmarked;
+    this.loadConversations();
+  }
+
+  /**
+   * Filter messages to show only bookmarked assistant responses + their preceding user questions.
+   * Used when "Saved" tab is active to show only relevant responses instead of full conversation.
+   */
+  private filterBookmarkedMessages(messages: any[]): any[] {
+    const filtered: any[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      if (messages[i].role === 'assistant' && messages[i].bookmarked) {
+        // Include the preceding user question for context
+        if (i > 0 && messages[i - 1].role === 'user') {
+          filtered.push(messages[i - 1]);
+        }
+        filtered.push(messages[i]);
+      }
+    }
+    return filtered;
+  }
+
+  /**
+   * Show all messages in the current conversation (exit bookmarked-only view).
+   */
+  showAllMessages(): void {
+    const activeId = this.stateService.getActiveConversationId();
+    if (activeId) {
+      this.showBookmarkedOnly = false;
+      this.loadConversation(activeId);
+      this.loadConversations(); // Refresh sidebar to reflect "All" tab
+    }
   }
 
   /**
@@ -6353,12 +6408,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     // Extract follow-up questions and remove section from content
                     const cleanedContent = this.extractAndRemoveFollowUpQuestions(message.content);
 
-                    // Add assistant message to chat view (with cleaned content and research mode)
-                    const assistantMessage = {
+                    // Add assistant message to chat view
+                    const assistantMessage: any = {
                       role: 'assistant' as 'assistant',
                       content: cleanedContent,
                       timestamp: new Date(message.createdAt || new Date()),
-                      researchMode: researchMode as 'FAST' | 'THOROUGH'
+                      id: message.id,
+                      bookmarked: message.bookmarked || false
                     };
                     this.stateService.addConversationMessage(assistantMessage);
 
@@ -7397,12 +7453,13 @@ You can:
             // Extract follow-up questions and remove section from content
             const cleanedContent = this.extractAndRemoveFollowUpQuestions(message.content);
 
-            // Add assistant message to chat view (with cleaned content and research mode)
-            const assistantMessage = {
+            // Add assistant message to chat view
+            const assistantMessage: any = {
               role: 'assistant' as 'assistant',
               content: cleanedContent,
               timestamp: new Date(message.createdAt || new Date()),
-              researchMode: researchMode as 'FAST' | 'THOROUGH'
+              id: message.id,
+              bookmarked: message.bookmarked || false
             };
             this.stateService.addConversationMessage(assistantMessage);
 
@@ -8588,15 +8645,22 @@ You can:
     }
   }
 
-  markAsReviewed(message: any): void {
-    if (!message.id || message.reviewedAt) return;
-    this.legalResearchService.markAsReviewed(message.id).subscribe({
+  toggleBookmark(message: any): void {
+    if (!message.id) return;
+    const previousState = message.bookmarked;
+    message.bookmarked = !previousState; // Optimistic update
+    this.cdr.detectChanges();
+
+    this.legalResearchService.toggleBookmark(message.id).subscribe({
       next: (updated) => {
-        message.reviewedBy = updated.reviewedBy;
-        message.reviewedAt = updated.reviewedAt;
+        message.bookmarked = updated.bookmarked; // Confirm with server state
         this.cdr.detectChanges();
       },
-      error: (err) => console.error('Failed to mark as reviewed:', err)
+      error: (err) => {
+        message.bookmarked = previousState; // Revert on failure
+        this.cdr.detectChanges();
+        this.notificationService.error('Error', 'Failed to toggle bookmark');
+      }
     });
   }
 

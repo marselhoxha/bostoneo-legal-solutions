@@ -1,22 +1,851 @@
-.avatar-lg {
-  width: 4rem;
-  height: 4rem;
+// ═══════════════════════════════════════════════
+// System Health — Command Center Dashboard
+// ═══════════════════════════════════════════════
+
+// ─── Page Header ─────────────────────────────
+.sh-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.75rem 0 1rem;
 }
 
-.avatar-sm {
-  width: 2.5rem;
-  height: 2.5rem;
+// ─── Status Banner ───────────────────────────
+.sh-banner {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+
+  &--success { box-shadow: 0 0 0 1px rgba(var(--vz-success-rgb), 0.2), 0 4px 24px -4px rgba(0, 0, 0, 0.3); }
+  &--warning { box-shadow: 0 0 0 1px rgba(var(--vz-warning-rgb), 0.3), 0 4px 24px -4px rgba(0, 0, 0, 0.3); }
+  &--danger  { box-shadow: 0 0 0 1px rgba(var(--vz-danger-rgb), 0.3), 0 4px 24px -4px rgba(0, 0, 0, 0.3); }
+
+  &__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+  }
+
+  &__content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-width: 120px;
+  }
+
+  &__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &--success {
+      background: #4ade80;
+      box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+      animation: banner-pulse 2s ease-in-out infinite;
+    }
+    &--warning {
+      background: #fbbf24;
+      box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+      animation: banner-pulse 1.5s ease-in-out infinite;
+    }
+    &--danger {
+      background: #f87171;
+      box-shadow: 0 0 8px rgba(248, 113, 113, 0.6);
+      animation: banner-pulse 1s ease-in-out infinite;
+    }
+    &--secondary {
+      background: #94a3b8;
+    }
+  }
+
+  &__label {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  &__metrics {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  &__sep {
+    width: 1px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+  }
+
+  &__metric {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #cbd5e1;
+
+    > i {
+      font-size: 1rem;
+      opacity: 0.7;
+    }
+  }
+
+  &__metric-lbl {
+    display: block;
+    font-size: 0.5625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+
+  &__metric-val {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    font-feature-settings: "tnum";
+    line-height: 1;
+
+    small {
+      font-size: 0.6875rem;
+      font-weight: 500;
+      color: #94a3b8;
+      margin-left: 1px;
+    }
+
+    &--alert {
+      color: #f87171;
+    }
+  }
 }
 
-.avatar-title {
-  width: 100%;
-  height: 100%;
+@keyframes banner-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px currentColor; }
+  50% { opacity: 0.6; box-shadow: 0 0 16px currentColor; }
+}
+
+// ─── Tab Navigation ──────────────────────────
+.sh-tabs {
+  background: var(--vz-light);
+  padding: 4px;
+  border-radius: 10px;
+  display: inline-flex;
+  gap: 2px;
+
+  .nav-link {
+    padding: 0.5rem 1.125rem;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--vz-secondary-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+
+    &:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.5);
+      color: var(--vz-body-color);
+    }
+
+    &.active {
+      background: var(--vz-card-bg);
+      color: var(--vz-primary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      font-weight: 600;
+    }
+  }
+}
+
+.sh-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  background: rgba(var(--vz-primary-rgb), 0.12);
+  color: var(--vz-primary);
+  margin-left: 6px;
+  font-feature-settings: "tnum";
+}
+
+// ─── KPI Cards ───────────────────────────────
+.sh-kpi {
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.625rem;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-left: 4px solid transparent;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  }
+
+  &--success {
+    border-left-color: var(--vz-success);
+    background: linear-gradient(135deg, rgba(var(--vz-success-rgb), 0.03) 0%, transparent 50%);
+  }
+  &--warning {
+    border-left-color: var(--vz-warning);
+    background: linear-gradient(135deg, rgba(var(--vz-warning-rgb), 0.03) 0%, transparent 50%);
+  }
+  &--danger {
+    border-left-color: var(--vz-danger);
+    background: linear-gradient(135deg, rgba(var(--vz-danger-rgb), 0.03) 0%, transparent 50%);
+  }
+  &--info {
+    border-left-color: var(--vz-info);
+    background: linear-gradient(135deg, rgba(var(--vz-info-rgb), 0.03) 0%, transparent 50%);
+  }
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+
+    &--success { background: rgba(var(--vz-success-rgb), 0.12); color: var(--vz-success); }
+    &--warning { background: rgba(var(--vz-warning-rgb), 0.12); color: var(--vz-warning); }
+    &--danger  { background: rgba(var(--vz-danger-rgb), 0.12);  color: var(--vz-danger); }
+    &--info    { background: rgba(var(--vz-info-rgb), 0.12);    color: var(--vz-info); }
+  }
+
+  &__label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--vz-secondary-color);
+    margin-bottom: 0;
+  }
+
+  &__big {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--vz-heading-color);
+    font-feature-settings: "tnum";
+    line-height: 1.25;
+  }
+
+  &__pct {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--vz-secondary-color);
+    margin-left: 1px;
+  }
+
+  &__sub {
+    font-size: 0.6875rem;
+    color: var(--vz-secondary-color);
+
+    i {
+      font-size: 0.75rem;
+      margin-right: 2px;
+      vertical-align: -1px;
+    }
+  }
+
+  &__minibar {
+    height: 4px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  &__minibar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  &__vdiv {
+    width: 1px;
+    height: 32px;
+    background: var(--vz-border-color);
+    flex-shrink: 0;
+  }
+}
+
+// ─── Shared Card Chrome ──────────────────────
+.sh-card {
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.625rem;
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--vz-border-color);
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--vz-border-color);
+    font-size: 0.75rem;
+    color: var(--vz-secondary-color);
+  }
+
+  &__badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+
+    &--primary { background: rgba(var(--vz-primary-rgb), 0.1); color: var(--vz-primary); }
+    &--success { background: rgba(var(--vz-success-rgb), 0.1); color: var(--vz-success); }
+    &--info    { background: rgba(var(--vz-info-rgb), 0.1);    color: var(--vz-info); }
+    &--danger  { background: rgba(var(--vz-danger-rgb), 0.1);  color: var(--vz-danger); }
+    &--warning { background: rgba(var(--vz-warning-rgb), 0.1); color: var(--vz-warning); }
+  }
+}
+
+// ─── Donut Chart ─────────────────────────────
+.sh-donut {
+  --fill-color: var(--vz-success);
+  --track-color: rgba(0, 0, 0, 0.06);
+
+  width: 148px;
+  height: 148px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--fill-color) calc(var(--gauge-pct, 0) * 1%),
+    var(--track-color) calc(var(--gauge-pct, 0) * 1%)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
+  position: relative;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: scale(1.03);
+  }
+
+  &--success {
+    --fill-color: var(--vz-success);
+    filter: drop-shadow(0 0 12px rgba(var(--vz-success-rgb), 0.15));
+  }
+  &--warning {
+    --fill-color: var(--vz-warning);
+    filter: drop-shadow(0 0 12px rgba(var(--vz-warning-rgb), 0.2));
+  }
+  &--danger {
+    --fill-color: var(--vz-danger);
+    filter: drop-shadow(0 0 12px rgba(var(--vz-danger-rgb), 0.25));
+  }
+
+  &__inner {
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    background: var(--vz-card-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  &__value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--vz-heading-color);
+    font-feature-settings: "tnum";
+    line-height: 1;
+  }
+
+  &__unit {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--vz-secondary-color);
+    margin-top: -2px;
+  }
+
+  &__sublabel {
+    font-size: 0.5625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--vz-secondary-color);
+    margin-top: 2px;
+  }
 }
 
+// ─── Memory Chips ────────────────────────────
+.sh-mem-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.sh-mem-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  background: var(--vz-light);
+  border-radius: 8px;
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &__label {
+    display: block;
+    font-size: 0.5625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--vz-secondary-color);
+    line-height: 1;
+  }
+
+  &__value {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--vz-heading-color);
+    font-feature-settings: "tnum";
+    line-height: 1.3;
+  }
+}
+
+// ─── Application Properties ──────────────────
+.sh-props {
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6875rem 1rem;
+    border-bottom: 1px solid var(--vz-border-color);
+    transition: background 0.15s ease;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: rgba(var(--vz-primary-rgb), 0.02);
+    }
+  }
+
+  &__label {
+    font-size: 0.8125rem;
+    color: var(--vz-secondary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+
+    i {
+      font-size: 0.9375rem;
+    }
+  }
+}
+
+// ─── Avatars ─────────────────────────────────
+.sh-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+  position: relative;
+
+  &--sm {
+    width: 26px;
+    height: 26px;
+    font-size: 0.5625rem;
+    border-radius: 6px;
+  }
+
+  &--primary { background: rgba(var(--vz-primary-rgb), 0.12); color: var(--vz-primary); }
+  &--success { background: rgba(var(--vz-success-rgb), 0.12); color: var(--vz-success); }
+  &--danger  { background: rgba(var(--vz-danger-rgb), 0.12);  color: var(--vz-danger); }
+  &--info    { background: rgba(var(--vz-info-rgb), 0.12);    color: var(--vz-info); }
+
+  &__online {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--vz-success);
+    border: 2px solid var(--vz-card-bg);
+  }
+}
+
+// ─── Organization Chip ───────────────────────
+.sh-org-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  background: var(--vz-light);
+  border-radius: 5px;
+  font-size: 0.75rem;
+  color: var(--vz-body-color);
+
+  i {
+    font-size: 0.6875rem;
+    color: var(--vz-secondary-color);
+  }
+}
+
+// ─── Status Dots ─────────────────────────────
+.sh-status-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+
+  &--success {
+    background: rgba(var(--vz-success-rgb), 0.12);
+    color: var(--vz-success);
+  }
+  &--danger {
+    background: rgba(var(--vz-danger-rgb), 0.12);
+    color: var(--vz-danger);
+  }
+}
+
+// ─── Session Window Pills ────────────────────
+.sh-pill-group {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--vz-light);
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.sh-pill {
+  padding: 0.25rem 0.75rem;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--vz-secondary-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(.sh-pill--active) {
+    color: var(--vz-body-color);
+  }
+
+  &--active {
+    background: var(--vz-card-bg);
+    color: var(--vz-primary);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    font-weight: 600;
+  }
+}
+
+// ─── Failed Login Row ────────────────────────
+.sh-row-fail {
+  background-color: rgba(var(--vz-danger-rgb), 0.03) !important;
+}
+
+// ─── Code Badge ──────────────────────────────
+.sh-code {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.4375rem;
+  background: var(--vz-light);
+  border-radius: 4px;
+  color: var(--vz-heading-color);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+// ─── Tabular Numbers ─────────────────────────
+.sh-tnum {
+  font-feature-settings: "tnum";
+}
+
+// ─── Storage Card Grid ───────────────────────
+.sh-storage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.sh-storage-card {
+  border: 1px solid var(--vz-border-color);
+  border-radius: 10px;
+  padding: 0;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    border-color: rgba(var(--vz-primary-rgb), 0.2);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.875rem 0;
+  }
+
+  &__pct {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  &__bar {
+    height: 4px;
+    background: rgba(0, 0, 0, 0.04);
+    margin: 0.5rem 0.875rem 0;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  &__bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+
+    &--empty {
+      background: var(--vz-border-color);
+      opacity: 0.5;
+    }
+
+    &--none {
+      background: repeating-linear-gradient(
+        90deg,
+        var(--vz-border-color) 0px,
+        var(--vz-border-color) 4px,
+        transparent 4px,
+        transparent 8px
+      );
+      opacity: 0.4;
+    }
+  }
+
+  &__stats {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0.625rem 0;
+    margin: 0.5rem 0.875rem 0;
+    border-top: 1px solid var(--vz-border-color);
+  }
+
+  &__stat {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--vz-body-color);
+
+    i {
+      font-size: 0.8125rem;
+      color: var(--vz-secondary-color);
+    }
+
+    small {
+      font-size: 0.625rem;
+    }
+
+    &:not(:last-child) {
+      border-right: 1px solid var(--vz-border-color);
+    }
+  }
+}
+
+// ─── Empty States ────────────────────────────
+.sh-empty {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+
+  &--success {
+    background: linear-gradient(180deg, rgba(var(--vz-success-rgb), 0.03) 0%, transparent 100%);
+  }
+
+  &__visual {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    margin-bottom: 0.75rem;
+  }
+
+  &__ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px dashed var(--vz-border-color);
+    animation: ring-spin 20s linear infinite;
+
+    &--success {
+      border-color: rgba(var(--vz-success-rgb), 0.3);
+    }
+  }
+
+  &__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background: var(--vz-light);
+    color: var(--vz-secondary-color);
+    position: relative;
+
+    &--success {
+      background: rgba(var(--vz-success-rgb), 0.1);
+      color: var(--vz-success);
+    }
+  }
+
+  &__title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--vz-heading-color);
+    margin-bottom: 0.25rem;
+  }
+
+  &__text {
+    font-size: 0.8125rem;
+    color: var(--vz-secondary-color);
+    margin-bottom: 0;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.5;
+  }
+}
+
+@keyframes ring-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+// ─── Table Styling ───────────────────────────
+.sh-page {
+  .table {
+    thead th {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--vz-secondary-color);
+      border-bottom: 2px solid var(--vz-border-color);
+      border-top: none;
+      background: transparent;
+      padding: 0.625rem 0.5rem;
+      white-space: nowrap;
+    }
+
+    tbody td {
+      font-size: 0.8125rem;
+      vertical-align: middle;
+      padding: 0.625rem 0.5rem;
+      border-bottom: 1px solid rgba(var(--vz-border-color), 0.5);
+    }
+  }
+
+  .sh-table-row {
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: rgba(var(--vz-primary-rgb), 0.02);
+    }
+
+    &:last-child td {
+      border-bottom: none;
+    }
+  }
+}
+
+// ─── Pagination ──────────────────────────────
+.sh-page-link {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px !important;
+  border: 1px solid var(--vz-border-color);
+  color: var(--vz-secondary-color);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--vz-light);
+    color: var(--vz-primary);
+    border-color: rgba(var(--vz-primary-rgb), 0.2);
+  }
+}
+
+.page-item.active .sh-page-link {
+  background: var(--vz-primary);
+  border-color: var(--vz-primary);
+  color: #fff;
+}
+
+// ─── Spinner ─────────────────────────────────
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -26,6 +855,78 @@
   to { transform: rotate(360deg); }
 }
 
-.card {
-  transition: all 0.3s ease;
+// ─── Responsive ──────────────────────────────
+@media (max-width: 991.98px) {
+  .sh-banner__content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .sh-banner__metrics {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .sh-banner__sep:first-child {
+    display: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .sh-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sh-tabs {
+    width: 100%;
+    display: flex;
+
+    .nav-item {
+      flex: 1;
+    }
+
+    .nav-link {
+      text-align: center;
+      justify-content: center;
+      padding: 0.5rem 0.5rem;
+      font-size: 0.75rem;
+    }
+  }
+
+  .sh-banner {
+    padding: 0.875rem 1rem;
+  }
+
+  .sh-banner__metric-val {
+    font-size: 0.875rem;
+  }
+
+  .sh-kpi__big {
+    font-size: 1.25rem;
+  }
+
+  .sh-donut {
+    width: 120px;
+    height: 120px;
+
+    &__inner {
+      width: 90px;
+      height: 90px;
+    }
+
+    &__value {
+      font-size: 1.5rem;
+    }
+  }
+
+  .sh-mem-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .sh-empty {
+    padding: 1.5rem 1rem;
+  }
 }

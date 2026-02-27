@@ -76,6 +76,7 @@ public class EnhancedSecurityConfig {
             .ignoringRequestMatchers(PUBLIC_URLS)
             .ignoringRequestMatchers("/api/auth/**", "/user/login", "/user/register", "/user/verify/**")
             .ignoringRequestMatchers("/ws/**")  // WebSocket endpoints use their own auth
+            .ignoringRequestMatchers("/swagger-ui/**", "/v3/api-docs/**")  // Swagger UI
             .ignoringRequestMatchers("/user/new/password", "/user/resetpassword/**")
             // Note: All /api/** endpoints use JWT tokens which provide CSRF protection
             // Disabling CSRF for stateless API is acceptable when using Bearer tokens
@@ -119,6 +120,8 @@ public class EnhancedSecurityConfig {
             .requestMatchers("/ws/**").permitAll()  // WebSocket has its own token validation
             .requestMatchers("/health", "/actuator/health").permitAll()  // Health check for load balancers
             .requestMatchers("/api/public/**").permitAll()  // Explicitly public endpoints only
+            // SpringDoc OpenAPI / Swagger UI
+            .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
             // Static resources and error pages
             .requestMatchers("/error", "/error/**").permitAll()
             .requestMatchers("/favicon.ico").permitAll()

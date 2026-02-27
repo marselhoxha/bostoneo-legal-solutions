@@ -2,9 +2,7 @@ import { Component, OnInit, OnDestroy, ViewChild, Input, ChangeDetectorRef } fro
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { User } from 'src/app/interface/user';
-import { UserService } from 'src/app/service/user.service';
 import { DashboardService, DashboardMetrics } from 'src/app/service/dashboard.service';
-import { PaymentAnalyticsService } from 'src/app/service/payment-analytics.service';
 import { ChartComponent } from 'ng-apexcharts';
 
 @Component({
@@ -58,10 +56,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
-    private userService: UserService,
     private cdr: ChangeDetectorRef,
-    private dashboardService: DashboardService,
-    private paymentAnalyticsService: PaymentAnalyticsService
+    private dashboardService: DashboardService
   ) { }
 
   switchTab(tab: 'practice' | 'admin'): void {
@@ -69,7 +65,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (tab === 'admin' && !this.adminDataLoaded) {
       this.adminDataLoaded = true;
       this.loadDashboardMetrics();
-      this.loadPaymentAnalytics();
       this.loadAttorneyData();
     }
   }
@@ -91,9 +86,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (metrics: DashboardMetrics) => {
           // Stats row
-          this.revenueMTD = metrics.revenue?.monthlyRevenue || 0;
+          this.revenueMTD = metrics.financial?.totalBilled || 0;
           this.utilizationRate = metrics.staff?.utilizationRate || 0;
-          this.collectedAmount = metrics.revenue?.totalRevenue || 0;
+          this.collectedAmount = metrics.financial?.totalCollected || 0;
           this.collectionRate = metrics.financial?.collectionRate || 0;
           this.paymentRate = metrics.financial?.grossMargin || 0;
           this.caseSuccessRate = metrics.cases?.successRate || 0;
@@ -146,31 +141,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           console.error('Error loading dashboard metrics:', error);
           this.initGaugeCharts();
           this.cdr.detectChanges();
-        }
-      });
-  }
-
-  private loadPaymentAnalytics(): void {
-    const endDate = new Date().toISOString().split('T')[0];
-    const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    this.paymentAnalyticsService.getPaymentAnalytics(startDate, endDate)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (analytics) => {
-          if (analytics.collectionRate) {
-            this.collectionRate = Math.round(analytics.collectionRate);
-          }
-          if (analytics.totalReceived) {
-            this.collectedAmount = analytics.totalReceived;
-          }
-          if (analytics.totalOverdue) {
-            this.outstandingBalance = analytics.totalOverdue;
-          }
-          this.cdr.detectChanges();
-        },
-        error: (error) => {
-          console.error('Error loading payment analytics:', error);
         }
       });
   }
@@ -335,24 +305,22 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   private loadAttorneyData(): void {
     this.attorneysLoading = true;
-    this.userService.getAttorneys()
+    this.dashboardService.getAttorneyPerformance()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (users: any[]) => {
+        next: (attorneys: any[]) => {
           this.attorneysLoading = false;
-          if (users && users.length > 0) {
-            this.attorneys = users.slice(0, 6).map((user, i) => ({
-              name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-              role: user.roleName || 'Attorney',
-              imageUrl: user.imageUrl,
-              initials: this.getInitials(user.firstName, user.lastName),
-              color: this.getPracticeAreaColor(i),
-              activeCases: 0,
-              billableHours: 0,
-              utilization: 0,
-              revenue: 0
-            }));
-          }
+          this.attorneys = (attorneys || []).slice(0, 6).map((a, i) => ({
+            name: `${a.firstName || ''} ${a.lastName || ''}`.trim(),
+            role: a.roleName || 'Attorney',
+            imageUrl: a.imageUrl,
+            initials: this.getInitials(a.firstName, a.lastName),
+            color: this.getPracticeAreaColor(i),
+            activeCases: a.activeCases || 0,
+            billableHours: a.billableHours || 0,
+            utilization: a.utilization || 0,
+            revenue: a.revenue || 0
+          }));
           this.cdr.detectChanges();
         },
         error: () => {

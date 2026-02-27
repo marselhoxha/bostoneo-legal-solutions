@@ -17,6 +17,7 @@ import { AnnouncementManagerComponent } from './components/announcement-manager/
 import { IntegrationStatusComponent } from './components/integration-status/integration-status.component';
 import { SecurityDashboardComponent } from './components/security-dashboard/security-dashboard.component';
 import { CreateOrganizationComponent } from './components/create-organization/create-organization.component';
+import { ApiDocsComponent } from './components/api-docs/api-docs.component';
 import { ImageUrlPipe } from '../../pipes/image-url.pipe';
 
 @NgModule({
@@ -32,7 +33,8 @@ import { ImageUrlPipe } from '../../pipes/image-url.pipe';
     AnnouncementManagerComponent,
     IntegrationStatusComponent,
     SecurityDashboardComponent,
-    CreateOrganizationComponent
+    CreateOrganizationComponent,
+    ApiDocsComponent
   ],
   imports: [
     CommonModule,

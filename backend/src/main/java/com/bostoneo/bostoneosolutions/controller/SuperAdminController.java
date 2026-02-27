@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 import static java.time.LocalDateTime.now;
@@ -41,7 +42,6 @@ public class SuperAdminController {
      * Get platform-wide statistics for the dashboard
      */
     @GetMapping("/dashboard/stats")
-    @AuditLog(action = "VIEW", entityType = "PLATFORM", description = "Viewed platform dashboard stats")
     public ResponseEntity<HttpResponse> getDashboardStats() {
         log.info("SUPERADMIN: Fetching dashboard stats");
 
@@ -62,7 +62,6 @@ public class SuperAdminController {
      * Get all organizations with their stats (paginated)
      */
     @GetMapping("/organizations")
-    @AuditLog(action = "VIEW", entityType = "ORGANIZATION", description = "Viewed all organizations")
     public ResponseEntity<HttpResponse> getAllOrganizations(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -101,7 +100,6 @@ public class SuperAdminController {
      * Search organizations by name or slug
      */
     @GetMapping("/organizations/search")
-    @AuditLog(action = "SEARCH", entityType = "ORGANIZATION", description = "Searched organizations")
     public ResponseEntity<HttpResponse> searchOrganizations(
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
@@ -135,7 +133,6 @@ public class SuperAdminController {
      * Get detailed information about a specific organization
      */
     @GetMapping("/organizations/{id}")
-    @AuditLog(action = "VIEW", entityType = "ORGANIZATION", description = "Viewed organization details")
     public ResponseEntity<HttpResponse> getOrganizationDetails(@PathVariable Long id) {
         log.info("SUPERADMIN: Fetching details for organization ID: {}", id);
 
@@ -156,7 +153,6 @@ public class SuperAdminController {
      * Get users belonging to a specific organization (paginated)
      */
     @GetMapping("/organizations/{id}/users")
-    @AuditLog(action = "VIEW", entityType = "USER", description = "Viewed organization users")
     public ResponseEntity<HttpResponse> getOrganizationUsers(
             @PathVariable Long id,
             @RequestParam(defaultValue = "0") int page,
@@ -233,7 +229,6 @@ public class SuperAdminController {
      * Get all available roles for user assignment
      */
     @GetMapping("/roles")
-    @AuditLog(action = "VIEW", entityType = "ROLE", description = "Viewed available roles")
     public ResponseEntity<HttpResponse> getAvailableRoles() {
         log.info("SUPERADMIN: Fetching available roles");
         var roles = superAdminService.getAvailableRoles();
@@ -312,7 +307,6 @@ public class SuperAdminController {
      * Get all users across all organizations (paginated)
      */
     @GetMapping("/users")
-    @AuditLog(action = "VIEW", entityType = "USER", description = "Viewed all users")
     public ResponseEntity<HttpResponse> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -345,7 +339,6 @@ public class SuperAdminController {
      * Search users across all organizations
      */
     @GetMapping("/users/search")
-    @AuditLog(action = "SEARCH", entityType = "USER", description = "Searched users")
     public ResponseEntity<HttpResponse> searchUsers(
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
@@ -379,7 +372,6 @@ public class SuperAdminController {
      * Get user details
      */
     @GetMapping("/users/{id}")
-    @AuditLog(action = "VIEW", entityType = "USER", description = "Viewed user details")
     public ResponseEntity<HttpResponse> getUserDetails(@PathVariable Long id) {
         log.info("SUPERADMIN: Fetching details for user ID: {}", id);
 
@@ -500,7 +492,6 @@ public class SuperAdminController {
      * Get recent login sessions for a user
      */
     @GetMapping("/users/{id}/sessions")
-    @AuditLog(action = "VIEW", entityType = "USER", description = "Viewed user sessions")
     public ResponseEntity<HttpResponse> getUserSessions(@PathVariable Long id) {
         log.info("SUPERADMIN: Fetching sessions for user {}", id);
 
@@ -541,7 +532,6 @@ public class SuperAdminController {
      * Get system health status
      */
     @GetMapping("/system/health")
-    @AuditLog(action = "VIEW", entityType = "SYSTEM", description = "Viewed system health")
     public ResponseEntity<HttpResponse> getSystemHealth() {
         log.info("SUPERADMIN: Checking system health");
 
@@ -559,10 +549,61 @@ public class SuperAdminController {
     }
 
     /**
+     * Get active sessions (users logged in within a time window)
+     */
+    @GetMapping("/system/active-sessions")
+    public ResponseEntity<HttpResponse> getActiveSessions(
+            @RequestParam(defaultValue = "1h") String window) {
+        log.info("SUPERADMIN: Fetching active sessions for window: {}", window);
+
+        List<ActiveSessionDTO> sessions = superAdminService.getActiveSessions(window);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of("sessions", sessions))
+                .message("Active sessions retrieved successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
+     * Get recent login events (paginated)
+     */
+    @GetMapping("/system/login-events")
+    public ResponseEntity<HttpResponse> getLoginEvents(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        log.info("SUPERADMIN: Fetching login events page {} size {}", page, size);
+
+        Page<LoginEventDTO> events = superAdminService.getLoginEvents(
+            PageRequest.of(page, size));
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .data(Map.of(
+                    "loginEvents", events.getContent(),
+                    "page", Map.of(
+                        "number", events.getNumber(),
+                        "size", events.getSize(),
+                        "totalElements", events.getTotalElements(),
+                        "totalPages", events.getTotalPages()
+                    )
+                ))
+                .message("Login events retrieved successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
      * Get platform analytics
      */
     @GetMapping("/analytics")
-    @AuditLog(action = "VIEW", entityType = "ANALYTICS", description = "Viewed platform analytics")
     public ResponseEntity<HttpResponse> getPlatformAnalytics(
             @RequestParam(defaultValue = "week") String period) {
         log.info("SUPERADMIN: Fetching platform analytics for period: {}", period);
@@ -632,7 +673,6 @@ public class SuperAdminController {
      * Get audit logs with filtering
      */
     @GetMapping("/audit-logs")
-    @AuditLog(action = "VIEW", entityType = "AUDIT_LOG", description = "Viewed audit logs")
     public ResponseEntity<HttpResponse> getAuditLogs(
             @RequestParam(required = false) Long organizationId,
             @RequestParam(required = false) Long userId,
@@ -695,7 +735,6 @@ public class SuperAdminController {
      * Get all announcements (paginated)
      */
     @GetMapping("/announcements")
-    @AuditLog(action = "VIEW", entityType = "ANNOUNCEMENT", description = "Viewed announcements")
     public ResponseEntity<HttpResponse> getAnnouncements(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -749,7 +788,6 @@ public class SuperAdminController {
      * Get integration status for all organizations
      */
     @GetMapping("/integrations/status")
-    @AuditLog(action = "VIEW", entityType = "INTEGRATION", description = "Viewed integration status")
     public ResponseEntity<HttpResponse> getIntegrationStatus() {
         log.info("SUPERADMIN: Fetching integration status");
 
@@ -772,7 +810,6 @@ public class SuperAdminController {
      * Get security overview
      */
     @GetMapping("/security/overview")
-    @AuditLog(action = "VIEW", entityType = "SECURITY", description = "Viewed security overview")
     public ResponseEntity<HttpResponse> getSecurityOverview() {
         log.info("SUPERADMIN: Fetching security overview");
 
@@ -793,7 +830,6 @@ public class SuperAdminController {
      * Get failed logins (paginated)
      */
     @GetMapping("/security/failed-logins")
-    @AuditLog(action = "VIEW", entityType = "SECURITY", description = "Viewed failed logins")
     public ResponseEntity<HttpResponse> getFailedLogins(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -827,7 +863,6 @@ public class SuperAdminController {
      * Get organization features
      */
     @GetMapping("/organizations/{id}/features")
-    @AuditLog(action = "VIEW", entityType = "ORGANIZATION", description = "Viewed organization features")
     public ResponseEntity<HttpResponse> getOrganizationFeatures(@PathVariable Long id) {
         log.info("SUPERADMIN: Fetching features for organization ID: {}", id);
 
@@ -865,5 +900,110 @@ public class SuperAdminController {
                 .statusCode(OK.value())
                 .build()
         );
+    }
+
+    // ==================== DASHBOARD DRILL-DOWNS ====================
+
+    @GetMapping("/dashboard/active-users-by-org")
+    public ResponseEntity<HttpResponse> getActiveUsersByOrg() {
+        return ResponseEntity.ok(HttpResponse.builder()
+            .timeStamp(now().toString())
+            .data(Map.of("organizations", superAdminService.getActiveUsersByOrg()))
+            .message("Active users by organization retrieved")
+            .status(OK).statusCode(OK.value()).build());
+    }
+
+    @GetMapping("/dashboard/active-users-by-org/{orgId}/users")
+    public ResponseEntity<HttpResponse> getActiveUsersForOrg(@PathVariable Long orgId) {
+        return ResponseEntity.ok(HttpResponse.builder()
+            .timeStamp(now().toString())
+            .data(Map.of("users", superAdminService.getActiveUsersForOrg(orgId)))
+            .message("Active users for organization retrieved")
+            .status(OK).statusCode(OK.value()).build());
+    }
+
+    @GetMapping("/dashboard/active-users-by-org/{orgId}/users/{userId}/sessions")
+    public ResponseEntity<HttpResponse> getUserSessionsDrillDown(
+            @PathVariable Long orgId, @PathVariable Long userId) {
+        return ResponseEntity.ok(HttpResponse.builder()
+            .timeStamp(now().toString())
+            .data(Map.of("sessions", superAdminService.getUserSessionsDrillDown(orgId, userId)))
+            .message("User sessions retrieved")
+            .status(OK).statusCode(OK.value()).build());
+    }
+
+    @GetMapping("/dashboard/requests-by-org")
+    public ResponseEntity<HttpResponse> getRequestsByOrg(
+            @RequestParam(defaultValue = "1h") String timeWindow) {
+        return ResponseEntity.ok(HttpResponse.builder()
+            .timeStamp(now().toString())
+            .data(Map.of("organizations", superAdminService.getRequestsByOrg(timeWindow)))
+            .message("API requests by organization retrieved")
+            .status(OK).statusCode(OK.value()).build());
+    }
+
+    @GetMapping("/dashboard/requests-by-org/{orgId}/breakdown")
+    public ResponseEntity<HttpResponse> getRequestBreakdownForOrg(
+            @PathVariable Long orgId,
+            @RequestParam(defaultValue = "1h") String timeWindow) {
+        return ResponseEntity.ok(HttpResponse.builder()
+            .timeStamp(now().toString())
+            .data(Map.of("breakdown", superAdminService.getRequestBreakdownForOrg(orgId, timeWindow)))
+            .message("Request breakdown retrieved")
+            .status(OK).statusCode(OK.value()).build());
+    }
+
+    @GetMapping("/dashboard/storage-by-org")
+    public ResponseEntity<HttpResponse> getStorageByOrg() {
+        return ResponseEntity.ok(HttpResponse.builder()
+            .timeStamp(now().toString())
+            .data(Map.of("organizations", superAdminService.getStorageByOrg()))
+            .message("Storage by organization retrieved")
+            .status(OK).statusCode(OK.value()).build());
+    }
+
+    @GetMapping("/dashboard/errors-by-org")
+    public ResponseEntity<HttpResponse> getErrorsByOrg() {
+        return ResponseEntity.ok(HttpResponse.builder()
+            .timeStamp(now().toString())
+            .data(Map.of("organizations", superAdminService.getErrorsByOrg()))
+            .message("Errors by organization retrieved")
+            .status(OK).statusCode(OK.value()).build());
+    }
+
+    @GetMapping("/dashboard/security-by-org")
+    public ResponseEntity<HttpResponse> getSecurityByOrg() {
+        return ResponseEntity.ok(HttpResponse.builder()
+            .timeStamp(now().toString())
+            .data(Map.of("organizations", superAdminService.getSecurityByOrg()))
+            .message("Security by organization retrieved")
+            .status(OK).statusCode(OK.value()).build());
+    }
+
+    @GetMapping("/dashboard/engagement")
+    public ResponseEntity<HttpResponse> getEngagementMetrics() {
+        return ResponseEntity.ok(HttpResponse.builder()
+            .timeStamp(now().toString())
+            .data(Map.of("engagement", superAdminService.getEngagementMetrics()))
+            .message("Engagement metrics retrieved")
+            .status(OK).statusCode(OK.value()).build());
+    }
+
+    @GetMapping("/dashboard/data-growth")
+    public ResponseEntity<HttpResponse> getDataGrowth() {
+        return ResponseEntity.ok(HttpResponse.builder()
+            .timeStamp(now().toString())
+            .data(Map.of("growth", superAdminService.getDataGrowth()))
+            .message("Data growth metrics retrieved")
+            .status(OK).statusCode(OK.value()).build());
+    }
+
+    @GetMapping("/dashboard/feature-adoption")
+    public ResponseEntity<HttpResponse> getFeatureAdoption() {
+        return ResponseEntity.ok(HttpResponse.builder()
+            .timeStamp(now().toString())
+            .data(Map.of("adoption", superAdminService.getFeatureAdoption()))
+            .message("Feature adoption retrieved")
+            .status(OK).statusCode(OK.value()).build());
     }
 }

@@ -17,6 +17,7 @@ import java.util.List;
 @AllArgsConstructor
 public class SecurityOverviewDTO {
 
+    private Integer totalFailedLogins;
     private Integer failedLoginsLast24h;
     private Integer failedLoginsLast7d;
     private Integer failedLoginsLast30d;

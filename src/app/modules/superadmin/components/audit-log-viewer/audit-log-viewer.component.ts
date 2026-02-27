@@ -17,6 +17,7 @@ export class AuditLogViewerComponent implements OnInit, OnDestroy {
   organizations: OrganizationWithStats[] = [];
   isLoading = true;
   error: string | null = null;
+  filtersCollapsed = false;
 
   // Pagination
   currentPage = 0;
@@ -34,8 +35,17 @@ export class AuditLogViewerComponent implements OnInit, OnDestroy {
     endDate: ''
   };
 
-  actionTypes = ['VIEW', 'CREATE', 'UPDATE', 'DELETE', 'SEARCH', 'LOGIN', 'LOGOUT'];
-  entityTypes = ['USER', 'ORGANIZATION', 'CASE', 'CLIENT', 'DOCUMENT', 'INVOICE', 'SYSTEM'];
+  actionTypes = ['CREATE', 'UPDATE', 'DELETE', 'VIEW', 'SEARCH', 'LOGIN', 'LOGOUT', 'UPLOAD', 'DOWNLOAD', 'APPROVE', 'REJECT', 'SUBMIT', 'ASSIGN', 'UNASSIGN', 'ARCHIVE', 'RESTORE'];
+  entityTypes = [
+    'USER', 'ORGANIZATION', 'LEGAL_CASE', 'CLIENT', 'CUSTOMER',
+    'DOCUMENT', 'INVOICE', 'PAYMENT', 'EXPENSE',
+    'APPOINTMENT', 'TASK', 'NOTE', 'ANNOUNCEMENT'
+  ];
+
+  // Summary stats
+  writeActions = 0;
+  uniqueUsers = 0;
+  todayCount = 0;
 
   constructor(
     private superAdminService: SuperAdminService,
@@ -83,6 +93,7 @@ export class AuditLogViewerComponent implements OnInit, OnDestroy {
           this.logs = response.content;
           this.totalElements = response.page.totalElements;
           this.totalPages = response.page.totalPages;
+          this.computeStats();
           this.isLoading = false;
           this.cdr.markForCheck();
         },
@@ -92,6 +103,15 @@ export class AuditLogViewerComponent implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         }
       });
+  }
+
+  private computeStats(): void {
+    const writeSet = new Set(['CREATE', 'UPDATE', 'DELETE', 'UPLOAD', 'APPROVE', 'REJECT', 'SUBMIT', 'ASSIGN', 'UNASSIGN', 'ARCHIVE', 'RESTORE']);
+    this.writeActions = this.logs.filter(l => writeSet.has(l.action)).length;
+    const users = new Set(this.logs.filter(l => l.userId).map(l => l.userId));
+    this.uniqueUsers = users.size;
+    const today = new Date().toDateString();
+    this.todayCount = this.logs.filter(l => l.createdAt && new Date(l.createdAt).toDateString() === today).length;
   }
 
   applyFilters(): void {
@@ -119,27 +139,165 @@ export class AuditLogViewerComponent implements OnInit, OnDestroy {
     }
   }
 
-  getActionBadgeClass(action: string): string {
+  getActionClass(action: string): string {
     switch (action?.toUpperCase()) {
-      case 'CREATE': return 'bg-success-subtle text-success';
-      case 'UPDATE': return 'bg-info-subtle text-info';
-      case 'DELETE': return 'bg-danger-subtle text-danger';
-      case 'VIEW': return 'bg-primary-subtle text-primary';
-      case 'LOGIN': return 'bg-success-subtle text-success';
-      case 'LOGOUT': return 'bg-secondary-subtle text-secondary';
-      default: return 'bg-secondary-subtle text-secondary';
+      case 'CREATE': return 'success';
+      case 'UPDATE': return 'info';
+      case 'DELETE': return 'danger';
+      case 'VIEW': return 'primary';
+      case 'SEARCH': return 'primary';
+      case 'LOGIN': return 'success';
+      case 'LOGOUT': return 'secondary';
+      case 'UPLOAD': return 'primary';
+      case 'DOWNLOAD': return 'primary';
+      case 'APPROVE': return 'success';
+      case 'REJECT': return 'warning';
+      case 'SUBMIT': return 'info';
+      case 'ASSIGN': return 'primary';
+      case 'UNASSIGN': return 'warning';
+      case 'ARCHIVE': return 'secondary';
+      case 'RESTORE': return 'info';
+      default: return 'secondary';
     }
   }
 
-  formatDate(dateString: string): string {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('en-US', {
+  getActionIcon(action: string): string {
+    switch (action?.toUpperCase()) {
+      case 'CREATE': return 'ri-add-circle-line';
+      case 'UPDATE': return 'ri-edit-line';
+      case 'DELETE': return 'ri-delete-bin-line';
+      case 'VIEW': return 'ri-eye-line';
+      case 'SEARCH': return 'ri-search-line';
+      case 'LOGIN': return 'ri-login-circle-line';
+      case 'LOGOUT': return 'ri-logout-circle-line';
+      case 'UPLOAD': return 'ri-upload-2-line';
+      case 'DOWNLOAD': return 'ri-download-2-line';
+      case 'APPROVE': return 'ri-check-double-line';
+      case 'REJECT': return 'ri-close-circle-line';
+      case 'SUBMIT': return 'ri-send-plane-line';
+      case 'ASSIGN': return 'ri-user-add-line';
+      case 'UNASSIGN': return 'ri-user-unfollow-line';
+      case 'ARCHIVE': return 'ri-archive-line';
+      case 'RESTORE': return 'ri-inbox-unarchive-line';
+      default: return 'ri-file-list-3-line';
+    }
+  }
+
+  getEntityTypeLabel(entityType: string): string {
+    if (!entityType) return '-';
+    return entityType.replace(/_/g, ' ');
+  }
+
+  getEntityIcon(entityType: string): string {
+    switch (entityType?.toUpperCase()) {
+      case 'USER': return 'ri-user-line';
+      case 'ORGANIZATION': return 'ri-building-2-line';
+      case 'LEGAL_CASE': case 'CASE': return 'ri-scales-3-line';
+      case 'CLIENT': case 'CUSTOMER': return 'ri-contacts-line';
+      case 'DOCUMENT': return 'ri-file-text-line';
+      case 'INVOICE': return 'ri-bill-line';
+      case 'PAYMENT': case 'EXPENSE': return 'ri-money-dollar-circle-line';
+      case 'APPOINTMENT': case 'CALENDAR_EVENT': return 'ri-calendar-line';
+      case 'TASK': return 'ri-task-line';
+      case 'NOTE': return 'ri-sticky-note-line';
+      case 'ANNOUNCEMENT': return 'ri-megaphone-line';
+      default: return 'ri-file-list-3-line';
+    }
+  }
+
+  getEntityTypeClass(entityType: string): string {
+    switch (entityType?.toUpperCase()) {
+      case 'USER':
+      case 'ROLE':
+      case 'PERMISSION':
+        return 'primary';
+      case 'ORGANIZATION':
+      case 'PLATFORM':
+        return 'purple';
+      case 'LEGAL_CASE':
+      case 'CASE':
+        return 'warning';
+      case 'CLIENT':
+      case 'CUSTOMER':
+        return 'info';
+      case 'DOCUMENT':
+      case 'NOTE':
+        return 'secondary';
+      case 'INVOICE':
+      case 'PAYMENT':
+      case 'EXPENSE':
+        return 'success';
+      case 'SECURITY':
+      case 'AUDIT_LOG':
+        return 'danger';
+      case 'EMAIL':
+      case 'INVITATION':
+        return 'teal';
+      case 'CALENDAR_EVENT':
+      case 'APPOINTMENT':
+      case 'TASK':
+        return 'indigo';
+      case 'ANNOUNCEMENT':
+      case 'INTEGRATION':
+        return 'pink';
+      default:
+        return 'secondary';
+    }
+  }
+
+  getOrgClass(orgName: string): string {
+    if (!orgName) return 'secondary';
+    const colors = ['primary', 'success', 'info', 'warning', 'purple', 'teal', 'indigo', 'pink'];
+    let hash = 0;
+    for (let i = 0; i < orgName.length; i++) {
+      hash = orgName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  }
+
+  getUserInitials(log: AuditLogEntry): string {
+    if (log.userName) {
+      const parts = log.userName.split(' ').filter(p => p);
+      return parts.map(p => p.charAt(0)).slice(0, 2).join('').toUpperCase();
+    }
+    if (log.userEmail) {
+      return log.userEmail.charAt(0).toUpperCase();
+    }
+    return 'S';
+  }
+
+  formatTimeAgo(dateStr: string): string {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHr / 24);
+
+    if (diffSec < 60) return 'just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffHr < 24) return `${diffHr}h ago`;
+    if (diffDay < 7) return `${diffDay}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  formatFullDate(dateStr: string): string {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      second: '2-digit'
     });
+  }
+
+  hasActiveFilters(): boolean {
+    return !!(this.filters.organizationId || this.filters.userId || this.filters.action
+      || this.filters.entityType || this.filters.startDate || this.filters.endDate);
   }
 
   get pageNumbers(): number[] {

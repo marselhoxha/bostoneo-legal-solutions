@@ -488,7 +488,8 @@ export const SUPERADMIN_MENU: MenuItem[] = [
     subItems: [
       { id: 'sa-system-health', label: 'System Health', link: '/superadmin/system-health', parentId: 'sa-system' },
       { id: 'sa-system-audit', label: 'Audit Logs', link: '/superadmin/audit-logs', parentId: 'sa-system' },
-      { id: 'sa-system-integrations', label: 'Integrations', link: '/superadmin/integrations', parentId: 'sa-system' }
+      { id: 'sa-system-integrations', label: 'Integrations', link: '/superadmin/integrations', parentId: 'sa-system' },
+      { id: 'sa-system-api-docs', label: 'API Docs', link: '/superadmin/api-docs', parentId: 'sa-system' }
     ]
   },
   {

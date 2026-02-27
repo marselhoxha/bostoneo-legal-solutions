@@ -120,12 +120,9 @@ export class IntegrationStatusComponent implements OnInit, OnDestroy {
     switch (status?.toUpperCase()) {
       case 'ACTIVE': return 'bg-success-subtle text-success';
       case 'SUSPENDED': return 'bg-danger-subtle text-danger';
+      case 'DELETED': return 'bg-dark-subtle text-dark';
       case 'TRIAL': return 'bg-warning-subtle text-warning';
       default: return 'bg-secondary-subtle text-secondary';
     }
-  }
-
-  getIntegrationIcon(enabled: boolean): string {
-    return enabled ? 'ri-checkbox-circle-fill text-success' : 'ri-close-circle-line text-muted';
   }
 }

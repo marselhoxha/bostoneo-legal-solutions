@@ -7,33 +7,23 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * DTO for login events (success and failure) across the platform.
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuditLogEntryDTO {
+public class LoginEventDTO {
 
     private Long id;
-    private String action;
-    private String entityType;
-    private Long entityId;
-    private String entityName;
-    private String description;
-
-    // User who performed the action
     private Long userId;
     private String userEmail;
     private String userName;
-
-    // Organization context
     private Long organizationId;
     private String organizationName;
-
-    // Additional details
+    private String device;
     private String ipAddress;
-    private String userAgent;
-    private String oldValue;
-    private String newValue;
-
-    private LocalDateTime createdAt;
+    private String eventType; // LOGIN_ATTEMPT_SUCCESS or LOGIN_ATTEMPT_FAILURE
+    private LocalDateTime timestamp;
 }

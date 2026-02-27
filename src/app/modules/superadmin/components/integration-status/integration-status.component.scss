@@ -1,42 +1,233 @@
-// Integration Status Component Styles
+// ═══════════════════════════════════════════════
+// Integration Status — Matches system health / audit log style
+// ═══════════════════════════════════════════════
 
-.card-animate {
-  transition: transform 0.2s ease;
+// ─── Page Header ─────────────────────────────
+.is-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.75rem 0 1rem;
+}
+
+// ─── Summary Stat Cards ─────────────────────
+.is-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--vz-card-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.625rem;
+  border-left: 4px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  &--primary   { border-left-color: var(--vz-primary); }
+  &--success   { border-left-color: var(--vz-success); }
+  &--info      { border-left-color: var(--vz-info); }
+  &--warning   { border-left-color: var(--vz-warning); }
+  &--danger    { border-left-color: var(--vz-danger); }
+  &--secondary { border-left-color: var(--vz-secondary); }
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+
+    .is-stat--primary &   { background: rgba(var(--vz-primary-rgb), 0.1); color: var(--vz-primary); }
+    .is-stat--success &   { background: rgba(var(--vz-success-rgb), 0.1); color: var(--vz-success); }
+    .is-stat--info &      { background: rgba(var(--vz-info-rgb), 0.1);    color: var(--vz-info); }
+    .is-stat--warning &   { background: rgba(var(--vz-warning-rgb), 0.1); color: var(--vz-warning); }
+    .is-stat--danger &    { background: rgba(var(--vz-danger-rgb), 0.1);  color: var(--vz-danger); }
+    .is-stat--secondary & { background: rgba(0, 0, 0, 0.05);             color: var(--vz-secondary-color); }
+  }
+
+  &__label {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--vz-secondary-color);
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+
+  &__value {
+    display: block;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--vz-heading-color);
+    font-feature-settings: "tnum";
+    line-height: 1.2;
   }
 }
 
-.search-box {
+// ─── Shared Card Chrome ──────────────────────
+.is-card {
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.625rem;
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--vz-border-color);
+  }
+
+  &__badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+
+    &--primary { background: rgba(var(--vz-primary-rgb), 0.1); color: var(--vz-primary); }
+  }
+}
+
+// ─── Search ─────────────────────────────────
+.is-search {
   position: relative;
 
-  .search-icon {
+  i {
     position: absolute;
-    right: 10px;
+    left: 10px;
     top: 50%;
     transform: translateY(-50%);
-    color: #878a99;
+    color: var(--vz-secondary-color);
+    font-size: 0.875rem;
   }
 
   input {
-    padding-right: 35px;
+    padding-left: 32px;
   }
 }
 
-.table {
-  th {
-    font-weight: 600;
-    font-size: 0.8125rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+// ─── Toggle Indicators ──────────────────────
+.is-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  &--on {
+    background: rgba(var(--vz-success-rgb), 0.12);
+    color: var(--vz-success);
+  }
+
+  &--off {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--vz-secondary-color);
+    opacity: 0.5;
   }
 }
 
-.table-warning {
-  background-color: rgba(247, 184, 75, 0.1) !important;
+// ─── Issue / OK badges ──────────────────────
+.is-issue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--vz-danger);
+
+  i { font-size: 0.875rem; }
 }
 
-.fs-5 {
-  font-size: 1.25rem !important;
+.is-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--vz-success);
+
+  i { font-size: 0.875rem; }
+}
+
+// ─── Table Styling ───────────────────────────
+.is-page {
+  .table {
+    thead th {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--vz-secondary-color);
+      border-bottom: 2px solid var(--vz-border-color);
+      border-top: none;
+      background: transparent;
+      padding: 0.625rem 0.5rem;
+      white-space: nowrap;
+    }
+
+    tbody td {
+      font-size: 0.8125rem;
+      vertical-align: middle;
+      padding: 0.625rem 0.5rem;
+      border-bottom: 1px solid rgba(var(--vz-border-color), 0.5);
+    }
+  }
+}
+
+.is-table-row {
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(var(--vz-primary-rgb), 0.02);
+  }
+
+  &:last-child td {
+    border-bottom: none;
+  }
+
+  &.is-row--warn {
+    background: rgba(var(--vz-warning-rgb), 0.04);
+  }
+}
+
+// ─── Spinner ─────────────────────────────────
+.is-spin {
+  animation: is-spin-anim 1s linear infinite;
+}
+
+@keyframes is-spin-anim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+// ─── Responsive ──────────────────────────────
+@media (max-width: 767.98px) {
+  .is-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .is-stat {
+    padding: 0.5rem 0.75rem;
+
+    &__value {
+      font-size: 1rem;
+    }
+  }
 }

@@ -1,9 +1,9 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Subject, forkJoin, of } from 'rxjs';
+import { takeUntil, catchError } from 'rxjs/operators';
 import { SuperAdminService } from '../../services/superadmin.service';
-import { PlatformStats, OrganizationWithStats } from '../../models/superadmin.models';
+import { PlatformStats, SystemHealth, SecurityOverview } from '../../models/superadmin.models';
 
 @Component({
   selector: 'app-superadmin-dashboard',
@@ -15,16 +15,12 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   stats: PlatformStats | null = null;
-  recentOrganizations: OrganizationWithStats[] = [];
-  topOrganizations: OrganizationWithStats[] = [];
+  systemHealth: SystemHealth | null = null;
+  securityOverview: SecurityOverview | null = null;
 
   isLoading = true;
   error: string | null = null;
   lastRefreshed: Date | null = null;
-
-  // Chart data
-  planDistributionData: any = null;
-  orgGrowthData: any = null;
 
   constructor(
     private superAdminService: SuperAdminService,
@@ -46,12 +42,21 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
     this.error = null;
     this.cdr.markForCheck();
 
-    // Load stats
-    this.superAdminService.getDashboardStats()
+    forkJoin({
+      stats: this.superAdminService.getDashboardStats(),
+      health: this.superAdminService.getSystemHealth().pipe(
+        catchError(err => { console.warn('System health unavailable:', err.status || err.message); return of(null); })
+      ),
+      security: this.superAdminService.getSecurityOverview().pipe(
+        catchError(err => { console.warn('Security overview unavailable:', err.status || err.message); return of(null); })
+      )
+    })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (stats) => {
+        next: ({ stats, health, security }) => {
           this.stats = stats;
+          this.systemHealth = health;
+          this.securityOverview = security;
           this.lastRefreshed = new Date();
           this.isLoading = false;
           this.cdr.markForCheck();
@@ -63,39 +68,60 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
           console.error('Dashboard stats error:', err);
         }
       });
-
-    // Load recent organizations
-    this.superAdminService.getOrganizations(0, 5, 'createdAt', 'desc')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.recentOrganizations = response.content;
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          console.error('Recent organizations error:', err);
-        }
-      });
-
-    // Load top organizations by user count
-    this.superAdminService.getOrganizations(0, 5, 'userCount', 'desc')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.topOrganizations = response.content;
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          console.error('Top organizations error:', err);
-        }
-      });
   }
+
+  // ==================== NAVIGATION ====================
+
+  navigateToOrganizations(): void { this.router.navigate(['/superadmin/organizations']); }
+  navigateToUsers(): void { this.router.navigate(['/superadmin/users']); }
+  navigateToSecurity(): void { this.router.navigate(['/superadmin/security']); }
+  navigateToHealth(): void { this.router.navigate(['/superadmin/system-health']); }
+  navigateToAnalytics(): void { this.router.navigate(['/superadmin/analytics']); }
+  navigateToAuditLogs(): void { this.router.navigate(['/superadmin/audit-logs']); }
+
+  // ==================== FORMATTERS ====================
+
+  formatCurrency(value: number | undefined): string {
+    if (value === undefined || value === null) return '$0';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency', currency: 'USD',
+      minimumFractionDigits: 0, maximumFractionDigits: 0
+    }).format(value);
+  }
+
+  formatNumber(value: number | undefined): string {
+    if (value === undefined || value === null) return '0';
+    return new Intl.NumberFormat('en-US').format(value);
+  }
+
+  formatTimeAgo(dateString: string): string {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  formatBytes(bytes: number | undefined): string {
+    if (!bytes || bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+  }
+
+  // ==================== STATUS HELPERS ====================
 
   getHealthStatusClass(status: string): string {
     switch (status) {
       case 'HEALTHY': return 'success';
       case 'DEGRADED': return 'warning';
-      case 'DOWN': return 'danger';
+      case 'DOWN': case 'UNHEALTHY': return 'danger';
       default: return 'secondary';
     }
   }
@@ -104,7 +130,7 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
     switch (status) {
       case 'HEALTHY': return 'ri-checkbox-circle-fill';
       case 'DEGRADED': return 'ri-alert-fill';
-      case 'DOWN': return 'ri-close-circle-fill';
+      case 'DOWN': case 'UNHEALTHY': return 'ri-close-circle-fill';
       default: return 'ri-question-fill';
     }
   }
@@ -127,104 +153,80 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  getActivityIcon(action: string): string {
+  getActionIcon(action: string): string {
     switch (action?.toUpperCase()) {
-      case 'CREATE': return 'ri-add-circle-line text-success';
-      case 'UPDATE': return 'ri-edit-line text-info';
-      case 'DELETE': return 'ri-delete-bin-line text-danger';
-      case 'VIEW': return 'ri-eye-line text-primary';
-      case 'LOGIN': return 'ri-login-circle-line text-success';
-      case 'LOGOUT': return 'ri-logout-circle-line text-secondary';
-      default: return 'ri-record-circle-line text-muted';
+      case 'CREATE': return 'ri-add-circle-line';
+      case 'UPDATE': return 'ri-edit-line';
+      case 'DELETE': return 'ri-delete-bin-line';
+      case 'READ': case 'GET': case 'VIEW': return 'ri-eye-line';
+      case 'LOGIN': return 'ri-login-circle-line';
+      case 'EXPORT': return 'ri-download-line';
+      default: return 'ri-flashlight-line';
     }
   }
 
-  getStatusClass(status: string): string {
-    switch (status?.toUpperCase()) {
-      case 'ACTIVE': return 'bg-success-subtle text-success';
-      case 'SUSPENDED': return 'bg-danger-subtle text-danger';
-      case 'PENDING': return 'bg-warning-subtle text-warning';
-      default: return 'bg-secondary-subtle text-secondary';
+  getActionColor(action: string): string {
+    switch (action?.toUpperCase()) {
+      case 'CREATE': return 'success';
+      case 'UPDATE': return 'info';
+      case 'DELETE': return 'danger';
+      case 'READ': case 'GET': case 'VIEW': return 'primary';
+      case 'LOGIN': return 'warning';
+      default: return 'secondary';
     }
   }
 
-  getPlanBadgeClass(plan: string): string {
-    switch (plan?.toUpperCase()) {
-      case 'ENTERPRISE': return 'bg-primary';
-      case 'PROFESSIONAL': return 'bg-info';
-      case 'STARTER': return 'bg-warning';
-      case 'FREE': return 'bg-secondary';
-      default: return 'bg-light text-dark';
-    }
+  formatEntityType(entityType: string): string {
+    if (!entityType) return '';
+    return entityType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  navigateToOrganizations(): void {
-    this.router.navigate(['/superadmin/organizations']);
-  }
-
-  navigateToUsers(): void {
-    this.router.navigate(['/superadmin/users']);
-  }
-
-  viewOrganization(id: number): void {
-    this.router.navigate(['/superadmin/organizations', id]);
-  }
-
-  formatCurrency(value: number | undefined): string {
-    if (value === undefined || value === null) return '$0';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
-  }
-
-  formatNumber(value: number | undefined): string {
-    if (value === undefined || value === null) return '0';
-    return new Intl.NumberFormat('en-US').format(value);
-  }
-
-  formatDate(dateString: string): string {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  formatTimeAgo(dateString: string): string {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (seconds < 60) return 'Just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-    return this.formatDate(dateString);
-  }
+  // ==================== COMPUTED VALUES ====================
 
   getActiveUsersPercent(): number {
     if (!this.stats || !this.stats.totalUsers || this.stats.totalUsers === 0) return 0;
     return Math.round((this.stats.activeUsersLast7Days / this.stats.totalUsers) * 100);
   }
 
-  getActiveCasesPercent(): number {
-    if (!this.stats || !this.stats.totalCases || this.stats.totalCases === 0) return 0;
-    return Math.round((this.stats.activeCases / this.stats.totalCases) * 100);
+  getStoragePercent(): number {
+    if (!this.stats?.totalStorageLimitBytes || this.stats.totalStorageLimitBytes === 0) return 0;
+    return Math.round(((this.stats.totalStorageUsedBytes || 0) / this.stats.totalStorageLimitBytes) * 100);
   }
 
-  getQuotaAlerts(): any[] {
-    if (!this.stats?.alerts) return [];
-    return this.stats.alerts.filter(a => a.type === 'WARNING');
+  getMemoryPercent(): number {
+    return this.systemHealth?.memory?.usagePercent ?? 0;
   }
 
-  getSystemAlerts(): any[] {
-    if (!this.stats?.alerts) return [];
-    return this.stats.alerts.filter(a => a.type === 'ERROR');
+  getMemoryStatusClass(): string {
+    const pct = this.getMemoryPercent();
+    if (pct < 60) return 'success';
+    if (pct < 85) return 'warning';
+    return 'danger';
+  }
+
+  getErrorSeverityClass(): string {
+    const count = this.systemHealth?.errorCountLast24Hours ?? 0;
+    if (count === 0) return 'success';
+    if (count < 10) return 'warning';
+    return 'danger';
+  }
+
+  getThreatLevel(): string {
+    if (!this.securityOverview) return 'Unknown';
+    const { failedLoginsLast24h, accountLockouts, suspiciousActivityCount } = this.securityOverview;
+    if (suspiciousActivityCount > 0 || accountLockouts > 2) return 'Elevated';
+    if (failedLoginsLast24h > 10 || accountLockouts > 0) return 'Moderate';
+    if (failedLoginsLast24h > 0) return 'Low';
+    return 'Clear';
+  }
+
+  getThreatLevelClass(): string {
+    switch (this.getThreatLevel()) {
+      case 'Elevated': return 'danger';
+      case 'Moderate': return 'warning';
+      case 'Low': return 'info';
+      case 'Clear': return 'success';
+      default: return 'secondary';
+    }
   }
 }

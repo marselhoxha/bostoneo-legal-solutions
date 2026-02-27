@@ -82,8 +82,8 @@ public class AuditLog {
 
     // Enum for audit actions
     public enum AuditAction {
-        CREATE, UPDATE, DELETE, LOGIN, LOGOUT, 
-        UPLOAD, DOWNLOAD, APPROVE, REJECT, SUBMIT, 
+        CREATE, UPDATE, DELETE, LOGIN, LOGOUT, VIEW, SEARCH,
+        UPLOAD, DOWNLOAD, APPROVE, REJECT, SUBMIT,
         ASSIGN, UNASSIGN, ARCHIVE, RESTORE
     }
 

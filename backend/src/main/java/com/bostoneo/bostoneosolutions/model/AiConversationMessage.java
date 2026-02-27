@@ -83,6 +83,10 @@ public class AiConversationMessage {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
+    @Column(name = "bookmarked")
+    @Builder.Default
+    private Boolean bookmarked = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

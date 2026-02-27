@@ -54,6 +54,8 @@ export interface StaffMetrics {
 }
 
 export interface FinancialMetrics {
+  totalBilled: number;
+  totalCollected: number;
   cashFlow: number;
   accountsReceivable: number;
   accountsPayable: number;
@@ -227,6 +229,12 @@ export class DashboardService {
   getTimeBasedMetrics(period: 'daily' | 'weekly' | 'monthly' | 'yearly'): Observable<any> {
     return this.http.get(`${this.baseUrl}/trends/${period}`).pipe(
       catchError(() => of(this.getDefaultMetrics()))
+    );
+  }
+
+  getAttorneyPerformance(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/attorney-performance`).pipe(
+      catchError(() => of([]))
     );
   }
 

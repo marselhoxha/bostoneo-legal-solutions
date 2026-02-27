@@ -144,4 +144,21 @@ public interface AiConversationSessionRepository extends JpaRepository<AiConvers
             @Param("caseId") Long caseId,
             @Param("orgId") Long organizationId
     );
+
+    /**
+     * Find sessions that have at least one bookmarked message, filtered by user, org, and task type
+     * Used by sidebar "Saved" filter
+     * NOTE: Uses subquery instead of DISTINCT+JOIN to avoid PostgreSQL ORDER BY limitation
+     */
+    @Query("SELECT s FROM AiConversationSession s " +
+           "WHERE s.userId = :userId AND s.organizationId = :orgId AND s.taskType = :taskType " +
+           "AND s.caseId IS NULL " +
+           "AND s.id IN (SELECT m.session.id FROM AiConversationMessage m WHERE m.bookmarked = true) " +
+           "ORDER BY COALESCE(s.lastInteractionAt, s.createdAt) DESC")
+    Page<AiConversationSession> findBookmarkedGeneralConversationsByUserIdAndOrganizationIdAndTaskType(
+            @Param("userId") Long userId,
+            @Param("orgId") Long organizationId,
+            @Param("taskType") String taskType,
+            Pageable pageable
+    );
 }

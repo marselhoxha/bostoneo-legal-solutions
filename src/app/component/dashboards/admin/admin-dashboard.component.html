@@ -21,17 +21,17 @@
 
   <!-- Section 1: Stats Row -->
   <div class="stats-row">
-    <div class="stat-item">
+    <div class="stat-item" data-tooltip="Sum of all sent invoices (excludes drafts)">
       <div class="stat-header">
-        <span class="stat-label">REVENUE MTD</span>
+        <span class="stat-label">TOTAL BILLED</span>
         <span class="stat-indicator stat-indicator-success"><i class="ri-money-dollar-circle-line"></i></span>
       </div>
       <div class="stat-body">
         <span class="stat-value text-success">{{ formatCurrency(revenueMTD) }}</span>
       </div>
-      <div class="stat-footer"><small class="text-muted">Monthly revenue</small></div>
+      <div class="stat-footer"><small class="text-muted">All invoices issued</small></div>
     </div>
-    <div class="stat-item">
+    <div class="stat-item" data-tooltip="Billable hours / total hours logged">
       <div class="stat-header">
         <span class="stat-label">UTILIZATION</span>
         <span class="stat-indicator stat-indicator-primary"><i class="ri-timer-line"></i></span>
@@ -39,9 +39,9 @@
       <div class="stat-body">
         <span class="stat-value">{{ utilizationRate }}%</span>
       </div>
-      <div class="stat-footer"><small class="text-muted">Billable utilization</small></div>
+      <div class="stat-footer"><small class="text-muted">Billable / total hours</small></div>
     </div>
-    <div class="stat-item">
+    <div class="stat-item" data-tooltip="Overdue & pending invoices owed by clients">
       <div class="stat-header">
         <span class="stat-label">OUTSTANDING</span>
         <span class="stat-indicator stat-indicator-warning"><i class="ri-error-warning-line"></i></span>
@@ -49,9 +49,9 @@
       <div class="stat-body">
         <span class="stat-value text-warning">{{ formatCurrency(outstandingBalance) }}</span>
       </div>
-      <div class="stat-footer"><small class="text-muted">Accounts receivable</small></div>
+      <div class="stat-footer"><small class="text-muted">Unpaid invoices</small></div>
     </div>
-    <div class="stat-item">
+    <div class="stat-item" data-tooltip="Total payments received from clients">
       <div class="stat-header">
         <span class="stat-label">COLLECTED</span>
         <span class="stat-indicator stat-indicator-info"><i class="ri-checkbox-circle-line"></i></span>
@@ -59,7 +59,7 @@
       <div class="stat-body">
         <span class="stat-value">{{ formatCurrency(collectedAmount) }}</span>
       </div>
-      <div class="stat-footer"><small class="text-muted">Total collected</small></div>
+      <div class="stat-footer"><small class="text-muted">Paid invoices</small></div>
     </div>
   </div>
 
@@ -262,8 +262,8 @@
                   <td>
                     <div class="atty-identity">
                       <div class="atty-avatar-ring" [style.borderColor]="attorney.color">
-                        <img *ngIf="attorney.imageUrl" [src]="attorney.imageUrl" [alt]="attorney.name" class="atty-photo">
-                        <span *ngIf="!attorney.imageUrl" class="atty-initials" [style.backgroundColor]="attorney.color">{{ attorney.initials }}</span>
+                        <img *ngIf="attorney.imageUrl && !attorney.imageError" [src]="attorney.imageUrl" [alt]="attorney.name" class="atty-photo" (error)="attorney.imageError = true">
+                        <span *ngIf="!attorney.imageUrl || attorney.imageError" class="atty-initials" [style.backgroundColor]="attorney.color">{{ attorney.initials }}</span>
                       </div>
                       <div>
                         <div class="atty-name">{{ attorney.name }}</div>

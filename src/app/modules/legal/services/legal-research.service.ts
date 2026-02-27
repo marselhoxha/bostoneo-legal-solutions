@@ -61,6 +61,7 @@ export interface AiConversationMessage {
   isTyping?: boolean;
   collapsed?: boolean;
   researchMode?: 'FAST' | 'THOROUGH'; // Research mode used for this message
+  bookmarked?: boolean;
 }
 
 export interface LegalSearchRequest {
@@ -691,21 +692,25 @@ export class LegalResearchService {
    * Get ONLY general conversations (no caseId) filtered by task type
    * Used by AI Workspace to exclude case-specific research conversations
    */
-  getGeneralConversationsByTaskType(taskType: string, page: number = 0, size: number = 50): Observable<{
+  getGeneralConversationsByTaskType(taskType: string, page: number = 0, size: number = 50, bookmarked?: boolean): Observable<{
     conversations: AiConversationSession[];
     totalPages: number;
     totalElements: number;
     currentPage: number;
   }> {
     const userId = this.getUserId();
+    const params: any = {
+      userId: userId.toString(),
+      page: page.toString(),
+      size: size.toString()
+    };
+    if (bookmarked) {
+      params.bookmarked = 'true';
+    }
     return this.http.get<any>(
       `${this.conversationApiUrl}/general/task/${taskType}`,
       {
-        params: {
-          userId: userId.toString(),
-          page: page.toString(),
-          size: size.toString()
-        },
+        params,
         withCredentials: true
       }
     ).pipe(
@@ -757,9 +762,11 @@ export class LegalResearchService {
     researchMode: string
   ): Observable<AiConversationMessage> {
     const userId = this.getUserId();
+    // Unified mode: always use THOROUGH
+    const mode = 'THOROUGH';
     return this.http.post<any>(
       `${this.conversationApiUrl}/${conversationId}/query`,
-      { userId, query, researchMode },
+      { userId, query, researchMode: mode },
       { withCredentials: true }
     ).pipe(
       map(response => response.data.message),
@@ -787,18 +794,18 @@ export class LegalResearchService {
   }
 
   /**
-   * Mark an AI message as reviewed by an attorney (ABA Opinion 512)
+   * Toggle bookmark on an AI message
    */
-  markAsReviewed(messageId: number): Observable<AiConversationMessage> {
+  toggleBookmark(messageId: number): Observable<AiConversationMessage> {
     const userId = this.getUserId();
     return this.http.patch<any>(
-      `${this.conversationApiUrl}/messages/${messageId}/review`,
+      `${this.conversationApiUrl}/messages/${messageId}/bookmark`,
       { userId },
       { withCredentials: true }
     ).pipe(
       map(response => response.data.message),
       catchError(error => {
-        console.error('Failed to mark message as reviewed:', error);
+        console.error('Failed to toggle bookmark:', error);
         return throwError(() => error);
       })
     );

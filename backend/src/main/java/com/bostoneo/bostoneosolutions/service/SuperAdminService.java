@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.model.Organization;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -197,4 +198,35 @@ public interface SuperAdminService {
      * Update organization features
      */
     OrganizationFeaturesDTO updateOrganizationFeatures(Long organizationId, OrganizationFeaturesDTO features);
+
+    // ==================== SYSTEM HEALTH SESSIONS ====================
+
+    /**
+     * Get currently active sessions (users who logged in within the given time window)
+     */
+    List<ActiveSessionDTO> getActiveSessions(String window);
+
+    /**
+     * Get recent login events (success + failure) across the platform, paginated
+     */
+    Page<LoginEventDTO> getLoginEvents(Pageable pageable);
+
+    // ==================== DASHBOARD DRILL-DOWNS ====================
+
+    List<DashboardDrillDownDTO.OrgActiveUsers> getActiveUsersByOrg();
+    List<DashboardDrillDownDTO.UserActivity> getActiveUsersForOrg(Long orgId);
+    List<DashboardDrillDownDTO.UserSession> getUserSessionsDrillDown(Long orgId, Long userId);
+
+    List<DashboardDrillDownDTO.OrgApiRequests> getRequestsByOrg(String timeWindow);
+    List<DashboardDrillDownDTO.EndpointBreakdown> getRequestBreakdownForOrg(Long orgId, String timeWindow);
+
+    List<DashboardDrillDownDTO.OrgStorage> getStorageByOrg();
+    List<DashboardDrillDownDTO.OrgErrors> getErrorsByOrg();
+    List<DashboardDrillDownDTO.OrgSecurity> getSecurityByOrg();
+
+    // ==================== ENGAGEMENT & GROWTH ====================
+
+    DashboardDrillDownDTO.EngagementMetrics getEngagementMetrics();
+    DashboardDrillDownDTO.DataGrowth getDataGrowth();
+    DashboardDrillDownDTO.FeatureAdoption getFeatureAdoption();
 }

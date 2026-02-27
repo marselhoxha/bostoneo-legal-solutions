@@ -376,10 +376,16 @@ public class LegalResearchConversationController {
             @PathVariable String taskType,
             @RequestParam Long userId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) Boolean bookmarked
     ) {
         try {
-            Page<AiConversationSession> conversations = conversationService.getGeneralConversationsByTaskType(taskType, userId, page, size);
+            Page<AiConversationSession> conversations;
+            if (Boolean.TRUE.equals(bookmarked)) {
+                conversations = conversationService.getBookmarkedGeneralConversationsByTaskType(taskType, userId, page, size);
+            } else {
+                conversations = conversationService.getGeneralConversationsByTaskType(taskType, userId, page, size);
+            }
 
             return ResponseEntity.ok(
                     HttpResponse.builder()
@@ -504,22 +510,22 @@ public class LegalResearchConversationController {
     }
 
     /**
-     * Mark an AI message as reviewed by an attorney (ABA Opinion 512)
-     * PATCH /api/legal/research/conversations/messages/{messageId}/review
+     * Toggle bookmark on an AI message
+     * PATCH /api/legal/research/conversations/messages/{messageId}/bookmark
      */
-    @PatchMapping("/messages/{messageId}/review")
-    public ResponseEntity<HttpResponse> markAsReviewed(
+    @PatchMapping("/messages/{messageId}/bookmark")
+    public ResponseEntity<HttpResponse> toggleBookmark(
             @PathVariable Long messageId,
-            @RequestBody ReviewRequest request
+            @RequestBody BookmarkRequest request
     ) {
         try {
-            AiConversationMessage message = conversationService.markAsReviewed(messageId, request.userId());
+            AiConversationMessage message = conversationService.toggleBookmark(messageId, request.userId());
 
             return ResponseEntity.ok(
                     HttpResponse.builder()
                             .timeStamp(now().toString())
                             .data(Map.of("message", message))
-                            .message("Message marked as reviewed")
+                            .message("Bookmark toggled successfully")
                             .status(HttpStatus.OK)
                             .statusCode(HttpStatus.OK.value())
                             .build()
@@ -535,11 +541,11 @@ public class LegalResearchConversationController {
                             .build());
 
         } catch (Exception e) {
-            log.error("Error marking message {} as reviewed", messageId, e);
+            log.error("Error toggling bookmark on message {}", messageId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(HttpResponse.builder()
                             .timeStamp(now().toString())
-                            .message("Failed to mark as reviewed: " + e.getMessage())
+                            .message("Failed to toggle bookmark: " + e.getMessage())
                             .status(HttpStatus.INTERNAL_SERVER_ERROR)
                             .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
                             .build());
@@ -580,5 +586,5 @@ public class LegalResearchConversationController {
     record UpdateTitleRequest(Long userId, String title) {}
     record CreateConversationRequest(Long userId, String title, String researchMode, String taskType, String documentType, String jurisdiction) {}
     record QueryRequest(Long userId, String query, String researchMode) {}
-    record ReviewRequest(Long userId) {}
+    record BookmarkRequest(Long userId) {}
 }

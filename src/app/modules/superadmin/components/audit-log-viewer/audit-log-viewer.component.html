@@ -1,169 +1,254 @@
-<div class="container-fluid">
+<div class="container-fluid al-page">
+
   <!-- Page Header -->
-  <div class="row">
-    <div class="col-12">
-      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <h4 class="mb-sm-0">Audit Logs</h4>
-        <div class="page-title-right">
-          <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a routerLink="/superadmin/dashboard">SUPERADMIN</a></li>
-            <li class="breadcrumb-item active">Audit Logs</li>
-          </ol>
+  <div class="al-header">
+    <div>
+      <div class="text-muted fs-11 fw-semibold text-uppercase" style="letter-spacing: 0.05em;">
+        SUPERADMIN <span class="mx-1">/</span> Compliance
+      </div>
+      <h4 class="mb-0 fw-semibold">Audit Logs</h4>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge bg-secondary-subtle text-secondary rounded-pill fs-11 px-3 py-1"
+            *ngIf="totalElements > 0">
+        {{ totalElements | number }} entries
+      </span>
+      <button class="btn btn-soft-primary btn-sm" (click)="loadLogs()" [disabled]="isLoading">
+        <i class="ri-refresh-line" [class.spin]="isLoading"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Stats Strip -->
+  <div class="row g-3 mb-3" *ngIf="!isLoading && logs.length > 0">
+    <div class="col-xl-3 col-sm-6">
+      <div class="al-stat al-stat--primary">
+        <div class="al-stat__icon"><i class="ri-file-list-3-line"></i></div>
+        <div>
+          <span class="al-stat__label">Total Entries</span>
+          <span class="al-stat__value">{{ totalElements | number }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-sm-6">
+      <div class="al-stat al-stat--success">
+        <div class="al-stat__icon"><i class="ri-edit-line"></i></div>
+        <div>
+          <span class="al-stat__label">Write Actions</span>
+          <span class="al-stat__value">{{ writeActions }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-sm-6">
+      <div class="al-stat al-stat--info">
+        <div class="al-stat__icon"><i class="ri-user-line"></i></div>
+        <div>
+          <span class="al-stat__label">Unique Users</span>
+          <span class="al-stat__value">{{ uniqueUsers }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-sm-6">
+      <div class="al-stat al-stat--warning">
+        <div class="al-stat__icon"><i class="ri-calendar-todo-line"></i></div>
+        <div>
+          <span class="al-stat__label">Today's Activity</span>
+          <span class="al-stat__value">{{ todayCount }}</span>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Filters Card -->
-  <div class="row mb-3">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="card-title mb-0"><i class="ri-filter-3-line me-2"></i>Filters</h5>
+  <div class="card al-card mb-3">
+    <div class="card-header bg-transparent al-card__header" (click)="filtersCollapsed = !filtersCollapsed"
+         style="cursor: pointer;">
+      <div class="al-card__badge al-card__badge--primary">
+        <i class="ri-filter-3-line"></i>
+      </div>
+      <h6 class="card-title mb-0 flex-grow-1">Filters</h6>
+      <span class="badge bg-primary-subtle text-primary rounded-pill fs-10" *ngIf="hasActiveFilters()">Active</span>
+      <i class="ri-arrow-down-s-line fs-16 text-muted"
+         [style.transform]="filtersCollapsed ? 'rotate(-90deg)' : 'rotate(0)'"
+         style="transition: transform 0.2s ease;"></i>
+    </div>
+    <div class="card-body" [class.d-none]="filtersCollapsed">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label fs-12 text-muted fw-semibold text-uppercase" style="letter-spacing: 0.04em;">Organization</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.organizationId">
+            <option [ngValue]="null">All Organizations</option>
+            <option *ngFor="let org of organizations" [ngValue]="org.id">{{ org.name }}</option>
+          </select>
         </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-3">
-              <label class="form-label">Organization</label>
-              <select class="form-select" [(ngModel)]="filters.organizationId">
-                <option [ngValue]="null">All Organizations</option>
-                <option *ngFor="let org of organizations" [ngValue]="org.id">{{ org.name }}</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Action</label>
-              <select class="form-select" [(ngModel)]="filters.action">
-                <option value="">All Actions</option>
-                <option *ngFor="let action of actionTypes" [value]="action">{{ action }}</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Entity Type</label>
-              <select class="form-select" [(ngModel)]="filters.entityType">
-                <option value="">All Types</option>
-                <option *ngFor="let type of entityTypes" [value]="type">{{ type }}</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Start Date</label>
-              <input type="date" class="form-control" [(ngModel)]="filters.startDate">
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">End Date</label>
-              <input type="date" class="form-control" [(ngModel)]="filters.endDate">
-            </div>
-            <div class="col-md-1 d-flex align-items-end">
-              <div class="btn-group w-100">
-                <button class="btn btn-primary" (click)="applyFilters()">
-                  <i class="ri-search-line"></i>
-                </button>
-                <button class="btn btn-outline-secondary" (click)="clearFilters()">
-                  <i class="ri-refresh-line"></i>
-                </button>
-              </div>
-            </div>
-          </div>
+        <div class="col-md-2">
+          <label class="form-label fs-12 text-muted fw-semibold text-uppercase" style="letter-spacing: 0.04em;">Action</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.action">
+            <option value="">All Actions</option>
+            <option *ngFor="let action of actionTypes" [value]="action">{{ action }}</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fs-12 text-muted fw-semibold text-uppercase" style="letter-spacing: 0.04em;">Entity Type</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.entityType">
+            <option value="">All Types</option>
+            <option *ngFor="let type of entityTypes" [value]="type">{{ type }}</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fs-12 text-muted fw-semibold text-uppercase" style="letter-spacing: 0.04em;">Start Date</label>
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.startDate">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fs-12 text-muted fw-semibold text-uppercase" style="letter-spacing: 0.04em;">End Date</label>
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.endDate">
+        </div>
+        <div class="col-md-1 d-flex gap-1">
+          <button class="btn btn-primary btn-sm flex-grow-1" (click)="applyFilters()" title="Search">
+            <i class="ri-search-line"></i>
+          </button>
+          <button class="btn btn-soft-secondary btn-sm" (click)="clearFilters()" title="Clear filters"
+                  *ngIf="hasActiveFilters()">
+            <i class="ri-close-line"></i>
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Logs Table -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="card-title mb-0">
-            <i class="ri-file-list-3-line me-2"></i>
-            Audit Trail ({{ totalElements }} entries)
-          </h5>
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-grow text-primary" style="width: 2.5rem; height: 2.5rem;"></div>
+    <h6 class="mt-3 text-muted">Loading audit logs...</h6>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error && !isLoading" class="alert alert-danger d-flex align-items-center gap-2">
+    <i class="ri-error-warning-line fs-4"></i>
+    <div class="flex-grow-1"><strong>Error:</strong> {{ error }}</div>
+    <button class="btn btn-sm btn-danger" (click)="loadLogs()">Retry</button>
+  </div>
+
+  <!-- Audit Logs Table -->
+  <div *ngIf="!isLoading && !error" class="card al-card">
+    <div class="card-header bg-transparent al-card__header">
+      <div class="al-card__badge al-card__badge--primary">
+        <i class="ri-shield-check-line"></i>
+      </div>
+      <h6 class="card-title mb-0 flex-grow-1">Audit Trail</h6>
+      <span class="badge bg-secondary-subtle text-secondary rounded-pill fs-10" *ngIf="totalElements > 0">
+        Page {{ currentPage + 1 }} of {{ totalPages }}
+      </span>
+    </div>
+    <div class="card-body p-0">
+      <div *ngIf="logs.length > 0" class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>User</th>
+              <th>Entity</th>
+              <th>Organization</th>
+              <th>Description</th>
+              <th class="text-end pe-3">Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let log of logs" class="al-table-row">
+              <td>
+                <span class="badge rounded-pill fs-10 px-2"
+                      [ngClass]="'bg-' + getActionClass(log.action) + '-subtle text-' + getActionClass(log.action)">
+                  {{ log.action }}
+                </span>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2" *ngIf="log.userName || log.userEmail">
+                  <div class="al-avatar" [ngClass]="'al-avatar--' + getActionClass(log.action)">
+                    {{ getUserInitials(log) }}
+                  </div>
+                  <div>
+                    <div class="fw-semibold fs-13">{{ log.userName || 'Unknown' }}</div>
+                    <span class="text-muted fs-11" *ngIf="log.userEmail">{{ log.userEmail }}</span>
+                  </div>
+                </div>
+                <span *ngIf="!log.userName && !log.userEmail" class="d-flex align-items-center gap-2">
+                  <div class="al-avatar al-avatar--secondary">S</div>
+                  <span class="text-muted fs-13">System</span>
+                </span>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2" *ngIf="log.entityName">
+                  <div class="al-entity-icon" [ngClass]="'al-entity-icon--' + getEntityTypeClass(log.entityType)">
+                    <i [class]="getEntityIcon(log.entityType)"></i>
+                  </div>
+                  <span class="fw-medium fs-13">{{ log.entityName }}</span>
+                </div>
+                <span class="text-muted fs-12" *ngIf="!log.entityName">—</span>
+              </td>
+              <td>
+                <span class="al-org-chip" *ngIf="log.organizationName"
+                      [ngClass]="'al-org-chip--' + getOrgClass(log.organizationName)">
+                  <i class="ri-building-2-line"></i>{{ log.organizationName }}
+                </span>
+                <span class="al-org-chip al-org-chip--platform" *ngIf="!log.organizationName">
+                  <i class="ri-global-line"></i>Platform
+                </span>
+              </td>
+              <td>
+                <span class="al-desc" [title]="log.description || ''">
+                  {{ log.description || '-' }}
+                </span>
+              </td>
+              <td class="text-end pe-3 text-muted fs-12 text-nowrap" [title]="formatFullDate(log.createdAt)">
+                {{ formatTimeAgo(log.createdAt) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="logs.length === 0" class="al-empty">
+        <div class="al-empty__visual">
+          <div class="al-empty__ring"></div>
+          <div class="al-empty__icon">
+            <i class="ri-file-shield-2-line"></i>
+          </div>
         </div>
-        <div class="card-body">
-          <!-- Loading -->
-          <div *ngIf="isLoading" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-2 text-muted">Loading audit logs...</p>
-          </div>
-
-          <!-- Error -->
-          <div *ngIf="error && !isLoading" class="alert alert-danger">
-            {{ error }}
-            <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadLogs()">Retry</button>
-          </div>
-
-          <!-- Table -->
-          <div *ngIf="!isLoading && !error" class="table-responsive">
-            <table class="table table-sm table-hover align-middle mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Action</th>
-                  <th>Entity</th>
-                  <th>User</th>
-                  <th>Organization</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let log of logs">
-                  <td class="text-nowrap">
-                    <small>{{ formatDate(log.createdAt) }}</small>
-                  </td>
-                  <td>
-                    <span class="badge" [ngClass]="getActionBadgeClass(log.action)">
-                      {{ log.action }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge bg-light text-dark">{{ log.entityType }}</span>
-                    <small *ngIf="log.entityId" class="text-muted ms-1">#{{ log.entityId }}</small>
-                  </td>
-                  <td>
-                    <span *ngIf="log.userName">{{ log.userName }}</span>
-                    <small *ngIf="log.userEmail" class="text-muted d-block">{{ log.userEmail }}</small>
-                    <span *ngIf="!log.userName && !log.userEmail" class="text-muted">System</span>
-                  </td>
-                  <td>
-                    <span *ngIf="log.organizationName">{{ log.organizationName }}</span>
-                    <span *ngIf="!log.organizationName" class="text-muted">-</span>
-                  </td>
-                  <td>
-                    <small class="text-truncate d-block" style="max-width: 300px;" [title]="log.description">
-                      {{ log.description || '-' }}
-                    </small>
-                  </td>
-                </tr>
-                <tr *ngIf="logs.length === 0">
-                  <td colspan="6" class="text-center py-4 text-muted">
-                    <i class="ri-file-list-3-line fs-1 d-block mb-2"></i>
-                    No audit logs found
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Pagination -->
-          <div *ngIf="!isLoading && totalPages > 1" class="d-flex justify-content-between align-items-center mt-3">
-            <div class="text-muted small">
-              Page {{ currentPage + 1 }} of {{ totalPages }} ({{ totalElements }} total)
-            </div>
-            <nav>
-              <ul class="pagination pagination-sm mb-0">
-                <li class="page-item" [class.disabled]="currentPage === 0">
-                  <a class="page-link" (click)="goToPage(currentPage - 1)">Prev</a>
-                </li>
-                <li *ngFor="let page of pageNumbers" class="page-item" [class.active]="page === currentPage">
-                  <a class="page-link" (click)="goToPage(page)">{{ page + 1 }}</a>
-                </li>
-                <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
-                  <a class="page-link" (click)="goToPage(currentPage + 1)">Next</a>
-                </li>
-              </ul>
-            </nav>
-          </div>
-        </div>
+        <h6 class="al-empty__title">No audit logs found</h6>
+        <p class="al-empty__text">
+          {{ hasActiveFilters() ? 'Try adjusting your filters to see more results.' : 'Audit entries will appear here as actions are performed.' }}
+        </p>
+        <button class="btn btn-sm btn-soft-primary mt-2" *ngIf="hasActiveFilters()" (click)="clearFilters()">
+          <i class="ri-filter-off-line me-1"></i> Clear Filters
+        </button>
       </div>
     </div>
+
+    <!-- Pagination -->
+    <div class="card-footer bg-transparent al-card__footer d-flex align-items-center justify-content-between"
+         *ngIf="totalPages > 1">
+      <span class="text-muted fs-12">
+        Page {{ currentPage + 1 }} of {{ totalPages }}
+      </span>
+      <nav>
+        <ul class="pagination pagination-sm mb-0 gap-1">
+          <li class="page-item" [class.disabled]="currentPage === 0">
+            <a class="page-link al-page-link" (click)="goToPage(currentPage - 1)">
+              <i class="ri-arrow-left-s-line"></i>
+            </a>
+          </li>
+          <li *ngFor="let page of pageNumbers" class="page-item" [class.active]="page === currentPage">
+            <a class="page-link al-page-link" (click)="goToPage(page)">{{ page + 1 }}</a>
+          </li>
+          <li class="page-item" [class.disabled]="currentPage >= totalPages - 1">
+            <a class="page-link al-page-link" (click)="goToPage(currentPage + 1)">
+              <i class="ri-arrow-right-s-line"></i>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
   </div>
+
 </div>

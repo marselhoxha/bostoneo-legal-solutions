@@ -1,181 +1,313 @@
-<div class="container-fluid">
+<div class="container-fluid sh-page">
+
   <!-- Page Header -->
-  <div class="row">
-    <div class="col-12">
-      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <h4 class="mb-sm-0">System Health</h4>
-        <div class="page-title-right">
-          <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a routerLink="/superadmin/dashboard">SUPERADMIN</a></li>
-            <li class="breadcrumb-item active">System Health</li>
-          </ol>
-        </div>
+  <div class="sh-header">
+    <div>
+      <div class="text-muted fs-11 fw-semibold text-uppercase" style="letter-spacing: 0.05em;">
+        SUPERADMIN <span class="mx-1">/</span> Monitoring
       </div>
+      <h4 class="mb-0 fw-semibold">System Health</h4>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+      <span class="text-muted fs-12" *ngIf="lastRefreshed">
+        <i class="ri-time-line align-middle"></i> {{ lastRefreshed | date:'shortTime' }}
+      </span>
+      <button class="btn btn-soft-primary btn-sm" (click)="loadHealth()" [disabled]="isLoading">
+        <i class="ri-refresh-line" [class.spin]="isLoading"></i> Refresh
+      </button>
     </div>
   </div>
 
   <!-- Loading -->
   <div *ngIf="isLoading && !health" class="text-center py-5">
-    <div class="spinner-border text-primary" role="status"></div>
-    <p class="mt-2 text-muted">Checking system health...</p>
+    <div class="spinner-grow text-primary" style="width: 2.5rem; height: 2.5rem;"></div>
+    <h6 class="mt-3 text-muted">Checking system health...</h6>
   </div>
 
   <!-- Error -->
-  <div *ngIf="error && !health" class="alert alert-danger">
-    {{ error }}
-    <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadHealth()">Retry</button>
+  <div *ngIf="error && !health" class="alert alert-danger d-flex align-items-center gap-2 mt-3">
+    <i class="ri-error-warning-line fs-4"></i>
+    <div class="flex-grow-1"><strong>Error:</strong> {{ error }}</div>
+    <button class="btn btn-sm btn-danger" (click)="loadHealth()">Retry</button>
   </div>
 
-  <!-- Health Dashboard -->
+  <!-- Content -->
   <div *ngIf="health">
-    <!-- Overall Status -->
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between">
-              <div class="d-flex align-items-center">
-                <div class="avatar-lg me-3">
-                  <span class="avatar-title rounded-circle fs-1"
-                        [ngClass]="'bg-' + getStatusClass(health.overallStatus) + '-subtle text-' + getStatusClass(health.overallStatus)">
-                    <i [class]="getStatusIcon(health.overallStatus)"></i>
+
+    <!-- ═══ STATUS BANNER ═══ -->
+    <div class="sh-banner" [ngClass]="'sh-banner--' + getStatusClass(health.overallStatus)">
+      <div class="sh-banner__grid"></div>
+      <div class="sh-banner__content">
+        <div class="sh-banner__status">
+          <span class="sh-banner__dot" [ngClass]="'sh-banner__dot--' + getStatusClass(health.overallStatus)"></span>
+          <span class="sh-banner__label">{{ health.overallStatus }}</span>
+        </div>
+        <div class="sh-banner__metrics">
+          <div class="sh-banner__sep"></div>
+          <div class="sh-banner__metric">
+            <i class="ri-database-2-line"></i>
+            <div>
+              <span class="sh-banner__metric-lbl">Database</span>
+              <span class="sh-banner__metric-val">{{ health.database.responseTimeMs }}<small>ms</small></span>
+            </div>
+          </div>
+          <div class="sh-banner__sep"></div>
+          <div class="sh-banner__metric">
+            <i class="ri-cpu-line"></i>
+            <div>
+              <span class="sh-banner__metric-lbl">Memory</span>
+              <span class="sh-banner__metric-val">{{ health.memory.usagePercent | number:'1.0-0' }}<small>%</small></span>
+            </div>
+          </div>
+          <div class="sh-banner__sep"></div>
+          <div class="sh-banner__metric" *ngIf="health.apiMetrics">
+            <i class="ri-flashlight-line"></i>
+            <div>
+              <span class="sh-banner__metric-lbl">Requests</span>
+              <span class="sh-banner__metric-val">{{ formatNumber(health.apiMetrics.totalRequestsLastHour) }}<small>/hr</small></span>
+            </div>
+          </div>
+          <div class="sh-banner__sep" *ngIf="health.apiMetrics"></div>
+          <div class="sh-banner__metric">
+            <i class="ri-bug-line"></i>
+            <div>
+              <span class="sh-banner__metric-lbl">Errors (24h)</span>
+              <span class="sh-banner__metric-val" [class.sh-banner__metric-val--alert]="health.errorCountLast24Hours > 0">
+                {{ health.errorCountLast24Hours }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav sh-tabs mb-3">
+      <li class="nav-item">
+        <a class="nav-link" [class.active]="activeTab === 'status'" (click)="switchTab('status')">
+          <i class="ri-pulse-line me-1"></i> Status
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" [class.active]="activeTab === 'sessions'" (click)="switchTab('sessions')">
+          <i class="ri-user-follow-line me-1"></i> Sessions
+          <span class="sh-tab-badge">{{ health.activeSessions }}</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" [class.active]="activeTab === 'infra'" (click)="switchTab('infra')">
+          <i class="ri-server-line me-1"></i> Infrastructure
+        </a>
+      </li>
+    </ul>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- STATUS TAB                                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div *ngIf="activeTab === 'status'">
+
+      <!-- KPI Row -->
+      <div class="row g-3 mb-3">
+        <!-- Database -->
+        <div class="col-xl-3 col-sm-6">
+          <div class="card sh-kpi sh-kpi--success">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3">
+                <div class="sh-kpi__icon sh-kpi__icon--success">
+                  <i class="ri-database-2-line"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <span class="sh-kpi__label">Database</span>
+                  <div class="d-flex align-items-center gap-2 mt-1">
+                    <span class="badge rounded-pill"
+                          [ngClass]="'bg-' + getStatusClass(health.database.status) + '-subtle text-' + getStatusClass(health.database.status)">
+                      <i [class]="getStatusIcon(health.database.status)" class="me-1 fs-10"></i>{{ health.database.status }}
+                    </span>
+                  </div>
+                  <div class="sh-kpi__sub mt-2">
+                    <i class="ri-timer-line"></i> {{ health.database.responseTimeMs }}ms response
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Memory -->
+        <div class="col-xl-3 col-sm-6">
+          <div class="card sh-kpi" [ngClass]="'sh-kpi--' + getMemoryStatusClass()">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3">
+                <div class="sh-kpi__icon" [ngClass]="'sh-kpi__icon--' + getMemoryStatusClass()">
+                  <i class="ri-cpu-line"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <span class="sh-kpi__label">Memory</span>
+                  <div class="sh-kpi__big">{{ health.memory.usagePercent | number:'1.0-0' }}<span class="sh-kpi__pct">%</span></div>
+                  <div class="sh-kpi__minibar mt-1">
+                    <div class="sh-kpi__minibar-fill" [ngClass]="'bg-' + getMemoryStatusClass()"
+                         [style.width.%]="health.memory.usagePercent"></div>
+                  </div>
+                  <div class="sh-kpi__sub mt-1">
+                    {{ formatBytes(health.memory.usedBytes) }} / {{ formatBytes(health.memory.totalBytes) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Requests -->
+        <div class="col-xl-3 col-sm-6">
+          <div class="card sh-kpi sh-kpi--info">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3">
+                <div class="sh-kpi__icon sh-kpi__icon--info">
+                  <i class="ri-flashlight-line"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <span class="sh-kpi__label">API Requests</span>
+                  <div class="sh-kpi__big" *ngIf="health.apiMetrics">
+                    {{ formatNumber(health.apiMetrics.totalRequestsLastHour) }}<span class="sh-kpi__pct">/hr</span>
+                  </div>
+                  <span class="text-muted fs-13" *ngIf="!health.apiMetrics">N/A</span>
+                  <div class="sh-kpi__sub mt-2" *ngIf="health.apiMetrics">
+                    <i class="ri-speed-line"></i> {{ health.apiMetrics.avgResponseTimeMs }}ms avg
+                    <span class="ms-2" *ngIf="health.apiMetrics.p95ResponseTimeMs">· p95 {{ health.apiMetrics.p95ResponseTimeMs }}ms</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Errors -->
+        <div class="col-xl-3 col-sm-6">
+          <div class="card sh-kpi" [ngClass]="health.errorCountLast24Hours === 0 ? 'sh-kpi--success' : 'sh-kpi--danger'">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3">
+                <div class="sh-kpi__icon" [ngClass]="health.errorCountLast24Hours === 0 ? 'sh-kpi__icon--success' : 'sh-kpi__icon--danger'">
+                  <i [class]="health.errorCountLast24Hours === 0 ? 'ri-shield-check-line' : 'ri-bug-line'"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <span class="sh-kpi__label">Errors</span>
+                  <div class="d-flex align-items-baseline gap-3 mt-1">
+                    <div>
+                      <div class="sh-kpi__big" [class.text-danger]="health.errorCountLastHour > 0">{{ health.errorCountLastHour }}</div>
+                      <span class="sh-kpi__sub">last hour</span>
+                    </div>
+                    <div class="sh-kpi__vdiv"></div>
+                    <div>
+                      <div class="sh-kpi__big" [class.text-warning]="health.errorCountLast24Hours > 0">{{ health.errorCountLast24Hours }}</div>
+                      <span class="sh-kpi__sub">24 hours</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Row: Memory Donut + Application -->
+      <div class="row g-3">
+        <div class="col-lg-5">
+          <div class="card sh-card h-100">
+            <div class="card-header bg-transparent sh-card__header">
+              <div class="sh-card__badge sh-card__badge--primary">
+                <i class="ri-cpu-line"></i>
+              </div>
+              <h6 class="card-title mb-0">Memory Usage</h6>
+            </div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+              <!-- Donut Chart -->
+              <div class="sh-donut"
+                   [ngClass]="'sh-donut--' + getMemoryStatusClass()"
+                   [style.--gauge-pct]="health.memory.usagePercent">
+                <div class="sh-donut__inner">
+                  <span class="sh-donut__value">{{ health.memory.usagePercent | number:'1.0-0' }}</span>
+                  <span class="sh-donut__unit">%</span>
+                  <span class="sh-donut__sublabel">used</span>
+                </div>
+              </div>
+              <!-- Memory breakdown -->
+              <div class="sh-mem-row mt-3">
+                <div class="sh-mem-chip">
+                  <span class="sh-mem-chip__dot bg-primary"></span>
+                  <div>
+                    <span class="sh-mem-chip__label">Used</span>
+                    <span class="sh-mem-chip__value">{{ formatBytes(health.memory.usedBytes) }}</span>
+                  </div>
+                </div>
+                <div class="sh-mem-chip">
+                  <span class="sh-mem-chip__dot bg-success"></span>
+                  <div>
+                    <span class="sh-mem-chip__label">Free</span>
+                    <span class="sh-mem-chip__value">{{ formatBytes(health.memory.freeBytes) }}</span>
+                  </div>
+                </div>
+                <div class="sh-mem-chip">
+                  <span class="sh-mem-chip__dot" style="background: var(--vz-secondary-color);"></span>
+                  <div>
+                    <span class="sh-mem-chip__label">Total</span>
+                    <span class="sh-mem-chip__value">{{ formatBytes(health.memory.totalBytes) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-7">
+          <div class="card sh-card h-100">
+            <div class="card-header bg-transparent sh-card__header">
+              <div class="sh-card__badge sh-card__badge--success">
+                <i class="ri-server-line"></i>
+              </div>
+              <h6 class="card-title mb-0">Application Details</h6>
+            </div>
+            <div class="card-body p-0">
+              <div class="sh-props">
+                <div class="sh-props__row">
+                  <span class="sh-props__label"><i class="ri-heart-pulse-line text-success"></i> Status</span>
+                  <span class="badge rounded-pill"
+                        [ngClass]="'bg-' + getStatusClass(health.application.status) + '-subtle text-' + getStatusClass(health.application.status)">
+                    <i [class]="getStatusIcon(health.application.status)" class="me-1 fs-10"></i>
+                    {{ health.application.status }}
                   </span>
                 </div>
-                <div>
-                  <h3 class="mb-1">System Status: {{ health.overallStatus }}</h3>
-                  <p class="text-muted mb-0">Last checked: {{ health.checkedAt | date:'medium' }}</p>
+                <div class="sh-props__row">
+                  <span class="sh-props__label"><i class="ri-user-follow-line text-primary"></i> Active Users (24h)</span>
+                  <strong class="sh-tnum">{{ health.activeSessions }}</strong>
                 </div>
-              </div>
-              <button class="btn btn-outline-primary" (click)="loadHealth()" [disabled]="isLoading">
-                <i class="ri-refresh-line me-1" [class.spin]="isLoading"></i>Refresh
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Component Status Cards -->
-    <div class="row">
-      <!-- Database -->
-      <div class="col-md-6 col-lg-4">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="avatar-sm me-3">
-                <span class="avatar-title rounded-circle"
-                      [ngClass]="'bg-' + getStatusClass(health.database.status) + '-subtle text-' + getStatusClass(health.database.status)">
-                  <i class="ri-database-2-line"></i>
-                </span>
-              </div>
-              <div class="flex-grow-1">
-                <h6 class="mb-1">Database</h6>
-                <span class="badge" [ngClass]="'bg-' + getStatusClass(health.database.status)">
-                  {{ health.database.status }}
-                </span>
-              </div>
-              <div class="text-end">
-                <small class="text-muted">{{ health.database.responseTimeMs }}ms</small>
-              </div>
-            </div>
-            <p class="text-muted small mt-2 mb-0">{{ health.database.message }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Application -->
-      <div class="col-md-6 col-lg-4">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="avatar-sm me-3">
-                <span class="avatar-title rounded-circle"
-                      [ngClass]="'bg-' + getStatusClass(health.application.status) + '-subtle text-' + getStatusClass(health.application.status)">
-                  <i class="ri-server-line"></i>
-                </span>
-              </div>
-              <div class="flex-grow-1">
-                <h6 class="mb-1">Application</h6>
-                <span class="badge" [ngClass]="'bg-' + getStatusClass(health.application.status)">
-                  {{ health.application.status }}
-                </span>
-              </div>
-            </div>
-            <p class="text-muted small mt-2 mb-0">{{ health.application.message }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Active Sessions -->
-      <div class="col-md-6 col-lg-4">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="avatar-sm me-3">
-                <span class="avatar-title rounded-circle bg-info-subtle text-info">
-                  <i class="ri-user-line"></i>
-                </span>
-              </div>
-              <div class="flex-grow-1">
-                <h6 class="mb-1">Active Sessions</h6>
-                <h4 class="mb-0">{{ health.activeSessions }}</h4>
-              </div>
-            </div>
-            <p class="text-muted small mt-2 mb-0">Users active in the last hour</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Memory Usage -->
-    <div class="row">
-      <div class="col-lg-6">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0"><i class="ri-cpu-line me-2"></i>Memory Usage</h5>
-          </div>
-          <div class="card-body">
-            <div class="d-flex justify-content-between mb-2">
-              <span>Used: {{ formatBytes(health.memory.usedBytes) }}</span>
-              <span>Total: {{ formatBytes(health.memory.totalBytes) }}</span>
-            </div>
-            <div class="progress" style="height: 20px;">
-              <div class="progress-bar"
-                   [ngClass]="{'bg-success': health.memory.usagePercent < 70, 'bg-warning': health.memory.usagePercent >= 70 && health.memory.usagePercent < 90, 'bg-danger': health.memory.usagePercent >= 90}"
-                   [style.width.%]="health.memory.usagePercent">
-                {{ health.memory.usagePercent | number:'1.1-1' }}%
-              </div>
-            </div>
-            <div class="d-flex justify-content-between mt-2 text-muted small">
-              <span>Free: {{ formatBytes(health.memory.freeBytes) }}</span>
-              <span>{{ health.memory.usagePercent | number:'1.1-1' }}% used</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Error Counts -->
-      <div class="col-lg-6">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0"><i class="ri-error-warning-line me-2"></i>Error Counts</h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-6">
-                <div class="border rounded p-3 text-center">
-                  <h3 class="mb-1" [class.text-danger]="health.errorCountLastHour > 0">
-                    {{ health.errorCountLastHour }}
-                  </h3>
-                  <small class="text-muted">Last Hour</small>
+                <div class="sh-props__row">
+                  <span class="sh-props__label"><i class="ri-error-warning-line" [class.text-danger]="health.errorCountLastHour > 0" [class.text-muted]="health.errorCountLastHour === 0"></i> Errors (1h)</span>
+                  <strong class="sh-tnum" [class.text-danger]="health.errorCountLastHour > 0">{{ health.errorCountLastHour }}</strong>
                 </div>
-              </div>
-              <div class="col-6">
-                <div class="border rounded p-3 text-center">
-                  <h3 class="mb-1" [class.text-warning]="health.errorCountLast24Hours > 10">
-                    {{ health.errorCountLast24Hours }}
-                  </h3>
-                  <small class="text-muted">Last 24 Hours</small>
+                <div class="sh-props__row" *ngIf="health.apiMetrics">
+                  <span class="sh-props__label"><i class="ri-timer-line text-info"></i> Avg Latency</span>
+                  <strong class="sh-tnum">{{ health.apiMetrics.avgResponseTimeMs }}<small class="text-muted fw-normal">ms</small></strong>
+                </div>
+                <div class="sh-props__row" *ngIf="health.apiMetrics?.p95ResponseTimeMs">
+                  <span class="sh-props__label"><i class="ri-speed-line text-warning"></i> p95 Latency</span>
+                  <strong class="sh-tnum">{{ health.apiMetrics!.p95ResponseTimeMs }}<small class="text-muted fw-normal">ms</small></strong>
+                </div>
+                <div class="sh-props__row">
+                  <span class="sh-props__label"><i class="ri-database-2-line text-success"></i> DB Response</span>
+                  <strong class="sh-tnum">{{ health.database.responseTimeMs }}<small class="text-muted fw-normal">ms</small></strong>
+                </div>
+                <div class="sh-props__row" *ngIf="health.disk">
+                  <span class="sh-props__label"><i class="ri-hard-drive-2-line text-primary"></i> Disk Usage</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="sh-kpi__minibar" style="width: 60px;">
+                      <div class="sh-kpi__minibar-fill" [ngClass]="{
+                        'bg-success': health.disk!.usagePercent < 60,
+                        'bg-warning': health.disk!.usagePercent >= 60 && health.disk!.usagePercent < 85,
+                        'bg-danger': health.disk!.usagePercent >= 85
+                      }" [style.width.%]="health.disk!.usagePercent"></div>
+                    </div>
+                    <strong class="sh-tnum">{{ health.disk!.usagePercent | number:'1.0-0' }}<small class="text-muted fw-normal">%</small></strong>
+                  </div>
                 </div>
               </div>
             </div>
@@ -183,5 +315,342 @@
         </div>
       </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SESSIONS TAB                                -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div *ngIf="activeTab === 'sessions'">
+      <div class="text-center py-4" *ngIf="sessionsLoading">
+        <div class="spinner-border spinner-border-sm text-primary"></div>
+        <span class="ms-2 text-muted fs-13">Loading session data...</span>
+      </div>
+
+      <div *ngIf="!sessionsLoading">
+        <!-- Active Users -->
+        <div class="card sh-card mb-3">
+          <div class="card-header bg-transparent sh-card__header">
+            <div class="sh-card__badge sh-card__badge--success">
+              <i class="ri-user-follow-line"></i>
+            </div>
+            <h6 class="card-title mb-0 flex-grow-1">Active Users</h6>
+            <div class="sh-pill-group">
+              <button *ngFor="let w of ['1h', '6h', '24h']"
+                      class="sh-pill" [class.sh-pill--active]="sessionWindow === w"
+                      (click)="changeSessionWindow(w)">{{ w }}</button>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div *ngIf="activeSessions && activeSessions.length > 0" class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th class="ps-3">User</th>
+                    <th>Organization</th>
+                    <th>Device</th>
+                    <th>IP Address</th>
+                    <th class="text-end pe-3">Last Login</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let s of activeSessions" class="sh-table-row">
+                    <td class="ps-3">
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="sh-avatar sh-avatar--success">
+                          {{ (s.firstName?.charAt(0) || '') + (s.lastName?.charAt(0) || '') }}
+                          <span class="sh-avatar__online"></span>
+                        </div>
+                        <div>
+                          <div class="fw-semibold fs-13">{{ s.firstName }} {{ s.lastName }}</div>
+                          <span class="text-muted fs-11">{{ s.email }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="sh-org-chip" *ngIf="s.organizationName">
+                        <i class="ri-building-2-line"></i>{{ s.organizationName }}
+                      </span>
+                      <span class="badge bg-dark-subtle text-dark fs-11" *ngIf="!s.organizationName">Platform</span>
+                    </td>
+                    <td>
+                      <span class="text-muted fs-13">
+                        <i class="ri-device-line me-1"></i>{{ s.device || 'Unknown' }}
+                      </span>
+                    </td>
+                    <td><code class="sh-code">{{ s.ipAddress || '—' }}</code></td>
+                    <td class="text-end pe-3 text-muted fs-12">{{ formatTimeAgo(s.loginTime) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Empty state -->
+            <div *ngIf="!activeSessions || activeSessions.length === 0" class="sh-empty">
+              <div class="sh-empty__visual">
+                <div class="sh-empty__ring"></div>
+                <div class="sh-empty__icon">
+                  <i class="ri-user-unfollow-line"></i>
+                </div>
+              </div>
+              <h6 class="sh-empty__title">No active users</h6>
+              <p class="sh-empty__text">No users logged in within the last {{ sessionWindow }}.</p>
+              <div class="sh-pill-group mt-2">
+                <button *ngFor="let w of ['1h', '6h', '24h']"
+                        class="sh-pill" [class.sh-pill--active]="sessionWindow === w"
+                        (click)="changeSessionWindow(w)">{{ w }}</button>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer bg-transparent sh-card__footer"
+               *ngIf="activeSessions && activeSessions.length > 0">
+            <i class="ri-group-line"></i>
+            {{ activeSessions.length }} active user{{ activeSessions.length !== 1 ? 's' : '' }} in the last {{ sessionWindow }}
+          </div>
+        </div>
+
+        <!-- Recent Login Events -->
+        <div class="card sh-card">
+          <div class="card-header bg-transparent sh-card__header">
+            <div class="sh-card__badge sh-card__badge--info">
+              <i class="ri-login-circle-line"></i>
+            </div>
+            <h6 class="card-title mb-0 flex-grow-1">Login Events</h6>
+            <span class="badge bg-secondary-subtle text-secondary rounded-pill fs-10" *ngIf="loginEventsPage.totalElements > 0">
+              {{ loginEventsPage.totalElements }} total
+            </span>
+          </div>
+          <div class="card-body p-0">
+            <div *ngIf="loginEvents && loginEvents.length > 0" class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th style="width: 44px;" class="ps-3 text-center"></th>
+                    <th>User</th>
+                    <th>Organization</th>
+                    <th>Device</th>
+                    <th>IP</th>
+                    <th class="text-end pe-3">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let evt of loginEvents" class="sh-table-row"
+                      [class.sh-row-fail]="evt.eventType === 'LOGIN_ATTEMPT_FAILURE'">
+                    <td class="ps-3 text-center">
+                      <div class="sh-status-dot"
+                           [ngClass]="evt.eventType === 'LOGIN_ATTEMPT_SUCCESS' ? 'sh-status-dot--success' : 'sh-status-dot--danger'">
+                        <i [class]="evt.eventType === 'LOGIN_ATTEMPT_SUCCESS' ? 'ri-check-line' : 'ri-close-line'"></i>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="sh-avatar sh-avatar--sm"
+                             [ngClass]="evt.eventType === 'LOGIN_ATTEMPT_SUCCESS' ? 'sh-avatar--primary' : 'sh-avatar--danger'">
+                          {{ evt.userName?.charAt(0) || '?' }}
+                        </div>
+                        <div>
+                          <div class="fw-semibold fs-13">{{ evt.userName }}</div>
+                          <span class="text-muted fs-11">{{ evt.userEmail }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="sh-org-chip" *ngIf="evt.organizationName">
+                        <i class="ri-building-2-line"></i>{{ evt.organizationName }}
+                      </span>
+                      <span class="text-muted fs-12" *ngIf="!evt.organizationName">—</span>
+                    </td>
+                    <td>
+                      <span class="text-muted fs-12">
+                        <i class="ri-device-line me-1"></i>{{ evt.device || 'Unknown' }}
+                      </span>
+                    </td>
+                    <td><code class="sh-code">{{ evt.ipAddress || '—' }}</code></td>
+                    <td class="text-end pe-3 text-muted fs-12">{{ formatTimeAgo(evt.timestamp) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Empty state -->
+            <div *ngIf="!loginEvents || loginEvents.length === 0" class="sh-empty">
+              <div class="sh-empty__visual">
+                <div class="sh-empty__ring"></div>
+                <div class="sh-empty__icon">
+                  <i class="ri-history-line"></i>
+                </div>
+              </div>
+              <h6 class="sh-empty__title">No login events yet</h6>
+              <p class="sh-empty__text">Login events will appear here as users sign in.</p>
+            </div>
+          </div>
+          <!-- Pagination -->
+          <div class="card-footer bg-transparent sh-card__footer d-flex align-items-center justify-content-between"
+               *ngIf="loginEventsPage.totalPages > 1">
+            <span class="text-muted fs-12">
+              Page {{ loginEventsPage.number + 1 }} of {{ loginEventsPage.totalPages }}
+            </span>
+            <nav>
+              <ul class="pagination pagination-sm mb-0 gap-1">
+                <li class="page-item" [class.disabled]="loginEventsPage.number === 0">
+                  <a class="page-link sh-page-link" (click)="loadLoginEventsPage(loginEventsPage.number - 1)">
+                    <i class="ri-arrow-left-s-line"></i>
+                  </a>
+                </li>
+                <li *ngFor="let p of getPageNumbers()" class="page-item" [class.active]="p === loginEventsPage.number">
+                  <a class="page-link sh-page-link" (click)="loadLoginEventsPage(p)">{{ p + 1 }}</a>
+                </li>
+                <li class="page-item" [class.disabled]="loginEventsPage.number >= loginEventsPage.totalPages - 1">
+                  <a class="page-link sh-page-link" (click)="loadLoginEventsPage(loginEventsPage.number + 1)">
+                    <i class="ri-arrow-right-s-line"></i>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- INFRASTRUCTURE TAB                          -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div *ngIf="activeTab === 'infra'">
+      <div class="text-center py-4" *ngIf="infraLoading">
+        <div class="spinner-border spinner-border-sm text-primary"></div>
+        <span class="ms-2 text-muted fs-13">Loading infrastructure data...</span>
+      </div>
+
+      <div *ngIf="!infraLoading">
+        <!-- Errors by Org -->
+        <div class="card sh-card mb-3">
+          <div class="card-header bg-transparent sh-card__header">
+            <div class="sh-card__badge"
+                 [ngClass]="errorsByOrg && errorsByOrg.length > 0 ? 'sh-card__badge--danger' : 'sh-card__badge--success'">
+              <i [class]="errorsByOrg && errorsByOrg.length > 0 ? 'ri-bug-line' : 'ri-shield-check-line'"></i>
+            </div>
+            <h6 class="card-title mb-0 flex-grow-1">Errors by Organization</h6>
+            <span class="badge bg-secondary-subtle text-secondary rounded-pill fs-10">Last 24h</span>
+          </div>
+          <div class="card-body p-0">
+            <div *ngIf="errorsByOrg && errorsByOrg.length > 0" class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th class="ps-3">Organization</th>
+                    <th>Last Error Type</th>
+                    <th class="text-center">Count</th>
+                    <th class="text-end pe-3">Last Occurred</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let org of errorsByOrg" class="sh-table-row">
+                    <td class="ps-3">
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="sh-avatar sh-avatar--sm sh-avatar--danger">
+                          {{ org.organizationName?.charAt(0) || '?' }}
+                        </div>
+                        <span class="fw-semibold">{{ org.organizationName }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <code class="sh-code" *ngIf="org.lastErrorType">{{ org.lastErrorType }}</code>
+                      <span class="text-muted fs-12" *ngIf="!org.lastErrorType">—</span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-danger-subtle text-danger rounded-pill fw-bold px-3">{{ org.errorCount24h }}</span>
+                    </td>
+                    <td class="text-end pe-3 text-muted fs-12">{{ formatTimeAgo(org.lastError) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div *ngIf="!errorsByOrg || errorsByOrg.length === 0" class="sh-empty sh-empty--success">
+              <div class="sh-empty__visual">
+                <div class="sh-empty__ring sh-empty__ring--success"></div>
+                <div class="sh-empty__icon sh-empty__icon--success">
+                  <i class="ri-shield-check-line"></i>
+                </div>
+              </div>
+              <h6 class="sh-empty__title text-success">All Clear</h6>
+              <p class="sh-empty__text">No errors reported in the last 24 hours. All systems nominal.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Storage by Org — Card Layout -->
+        <div class="card sh-card">
+          <div class="card-header bg-transparent sh-card__header">
+            <div class="sh-card__badge sh-card__badge--primary">
+              <i class="ri-hard-drive-2-line"></i>
+            </div>
+            <h6 class="card-title mb-0 flex-grow-1">Storage by Organization</h6>
+            <span class="badge bg-secondary-subtle text-secondary rounded-pill fs-10" *ngIf="storageByOrg">
+              {{ storageByOrg.length }} org{{ storageByOrg.length !== 1 ? 's' : '' }}
+            </span>
+          </div>
+          <div class="card-body" *ngIf="storageByOrg && storageByOrg.length > 0">
+            <div class="sh-storage-grid">
+              <div *ngFor="let org of storageByOrg" class="sh-storage-card">
+                <!-- Header: Avatar + Name + Quota -->
+                <div class="sh-storage-card__header">
+                  <div class="d-flex align-items-center gap-2 flex-grow-1 min-width-0">
+                    <div class="sh-avatar sh-avatar--sm sh-avatar--primary">
+                      {{ org.organizationName?.charAt(0) || '?' }}
+                    </div>
+                    <span class="fw-semibold fs-13 text-truncate">{{ org.organizationName }}</span>
+                  </div>
+                  <span class="sh-storage-card__pct sh-tnum" *ngIf="org.quotaPercent !== null" [ngClass]="{
+                    'text-muted': org.quotaPercent === 0,
+                    'text-success': org.quotaPercent! > 0 && org.quotaPercent! < 60,
+                    'text-warning': org.quotaPercent! >= 60 && org.quotaPercent! < 85,
+                    'text-danger': org.quotaPercent! >= 85
+                  }">{{ org.quotaPercent }}%</span>
+                  <span class="text-muted fs-11" *ngIf="org.quotaPercent === null">No limit</span>
+                </div>
+
+                <!-- Quota Bar (full width) -->
+                <div class="sh-storage-card__bar" *ngIf="org.quotaPercent !== null">
+                  <div class="sh-storage-card__bar-fill" [ngClass]="{
+                    'sh-storage-card__bar-fill--empty': org.quotaPercent === 0,
+                    'bg-success': org.quotaPercent! > 0 && org.quotaPercent! < 60,
+                    'bg-warning': org.quotaPercent! >= 60 && org.quotaPercent! < 85,
+                    'bg-danger': org.quotaPercent! >= 85
+                  }" [style.width.%]="org.quotaPercent! > 0 ? org.quotaPercent : 100"></div>
+                </div>
+                <div class="sh-storage-card__bar" *ngIf="org.quotaPercent === null">
+                  <div class="sh-storage-card__bar-fill sh-storage-card__bar-fill--none" style="width: 100%;"></div>
+                </div>
+
+                <!-- Stats Row -->
+                <div class="sh-storage-card__stats">
+                  <div class="sh-storage-card__stat">
+                    <i class="ri-hard-drive-2-line"></i>
+                    <span class="sh-tnum fw-medium">{{ formatBytes(org.storageUsedBytes) }}</span>
+                  </div>
+                  <div class="sh-storage-card__stat">
+                    <i class="ri-file-text-line"></i>
+                    <span class="sh-tnum">{{ formatNumber(org.documentCount) }} <small class="text-muted">docs</small></span>
+                  </div>
+                  <div class="sh-storage-card__stat">
+                    <i class="ri-database-2-line"></i>
+                    <span class="sh-tnum">{{ formatNumber(org.dbRows) }} <small class="text-muted">rows</small></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body" *ngIf="!storageByOrg || storageByOrg.length === 0">
+            <div class="sh-empty">
+              <div class="sh-empty__visual">
+                <div class="sh-empty__ring"></div>
+                <div class="sh-empty__icon">
+                  <i class="ri-hard-drive-2-line"></i>
+                </div>
+              </div>
+              <h6 class="sh-empty__title">No storage data</h6>
+              <p class="sh-empty__text">Storage metrics appear once organizations upload documents.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>

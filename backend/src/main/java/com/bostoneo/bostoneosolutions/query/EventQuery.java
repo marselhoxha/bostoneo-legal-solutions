@@ -12,7 +12,7 @@ public class EventQuery {
      * @deprecated Use INSERT_EVENT_BY_USER_EMAIL_WITH_ORG_QUERY for tenant isolation
      */
     @Deprecated
-    public static final String INSERT_EVENT_BY_USER_EMAIL_QUERY = "INSERT INTO user_events (user_id, event_id, device, ip_address) VALUES ((SELECT id FROM users WHERE email = :email), (SELECT id FROM events WHERE type = :type), :device, :ipAddress)";
+    public static final String INSERT_EVENT_BY_USER_EMAIL_QUERY = "INSERT INTO user_events (user_id, event_id, device, ip_address, created_at) VALUES ((SELECT id FROM users WHERE email = :email), (SELECT id FROM events WHERE type = :type), :device, :ipAddress, NOW())";
 
     // ==================== TENANT-FILTERED QUERIES ====================
     // SECURITY: Always use these queries for proper multi-tenant isolation.
@@ -30,14 +30,14 @@ public class EventQuery {
      * SECURITY: Insert event for a user with organization context (by email)
      */
     public static final String INSERT_EVENT_BY_USER_EMAIL_WITH_ORG_QUERY =
-            "INSERT INTO user_events (user_id, event_id, device, ip_address, organization_id) " +
+            "INSERT INTO user_events (user_id, event_id, device, ip_address, organization_id, created_at) " +
             "VALUES ((SELECT id FROM users WHERE email = :email AND organization_id = :organizationId), " +
-            "(SELECT id FROM events WHERE type = :type), :device, :ipAddress, :organizationId)";
+            "(SELECT id FROM events WHERE type = :type), :device, :ipAddress, :organizationId, NOW())";
 
     /**
      * SECURITY: Insert event for a user with organization context (by userId)
      */
     public static final String INSERT_EVENT_BY_USER_ID_WITH_ORG_QUERY =
-            "INSERT INTO user_events (user_id, event_id, device, ip_address, organization_id) " +
-            "VALUES (:userId, (SELECT id FROM events WHERE type = :type), :device, :ipAddress, :organizationId)";
+            "INSERT INTO user_events (user_id, event_id, device, ip_address, organization_id, created_at) " +
+            "VALUES (:userId, (SELECT id FROM events WHERE type = :type), :device, :ipAddress, :organizationId, NOW())";
 }

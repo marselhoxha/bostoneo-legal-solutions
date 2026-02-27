@@ -244,6 +244,7 @@ export interface AuditLogEntry {
   action: string;
   entityType: string;
   entityId?: number;
+  entityName?: string;
   description: string;
   userId?: number;
   userEmail?: string;
@@ -335,6 +336,7 @@ export interface IntegrationStatus {
 
 // Security Overview (for Phase 1.3)
 export interface SecurityOverview {
+  totalFailedLogins: number;
   failedLoginsLast24h: number;
   failedLoginsLast7d: number;
   failedLoginsLast30d: number;
@@ -401,4 +403,142 @@ export interface CreateUserForOrg {
   lastName: string;
   email: string;
   roleName: string;
+}
+
+// === Dashboard Drill-Down Models ===
+
+export interface OrgActiveUsers {
+  organizationId: number;
+  organizationName: string;
+  activeUsers24h: number;
+  totalUsers: number;
+  activityPercent: number;
+}
+
+export interface DrillDownUserActivity {
+  userId: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  lastLogin: string;
+  loginCount24h: number;
+  lastDevice: string;
+  lastIpAddress: string;
+}
+
+export interface UserSessionItem {
+  loginTime: string;
+  device: string;
+  ipAddress: string;
+  eventType: 'SUCCESS' | 'FAILURE';
+}
+
+export interface OrgApiRequests {
+  organizationId: number | null;
+  organizationName: string;
+  requestCount: number;
+  topAction: string;
+}
+
+export interface EndpointBreakdown {
+  action: string;
+  entityType: string;
+  count: number;
+  lastHit: string;
+}
+
+export interface OrgStorage {
+  organizationId: number;
+  organizationName: string;
+  storageUsedBytes: number;
+  documentCount: number;
+  dbRows: number;
+  quotaPercent: number | null;
+}
+
+export interface OrgErrors {
+  organizationId: number | null;
+  organizationName: string;
+  errorCount24h: number;
+  lastError: string;
+  lastErrorType: string;
+}
+
+export interface OrgSecurity {
+  organizationId: number;
+  organizationName: string;
+  failedLogins: number;
+  accountLockouts: number;
+  suspiciousIps: number;
+}
+
+export interface EngagementMetrics {
+  dau: number;
+  wau: number;
+  mau: number;
+  dauWauRatio: number;
+  avgLoginsPerUserPerDay: number;
+  byOrganization: OrgEngagement[];
+}
+
+export interface OrgEngagement {
+  organizationId: number;
+  organizationName: string;
+  dau: number;
+  wau: number;
+  mau: number;
+}
+
+export interface DataGrowth {
+  casesThisWeek: number;
+  casesLastWeek: number;
+  documentsThisWeek: number;
+  documentsLastWeek: number;
+  clientsThisWeek: number;
+  clientsLastWeek: number;
+  byOrganization: OrgDataGrowth[];
+}
+
+export interface OrgDataGrowth {
+  organizationId: number;
+  organizationName: string;
+  casesThisWeek: number;
+  documentsThisWeek: number;
+  clientsThisWeek: number;
+}
+
+export interface FeatureAdoption {
+  totalOrganizations: number;
+  smsEnabled: number;
+  whatsappEnabled: number;
+  emailEnabled: number;
+  boldSignEnabled: number;
+  twilioEnabled: number;
+}
+
+// System Health — Active Sessions & Login Events
+
+export interface ActiveSession {
+  userId: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  organizationId: number | null;
+  organizationName: string;
+  device: string;
+  ipAddress: string;
+  loginTime: string;
+}
+
+export interface LoginEvent {
+  id: number;
+  userId: number;
+  userEmail: string;
+  userName: string;
+  organizationId: number | null;
+  organizationName: string;
+  device: string;
+  ipAddress: string;
+  eventType: 'LOGIN_ATTEMPT_SUCCESS' | 'LOGIN_ATTEMPT_FAILURE';
+  timestamp: string;
 }

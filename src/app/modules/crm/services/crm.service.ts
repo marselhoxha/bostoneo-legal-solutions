@@ -246,35 +246,37 @@ export class CrmService {
   }
 
   // Conflict Checking
+  private conflictCheckUrl = `${environment.apiUrl}/api/conflict-checks`;
+
   performClientConflictCheck(leadId: number, clientData: any): Observable<any> {
-    return this.http.post<any>(`/api/conflict-checks/check-client?leadId=${leadId}`, clientData);
+    return this.http.post<any>(`${this.conflictCheckUrl}/check-client?leadId=${leadId}`, clientData);
   }
 
   performMatterConflictCheck(leadId: number, matterData: any): Observable<any> {
-    return this.http.post<any>(`/api/conflict-checks/check-matter?leadId=${leadId}`, matterData);
+    return this.http.post<any>(`${this.conflictCheckUrl}/check-matter?leadId=${leadId}`, matterData);
   }
 
   performFullConflictCheck(leadId: number, conversionData: any): Observable<any> {
-    return this.http.post<any>(`/api/conflict-checks/check-full?leadId=${leadId}`, conversionData);
+    return this.http.post<any>(`${this.conflictCheckUrl}/check-full?leadId=${leadId}`, conversionData);
   }
 
   reviewConflictCheck(conflictCheckId: number, reviewData: any): Observable<any> {
-    return this.http.post<any>(`/api/conflict-checks/${conflictCheckId}/review`, reviewData);
+    return this.http.post<any>(`${this.conflictCheckUrl}/${conflictCheckId}/review`, reviewData);
   }
 
   resolveConflict(conflictCheckId: number, resolutionData: any): Observable<any> {
-    return this.http.post<any>(`/api/conflict-checks/${conflictCheckId}/resolve`, resolutionData);
+    return this.http.post<any>(`${this.conflictCheckUrl}/${conflictCheckId}/resolve`, resolutionData);
   }
 
   canProceedWithConversion(entityType: string, entityId: number): Observable<any> {
-    return this.http.get<any>(`/api/conflict-checks/entity/${entityType}/${entityId}/can-proceed`);
+    return this.http.get<any>(`${this.conflictCheckUrl}/entity/${entityType}/${entityId}/can-proceed`);
   }
 
   getConflictChecks(params?: any): Observable<any> {
-    return this.http.get<any>('/api/conflict-checks', { params });
+    return this.http.get<any>(this.conflictCheckUrl, { params });
   }
 
   getConflictCheckById(id: number): Observable<any> {
-    return this.http.get<any>(`/api/conflict-checks/${id}`);
+    return this.http.get<any>(`${this.conflictCheckUrl}/${id}`);
   }
 }

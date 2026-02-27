@@ -213,9 +213,16 @@
 
       <!-- ====== QUESTION MODE CONTENT ====== -->
       <div [hidden]="selectedTask !== 'question'" class="px-3">
+        <!-- Bookmark Filter Tabs -->
+        <div class="sidebar-filter-tabs">
+          <button class="filter-tab" [class.active]="!showBookmarkedOnly" (click)="setBookmarkFilter(false)">All</button>
+          <button class="filter-tab" [class.active]="showBookmarkedOnly" (click)="setBookmarkFilter(true)">
+            <i class="ri-bookmark-fill me-1"></i>Saved
+          </button>
+        </div>
         <div class="sidebar-section-header">
-          <span class="section-title">Past 90 Days</span>
-          <span class="section-action action-primary" (click)="deleteAllConversations()">Clear all</span>
+          <span class="section-title">{{ showBookmarkedOnly ? 'Bookmarked' : 'Past 90 Days' }}</span>
+          <span class="section-action action-primary" *ngIf="!showBookmarkedOnly" (click)="deleteAllConversations()">Clear all</span>
         </div>
 
         <!-- Loading State -->
@@ -226,9 +233,9 @@
 
         <!-- Empty State -->
         <div class="sidebar-empty-state" *ngIf="!loadingDrafts && filteredQuestionConversations.length === 0">
-          <div class="empty-icon"><i class="ri-question-answer-line"></i></div>
-          <p class="empty-title">No questions yet</p>
-          <p class="empty-desc">Ask a legal question to get started</p>
+          <div class="empty-icon"><i [class]="showBookmarkedOnly ? 'ri-bookmark-line' : 'ri-question-answer-line'"></i></div>
+          <p class="empty-title">{{ showBookmarkedOnly ? 'No saved responses' : 'No questions yet' }}</p>
+          <p class="empty-desc">{{ showBookmarkedOnly ? 'Save an AI response to find it here' : 'Ask a legal question to get started' }}</p>
         </div>
 
         <!-- Questions List -->
@@ -1554,6 +1561,12 @@
 
         <app-ai-disclaimer [compact]="true"></app-ai-disclaimer>
         <div class="chat-messages-area-side">
+          <!-- Bookmarked-only banner -->
+          <div class="bookmarked-only-banner" *ngIf="showBookmarkedOnly && (conversationMessages$ | async)?.length > 0">
+            <i class="ri-bookmark-fill"></i>
+            <span>Showing saved responses only</span>
+            <button class="btn-show-all" (click)="showAllMessages()">Show all</button>
+          </div>
           <ul class="list-unstyled chat-conversation-list">
             <!-- User & AI Messages -->
             <ng-container *ngFor="let message of (conversationMessages$ | async); let i = index">
@@ -1589,15 +1602,9 @@
                       <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
                     </div>
                     <div class="message-bubble ai-message flex-grow-1">
-                      <!-- Research Mode Badge + Quality Score -->
-                      <div class="research-mode-badge d-flex align-items-center gap-2 flex-wrap" *ngIf="message.researchMode">
-                        <span class="badge" [ngClass]="message.researchMode === 'THOROUGH' ? 'badge-thorough' : 'badge-fast'">
-                          <i [class]="message.researchMode === 'THOROUGH' ? 'ri-search-eye-line' : 'ri-flashlight-line'"></i>
-                          {{ message.researchMode === 'THOROUGH' ? 'Thorough' : 'Fast' }}
-                        </span>
-                        <!-- Quality Score Badge -->
-                        <span *ngIf="message.metadata?.qualityScore"
-                              class="badge quality-score-badge"
+                      <!-- Quality Score Badge (shown only when present) -->
+                      <div class="research-mode-badge d-flex align-items-center gap-2 flex-wrap" *ngIf="message.metadata?.qualityScore">
+                        <span class="badge quality-score-badge"
                               [ngClass]="getQualityBadgeClass(message.metadata.qualityScore.grade)"
                               [title]="getQualityTooltip(message.metadata.qualityScore)">
                           <i class="ri-shield-check-line me-1"></i>
@@ -1692,13 +1699,14 @@
                         (reject)="rejectTransformation($event)">
                       </app-transformation-preview>
 
-                      <!-- Attorney Review Button (ABA Opinion 512) -->
-                      <div class="d-flex align-items-center gap-2 mt-2" *ngIf="message.id">
-                        <button class="btn btn-sm" [class.text-success]="message.reviewedAt"
-                                (click)="markAsReviewed(message)"
-                                [title]="message.reviewedAt ? 'Reviewed on ' + (message.reviewedAt | date:'short') : 'Mark as Reviewed'">
-                          <i class="ri-checkbox-circle-line"></i>
-                          <span class="ms-1 small" *ngIf="message.reviewedAt">Reviewed</span>
+                      <!-- Message Actions: Bookmark -->
+                      <div class="message-actions-bar" *ngIf="message.role === 'assistant'">
+                        <button class="action-btn-bookmark"
+                                [class.active]="message.bookmarked"
+                                (click)="toggleBookmark(message)"
+                                [title]="message.bookmarked ? 'Remove bookmark' : 'Bookmark this response'">
+                          <i [class]="message.bookmarked ? 'ri-bookmark-fill' : 'ri-bookmark-line'"></i>
+                          {{ message.bookmarked ? 'Saved' : 'Save' }}
                         </button>
                       </div>
                     </div>
@@ -1774,6 +1782,12 @@
       </div>
       <app-ai-disclaimer></app-ai-disclaimer>
       <div class="chat-messages-area">
+        <!-- Bookmarked-only banner -->
+        <div class="bookmarked-only-banner" *ngIf="showBookmarkedOnly && (conversationMessages$ | async)?.length > 0">
+          <i class="ri-bookmark-fill"></i>
+          <span>Showing saved responses only</span>
+          <button class="btn-show-all" (click)="showAllMessages()">Show all</button>
+        </div>
         <ul class="list-unstyled chat-conversation-list">
 
           <!-- User & AI Messages -->
@@ -1811,15 +1825,9 @@
                   </div>
 
                   <div class="message-bubble ai-message flex-grow-1">
-                    <!-- Research Mode Badge + Quality Score -->
-                    <div class="research-mode-badge d-flex align-items-center gap-2 flex-wrap" *ngIf="message.researchMode">
-                      <span class="badge" [ngClass]="message.researchMode === 'THOROUGH' ? 'badge-thorough' : 'badge-fast'">
-                        <i [class]="message.researchMode === 'THOROUGH' ? 'ri-search-eye-line' : 'ri-flashlight-line'"></i>
-                        {{ message.researchMode === 'THOROUGH' ? 'Thorough Research' : 'Fast Mode' }}
-                      </span>
-                      <!-- Quality Score Badge -->
-                      <span *ngIf="message.metadata?.qualityScore"
-                            class="badge quality-score-badge"
+                    <!-- Quality Score Badge (shown only when present) -->
+                    <div class="research-mode-badge d-flex align-items-center gap-2 flex-wrap" *ngIf="message.metadata?.qualityScore">
+                      <span class="badge quality-score-badge"
                             [ngClass]="getQualityBadgeClass(message.metadata.qualityScore.grade)"
                             [title]="getQualityTooltip(message.metadata.qualityScore)">
                         <i class="ri-shield-check-line me-1"></i>
@@ -1917,13 +1925,14 @@
                       </div>
                     </div>
 
-                    <!-- Attorney Review Button (ABA Opinion 512) -->
-                    <div class="d-flex align-items-center gap-2 mt-2" *ngIf="message.id">
-                      <button class="btn btn-sm" [class.text-success]="message.reviewedAt"
-                              (click)="markAsReviewed(message)"
-                              [title]="message.reviewedAt ? 'Reviewed on ' + (message.reviewedAt | date:'short') : 'Mark as Reviewed'">
-                        <i class="ri-checkbox-circle-line"></i>
-                        <span class="ms-1 small" *ngIf="message.reviewedAt">Reviewed</span>
+                    <!-- Message Actions: Bookmark -->
+                    <div class="message-actions-bar" *ngIf="message.role === 'assistant'">
+                      <button class="action-btn-bookmark"
+                              [class.active]="message.bookmarked"
+                              (click)="toggleBookmark(message)"
+                              [title]="message.bookmarked ? 'Remove bookmark' : 'Bookmark this response'">
+                        <i [class]="message.bookmarked ? 'ri-bookmark-fill' : 'ri-bookmark-line'"></i>
+                        {{ message.bookmarked ? 'Saved' : 'Save' }}
                       </button>
                     </div>
 

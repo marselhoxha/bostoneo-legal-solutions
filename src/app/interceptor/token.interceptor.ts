@@ -224,9 +224,9 @@ export class TokenInterceptor implements HttpInterceptor {
   }
 
   private isPublicEndpoint(url: string): boolean {
-    return url.includes('verify') ||
-           url.includes('login') ||
-           url.includes('register') ||
+    return url.includes('/verify/') ||
+           url.includes('/user/login') ||
+           url.includes('/user/register') ||
            url.includes('resetpassword') ||
            url.includes('/webhook/') ||
            url.includes('refresh/token');

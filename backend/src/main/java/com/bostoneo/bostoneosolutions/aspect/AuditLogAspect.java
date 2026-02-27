@@ -1,8 +1,11 @@
 package com.bostoneo.bostoneosolutions.aspect;
 
 import com.bostoneo.bostoneosolutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.AuditLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -10,7 +13,12 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -110,6 +118,39 @@ public class AuditLogAspect {
             description = buildDescription(action, entityType, method.getName());
         }
 
+        // Capture ThreadLocal context BEFORE async execution (SecurityContext, TenantContext, Request)
+        Long userId = null;
+        Long organizationId = TenantContext.getCurrentTenant();
+        String ipAddress = null;
+        String userAgent = null;
+
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+                Object principal = auth.getPrincipal();
+                if (principal instanceof UserDTO userDTO) {
+                    userId = userDTO.getId();
+                    if (organizationId == null) {
+                        organizationId = userDTO.getOrganizationId();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not extract user context for audit: {}", e.getMessage());
+        }
+
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                HttpServletRequest request = attrs.getRequest();
+                String xff = request.getHeader("X-Forwarded-For");
+                ipAddress = (xff != null && !xff.isEmpty()) ? xff.split(",")[0].trim() : request.getRemoteAddr();
+                userAgent = request.getHeader("User-Agent");
+            }
+        } catch (Exception e) {
+            log.debug("Could not extract request context for audit: {}", e.getMessage());
+        }
+
         // Log the activity asynchronously — don't block the response
         try {
             String safeMetadata = (metadata != null && !metadata.isEmpty()) ? metadata : "{}";
@@ -117,9 +158,14 @@ public class AuditLogAspect {
             final String finalDescription = description;
             final com.bostoneo.bostoneosolutions.model.AuditLog.AuditAction finalAction = action;
             final com.bostoneo.bostoneosolutions.model.AuditLog.EntityType finalEntityType = entityType;
+            final Long finalUserId = userId;
+            final Long finalOrgId = organizationId;
+            final String finalIp = ipAddress;
+            final String finalUa = userAgent;
             java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
-                    auditLogService.log(finalAction, finalEntityType, finalEntityId, finalDescription, safeMetadata);
+                    auditLogService.log(finalUserId, finalOrgId, finalAction, finalEntityType,
+                            finalEntityId, finalDescription, safeMetadata, finalIp, finalUa);
                 } catch (Exception ex) {
                     log.error("Failed to log audit activity (async): {}", ex.getMessage());
                 }

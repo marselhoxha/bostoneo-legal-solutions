@@ -1,276 +1,354 @@
-// Card animations
-.card-animate {
-  transition: all 0.3s ease;
+// ═══════════════════════════════════════════════
+// SuperAdmin Dashboard — Executive Summary
+// Velzon theme aligned, single-page layout
+// ═══════════════════════════════════════════════
+
+// ─── Page Header ──────────────────────────────
+.sa-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.75rem 0 1.25rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--vz-border-color);
+
+  &__left {
+    .sa-header__label {
+      margin-bottom: 0.125rem;
+    }
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+// ─── Stat Cards ───────────────────────────────
+.sa-stat-card {
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+
+  &--primary::before { background: var(--vz-primary); }
+  &--info::before { background: var(--vz-info); }
+  &--success::before { background: var(--vz-success); }
+  &--warning::before { background: var(--vz-warning); }
+
+  &--primary, &--info {
+    cursor: pointer;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  &__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--vz-secondary-color);
+    margin-bottom: 0.25rem;
+  }
+
+  &__value {
+    font-weight: 700;
+    color: var(--vz-heading-color);
+    font-feature-settings: "tnum";
+    margin-bottom: 0;
+  }
+
+  &__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  &--primary .sa-stat-card__icon {
+    background: rgba(var(--vz-primary-rgb), 0.1);
+    color: var(--vz-primary);
+  }
+  &--info .sa-stat-card__icon {
+    background: rgba(var(--vz-info-rgb), 0.1);
+    color: var(--vz-info);
+  }
+  &--success .sa-stat-card__icon {
+    background: rgba(var(--vz-success-rgb), 0.1);
+    color: var(--vz-success);
+  }
+  &--warning .sa-stat-card__icon {
+    background: rgba(var(--vz-warning-rgb), 0.1);
+    color: var(--vz-warning);
+  }
+}
+
+// ─── System Vitals Strip ──────────────────────
+.sa-vitals {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.sa-vital {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+
+  i {
+    font-size: 1rem;
+  }
+
+  &__val {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--vz-heading-color);
+    font-feature-settings: "tnum";
+  }
+
+  &__lbl {
+    font-size: 0.75rem;
+    color: var(--vz-secondary-color);
+  }
+
+  &__bar {
+    width: 48px;
+    height: 4px;
+    background: var(--vz-light);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  &__bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+
+  &__sep {
+    width: 1px;
+    height: 24px;
+    background: var(--vz-border-color);
+    flex-shrink: 0;
+  }
+}
+
+// ─── Alert Items ──────────────────────────────
+.sa-alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--vz-border-color);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  &:first-child {
+    padding-top: 0;
+  }
+
+  &__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+
+    &--danger {
+      background: rgba(var(--vz-danger-rgb), 0.1);
+      color: var(--vz-danger);
+    }
+    &--warning {
+      background: rgba(var(--vz-warning-rgb), 0.1);
+      color: var(--vz-warning);
+    }
+    &--info {
+      background: rgba(var(--vz-info-rgb), 0.1);
+      color: var(--vz-info);
+    }
+    &--secondary {
+      background: rgba(var(--vz-secondary-rgb), 0.1);
+      color: var(--vz-secondary-color);
+    }
+  }
+}
+
+// ─── Security Pulse Dot ───────────────────────
+.sa-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+
+  &--success { background: var(--vz-success); }
+  &--info { background: var(--vz-info); }
+  &--warning {
+    background: var(--vz-warning);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  &--danger {
+    background: var(--vz-danger);
+    animation: pulse-glow 1.5s ease-in-out infinite;
+  }
+  &--secondary { background: var(--vz-secondary-color); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.5); }
+}
+
+// ─── Activity Table Action Dots ───────────────
+.sa-action-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+
+  &--success {
+    background: rgba(var(--vz-success-rgb), 0.1);
+    color: var(--vz-success);
+  }
+  &--info {
+    background: rgba(var(--vz-info-rgb), 0.1);
+    color: var(--vz-info);
+  }
+  &--danger {
+    background: rgba(var(--vz-danger-rgb), 0.1);
+    color: var(--vz-danger);
+  }
+  &--primary {
+    background: rgba(var(--vz-primary-rgb), 0.1);
+    color: var(--vz-primary);
+  }
+  &--warning {
+    background: rgba(var(--vz-warning-rgb), 0.1);
+    color: var(--vz-warning);
+  }
+  &--secondary {
+    background: rgba(var(--vz-secondary-rgb), 0.1);
+    color: var(--vz-secondary-color);
+  }
+}
+
+// ─── Quick Nav Cards ──────────────────────────
+.sa-nav-card {
+  cursor: pointer;
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
 
   &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: rgba(var(--vz-primary-rgb), 0.3);
   }
-}
 
-// Cursor pointer
-.cursor-pointer {
-  cursor: pointer;
-}
-
-// Avatar sizes
-.avatar-md {
-  width: 3.5rem;
-  height: 3.5rem;
-
-  .avatar-title {
-    width: 100%;
-    height: 100%;
+  &__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+
+    &--info {
+      background: rgba(var(--vz-info-rgb), 0.1);
+      color: var(--vz-info);
+    }
+    &--success {
+      background: rgba(var(--vz-success-rgb), 0.1);
+      color: var(--vz-success);
+    }
+    &--warning {
+      background: rgba(var(--vz-warning-rgb), 0.1);
+      color: var(--vz-warning);
+    }
   }
 }
 
-.avatar-sm {
-  width: 2.5rem;
-  height: 2.5rem;
-
-  .avatar-title {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-  }
-}
-
-.avatar-xs {
-  width: 2rem;
-  height: 2rem;
-
-  .avatar-title {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-  }
-}
-
-// Soft background colors
-.bg-soft-primary {
-  background-color: rgba(64, 81, 137, 0.15) !important;
-}
-
-.bg-soft-success {
-  background-color: rgba(10, 179, 156, 0.15) !important;
-}
-
-.bg-soft-info {
-  background-color: rgba(41, 156, 219, 0.15) !important;
-}
-
-.bg-soft-warning {
-  background-color: rgba(247, 184, 75, 0.15) !important;
-}
-
-.bg-soft-danger {
-  background-color: rgba(240, 101, 72, 0.15) !important;
-}
-
-.bg-soft-secondary {
-  background-color: rgba(135, 138, 153, 0.15) !important;
-}
-
-// Spin animation
+// ─── Refresh Spinner ──────────────────────────
 .spin {
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-// Alert and activity item hover
-.alert-item,
-.activity-item {
-  transition: background-color 0.15s ease;
+// ─── Activity Table Refinements ───────────────
+.sa-dashboard {
+  .table {
+    th {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--vz-secondary-color);
+      border-bottom-width: 1px;
+    }
 
-  &:hover {
-    background-color: rgba(64, 81, 137, 0.05);
-  }
-
-  &:last-child {
-    border-bottom: none !important;
-  }
-}
-
-// Quick Actions FAB
-.quick-actions-fab {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 1000;
-
-  .btn {
-    width: 56px;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-
-    &:hover {
-      transform: scale(1.1);
+    td {
+      font-size: 0.8125rem;
+      vertical-align: middle;
     }
   }
 
-  .dropdown-menu {
-    min-width: 200px;
-    border: none;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-    border-radius: 0.5rem;
-  }
-
-  .dropdown-item {
-    padding: 0.625rem 1rem;
-    font-size: 0.875rem;
-    cursor: pointer;
-
-    &:hover {
-      background-color: rgba(64, 81, 137, 0.08);
-    }
-
-    i {
-      width: 20px;
-      text-align: center;
-    }
+  .card-header {
+    border-bottom: 1px solid var(--vz-border-color);
   }
 }
 
-// Table hover rows
-.table-hover tbody tr {
-  transition: background-color 0.15s ease;
-}
-
-// Card header styling
-.card-header {
-  padding: 1rem 1.25rem;
-}
-
-// Progress bar in cards
-.card > .progress {
-  border-radius: 0;
-}
-
-// Button icon
-.btn-icon {
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-// Responsive adjustments
-@media (max-width: 991.98px) {
-  .card-animate {
-    &:hover {
-      transform: none; // Disable hover lift on tablet
-    }
-  }
-}
-
+// ─── Responsive ───────────────────────────────
 @media (max-width: 767.98px) {
-  .quick-actions-fab {
-    bottom: 1rem;
-    right: 1rem;
-
-    .btn {
-      width: 48px;
-      height: 48px;
-    }
-
-    .dropdown-menu {
-      min-width: 180px;
-    }
+  .sa-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .avatar-md {
-    width: 3rem;
-    height: 3rem;
+  .sa-vitals {
+    gap: 0.75rem;
   }
 
-  .card-header {
-    padding: 0.875rem 1rem;
-
-    h5 {
-      font-size: 1rem;
-    }
+  .sa-vital__sep {
+    display: none;
   }
 
-  .btn-icon {
-    width: 34px;
-    height: 34px;
-  }
-}
-
-@media (max-width: 575.98px) {
-  .quick-actions-fab {
-    bottom: 0.75rem;
-    right: 0.75rem;
-
-    .btn {
-      width: 44px;
-      height: 44px;
-    }
-  }
-
-  .avatar-md {
-    width: 2.75rem;
-    height: 2.75rem;
-  }
-
-  .avatar-sm {
-    width: 2.25rem;
-    height: 2.25rem;
-  }
-
-  .card-header {
-    padding: 0.75rem;
-
-    h5 {
-      font-size: 0.9375rem;
-    }
-  }
-
-  .alert-item,
-  .activity-item {
-    padding: 0.75rem !important;
-  }
-}
-
-// Custom scrollbar for activity/alerts
-.card-body[style*="overflow-y: auto"] {
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-
-    &:hover {
-      background: #a1a1a1;
-    }
+  .sa-vital__bar {
+    width: 36px;
   }
 }

@@ -576,20 +576,48 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             overallStatus = "DEGRADED";
         }
 
-        // Error counts
+        // Time ranges
         LocalDateTime oneHourAgo = now.minusHours(1);
         LocalDateTime oneDayAgo = now.minusDays(1);
 
-        // Count errors (simplified - in production would query error logs)
-        int errorCountLastHour = 0;
-        int errorCountLast24Hours = 0;
-
-        // Active sessions (count recent activity)
-        Integer activeSessions = jdbc.queryForObject(
-            "SELECT COUNT(DISTINCT user_id) FROM audit_log WHERE timestamp >= :since",
+        // Error counts from user_events (failed login attempts as error proxy)
+        Integer errorCountLastHour = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_events ue JOIN events e ON ue.event_id = e.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' AND ue.created_at >= :since",
             new MapSqlParameterSource().addValue("since", oneHourAgo),
             Integer.class
         );
+
+        Integer errorCountLast24Hours = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_events ue JOIN events e ON ue.event_id = e.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' AND ue.created_at >= :since",
+            new MapSqlParameterSource().addValue("since", oneDayAgo),
+            Integer.class
+        );
+
+        // Active sessions: distinct users with successful logins in last 24h
+        Integer activeSessions = jdbc.queryForObject(
+            "SELECT COUNT(DISTINCT ue.user_id) FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_SUCCESS' AND ue.created_at >= :since",
+            new MapSqlParameterSource().addValue("since", oneDayAgo),
+            Integer.class
+        );
+
+        // API metrics from audit_log
+        Integer totalRequestsLastHour = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM audit_log WHERE timestamp >= :since",
+            new MapSqlParameterSource().addValue("since", oneHourAgo),
+            Integer.class
+        );
+
+        // Use DB response time as a baseline for API performance
+        SystemHealthDTO.ApiMetrics apiMetrics = SystemHealthDTO.ApiMetrics.builder()
+            .totalRequestsLastHour(totalRequestsLastHour != null ? totalRequestsLastHour : 0)
+            .avgResponseTimeMs(dbHealth.getResponseTimeMs())
+            .p95ResponseTimeMs(0)
+            .p99ResponseTimeMs(0)
+            .build();
 
         return SystemHealthDTO.builder()
             .overallStatus(overallStatus)
@@ -597,9 +625,10 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             .database(dbHealth)
             .application(appHealth)
             .memory(memoryInfo)
-            .errorCountLastHour(errorCountLastHour)
-            .errorCountLast24Hours(errorCountLast24Hours)
+            .errorCountLastHour(errorCountLastHour != null ? errorCountLastHour : 0)
+            .errorCountLast24Hours(errorCountLast24Hours != null ? errorCountLast24Hours : 0)
             .activeSessions(activeSessions != null ? activeSessions : 0)
+            .apiMetrics(apiMetrics)
             .build();
     }
 
@@ -1016,15 +1045,30 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         log.info("SUPERADMIN: Fetching audit logs with filters");
 
         StringBuilder sql = new StringBuilder(
-            "SELECT a.*, u.email as user_email, u.first_name, u.last_name, o.name as org_name " +
+            "SELECT a.*, u.email as user_email, u.first_name, u.last_name, o.name as org_name, " +
+            "CASE " +
+            "  WHEN a.entity_type = 'USER' AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT COALESCE(NULLIF(TRIM(COALESCE(eu.first_name,'') || ' ' || COALESCE(eu.last_name,'')), ''), eu.email) FROM users eu WHERE eu.id = a.entity_id) " +
+            "  WHEN a.entity_type = 'ORGANIZATION' AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT eo.name FROM organizations eo WHERE eo.id = a.entity_id) " +
+            "  WHEN a.entity_type IN ('CLIENT', 'CUSTOMER') AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT ec.name FROM clients ec WHERE ec.id = a.entity_id) " +
+            "  WHEN a.entity_type IN ('LEGAL_CASE', 'CASE') AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT el.title FROM legal_cases el WHERE el.id = a.entity_id) " +
+            "  WHEN a.entity_type = 'DOCUMENT' AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT ed.title FROM documents ed WHERE ed.id = a.entity_id) " +
+            "  WHEN a.entity_type = 'INVOICE' AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT ei.invoice_number FROM invoices ei WHERE ei.id = a.entity_id) " +
+            "  ELSE NULL " +
+            "END as entity_name " +
             "FROM audit_log a " +
             "LEFT JOIN users u ON a.user_id = u.id " +
             "LEFT JOIN organizations o ON a.organization_id = o.id " +
-            "WHERE 1=1 "
+            "WHERE a.user_id IS NOT NULL "
         );
 
         StringBuilder countSql = new StringBuilder(
-            "SELECT COUNT(*) FROM audit_log a WHERE 1=1 "
+            "SELECT COUNT(*) FROM audit_log a WHERE a.user_id IS NOT NULL "
         );
 
         MapSqlParameterSource params = new MapSqlParameterSource();
@@ -1071,22 +1115,34 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         params.addValue("limit", pageable.getPageSize());
         params.addValue("offset", pageable.getOffset());
 
-        List<AuditLogEntryDTO> logs = jdbc.query(sql.toString(), params, (rs, rowNum) ->
-            AuditLogEntryDTO.builder()
+        List<AuditLogEntryDTO> logs = jdbc.query(sql.toString(), params, (rs, rowNum) -> {
+            String firstName = rs.getString("first_name");
+            String lastName = rs.getString("last_name");
+            String userName = null;
+            if (firstName != null || lastName != null) {
+                String full = ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
+                if (!full.isEmpty()) {
+                    userName = full;
+                }
+            }
+            return AuditLogEntryDTO.builder()
                 .id(rs.getLong("id"))
                 .action(rs.getString("action"))
                 .entityType(rs.getString("entity_type"))
-                .entityId(rs.getLong("entity_id"))
+                .entityId(rs.getObject("entity_id") != null ? rs.getLong("entity_id") : null)
+                .entityName(rs.getString("entity_name"))
                 .description(rs.getString("description"))
-                .userId(rs.getLong("user_id"))
+                .userId(rs.getObject("user_id") != null ? rs.getLong("user_id") : null)
                 .userEmail(rs.getString("user_email"))
-                .userName(rs.getString("first_name") + " " + rs.getString("last_name"))
-                .organizationId(rs.getLong("organization_id"))
+                .userName(userName)
+                .organizationId(rs.getObject("organization_id") != null ? rs.getLong("organization_id") : null)
                 .organizationName(rs.getString("org_name"))
+                .ipAddress(rs.getString("ip_address"))
+                .userAgent(rs.getString("user_agent"))
                 .createdAt(rs.getTimestamp("timestamp") != null ?
                     rs.getTimestamp("timestamp").toLocalDateTime() : null)
-                .build()
-        );
+                .build();
+        });
 
         Integer total = jdbc.queryForObject(countSql.toString(), params, Integer.class);
 
@@ -1227,7 +1283,16 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         LocalDateTime last7d = now.minusDays(7);
         LocalDateTime last30d = now.minusDays(30);
 
-        // Count failed logins
+        // Count total failed logins (all-time)
+        Integer totalFailed = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_FAILURE'",
+            new MapSqlParameterSource(),
+            Integer.class
+        );
+
+        // Count failed logins by time window
         Integer failedLast24h = jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_events ue " +
             "JOIN events e ON ue.event_id = e.id " +
@@ -1259,19 +1324,19 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             Integer.class
         );
 
-        // Suspicious activity - multiple failed logins from same IP
+        // Suspicious activity - IPs with 5+ failed logins (all-time)
         Integer suspiciousCount = jdbc.queryForObject(
             "SELECT COUNT(DISTINCT ip_address) FROM (" +
             "  SELECT ip_address, COUNT(*) as cnt FROM user_events ue " +
             "  JOIN events e ON ue.event_id = e.id " +
-            "  WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' AND ue.created_at >= :since " +
+            "  WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' " +
             "  GROUP BY ip_address HAVING COUNT(*) >= 5" +
             ") suspicious",
-            new MapSqlParameterSource().addValue("since", last24h),
+            new MapSqlParameterSource(),
             Integer.class
         );
 
-        // Recent security events
+        // Recent security events (last 10, no time filter — KPIs handle time windows)
         List<SecurityOverviewDTO.SecurityEventDTO> recentEvents = jdbc.query(
             "SELECT ue.id, e.type, u.email, o.name as org_name, ue.ip_address, e.description, ue.created_at " +
             "FROM user_events ue " +
@@ -1279,11 +1344,11 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             "LEFT JOIN users u ON ue.user_id = u.id " +
             "LEFT JOIN organizations o ON ue.organization_id = o.id " +
             "WHERE e.type IN ('LOGIN_ATTEMPT_FAILURE', 'PASSWORD_UPDATE', 'MFA_UPDATE') " +
-            "ORDER BY ue.created_at DESC LIMIT 20",
+            "ORDER BY ue.created_at DESC LIMIT 10",
             new MapSqlParameterSource(),
             (rs, rowNum) -> SecurityOverviewDTO.SecurityEventDTO.builder()
                 .id(rs.getLong("id"))
-                .eventType(rs.getString("type"))
+                .eventType(mapEventType(rs.getString("type")))
                 .userEmail(rs.getString("email"))
                 .organizationName(rs.getString("org_name"))
                 .ipAddress(rs.getString("ip_address"))
@@ -1294,6 +1359,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         );
 
         return SecurityOverviewDTO.builder()
+            .totalFailedLogins(totalFailed != null ? totalFailed : 0)
             .failedLoginsLast24h(failedLast24h != null ? failedLast24h : 0)
             .failedLoginsLast7d(failedLast7d != null ? failedLast7d : 0)
             .failedLoginsLast30d(failedLast30d != null ? failedLast30d : 0)
@@ -1358,17 +1424,14 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         boolean hasIssues = false;
         StringBuilder issueDesc = new StringBuilder();
 
-        // Check for potential issues
-        if (Boolean.TRUE.equals(org.getTwilioEnabled()) &&
+        boolean twilioConfigured = Boolean.TRUE.equals(org.getTwilioEnabled());
+        boolean boldSignConfigured = org.getBoldsignApiKeyEncrypted() != null && !org.getBoldsignApiKeyEncrypted().isEmpty();
+
+        // Twilio issue: explicitly enabled but missing phone number
+        if (twilioConfigured &&
             (org.getTwilioPhoneNumber() == null || org.getTwilioPhoneNumber().isEmpty())) {
             hasIssues = true;
             issueDesc.append("Twilio enabled but no phone number configured. ");
-        }
-
-        if (Boolean.TRUE.equals(org.getBoldsignEnabled()) &&
-            (org.getBoldsignApiKeyEncrypted() == null || org.getBoldsignApiKeyEncrypted().isEmpty())) {
-            hasIssues = true;
-            issueDesc.append("BoldSign enabled but no API key configured. ");
         }
 
         return IntegrationStatusDTO.builder()
@@ -1376,10 +1439,10 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             .organizationName(org.getName())
             .organizationSlug(org.getSlug())
             .status(org.getStatus() != null ? org.getStatus().name() : null)
-            .twilioEnabled(org.getTwilioEnabled())
+            .twilioEnabled(twilioConfigured)
             .twilioPhoneNumber(org.getTwilioPhoneNumber())
-            .boldSignEnabled(org.getBoldsignEnabled())
-            .boldSignApiConfigured(org.getBoldsignApiKeyEncrypted() != null && !org.getBoldsignApiKeyEncrypted().isEmpty())
+            .boldSignEnabled(boldSignConfigured)
+            .boldSignApiConfigured(boldSignConfigured)
             .smsEnabled(org.getSmsEnabled())
             .whatsappEnabled(org.getWhatsappEnabled())
             .emailEnabled(org.getEmailEnabled())
@@ -1834,5 +1897,504 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         tokenBlacklistService.blacklistAllUserTokens(userId);
         log.info("SUPERADMIN: All sessions terminated for user {}", userId);
+    }
+
+    // ==================== SYSTEM HEALTH SESSIONS ====================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActiveSessionDTO> getActiveSessions(String window) {
+        log.info("SUPERADMIN: Fetching active sessions for window: {}", window);
+
+        int hours;
+        switch (window != null ? window : "1h") {
+            case "6h": hours = 6; break;
+            case "24h": hours = 24; break;
+            default: hours = 1; break;
+        }
+
+        String sql = "SELECT DISTINCT ON (ue.user_id) " +
+                "ue.user_id, u.first_name, u.last_name, u.email, " +
+                "u.organization_id, COALESCE(o.name, 'Platform') as org_name, " +
+                "ue.device, ue.ip_address, ue.created_at as login_time " +
+                "FROM user_events ue " +
+                "JOIN users u ON ue.user_id = u.id " +
+                "JOIN events e ON ue.event_id = e.id " +
+                "LEFT JOIN organizations o ON u.organization_id = o.id " +
+                "WHERE e.type = 'LOGIN_ATTEMPT_SUCCESS' " +
+                "AND ue.created_at > NOW() - (:hours * INTERVAL '1 hour') " +
+                "ORDER BY ue.user_id, ue.created_at DESC";
+
+        MapSqlParameterSource sessionParams = new MapSqlParameterSource().addValue("hours", hours);
+
+        return jdbc.query(sql, sessionParams, (rs, rowNum) ->
+            ActiveSessionDTO.builder()
+                .userId(rs.getLong("user_id"))
+                .firstName(rs.getString("first_name"))
+                .lastName(rs.getString("last_name"))
+                .email(rs.getString("email"))
+                .organizationId(rs.getObject("organization_id") != null ? rs.getLong("organization_id") : null)
+                .organizationName(rs.getString("org_name"))
+                .device(rs.getString("device"))
+                .ipAddress(rs.getString("ip_address"))
+                .loginTime(rs.getTimestamp("login_time") != null ? rs.getTimestamp("login_time").toLocalDateTime() : null)
+                .build()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LoginEventDTO> getLoginEvents(Pageable pageable) {
+        log.info("SUPERADMIN: Fetching login events page {} size {}", pageable.getPageNumber(), pageable.getPageSize());
+
+        String countSql = "SELECT COUNT(*) FROM user_events ue " +
+                "JOIN events e ON ue.event_id = e.id " +
+                "WHERE e.type IN ('LOGIN_ATTEMPT_SUCCESS', 'LOGIN_ATTEMPT_FAILURE')";
+
+        Integer total = jdbc.queryForObject(countSql, new MapSqlParameterSource(), Integer.class);
+        if (total == null || total == 0) {
+            return new org.springframework.data.domain.PageImpl<>(List.of(), pageable, 0);
+        }
+
+        String sql = "SELECT ue.id, ue.user_id, u.email, " +
+                "(u.first_name || ' ' || u.last_name) as user_name, " +
+                "u.organization_id, COALESCE(o.name, 'Platform') as org_name, " +
+                "ue.device, ue.ip_address, e.type as event_type, ue.created_at " +
+                "FROM user_events ue " +
+                "JOIN users u ON ue.user_id = u.id " +
+                "JOIN events e ON ue.event_id = e.id " +
+                "LEFT JOIN organizations o ON u.organization_id = o.id " +
+                "WHERE e.type IN ('LOGIN_ATTEMPT_SUCCESS', 'LOGIN_ATTEMPT_FAILURE') " +
+                "ORDER BY ue.created_at DESC " +
+                "LIMIT :limit OFFSET :offset";
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("limit", pageable.getPageSize())
+                .addValue("offset", pageable.getOffset());
+
+        List<LoginEventDTO> events = jdbc.query(sql, params, (rs, rowNum) ->
+            LoginEventDTO.builder()
+                .id(rs.getLong("id"))
+                .userId(rs.getLong("user_id"))
+                .userEmail(rs.getString("email"))
+                .userName(rs.getString("user_name"))
+                .organizationId(rs.getObject("organization_id") != null ? rs.getLong("organization_id") : null)
+                .organizationName(rs.getString("org_name"))
+                .device(rs.getString("device"))
+                .ipAddress(rs.getString("ip_address"))
+                .eventType(rs.getString("event_type"))
+                .timestamp(rs.getTimestamp("created_at") != null ? rs.getTimestamp("created_at").toLocalDateTime() : null)
+                .build()
+        );
+
+        return new org.springframework.data.domain.PageImpl<>(events, pageable, total);
+    }
+
+    // ==================== DASHBOARD DRILL-DOWNS ====================
+
+    @Override
+    public List<DashboardDrillDownDTO.OrgActiveUsers> getActiveUsersByOrg() {
+        log.info("SUPERADMIN: Fetching active users by organization");
+        LocalDateTime since = LocalDateTime.now().minusDays(1);
+
+        return jdbc.query(
+            "SELECT o.id as org_id, o.name as org_name, " +
+            "  COUNT(DISTINCT CASE WHEN ue.created_at >= :since AND e.type = 'LOGIN_ATTEMPT_SUCCESS' THEN ue.user_id END) as active_users, " +
+            "  COUNT(DISTINCT u.id) as total_users " +
+            "FROM organizations o " +
+            "LEFT JOIN users u ON u.organization_id = o.id " +
+            "LEFT JOIN user_events ue ON ue.user_id = u.id " +
+            "LEFT JOIN events e ON ue.event_id = e.id " +
+            "WHERE o.status != 'DELETED' " +
+            "GROUP BY o.id, o.name " +
+            "ORDER BY active_users DESC",
+            new MapSqlParameterSource().addValue("since", since),
+            (rs, rowNum) -> {
+                int active = rs.getInt("active_users");
+                int total = rs.getInt("total_users");
+                return DashboardDrillDownDTO.OrgActiveUsers.builder()
+                    .organizationId(rs.getLong("org_id"))
+                    .organizationName(rs.getString("org_name"))
+                    .activeUsers24h(active)
+                    .totalUsers(total)
+                    .activityPercent(total > 0 ? Math.round(active * 1000.0 / total) / 10.0 : 0)
+                    .build();
+            }
+        );
+    }
+
+    @Override
+    public List<DashboardDrillDownDTO.UserActivity> getActiveUsersForOrg(Long orgId) {
+        log.info("SUPERADMIN: Fetching active user details for org {}", orgId);
+        LocalDateTime since = LocalDateTime.now().minusDays(1);
+
+        return jdbc.query(
+            "SELECT u.id, u.first_name, u.last_name, u.email, " +
+            "  MAX(ue.created_at) as last_login, " +
+            "  COUNT(ue.id) as login_count, " +
+            "  (SELECT ue2.device FROM user_events ue2 JOIN events e2 ON ue2.event_id = e2.id " +
+            "   WHERE ue2.user_id = u.id AND e2.type = 'LOGIN_ATTEMPT_SUCCESS' " +
+            "   ORDER BY ue2.created_at DESC LIMIT 1) as last_device, " +
+            "  (SELECT ue3.ip_address FROM user_events ue3 JOIN events e3 ON ue3.event_id = e3.id " +
+            "   WHERE ue3.user_id = u.id AND e3.type = 'LOGIN_ATTEMPT_SUCCESS' " +
+            "   ORDER BY ue3.created_at DESC LIMIT 1) as last_ip " +
+            "FROM users u " +
+            "JOIN user_events ue ON ue.user_id = u.id " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "WHERE u.organization_id = :orgId " +
+            "AND e.type = 'LOGIN_ATTEMPT_SUCCESS' " +
+            "AND ue.created_at >= :since " +
+            "GROUP BY u.id, u.first_name, u.last_name, u.email " +
+            "ORDER BY last_login DESC",
+            new MapSqlParameterSource()
+                .addValue("orgId", orgId)
+                .addValue("since", since),
+            (rs, rowNum) -> DashboardDrillDownDTO.UserActivity.builder()
+                .userId(rs.getLong("id"))
+                .firstName(rs.getString("first_name"))
+                .lastName(rs.getString("last_name"))
+                .email(rs.getString("email"))
+                .lastLogin(rs.getTimestamp("last_login") != null ?
+                    rs.getTimestamp("last_login").toLocalDateTime() : null)
+                .loginCount24h(rs.getInt("login_count"))
+                .lastDevice(rs.getString("last_device"))
+                .lastIpAddress(rs.getString("last_ip"))
+                .build()
+        );
+    }
+
+    @Override
+    public List<DashboardDrillDownDTO.UserSession> getUserSessionsDrillDown(Long orgId, Long userId) {
+        log.info("SUPERADMIN: Fetching sessions for user {} in org {}", userId, orgId);
+
+        return jdbc.query(
+            "SELECT ue.created_at, ue.device, ue.ip_address, e.type " +
+            "FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "WHERE ue.user_id = :userId " +
+            "AND (ue.organization_id = :orgId OR ue.organization_id IS NULL) " +
+            "AND e.type IN ('LOGIN_ATTEMPT_SUCCESS', 'LOGIN_ATTEMPT_FAILURE') " +
+            "ORDER BY ue.created_at DESC LIMIT 20",
+            new MapSqlParameterSource()
+                .addValue("userId", userId)
+                .addValue("orgId", orgId),
+            (rs, rowNum) -> DashboardDrillDownDTO.UserSession.builder()
+                .loginTime(rs.getTimestamp("created_at") != null ?
+                    rs.getTimestamp("created_at").toLocalDateTime() : null)
+                .device(rs.getString("device"))
+                .ipAddress(rs.getString("ip_address"))
+                .eventType(rs.getString("type").contains("SUCCESS") ? "SUCCESS" : "FAILURE")
+                .build()
+        );
+    }
+
+    @Override
+    public List<DashboardDrillDownDTO.OrgApiRequests> getRequestsByOrg(String timeWindow) {
+        log.info("SUPERADMIN: Fetching API requests by org, window={}", timeWindow);
+        LocalDateTime since = getTimeWindowStart(timeWindow);
+
+        return jdbc.query(
+            "SELECT COALESCE(al.organization_id, 0) as org_id, " +
+            "  COALESCE(o.name, 'Platform / System') as org_name, " +
+            "  COUNT(*) as request_count " +
+            "FROM audit_log al " +
+            "LEFT JOIN organizations o ON al.organization_id = o.id " +
+            "WHERE al.timestamp >= :since " +
+            "GROUP BY COALESCE(al.organization_id, 0), COALESCE(o.name, 'Platform / System') " +
+            "ORDER BY request_count DESC",
+            new MapSqlParameterSource().addValue("since", since),
+            (rs, rowNum) -> {
+                long orgIdVal = rs.getLong("org_id");
+                return DashboardDrillDownDTO.OrgApiRequests.builder()
+                    .organizationId(orgIdVal == 0 ? null : orgIdVal)
+                    .organizationName(rs.getString("org_name"))
+                    .requestCount(rs.getInt("request_count"))
+                    .topAction(null) // populated via breakdown endpoint
+                    .build();
+            }
+        );
+    }
+
+    @Override
+    public List<DashboardDrillDownDTO.EndpointBreakdown> getRequestBreakdownForOrg(Long orgId, String timeWindow) {
+        log.info("SUPERADMIN: Fetching request breakdown for org {}", orgId);
+        LocalDateTime since = getTimeWindowStart(timeWindow);
+
+        // Treat orgId=0 as null (Platform/System requests have no org)
+        Long effectiveOrgId = (orgId != null && orgId == 0L) ? null : orgId;
+        String orgFilter = effectiveOrgId != null ? "al.organization_id = :orgId" : "al.organization_id IS NULL";
+        MapSqlParameterSource params = new MapSqlParameterSource().addValue("since", since);
+        if (effectiveOrgId != null) params.addValue("orgId", effectiveOrgId);
+
+        return jdbc.query(
+            "SELECT al.action, al.entity_type, COUNT(*) as cnt, MAX(al.timestamp) as last_hit " +
+            "FROM audit_log al " +
+            "WHERE " + orgFilter + " AND al.timestamp >= :since " +
+            "GROUP BY al.action, al.entity_type " +
+            "ORDER BY cnt DESC",
+            params,
+            (rs, rowNum) -> DashboardDrillDownDTO.EndpointBreakdown.builder()
+                .action(rs.getString("action"))
+                .entityType(rs.getString("entity_type"))
+                .count(rs.getInt("cnt"))
+                .lastHit(rs.getTimestamp("last_hit") != null ?
+                    rs.getTimestamp("last_hit").toLocalDateTime() : null)
+                .build()
+        );
+    }
+
+    @Override
+    public List<DashboardDrillDownDTO.OrgStorage> getStorageByOrg() {
+        log.info("SUPERADMIN: Fetching storage usage by org");
+
+        return jdbc.query(
+            "SELECT o.id as org_id, o.name as org_name, " +
+            "  COALESCE((SELECT SUM(d.file_size) FROM documents d WHERE d.organization_id = o.id), 0) as storage_used, " +
+            "  (SELECT COUNT(*) FROM documents d WHERE d.organization_id = o.id) as doc_count, " +
+            "  (SELECT COUNT(*) FROM legal_cases lc WHERE lc.organization_id = o.id) + " +
+            "  (SELECT COUNT(*) FROM clients c WHERE c.organization_id = o.id) + " +
+            "  (SELECT COUNT(*) FROM documents d WHERE d.organization_id = o.id) + " +
+            "  (SELECT COUNT(*) FROM invoices i WHERE i.organization_id = o.id) as db_rows, " +
+            "  CASE WHEN o.max_storage_bytes > 0 THEN " +
+            "    ROUND(COALESCE((SELECT SUM(d.file_size) FROM documents d WHERE d.organization_id = o.id), 0) * 100.0 / o.max_storage_bytes, 1) " +
+            "  ELSE NULL END as quota_pct " +
+            "FROM organizations o " +
+            "WHERE o.status != 'DELETED' " +
+            "ORDER BY storage_used DESC",
+            new MapSqlParameterSource(),
+            (rs, rowNum) -> {
+                Double quotaPct = rs.getObject("quota_pct") != null ? rs.getDouble("quota_pct") : null;
+                return DashboardDrillDownDTO.OrgStorage.builder()
+                    .organizationId(rs.getLong("org_id"))
+                    .organizationName(rs.getString("org_name"))
+                    .storageUsedBytes(rs.getLong("storage_used"))
+                    .documentCount(rs.getInt("doc_count"))
+                    .dbRows(rs.getInt("db_rows"))
+                    .quotaPercent(quotaPct)
+                    .build();
+            }
+        );
+    }
+
+    @Override
+    public List<DashboardDrillDownDTO.OrgErrors> getErrorsByOrg() {
+        log.info("SUPERADMIN: Fetching errors by org");
+        LocalDateTime since = LocalDateTime.now().minusDays(1);
+
+        return jdbc.query(
+            "SELECT COALESCE(ue.organization_id, 0) as org_id, " +
+            "  COALESCE(o.name, 'Unknown') as org_name, " +
+            "  COUNT(*) as error_count, " +
+            "  MAX(ue.created_at) as last_error " +
+            "FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "LEFT JOIN organizations o ON ue.organization_id = o.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' AND ue.created_at >= :since " +
+            "GROUP BY COALESCE(ue.organization_id, 0), COALESCE(o.name, 'Unknown') " +
+            "ORDER BY error_count DESC",
+            new MapSqlParameterSource().addValue("since", since),
+            (rs, rowNum) -> {
+                long orgIdVal = rs.getLong("org_id");
+                return DashboardDrillDownDTO.OrgErrors.builder()
+                    .organizationId(orgIdVal == 0 ? null : orgIdVal)
+                    .organizationName(rs.getString("org_name"))
+                    .errorCount24h(rs.getInt("error_count"))
+                    .lastError(rs.getTimestamp("last_error") != null ?
+                        rs.getTimestamp("last_error").toLocalDateTime() : null)
+                    .lastErrorType("LOGIN_ATTEMPT_FAILURE")
+                    .build();
+            }
+        );
+    }
+
+    @Override
+    public List<DashboardDrillDownDTO.OrgSecurity> getSecurityByOrg() {
+        log.info("SUPERADMIN: Fetching security metrics by org");
+
+        return jdbc.query(
+            "SELECT o.id as org_id, o.name as org_name, " +
+            "  (SELECT COUNT(*) FROM user_events ue JOIN events e ON ue.event_id = e.id " +
+            "   WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' AND ue.organization_id = o.id) as failed_logins, " +
+            "  (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id AND u.non_locked = false) as lockouts, " +
+            "  (SELECT COUNT(DISTINCT ue.ip_address) FROM (" +
+            "    SELECT ue.ip_address FROM user_events ue JOIN events e ON ue.event_id = e.id " +
+            "    WHERE e.type = 'LOGIN_ATTEMPT_FAILURE' AND ue.organization_id = o.id " +
+            "    GROUP BY ue.ip_address HAVING COUNT(*) >= 5" +
+            "  ) ue) as suspicious_ips " +
+            "FROM organizations o " +
+            "WHERE o.status != 'DELETED' " +
+            "ORDER BY failed_logins DESC",
+            new MapSqlParameterSource(),
+            (rs, rowNum) -> DashboardDrillDownDTO.OrgSecurity.builder()
+                .organizationId(rs.getLong("org_id"))
+                .organizationName(rs.getString("org_name"))
+                .failedLogins(rs.getInt("failed_logins"))
+                .accountLockouts(rs.getInt("lockouts"))
+                .suspiciousIps(rs.getInt("suspicious_ips"))
+                .build()
+        );
+    }
+
+    // ==================== ENGAGEMENT & GROWTH ====================
+
+    @Override
+    public DashboardDrillDownDTO.EngagementMetrics getEngagementMetrics() {
+        log.info("SUPERADMIN: Fetching engagement metrics");
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime dayAgo = now.minusDays(1);
+        LocalDateTime weekAgo = now.minusDays(7);
+        LocalDateTime monthAgo = now.minusDays(30);
+
+        String countQuery = "SELECT COUNT(DISTINCT ue.user_id) FROM user_events ue " +
+            "JOIN events e ON ue.event_id = e.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_SUCCESS' AND ue.created_at >= :since";
+
+        Integer dau = jdbc.queryForObject(countQuery,
+            new MapSqlParameterSource().addValue("since", dayAgo), Integer.class);
+        Integer wau = jdbc.queryForObject(countQuery,
+            new MapSqlParameterSource().addValue("since", weekAgo), Integer.class);
+        Integer mau = jdbc.queryForObject(countQuery,
+            new MapSqlParameterSource().addValue("since", monthAgo), Integer.class);
+
+        int dauVal = dau != null ? dau : 0;
+        int wauVal = wau != null ? wau : 0;
+        int mauVal = mau != null ? mau : 0;
+
+        Integer totalLoginsToday = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_events ue JOIN events e ON ue.event_id = e.id " +
+            "WHERE e.type = 'LOGIN_ATTEMPT_SUCCESS' AND ue.created_at >= :since",
+            new MapSqlParameterSource().addValue("since", dayAgo), Integer.class);
+        double avgLogins = dauVal > 0 ?
+            Math.round((totalLoginsToday != null ? totalLoginsToday : 0) * 10.0 / dauVal) / 10.0 : 0;
+
+        List<DashboardDrillDownDTO.OrgEngagement> byOrg = jdbc.query(
+            "SELECT o.id as org_id, o.name as org_name, " +
+            "  COUNT(DISTINCT CASE WHEN ue.created_at >= :dayAgo THEN ue.user_id END) as dau, " +
+            "  COUNT(DISTINCT CASE WHEN ue.created_at >= :weekAgo THEN ue.user_id END) as wau, " +
+            "  COUNT(DISTINCT CASE WHEN ue.created_at >= :monthAgo THEN ue.user_id END) as mau " +
+            "FROM organizations o " +
+            "LEFT JOIN users u ON u.organization_id = o.id " +
+            "LEFT JOIN user_events ue ON ue.user_id = u.id " +
+            "LEFT JOIN events e ON ue.event_id = e.id AND e.type = 'LOGIN_ATTEMPT_SUCCESS' " +
+            "WHERE o.status != 'DELETED' " +
+            "GROUP BY o.id, o.name ORDER BY dau DESC",
+            new MapSqlParameterSource()
+                .addValue("dayAgo", dayAgo)
+                .addValue("weekAgo", weekAgo)
+                .addValue("monthAgo", monthAgo),
+            (rs, rowNum) -> DashboardDrillDownDTO.OrgEngagement.builder()
+                .organizationId(rs.getLong("org_id"))
+                .organizationName(rs.getString("org_name"))
+                .dau(rs.getInt("dau"))
+                .wau(rs.getInt("wau"))
+                .mau(rs.getInt("mau"))
+                .build()
+        );
+
+        return DashboardDrillDownDTO.EngagementMetrics.builder()
+            .dau(dauVal).wau(wauVal).mau(mauVal)
+            .dauWauRatio(wauVal > 0 ? Math.round(dauVal * 1000.0 / wauVal) / 1000.0 : 0)
+            .avgLoginsPerUserPerDay(avgLogins)
+            .byOrganization(byOrg)
+            .build();
+    }
+
+    @Override
+    public DashboardDrillDownDTO.DataGrowth getDataGrowth() {
+        log.info("SUPERADMIN: Fetching data growth metrics");
+        LocalDate today = LocalDate.now();
+        LocalDate thisWeekStart = today.minusDays(7);
+        LocalDate lastWeekStart = today.minusDays(14);
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("thisWeekStart", thisWeekStart)
+            .addValue("lastWeekStart", lastWeekStart)
+            .addValue("lastWeekEnd", thisWeekStart);
+
+        Integer casesThisWeek = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM legal_cases WHERE DATE(created_at) >= :thisWeekStart", params, Integer.class);
+        Integer casesLastWeek = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM legal_cases WHERE DATE(created_at) >= :lastWeekStart AND DATE(created_at) < :lastWeekEnd", params, Integer.class);
+        Integer docsThisWeek = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM documents WHERE DATE(uploaded_at) >= :thisWeekStart", params, Integer.class);
+        Integer docsLastWeek = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM documents WHERE DATE(uploaded_at) >= :lastWeekStart AND DATE(uploaded_at) < :lastWeekEnd", params, Integer.class);
+        Integer clientsThisWeek = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM clients WHERE DATE(created_at) >= :thisWeekStart", params, Integer.class);
+        Integer clientsLastWeek = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM clients WHERE DATE(created_at) >= :lastWeekStart AND DATE(created_at) < :lastWeekEnd", params, Integer.class);
+
+        List<DashboardDrillDownDTO.OrgDataGrowth> byOrg = jdbc.query(
+            "SELECT o.id as org_id, o.name as org_name, " +
+            "  (SELECT COUNT(*) FROM legal_cases lc WHERE lc.organization_id = o.id AND DATE(lc.created_at) >= :thisWeekStart) as cases, " +
+            "  (SELECT COUNT(*) FROM documents d WHERE d.organization_id = o.id AND DATE(d.uploaded_at) >= :thisWeekStart) as docs, " +
+            "  (SELECT COUNT(*) FROM clients c WHERE c.organization_id = o.id AND DATE(c.created_at) >= :thisWeekStart) as clients " +
+            "FROM organizations o WHERE o.status != 'DELETED' ORDER BY cases DESC",
+            new MapSqlParameterSource().addValue("thisWeekStart", thisWeekStart),
+            (rs, rowNum) -> DashboardDrillDownDTO.OrgDataGrowth.builder()
+                .organizationId(rs.getLong("org_id"))
+                .organizationName(rs.getString("org_name"))
+                .casesThisWeek(rs.getInt("cases"))
+                .documentsThisWeek(rs.getInt("docs"))
+                .clientsThisWeek(rs.getInt("clients"))
+                .build()
+        );
+
+        return DashboardDrillDownDTO.DataGrowth.builder()
+            .casesThisWeek(casesThisWeek != null ? casesThisWeek : 0)
+            .casesLastWeek(casesLastWeek != null ? casesLastWeek : 0)
+            .documentsThisWeek(docsThisWeek != null ? docsThisWeek : 0)
+            .documentsLastWeek(docsLastWeek != null ? docsLastWeek : 0)
+            .clientsThisWeek(clientsThisWeek != null ? clientsThisWeek : 0)
+            .clientsLastWeek(clientsLastWeek != null ? clientsLastWeek : 0)
+            .byOrganization(byOrg)
+            .build();
+    }
+
+    @Override
+    public DashboardDrillDownDTO.FeatureAdoption getFeatureAdoption() {
+        log.info("SUPERADMIN: Fetching feature adoption metrics");
+
+        return jdbc.queryForObject(
+            "SELECT COUNT(*) as total, " +
+            "  COUNT(*) FILTER (WHERE sms_enabled = true) as sms, " +
+            "  COUNT(*) FILTER (WHERE whatsapp_enabled = true) as whatsapp, " +
+            "  COUNT(*) FILTER (WHERE email_enabled = true) as email, " +
+            "  COUNT(*) FILTER (WHERE boldsign_enabled = true) as boldsign, " +
+            "  COUNT(*) FILTER (WHERE twilio_enabled = true) as twilio " +
+            "FROM organizations WHERE status != 'DELETED'",
+            new MapSqlParameterSource(),
+            (rs, rowNum) -> DashboardDrillDownDTO.FeatureAdoption.builder()
+                .totalOrganizations(rs.getInt("total"))
+                .smsEnabled(rs.getInt("sms"))
+                .whatsappEnabled(rs.getInt("whatsapp"))
+                .emailEnabled(rs.getInt("email"))
+                .boldSignEnabled(rs.getInt("boldsign"))
+                .twilioEnabled(rs.getInt("twilio"))
+                .build()
+        );
+    }
+
+    /** Map database event types to frontend-expected security event types */
+    private String mapEventType(String dbEventType) {
+        if (dbEventType == null) return "FAILED_LOGIN";
+        switch (dbEventType) {
+            case "LOGIN_ATTEMPT_FAILURE": return "FAILED_LOGIN";
+            case "PASSWORD_UPDATE": return "PASSWORD_RESET";
+            case "MFA_UPDATE": return "PASSWORD_RESET";
+            case "ACCOUNT_LOCKED": return "ACCOUNT_LOCKOUT";
+            default: return "FAILED_LOGIN";
+        }
+    }
+
+    private LocalDateTime getTimeWindowStart(String timeWindow) {
+        LocalDateTime now = LocalDateTime.now();
+        if (timeWindow == null) return now.minusHours(1);
+        switch (timeWindow) {
+            case "1h": return now.minusHours(1);
+            case "24h": return now.minusDays(1);
+            case "7d": return now.minusDays(7);
+            default: return now.minusHours(1);
+        }
     }
 }

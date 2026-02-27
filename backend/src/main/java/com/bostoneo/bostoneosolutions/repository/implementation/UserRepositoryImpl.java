@@ -216,31 +216,62 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             jdbc.update("DELETE FROM document_visibility_overrides WHERE user_id = :userId OR granted_by = :userId", of("userId", id));
             jdbc.update("UPDATE documents SET uploaded_by = NULL WHERE uploaded_by = :userId", of("userId", id));
             
-            // Delete file system related
+            // Delete file system related (child tables referencing user directly)
             jdbc.update("DELETE FROM file_access_logs WHERE user_id = :userId", of("userId", id));
             jdbc.update("DELETE FROM file_comments WHERE created_by = :userId", of("userId", id));
-            jdbc.update("DELETE FROM file_items WHERE created_by = :userId", of("userId", id));
             jdbc.update("DELETE FROM file_permissions WHERE user_id = :userId OR granted_by = :userId OR revoked_by = :userId", of("userId", id));
-            jdbc.update("DELETE FROM file_shares WHERE shared_by = :userId OR shared_with = :userId", of("userId", id));
+            jdbc.update("DELETE FROM file_shares WHERE created_by = :userId OR shared_with_user_id = :userId", of("userId", id));
             jdbc.update("DELETE FROM file_tags WHERE created_by = :userId", of("userId", id));
             jdbc.update("DELETE FROM file_versions WHERE uploaded_by = :userId", of("userId", id));
+            // Delete child records referencing file_items owned by this user (other users' interactions with these files)
+            jdbc.update("DELETE FROM file_access_logs WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", of("userId", id));
+            jdbc.update("DELETE FROM file_comments WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", of("userId", id));
+            jdbc.update("DELETE FROM file_permissions WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", of("userId", id));
+            jdbc.update("DELETE FROM file_shares WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", of("userId", id));
+            jdbc.update("DELETE FROM file_tags WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", of("userId", id));
+            jdbc.update("DELETE FROM file_versions WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", of("userId", id));
+            jdbc.update("DELETE FROM file_item_text_cache WHERE file_item_id IN (SELECT id FROM file_items WHERE created_by = :userId)", of("userId", id));
+            jdbc.update("DELETE FROM file_items WHERE created_by = :userId", of("userId", id));
             jdbc.update("UPDATE folders SET created_by = NULL WHERE created_by = :userId", of("userId", id));
             
             // Delete financial
             jdbc.update("DELETE FROM financial_access_permissions WHERE user_id = :userId OR granted_by = :userId", of("userId", id));
-            jdbc.update("UPDATE expenses SET created_by_user_id = NULL WHERE created_by_user_id = :userId", of("userId", id));
             jdbc.update("UPDATE invoice_templates SET created_by = NULL WHERE created_by = :userId", of("userId", id));
             jdbc.update("UPDATE invoice_workflow_rules SET created_by = NULL WHERE created_by = :userId", of("userId", id));
             jdbc.update("UPDATE invoices SET created_by = NULL WHERE created_by = :userId", of("userId", id));
             jdbc.update("UPDATE payment_transactions SET created_by = NULL WHERE created_by = :userId", of("userId", id));
-            
+            jdbc.update("UPDATE trust_account_transactions SET created_by = NULL WHERE created_by = :userId", of("userId", id));
+
             // Delete legal documents
-            jdbc.update("UPDATE legaldocument SET uploadedBy = NULL WHERE uploadedBy = :userId", of("userId", id));
-            
+            jdbc.update("DELETE FROM legal_documents WHERE user_id = :userId", of("userId", id));
+
+            // Delete workflow executions (handle children first)
+            jdbc.update("UPDATE case_tasks SET workflow_execution_id = NULL WHERE workflow_execution_id IN (SELECT id FROM case_workflow_executions WHERE created_by = :userId)", of("userId", id));
+            jdbc.update("DELETE FROM case_workflow_step_executions WHERE workflow_execution_id IN (SELECT id FROM case_workflow_executions WHERE created_by = :userId)", of("userId", id));
+            jdbc.update("DELETE FROM case_workflow_history WHERE execution_id IN (SELECT id FROM case_workflow_executions WHERE created_by = :userId)", of("userId", id));
+            jdbc.update("DELETE FROM case_workflow_executions WHERE created_by = :userId", of("userId", id));
+            jdbc.update("UPDATE case_workflow_templates SET created_by = NULL WHERE created_by = :userId", of("userId", id));
+
+            // Delete CRM / leads
+            jdbc.update("DELETE FROM lead_activities WHERE created_by = :userId", of("userId", id));
+            jdbc.update("DELETE FROM lead_pipeline_history WHERE moved_by = :userId", of("userId", id));
+            jdbc.update("UPDATE leads SET assigned_to = NULL WHERE assigned_to = :userId", of("userId", id));
+
+            // Delete conflict checks
+            jdbc.update("UPDATE conflict_checks SET checked_by = NULL WHERE checked_by = :userId", of("userId", id));
+            jdbc.update("UPDATE conflict_checks SET resolved_by = NULL WHERE resolved_by = :userId", of("userId", id));
+
+            // Delete intake / invitations
+            jdbc.update("UPDATE intake_submissions SET reviewed_by = NULL WHERE reviewed_by = :userId", of("userId", id));
+            jdbc.update("DELETE FROM organization_invitations WHERE created_by = :userId", of("userId", id));
+
+            // Delete practice area tool history
+            jdbc.update("DELETE FROM practice_area_tool_history WHERE user_id = :userId", of("userId", id));
+
             // Delete workload
             jdbc.update("DELETE FROM user_workload WHERE user_id = :userId", of("userId", id));
             jdbc.update("DELETE FROM workload_calculations WHERE user_id = :userId", of("userId", id));
-            
+
             // Delete user roles (appears twice in FK list, but delete once)
             jdbc.update(DELETE_USER_ROLES_QUERY, of("userId", id));
             
