@@ -291,9 +291,13 @@
                         <td>
                           <div class="d-flex align-items-center gap-2">
                             <div class="avatar-xs">
-                              <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-10">
+                              <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-10"
+                                    *ngIf="!user.imageUrl">
                                 {{ user.firstName?.charAt(0) }}{{ user.lastName?.charAt(0) }}
                               </span>
+                              <img *ngIf="user.imageUrl" [src]="user.imageUrl" class="rounded-circle"
+                                   style="width: 100%; height: 100%; object-fit: cover;"
+                                   (error)="$event.target.style.display='none'; $event.target.previousElementSibling.style.display='flex'">
                             </div>
                             <div>
                               <h6 class="mb-0 fs-13">{{ user.firstName }} {{ user.lastName }}</h6>
@@ -392,7 +396,8 @@
                           {{ user.firstName?.charAt(0) }}{{ user.lastName?.charAt(0) }}
                         </span>
                         <img [src]="user.imageUrl" class="rounded-circle" *ngIf="user.imageUrl"
-                             style="width: 100%; height: 100%; object-fit: cover;">
+                             style="width: 100%; height: 100%; object-fit: cover;"
+                             (error)="$event.target.style.display='none'; $event.target.previousElementSibling.style.display='flex'">
                       </div>
                       <div>
                         <h6 class="mb-0 fw-medium">{{ user.firstName }} {{ user.lastName }}</h6>
