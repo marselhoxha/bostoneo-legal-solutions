@@ -1,3 +1,10 @@
+## CRITICAL SAFETY RULES — NEVER VIOLATE THESE
+* **NEVER run destructive git commands** (git filter-repo, git reset --hard, git push --force, git rebase, git clean -f, rm -rf on repo) without EXPLICIT user permission. Ask first, explain exactly what the command will do, and wait for approval. NO EXCEPTIONS.
+* **NEVER commit, push, merge, or deploy** without EXPLICIT user permission. Always ask first. No exceptions.
+* **NEVER hardcode secrets, API keys, credentials, or tokens** into any file that is tracked by git. Always use environment variables or CI-injected placeholders. If you catch yourself about to write a secret into a tracked file, STOP and use a placeholder pattern instead.
+* **NEVER run any command that rewrites git history** (filter-repo, filter-branch, rebase -i, commit --amend on pushed commits). These can destroy the entire repository. If history rewriting is needed, explain the risks to the user and let THEM decide.
+* **Before any git operation that affects remote branches** (push, force-push, delete branch, update ref), explain what you're about to do and get explicit approval.
+
 Standard Workflow
 1. First think through the problem, read the codebase for relevant files, and write a plan to projectplan.md.
 2. The plan should have a list of todo items that you can check off as you complete them

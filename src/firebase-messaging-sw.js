@@ -1,19 +1,14 @@
 // Firebase Cloud Messaging Service Worker
+// WARNING: Do NOT add credentials here. This file is committed to git.
+// The __FIREBASE_CONFIG__ placeholder is replaced at CI build time
+// by the "Inject Firebase config into Service Worker" step in ci.yml.
 importScripts('https://www.gstatic.com/firebasejs/9.2.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.2.0/firebase-messaging-compat.js');
 
-firebase.initializeApp({
-  apiKey: "REDACTED_FIREBASE_API_KEY",
-  authDomain: "bostoneo-legal-solutions.firebaseapp.com",
-  projectId: "bostoneo-legal-solutions",
-  storageBucket: "bostoneo-legal-solutions.firebasestorage.app",
-  messagingSenderId: "REDACTED_FIREBASE_SENDER_ID",
-  appId: "REDACTED_FIREBASE_APP_ID"
-});
+firebase.initializeApp(__FIREBASE_CONFIG__);
 
 const messaging = firebase.messaging();
 
-// Handle background messages
 messaging.onBackgroundMessage((payload) => {
   const { title, body, icon } = payload.notification || {};
   self.registration.showNotification(title || 'Legience', {

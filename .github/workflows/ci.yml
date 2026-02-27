@@ -394,6 +394,28 @@ jobs:
           printenv ENV_PROD_TS > src/environments/environment.prod.ts
           printenv ENV_STAGING_TS > src/environments/environment.staging.ts
 
+      - name: Inject Firebase config into Service Worker
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            ENV_FILE="src/environments/environment.prod.ts"
+          else
+            ENV_FILE="src/environments/environment.staging.ts"
+          fi
+          node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync('$ENV_FILE', 'utf8');
+            const keys = ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'];
+            const config = {};
+            keys.forEach(k => {
+              const m = content.match(new RegExp(k + ':\\\\s*[\"\\x27]([^\"\\x27]+)[\"\\x27]'));
+              if (m) config[k] = m[1];
+            });
+            let sw = fs.readFileSync('src/firebase-messaging-sw.js', 'utf8');
+            sw = sw.replace('__FIREBASE_CONFIG__', JSON.stringify(config));
+            fs.writeFileSync('src/firebase-messaging-sw.js', sw);
+            console.log('Firebase SW config injected:', JSON.stringify(config, null, 2));
+          "
+
       - name: Build
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
