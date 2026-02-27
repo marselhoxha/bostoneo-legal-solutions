@@ -37,7 +37,11 @@
                 "input": "src/assets/root",
                 "output": "/"
               },
-              "src/firebase-messaging-sw.js",
+              {
+                "glob": "firebase-messaging-sw.js",
+                "input": "src",
+                "output": "/"
+              },
               {
                 "glob": "**/*",
                 "input": "node_modules/ngx-extended-pdf-viewer/assets/",
