@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { Subject, forkJoin, of } from 'rxjs';
 import { takeUntil, catchError } from 'rxjs/operators';
 import { SuperAdminService } from '../../services/superadmin.service';
-import { PlatformStats, SystemHealth, SecurityOverview } from '../../models/superadmin.models';
+import { PlatformStats, PlatformAnalytics, SystemHealth, SecurityOverview, RecentActivity } from '../../models/superadmin.models';
 
 @Component({
   selector: 'app-superadmin-dashboard',
@@ -17,6 +17,13 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
   stats: PlatformStats | null = null;
   systemHealth: SystemHealth | null = null;
   securityOverview: SecurityOverview | null = null;
+  analytics: PlatformAnalytics | null = null;
+
+  // Chart configs
+  topOrgsChart: any = {};
+  revenueChart: any = {};
+  growthChart: any = {};
+  chartsReady = false;
 
   isLoading = true;
   error: string | null = null;
@@ -49,14 +56,19 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
       ),
       security: this.superAdminService.getSecurityOverview().pipe(
         catchError(err => { console.warn('Security overview unavailable:', err.status || err.message); return of(null); })
+      ),
+      analytics: this.superAdminService.getAnalytics('month').pipe(
+        catchError(err => { console.warn('Analytics unavailable:', err.status || err.message); return of(null); })
       )
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ({ stats, health, security }) => {
+        next: ({ stats, health, security, analytics }) => {
           this.stats = stats;
           this.systemHealth = health;
           this.securityOverview = security;
+          this.analytics = analytics;
+          this.buildCharts();
           this.lastRefreshed = new Date();
           this.isLoading = false;
           this.cdr.markForCheck();
@@ -76,6 +88,7 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
   navigateToUsers(): void { this.router.navigate(['/superadmin/users']); }
   navigateToSecurity(): void { this.router.navigate(['/superadmin/security']); }
   navigateToHealth(): void { this.router.navigate(['/superadmin/system-health']); }
+  navigateToHealthTab(tab: string): void { this.router.navigate(['/superadmin/system-health'], { queryParams: { tab } }); }
   navigateToAnalytics(): void { this.router.navigate(['/superadmin/analytics']); }
   navigateToAuditLogs(): void { this.router.navigate(['/superadmin/audit-logs']); }
 
@@ -228,5 +241,168 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
       case 'Clear': return 'success';
       default: return 'secondary';
     }
+  }
+
+  // ==================== RECENT ACTIVITY HELPERS ====================
+
+  getUserInitials(item: RecentActivity): string {
+    if (item.userName) {
+      const parts = item.userName.split(' ').filter(p => p);
+      return parts.map(p => p.charAt(0)).slice(0, 2).join('').toUpperCase();
+    }
+    if (item.userEmail) {
+      return item.userEmail.charAt(0).toUpperCase();
+    }
+    return 'S';
+  }
+
+  getEntityIcon(entityType: string): string {
+    switch (entityType?.toUpperCase()) {
+      case 'USER': return 'ri-user-line';
+      case 'ORGANIZATION': return 'ri-building-2-line';
+      case 'LEGAL_CASE': case 'CASE': return 'ri-scales-3-line';
+      case 'CLIENT': case 'CUSTOMER': return 'ri-contacts-line';
+      case 'DOCUMENT': return 'ri-file-text-line';
+      case 'INVOICE': return 'ri-bill-line';
+      case 'PAYMENT': case 'EXPENSE': return 'ri-money-dollar-circle-line';
+      case 'APPOINTMENT': case 'CALENDAR_EVENT': return 'ri-calendar-line';
+      case 'TASK': return 'ri-task-line';
+      case 'NOTE': return 'ri-sticky-note-line';
+      case 'ANNOUNCEMENT': return 'ri-megaphone-line';
+      default: return 'ri-file-list-3-line';
+    }
+  }
+
+  getEntityTypeClass(entityType: string): string {
+    switch (entityType?.toUpperCase()) {
+      case 'USER': case 'ROLE': case 'PERMISSION': return 'primary';
+      case 'ORGANIZATION': case 'PLATFORM': return 'purple';
+      case 'LEGAL_CASE': case 'CASE': return 'warning';
+      case 'CLIENT': case 'CUSTOMER': return 'info';
+      case 'DOCUMENT': case 'NOTE': return 'secondary';
+      case 'INVOICE': case 'PAYMENT': case 'EXPENSE': return 'success';
+      case 'SECURITY': case 'AUDIT_LOG': return 'danger';
+      case 'EMAIL': case 'INVITATION': return 'teal';
+      case 'CALENDAR_EVENT': case 'APPOINTMENT': case 'TASK': return 'indigo';
+      case 'ANNOUNCEMENT': case 'INTEGRATION': return 'pink';
+      default: return 'secondary';
+    }
+  }
+
+  getPlanBadgeClass(planType: string): string {
+    switch (planType?.toUpperCase()) {
+      case 'ENTERPRISE': return 'primary';
+      case 'PROFESSIONAL': return 'success';
+      case 'STARTER': return 'info';
+      case 'TRIAL': return 'warning';
+      default: return 'secondary';
+    }
+  }
+
+  getStatusBadgeClass(status: string): string {
+    switch (status?.toUpperCase()) {
+      case 'ACTIVE': return 'success';
+      case 'SUSPENDED': return 'danger';
+      case 'TRIAL': return 'warning';
+      default: return 'secondary';
+    }
+  }
+
+  getOrgClass(orgName: string): string {
+    if (!orgName) return 'secondary';
+    const colors = ['primary', 'success', 'info', 'warning', 'purple', 'teal', 'indigo', 'pink'];
+    let hash = 0;
+    for (let i = 0; i < orgName.length; i++) {
+      hash = orgName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  }
+
+  formatFullDate(dateStr: string): string {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+  }
+
+  formatDate(dateStr: string): string {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  // ==================== CHART BUILDERS ====================
+
+  private buildCharts(): void {
+    if (!this.analytics) return;
+    this.chartsReady = false;
+    this.buildTopOrgsChart();
+    this.buildRevenueChart();
+    this.buildGrowthChart();
+    this.chartsReady = true;
+  }
+
+  private buildTopOrgsChart(): void {
+    const data = this.analytics?.topOrgsByUsers || [];
+    this.topOrgsChart = {
+      series: [{ name: 'Users', data: data.map(d => d.value) }],
+      chart: { type: 'bar', height: 280, toolbar: { show: false } },
+      colors: ['#405189'],
+      plotOptions: { bar: { horizontal: true, barHeight: '45%', borderRadius: 4 } },
+      dataLabels: { enabled: true, style: { fontSize: '11px' } },
+      xaxis: { categories: data.map(d => d.organizationName) },
+      yaxis: { labels: { style: { fontSize: '12px' } } },
+      grid: { borderColor: 'var(--vz-border-color)', strokeDashArray: 3 },
+      tooltip: { y: { formatter: (val: number) => val + ' users' } }
+    };
+  }
+
+  private buildRevenueChart(): void {
+    const data = this.analytics?.topOrgsByRevenue || [];
+    if (!data.length) { this.revenueChart = {}; return; }
+    this.revenueChart = {
+      series: data.map(d => d.value),
+      chart: { type: 'donut', height: 280 },
+      labels: data.map(d => d.organizationName),
+      colors: ['#405189', '#0ab39c', '#f06548', '#299cdb', '#f7b84b'],
+      legend: { position: 'bottom', fontSize: '12px' },
+      dataLabels: { enabled: true, formatter: (val: number) => val.toFixed(1) + '%' },
+      plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total Revenue', formatter: (w: any) => '$' + w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0).toLocaleString() } } } } },
+      tooltip: { y: { formatter: (val: number) => '$' + val.toLocaleString() } }
+    };
+  }
+
+  private buildGrowthChart(): void {
+    const orgGrowth = this.analytics?.organizationGrowth || [];
+    const userGrowth = this.analytics?.userGrowth || [];
+
+    // Build a sorted union of all dates to align both series
+    const allDates = [...new Set([
+      ...orgGrowth.map(d => d.date),
+      ...userGrowth.map(d => d.date)
+    ])].sort();
+
+    const orgMap = new Map(orgGrowth.map(d => [d.date, d.value]));
+    const userMap = new Map(userGrowth.map(d => [d.date, d.value]));
+
+    this.growthChart = {
+      series: [
+        { name: 'Organizations', data: allDates.map(d => orgMap.get(d) ?? null) },
+        { name: 'Users', data: allDates.map(d => userMap.get(d) ?? null) }
+      ],
+      chart: { type: 'area', height: 280, toolbar: { show: false } },
+      colors: ['#405189', '#0ab39c'],
+      stroke: { curve: 'smooth', width: 2 },
+      fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
+      xaxis: {
+        categories: allDates.map(d =>
+          new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        ),
+        labels: { style: { fontSize: '11px' } }
+      },
+      tooltip: { shared: true },
+      dataLabels: { enabled: false },
+      grid: { borderColor: 'var(--vz-border-color)', strokeDashArray: 3 }
+    };
   }
 }

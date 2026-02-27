@@ -12,6 +12,7 @@ import com.bostoneo.bostoneosolutions.repository.*;
 import com.bostoneo.bostoneosolutions.rowmapper.UserRowMapper;
 import com.bostoneo.bostoneosolutions.service.EmailService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
+import com.bostoneo.bostoneosolutions.service.OnlineUserService;
 import com.bostoneo.bostoneosolutions.service.SuperAdminService;
 import com.bostoneo.bostoneosolutions.service.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private final NotificationService notificationService;
     private final BCryptPasswordEncoder passwordEncoder;
     private final TokenBlacklistService tokenBlacklistService;
+    private final OnlineUserService onlineUserService;
 
     @Value("${UI_APP_URL:http://localhost:4200}")
     private String frontendBaseUrl;
@@ -118,17 +120,14 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         Double paidRevenue = invoiceRepository.sumTotalAmountByStatus(InvoiceStatus.PAID);
         BigDecimal totalRevenue = paidRevenue != null ? BigDecimal.valueOf(paidRevenue) : BigDecimal.ZERO;
 
-        // Recent activity (last 10 across all orgs)
-        LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
-        List<AuditLog> recentLogs = auditLogRepository.findRecentActivitiesForDashboard(
-            oneDayAgo, PageRequest.of(0, 10));
-
-        List<PlatformStatsDTO.RecentActivityDTO> recentActivity = recentLogs.stream()
-            .map(this::mapToRecentActivity)
-            .collect(Collectors.toList());
+        // Recent activity (last 10 across all orgs) — raw SQL with name resolution
+        List<PlatformStatsDTO.RecentActivityDTO> recentActivity = getRecentActivityWithNames(null);
 
         // Build alerts
         List<PlatformStatsDTO.AlertDTO> alerts = buildAlerts(allOrgs);
+
+        // New signups — 5 most recent organizations created in last 30 days
+        List<PlatformStatsDTO.NewSignupDTO> newSignups = getNewSignups();
 
         return PlatformStatsDTO.builder()
             .totalOrganizations(totalOrgs)
@@ -146,6 +145,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             .systemHealth("HEALTHY")
             .recentActivity(recentActivity)
             .alerts(alerts)
+            .newSignups(newSignups)
             .build();
     }
 
@@ -203,14 +203,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         // Recent users
         List<UserDTO> recentUsers = getOrganizationUsers(organizationId, PageRequest.of(0, 5)).getContent();
 
-        // Recent activity
-        LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
-        List<AuditLog> recentLogs = auditLogRepository.findRecentActivitiesForDashboardByOrganization(
-            organizationId, oneDayAgo, PageRequest.of(0, 10));
-
-        List<PlatformStatsDTO.RecentActivityDTO> recentActivity = recentLogs.stream()
-            .map(this::mapToRecentActivity)
-            .collect(Collectors.toList());
+        // Recent activity — raw SQL with name resolution
+        List<PlatformStatsDTO.RecentActivityDTO> recentActivity = getRecentActivityWithNames(organizationId);
 
         // Calculate quota percentages
         Double userQuotaPercent = calculateQuotaPercent(userCount, org.getMaxUsers());
@@ -440,15 +434,97 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             .build();
     }
 
-    private PlatformStatsDTO.RecentActivityDTO mapToRecentActivity(AuditLog log) {
-        return PlatformStatsDTO.RecentActivityDTO.builder()
-            .id(log.getId())
-            .action(log.getAction() != null ? log.getAction().name() : null)
-            .entityType(log.getEntityType() != null ? log.getEntityType().name() : null)
-            .entityName(log.getDescription())
-            .userName(log.getUserId() != null ? "User #" + log.getUserId() : "System")
-            .timestamp(log.getTimestamp() != null ? log.getTimestamp().toString() : null)
-            .build();
+    /**
+     * Fetches recent activity with resolved user/entity/org names via raw SQL JOINs.
+     * Same pattern as getAuditLogs() but simplified for dashboard use (no pagination/filters).
+     */
+    private List<PlatformStatsDTO.NewSignupDTO> getNewSignups() {
+        try {
+            String sql = "SELECT o.id, o.name, o.plan_type, o.status, o.created_at, " +
+                "COUNT(u.id) as user_count, " +
+                "(SELECT u2.email FROM users u2 WHERE u2.organization_id = o.id ORDER BY u2.created_at LIMIT 1) as admin_email " +
+                "FROM organizations o LEFT JOIN users u ON u.organization_id = o.id " +
+                "WHERE o.created_at >= :since " +
+                "GROUP BY o.id, o.name, o.plan_type, o.status, o.created_at " +
+                "ORDER BY o.created_at DESC LIMIT 5";
+
+            return jdbc.query(sql,
+                new MapSqlParameterSource().addValue("since", LocalDateTime.now().minusDays(30)),
+                (rs, rowNum) -> PlatformStatsDTO.NewSignupDTO.builder()
+                    .id(rs.getLong("id"))
+                    .name(rs.getString("name"))
+                    .planType(rs.getString("plan_type"))
+                    .status(rs.getString("status"))
+                    .userCount(rs.getInt("user_count"))
+                    .adminEmail(rs.getString("admin_email"))
+                    .createdAt(rs.getTimestamp("created_at") != null
+                        ? rs.getTimestamp("created_at").toLocalDateTime().toString()
+                        : null)
+                    .build()
+            );
+        } catch (Exception e) {
+            log.warn("Error fetching new signups: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    private List<PlatformStatsDTO.RecentActivityDTO> getRecentActivityWithNames(Long organizationId) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT a.id, a.action, a.entity_type, a.description, a.timestamp, " +
+            "u.email as user_email, u.first_name, u.last_name, o.name as org_name, " +
+            "CASE " +
+            "  WHEN a.entity_type = 'USER' AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT COALESCE(NULLIF(TRIM(COALESCE(eu.first_name,'') || ' ' || COALESCE(eu.last_name,'')), ''), eu.email) FROM users eu WHERE eu.id = a.entity_id) " +
+            "  WHEN a.entity_type = 'ORGANIZATION' AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT eo.name FROM organizations eo WHERE eo.id = a.entity_id) " +
+            "  WHEN a.entity_type IN ('CLIENT', 'CUSTOMER') AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT ec.name FROM clients ec WHERE ec.id = a.entity_id) " +
+            "  WHEN a.entity_type IN ('LEGAL_CASE', 'CASE') AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT el.title FROM legal_cases el WHERE el.id = a.entity_id) " +
+            "  WHEN a.entity_type = 'DOCUMENT' AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT ed.title FROM documents ed WHERE ed.id = a.entity_id) " +
+            "  WHEN a.entity_type = 'INVOICE' AND a.entity_id IS NOT NULL THEN " +
+            "    (SELECT ei.invoice_number FROM invoices ei WHERE ei.id = a.entity_id) " +
+            "  ELSE NULL " +
+            "END as entity_name " +
+            "FROM audit_log a " +
+            "LEFT JOIN users u ON a.user_id = u.id " +
+            "LEFT JOIN organizations o ON a.organization_id = o.id " +
+            "WHERE a.user_id IS NOT NULL "
+        );
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+
+        if (organizationId != null) {
+            sql.append("AND a.organization_id = :orgId ");
+            params.addValue("orgId", organizationId);
+        }
+
+        sql.append("ORDER BY a.timestamp DESC LIMIT 10");
+
+        return jdbc.query(sql.toString(), params, (rs, rowNum) -> {
+            String firstName = rs.getString("first_name");
+            String lastName = rs.getString("last_name");
+            String userName = null;
+            if (firstName != null || lastName != null) {
+                String full = ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
+                if (!full.isEmpty()) {
+                    userName = full;
+                }
+            }
+            return PlatformStatsDTO.RecentActivityDTO.builder()
+                .id(rs.getLong("id"))
+                .action(rs.getString("action"))
+                .entityType(rs.getString("entity_type"))
+                .entityName(rs.getString("entity_name"))
+                .description(rs.getString("description"))
+                .userName(userName)
+                .userEmail(rs.getString("user_email"))
+                .organizationName(rs.getString("org_name"))
+                .timestamp(rs.getTimestamp("timestamp") != null ?
+                    rs.getTimestamp("timestamp").toLocalDateTime().toString() : null)
+                .build();
+        });
     }
 
     private UserDTO mapToUserDTO(User user, Set<Role> roles) {
@@ -595,14 +671,21 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             Integer.class
         );
 
-        // Active sessions: distinct users with successful logins in last 24h
-        Integer activeSessions = jdbc.queryForObject(
-            "SELECT COUNT(DISTINCT ue.user_id) FROM user_events ue " +
-            "JOIN events e ON ue.event_id = e.id " +
-            "WHERE e.type = 'LOGIN_ATTEMPT_SUCCESS' AND ue.created_at >= :since",
-            new MapSqlParameterSource().addValue("since", oneDayAgo),
-            Integer.class
-        );
+        // Active sessions: real-time from Redis, fall back to SQL if Redis is down
+        int activeSessions;
+        if (onlineUserService.isAvailable()) {
+            activeSessions = onlineUserService.getOnlineUserCount();
+        } else {
+            // Fallback: count users with activity in last 15 minutes (approximates Redis 5-min TTL)
+            LocalDateTime fifteenMinAgo = now.minusMinutes(15);
+            Integer sqlCount = jdbc.queryForObject(
+                "SELECT COUNT(DISTINCT user_id) FROM audit_log " +
+                "WHERE timestamp >= :since AND user_id IS NOT NULL",
+                new MapSqlParameterSource().addValue("since", fifteenMinAgo),
+                Integer.class
+            );
+            activeSessions = sqlCount != null ? sqlCount : 0;
+        }
 
         // API metrics from audit_log
         Integer totalRequestsLastHour = jdbc.queryForObject(
@@ -627,7 +710,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             .memory(memoryInfo)
             .errorCountLastHour(errorCountLastHour != null ? errorCountLastHour : 0)
             .errorCountLast24Hours(errorCountLast24Hours != null ? errorCountLast24Hours : 0)
-            .activeSessions(activeSessions != null ? activeSessions : 0)
+            .activeSessions(activeSessions)
             .apiMetrics(apiMetrics)
             .build();
     }
@@ -657,6 +740,12 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         // Case growth
         List<PlatformAnalyticsDTO.TimeSeriesData> caseGrowth = getTimeSeriesData(
             "SELECT DATE(created_at) as date, COUNT(*) as count FROM legal_cases WHERE created_at >= :start GROUP BY DATE(created_at) ORDER BY date",
+            startDate
+        );
+
+        // Revenue growth
+        List<PlatformAnalyticsDTO.TimeSeriesData> revenueGrowth = getTimeSeriesData(
+            "SELECT DATE(i.issue_date) as date, SUM(i.total_amount) as count FROM invoices i WHERE i.status = 'PAID' AND i.issue_date >= :start GROUP BY DATE(i.issue_date) ORDER BY date",
             startDate
         );
 
@@ -708,6 +797,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             .organizationGrowth(orgGrowth)
             .userGrowth(userGrowth)
             .caseGrowth(caseGrowth)
+            .revenueGrowth(revenueGrowth)
             .topOrgsByUsers(topOrgsByUsers)
             .topOrgsByRevenue(topOrgsByRevenue)
             .usersByRole(usersByRole)

@@ -57,6 +57,9 @@ public class PlatformStatsDTO {
     // Alerts
     private List<AlertDTO> alerts;
 
+    // New signups (recent organizations)
+    private List<NewSignupDTO> newSignups;
+
     @Data
     @Builder
     @NoArgsConstructor
@@ -67,7 +70,9 @@ public class PlatformStatsDTO {
         private String entityType;
         private String entityName;
         private String userName;
+        private String userEmail;
         private String organizationName;
+        private String description;
         private String timestamp;
     }
 
@@ -80,5 +85,19 @@ public class PlatformStatsDTO {
         private String message;
         private String organizationName;
         private String timestamp;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class NewSignupDTO {
+        private Long id;
+        private String name;
+        private String planType;
+        private String status;
+        private int userCount;
+        private String adminEmail;
+        private String createdAt;
     }
 }

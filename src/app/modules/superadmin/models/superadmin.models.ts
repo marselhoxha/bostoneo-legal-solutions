@@ -17,6 +17,17 @@ export interface PlatformStats {
   totalStorageLimitBytes?: number;
   recentActivity: RecentActivity[];
   alerts: Alert[];
+  newSignups?: NewSignup[];
+}
+
+export interface NewSignup {
+  id: number;
+  name: string;
+  planType: string;
+  status: string;
+  userCount: number;
+  adminEmail: string;
+  createdAt: string;
 }
 
 export interface RecentActivity {
@@ -25,7 +36,9 @@ export interface RecentActivity {
   entityType: string;
   entityName: string;
   userName: string;
+  userEmail?: string;
   organizationName?: string;
+  description?: string;
   timestamp: string;
 }
 

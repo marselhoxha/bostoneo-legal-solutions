@@ -55,72 +55,51 @@
   <div *ngIf="!isLoading && organization" style="margin-bottom: 60px;">
     <!-- Stats Cards -->
     <div class="stats-row">
-      <div class="stat-item">
-        <div class="stat-header">
-          <span class="stat-label">USERS</span>
-          <span class="stat-indicator stat-indicator-primary">
-            <i class="ri-user-line"></i>
-          </span>
+      <div class="stat-item accent-primary">
+        <div class="stat-icon-box icon-primary">
+          <i class="ri-group-line"></i>
         </div>
-        <div class="stat-body">
-          <i class="ri-group-line stat-icon text-primary"></i>
-          <span class="stat-value">{{ organization.stats.userCount }}</span>
-        </div>
-        <div class="stat-footer" *ngIf="organization.stats.maxUsers">
-          <div class="progress" style="height: 4px;">
-            <div class="progress-bar" [ngClass]="getQuotaClass(organization.stats.userQuotaPercent)"
-                 [style.width.%]="organization.stats.userQuotaPercent"></div>
+        <div class="stat-content">
+          <div class="stat-label">Users</div>
+          <div class="stat-value">{{ organization.stats.userCount }}</div>
+          <div class="stat-meta" *ngIf="organization.stats.maxUsers">
+            {{ organization.stats.userCount }} of {{ organization.stats.maxUsers }} seats
           </div>
-          <small class="text-muted">{{ organization.stats.userCount }} / {{ organization.stats.maxUsers }}</small>
         </div>
       </div>
 
-      <div class="stat-item">
-        <div class="stat-header">
-          <span class="stat-label">CASES</span>
-          <span class="stat-indicator stat-indicator-success">
-            <i class="ri-briefcase-line"></i>
-          </span>
+      <div class="stat-item accent-success">
+        <div class="stat-icon-box icon-success">
+          <i class="ri-briefcase-4-line"></i>
         </div>
-        <div class="stat-body">
-          <i class="ri-briefcase-4-line stat-icon text-success"></i>
-          <span class="stat-value">{{ organization.stats.caseCount }}</span>
-        </div>
-        <div class="stat-footer" *ngIf="organization.stats.maxCases">
-          <div class="progress" style="height: 4px;">
-            <div class="progress-bar" [ngClass]="getQuotaClass(organization.stats.caseQuotaPercent)"
-                 [style.width.%]="organization.stats.caseQuotaPercent"></div>
+        <div class="stat-content">
+          <div class="stat-label">Cases</div>
+          <div class="stat-value">{{ organization.stats.caseCount }}</div>
+          <div class="stat-meta" *ngIf="organization.stats.maxCases">
+            {{ organization.stats.caseCount }} of {{ organization.stats.maxCases }} limit
           </div>
-          <small class="text-muted">{{ organization.stats.caseCount }} / {{ organization.stats.maxCases }}</small>
         </div>
       </div>
 
-      <div class="stat-item">
-        <div class="stat-header">
-          <span class="stat-label">CLIENTS</span>
-          <span class="stat-indicator stat-indicator-info">
-            <i class="ri-contacts-line"></i>
-          </span>
+      <div class="stat-item accent-info">
+        <div class="stat-icon-box icon-info">
+          <i class="ri-contacts-book-line"></i>
         </div>
-        <div class="stat-body">
-          <i class="ri-contacts-book-line stat-icon text-info"></i>
-          <span class="stat-value">{{ organization.stats.clientCount }}</span>
+        <div class="stat-content">
+          <div class="stat-label">Clients</div>
+          <div class="stat-value">{{ organization.stats.clientCount }}</div>
+          <div class="stat-meta">Active clients</div>
         </div>
       </div>
 
-      <div class="stat-item">
-        <div class="stat-header">
-          <span class="stat-label">REVENUE</span>
-          <span class="stat-indicator stat-indicator-warning">
-            <i class="ri-money-dollar-circle-line"></i>
-          </span>
+      <div class="stat-item accent-warning">
+        <div class="stat-icon-box icon-warning">
+          <i class="ri-money-dollar-circle-line"></i>
         </div>
-        <div class="stat-body">
-          <i class="ri-funds-line stat-icon text-warning"></i>
-          <span class="stat-value fs-5">{{ formatCurrency(organization.stats.totalRevenue) }}</span>
-        </div>
-        <div class="stat-footer">
-          <small class="text-muted">{{ organization.stats.invoiceCount }} invoices</small>
+        <div class="stat-content">
+          <div class="stat-label">Revenue</div>
+          <div class="stat-value">{{ formatCurrency(organization.stats.totalRevenue) }}</div>
+          <div class="stat-meta">{{ organization.stats.invoiceCount }} invoices</div>
         </div>
       </div>
     </div>

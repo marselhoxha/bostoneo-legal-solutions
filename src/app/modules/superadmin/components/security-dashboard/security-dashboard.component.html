@@ -1,258 +1,436 @@
-<div class="container-fluid">
+<div class="container-fluid sa-security">
+
   <!-- Page Header -->
-  <div class="row">
-    <div class="col-12">
-      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <h4 class="mb-sm-0">Security Dashboard</h4>
-        <div class="page-title-right">
-          <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a routerLink="/superadmin/dashboard">SUPERADMIN</a></li>
-            <li class="breadcrumb-item active">Security</li>
-          </ol>
-        </div>
+  <div class="sa-header">
+    <div class="sa-header__left">
+      <div class="sa-header__label">
+        <span class="text-muted fs-11 fw-semibold text-uppercase" style="letter-spacing: 0.05em;">SUPERADMIN</span>
+        <span class="text-muted fs-11 mx-1">/</span>
+        <span class="text-muted fs-11">Platform Security</span>
       </div>
+      <h4 class="mb-0 fw-semibold">Security</h4>
+    </div>
+    <div class="sa-header__right">
+      <span class="badge rounded-pill d-inline-flex align-items-center gap-1"
+            *ngIf="securityOverview"
+            [ngClass]="'bg-' + getThreatLevelClass() + '-subtle text-' + getThreatLevelClass()">
+        <span class="sa-pulse-dot" [ngClass]="'sa-pulse-dot--' + getThreatLevelClass()"></span>
+        {{ getThreatLevel() }}
+      </span>
+      <button class="btn btn-soft-primary btn-sm" (click)="refreshData()" [disabled]="isRefreshing">
+        <i class="ri-refresh-line" [class.spin]="isRefreshing"></i> Refresh
+      </button>
     </div>
   </div>
 
   <!-- Loading -->
-  <div *ngIf="isLoading" class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-body text-center py-5">
-          <div class="spinner-border text-primary" role="status"></div>
-          <p class="mt-2 text-muted">Loading security data...</p>
-        </div>
-      </div>
-    </div>
+  <div class="text-center py-5" *ngIf="isLoading">
+    <div class="spinner-grow text-primary" role="status" style="width: 2.5rem; height: 2.5rem;"></div>
+    <h6 class="mt-3 text-muted">Loading security data...</h6>
   </div>
 
   <!-- Error -->
-  <div *ngIf="error && !isLoading" class="row">
-    <div class="col-12">
-      <div class="alert alert-danger">
-        {{ error }}
-        <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadSecurityOverview()">Retry</button>
-      </div>
+  <div class="alert alert-danger d-flex align-items-center gap-2" *ngIf="error && !isLoading" role="alert">
+    <i class="ri-error-warning-line fs-4"></i>
+    <div class="flex-grow-1">
+      <strong>Error:</strong> {{ error }}
     </div>
+    <button class="btn btn-sm btn-danger" (click)="loadSecurityOverview()">Retry</button>
   </div>
 
   <!-- Content -->
   <div *ngIf="!isLoading && !error && securityOverview">
-    <!-- Stats Cards -->
-    <div class="row mb-3">
-      <div class="col-md-3">
-        <div class="card card-animate" [class.border-danger]="securityOverview.failedLoginsLast24h > 10">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-grow-1">
-                <p class="text-uppercase fw-medium text-muted mb-0">Failed Logins (24h)</p>
-                <h4 class="fs-22 fw-semibold mb-0"
-                    [class.text-danger]="securityOverview.failedLoginsLast24h > 10">
-                  {{ securityOverview.failedLoginsLast24h }}
-                </h4>
-              </div>
-              <div class="avatar-sm flex-shrink-0">
-                <span class="avatar-title rounded fs-3"
-                      [ngClass]="securityOverview.failedLoginsLast24h > 10 ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning'">
-                  <i class="ri-lock-line"></i>
-                </span>
-              </div>
-            </div>
+
+    <!-- ═══ VITAL TILES ═══ -->
+    <div class="row g-3 mb-3">
+      <div class="col">
+        <div class="sa-vital-tile" [ngClass]="securityOverview.failedLoginsLast24h > 10 ? 'sa-vital-tile--danger' : 'sa-vital-tile--warning'">
+          <div class="sa-vital-tile__icon">
+            <i class="ri-lock-line"></i>
+          </div>
+          <div class="sa-vital-tile__body">
+            <span class="sa-vital-tile__val">{{ securityOverview.failedLoginsLast24h }}</span>
+            <span class="sa-vital-tile__lbl">Failed 24h</span>
           </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card card-animate">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-grow-1">
-                <p class="text-uppercase fw-medium text-muted mb-0">Failed Logins (7d)</p>
-                <h4 class="fs-22 fw-semibold mb-0">{{ securityOverview.failedLoginsLast7d }}</h4>
-              </div>
-              <div class="avatar-sm flex-shrink-0">
-                <span class="avatar-title bg-info-subtle text-info rounded fs-3">
-                  <i class="ri-calendar-line"></i>
-                </span>
-              </div>
-            </div>
+      <div class="col">
+        <div class="sa-vital-tile sa-vital-tile--info">
+          <div class="sa-vital-tile__icon">
+            <i class="ri-calendar-line"></i>
+          </div>
+          <div class="sa-vital-tile__body">
+            <span class="sa-vital-tile__val">{{ securityOverview.failedLoginsLast7d }}</span>
+            <span class="sa-vital-tile__lbl">Failed 7d</span>
           </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card card-animate" [class.border-danger]="securityOverview.accountLockouts > 0">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-grow-1">
-                <p class="text-uppercase fw-medium text-muted mb-0">Locked Accounts</p>
-                <h4 class="fs-22 fw-semibold mb-0"
-                    [class.text-danger]="securityOverview.accountLockouts > 0">
-                  {{ securityOverview.accountLockouts }}
-                </h4>
-              </div>
-              <div class="avatar-sm flex-shrink-0">
-                <span class="avatar-title rounded fs-3"
-                      [ngClass]="securityOverview.accountLockouts > 0 ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'">
-                  <i class="ri-user-forbid-line"></i>
-                </span>
-              </div>
-            </div>
+      <div class="col">
+        <div class="sa-vital-tile sa-vital-tile--primary">
+          <div class="sa-vital-tile__icon">
+            <i class="ri-calendar-check-line"></i>
+          </div>
+          <div class="sa-vital-tile__body">
+            <span class="sa-vital-tile__val">{{ securityOverview.failedLoginsLast30d }}</span>
+            <span class="sa-vital-tile__lbl">Failed 30d</span>
           </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card card-animate" [class.border-danger]="securityOverview.suspiciousActivityCount > 0">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-grow-1">
-                <p class="text-uppercase fw-medium text-muted mb-0">Suspicious IPs (24h)</p>
-                <h4 class="fs-22 fw-semibold mb-0"
-                    [class.text-danger]="securityOverview.suspiciousActivityCount > 0">
-                  {{ securityOverview.suspiciousActivityCount }}
-                </h4>
-              </div>
-              <div class="avatar-sm flex-shrink-0">
-                <span class="avatar-title rounded fs-3"
-                      [ngClass]="securityOverview.suspiciousActivityCount > 0 ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'">
-                  <i class="ri-spy-line"></i>
-                </span>
-              </div>
-            </div>
+      <div class="col">
+        <div class="sa-vital-tile" [ngClass]="securityOverview.accountLockouts > 0 ? 'sa-vital-tile--danger' : 'sa-vital-tile--success'">
+          <div class="sa-vital-tile__icon">
+            <i class="ri-user-forbid-line"></i>
+          </div>
+          <div class="sa-vital-tile__body">
+            <span class="sa-vital-tile__val">{{ securityOverview.accountLockouts }}</span>
+            <span class="sa-vital-tile__lbl">Lockouts</span>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="sa-vital-tile" [ngClass]="securityOverview.suspiciousActivityCount > 0 ? 'sa-vital-tile--danger' : 'sa-vital-tile--success'">
+          <div class="sa-vital-tile__icon">
+            <i class="ri-spy-line"></i>
+          </div>
+          <div class="sa-vital-tile__body">
+            <span class="sa-vital-tile__val">{{ securityOverview.suspiciousActivityCount }}</span>
+            <span class="sa-vital-tile__lbl">Suspicious IPs</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="row">
+    <!-- ═══ TABBED CARD ═══ -->
+    <div class="row g-3 mb-3">
       <div class="col-12">
-        <div class="card">
-          <div class="card-header">
-            <ul class="nav nav-tabs card-header-tabs">
+        <div class="card sa-card">
+          <div class="card-header bg-transparent sa-card__header">
+            <div class="sa-card__badge sa-card__badge--primary">
+              <i class="ri-shield-check-line"></i>
+            </div>
+            <h6 class="card-title mb-0 flex-grow-1">Security Events</h6>
+            <ul class="nav nav-pills sa-nav-pills mb-0">
               <li class="nav-item">
                 <a class="nav-link" [class.active]="activeTab === 'overview'"
-                   (click)="setActiveTab('overview')" role="button">
-                  <i class="ri-shield-check-line me-1"></i>Recent Events
+                   (click)="setActiveTab('overview')">
+                  <i class="ri-alarm-warning-line me-1"></i>Recent
                 </a>
               </li>
               <li class="nav-item">
                 <a class="nav-link" [class.active]="activeTab === 'logins'"
-                   (click)="setActiveTab('logins')" role="button">
+                   (click)="setActiveTab('logins')">
                   <i class="ri-lock-line me-1"></i>Failed Logins
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" [class.active]="activeTab === 'events'"
+                   (click)="setActiveTab('events')">
+                  <i class="ri-login-circle-line me-1"></i>Login Activity
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" [class.active]="activeTab === 'sessions'"
+                   (click)="setActiveTab('sessions')">
+                  <i class="ri-user-follow-line me-1"></i>Active Sessions
                 </a>
               </li>
             </ul>
           </div>
-          <div class="card-body">
-            <!-- Recent Events Tab -->
+
+          <div class="card-body p-0">
+
+            <!-- ── Tab 1: Recent Events ── -->
             <div *ngIf="activeTab === 'overview'">
-              <h6 class="mb-3">Recent Security Events</h6>
-              <div class="timeline-2" *ngIf="securityOverview.recentSecurityEvents?.length">
-                <div class="timeline-item" *ngFor="let event of securityOverview.recentSecurityEvents">
-                  <div class="d-flex align-items-start">
-                    <div class="avatar-xs me-3 flex-shrink-0">
-                      <span class="avatar-title rounded-circle" [ngClass]="getEventTypeBadge(event.eventType)">
-                        <i [class]="getEventTypeIcon(event.eventType).replace(' text-', ' ')"></i>
-                      </span>
-                    </div>
-                    <div class="flex-grow-1">
-                      <div class="d-flex justify-content-between">
-                        <div>
-                          <span class="badge me-2" [ngClass]="getEventTypeBadge(event.eventType)">
-                            {{ formatEventType(event.eventType) }}
-                          </span>
-                          <span class="text-muted" *ngIf="event.userEmail">{{ event.userEmail }}</span>
-                        </div>
-                        <small class="text-muted">{{ formatRelativeTime(event.timestamp) }}</small>
-                      </div>
-                      <p class="mb-0 small text-muted mt-1">
-                        {{ event.description }}
-                        <span *ngIf="event.organizationName"> - {{ event.organizationName }}</span>
-                        <span *ngIf="event.ipAddress" class="ms-2">
-                          <i class="ri-global-line me-1"></i>{{ event.ipAddress }}
-                        </span>
-                      </p>
-                    </div>
+              <div *ngIf="securityOverview.recentSecurityEvents?.length">
+                <div *ngFor="let event of securityOverview.recentSecurityEvents" class="sa-event-item">
+                  <div class="sa-event-item__icon" [ngClass]="'sa-event-item__icon--' + getEventTypeColorClass(event.eventType)">
+                    <i [class]="getEventTypeIcon(event.eventType)"></i>
                   </div>
+                  <div class="sa-event-item__content">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                      <span class="badge" [ngClass]="getEventTypeBadge(event.eventType)">
+                        {{ formatEventType(event.eventType) }}
+                      </span>
+                      <span class="text-muted fs-12" *ngIf="event.userEmail">{{ event.userEmail }}</span>
+                    </div>
+                    <p class="mb-0 fs-12 text-muted">
+                      {{ event.description }}
+                      <span *ngIf="event.organizationName"> &mdash; {{ event.organizationName }}</span>
+                      <span *ngIf="event.ipAddress" class="ms-2">
+                        <code class="sa-ip-code">{{ event.ipAddress }}</code>
+                      </span>
+                    </p>
+                  </div>
+                  <span class="sa-event-item__time">{{ formatRelativeTime(event.timestamp) }}</span>
                 </div>
               </div>
-              <div *ngIf="!securityOverview.recentSecurityEvents?.length" class="text-center py-4 text-muted">
-                <i class="ri-shield-check-line fs-1 d-block mb-2"></i>
-                No recent security events
+              <div *ngIf="!securityOverview.recentSecurityEvents?.length" class="text-center py-4">
+                <i class="ri-shield-check-line text-success fs-24 d-block mb-2"></i>
+                <span class="text-muted fs-13">No recent security events</span>
               </div>
             </div>
 
-            <!-- Failed Logins Tab -->
+            <!-- ── Tab 2: Failed Logins ── -->
             <div *ngIf="activeTab === 'logins'">
-              <!-- Loading -->
               <div *ngIf="isLoadingLogins" class="text-center py-4">
                 <div class="spinner-border spinner-border-sm text-primary"></div>
                 <span class="ms-2 text-muted">Loading...</span>
               </div>
 
-              <!-- Table -->
-              <div *ngIf="!isLoadingLogins" class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                  <thead class="table-light">
-                    <tr>
-                      <th>User</th>
-                      <th>Organization</th>
-                      <th>IP Address</th>
-                      <th>Device/Browser</th>
-                      <th>Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let login of failedLogins">
-                      <td>
-                        <span class="fw-semibold">{{ login.userEmail || 'Unknown' }}</span>
-                        <small *ngIf="login.userName" class="text-muted d-block">{{ login.userName }}</small>
-                      </td>
-                      <td>{{ login.organizationName || '-' }}</td>
-                      <td>
-                        <code>{{ login.ipAddress || '-' }}</code>
-                      </td>
-                      <td>
-                        <small class="text-truncate d-block" style="max-width: 200px;" [title]="login.userAgent">
-                          {{ login.userAgent || '-' }}
-                        </small>
-                      </td>
-                      <td>
-                        <small>{{ formatDate(login.timestamp) }}</small>
-                      </td>
-                    </tr>
-                    <tr *ngIf="failedLogins.length === 0">
-                      <td colspan="5" class="text-center py-4 text-muted">
-                        <i class="ri-checkbox-circle-line fs-1 d-block mb-2 text-success"></i>
-                        No failed login attempts
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div *ngIf="!isLoadingLogins">
+                <div class="table-responsive">
+                  <table class="table align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>User</th>
+                        <th>Organization</th>
+                        <th>IP Address</th>
+                        <th>Device / Browser</th>
+                        <th>Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let login of failedLogins" class="sa-table-row">
+                        <td>
+                          <span class="fw-semibold fs-13">{{ login.userEmail || 'Unknown' }}</span>
+                        </td>
+                        <td>
+                          <span class="fs-13">{{ login.organizationName || '-' }}</span>
+                        </td>
+                        <td>
+                          <code class="sa-ip-code">{{ login.ipAddress || '-' }}</code>
+                        </td>
+                        <td>
+                          <span class="text-truncate d-inline-block fs-12" style="max-width: 200px;" [title]="login.userAgent || ''">
+                            {{ login.userAgent || '-' }}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="fs-12 text-muted">{{ formatDate(login.timestamp) }}</span>
+                        </td>
+                      </tr>
+                      <tr *ngIf="failedLogins.length === 0">
+                        <td colspan="5" class="text-center py-4">
+                          <i class="ri-checkbox-circle-line text-success fs-24 d-block mb-2"></i>
+                          <span class="text-muted fs-13">No failed login attempts</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Pagination -->
+                <div *ngIf="loginsTotalPages > 1" class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+                  <span class="text-muted fs-12">
+                    Page {{ loginsPage + 1 }} of {{ loginsTotalPages }} ({{ loginsTotalElements }} total)
+                  </span>
+                  <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                      <li class="page-item" [class.disabled]="loginsPage === 0">
+                        <a class="page-link" (click)="goToLoginsPage(loginsPage - 1)">Prev</a>
+                      </li>
+                      <li *ngFor="let page of loginsPageNumbers" class="page-item" [class.active]="page === loginsPage">
+                        <a class="page-link" (click)="goToLoginsPage(page)">{{ page + 1 }}</a>
+                      </li>
+                      <li class="page-item" [class.disabled]="loginsPage === loginsTotalPages - 1">
+                        <a class="page-link" (click)="goToLoginsPage(loginsPage + 1)">Next</a>
+                      </li>
+                    </ul>
+                  </nav>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Tab 3: Login Activity ── -->
+            <div *ngIf="activeTab === 'events'">
+              <div *ngIf="isLoadingEvents" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-primary"></div>
+                <span class="ms-2 text-muted">Loading...</span>
               </div>
 
-              <!-- Pagination -->
-              <div *ngIf="!isLoadingLogins && loginsTotalPages > 1" class="d-flex justify-content-between align-items-center mt-3">
-                <div class="text-muted small">
-                  Page {{ loginsPage + 1 }} of {{ loginsTotalPages }} ({{ loginsTotalElements }} total)
+              <div *ngIf="!isLoadingEvents">
+                <div class="table-responsive">
+                  <table class="table align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>Status</th>
+                        <th>User</th>
+                        <th>Organization</th>
+                        <th>IP Address</th>
+                        <th>Device</th>
+                        <th>Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let event of loginEvents" class="sa-table-row">
+                        <td>
+                          <span class="badge" [ngClass]="getEventTypeBadge(event.eventType)">
+                            {{ event.eventType === 'LOGIN_ATTEMPT_SUCCESS' ? 'SUCCESS' : 'FAILURE' }}
+                          </span>
+                        </td>
+                        <td>
+                          <div>
+                            <span class="fw-semibold fs-13">{{ event.userName || 'Unknown' }}</span>
+                            <span class="text-muted fs-12 d-block">{{ event.userEmail }}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="fs-13">{{ event.organizationName || 'Platform' }}</span>
+                        </td>
+                        <td>
+                          <code class="sa-ip-code">{{ event.ipAddress || '-' }}</code>
+                        </td>
+                        <td>
+                          <span class="text-truncate d-inline-block fs-12" style="max-width: 160px;" [title]="event.device || ''">
+                            {{ event.device || '-' }}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="fs-12 text-muted">{{ formatDate(event.timestamp) }}</span>
+                        </td>
+                      </tr>
+                      <tr *ngIf="loginEvents.length === 0">
+                        <td colspan="6" class="text-center py-4">
+                          <i class="ri-login-circle-line text-muted fs-24 d-block mb-2"></i>
+                          <span class="text-muted fs-13">No login events found</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-                <nav>
-                  <ul class="pagination pagination-sm mb-0">
-                    <li class="page-item" [class.disabled]="loginsPage === 0">
-                      <a class="page-link" (click)="goToLoginsPage(loginsPage - 1)">Prev</a>
-                    </li>
-                    <li *ngFor="let page of loginsPageNumbers" class="page-item" [class.active]="page === loginsPage">
-                      <a class="page-link" (click)="goToLoginsPage(page)">{{ page + 1 }}</a>
-                    </li>
-                    <li class="page-item" [class.disabled]="loginsPage === loginsTotalPages - 1">
-                      <a class="page-link" (click)="goToLoginsPage(loginsPage + 1)">Next</a>
-                    </li>
-                  </ul>
-                </nav>
+
+                <!-- Pagination -->
+                <div *ngIf="eventsTotalPages > 1" class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+                  <span class="text-muted fs-12">
+                    Page {{ eventsPage + 1 }} of {{ eventsTotalPages }} ({{ eventsTotalElements }} total)
+                  </span>
+                  <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                      <li class="page-item" [class.disabled]="eventsPage === 0">
+                        <a class="page-link" (click)="goToEventsPage(eventsPage - 1)">Prev</a>
+                      </li>
+                      <li *ngFor="let page of eventsPageNumbers" class="page-item" [class.active]="page === eventsPage">
+                        <a class="page-link" (click)="goToEventsPage(page)">{{ page + 1 }}</a>
+                      </li>
+                      <li class="page-item" [class.disabled]="eventsPage === eventsTotalPages - 1">
+                        <a class="page-link" (click)="goToEventsPage(eventsPage + 1)">Next</a>
+                      </li>
+                    </ul>
+                  </nav>
+                </div>
               </div>
+            </div>
+
+            <!-- ── Tab 4: Active Sessions ── -->
+            <div *ngIf="activeTab === 'sessions'">
+              <!-- Window Selector -->
+              <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+                <span class="text-muted fs-12" *ngIf="!isLoadingSessions">
+                  {{ activeSessions.length }} session{{ activeSessions.length !== 1 ? 's' : '' }}
+                </span>
+                <span class="text-muted fs-12" *ngIf="isLoadingSessions">Loading...</span>
+                <div class="sa-window-selector">
+                  <button class="sa-window-btn" [class.active]="sessionWindow === '1h'"
+                          (click)="setSessionWindow('1h')">1h</button>
+                  <button class="sa-window-btn" [class.active]="sessionWindow === '24h'"
+                          (click)="setSessionWindow('24h')">24h</button>
+                  <button class="sa-window-btn" [class.active]="sessionWindow === '7d'"
+                          (click)="setSessionWindow('7d')">7d</button>
+                </div>
+              </div>
+
+              <div *ngIf="isLoadingSessions" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-primary"></div>
+              </div>
+
+              <div *ngIf="!isLoadingSessions">
+                <div *ngFor="let session of activeSessions" class="sa-event-item">
+                  <div class="sa-event-item__icon sa-event-item__icon--success">
+                    <i class="ri-user-follow-line"></i>
+                  </div>
+                  <div class="sa-event-item__content">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                      <span class="fw-semibold fs-13">{{ session.firstName }} {{ session.lastName }}</span>
+                      <span class="text-muted fs-12">{{ session.email }}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 fs-12 text-muted">
+                      <span *ngIf="session.organizationName">
+                        <i class="ri-building-2-line me-1"></i>{{ session.organizationName }}
+                      </span>
+                      <span *ngIf="session.ipAddress">
+                        <code class="sa-ip-code">{{ session.ipAddress }}</code>
+                      </span>
+                      <span *ngIf="session.device">
+                        <i class="ri-device-line me-1"></i>{{ session.device }}
+                      </span>
+                    </div>
+                  </div>
+                  <span class="sa-event-item__time">{{ formatRelativeTime(session.loginTime) }}</span>
+                </div>
+                <div *ngIf="activeSessions.length === 0" class="text-center py-4">
+                  <i class="ri-user-follow-line text-muted fs-24 d-block mb-2"></i>
+                  <span class="text-muted fs-13">No active sessions in this window</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SECURITY BY ORG ═══ -->
+    <div class="row g-3" *ngIf="securityByOrg.length > 0">
+      <div class="col-12">
+        <div class="card sa-card">
+          <div class="card-header bg-transparent sa-card__header">
+            <div class="sa-card__badge sa-card__badge--warning">
+              <i class="ri-building-2-line"></i>
+            </div>
+            <h6 class="card-title mb-0 flex-grow-1">Security by Organization</h6>
+            <span class="badge bg-warning-subtle text-warning rounded-pill fs-10">
+              {{ securityByOrg.length }} org{{ securityByOrg.length !== 1 ? 's' : '' }}
+            </span>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Organization</th>
+                    <th class="text-center">Failed Logins</th>
+                    <th class="text-center">Lockouts</th>
+                    <th class="text-center">Suspicious IPs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let org of securityByOrg" class="sa-table-row">
+                    <td>
+                      <span class="fw-semibold fs-13">{{ org.organizationName }}</span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge" [ngClass]="org.failedLogins > 10 ? 'bg-danger-subtle text-danger' : 'bg-secondary-subtle text-secondary'">
+                        {{ org.failedLogins }}
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge" [ngClass]="org.accountLockouts > 0 ? 'bg-danger-subtle text-danger' : 'bg-secondary-subtle text-secondary'">
+                        {{ org.accountLockouts }}
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge" [ngClass]="org.suspiciousIps > 0 ? 'bg-warning-subtle text-warning' : 'bg-secondary-subtle text-secondary'">
+                        {{ org.suspiciousIps }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </div>
     </div>
+
   </div>
 </div>

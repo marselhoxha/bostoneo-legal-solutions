@@ -1,7 +1,12 @@
 // ═══════════════════════════════════════════════
 // SuperAdmin Dashboard — Executive Summary
-// Velzon theme aligned, single-page layout
+// Polished Velzon-aligned layout
 // ═══════════════════════════════════════════════
+
+// ─── Page Container ─────────────────────────────
+.sa-dashboard {
+  padding-bottom: 1.5rem;
+}
 
 // ─── Page Header ──────────────────────────────
 .sa-header {
@@ -10,13 +15,18 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 1rem;
-  padding: 0.75rem 0 1.25rem;
-  margin-bottom: 0.5rem;
+  padding: 1rem 0 1.25rem;
+  margin-bottom: 0.75rem;
   border-bottom: 1px solid var(--vz-border-color);
 
   &__left {
     .sa-header__label {
-      margin-bottom: 0.125rem;
+      margin-bottom: 0.25rem;
+    }
+
+    h4 {
+      font-size: 1.25rem;
+      letter-spacing: -0.01em;
     }
   }
 
@@ -27,132 +37,198 @@
   }
 }
 
-// ─── Stat Cards ───────────────────────────────
-.sa-stat-card {
+// ─── Stats Row (eSignatures pattern) ─────────────
+.stats-row {
+  display: flex;
+  background: var(--vz-card-bg);
+  border-radius: 12px;
   border: 1px solid var(--vz-border-color);
-  border-radius: 0.5rem;
-  transition: all 0.2s ease;
   overflow: hidden;
-  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
+.stat-item {
+  flex: 1;
+  padding: 1.25rem 1.5rem;
+  border-right: 1px solid var(--vz-border-color);
+  transition: all 0.2s ease;
+
+  &:last-child {
+    border-right: none;
   }
 
-  &--primary::before { background: var(--vz-primary); }
-  &--info::before { background: var(--vz-info); }
-  &--success::before { background: var(--vz-success); }
-  &--warning::before { background: var(--vz-warning); }
+  &:hover {
+    filter: brightness(0.97);
+  }
 
-  &--primary, &--info {
+  &--clickable {
     cursor: pointer;
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
   }
+}
 
-  &__label {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--vz-secondary-color);
-    margin-bottom: 0.25rem;
-  }
+.stat-item:nth-child(1) {
+  background: rgba(var(--vz-primary-rgb), 0.08);
+}
 
-  &__value {
-    font-weight: 700;
-    color: var(--vz-heading-color);
-    font-feature-settings: "tnum";
-    margin-bottom: 0;
-  }
+.stat-item:nth-child(2) {
+  background: rgba(var(--vz-info-rgb), 0.08);
+}
 
-  &__icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    flex-shrink: 0;
-  }
+.stat-item:nth-child(3) {
+  background: rgba(var(--vz-success-rgb), 0.08);
+}
 
-  &--primary .sa-stat-card__icon {
+.stat-item:nth-child(4) {
+  background: rgba(var(--vz-warning-rgb), 0.08);
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--vz-secondary-color);
+}
+
+.stat-indicator {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+
+  &-primary {
     background: rgba(var(--vz-primary-rgb), 0.1);
     color: var(--vz-primary);
   }
-  &--info .sa-stat-card__icon {
+
+  &-info {
     background: rgba(var(--vz-info-rgb), 0.1);
     color: var(--vz-info);
   }
-  &--success .sa-stat-card__icon {
+
+  &-success {
     background: rgba(var(--vz-success-rgb), 0.1);
     color: var(--vz-success);
   }
-  &--warning .sa-stat-card__icon {
+
+  &-warning {
     background: rgba(var(--vz-warning-rgb), 0.1);
     color: var(--vz-warning);
   }
 }
 
-// ─── System Vitals Strip ──────────────────────
-.sa-vitals {
+.stat-body {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
-.sa-vital {
+.stat-icon {
+  font-size: 1.5rem;
+  opacity: 0.7;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--vz-heading-color);
+  line-height: 1;
+  font-feature-settings: "tnum";
+}
+
+// ─── System Vitals ──────────────────────────────
+.sa-vital-col {
+  cursor: pointer;
+}
+
+// ─── System Vitals Tiles ────────────────────────
+.sa-vital-tile {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--vz-border-color);
+  background: var(--vz-card-bg);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
 
-  i {
-    font-size: 1rem;
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
 
   &__val {
-    font-size: 0.9375rem;
-    font-weight: 600;
+    font-size: 1.125rem;
+    font-weight: 700;
     color: var(--vz-heading-color);
     font-feature-settings: "tnum";
+    line-height: 1.2;
   }
 
   &__lbl {
-    font-size: 0.75rem;
+    font-size: 0.625rem;
+    font-weight: 600;
     color: var(--vz-secondary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    margin-top: 2px;
   }
 
   &__bar {
-    width: 48px;
-    height: 4px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
     background: var(--vz-light);
-    border-radius: 2px;
-    overflow: hidden;
   }
 
   &__bar-fill {
     height: 100%;
-    border-radius: 2px;
-    transition: width 0.3s ease;
+    transition: width 0.4s ease;
   }
 
-  &__sep {
-    width: 1px;
-    height: 24px;
-    background: var(--vz-border-color);
-    flex-shrink: 0;
-  }
+  // Color variants
+  &--primary .sa-vital-tile__icon { background: rgba(var(--vz-primary-rgb), 0.12); color: var(--vz-primary); }
+  &--success .sa-vital-tile__icon { background: rgba(var(--vz-success-rgb), 0.12); color: var(--vz-success); }
+  &--info    .sa-vital-tile__icon { background: rgba(var(--vz-info-rgb), 0.12);    color: var(--vz-info); }
+  &--warning .sa-vital-tile__icon { background: rgba(var(--vz-warning-rgb), 0.12); color: var(--vz-warning); }
+  &--danger  .sa-vital-tile__icon { background: rgba(var(--vz-danger-rgb), 0.12);  color: var(--vz-danger); }
+
+  &--primary { border-left: 3px solid var(--vz-primary); }
+  &--success { border-left: 3px solid var(--vz-success); }
+  &--info    { border-left: 3px solid var(--vz-info); }
+  &--warning { border-left: 3px solid var(--vz-warning); }
+  &--danger  { border-left: 3px solid var(--vz-danger); }
 }
 
 // ─── Alert Items ──────────────────────────────
@@ -175,7 +251,7 @@
   &__icon {
     width: 28px;
     height: 28px;
-    border-radius: 6px;
+    border-radius: 7px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -226,78 +302,164 @@
   50% { opacity: 0.5; transform: scale(1.5); }
 }
 
-// ─── Activity Table Action Dots ───────────────
-.sa-action-dot {
+// ─── Card Chrome (matching audit-log pattern) ──
+.sa-card {
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.625rem;
+  overflow: hidden;
+  background: var(--vz-card-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--vz-border-color);
+  }
+
+  &__badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+
+    &--primary { background: rgba(var(--vz-primary-rgb), 0.1); color: var(--vz-primary); }
+    &--success { background: rgba(var(--vz-success-rgb), 0.1); color: var(--vz-success); }
+    &--info    { background: rgba(var(--vz-info-rgb), 0.1);    color: var(--vz-info); }
+    &--danger  { background: rgba(var(--vz-danger-rgb), 0.1);  color: var(--vz-danger); }
+    &--warning { background: rgba(var(--vz-warning-rgb), 0.1); color: var(--vz-warning); }
+  }
+}
+
+// ─── User Avatars (initials) ────────────────────
+.sa-avatar {
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+
+  &--primary   { background: rgba(var(--vz-primary-rgb), 0.12); color: var(--vz-primary); }
+  &--success   { background: rgba(var(--vz-success-rgb), 0.12); color: var(--vz-success); }
+  &--danger    { background: rgba(var(--vz-danger-rgb), 0.12);  color: var(--vz-danger); }
+  &--info      { background: rgba(var(--vz-info-rgb), 0.12);    color: var(--vz-info); }
+  &--warning   { background: rgba(var(--vz-warning-rgb), 0.12); color: var(--vz-warning); }
+  &--secondary { background: rgba(0, 0, 0, 0.06); color: var(--vz-secondary-color); }
+}
+
+// ─── Entity Icons ───────────────────────────────
+.sa-entity-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 0.8125rem;
+  flex-shrink: 0;
 
-  &--success {
-    background: rgba(var(--vz-success-rgb), 0.1);
-    color: var(--vz-success);
+  &--primary   { background: rgba(var(--vz-primary-rgb), 0.12); color: var(--vz-primary); }
+  &--success   { background: rgba(var(--vz-success-rgb), 0.12); color: var(--vz-success); }
+  &--info      { background: rgba(var(--vz-info-rgb), 0.12);    color: var(--vz-info); }
+  &--warning   { background: rgba(var(--vz-warning-rgb), 0.12); color: var(--vz-warning); }
+  &--danger    { background: rgba(var(--vz-danger-rgb), 0.12);  color: var(--vz-danger); }
+  &--secondary { background: rgba(0, 0, 0, 0.06);               color: var(--vz-secondary-color); }
+  &--purple    { background: rgba(108, 92, 231, 0.12);          color: #6c5ce7; }
+  &--teal      { background: rgba(0, 184, 148, 0.12);           color: #00b894; }
+  &--indigo    { background: rgba(85, 110, 230, 0.12);          color: #556ee6; }
+  &--pink      { background: rgba(232, 62, 140, 0.12);          color: #e83e8c; }
+}
+
+// ─── Organization Chips ─────────────────────────
+.sa-org-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  background: var(--vz-light);
+  border-radius: 5px;
+  font-size: 0.75rem;
+  color: var(--vz-body-color);
+
+  i {
+    font-size: 0.6875rem;
+    opacity: 0.7;
   }
-  &--info {
-    background: rgba(var(--vz-info-rgb), 0.1);
-    color: var(--vz-info);
+
+  &--primary   { background: rgba(var(--vz-primary-rgb), 0.1);   color: var(--vz-primary);   i { color: var(--vz-primary); } }
+  &--success   { background: rgba(var(--vz-success-rgb), 0.1);   color: var(--vz-success);   i { color: var(--vz-success); } }
+  &--info      { background: rgba(var(--vz-info-rgb), 0.1);      color: var(--vz-info);      i { color: var(--vz-info); } }
+  &--warning   { background: rgba(var(--vz-warning-rgb), 0.1);   color: var(--vz-warning);   i { color: var(--vz-warning); } }
+  &--secondary { background: rgba(0, 0, 0, 0.05);                color: var(--vz-secondary-color); i { color: var(--vz-secondary-color); } }
+  &--purple    { background: rgba(108, 92, 231, 0.1);            color: #6c5ce7;   i { color: #6c5ce7; } }
+  &--teal      { background: rgba(0, 184, 148, 0.1);             color: #00b894;   i { color: #00b894; } }
+  &--indigo    { background: rgba(85, 110, 230, 0.1);            color: #556ee6;   i { color: #556ee6; } }
+  &--pink      { background: rgba(232, 62, 140, 0.1);            color: #e83e8c;   i { color: #e83e8c; } }
+  &--platform  { background: rgba(85, 110, 230, 0.08);           color: #556ee6;   i { color: #556ee6; } border: 1px dashed rgba(85, 110, 230, 0.25); }
+}
+
+// ─── Table Row Hover ────────────────────────────
+.sa-table-row {
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(var(--vz-primary-rgb), 0.02);
   }
-  &--danger {
-    background: rgba(var(--vz-danger-rgb), 0.1);
-    color: var(--vz-danger);
-  }
-  &--primary {
-    background: rgba(var(--vz-primary-rgb), 0.1);
-    color: var(--vz-primary);
-  }
-  &--warning {
-    background: rgba(var(--vz-warning-rgb), 0.1);
-    color: var(--vz-warning);
-  }
-  &--secondary {
-    background: rgba(var(--vz-secondary-rgb), 0.1);
-    color: var(--vz-secondary-color);
+
+  &:last-child td {
+    border-bottom: none;
   }
 }
 
-// ─── Quick Nav Cards ──────────────────────────
-.sa-nav-card {
-  cursor: pointer;
-  border: 1px solid var(--vz-border-color);
-  border-radius: 0.5rem;
-  transition: all 0.2s ease;
+// ─── New Signups List ────────────────────────
+.sa-signup-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--vz-border-color);
+  transition: background 0.15s ease;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border-color: rgba(var(--vz-primary-rgb), 0.3);
+    background: rgba(var(--vz-primary-rgb), 0.02);
+  }
+
+  &--last {
+    border-bottom: none;
   }
 
   &__icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 0.5rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: 0.875rem;
     flex-shrink: 0;
-
-    &--info {
-      background: rgba(var(--vz-info-rgb), 0.1);
-      color: var(--vz-info);
-    }
-    &--success {
-      background: rgba(var(--vz-success-rgb), 0.1);
-      color: var(--vz-success);
-    }
-    &--warning {
-      background: rgba(var(--vz-warning-rgb), 0.1);
-      color: var(--vz-warning);
-    }
+    background: rgba(var(--vz-success-rgb), 0.1);
+    color: var(--vz-success);
   }
+
+  .min-width-0 {
+    min-width: 0;
+  }
+}
+
+// ─── Chart Containers ───────────────────────
+.sa-chart-container {
+  min-height: 280px;
 }
 
 // ─── Refresh Spinner ──────────────────────────
@@ -313,42 +475,87 @@
 // ─── Activity Table Refinements ───────────────
 .sa-dashboard {
   .table {
-    th {
-      font-size: 0.75rem;
+    thead th {
+      font-size: 0.6875rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: var(--vz-secondary-color);
-      border-bottom-width: 1px;
+      border-bottom: 2px solid var(--vz-border-color);
+      border-top: none;
+      background: transparent;
+      padding: 0.625rem 0.75rem;
+      white-space: nowrap;
     }
 
-    td {
+    tbody td {
       font-size: 0.8125rem;
       vertical-align: middle;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid rgba(var(--vz-border-color), 0.5);
     }
   }
 
-  .card-header {
-    border-bottom: 1px solid var(--vz-border-color);
+  // Give all cards consistent shadow lift
+  .card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   }
 }
 
 // ─── Responsive ───────────────────────────────
+@media (max-width: 991px) {
+  .stats-row {
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    flex: 1 1 50%;
+    border-bottom: 1px solid var(--vz-border-color);
+
+    &:nth-child(2) {
+      border-right: none;
+    }
+
+    &:nth-child(3),
+    &:nth-child(4) {
+      border-bottom: none;
+    }
+  }
+}
+
 @media (max-width: 767.98px) {
   .sa-header {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .sa-vitals {
-    gap: 0.75rem;
+  .sa-vital-tile {
+    padding: 0.625rem 0.75rem;
+
+    &__val {
+      font-size: 1rem;
+    }
+
+    &__icon {
+      width: 32px;
+      height: 32px;
+      font-size: 1rem;
+    }
+  }
+}
+
+@media (max-width: 575px) {
+  .stat-item {
+    flex: 1 1 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--vz-border-color);
+
+    &:last-child {
+      border-bottom: none;
+    }
   }
 
-  .sa-vital__sep {
-    display: none;
-  }
-
-  .sa-vital__bar {
-    width: 36px;
+  .stat-value {
+    font-size: 1.5rem;
   }
 }

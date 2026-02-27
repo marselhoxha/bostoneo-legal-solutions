@@ -5,6 +5,7 @@ import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.provider.TokenProvider;
+import com.bostoneo.bostoneosolutions.service.OnlineUserService;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -35,6 +36,7 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
 
     private final TokenProvider tokenProvider;
     private final com.bostoneo.bostoneosolutions.service.TokenBlacklistService tokenBlacklistService;
+    private final OnlineUserService onlineUserService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -88,6 +90,7 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
 
                 Authentication authentication = tokenProvider.getAuthentication(userId, authorities, request);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                onlineUserService.markOnline(userId, organizationId);
             } else {
                 log.warn("Token invalid for user {}, clearing SecurityContext", userId);
                 SecurityContextHolder.clearContext();

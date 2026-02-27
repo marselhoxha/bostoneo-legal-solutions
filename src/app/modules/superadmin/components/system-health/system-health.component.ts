@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Subject, interval, forkJoin, of } from 'rxjs';
 import { takeUntil, catchError } from 'rxjs/operators';
 import { SuperAdminService } from '../../services/superadmin.service';
@@ -42,11 +43,26 @@ export class SystemHealthComponent implements OnInit, OnDestroy {
 
   constructor(
     private superAdminService: SuperAdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
+    // Read tab from query params (e.g., ?tab=sessions)
+    const tabParam = this.route.snapshot.queryParamMap.get('tab');
+    if (tabParam && ['status', 'sessions', 'infra'].includes(tabParam)) {
+      this.activeTab = tabParam as HealthTab;
+    }
+
     this.loadHealth();
+
+    // If landing on a non-status tab, load its data immediately
+    if (this.activeTab === 'sessions') {
+      this.loadSessionsData();
+    } else if (this.activeTab === 'infra') {
+      this.loadInfraData();
+    }
+
     // Auto-refresh status every 30s
     interval(30000).pipe(takeUntil(this.destroy$)).subscribe(() => {
       if (this.activeTab === 'status') {

@@ -465,7 +465,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
   }
 
   getQuotaClass(percent: number | undefined): string {
-    if (!percent) return 'bg-secondary';
+    if (percent == null) return 'bg-secondary';
     if (percent >= 90) return 'bg-danger';
     if (percent >= 70) return 'bg-warning';
     return 'bg-success';

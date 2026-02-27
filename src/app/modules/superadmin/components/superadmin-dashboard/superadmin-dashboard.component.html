@@ -46,130 +46,137 @@
   <div *ngIf="!isLoading && stats">
 
     <!-- ═══ PRIMARY STATS ROW ═══ -->
-    <div class="row g-3 mb-3">
-      <div class="col-xl-3 col-sm-6">
-        <div class="card sa-stat-card sa-stat-card--primary" (click)="navigateToOrganizations()">
-          <div class="card-body">
-            <div class="d-flex align-items-start justify-content-between">
-              <div>
-                <p class="sa-stat-card__label">Organizations</p>
-                <h3 class="sa-stat-card__value">{{ formatNumber(stats.totalOrganizations) }}</h3>
-              </div>
-              <div class="sa-stat-card__icon">
-                <i class="ri-building-2-line"></i>
-              </div>
-            </div>
-            <div class="d-flex align-items-center gap-2 mt-2">
-              <span class="badge bg-success-subtle text-success">{{ stats.activeOrganizations }} active</span>
-              <span class="badge bg-danger-subtle text-danger" *ngIf="stats.suspendedOrganizations > 0">
-                {{ stats.suspendedOrganizations }} suspended
-              </span>
-            </div>
-          </div>
+    <div class="stats-row mb-3">
+      <!-- Organizations -->
+      <div class="stat-item stat-item--clickable" (click)="navigateToOrganizations()">
+        <div class="stat-header">
+          <span class="stat-label">ORGANIZATIONS</span>
+          <span class="stat-indicator stat-indicator-primary"><i class="ri-building-2-line"></i></span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-building-2-line stat-icon text-primary"></i>
+          <span class="stat-value">{{ formatNumber(stats.totalOrganizations) }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <span class="badge bg-success-subtle text-success">{{ stats.activeOrganizations }} active</span>
+          <span class="badge bg-danger-subtle text-danger" *ngIf="stats.suspendedOrganizations > 0">
+            {{ stats.suspendedOrganizations }} suspended
+          </span>
         </div>
       </div>
-      <div class="col-xl-3 col-sm-6">
-        <div class="card sa-stat-card sa-stat-card--info" (click)="navigateToUsers()">
-          <div class="card-body">
-            <div class="d-flex align-items-start justify-content-between">
-              <div>
-                <p class="sa-stat-card__label">Users</p>
-                <h3 class="sa-stat-card__value">{{ formatNumber(stats.totalUsers) }}</h3>
-              </div>
-              <div class="sa-stat-card__icon">
-                <i class="ri-group-line"></i>
-              </div>
-            </div>
-            <div class="d-flex align-items-center gap-2 mt-2">
-              <span class="badge bg-info-subtle text-info">{{ stats.activeUsersLast7Days }} active (7d)</span>
-              <span class="text-muted fs-12">{{ getActiveUsersPercent() }}%</span>
-            </div>
-          </div>
+
+      <!-- Users -->
+      <div class="stat-item stat-item--clickable" (click)="navigateToUsers()">
+        <div class="stat-header">
+          <span class="stat-label">USERS</span>
+          <span class="stat-indicator stat-indicator-info"><i class="ri-group-line"></i></span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-group-line stat-icon text-info"></i>
+          <span class="stat-value">{{ formatNumber(stats.totalUsers) }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <span class="badge bg-info-subtle text-info">{{ stats.activeUsersLast7Days }} active (7d)</span>
+          <span class="text-muted fs-12">{{ getActiveUsersPercent() }}%</span>
         </div>
       </div>
-      <div class="col-xl-3 col-sm-6">
-        <div class="card sa-stat-card sa-stat-card--success">
-          <div class="card-body">
-            <div class="d-flex align-items-start justify-content-between">
-              <div>
-                <p class="sa-stat-card__label">Cases</p>
-                <h3 class="sa-stat-card__value">{{ formatNumber(stats.totalCases) }}</h3>
-              </div>
-              <div class="sa-stat-card__icon">
-                <i class="ri-briefcase-4-line"></i>
-              </div>
-            </div>
-            <div class="d-flex align-items-center gap-2 mt-2">
-              <span class="badge bg-success-subtle text-success">{{ stats.activeCases }} active</span>
-              <span class="badge bg-secondary-subtle text-secondary">{{ stats.closedCases }} closed</span>
-            </div>
-          </div>
+
+      <!-- Cases -->
+      <div class="stat-item">
+        <div class="stat-header">
+          <span class="stat-label">CASES</span>
+          <span class="stat-indicator stat-indicator-success"><i class="ri-briefcase-4-line"></i></span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-briefcase-4-line stat-icon text-success"></i>
+          <span class="stat-value">{{ formatNumber(stats.totalCases) }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <span class="badge bg-success-subtle text-success">{{ stats.activeCases }} active</span>
+          <span class="badge bg-secondary-subtle text-secondary">{{ stats.closedCases }} closed</span>
         </div>
       </div>
-      <div class="col-xl-3 col-sm-6">
-        <div class="card sa-stat-card sa-stat-card--warning">
-          <div class="card-body">
-            <div class="d-flex align-items-start justify-content-between">
-              <div>
-                <p class="sa-stat-card__label">Revenue</p>
-                <h3 class="sa-stat-card__value">{{ formatCurrency(stats.totalRevenue) }}</h3>
-              </div>
-              <div class="sa-stat-card__icon">
-                <i class="ri-money-dollar-circle-line"></i>
-              </div>
-            </div>
-            <div class="d-flex align-items-center gap-2 mt-2">
-              <span class="badge bg-warning-subtle text-warning">{{ stats.totalInvoices }} invoices</span>
-              <span class="text-muted fs-12">{{ stats.totalClients }} clients</span>
-            </div>
-          </div>
+
+      <!-- Revenue -->
+      <div class="stat-item">
+        <div class="stat-header">
+          <span class="stat-label">REVENUE</span>
+          <span class="stat-indicator stat-indicator-warning"><i class="ri-money-dollar-circle-line"></i></span>
+        </div>
+        <div class="stat-body">
+          <i class="ri-money-dollar-circle-line stat-icon text-warning"></i>
+          <span class="stat-value">{{ formatCurrency(stats.totalRevenue) }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <span class="badge bg-warning-subtle text-warning">{{ stats.totalInvoices }} invoices</span>
+          <span class="text-muted fs-12">{{ stats.totalClients }} clients</span>
         </div>
       </div>
     </div>
 
     <!-- ═══ SYSTEM VITALS STRIP ═══ -->
-    <div class="card mb-3" *ngIf="systemHealth">
-      <div class="card-body py-2">
-        <div class="sa-vitals">
-          <div class="sa-vital" (click)="navigateToHealth()" style="cursor: pointer;">
-            <i class="ri-user-follow-line text-primary"></i>
-            <span class="sa-vital__val">{{ systemHealth.activeSessions }}</span>
-            <span class="sa-vital__lbl">Sessions</span>
+    <div class="row g-3 mb-3" *ngIf="systemHealth">
+      <!-- Sessions -->
+      <div class="col sa-vital-col" (click)="navigateToHealthTab('sessions')">
+        <div class="sa-vital-tile sa-vital-tile--primary">
+          <div class="sa-vital-tile__icon">
+            <i class="ri-user-follow-line"></i>
           </div>
-          <div class="sa-vital__sep"></div>
-          <div class="sa-vital" (click)="navigateToHealth()" style="cursor: pointer;">
-            <i class="ri-cpu-line" [ngClass]="'text-' + getMemoryStatusClass()"></i>
-            <span class="sa-vital__val">{{ getMemoryPercent() }}%</span>
-            <span class="sa-vital__lbl">Memory</span>
-            <div class="sa-vital__bar">
-              <div class="sa-vital__bar-fill" [ngClass]="'bg-' + getMemoryStatusClass()"
-                   [style.width.%]="getMemoryPercent()"></div>
-            </div>
+          <div class="sa-vital-tile__body">
+            <span class="sa-vital-tile__val">{{ systemHealth.activeSessions }}</span>
+            <span class="sa-vital-tile__lbl">Active Sessions</span>
           </div>
-          <div class="sa-vital__sep"></div>
-          <div class="sa-vital" *ngIf="systemHealth.apiMetrics" (click)="navigateToHealth()" style="cursor: pointer;">
-            <i class="ri-flashlight-line text-info"></i>
-            <span class="sa-vital__val">{{ formatNumber(systemHealth.apiMetrics.totalRequestsLastHour) }}</span>
-            <span class="sa-vital__lbl">Req/hr</span>
+        </div>
+      </div>
+      <!-- Memory -->
+      <div class="col sa-vital-col" (click)="navigateToHealthTab('infra')">
+        <div class="sa-vital-tile" [ngClass]="'sa-vital-tile--' + getMemoryStatusClass()">
+          <div class="sa-vital-tile__icon">
+            <i class="ri-cpu-line"></i>
           </div>
-          <div class="sa-vital__sep" *ngIf="systemHealth.apiMetrics"></div>
-          <div class="sa-vital" (click)="navigateToHealth()" style="cursor: pointer;">
-            <i class="ri-bug-line" [ngClass]="'text-' + getErrorSeverityClass()"></i>
-            <span class="sa-vital__val">{{ systemHealth.errorCountLast24Hours }}</span>
-            <span class="sa-vital__lbl">Errors (24h)</span>
+          <div class="sa-vital-tile__body">
+            <span class="sa-vital-tile__val">{{ getMemoryPercent() }}%</span>
+            <span class="sa-vital-tile__lbl">Memory</span>
           </div>
-          <div class="sa-vital__sep" *ngIf="stats.totalStorageLimitBytes"></div>
-          <div class="sa-vital" *ngIf="stats.totalStorageLimitBytes" (click)="navigateToHealth()" style="cursor: pointer;">
-            <i class="ri-hard-drive-2-line text-primary"></i>
-            <span class="sa-vital__val">{{ getStoragePercent() }}%</span>
-            <span class="sa-vital__lbl">Storage</span>
-            <div class="sa-vital__bar">
-              <div class="sa-vital__bar-fill" [ngClass]="{
-                'bg-success': getStoragePercent() < 60,
-                'bg-warning': getStoragePercent() >= 60 && getStoragePercent() < 85,
-                'bg-danger': getStoragePercent() >= 85
-              }" [style.width.%]="getStoragePercent()"></div>
-            </div>
+        </div>
+      </div>
+      <!-- Requests/hr -->
+      <div class="col sa-vital-col" *ngIf="systemHealth.apiMetrics" (click)="navigateToHealthTab('status')">
+        <div class="sa-vital-tile sa-vital-tile--info">
+          <div class="sa-vital-tile__icon">
+            <i class="ri-flashlight-line"></i>
+          </div>
+          <div class="sa-vital-tile__body">
+            <span class="sa-vital-tile__val">{{ formatNumber(systemHealth.apiMetrics.totalRequestsLastHour) }}</span>
+            <span class="sa-vital-tile__lbl">Req / hr</span>
+          </div>
+        </div>
+      </div>
+      <!-- Errors -->
+      <div class="col sa-vital-col" (click)="navigateToHealthTab('status')">
+        <div class="sa-vital-tile" [ngClass]="'sa-vital-tile--' + getErrorSeverityClass()">
+          <div class="sa-vital-tile__icon">
+            <i class="ri-bug-line"></i>
+          </div>
+          <div class="sa-vital-tile__body">
+            <span class="sa-vital-tile__val">{{ systemHealth.errorCountLast24Hours }}</span>
+            <span class="sa-vital-tile__lbl">Errors (24h)</span>
+          </div>
+        </div>
+      </div>
+      <!-- Storage (optional) -->
+      <div class="col sa-vital-col" *ngIf="stats.totalStorageLimitBytes" (click)="navigateToHealthTab('infra')">
+        <div class="sa-vital-tile" [ngClass]="{
+          'sa-vital-tile--success': getStoragePercent() < 60,
+          'sa-vital-tile--warning': getStoragePercent() >= 60 && getStoragePercent() < 85,
+          'sa-vital-tile--danger': getStoragePercent() >= 85
+        }">
+          <div class="sa-vital-tile__icon">
+            <i class="ri-hard-drive-2-line"></i>
+          </div>
+          <div class="sa-vital-tile__body">
+            <span class="sa-vital-tile__val">{{ getStoragePercent() }}%</span>
+            <span class="sa-vital-tile__lbl">Storage</span>
           </div>
         </div>
       </div>
@@ -179,11 +186,13 @@
     <div class="row g-3 mb-3">
       <!-- Alerts Panel -->
       <div class="col-lg-7">
-        <div class="card h-100">
-          <div class="card-header bg-transparent d-flex align-items-center gap-2">
-            <i class="ri-alarm-warning-line text-warning fs-16"></i>
+        <div class="card sa-card h-100">
+          <div class="card-header bg-transparent sa-card__header">
+            <div class="sa-card__badge sa-card__badge--warning">
+              <i class="ri-alarm-warning-line"></i>
+            </div>
             <h6 class="card-title mb-0 flex-grow-1">Platform Alerts</h6>
-            <span class="badge bg-warning-subtle text-warning" *ngIf="stats.alerts?.length">
+            <span class="badge bg-warning-subtle text-warning rounded-pill fs-10" *ngIf="stats.alerts?.length">
               {{ stats.alerts.length }}
             </span>
           </div>
@@ -211,9 +220,11 @@
 
       <!-- Security Summary -->
       <div class="col-lg-5">
-        <div class="card h-100">
-          <div class="card-header bg-transparent d-flex align-items-center gap-2">
-            <i class="ri-shield-check-line text-primary fs-16"></i>
+        <div class="card sa-card h-100">
+          <div class="card-header bg-transparent sa-card__header">
+            <div class="sa-card__badge sa-card__badge--primary">
+              <i class="ri-shield-check-line"></i>
+            </div>
             <h6 class="card-title mb-0 flex-grow-1">Security</h6>
             <span class="badge rounded-pill d-inline-flex align-items-center gap-1"
                   *ngIf="securityOverview"
@@ -259,80 +270,145 @@
       </div>
     </div>
 
-    <!-- ═══ RECENT ACTIVITY ═══ -->
-    <div class="card">
-      <div class="card-header bg-transparent d-flex align-items-center gap-2">
-        <i class="ri-pulse-line text-info fs-16"></i>
-        <h6 class="card-title mb-0 flex-grow-1">Recent Activity</h6>
-        <button class="btn btn-soft-info btn-sm" (click)="navigateToAuditLogs()">
-          All Logs <i class="ri-arrow-right-s-line"></i>
-        </button>
-      </div>
-      <div class="card-body">
-        <div *ngIf="stats.recentActivity && stats.recentActivity.length > 0">
-          <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th style="width: 40px;"></th>
-                  <th>Action</th>
-                  <th>Entity</th>
-                  <th>User</th>
-                  <th>Organization</th>
-                  <th class="text-end">When</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let item of stats.recentActivity?.slice(0, 8)">
-                  <td>
-                    <span class="sa-action-dot" [ngClass]="'sa-action-dot--' + getActionColor(item.action)">
-                      <i [class]="getActionIcon(item.action)"></i>
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge" [ngClass]="'bg-' + getActionColor(item.action) + '-subtle text-' + getActionColor(item.action)">
-                      {{ item.action }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="fw-medium">{{ formatEntityType(item.entityType) }}</span>
-                    <span class="text-muted fs-12 d-block" *ngIf="item.entityName">{{ item.entityName }}</span>
-                  </td>
-                  <td class="text-muted fs-13">{{ item.userName }}</td>
-                  <td>
-                    <span class="text-muted fs-13" *ngIf="item.organizationName">{{ item.organizationName }}</span>
-                    <span class="text-muted fs-12" *ngIf="!item.organizationName">—</span>
-                  </td>
-                  <td class="text-end text-muted fs-12">{{ formatTimeAgo(item.timestamp) }}</td>
-                </tr>
-              </tbody>
-            </table>
+    <!-- ═══ ROW 1: TOP ORGS + NEW SIGNUPS ═══ -->
+    <div class="row g-3 mb-3">
+      <!-- Top Orgs by Activity -->
+      <div class="col-lg-7">
+        <div class="card sa-card h-100">
+          <div class="card-header bg-transparent sa-card__header">
+            <div class="sa-card__badge sa-card__badge--primary">
+              <i class="ri-bar-chart-horizontal-line"></i>
+            </div>
+            <h6 class="card-title mb-0 flex-grow-1">Top Organizations</h6>
+            <button class="btn btn-soft-primary btn-sm" (click)="navigateToAnalytics()">
+              View All <i class="ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+          <div class="card-body">
+            <div *ngIf="chartsReady && topOrgsChart.series?.[0]?.data?.length" class="sa-chart-container">
+              <apx-chart
+                [series]="topOrgsChart.series" [chart]="topOrgsChart.chart" [colors]="topOrgsChart.colors"
+                [plotOptions]="topOrgsChart.plotOptions" [dataLabels]="topOrgsChart.dataLabels"
+                [xaxis]="topOrgsChart.xaxis" [yaxis]="topOrgsChart.yaxis"
+                [grid]="topOrgsChart.grid" [tooltip]="topOrgsChart.tooltip">
+              </apx-chart>
+            </div>
+            <div *ngIf="!chartsReady || !topOrgsChart.series?.[0]?.data?.length" class="text-center py-4">
+              <i class="ri-bar-chart-horizontal-line text-muted fs-24 d-block mb-2"></i>
+              <span class="text-muted fs-13">No organization data available</span>
+            </div>
           </div>
         </div>
-        <div *ngIf="!stats.recentActivity || stats.recentActivity.length === 0" class="text-center py-4">
-          <i class="ri-history-line text-muted fs-24 d-block mb-2"></i>
-          <span class="text-muted fs-13">No recent activity</span>
+      </div>
+
+      <!-- New Signups -->
+      <div class="col-lg-5">
+        <div class="card sa-card h-100">
+          <div class="card-header bg-transparent sa-card__header">
+            <div class="sa-card__badge sa-card__badge--success">
+              <i class="ri-user-add-line"></i>
+            </div>
+            <h6 class="card-title mb-0 flex-grow-1">New Signups</h6>
+            <span class="badge bg-success-subtle text-success rounded-pill fs-10" *ngIf="stats.newSignups?.length">
+              Last 30 days
+            </span>
+          </div>
+          <div class="card-body p-0">
+            <div *ngIf="stats.newSignups && stats.newSignups.length > 0">
+              <div *ngFor="let signup of stats.newSignups; let last = last"
+                   class="sa-signup-item" [class.sa-signup-item--last]="last">
+                <div class="sa-signup-item__icon">
+                  <i class="ri-building-2-line"></i>
+                </div>
+                <div class="flex-grow-1 min-width-0">
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="fw-semibold fs-13 text-truncate">{{ signup.name }}</span>
+                    <span class="badge rounded-pill fs-10 px-2"
+                          [ngClass]="'bg-' + getPlanBadgeClass(signup.planType) + '-subtle text-' + getPlanBadgeClass(signup.planType)">
+                      {{ signup.planType || 'STARTER' }}
+                    </span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted fs-12" *ngIf="signup.adminEmail">
+                      <i class="ri-mail-line me-1"></i>{{ signup.adminEmail }}
+                    </span>
+                    <span class="text-muted fs-12">
+                      <i class="ri-group-line me-1"></i>{{ signup.userCount }} users
+                    </span>
+                  </div>
+                </div>
+                <div class="text-end flex-shrink-0">
+                  <span class="badge rounded-pill fs-10"
+                        [ngClass]="'bg-' + getStatusBadgeClass(signup.status) + '-subtle text-' + getStatusBadgeClass(signup.status)">
+                    {{ signup.status }}
+                  </span>
+                  <div class="text-muted fs-11 mt-1">{{ formatDate(signup.createdAt) }}</div>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!stats.newSignups || stats.newSignups.length === 0" class="text-center py-4">
+              <i class="ri-user-add-line text-muted fs-24 d-block mb-2"></i>
+              <span class="text-muted fs-13">No new signups in the last 30 days</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ═══ QUICK NAVIGATION ═══ -->
-    <div class="row g-3 mt-1">
-      <div class="col-lg-4 col-sm-6" *ngFor="let link of [
-        { label: 'Analytics', desc: 'Growth trends & engagement', icon: 'ri-bar-chart-box-line', color: 'info', action: 'analytics' },
-        { label: 'System Health', desc: 'Infrastructure monitoring', icon: 'ri-server-line', color: 'success', action: 'health' },
-        { label: 'Audit Logs', desc: 'Full activity trail', icon: 'ri-file-list-3-line', color: 'warning', action: 'audit' }
-      ]">
-        <div class="card sa-nav-card" (click)="link.action === 'analytics' ? navigateToAnalytics() : link.action === 'health' ? navigateToHealth() : navigateToAuditLogs()">
-          <div class="card-body d-flex align-items-center gap-3 py-3">
-            <div class="sa-nav-card__icon" [ngClass]="'sa-nav-card__icon--' + link.color">
-              <i [class]="link.icon"></i>
+    <!-- ═══ ROW 2: REVENUE + PLATFORM GROWTH ═══ -->
+    <div class="row g-3 mb-3">
+      <!-- Revenue Breakdown -->
+      <div class="col-lg-5">
+        <div class="card sa-card h-100">
+          <div class="card-header bg-transparent sa-card__header">
+            <div class="sa-card__badge sa-card__badge--warning">
+              <i class="ri-money-dollar-circle-line"></i>
             </div>
-            <div class="flex-grow-1">
-              <h6 class="mb-0 fs-14">{{ link.label }}</h6>
-              <span class="text-muted fs-12">{{ link.desc }}</span>
+            <h6 class="card-title mb-0 flex-grow-1">Revenue Breakdown</h6>
+            <button class="btn btn-soft-warning btn-sm" (click)="navigateToAnalytics()">
+              Details <i class="ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+          <div class="card-body">
+            <div *ngIf="chartsReady && revenueChart.series?.length" class="sa-chart-container">
+              <apx-chart
+                [series]="revenueChart.series" [chart]="revenueChart.chart" [colors]="revenueChart.colors"
+                [labels]="revenueChart.labels" [legend]="revenueChart.legend"
+                [dataLabels]="revenueChart.dataLabels" [plotOptions]="revenueChart.plotOptions"
+                [tooltip]="revenueChart.tooltip">
+              </apx-chart>
             </div>
-            <i class="ri-arrow-right-s-line text-muted fs-18"></i>
+            <div *ngIf="!chartsReady || !revenueChart.series?.length" class="text-center py-4">
+              <i class="ri-money-dollar-circle-line text-muted fs-24 d-block mb-2"></i>
+              <span class="text-muted fs-13">No revenue data available</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Platform Growth -->
+      <div class="col-lg-7">
+        <div class="card sa-card h-100">
+          <div class="card-header bg-transparent sa-card__header">
+            <div class="sa-card__badge sa-card__badge--info">
+              <i class="ri-line-chart-line"></i>
+            </div>
+            <h6 class="card-title mb-0 flex-grow-1">Platform Growth</h6>
+            <span class="badge bg-info-subtle text-info rounded-pill fs-10">Last 30 days</span>
+          </div>
+          <div class="card-body">
+            <div *ngIf="chartsReady && growthChart.series?.[0]?.data?.length" class="sa-chart-container">
+              <apx-chart
+                [series]="growthChart.series" [chart]="growthChart.chart" [colors]="growthChart.colors"
+                [stroke]="growthChart.stroke" [fill]="growthChart.fill"
+                [xaxis]="growthChart.xaxis" [tooltip]="growthChart.tooltip"
+                [dataLabels]="growthChart.dataLabels" [grid]="growthChart.grid">
+              </apx-chart>
+            </div>
+            <div *ngIf="!chartsReady || !growthChart.series?.[0]?.data?.length" class="text-center py-4">
+              <i class="ri-line-chart-line text-muted fs-24 d-block mb-2"></i>
+              <span class="text-muted fs-13">No growth data available</span>
+            </div>
           </div>
         </div>
       </div>

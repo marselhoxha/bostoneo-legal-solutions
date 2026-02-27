@@ -74,6 +74,7 @@ public class UserResource {
     private final com.bostoneo.bostoneosolutions.repository.implementation.UserRepositoryImpl userRepositoryImpl;
     private final com.bostoneo.bostoneosolutions.repository.OrganizationRepository organizationRepository;
     private final com.bostoneo.bostoneosolutions.service.TokenBlacklistService tokenBlacklistService;
+    private final com.bostoneo.bostoneosolutions.service.OnlineUserService onlineUserService;
 
     // Holds the UserPrincipal from authentication to avoid rebuilding it in sendResponse()
     private final ThreadLocal<UserPrincipal> authenticatedPrincipal = new ThreadLocal<>();
@@ -96,6 +97,11 @@ public class UserResource {
         if (authHeader != null && authHeader.startsWith(TOKEN_PREFIX)) {
             String token = authHeader.substring(TOKEN_PREFIX.length());
             tokenBlacklistService.blacklistToken(token, java.time.Duration.ofHours(8));
+            // Mark user offline immediately instead of waiting for 5-min TTL expiry
+            try {
+                Long userId = tokenProvider.getSubject(token, request);
+                onlineUserService.markOffline(userId);
+            } catch (Exception ignored) { }
         }
         return ResponseEntity.ok().body(
                 HttpResponse.builder()

@@ -6,6 +6,8 @@ import { SuperAdminService } from '../../services/superadmin.service';
 import { OrganizationWithStats } from '../../models/superadmin.models';
 import Swal from 'sweetalert2';
 
+type StatusFilter = 'ALL' | 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+
 @Component({
   selector: 'app-organization-list',
   templateUrl: './organization-list.component.html',
@@ -31,9 +33,14 @@ export class OrganizationListComponent implements OnInit, OnDestroy {
   sortBy = 'id';
   sortDir = 'asc';
 
-  // Stats
+  // Status filter
+  statusFilter: StatusFilter = 'ALL';
+
+  // Stats (computed from all orgs on current page)
+  allCount = 0;
   activeCount = 0;
   suspendedCount = 0;
+  deletedCount = 0;
 
   constructor(
     private superAdminService: SuperAdminService,
@@ -86,17 +93,17 @@ export class OrganizationListComponent implements OnInit, OnDestroy {
           this.isLoading = false;
           this.cdr.markForCheck();
         },
-        error: (err) => {
+        error: () => {
           this.error = 'Failed to load organizations';
           this.isLoading = false;
           this.cdr.markForCheck();
-          console.error('Load organizations error:', err);
         }
       });
   }
 
   searchOrganizations(query: string): void {
     this.isLoading = true;
+    this.error = null;
     this.cdr.markForCheck();
 
     this.superAdminService.searchOrganizations(query, this.currentPage, this.pageSize)
@@ -106,14 +113,14 @@ export class OrganizationListComponent implements OnInit, OnDestroy {
           this.organizations = response.content;
           this.totalElements = response.page.totalElements;
           this.totalPages = response.page.totalPages;
+          this.calculateStats();
           this.isLoading = false;
           this.cdr.markForCheck();
         },
-        error: (err) => {
+        error: () => {
           this.error = 'Search failed';
           this.isLoading = false;
           this.cdr.markForCheck();
-          console.error('Search error:', err);
         }
       });
   }
@@ -123,9 +130,25 @@ export class OrganizationListComponent implements OnInit, OnDestroy {
   }
 
   private calculateStats(): void {
+    this.allCount = this.organizations.length;
     this.activeCount = this.organizations.filter(o => o.status === 'ACTIVE').length;
     this.suspendedCount = this.organizations.filter(o => o.status === 'SUSPENDED').length;
+    this.deletedCount = this.organizations.filter(o => o.status === 'DELETED').length;
   }
+
+  // ── Status Filter ─────────────────────────────
+
+  setStatusFilter(filter: StatusFilter): void {
+    this.statusFilter = filter;
+    this.cdr.markForCheck();
+  }
+
+  get filteredOrganizations(): OrganizationWithStats[] {
+    if (this.statusFilter === 'ALL') return this.organizations;
+    return this.organizations.filter(o => o.status === this.statusFilter);
+  }
+
+  // ── Sorting ───────────────────────────────────
 
   onSort(column: string): void {
     if (this.sortBy === column) {
@@ -142,6 +165,8 @@ export class OrganizationListComponent implements OnInit, OnDestroy {
     return this.sortDir === 'asc' ? 'ri-arrow-up-line text-primary' : 'ri-arrow-down-line text-primary';
   }
 
+  // ── Pagination ────────────────────────────────
+
   goToPage(page: number): void {
     if (page >= 0 && page < this.totalPages) {
       this.currentPage = page;
@@ -153,9 +178,23 @@ export class OrganizationListComponent implements OnInit, OnDestroy {
     }
   }
 
+  get pageNumbers(): number[] {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
+    const end = Math.min(this.totalPages, start + maxVisible);
+    if (end - start < maxVisible) start = Math.max(0, end - maxVisible);
+    for (let i = start; i < end; i++) pages.push(i);
+    return pages;
+  }
+
+  // ── Navigation ────────────────────────────────
+
   viewOrganization(id: number): void {
     this.router.navigate(['/superadmin/organizations', id]);
   }
+
+  // ── Actions ───────────────────────────────────
 
   async suspendOrganization(org: OrganizationWithStats, event: Event): Promise<void> {
     event.stopPropagation();
@@ -178,9 +217,8 @@ export class OrganizationListComponent implements OnInit, OnDestroy {
             Swal.fire('Suspended!', `${org.name} has been suspended.`, 'success');
             this.loadOrganizations();
           },
-          error: (err) => {
+          error: () => {
             Swal.fire('Error', 'Failed to suspend organization', 'error');
-            console.error('Suspend error:', err);
           }
         });
     }
@@ -207,19 +245,50 @@ export class OrganizationListComponent implements OnInit, OnDestroy {
             Swal.fire('Activated!', `${org.name} has been activated.`, 'success');
             this.loadOrganizations();
           },
-          error: (err) => {
+          error: () => {
             Swal.fire('Error', 'Failed to activate organization', 'error');
-            console.error('Activate error:', err);
           }
         });
     }
   }
+
+  async deleteOrganization(org: OrganizationWithStats, event: Event): Promise<void> {
+    event.stopPropagation();
+
+    const result = await Swal.fire({
+      title: 'Delete Organization?',
+      html: `This will soft-delete <strong>"${org.name}"</strong>. Users will lose access and data will be retained but hidden.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f06548',
+      cancelButtonColor: '#878a99',
+      confirmButtonText: 'Yes, delete it',
+      focusCancel: true
+    });
+
+    if (result.isConfirmed) {
+      this.superAdminService.deleteOrganization(org.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            Swal.fire('Deleted!', `${org.name} has been deleted.`, 'success');
+            this.loadOrganizations();
+          },
+          error: () => {
+            Swal.fire('Error', 'Failed to delete organization', 'error');
+          }
+        });
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────
 
   getStatusClass(status: string): string {
     switch (status?.toUpperCase()) {
       case 'ACTIVE': return 'bg-success-subtle text-success';
       case 'SUSPENDED': return 'bg-danger-subtle text-danger';
       case 'PENDING': return 'bg-warning-subtle text-warning';
+      case 'DELETED': return 'bg-secondary-subtle text-secondary';
       default: return 'bg-secondary-subtle text-secondary';
     }
   }
@@ -234,13 +303,13 @@ export class OrganizationListComponent implements OnInit, OnDestroy {
   }
 
   getQuotaClass(percent: number | undefined): string {
-    if (!percent) return 'bg-secondary';
+    if (percent == null) return 'bg-secondary';
     if (percent >= 90) return 'bg-danger';
     if (percent >= 70) return 'bg-warning';
     return 'bg-success';
   }
 
-  formatDate(dateString: string): string {
+  formatDate(dateString: string | undefined): string {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -249,19 +318,19 @@ export class OrganizationListComponent implements OnInit, OnDestroy {
     });
   }
 
-  get pageNumbers(): number[] {
-    const pages: number[] = [];
-    const maxVisible = 5;
-    let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(this.totalPages, start + maxVisible);
+  formatRelativeTime(dateString: string | undefined): string {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-    if (end - start < maxVisible) {
-      start = Math.max(0, end - maxVisible);
-    }
-
-    for (let i = start; i < end; i++) {
-      pages.push(i);
-    }
-    return pages;
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return this.formatDate(dateString);
   }
 }
