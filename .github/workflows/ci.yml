@@ -464,25 +464,23 @@ jobs:
             CLUSTER="legience-staging"
             SERVICE="legience-staging-api"
           fi
-          aws ecs wait services-stable --cluster $CLUSTER --services $SERVICE
-
-      - name: Notify Slack
-        if: always()
-        continue-on-error: true
-        uses: slackapi/slack-github-action@v1.26.0
-        with:
-          payload: |
-            {
-              "text": "Legience Deployment: ${{ job.status }}",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Legience Deployment* ${{ job.status == 'success' && ':white_check_mark:' || ':x:' }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}\n*Actor:* ${{ github.actor }}"
-                  }
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          echo "Waiting for ECS service $SERVICE to become stable (up to 30 minutes)..."
+          for i in $(seq 1 60); do
+            ROLLOUT=$(aws ecs describe-services --cluster $CLUSTER --services $SERVICE \
+              --query 'services[0].deployments[0].rolloutState' --output text 2>/dev/null || echo "UNKNOWN")
+            RUNNING=$(aws ecs describe-services --cluster $CLUSTER --services $SERVICE \
+              --query 'services[0].runningCount' --output text 2>/dev/null || echo "0")
+            DESIRED=$(aws ecs describe-services --cluster $CLUSTER --services $SERVICE \
+              --query 'services[0].desiredCount' --output text 2>/dev/null || echo "0")
+            echo "Attempt $i/60 — rolloutState=$ROLLOUT running=$RUNNING desired=$DESIRED"
+            if [ "$ROLLOUT" = "COMPLETED" ]; then
+              echo "Deployment completed successfully."
+              exit 0
+            elif [ "$ROLLOUT" = "FAILED" ]; then
+              echo "Deployment failed."
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "Deployment timed out after 30 minutes."
+          exit 1
