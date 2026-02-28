@@ -217,7 +217,7 @@ public class FileManagerResource {
             try {
                 Resource resource = fileStorageService.loadFileAsResource(filePath);
                 fileExists = resource.exists();
-                actualPath = resource.getURI().toString();
+                actualPath = resource.getClass().getSimpleName() + ":" + resource.getFilename();
             } catch (Exception e) {
                 actualPath = "Error: " + e.getMessage();
             }
@@ -256,8 +256,8 @@ public class FileManagerResource {
             
             // Load file from storage
             Resource resource = fileStorageService.loadFileAsResource(filePath);
-            log.info("Resource loaded: {} exists: {} readable: {}", 
-                    resource.getURI(), resource.exists(), resource.isReadable());
+            log.info("Resource loaded: {} ({}) exists: {} readable: {}",
+                    resource.getClass().getSimpleName(), resource.getFilename(), resource.exists(), resource.isReadable());
             
             // Read file content as InputStream to handle large files better
             byte[] fileContent = resource.getInputStream().readAllBytes();

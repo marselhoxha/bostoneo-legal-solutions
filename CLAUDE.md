@@ -4,6 +4,7 @@
 * **NEVER hardcode secrets, API keys, credentials, or tokens** into any file that is tracked by git. Always use environment variables or CI-injected placeholders. If you catch yourself about to write a secret into a tracked file, STOP and use a placeholder pattern instead.
 * **NEVER run any command that rewrites git history** (filter-repo, filter-branch, rebase -i, commit --amend on pushed commits). These can destroy the entire repository. If history rewriting is needed, explain the risks to the user and let THEM decide.
 * **Before any git operation that affects remote branches** (push, force-push, delete branch, update ref), explain what you're about to do and get explicit approval.
+* **NEVER run `rm -rf` on the project directory or re-clone the repo.** This DESTROYS all untracked and gitignored local files (environments, projectplans, mockups, sales assets, local configs) that CANNOT be recovered. Instead, to update local git history, use `git fetch origin && git reset --hard origin/<branch>` INSIDE the existing directory — this preserves all untracked/gitignored files. This mistake caused permanent loss of the user's local files once. NEVER repeat it.
 
 Standard Workflow
 1. First think through the problem, read the codebase for relevant files, and write a plan to projectplan.md.
@@ -52,12 +53,15 @@ Standard Workflow
 * Flyway is enabled for staging/prod deployments, disabled for local dev
 * Dev uses Hibernate `ddl-auto: update` — no migration files needed locally
 * Before deploying schema changes, create a migration file in `backend/src/main/resources/db/migration/`
-* Naming convention: `V{next_number}__{short_description}.sql` (double underscore after version)
-* Current latest: `V1__feb_2026_ai_features.sql` — increment from there (V2, V3, etc.)
+* **Naming convention:** `V{next_number}__{short_description}.sql` (double underscore after version)
+* **Current latest:** `V8__clear_failed_text_cache.sql` — next is V9
+* **Numbering:** V1–V7 are the active PostgreSQL migration sequence. V8+ continues from there. Old MySQL-era migrations (V9, V38, V53 in the folder) are pre-migration leftovers — ignore their numbers.
+* **PostgreSQL only:** All new migrations MUST use PostgreSQL syntax. NEVER use MySQL-isms like `AUTO_INCREMENT` (use `GENERATED ALWAYS AS IDENTITY` or `SERIAL`), `ENGINE=InnoDB`, `ON UPDATE CURRENT_TIMESTAMP`, `ENUM(...)` type, `UNSIGNED`, `CHARSET/COLLATE`. The DB is PostgreSQL — we migrated from MySQL.
 * All migration SQL must be idempotent where possible (`IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`)
 * Old historical migrations live in `db/migration-archive/` — do not touch
 * Flyway runs automatically on ECS container startup — no manual SSH/SQL needed
 * **Every SQL/schema change must include a proper Flyway migration file** — even data-only changes (INSERT, UPDATE, DELETE). No SQL change should go without a corresponding migration in `db/migration/`
+* **After creating a migration file, also run the SQL manually** on local dev: `PGPASSWORD=legience_dev psql -h localhost -U legience_admin -d legience -c "<SQL>"`
 
 ## Multi-Tenant User Queries
 * Always include `organization_id` when querying users, since different organizations can have users with the same names

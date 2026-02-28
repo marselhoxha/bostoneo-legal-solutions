@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.service;
 
+import com.bostoneo.bostoneosolutions.config.AIConfig;
 import com.bostoneo.bostoneosolutions.dto.CaseDocumentSummary;
 import com.bostoneo.bostoneosolutions.model.FileItem;
 import com.bostoneo.bostoneosolutions.model.FileItemTextCache;
@@ -7,15 +8,18 @@ import com.bostoneo.bostoneosolutions.repository.FileItemRepository;
 import com.bostoneo.bostoneosolutions.repository.FileItemTextCacheRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.tika.Tika;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -30,8 +34,11 @@ public class CaseDocumentService {
     private final FileItemRepository fileItemRepository;
     private final FileItemTextCacheRepository textCacheRepository;
     private final FileStorageService fileStorageService;
+    private final AIConfig aiConfig;
+    private final WebClient anthropicWebClient;
 
     private final Tika tika = new Tika();
+    private static final int MAX_VISION_PAGES = 10;
 
     // File types we can extract text from
     private static final Set<String> EXTRACTABLE_EXTENSIONS = Set.of(
@@ -127,6 +134,20 @@ public class CaseDocumentService {
             }
 
             if (extractedText == null || extractedText.trim().isEmpty()) {
+                // Tika couldn't extract text — try Vision OCR for scanned PDFs
+                if ("pdf".equalsIgnoreCase(ext)) {
+                    log.info("Tika returned empty for file {} — attempting Vision OCR fallback", fileItemId);
+                    String visionText = extractTextWithVisionOCR(resource);
+                    if (visionText != null && !visionText.trim().isEmpty()) {
+                        extractedText = visionText.trim();
+                        saveCache(fileItemId, orgId, extractedText, "success", null, extractedText.length());
+                        log.info("Vision OCR extracted {} chars from scanned PDF {}", extractedText.length(), fileItemId);
+                        if (extractedText.length() > maxLength) {
+                            return extractedText.substring(0, maxLength) + "\n\n[... Document truncated at " + maxLength + " characters. Full document is " + extractedText.length() + " characters.]";
+                        }
+                        return extractedText;
+                    }
+                }
                 saveCache(fileItemId, orgId, null, "failed", "No text content could be extracted (possibly scanned image).", 0);
                 return "No text content could be extracted from this document. It may be a scanned image without OCR text.";
             }
@@ -147,6 +168,76 @@ public class CaseDocumentService {
             log.error("Text extraction failed for file {}: {}", fileItemId, e.getMessage());
             saveCache(fileItemId, orgId, null, "failed", e.getMessage(), 0);
             return "Error extracting text from document: " + e.getMessage();
+        }
+    }
+
+    /**
+     * Vision OCR fallback: converts PDF pages to JPEG images and sends them
+     * to Claude Haiku for text extraction. Used when Tika returns empty
+     * (scanned/image-based PDFs).
+     */
+    private String extractTextWithVisionOCR(Resource resource) {
+        try (InputStream is = resource.getInputStream();
+             PDDocument document = PDDocument.load(is)) {
+
+            PDFRenderer renderer = new PDFRenderer(document);
+            int pageCount = Math.min(document.getNumberOfPages(), MAX_VISION_PAGES);
+            if (pageCount == 0) return null;
+
+            // Build image content blocks for the API request
+            List<Map<String, Object>> contentBlocks = new ArrayList<>();
+            contentBlocks.add(Map.of("type", "text", "text",
+                "Extract ALL text from these scanned document pages. Return only the extracted text, preserving paragraph structure. Do not add commentary."));
+
+            for (int i = 0; i < pageCount; i++) {
+                BufferedImage image = renderer.renderImageWithDPI(i, 200);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ImageIO.write(image, "jpeg", baos);
+                String base64 = Base64.getEncoder().encodeToString(baos.toByteArray());
+
+                contentBlocks.add(Map.of(
+                    "type", "image",
+                    "source", Map.of(
+                        "type", "base64",
+                        "media_type", "image/jpeg",
+                        "data", base64
+                    )
+                ));
+            }
+
+            // Call Claude Haiku vision API
+            Map<String, Object> request = Map.of(
+                "model", "claude-haiku-4-5-20251001",
+                "max_tokens", 16000,
+                "messages", List.of(Map.of("role", "user", "content", contentBlocks))
+            );
+
+            String response = anthropicWebClient.post()
+                .uri("/v1/messages")
+                .header("x-api-key", aiConfig.getApiKey())
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(java.time.Duration.ofMinutes(3));
+
+            if (response != null) {
+                // Extract text from response JSON
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                var root = mapper.readTree(response);
+                var content = root.path("content");
+                StringBuilder sb = new StringBuilder();
+                for (var block : content) {
+                    if ("text".equals(block.path("type").asText())) {
+                        sb.append(block.path("text").asText()).append("\n");
+                    }
+                }
+                String result = sb.toString().trim();
+                return result.isEmpty() ? null : result;
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("Vision OCR fallback failed: {}", e.getMessage());
+            return null;
         }
     }
 
