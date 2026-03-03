@@ -102,6 +102,18 @@ public interface PIMedicalRecordRepository extends JpaRepository<PIMedicalRecord
     void deleteByCaseIdAndOrganizationId(Long caseId, Long organizationId);
 
     /**
+     * Find existing record for same provider and treatment date (case-insensitive provider match).
+     * Used to merge multiple documents from the same provider visit into one record.
+     */
+    @Query("SELECT m FROM PIMedicalRecord m " +
+           "WHERE m.caseId = :caseId AND m.organizationId = :orgId " +
+           "AND LOWER(m.providerName) = LOWER(:providerName) " +
+           "AND m.treatmentDate = :treatmentDate")
+    Optional<PIMedicalRecord> findByCaseAndProviderAndDate(
+            @Param("caseId") Long caseId, @Param("orgId") Long organizationId,
+            @Param("providerName") String providerName, @Param("treatmentDate") LocalDate treatmentDate);
+
+    /**
      * Check if a medical record already exists for a specific document
      */
     boolean existsByDocumentIdAndOrganizationId(Long documentId, Long organizationId);

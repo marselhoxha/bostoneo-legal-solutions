@@ -1439,7 +1439,7 @@ public class ClientPortalServiceImpl implements ClientPortalService {
                 .id(legalCase.getId())
                 .caseNumber(legalCase.getCaseNumber())
                 .title(legalCase.getTitle())
-                .type(legalCase.getType())
+                .type(legalCase.getEffectivePracticeArea())
                 .status(legalCase.getStatus() != null ? legalCase.getStatus().name() : null)
                 .description(legalCase.getDescription())
                 .attorneyName(attorneyName)

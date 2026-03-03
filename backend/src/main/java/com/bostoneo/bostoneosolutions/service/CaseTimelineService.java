@@ -47,6 +47,7 @@ public class CaseTimelineService {
     /**
      * Get the timeline for a specific case - TENANT FILTERED
      */
+    @Transactional
     public CaseTimelineDTO getCaseTimeline(Long caseId) {
         Long orgId = getRequiredOrganizationId();
         LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
@@ -68,7 +69,7 @@ public class CaseTimelineService {
         }
 
         // Get template info for additional details
-        String caseType = mapCaseTypeToTemplate(legalCase.getType());
+        String caseType = mapCaseTypeToTemplate(legalCase.getEffectivePracticeArea());
         List<CaseTimelineTemplate> templates = templateRepository.findByCaseTypeOrderByPhaseOrderAsc(caseType);
         Map<Integer, CaseTimelineTemplate> templateMap = templates.stream()
                 .collect(Collectors.toMap(CaseTimelineTemplate::getPhaseOrder, t -> t));
@@ -122,7 +123,7 @@ public class CaseTimelineService {
                 .caseId(caseId)
                 .caseNumber(legalCase.getCaseNumber())
                 .caseTitle(legalCase.getTitle())
-                .caseType(legalCase.getType())
+                .caseType(legalCase.getEffectivePracticeArea())
                 .caseStatus(legalCase.getStatus() != null ? legalCase.getStatus().name() : null)
                 .currentPhase(currentPhaseOrder)
                 .totalPhases(totalPhases)
@@ -149,11 +150,11 @@ public class CaseTimelineService {
         }
 
         // Map case type to template type
-        String templateType = mapCaseTypeToTemplate(legalCase.getType());
+        String templateType = mapCaseTypeToTemplate(legalCase.getEffectivePracticeArea());
         List<CaseTimelineTemplate> templates = templateRepository.findByCaseTypeOrderByPhaseOrderAsc(templateType);
 
         if (templates.isEmpty()) {
-            log.warn("No timeline template found for case type: {}. Using default.", legalCase.getType());
+            log.warn("No timeline template found for case type: {}. Using default.", legalCase.getEffectivePracticeArea());
             templates = createDefaultTimeline();
         }
 
@@ -428,7 +429,7 @@ public class CaseTimelineService {
                 .caseId(legalCase.getId())
                 .caseNumber(legalCase.getCaseNumber())
                 .caseTitle(legalCase.getTitle())
-                .caseType(legalCase.getType())
+                .caseType(legalCase.getEffectivePracticeArea())
                 .currentPhase(0)
                 .totalPhases(0)
                 .completedPhases(0)

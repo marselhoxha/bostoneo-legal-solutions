@@ -550,9 +550,9 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         altFormat: 'F j, Y',
         allowInput: true,
         defaultDate: this.editForm.get(controlName)?.value || new Date(),
-        onChange: (selectedDates) => {
+        onChange: (selectedDates, dateStr) => {
           if (selectedDates.length > 0) {
-            this.editForm.get(controlName)?.setValue(selectedDates[0]);
+            this.editForm.get(controlName)?.setValue(dateStr || null);
           }
         }
       });
@@ -576,14 +576,9 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         const formControl = this.editForm.get(controlName);
         
         if (formControl) {
-          // Get current value
+          // Get current value — pass strings directly to flatpickr to avoid timezone shifts
           const currentValue = formControl.value;
-          
-          // Parse date if it's a string
-          let defaultDate = null;
-          if (currentValue) {
-            defaultDate = typeof currentValue === 'string' ? new Date(currentValue) : currentValue;
-          }
+          const defaultDate = currentValue || null;
           
           // Create a new flatpickr instance
           const instance = flatpickr(input.nativeElement, {
@@ -592,10 +587,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
             altFormat: 'F j, Y',
             allowInput: true,
             defaultDate: defaultDate,
-            onChange: (selectedDates) => {
-              if (selectedDates.length > 0) {
-                formControl.setValue(selectedDates[0]);
-              }
+            onChange: (selectedDates, dateStr) => {
+              formControl.setValue(dateStr || null);
             }
           });
           
@@ -664,9 +657,9 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         countyName,
         judgeName,
         courtroom,
-        filingDate: filingDate ? new Date(filingDate) : null,
-        nextHearing: nextHearing ? new Date(nextHearing) : null,
-        trialDate: trialDate ? new Date(trialDate) : null,
+        filingDate: filingDate || null,
+        nextHearing: nextHearing || null,
+        trialDate: trialDate || null,
         hourlyRate,
         totalHours,
         totalAmount,
@@ -676,9 +669,9 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       this.caseForm.patchValue({
         caseNumber: this.case.caseNumber,
         status: this.case.status,
-        filingDate: filingDate ? new Date(filingDate) : null,
-        nextHearing: nextHearing ? new Date(nextHearing) : null,
-        trialDate: trialDate ? new Date(trialDate) : null,
+        filingDate: filingDate || null,
+        nextHearing: nextHearing || null,
+        trialDate: trialDate || null,
         judge: judgeName,
         court: countyName,
         jurisdiction: courtroom,
@@ -1259,14 +1252,29 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           throw new Error('Billing values must be valid numbers');
         }
         
-        // Format dates properly
-        const formatDate = (date: any) => {
+        // Format dates as YYYY-MM-DD strings to avoid timezone drift
+        const formatDate = (date: any): string | null => {
           if (!date) return null;
-          return date instanceof Date ? date : new Date(date);
+          if (typeof date === 'string') {
+            // Already a YYYY-MM-DD string — pass through
+            if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+            // Other string format — parse carefully
+            const d = new Date(date);
+            if (isNaN(d.getTime())) return null;
+            return d.toISOString().split('T')[0];
+          }
+          if (date instanceof Date) {
+            // Date object from flatpickr — use local date parts (what the user selected)
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          }
+          return null;
         };
         
-        // Create properly formatted update data
-        const updateData = {
+        // Create properly formatted update data (dates sent as YYYY-MM-DD strings to avoid timezone drift)
+        const updateData: any = {
           id: this.case.id,
           caseNumber: formValues.caseNumber,
           title: formValues.title,
@@ -1276,7 +1284,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           clientAddress: formValues.clientAddress,
           status: formValues.status,
           priority: formValues.priority,
-          type: formValues.type,
+          practiceArea: (this.case as any).practiceArea || null,
           description: formValues.description,
           
           // Include both nested and flat fields for maximum compatibility
@@ -1311,6 +1319,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         };
 
         // Add practice area specific fields to update data
+        // Include ALL fields (even empty ones) so the backend can clear values
         this.currentPracticeAreaSections.forEach(section => {
           section.fields.forEach(field => {
             const value = formValues[field.name];
@@ -1321,6 +1330,15 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
                 (updateData as any)[field.name] = value ? parseFloat(value) : null;
               } else {
                 (updateData as any)[field.name] = value;
+              }
+            } else {
+              // Send null/empty values so backend can clear them
+              if (field.type === 'currency' || field.type === 'number') {
+                (updateData as any)[field.name] = null;
+              } else if (field.type === 'checkbox') {
+                (updateData as any)[field.name] = value ?? false;
+              } else {
+                (updateData as any)[field.name] = '';
               }
             }
           });
@@ -3018,7 +3036,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
             const element = document.getElementById(`pa_edit_${field.name}`);
             if (element) {
               const currentValue = this.editForm.get(field.name)?.value;
-              const defaultDate = currentValue ? new Date(currentValue) : null;
+              const defaultDate = currentValue || null;
 
               const picker = flatpickr(element, {
                 dateFormat: 'Y-m-d',
@@ -3026,10 +3044,8 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
                 altFormat: 'F j, Y',
                 allowInput: true,
                 defaultDate: defaultDate,
-                onChange: (selectedDates) => {
-                  if (selectedDates.length > 0) {
-                    this.editForm.get(field.name)?.setValue(selectedDates[0]);
-                  }
+                onChange: (selectedDates, dateStr) => {
+                  this.editForm.get(field.name)?.setValue(dateStr || null);
                 }
               });
               this.practiceAreaDatePickers.push(picker);

@@ -139,7 +139,7 @@ export class MarkdownConverterService {
   /**
    * Convert Markdown to HTML
    * Handles: headers, bold, italic, lists, links, tables, paragraphs
-   * Note: No custom classes - Quill strips them. Style native HTML elements directly.
+   * CKEditor 5 preserves custom classes via GeneralHtmlSupport plugin.
    */
   private convertMarkdownToHtml(text: string): string {
     // REMOVE STRAY BACKTICKS (formatting artifacts from AI responses)
@@ -192,9 +192,9 @@ export class MarkdownConverterService {
     // Line breaks
     text = text.replace(/\n/g, '<br>');
 
-    // Clean up extra <br> tags around block elements
-    text = text.replace(/<br>\s*<(h[1-6]|p|ul|ol|li|blockquote|hr)/gi, '<$1');
-    text = text.replace(/<\/(h[1-6]|p|ul|ol|li|blockquote|hr)>\s*<br>/gi, '</$1>');
+    // Clean up extra <br> tags around block elements (including table-related elements)
+    text = text.replace(/<br>\s*<(h[1-6]|p|ul|ol|li|blockquote|hr|figure|table|thead|tbody|tr)/gi, '<$1');
+    text = text.replace(/<\/(h[1-6]|p|ul|ol|li|blockquote|hr|figure|table|thead|tbody|tr)>\s*<br>/gi, '</$1>');
 
     // Clean up excessive line breaks (more than 2 consecutive)
     text = text.replace(/(<br>\s*){3,}/g, '<br><br>');
@@ -307,11 +307,12 @@ export class MarkdownConverterService {
   private formatTableRows(rows: string[]): string {
     if (rows.length === 0) return '';
 
-    let html = '<div class="table-responsive"><table class="table table-bordered table-striped table-hover align-middle mb-0"><thead class="table-light"><tr>';
+    // CKEditor 5 expects <figure class="table"><table>...</table></figure>
+    let html = '<figure class="table"><table><thead><tr>';
 
     const headerCells = this.parseTableRow(rows[0]);
     headerCells.forEach(cell => {
-      html += `<th scope="col">${cell}</th>`;
+      html += `<th>${cell}</th>`;
     });
     html += '</tr></thead>';
 
@@ -328,7 +329,7 @@ export class MarkdownConverterService {
       html += '</tbody>';
     }
 
-    html += '</table></div>';
+    html += '</table></figure>';
     return html;
   }
 

@@ -5,7 +5,6 @@ import com.bostoneo.bostoneosolutions.model.LegalCase;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
 import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -25,7 +24,7 @@ public class LegalCaseDTOMapper {
             .clientEmail(entity.getClientEmail())
             .clientPhone(entity.getClientPhone())
             .clientAddress(entity.getClientAddress())
-            .type(entity.getType())
+            .type(entity.getEffectivePracticeArea())
             .description(entity.getDescription())
             .countyName(entity.getCountyName())
             .courtroom(entity.getCourtroom())
@@ -126,7 +125,6 @@ public class LegalCaseDTOMapper {
         entity.setClientAddress(dto.getClientAddress());
         entity.setStatus(dto.getStatus());
         entity.setPriority(dto.getPriority());
-        entity.setType(dto.getType());
         entity.setDescription(dto.getDescription());
         entity.setCountyName(dto.getCountyName());
         entity.setJudgeName(dto.getJudgeName());
@@ -211,19 +209,16 @@ public class LegalCaseDTOMapper {
     }
 
     public static LegalCaseDTO fromLegalCase(LegalCase legalCase) {
-        LegalCaseDTO legalCaseDTO = new LegalCaseDTO();
-        BeanUtils.copyProperties(legalCase, legalCaseDTO);
-        return legalCaseDTO;
+        // Delegate to instance method to ensure getEffectivePracticeArea() is applied
+        return new LegalCaseDTOMapper().toDTO(legalCase);
     }
-    
+
     public static LegalCase toLegalCase(LegalCaseDTO legalCaseDTO) {
-        LegalCase legalCase = new LegalCase();
-        BeanUtils.copyProperties(legalCaseDTO, legalCase);
-        return legalCase;
+        // Delegate to instance method to ensure consistent mapping
+        return new LegalCaseDTOMapper().toEntity(legalCaseDTO);
     }
 
     public LegalCase fromDTO(LegalCaseDTO dto) {
-        // Delegate to toEntity to avoid code duplication
         return toEntity(dto);
     }
 } 

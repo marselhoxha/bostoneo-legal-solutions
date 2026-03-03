@@ -70,7 +70,7 @@ public class CaseContextService {
                 .organizationId(organizationId)
                 .caseNumber(legalCase.getCaseNumber())
                 .title(legalCase.getTitle())
-                .caseType(legalCase.getType())
+                .caseType(legalCase.getEffectivePracticeArea())
                 .status(legalCase.getStatus())
                 .priority(legalCase.getPriority())
                 .clientName(legalCase.getClientName())

@@ -66,22 +66,6 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   // Flatpickr instances for practice area date fields
   private practiceAreaDatePickers: any[] = [];
 
-  // Mapping from practice area to legacy case type for backend compatibility
-  private practiceAreaToTypeMap: { [key: string]: string } = {
-    'Personal Injury': 'CIVIL',
-    'Criminal Defense': 'CRIMINAL',
-    'Family Law': 'FAMILY',
-    'Immigration Law': 'IMMIGRATION',
-    'Real Estate Law': 'REAL_ESTATE',
-    'Intellectual Property': 'INTELLECTUAL_PROPERTY',
-    'Business Law': 'BUSINESS',
-    'Estate Planning': 'CIVIL',
-    'Employment Law': 'CIVIL',
-    'Bankruptcy': 'CIVIL',
-    'Civil Litigation': 'CIVIL',
-    'Other': 'OTHER'
-  };
-
   // Billing types array for dropdown
   billingTypes = [
     { value: 'HOURLY', label: 'Hourly' },
@@ -123,7 +107,7 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       courtroom: [''],
 
       // Important Dates
-      filingDate: ['', [Validators.required]],
+      filingDate: [''],
       nextHearingDate: [''],
       estimatedCompletionDate: [''],
       statuteOfLimitationsDate: [''],
@@ -139,15 +123,11 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.loadAttorneys();
 
-    // Set default dates
-    const today = new Date();
-
     // Generate a unique case number
     const uniqueCaseNumber = this.generateUniqueCaseNumber();
 
     this.caseForm.patchValue({
-      caseNumber: uniqueCaseNumber,
-      filingDate: today
+      caseNumber: uniqueCaseNumber
     });
 
     // Subscribe to practice area changes
@@ -289,11 +269,28 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     const phoneNumber = this.caseForm.value.clientPhone ?
       this.caseForm.value.clientPhone.replace(/\D/g, '') : '';
 
-    // Build date objects only if values exist
-    const filingDate = this.caseForm.value.filingDate ? new Date(this.caseForm.value.filingDate) : null;
-    const nextHearingDate = this.caseForm.value.nextHearingDate ? new Date(this.caseForm.value.nextHearingDate) : null;
-    const estimatedCompletionDate = this.caseForm.value.estimatedCompletionDate ? new Date(this.caseForm.value.estimatedCompletionDate) : null;
-    const statuteOfLimitationsDate = this.caseForm.value.statuteOfLimitationsDate ? new Date(this.caseForm.value.statuteOfLimitationsDate) : null;
+    // Format dates as YYYY-MM-DD strings to avoid timezone drift
+    const formatDate = (date: any): string | null => {
+      if (!date) return null;
+      if (typeof date === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return null;
+        return d.toISOString().split('T')[0];
+      }
+      if (date instanceof Date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      return null;
+    };
+
+    const filingDate = formatDate(this.caseForm.value.filingDate);
+    const nextHearingDate = formatDate(this.caseForm.value.nextHearingDate);
+    const estimatedCompletionDate = formatDate(this.caseForm.value.estimatedCompletionDate);
+    const statuteOfLimitationsDate = formatDate(this.caseForm.value.statuteOfLimitationsDate);
 
     // Transform form values to match API expectations - map to LegalCaseDTO
     const caseData: any = {
@@ -305,7 +302,6 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       clientAddress: this.caseForm.value.clientAddress || '',
       status: this.caseForm.value.status,
       priority: this.caseForm.value.priority,
-      type: this.practiceAreaToTypeMap[this.caseForm.value.practiceArea] || 'OTHER',
       practiceArea: this.caseForm.value.practiceArea,
       description: this.caseForm.value.description,
 
@@ -351,21 +347,28 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       paymentStatus: this.caseForm.value.paymentStatus
     };
 
-    // Add practice area specific fields
+    // Add practice area specific fields (always include all fields, even empty ones)
     this.currentPracticeAreaSections.forEach(section => {
       section.fields.forEach(field => {
         const value = this.caseForm.value[field.name];
         if (value !== null && value !== undefined && value !== '') {
           if (field.type === 'date' && value) {
-            caseData[field.name] = new Date(value);
+            caseData[field.name] = formatDate(value);
           } else if (field.type === 'currency' || field.type === 'number') {
             caseData[field.name] = value ? parseFloat(value) : null;
           } else {
             caseData[field.name] = value;
           }
+        } else {
+          // Explicitly send null for empty fields to prevent stale data
+          caseData[field.name] = null;
         }
       });
     });
+
+    // DEBUG: Log the exact data being sent
+    console.log('📋 CREATE CASE - clientAddress:', caseData.clientAddress, '| defendantAddress:', caseData.defendantAddress);
+    console.log('📋 CREATE CASE - full data:', JSON.stringify(caseData, null, 2));
 
     // Make the actual API call
     this.caseService.createCase(caseData).subscribe({

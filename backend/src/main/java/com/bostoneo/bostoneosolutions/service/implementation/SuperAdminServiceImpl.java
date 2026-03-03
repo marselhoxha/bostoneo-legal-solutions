@@ -1101,6 +1101,31 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
     @Override
     @Transactional
+    public void toggleUserMfa(Long userId, boolean enabled) {
+        log.info("SUPERADMIN: Setting user {} MFA status to: {}", userId, enabled);
+
+        int updated = jdbc.update(
+            "UPDATE users SET using_mfa = :enabled WHERE id = :userId",
+            new MapSqlParameterSource()
+                .addValue("enabled", enabled)
+                .addValue("userId", userId)
+        );
+
+        if (updated == 0) {
+            throw new ApiException("User not found with ID: " + userId);
+        }
+
+        // Clean up any pending verification codes when disabling MFA
+        if (!enabled) {
+            jdbc.update(
+                "DELETE FROM two_factor_verifications WHERE user_id = :userId",
+                new MapSqlParameterSource().addValue("userId", userId)
+            );
+        }
+    }
+
+    @Override
+    @Transactional
     public void resendVerificationEmail(Long userId) {
         log.info("SUPERADMIN: Resending verification email for user ID: {}", userId);
 

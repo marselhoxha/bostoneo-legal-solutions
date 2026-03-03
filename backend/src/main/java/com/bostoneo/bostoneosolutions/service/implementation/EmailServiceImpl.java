@@ -655,6 +655,99 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    @Override
+    public void sendMfaVerificationEmail(String email, String firstName, String code) {
+        try {
+            log.info("Sending MFA verification email to: {}", email);
+
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            helper.setFrom("info@bostoneo.com", "Bostoneo Legal Solutions");
+            helper.setTo(email);
+            helper.setSubject("Bostoneo Solutions - Your Verification Code");
+
+            String htmlContent = buildMfaVerificationEmailHtml(firstName, code);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(mimeMessage);
+            log.info("MFA verification email sent successfully to: {}", email);
+        } catch (MessagingException | java.io.UnsupportedEncodingException exception) {
+            log.error("Failed to send MFA verification email to {}: {}", email, exception.getMessage(), exception);
+            throw new RuntimeException("Failed to send MFA verification email", exception);
+        }
+    }
+
+    private String buildMfaVerificationEmailHtml(String firstName, String code) {
+        String safeName = org.springframework.web.util.HtmlUtils.htmlEscape(firstName);
+        StringBuilder html = new StringBuilder();
+
+        html.append("<!DOCTYPE html>");
+        html.append("<html lang=\"en\">");
+        html.append("<head>");
+        html.append("<meta charset=\"UTF-8\">");
+        html.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
+        html.append("<title>Verification Code</title>");
+        html.append("<style>");
+        html.append(getEmailCSS());
+        html.append("</style>");
+        html.append("</head>");
+        html.append("<body>");
+
+        html.append("<div class=\"email-container\">");
+
+        // Header
+        html.append("<div class=\"header\">");
+        html.append("<div class=\"logo\">");
+        html.append("<h2>Bostoneo Legal Solutions</h2>");
+        html.append("</div>");
+        html.append("</div>");
+
+        // Main Content
+        html.append("<div class=\"content\">");
+
+        html.append("<div class=\"greeting\">");
+        html.append("<h3>Hello ").append(safeName).append(",</h3>");
+        html.append("</div>");
+
+        html.append("<div class=\"message-content\">");
+        html.append("<p>Your multi-factor authentication verification code is:</p>");
+        html.append("</div>");
+
+        // Code display
+        html.append("<div style=\"text-align: center; margin: 30px 0;\">");
+        html.append("<div style=\"display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); ");
+        html.append("color: white; font-size: 32px; font-weight: 700; letter-spacing: 8px; padding: 20px 40px; ");
+        html.append("border-radius: 12px;\">");
+        html.append(code);
+        html.append("</div>");
+        html.append("</div>");
+
+        // Expiration notice
+        html.append("<div class=\"additional-info\">");
+        html.append("<p>This code expires in <strong>10 minutes</strong>. If you did not request this code, please ignore this email.</p>");
+        html.append("</div>");
+
+        html.append("</div>"); // End content
+
+        // Footer
+        html.append("<div class=\"footer\">");
+        html.append("<p>Best regards,<br>");
+        html.append("<strong>Bostoneo Legal Solutions Team</strong></p>");
+        html.append("<div class=\"footer-links\">");
+        html.append("<p><small>");
+        html.append("This is an automated security email. Do not share this code with anyone.");
+        html.append("</small></p>");
+        html.append("</div>");
+        html.append("</div>");
+
+        html.append("</div>"); // End container
+        html.append("</body>");
+        html.append("</html>");
+
+        return html.toString();
+    }
+
     private String getEmailMessage(String firstName, String verificationUrl, VerificationType verificationType) {
         switch (verificationType) {
             case PASSWORD:

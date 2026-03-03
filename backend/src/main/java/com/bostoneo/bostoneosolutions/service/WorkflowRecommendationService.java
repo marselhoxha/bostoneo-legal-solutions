@@ -384,7 +384,7 @@ public class WorkflowRecommendationService {
             String caseNumber,
             String caseTitle
     ) {
-        String caseType = legalCase.getType() != null ? legalCase.getType().toLowerCase() : "";
+        String caseType = legalCase.getEffectivePracticeArea() != null ? legalCase.getEffectivePracticeArea().toLowerCase() : "";
 
         if (caseType.contains("contract") || caseType.contains("agreement") ||
                 caseType.contains("negotiation") || caseType.contains("deal")) {
@@ -412,7 +412,7 @@ public class WorkflowRecommendationService {
             String caseNumber,
             String caseTitle
     ) {
-        String caseType = legalCase.getType() != null ? legalCase.getType().toLowerCase() : "";
+        String caseType = legalCase.getEffectivePracticeArea() != null ? legalCase.getEffectivePracticeArea().toLowerCase() : "";
 
         if (caseType.contains("transaction") || caseType.contains("acquisition") ||
                 caseType.contains("merger") || caseType.contains("due diligence") ||

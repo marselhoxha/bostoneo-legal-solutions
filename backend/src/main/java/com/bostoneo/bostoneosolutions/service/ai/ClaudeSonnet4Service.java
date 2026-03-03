@@ -68,6 +68,14 @@ public class ClaudeSonnet4Service implements AIService {
      *                    Use null for default temperature.
      */
     public CompletableFuture<String> generateCompletion(String prompt, String systemMessage, boolean useDeepThinking, Long sessionId, Double temperature) {
+        return generateCompletionWithModel(prompt, systemMessage, useDeepThinking, sessionId, temperature, null);
+    }
+
+    /**
+     * Generate completion with explicit model selection. Used by AIRequestRouter for smart model routing.
+     * If model is null, defaults to Opus 4.5 (via createRequest).
+     */
+    public CompletableFuture<String> generateCompletionWithModel(String prompt, String systemMessage, boolean useDeepThinking, Long sessionId, Double temperature, String model) {
         // Check if generation has been cancelled BEFORE making expensive API call
         if (sessionId != null && cancellationService.isCancelled(sessionId)) {
             log.warn("AI generation cancelled before API call for session {}", sessionId);
@@ -82,7 +90,7 @@ public class ClaudeSonnet4Service implements AIService {
         String redactedPrompt = PiiDetector.redact(prompt);
         String redactedSystemMessage = PiiDetector.redact(systemMessage);
 
-        AIRequest request = createRequest(redactedPrompt, redactedSystemMessage, useDeepThinking, temperature);
+        AIRequest request = createRequest(redactedPrompt, redactedSystemMessage, useDeepThinking, temperature, model);
 
         log.info("Sending request to Anthropic: model={}, maxTokens={}, promptLen={}",
                 request.getModel(), request.getMax_tokens(), redactedPrompt.length());
@@ -1149,7 +1157,7 @@ public class ClaudeSonnet4Service implements AIService {
         log.info("🔄 Agentic iteration {}/{}", iteration + 1, MAX_ITERATIONS);
 
         AIRequest request = new AIRequest();
-        request.setModel("claude-sonnet-4-5-20250929");
+        request.setModel("claude-sonnet-4-6");
         request.setMax_tokens(4096); // Target 800-1200 words (~2K tokens), 4096 gives headroom
 
         if (systemMessage != null && !systemMessage.isEmpty()) {
@@ -1345,16 +1353,24 @@ public class ClaudeSonnet4Service implements AIService {
     }
 
     private AIRequest createRequest(String prompt, boolean useDeepThinking) {
-        return createRequest(prompt, null, useDeepThinking, null);
+        return createRequest(prompt, null, useDeepThinking, null, null);
     }
 
     private AIRequest createRequest(String prompt, String systemMessage, boolean useDeepThinking) {
-        return createRequest(prompt, systemMessage, useDeepThinking, null);
+        return createRequest(prompt, systemMessage, useDeepThinking, null, null);
     }
 
     private AIRequest createRequest(String prompt, String systemMessage, boolean useDeepThinking, Double temperature) {
+        return createRequest(prompt, systemMessage, useDeepThinking, temperature, null);
+    }
+
+    /**
+     * Create request with explicit model selection. Used by AIRequestRouter for smart model routing.
+     * If model is null, defaults to Opus 4.5.
+     */
+    private AIRequest createRequest(String prompt, String systemMessage, boolean useDeepThinking, Double temperature, String model) {
         AIRequest request = new AIRequest();
-        request.setModel("claude-opus-4-5-20251101");
+        request.setModel(model != null ? model : "claude-opus-4-6");
 
         // Set temperature for deterministic responses when needed (e.g., classification)
         if (temperature != null) {
@@ -1587,6 +1603,22 @@ public class ClaudeSonnet4Service implements AIService {
             Runnable onComplete,
             java.util.function.Consumer<Throwable> onError
     ) {
+        generateCompletionStreamingWithModel(prompt, systemMessage, sessionId, tokenConsumer, onComplete, onError, null);
+    }
+
+    /**
+     * Streaming completion with explicit model selection. Used by AIRequestRouter.
+     * If model is null, defaults to Opus 4.5.
+     */
+    public void generateCompletionStreamingWithModel(
+            String prompt,
+            String systemMessage,
+            Long sessionId,
+            java.util.function.Consumer<String> tokenConsumer,
+            Runnable onComplete,
+            java.util.function.Consumer<Throwable> onError,
+            String model
+    ) {
         // Check cancellation before starting
         if (sessionId != null && cancellationService.isCancelled(sessionId)) {
             log.warn("Streaming generation cancelled before API call for session {}", sessionId);
@@ -1603,8 +1635,8 @@ public class ClaudeSonnet4Service implements AIService {
         String redactedPrompt = PiiDetector.redact(prompt);
         String redactedSystemMessage = PiiDetector.redact(systemMessage);
 
-        // Build request with stream=true
-        AIRequest request = createRequest(redactedPrompt, redactedSystemMessage, false, null);
+        // Build request with stream=true and explicit model
+        AIRequest request = createRequest(redactedPrompt, redactedSystemMessage, false, null, model);
         request.setStream(true);
 
         String apiKey = aiConfig.getApiKey();

@@ -166,6 +166,32 @@ export class UserDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  async toggleMfa(): Promise<void> {
+    if (!this.user) return;
+    const action = this.user.usingMfa ? 'disable' : 'enable';
+
+    const result = await Swal.fire({
+      title: `${action.charAt(0).toUpperCase() + action.slice(1)} MFA?`,
+      text: `Are you sure you want to ${action} MFA for this user?`,
+      icon: this.user.usingMfa ? 'warning' : 'question',
+      showCancelButton: true,
+      confirmButtonColor: this.user.usingMfa ? '#f06548' : '#0ab39c',
+      confirmButtonText: `Yes, ${action} MFA`
+    });
+
+    if (result.isConfirmed) {
+      this.superAdminService.toggleUserMfa(this.userId, !this.user.usingMfa)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            Swal.fire('Success', `MFA ${action}d successfully`, 'success');
+            this.loadUser();
+          },
+          error: () => Swal.fire('Error', `Failed to ${action} MFA`, 'error')
+        });
+    }
+  }
+
   async toggleUserStatus(): Promise<void> {
     if (!this.user) return;
     const action = this.user.enabled ? 'disable' : 'enable';

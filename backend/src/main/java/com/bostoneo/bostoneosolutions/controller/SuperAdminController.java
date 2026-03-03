@@ -431,6 +431,29 @@ public class SuperAdminController {
     }
 
     /**
+     * Enable or disable MFA for a user (SuperAdmin override)
+     */
+    @PutMapping("/users/{id}/toggle-mfa")
+    @AuditLog(action = "UPDATE", entityType = "USER", description = "Toggled user MFA status")
+    public ResponseEntity<HttpResponse> toggleUserMfa(
+            @PathVariable Long id,
+            @RequestBody Map<String, Boolean> body) {
+        boolean enabled = Boolean.TRUE.equals(body.get("enabled"));
+        log.info("SUPERADMIN: Setting user {} MFA to: {}", id, enabled);
+
+        superAdminService.toggleUserMfa(id, enabled);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .message("User MFA status updated successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
      * Resend verification email
      */
     @PostMapping("/users/{id}/resend-verification")

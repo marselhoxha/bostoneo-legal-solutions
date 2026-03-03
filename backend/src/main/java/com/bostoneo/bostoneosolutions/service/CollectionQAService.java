@@ -20,6 +20,7 @@ public class CollectionQAService {
 
     private final SemanticSearchService semanticSearchService;
     private final ClaudeSonnet4Service claudeService;
+    private final com.bostoneo.bostoneosolutions.service.ai.AIRequestRouter aiRequestRouter;
 
     /**
      * Response object for collection Q&A
@@ -110,8 +111,10 @@ public class CollectionQAService {
         String systemMessage = buildSystemMessage(analysisContext);
         String userPrompt = buildUserPrompt(query, contextBuilder.toString(), searchResults.size());
 
-        // Step 4: Call Claude to generate answer
-        return claudeService.generateCompletion(userPrompt, systemMessage, false)
+        // Step 4: Route through AIRequestRouter — COLLECTION_QA uses Sonnet
+        return aiRequestRouter.routeSimple(
+                com.bostoneo.bostoneosolutions.enumeration.AIOperationType.COLLECTION_QA,
+                userPrompt, systemMessage, false, null)
             .thenApply(answer -> {
                 response.answer = answer;
                 response.processingTimeMs = System.currentTimeMillis() - startTime;
@@ -271,7 +274,9 @@ public class CollectionQAService {
             Provide a detailed comparison analysis.
             """, aspect != null ? aspect : "all key provisions", contextBuilder.toString());
 
-        return claudeService.generateCompletion(userPrompt, systemMessage, false)
+        return aiRequestRouter.routeSimple(
+                com.bostoneo.bostoneosolutions.enumeration.AIOperationType.COLLECTION_COMPARISON,
+                userPrompt, systemMessage, false, null)
             .thenApply(answer -> {
                 response.answer = answer;
                 response.processingTimeMs = System.currentTimeMillis() - startTime;

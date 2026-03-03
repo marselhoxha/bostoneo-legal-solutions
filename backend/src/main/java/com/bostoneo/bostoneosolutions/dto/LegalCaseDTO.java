@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
 import com.bostoneo.bostoneosolutions.validation.ValidEnum;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -49,7 +50,6 @@ public class LegalCaseDTO {
     @ValidEnum(enumClass = CasePriority.class)
     private CasePriority priority;
 
-    @NotBlank(message = "Type is required")
     private String type;
 
     private String description;
@@ -65,8 +65,11 @@ public class LegalCaseDTO {
     private Map<String, Object> billingInfo;
     
     // Important Dates
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date filingDate;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date nextHearing;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date trialDate;
     
     // Billing Information
@@ -102,7 +105,7 @@ public class LegalCaseDTO {
     // ============================================
 
     // Injury Information
-    private Date injuryDate;
+    private java.time.LocalDate injuryDate;
     private String injuryType;
     private String injuryDescription;
     private String accidentLocation;
@@ -122,6 +125,7 @@ public class LegalCaseDTO {
     private BigDecimal settlementDemandAmount;
     private BigDecimal settlementOfferAmount;
     private BigDecimal settlementFinalAmount;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date settlementDate;
 
     // Insurance Information
@@ -155,6 +159,7 @@ public class LegalCaseDTO {
     private String chargeLevel;
     private String docketNumber;
     private BigDecimal bailAmount;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date arrestDate;
     private String prosecutorName;
 
@@ -163,7 +168,9 @@ public class LegalCaseDTO {
     // ============================================
     private String caseSubtype;
     private String spouseName;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date marriageDate;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date separationDate;
     private Boolean hasMinorChildren;
     private Integer childrenCount;
@@ -176,6 +183,7 @@ public class LegalCaseDTO {
     private String uscisNumber;
     private String petitionerName;
     private String beneficiaryName;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date priorityDate;
     private String visaCategory;
 
@@ -185,6 +193,7 @@ public class LegalCaseDTO {
     private String transactionType;
     private String propertyAddress;
     private BigDecimal purchasePrice;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date closingDate;
     private String buyerName;
     private String sellerName;
@@ -194,6 +203,7 @@ public class LegalCaseDTO {
     // ============================================
     private String ipType;
     private String applicationNumber;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date ipFilingDate;
     private String inventorName;
     private String technologyArea;
@@ -201,6 +211,13 @@ public class LegalCaseDTO {
     // ============================================
     // PI Computed Fields (for Case Value Calculator)
     // ============================================
+
+    /**
+     * Returns practiceArea if set, otherwise falls back to type for old data.
+     */
+    public String getEffectivePracticeArea() {
+        return practiceArea != null ? practiceArea : type;
+    }
 
     // Get total economic damages
     public BigDecimal getEconomicDamages() {

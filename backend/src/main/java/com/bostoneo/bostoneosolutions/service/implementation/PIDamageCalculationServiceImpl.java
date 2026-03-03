@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.exception.ResourceNotFoundException;
 import com.bostoneo.bostoneosolutions.model.PIDamageCalculation;
 import com.bostoneo.bostoneosolutions.model.PIDamageElement;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.PIDamageCalculationRepository;
 import com.bostoneo.bostoneosolutions.repository.PIDamageElementRepository;
 import com.bostoneo.bostoneosolutions.repository.PIMedicalRecordRepository;
@@ -34,6 +35,7 @@ public class PIDamageCalculationServiceImpl implements PIDamageCalculationServic
     private final PIDamageElementRepository elementRepository;
     private final PIDamageCalculationRepository calculationRepository;
     private final PIMedicalRecordRepository medicalRecordRepository;
+    private final LegalCaseRepository legalCaseRepository;
     private final TenantService tenantService;
     private final ClaudeSonnet4Service claudeService;
 
@@ -43,6 +45,18 @@ public class PIDamageCalculationServiceImpl implements PIDamageCalculationServic
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
                 .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
+    /**
+     * Atomically get or create a PIDamageCalculation record.
+     * Uses DB-level upsert to prevent duplicate key errors from concurrent requests.
+     */
+    private PIDamageCalculation getOrCreateCalculation(Long caseId, Long orgId) {
+        calculationRepository.ensureExists(caseId, orgId);
+        calculationRepository.flush();
+        return calculationRepository.findByCaseIdAndOrganizationId(caseId, orgId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Calculation record missing after ensureExists for case: " + caseId));
     }
 
     // ===== Damage Elements =====
@@ -170,13 +184,8 @@ public class PIDamageCalculationServiceImpl implements PIDamageCalculationServic
                     BigDecimal::add);
         }
 
-        // Get or create calculation record
-        PIDamageCalculation calculation = calculationRepository
-                .findByCaseIdAndOrganizationId(caseId, orgId)
-                .orElse(PIDamageCalculation.builder()
-                        .caseId(caseId)
-                        .organizationId(orgId)
-                        .build());
+        // Get or create calculation record (atomic — prevents duplicate key on concurrent requests)
+        PIDamageCalculation calculation = getOrCreateCalculation(caseId, orgId);
 
         // Set category totals
         calculation.setPastMedicalTotal(sumsByType.getOrDefault("PAST_MEDICAL", BigDecimal.ZERO));
@@ -198,11 +207,24 @@ public class PIDamageCalculationServiceImpl implements PIDamageCalculationServic
                 .add(calculation.getOtherDamagesTotal());
         calculation.setEconomicDamagesTotal(economicTotal);
 
-        // Non-economic is pain & suffering
-        calculation.setNonEconomicDamagesTotal(calculation.getPainSufferingTotal());
+        // Non-economic: use PAIN_SUFFERING elements if they exist, otherwise apply multiplier from case
+        BigDecimal nonEconomicTotal = calculation.getPainSufferingTotal();
+        if (nonEconomicTotal.compareTo(BigDecimal.ZERO) == 0 && economicTotal.compareTo(BigDecimal.ZERO) > 0) {
+            // No PAIN_SUFFERING elements — apply the case's painSufferingMultiplier
+            Double multiplier = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+                    .map(c -> c.getPainSufferingMultiplier())
+                    .orElse(null);
+            if (multiplier != null && multiplier > 0) {
+                nonEconomicTotal = economicTotal.multiply(BigDecimal.valueOf(multiplier))
+                        .setScale(2, RoundingMode.HALF_UP);
+                log.info("Applied pain & suffering multiplier {}x to economic total {} = {}",
+                        multiplier, economicTotal, nonEconomicTotal);
+            }
+        }
+        calculation.setNonEconomicDamagesTotal(nonEconomicTotal);
 
         // Gross total
-        calculation.setGrossDamagesTotal(economicTotal.add(calculation.getPainSufferingTotal()));
+        calculation.setGrossDamagesTotal(economicTotal.add(nonEconomicTotal));
 
         // Apply comparative negligence if set
         if (calculation.getComparativeNegligencePercent() != null && calculation.getComparativeNegligencePercent() > 0) {
@@ -267,13 +289,8 @@ public class PIDamageCalculationServiceImpl implements PIDamageCalculationServic
         Long orgId = getRequiredOrganizationId();
         log.info("Saving settlement analysis for case: {} in org: {}", caseId, orgId);
 
-        // Get or create calculation record
-        PIDamageCalculation calculation = calculationRepository
-                .findByCaseIdAndOrganizationId(caseId, orgId)
-                .orElse(PIDamageCalculation.builder()
-                        .caseId(caseId)
-                        .organizationId(orgId)
-                        .build());
+        // Get or create calculation record (atomic — prevents duplicate key on concurrent requests)
+        PIDamageCalculation calculation = getOrCreateCalculation(caseId, orgId);
 
         calculation.setSettlementAnalysis(settlementAnalysis);
 

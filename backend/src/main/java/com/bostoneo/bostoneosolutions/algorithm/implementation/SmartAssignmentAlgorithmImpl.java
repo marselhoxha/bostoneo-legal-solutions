@@ -60,7 +60,7 @@ public class SmartAssignmentAlgorithmImpl implements SmartAssignmentAlgorithm {
         // Build recommendation details
         Map<String, Object> analysisDetails = new HashMap<>();
         analysisDetails.put("candidatesEvaluated", candidates.size());
-        analysisDetails.put("caseType", legalCase.getType());
+        analysisDetails.put("caseType", legalCase.getEffectivePracticeArea());
         analysisDetails.put("casePriority", legalCase.getPriority());
         analysisDetails.put("algorithmVersion", "1.0");
         
@@ -301,7 +301,7 @@ public class SmartAssignmentAlgorithmImpl implements SmartAssignmentAlgorithm {
     private boolean isExpertiseMatchForCase(ExpertiseArea expertise, LegalCase legalCase) {
         // Simplified matching logic
         // Real implementation would have sophisticated mapping
-        String caseType = legalCase.getType().toLowerCase();
+        String caseType = (legalCase.getEffectivePracticeArea() != null ? legalCase.getEffectivePracticeArea() : "").toLowerCase();
         String expertiseArea = expertise.name().toLowerCase();
         
         return caseType.contains(expertiseArea) || expertiseArea.contains(caseType);

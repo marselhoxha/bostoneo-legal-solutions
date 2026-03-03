@@ -36,6 +36,7 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
     private final AIStyleGuideRepository styleGuideRepository;
     private final LegalCaseRepository caseRepository;
     private final ClaudeSonnet4Service claudeService;
+    private final com.bostoneo.bostoneosolutions.service.ai.AIRequestRouter aiRequestRouter;
     private final ObjectMapper objectMapper;
     private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
 
@@ -132,7 +133,9 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
                 // Apply AI enhancement if prompt structure exists
                 if (template.getAiPromptStructure() != null && !template.getAiPromptStructure().isEmpty()) {
                     String aiPrompt = buildAIPrompt(template, populatedContent, variables);
-                    populatedContent = claudeService.generateCompletion(aiPrompt, true).join();
+                    populatedContent = aiRequestRouter.routeSimple(
+                            com.bostoneo.bostoneosolutions.enumeration.AIOperationType.TEMPLATE_ENHANCEMENT,
+                            aiPrompt, null, true, null).join();
                 }
                 
                 // Apply style guide if configured
@@ -216,7 +219,9 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
                 
                 // Use AI to intelligently merge documents
                 String mergePrompt = buildMergePrompt(generatedDocs, variables);
-                return claudeService.generateCompletion(mergePrompt, true).join();
+                return aiRequestRouter.routeSimple(
+                        com.bostoneo.bostoneosolutions.enumeration.AIOperationType.TEMPLATE_MERGE,
+                        mergePrompt, null, true, null).join();
                 
             } catch (Exception e) {
                 log.error("Error merging templates: {}", e.getMessage(), e);
@@ -272,7 +277,9 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
                     Return only a comma-separated list of the 5 most relevant template names.
                     """, description, practiceArea);
                 
-                String aiResponse = claudeService.generateCompletion(aiPrompt, false).join();
+                String aiResponse = aiRequestRouter.routeSimple(
+                        com.bostoneo.bostoneosolutions.enumeration.AIOperationType.TEMPLATE_SUGGESTION,
+                        aiPrompt, null, false, null).join();
                 return Arrays.asList(aiResponse.split(",\\s*"));
                 
             } catch (Exception e) {
@@ -357,7 +364,7 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
                     .caseId(caseId)
                     .generationType(type)
                     .inputData(objectMapper.writeValueAsString(inputData))
-                    .aiModelUsed("claude-sonnet-4")
+                    .aiModelUsed("claude-sonnet-4-6")
                     .success(success)
                     .createdAt(LocalDateTime.now())
                     .build();
@@ -397,8 +404,10 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
                     """, styleGuide.getName(), styleGuide.getCitationStyle(), 
                     styleGuide.getFormattingPreferences(), content);
                 
-                return claudeService.generateCompletion(prompt, false).join();
-                
+                return aiRequestRouter.routeSimple(
+                        com.bostoneo.bostoneosolutions.enumeration.AIOperationType.STYLE_APPLICATION,
+                        prompt, null, false, null).join();
+
             } catch (Exception e) {
                 log.error("Error applying style guide: {}", e.getMessage());
                 return content; // Return original if styling fails
@@ -422,7 +431,9 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
                 %s
                 """, documentType, content);
             
-            return claudeService.generateCompletion(prompt, false).join();
+            return aiRequestRouter.routeSimple(
+                    com.bostoneo.bostoneosolutions.enumeration.AIOperationType.JURISDICTION_FORMATTING,
+                    prompt, null, false, null).join();
         });
     }
 
@@ -443,7 +454,9 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
                 %s
                 """, improvementType, content);
             
-            return claudeService.generateCompletion(prompt, true).join();
+            return aiRequestRouter.routeSimple(
+                    com.bostoneo.bostoneosolutions.enumeration.AIOperationType.DOCUMENT_ENHANCEMENT,
+                    prompt, null, true, null).join();
         });
     }
 
@@ -467,7 +480,9 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
                     Return as a numbered list.
                     """, context, content);
                 
-                String response = claudeService.generateCompletion(prompt, false).join();
+                String response = aiRequestRouter.routeSimple(
+                        com.bostoneo.bostoneosolutions.enumeration.AIOperationType.SUGGESTION_GENERATION,
+                        prompt, null, false, null).join();
                 return Arrays.asList(response.split("\\n"))
                         .stream()
                         .filter(line -> line.trim().matches("^\\d+\\..*"))
@@ -561,7 +576,7 @@ public class AIDocumentGenerationServiceImpl implements AIDocumentGenerationServ
         variables.put("CLIENT_ADDRESS", legalCase.getClientAddress());
         variables.put("CASE_NUMBER", legalCase.getCaseNumber());
         variables.put("CASE_TITLE", legalCase.getTitle());
-        variables.put("CASE_TYPE", legalCase.getType());
+        variables.put("CASE_TYPE", legalCase.getEffectivePracticeArea());
         variables.put("CASE_DESCRIPTION", legalCase.getDescription());
         variables.put("COUNTY_NAME", legalCase.getCountyName());
         variables.put("JUDGE_NAME", legalCase.getJudgeName());

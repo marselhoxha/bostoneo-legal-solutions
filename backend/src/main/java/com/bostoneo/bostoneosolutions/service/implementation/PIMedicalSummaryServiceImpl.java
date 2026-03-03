@@ -119,7 +119,7 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
 
         // Generation info
         summary.setGeneratedAt(LocalDateTime.now());
-        summary.setGeneratedByModel("claude-sonnet-4");
+        summary.setGeneratedByModel("claude-sonnet-4-6");
         summary.setLastRecordDate(lastDate);
         summary.setIsStale(false);
 

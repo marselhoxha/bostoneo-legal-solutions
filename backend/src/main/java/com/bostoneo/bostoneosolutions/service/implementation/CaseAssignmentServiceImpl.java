@@ -1062,7 +1062,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
                 .caseId(assignment.getLegalCase().getId())
                 .caseNumber(assignment.getLegalCase().getCaseNumber())
                 .caseTitle(assignment.getLegalCase().getTitle())
-                .caseType(assignment.getLegalCase().getType())
+                .caseType(assignment.getLegalCase().getEffectivePracticeArea())
                 .priority(assignment.getLegalCase().getPriority() != null ? 
                     assignment.getLegalCase().getPriority().toString() : "NORMAL")
                 .workloadPoints(calculateAssignmentPoints(assignment))

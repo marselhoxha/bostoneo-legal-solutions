@@ -36,6 +36,7 @@ public class CaseWorkflowExecutionService {
     private final ActionItemRepository actionItemRepository;
     private final TimelineEventRepository timelineEventRepository;
     private final ClaudeSonnet4Service claudeService;
+    private final com.bostoneo.bostoneosolutions.service.ai.AIRequestRouter aiRequestRouter;
 
     // Integration repositories - for creating actual drafts and research sessions
     private final AiConversationSessionRepository conversationSessionRepository;
@@ -74,6 +75,7 @@ public class CaseWorkflowExecutionService {
             ActionItemRepository actionItemRepository,
             TimelineEventRepository timelineEventRepository,
             ClaudeSonnet4Service claudeService,
+            com.bostoneo.bostoneosolutions.service.ai.AIRequestRouter aiRequestRouter,
             AiConversationSessionRepository conversationSessionRepository,
             AiConversationMessageRepository conversationMessageRepository,
             ResearchSessionRepository researchSessionRepository,
@@ -92,6 +94,7 @@ public class CaseWorkflowExecutionService {
         this.actionItemRepository = actionItemRepository;
         this.timelineEventRepository = timelineEventRepository;
         this.claudeService = claudeService;
+        this.aiRequestRouter = aiRequestRouter;
         this.conversationSessionRepository = conversationSessionRepository;
         this.conversationMessageRepository = conversationMessageRepository;
         this.researchSessionRepository = researchSessionRepository;
@@ -562,7 +565,9 @@ public class CaseWorkflowExecutionService {
         String prompt = buildSynthesisPrompt(synthesisType, documentContext.toString(), step.getStepName(), caseContext);
 
         try {
-            String aiResponse = claudeService.generateCompletion(prompt, false).get();
+            String aiResponse = aiRequestRouter.routeSimple(
+                    com.bostoneo.bostoneosolutions.enumeration.AIOperationType.SYNTHESIS,
+                    prompt, null, false, null).get();
 
             // Save synthesis result as a draft session (so it appears in Drafting taskcard)
             String sessionName = getSynthesisSessionName(synthesisType, execution.getName());
@@ -589,7 +594,7 @@ public class CaseWorkflowExecutionService {
                     .organizationId(session.getOrganizationId())
                     .role("assistant")
                     .content(aiResponse)
-                    .modelUsed("claude-sonnet-4")
+                    .modelUsed("claude-sonnet-4-6")
                     .ragContextUsed(true)
                     .build();
             conversationMessageRepository.save(message);
@@ -738,7 +743,9 @@ public class CaseWorkflowExecutionService {
         String prompt = buildGenerationPrompt(generationType, documentContext.toString(), step.getStepName(), caseContext);
 
         try {
-            String aiResponse = claudeService.generateCompletion(prompt, true).get(); // Use deep thinking for generation
+            String aiResponse = aiRequestRouter.routeSimple(
+                    com.bostoneo.bostoneosolutions.enumeration.AIOperationType.DOCUMENT_GENERATION,
+                    prompt, null, true, null).get();
 
             Map<String, Object> result = new HashMap<>();
             result.put("stepType", "generation");
@@ -1015,7 +1022,7 @@ public class CaseWorkflowExecutionService {
                         .organizationId(session.getOrganizationId())
                         .role("assistant")
                         .content(draftContent)
-                        .modelUsed("claude-sonnet-4")
+                        .modelUsed("claude-sonnet-4-6")
                         .ragContextUsed(true)
                         .build();
                 conversationMessageRepository.save(message);
@@ -1056,8 +1063,10 @@ public class CaseWorkflowExecutionService {
                 String researchPrompt = buildLegalResearchPrompt(documentContext.toString(), researchQuery, step.getStepName());
 
                 try {
-                    // Perform legal research via Claude
-                    String researchContent = claudeService.generateCompletion(researchPrompt, true).get();
+                    // Route legal research through AIRequestRouter
+                    String researchContent = aiRequestRouter.routeSimple(
+                            com.bostoneo.bostoneosolutions.enumeration.AIOperationType.LEGAL_RESEARCH,
+                            researchPrompt, null, true, null).get();
 
                     // Create research session record
                     String sessionName = "Research - " + (execution.getName() != null ? execution.getName() : "Workflow");

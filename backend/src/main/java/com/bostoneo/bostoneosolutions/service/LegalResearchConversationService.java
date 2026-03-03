@@ -32,6 +32,8 @@ public class LegalResearchConversationService {
     private final AiConversationSessionRepository sessionRepository;
     private final AiConversationMessageRepository messageRepository;
     private final ClaudeSonnet4Service claudeService;
+    private final com.bostoneo.bostoneosolutions.service.ai.AIRequestRouter aiRequestRouter;
+    private final com.bostoneo.bostoneosolutions.service.ai.AIComplexityScorer aiComplexityScorer;
     private final GenerationCancellationService cancellationService;
     private final AILegalResearchService aiLegalResearchService;
     private final TenantService tenantService;
@@ -396,6 +398,14 @@ public class LegalResearchConversationService {
             return CompletableFuture.failedFuture(new IllegalStateException("Query cancelled by user"));
         }
 
+        // Auto-select research mode if not provided (backend decides based on query complexity)
+        if (researchMode == null || researchMode.isBlank()) {
+            var decision = aiComplexityScorer.decide(
+                com.bostoneo.bostoneosolutions.enumeration.AIOperationType.CONVERSATION, query);
+            researchMode = decision.mode();
+            log.info("Auto-selected research mode: {} (complexity: {})", researchMode, String.format("%.2f", decision.complexityScore()));
+        }
+
         // THOROUGH mode: Use full agentic research system with citation verification
         if ("THOROUGH".equalsIgnoreCase(researchMode)) {
             return handleThoroughModeQuery(session, sessionId, userId, query, messages);
@@ -478,8 +488,10 @@ public class LegalResearchConversationService {
                 + "- START with: \"What are\", \"Find\", \"Explain\", \"How does\", \"Does [law] apply\"\n\n"
                 + "Conversation History:\n" + conversationHistory.toString();
 
-        // Get the Claude AI future - subscription registration handled inside
-        CompletableFuture<String> claudeFuture = claudeService.generateCompletion(prompt, null, useDeepThinking, sessionId);
+        // Route through AIRequestRouter for smart model selection
+        CompletableFuture<String> claudeFuture = aiRequestRouter.routeSimple(
+                com.bostoneo.bostoneosolutions.enumeration.AIOperationType.CONVERSATION,
+                prompt, null, useDeepThinking, sessionId);
 
         // Transform the String response to AiConversationMessage
         return claudeFuture
@@ -491,7 +503,7 @@ public class LegalResearchConversationService {
                             .role("assistant")
                             .content(aiResponse)
                             .ragContextUsed(false)
-                            .modelUsed("claude-sonnet-4")
+                            .modelUsed("claude-sonnet-4-6")
                             .researchMode("FAST") // Store research mode per message for badge display
                             .build();
 
@@ -582,7 +594,7 @@ public class LegalResearchConversationService {
                     .role("assistant")
                     .content(aiResponse)
                     .ragContextUsed(true) // THOROUGH mode uses tools/research
-                    .modelUsed("claude-sonnet-4-thorough")
+                    .modelUsed("claude-sonnet-4-6-thorough")
                     .researchMode("THOROUGH") // Store research mode per message for badge display
                     .metadata(messageMetadata.isEmpty() ? null : messageMetadata)
                     .build();

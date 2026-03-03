@@ -18,14 +18,32 @@ public class CostPredictionService {
 
     private final QuerySimilarityService similarityService;
     private final ResearchAnalyticsService analyticsService;
+    private final com.bostoneo.bostoneosolutions.service.ai.AIComplexityScorer aiComplexityScorer;
 
-    // Cost constants (based on actual Claude API pricing)
-    private static final double FAST_BASE_COST = 0.15;
-    private static final double THOROUGH_BASE_COST = 1.50;
-    private static final double TOOL_CALL_COST = 0.10; // Average per tool call
+    // Per-token costs (per 1K tokens) based on Claude API pricing
+    private static final double SONNET_INPUT_COST_PER_1K = 0.003;   // $3.00 / 1M tokens
+    private static final double SONNET_OUTPUT_COST_PER_1K = 0.015;  // $15.00 / 1M tokens
+    private static final double OPUS_INPUT_COST_PER_1K = 0.015;     // $15.00 / 1M tokens
+    private static final double OPUS_OUTPUT_COST_PER_1K = 0.075;    // $75.00 / 1M tokens
+
+    // Estimated average tokens per query type
+    private static final int AVG_INPUT_TOKENS = 2000;  // ~2K input tokens average
+    private static final int AVG_OUTPUT_TOKENS = 1500;  // ~1.5K output tokens average
+
+    // Derived base costs per model
+    private static final double SONNET_BASE_COST =
+        (AVG_INPUT_TOKENS / 1000.0) * SONNET_INPUT_COST_PER_1K +
+        (AVG_OUTPUT_TOKENS / 1000.0) * SONNET_OUTPUT_COST_PER_1K; // ~$0.0285
+    private static final double OPUS_BASE_COST =
+        (AVG_INPUT_TOKENS / 1000.0) * OPUS_INPUT_COST_PER_1K +
+        (AVG_OUTPUT_TOKENS / 1000.0) * OPUS_OUTPUT_COST_PER_1K;   // ~$0.1425
+
+    private static final double TOOL_CALL_COST = 0.03; // Average per tool call (Sonnet-priced since agentic uses Sonnet)
 
     /**
-     * Predict cost for a query
+     * Predict cost for a query using multi-model pricing.
+     * Uses AIComplexityScorer to determine which model (Sonnet/Opus) and mode (FAST/THOROUGH)
+     * would be auto-selected, then calculates cost accordingly.
      */
     public CostPrediction predictCost(String query, String mode, Long userId) {
         double estimatedCost;
@@ -34,37 +52,50 @@ public class CostPredictionService {
         String explanation;
         Map<String, Object> breakdown = new HashMap<>();
 
-        if ("THOROUGH".equalsIgnoreCase(mode)) {
-            // THOROUGH mode cost prediction
+        // Determine actual model routing using AIComplexityScorer
+        var decision = aiComplexityScorer.decide(
+            com.bostoneo.bostoneosolutions.enumeration.AIOperationType.CONVERSATION, query);
+        String autoMode = mode != null ? mode : decision.mode();
+        boolean usesOpus = decision.isOpus();
+        double baseCost = usesOpus ? OPUS_BASE_COST : SONNET_BASE_COST;
+        String modelName = usesOpus ? "Opus" : "Sonnet";
+
+        if ("THOROUGH".equalsIgnoreCase(autoMode)) {
+            // THOROUGH mode: agentic research with tool calls (always uses Sonnet for tools)
             int estimatedToolCalls = estimateToolCalls(query);
 
-            minCost = THOROUGH_BASE_COST;
-            maxCost = THOROUGH_BASE_COST + (estimatedToolCalls * TOOL_CALL_COST);
-            estimatedCost = THOROUGH_BASE_COST + ((estimatedToolCalls / 2.0) * TOOL_CALL_COST);
+            // Base analysis cost + tool call costs (tool calls use Sonnet)
+            minCost = baseCost;
+            maxCost = baseCost + (estimatedToolCalls * TOOL_CALL_COST);
+            estimatedCost = baseCost + ((estimatedToolCalls / 2.0) * TOOL_CALL_COST);
 
-            breakdown.put("baseAICost", THOROUGH_BASE_COST);
+            breakdown.put("model", modelName);
+            breakdown.put("baseAICost", Math.round(baseCost * 10000.0) / 10000.0);
             breakdown.put("estimatedToolCalls", estimatedToolCalls);
-            breakdown.put("toolCallsCost", estimatedToolCalls * TOOL_CALL_COST);
+            breakdown.put("toolCallsCost", Math.round(estimatedToolCalls * TOOL_CALL_COST * 10000.0) / 10000.0);
+            breakdown.put("complexityScore", Math.round(decision.complexityScore() * 100.0) / 100.0);
 
             explanation = String.format(
-                "THOROUGH mode: Base $%.2f + ~%d tool calls ($%.2f each)",
-                THOROUGH_BASE_COST, estimatedToolCalls, TOOL_CALL_COST
+                "THOROUGH (%s): $%.4f base + ~%d tool calls ($%.3f each)",
+                modelName, baseCost, estimatedToolCalls, TOOL_CALL_COST
             );
 
         } else {
-            // FAST mode cost prediction
+            // FAST mode: single AI response, no tools
             int queryLength = query.length();
             double lengthMultiplier = Math.min(2.0, 1.0 + (queryLength / 1000.0));
 
-            minCost = FAST_BASE_COST;
-            maxCost = FAST_BASE_COST * lengthMultiplier;
-            estimatedCost = FAST_BASE_COST * (1.0 + ((lengthMultiplier - 1.0) / 2.0));
+            minCost = baseCost;
+            maxCost = baseCost * lengthMultiplier;
+            estimatedCost = baseCost * (1.0 + ((lengthMultiplier - 1.0) / 2.0));
 
-            breakdown.put("baseAICost", FAST_BASE_COST);
+            breakdown.put("model", modelName);
+            breakdown.put("baseAICost", Math.round(baseCost * 10000.0) / 10000.0);
             breakdown.put("queryLength", queryLength);
-            breakdown.put("lengthMultiplier", lengthMultiplier);
+            breakdown.put("lengthMultiplier", Math.round(lengthMultiplier * 100.0) / 100.0);
+            breakdown.put("complexityScore", Math.round(decision.complexityScore() * 100.0) / 100.0);
 
-            explanation = "FAST mode: Quick AI response with existing knowledge";
+            explanation = String.format("FAST (%s): Quick response, $%.4f base", modelName, baseCost);
         }
 
         // Check for potential cache hit (cost = $0)
@@ -88,8 +119,9 @@ public class CostPredictionService {
 
         String affordabilityNote = generateAffordabilityNote(estimatedCost, monthlySpend);
 
-        log.debug("💵 COST PREDICTION: {} mode = ${:.2f} (${:.2f}-${:.2f}) for query: '{}'",
-            mode, estimatedCost, minCost, maxCost,
+        log.debug("COST PREDICTION: {} mode ({}) = ${} (${}-${}) for query: '{}'",
+            autoMode, modelName, String.format("%.4f", estimatedCost),
+            String.format("%.4f", minCost), String.format("%.4f", maxCost),
             query.length() > 50 ? query.substring(0, 50) + "..." : query);
 
         return new CostPrediction(
@@ -191,11 +223,15 @@ public class CostPredictionService {
     }
 
     /**
-     * Compare costs between FAST and THOROUGH modes
+     * Compare costs between FAST and THOROUGH modes.
+     * Now also shows which model would be used for each.
      */
     public Map<String, Object> compareModes(String query, Long userId) {
         CostPrediction fastCost = predictCost(query, "FAST", userId);
         CostPrediction thoroughCost = predictCost(query, "THOROUGH", userId);
+
+        // Auto-selected prediction (what the system would actually pick)
+        CostPrediction autoCost = predictCost(query, null, userId);
 
         double savings = thoroughCost.estimatedCost - fastCost.estimatedCost;
         double savingsPercent = thoroughCost.estimatedCost > 0
@@ -205,13 +241,10 @@ public class CostPredictionService {
         Map<String, Object> comparison = new HashMap<>();
         comparison.put("fastMode", fastCost.toMap());
         comparison.put("thoroughMode", thoroughCost.toMap());
-        comparison.put("savings", Math.round(savings * 100.0) / 100.0);
+        comparison.put("autoSelected", autoCost.toMap());
+        comparison.put("savings", Math.round(savings * 10000.0) / 10000.0);
         comparison.put("savingsPercent", Math.round(savingsPercent));
-        comparison.put("recommendation",
-            fastCost.estimatedCost == 0.0 ? "Both modes free (cache hit)" :
-            thoroughCost.estimatedCost < 1.0 ? "THOROUGH mode good value for this query" :
-            "FAST mode recommended for cost efficiency"
-        );
+        comparison.put("recommendation", "Mode auto-selected by AI complexity scoring");
 
         return comparison;
     }

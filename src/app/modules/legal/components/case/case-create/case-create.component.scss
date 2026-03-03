@@ -2,11 +2,15 @@
   display: block;
 }
 
+.page-content {
+  padding-top: 10px;
+}
+
 .page-title-box {
-  padding: 24px 0;
+  padding: 12px 0;
   background-color: var(--bs-body-bg);
   border-bottom: 1px solid var(--bs-border-color);
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .card {

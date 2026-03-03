@@ -708,6 +708,16 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     if (savedCaseValue) {
       this.latestCaseValue = parseFloat(savedCaseValue);
     }
+
+    // Restore calculatedValue so LOW/LIKELY/HIGH survive navigation
+    const savedCalcValue = localStorage.getItem('pi_calculated_value');
+    if (savedCalcValue) {
+      try {
+        this.calculatedValue = JSON.parse(savedCalcValue);
+      } catch (e) {
+        // Ignore corrupted data
+      }
+    }
   }
 
   loadRecentActivity(): void {
@@ -1153,7 +1163,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
             this.generatedDemand = response.demandLetter;
             this.demandDocumentId = response.documentId || null;
             this.demandConversationId = response.conversationId || null;
-            this.demandDocumentContent = this.formatTablesForQuill(response.demandLetter);
+            this.demandDocumentContent = this.convertMarkdownContent(response.demandLetter);
             this.cdr.detectChanges();
           }
         },
@@ -1353,6 +1363,9 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           this.latestCaseValue = calc.realisticRecovery || calc.totalCaseValue || 0;
           localStorage.setItem('pi_latest_case_value', this.latestCaseValue.toString());
 
+          // Persist calculatedValue so LOW/LIKELY/HIGH survive navigation
+          localStorage.setItem('pi_calculated_value', JSON.stringify(this.calculatedValue));
+
           // Add to activity
           this.addActivity('case-value', `${this.formatCompactCurrency(this.latestCaseValue)} Case Value (AI)`);
 
@@ -1369,6 +1382,22 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
                 }
               },
               error: (err) => console.error('Error saving settlement analysis:', err)
+            });
+
+            // Auto-save key valuation fields to the case entity so backend calculations work
+            this.caseService.patchCase(String(this.linkedCase.id), {
+              painSufferingMultiplier: calc.recommendedMultiplier || this.getMultiplier(),
+              medicalExpensesTotal: formData.medicalExpenses || 0,
+              lostWages: formData.lostWages || 0,
+              futureMedicalEstimate: formData.futureMedical || 0
+            } as any).subscribe({
+              next: () => {
+                this.linkedCase!.painSufferingMultiplier = calc.recommendedMultiplier || this.getMultiplier();
+                this.linkedCase!.medicalExpensesTotal = formData.medicalExpenses || 0;
+                this.linkedCase!.lostWages = formData.lostWages || 0;
+                this.linkedCase!.futureMedicalEstimate = formData.futureMedical || 0;
+              },
+              error: (err) => console.error('Error auto-saving valuation fields:', err)
             });
           }
 
@@ -1430,6 +1459,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
     this.latestCaseValue = realisticRecovery;
     localStorage.setItem('pi_latest_case_value', realisticRecovery.toString());
+    localStorage.setItem('pi_calculated_value', JSON.stringify(this.calculatedValue));
     this.addActivity('case-value', `${this.formatCompactCurrency(realisticRecovery)} Case Value`);
     setTimeout(() => this.createDamageChart(), 100);
     this.isCalculating = false;
@@ -1584,7 +1614,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
             if (response.documentId) {
               this.demandDocumentId = response.documentId;
               this.demandConversationId = response.conversationId || null;
-              this.demandDocumentContent = this.formatTablesForQuill(response.demandLetter);
+              this.demandDocumentContent = this.convertMarkdownContent(response.demandLetter);
               // Don't set isEditingDemand = true - show preview instead
               this.hasUnsavedDemandChanges = false;
             }
@@ -1715,7 +1745,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       .pipe(takeUntil(this.caseSwitch$))
       .subscribe({
         next: (response) => {
-          this.demandDocumentContent = this.formatTablesForQuill(response.transformedContent);
+          this.demandDocumentContent = this.convertMarkdownContent(response.transformedContent);
           this.hasUnsavedDemandChanges = true;
           this.isTransformingDemand = false;
           Swal.fire({
@@ -1870,7 +1900,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       buttonsStyling: false
     }).then(result => {
       if (result.isConfirmed) {
-        this.demandDocumentContent = this.formatTablesForQuill(version.content);
+        this.demandDocumentContent = this.convertMarkdownContent(version.content);
         this.hasUnsavedDemandChanges = true;
         this.showDemandVersionHistory = false;
         this.cdr.detectChanges();
@@ -2894,28 +2924,21 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   /**
-   * Formats table content for better display in Quill editor.
-   * Converts paragraphs containing markdown table syntax to <pre> (code-block) format.
-   * Quill natively supports <pre> tags with monospace styling.
+   * Converts raw markdown (or HTML) content to Quill-compatible HTML.
+   * Markdown headers → <h1>/<h2>/<h3>, bold → <strong>, lists → <ul>/<ol>,
+   * and markdown tables → single <pre class="ql-syntax"> code blocks.
+   * Quill doesn't support native tables, so code blocks give the best visual result.
    */
-  private formatTablesForQuill(html: string): string {
-    if (!html) return html;
-
-    // Match <p> tags and check if their content contains pipe characters (table rows)
-    return html.replace(/<p([^>]*)>([\s\S]*?)<\/p>/gi, (match, attrs, content) => {
-      // Strip HTML tags to check for pipes
-      const textOnly = content.replace(/<[^>]*>/g, '').trim();
-
-      // Check if this looks like a table row (has pipes and multiple cells)
-      if (textOnly.includes('|') && textOnly.split('|').length >= 2) {
-        // Convert to <pre> tag (code-block) which Quill renders with monospace font
-        // Use the plain text content to avoid nested HTML issues
-        return `<pre class="ql-syntax">${textOnly}</pre>`;
-      }
-
-      // Not a table row, return unchanged
-      return match;
-    });
+  /**
+   * Convert markdown content for the document editor.
+   * CKEditor 5 handles tables natively, so no special workarounds needed.
+   * Also migrates any legacy Quill HTML if content was previously saved by Quill.
+   */
+  private convertMarkdownContent(content: string): string {
+    if (!content) return content;
+    // Pass through as-is — CKEditor handles markdown tables natively
+    // The QuillHtmlMigrator will handle any legacy ql-syntax blocks if present
+    return content;
   }
 
   prefillFormsFromCase(caseData: LegalCase): void {
@@ -3017,7 +3040,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       comparativeNegligencePercent: formData.comparativeNegligence
     };
 
-    this.caseService.updateCase(String(this.linkedCase.id), updateData).subscribe({
+    this.caseService.patchCase(String(this.linkedCase.id), updateData as any).subscribe({
       next: () => {
         Swal.fire({
           icon: 'success',
@@ -3047,7 +3070,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       medicalExpensesTotal: medicalTotal
     };
 
-    this.caseService.updateCase(String(this.linkedCase.id), updateData).subscribe({
+    this.caseService.patchCase(String(this.linkedCase.id), updateData as any).subscribe({
       next: () => {
         Swal.fire({
           icon: 'success',
@@ -3077,7 +3100,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       settlementOfferAmount: formData.offerAmount || this.getLatestOffer()
     };
 
-    this.caseService.updateCase(String(this.linkedCase.id), updateData).subscribe({
+    this.caseService.patchCase(String(this.linkedCase.id), updateData as any).subscribe({
       next: () => {
         Swal.fire({
           icon: 'success',
@@ -3110,7 +3133,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       accidentLocation: formData.accidentLocation
     };
 
-    this.caseService.updateCase(String(this.linkedCase.id), updateData).subscribe({
+    this.caseService.patchCase(String(this.linkedCase.id), updateData as any).subscribe({
       next: () => {
         Swal.fire({
           icon: 'success',
@@ -3133,15 +3156,32 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
   // Get dashboard stats from linked case
   getLinkedCaseValue(): number {
-    if (!this.linkedCase) return this.latestCaseValue;
-    const medical = this.linkedCase.medicalExpensesTotal || 0;
-    const wages = this.linkedCase.lostWages || 0;
-    const future = this.linkedCase.futureMedicalEstimate || 0;
-    const multiplier = this.linkedCase.painSufferingMultiplier || 2;
-    const economic = medical + wages + future;
-    const total = economic + (economic * multiplier);
-    const negligence = this.linkedCase.comparativeNegligencePercent || 0;
-    return total * (1 - negligence / 100);
+    // 1. Prefer latestCaseValue — set from the most recent AI calculation (persisted in localStorage)
+    if (this.latestCaseValue > 0) {
+      return this.latestCaseValue;
+    }
+    // 2. In-memory AI result from current session
+    if (this.calculatedValue?.realisticRecovery && this.calculatedValue.realisticRecovery > 0) {
+      return this.calculatedValue.realisticRecovery;
+    }
+    // 3. DB-persisted damage calculation total (includes multiplier-based non-economic)
+    if (this.damageCalculation?.adjustedDamagesTotal && this.damageCalculation.adjustedDamagesTotal > 0) {
+      return this.damageCalculation.adjustedDamagesTotal;
+    }
+    // 4. Compute from actual medical records + multiplier as last resort
+    if (this.linkedCase) {
+      const medical = this.linkedCase.medicalExpensesTotal || this.getTotalMedicalBills();
+      const wages = this.linkedCase.lostWages || 0;
+      const future = this.linkedCase.futureMedicalEstimate || 0;
+      const multiplier = this.linkedCase.painSufferingMultiplier || 2;
+      const economic = medical + wages + future;
+      if (economic > 0) {
+        const total = economic + (economic * multiplier);
+        const negligence = this.linkedCase.comparativeNegligencePercent || 0;
+        return total * (1 - negligence / 100);
+      }
+    }
+    return 0;
   }
 
   getLinkedCaseMedicalTotal(): number {
@@ -4558,6 +4598,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
         this.damageCalculation = null;
         this.latestCaseValue = 0;
         localStorage.removeItem('pi_latest_case_value');
+        localStorage.removeItem('pi_calculated_value');
 
         // Destroy the chart if it exists
         if (this.damageChart) {

@@ -318,6 +318,15 @@ export class SuperAdminService {
   }
 
   /**
+   * Toggle MFA for a user (SuperAdmin override)
+   */
+  toggleUserMfa(id: number, enabled: boolean): Observable<void> {
+    return this.http.put<ApiResponse<void>>(
+      `${this.apiUrl}/users/${id}/toggle-mfa`, { enabled }
+    ).pipe(map(() => void 0));
+  }
+
+  /**
    * Resend verification email
    */
   resendVerificationEmail(id: number): Observable<void> {

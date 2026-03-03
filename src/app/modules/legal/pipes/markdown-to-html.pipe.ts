@@ -567,7 +567,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
    * IMPORTANT: No newlines in the HTML to prevent markdown converter from adding <br> tags
    */
   private formatTimelineItems(items: {date: string, description: string}[]): string {
-    let html = '<div class="position-relative ,mt-4 mb-4">';
+    let html = '<div class="position-relative mt-4 mb-4">';
 
     // Vertical connecting line - starts from center of first icon, ends at center of last icon
     // top: 18px (half of 36px icon), height: calculated based on number of items
@@ -971,23 +971,57 @@ export class MarkdownToHtmlPipe implements PipeTransform {
 
     const rawSources = match[1].split('|').map(s => s.trim()).filter(s => s.length > 0);
     const chipsHtml = rawSources.map(source => {
+      // Check for case document references: "Document 123 (Name)" or "[Document 123 (Name)](url)"
+      // These are internal documents — show as doc badges, not external links
+      const docPatternPlain = source.match(/^Document\s+(\d+)\s*(?:\(([^)]+)\))?$/i);
+      const docPatternLink = source.match(/\[Document\s+(\d+)\s*(?:\(([^)]*)\))?\]\([^)]+\)/i);
+      if (docPatternPlain || docPatternLink) {
+        const docMatch = docPatternPlain || docPatternLink;
+        const docId = docMatch![1];
+        const docName = docMatch?.[2]?.trim() || `Document ${docId}`;
+        return `<span class="source-chip doc-chip"><i class="ri-file-text-line"></i>${docName}</span>`;
+      }
+
+      // Check for HTML <a> tag with casedoc data attribute (uploaded case documents)
+      const docLinkMatch = source.match(/<a\s+href="#"\s+data-casedoc="([^"]+)"[^>]*>([^<]+)<\/a>/);
+      if (docLinkMatch) {
+        const casedocRef = docLinkMatch[1]; // format: "caseId:docId"
+        const docName = docLinkMatch[2];
+        return `<a href="#" data-casedoc="${casedocRef}" class="source-chip doc-chip" onclick="return false;"><i class="ri-file-text-line"></i>${docName}</a>`;
+      }
+
       // Check for HTML <a> tag (from CitationUrlInjector's convertMarkdownLinksToHtml)
       const htmlLinkMatch = source.match(/<a\s+href="([^"]+)"[^>]*>([^<]+)<\/a>/);
       if (htmlLinkMatch) {
-        return `<a href="${htmlLinkMatch[1]}" target="_blank" rel="noopener noreferrer" class="source-chip">${htmlLinkMatch[2]}</a>`;
+        const url = htmlLinkMatch[1];
+        // Only allow http/https URLs to prevent XSS via javascript: URLs
+        if (/^https?:\/\//i.test(url)) {
+          return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="source-chip">${htmlLinkMatch[2]}</a>`;
+        }
+        return `<span class="source-chip no-link"><i class="ri-book-open-line"></i>${htmlLinkMatch[2]}</span>`;
       }
 
-      // Check for markdown link [text](url)
+      // Check for markdown link [text](url) — but NOT document links (handled above)
       const mdLinkMatch = source.match(/\[([^\]]+)\]\(([^)]+)\)/);
       if (mdLinkMatch) {
-        return `<a href="${mdLinkMatch[2]}" target="_blank" rel="noopener noreferrer" class="source-chip">${mdLinkMatch[1]}</a>`;
+        const url = mdLinkMatch[2];
+        // Handle casedoc: protocol for case document references
+        if (/^casedoc:/i.test(url)) {
+          const casedocRef = url.substring(8); // strip "casedoc:" prefix
+          return `<a href="#" data-casedoc="${casedocRef}" class="source-chip doc-chip" onclick="return false;"><i class="ri-file-text-line"></i>${mdLinkMatch[1]}</a>`;
+        }
+        // Only allow http/https URLs to prevent XSS via javascript: URLs
+        if (/^https?:\/\//i.test(url)) {
+          return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="source-chip">${mdLinkMatch[1]}</a>`;
+        }
+        return `<span class="source-chip no-link"><i class="ri-book-open-line"></i>${mdLinkMatch[1]}</span>`;
       }
 
-      // Plain text source (no URL available)
-      return `<span class="source-chip no-link">${source}</span>`;
+      // Plain text source (no URL available) — show as badge
+      return `<span class="source-chip no-link"><i class="ri-book-open-line"></i>${source}</span>`;
     }).join(' ');
 
-    const html = `<div class="sources-bar"><span class="sources-label">Sources:</span> ${chipsHtml}</div>`;
+    const html = `<div class="sources-bar"><span class="sources-label"><i class="ri-links-line"></i> Sources:</span> ${chipsHtml}</div>`;
     const remaining = text.replace(regex, '').replace(/\n{3,}/g, '\n\n');
 
     return { html, remaining };
@@ -1054,28 +1088,8 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     text = text.replace(/^\-\-\-$/gim, '<hr>');
     text = text.replace(/^\*\*\*$/gim, '<hr>');
 
-    // Lists - Process multi-line lists
-    // Ordered lists
-    text = text.replace(/^(\d+)\.\s+(.+)$/gim, '<li>$2</li>');
-    text = text.replace(/(<li>.*<\/li>)/gim, function(match) {
-      if (!match.includes('<ol>')) {
-        return '<ol>' + match + '</ol>';
-      }
-      return match;
-    });
-    // Clean up multiple ol tags
-    text = text.replace(/<\/ol>\s*<ol>/g, '');
-
-    // Unordered lists
-    text = text.replace(/^[\*\-]\s+(.+)$/gim, '<li>$1</li>');
-    text = text.replace(/(<li>.*<\/li>)/gim, function(match) {
-      if (!match.includes('<ul>') && !match.includes('<ol>')) {
-        return '<ul>' + match + '</ul>';
-      }
-      return match;
-    });
-    // Clean up multiple ul tags
-    text = text.replace(/<\/ul>\s*<ul>/g, '');
+    // Lists - Process with nesting support
+    text = this.processListsWithNesting(text);
 
     // Paragraphs - Wrap text that isn't already in tags
     const lines = text.split('\n');
@@ -1097,5 +1111,95 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     text = text.replace(/<\/(h[1-6]|p|ul|ol|li|blockquote|hr)>\s*<br>/gi, '</$1>');
 
     return text;
+  }
+
+  /**
+   * Process lists with proper nesting support.
+   * Detects indentation depth and creates nested <ul>/<ol> elements.
+   * Handles mixed ordered/unordered lists and multi-level nesting.
+   */
+  private processListsWithNesting(text: string): string {
+    // Normalize tabs to 4 spaces for consistent indentation detection
+    const lines = text.replace(/\t/g, '    ').split('\n');
+    const result: string[] = [];
+    let listStack: { type: 'ul' | 'ol'; indent: number }[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Skip lines already containing HTML tags — they were processed by earlier steps
+      if (trimmed.startsWith('<')) {
+        // Close any open lists before HTML content
+        while (listStack.length > 0) {
+          const closed = listStack.pop()!;
+          result.push(`</li></${closed.type}>`);
+        }
+        result.push(line);
+        continue;
+      }
+
+      // Match unordered list items with any indentation: "  - item" or "  * item"
+      const ulMatch = line.match(/^(\s*)[*\-]\s+(.+)$/);
+      // Match ordered list items with any indentation: "  1. item"
+      const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
+
+      if (ulMatch || olMatch) {
+        const indent = (ulMatch || olMatch)![1].length;
+        const content = (ulMatch || olMatch)![2];
+        const listType: 'ul' | 'ol' = ulMatch ? 'ul' : 'ol';
+
+        if (listStack.length === 0) {
+          // Start a new list
+          result.push(`<${listType}>`);
+          listStack.push({ type: listType, indent });
+        } else {
+          const currentLevel = listStack[listStack.length - 1];
+
+          if (indent > currentLevel.indent) {
+            // Deeper indentation — open a nested list
+            result.push(`<${listType}>`);
+            listStack.push({ type: listType, indent });
+          } else if (indent < currentLevel.indent) {
+            // Shallower indentation — close nested lists until we reach the right level
+            while (listStack.length > 0 && listStack[listStack.length - 1].indent > indent) {
+              const closed = listStack.pop()!;
+              result.push(`</li></${closed.type}>`);
+            }
+            // Close the previous <li> at this level (only if stack still has entries)
+            if (listStack.length > 0) {
+              result.push('</li>');
+            }
+          } else {
+            // Same level — close previous <li>
+            result.push('</li>');
+            // If list type changed at same level, close and reopen
+            if (currentLevel.type !== listType) {
+              const closed = listStack.pop()!;
+              result.push(`</${closed.type}>`);
+              result.push(`<${listType}>`);
+              listStack.push({ type: listType, indent });
+            }
+          }
+        }
+
+        result.push(`<li>${content}`);
+      } else {
+        // Non-list line — close all open lists
+        while (listStack.length > 0) {
+          const closed = listStack.pop()!;
+          result.push(`</li></${closed.type}>`);
+        }
+        result.push(line);
+      }
+    }
+
+    // Close any remaining open lists
+    while (listStack.length > 0) {
+      const closed = listStack.pop()!;
+      result.push(`</li></${closed.type}>`);
+    }
+
+    return result.join('\n');
   }
 }

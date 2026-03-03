@@ -120,15 +120,15 @@ public class DashboardResource {
     private Map<String, Double> getRevenueByPracticeArea(Long orgId) {
         Map<String, Double> revenueByArea = new LinkedHashMap<>();
         try {
-            String sql = "SELECT lc.type, COALESCE(SUM(i.total_amount), 0) as revenue " +
+            String sql = "SELECT COALESCE(lc.practice_area, lc.type) as practice_area, COALESCE(SUM(i.total_amount), 0) as revenue " +
                     "FROM invoices i " +
                     "JOIN legal_cases lc ON i.legal_case_id = lc.id AND lc.organization_id = ? " +
                     "WHERE i.status = 'PAID' AND i.organization_id = ? " +
-                    "GROUP BY lc.type " +
+                    "GROUP BY COALESCE(lc.practice_area, lc.type) " +
                     "ORDER BY revenue DESC";
             List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, orgId, orgId);
             for (Map<String, Object> row : results) {
-                String type = (String) row.get("type");
+                String type = (String) row.get("practice_area");
                 if (type != null) {
                     String displayName = formatCaseType(type);
                     double rev = ((Number) row.get("revenue")).doubleValue();

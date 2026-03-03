@@ -19,7 +19,8 @@ public interface LegalCaseService {
     // Create and Update
     LegalCaseDTO createCase(LegalCaseDTO caseDTO);
     LegalCaseDTO updateCase(Long id, LegalCaseDTO caseDTO);
-    
+    LegalCaseDTO patchCaseFields(Long id, LegalCaseDTO caseDTO);
+
     // Retrieve
     LegalCaseDTO getCase(Long id);
     

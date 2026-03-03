@@ -3,12 +3,11 @@ import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { DocumentGenerationService } from './document-generation.service';
 import { AiWorkspaceStateService } from './ai-workspace-state.service';
-import { QuillEditorService } from './quill-editor.service';
+import { CKEditorService } from './ckeditor.service';
 import { NotificationService } from './notification.service';
 import { TransformationRequest, TransformationResponse } from '../models/transformation.model';
 import { TransformationScope } from '../models/enums/transformation-type.enum';
 import { WorkflowStepStatus } from '../models/enums/workflow-step-status.enum';
-import Quill from 'quill';
 
 @Injectable({
   providedIn: 'root'
@@ -27,7 +26,7 @@ export class DocumentTransformationService {
   constructor(
     private documentGenerationService: DocumentGenerationService,
     private stateService: AiWorkspaceStateService,
-    private quillEditorService: QuillEditorService,
+    private ckEditorService: CKEditorService,
     private notificationService: NotificationService
   ) {}
 
@@ -64,10 +63,10 @@ export class DocumentTransformationService {
   }
 
   /**
-   * Apply transformation to Quill editor
+   * Apply transformation to CKEditor instance
    */
   applyTransformationToEditor(
-    quill: Quill,
+    editor: any,
     transformation: {
       scope: TransformationScope;
       newContent: string;
@@ -76,7 +75,7 @@ export class DocumentTransformationService {
   ): void {
     if (transformation.scope === TransformationScope.FullDocument) {
       // Replace entire document
-      this.quillEditorService.setContentFromHtml(quill, transformation.newContent);
+      this.ckEditorService.setContentFromHtml(editor, transformation.newContent);
     } else {
       // Replace selection with highlight
       if (!transformation.selectionRange) {
@@ -85,13 +84,13 @@ export class DocumentTransformationService {
       }
 
       const { index, length } = transformation.selectionRange;
-      this.quillEditorService.replaceTextWithHighlight(
-        quill,
+      this.ckEditorService.replaceTextWithHighlight(
+        editor,
         index,
         length,
         transformation.newContent,
-        '#d4edda', // Velzon success-subtle green
-        4000 // 4 seconds
+        '#d4edda',
+        4000
       );
     }
   }

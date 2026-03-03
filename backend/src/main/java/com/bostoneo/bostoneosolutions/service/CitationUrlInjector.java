@@ -3,9 +3,9 @@ package com.bostoneo.bostoneosolutions.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import com.bostoneo.bostoneosolutions.dto.CaseDocumentSummary;
+
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -659,6 +659,27 @@ public class CitationUrlInjector {
         return sb.toString();
     }
 
+    // Thread-local document context for matching sources against case documents
+    private final ThreadLocal<List<CaseDocumentSummary>> documentContext = new ThreadLocal<>();
+    private final ThreadLocal<String> caseIdContext = new ThreadLocal<>();
+
+    /**
+     * Inject with document context — matches sources against uploaded case documents.
+     */
+    public String inject(String response, String caseId, List<CaseDocumentSummary> documents) {
+        try {
+            if (documents != null && !documents.isEmpty()) {
+                documentContext.set(documents);
+                caseIdContext.set(caseId);
+                log.info("🔗 CitationUrlInjector: {} case documents available for source matching", documents.size());
+            }
+            return inject(response);
+        } finally {
+            documentContext.remove();
+            caseIdContext.remove();
+        }
+    }
+
     /**
      * Main injection method - scans response and adds URLs for known citations
      */
@@ -777,14 +798,20 @@ public class CitationUrlInjector {
                 } else if (source.startsWith("[")) {
                     source = source.substring(1);
                 }
-                // Try to match against CITATION_URL_MAP, fall back to Google Scholar search
+                // Try to match against CITATION_URL_MAP
                 String matched = matchCitationUrl(source);
                 if (matched != null) {
                     enriched.append(matched);
                 } else {
-                    // Fallback: make chip clickable via Google Scholar search
-                    String encoded = source.trim().replaceAll("\\s+", "+");
-                    enriched.append("[" + source + "](https://scholar.google.com/scholar?q=%22" + encoded + "%22)");
+                    // Try to match against uploaded case documents
+                    String docMatch = matchCaseDocument(source);
+                    if (docMatch != null) {
+                        enriched.append(docMatch);
+                    } else {
+                        // Fallback: CourtListener search (better than Google Scholar for legal documents)
+                        String encoded = source.trim().replaceAll("\\s+", "+");
+                        enriched.append("[" + source + "](https://www.courtlistener.com/?q=" + encoded + "&type=o)");
+                    }
                 }
             }
 
@@ -811,22 +838,61 @@ public class CitationUrlInjector {
     }
 
     /**
+     * Try to match a source string against uploaded case documents.
+     * Uses fuzzy matching: checks if the document name is contained in the source or vice versa.
+     * Returns a casedoc: protocol link for frontend to handle, or null.
+     */
+    private String matchCaseDocument(String source) {
+        List<CaseDocumentSummary> docs = documentContext.get();
+        String caseId = caseIdContext.get();
+        if (docs == null || docs.isEmpty() || caseId == null) return null;
+
+        String sourceLower = source.toLowerCase().trim();
+
+        // Try exact name match first, then fuzzy containment
+        for (CaseDocumentSummary doc : docs) {
+            String docName = doc.getName();
+            if (docName == null) continue;
+            String docNameLower = docName.toLowerCase().trim();
+
+            // Strip file extension for matching (e.g., "Medical Records.pdf" → "Medical Records")
+            String docNameNoExt = docNameLower.replaceAll("\\.[a-z]{2,5}$", "").trim();
+
+            if (sourceLower.equals(docNameLower) || sourceLower.equals(docNameNoExt)
+                || sourceLower.contains(docNameNoExt) || docNameNoExt.contains(sourceLower)) {
+                log.info("📄 Matched source '{}' → case document ID {} ({})", source, doc.getId(), docName);
+                return "[" + source + "](casedoc:" + caseId + ":" + doc.getId() + ")";
+            }
+        }
+        return null;
+    }
+
+    /**
      * Convert markdown links [text](url) to HTML anchor tags.
      * Runs AFTER all pattern matching so every injected markdown link becomes an <a> tag.
      * This eliminates frontend markdown parsing failures with citation parentheses.
      */
     private String convertMarkdownLinksToHtml(String text) {
+        // Match both http/https URLs and casedoc: protocol links
         Pattern mdLinkPattern = Pattern.compile(
-            "\\[([^\\]]+)\\]\\((https?://[^)\\s]+)\\)"
+            "\\[([^\\]]+)\\]\\(((?:https?://|casedoc:)[^)\\s]+)\\)"
         );
         Matcher matcher = mdLinkPattern.matcher(text);
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
             String linkText = matcher.group(1);
             String url = matcher.group(2);
-            String htmlLink = "<a href=\"" + Matcher.quoteReplacement(url)
-                + "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"legal-link\">"
-                + Matcher.quoteReplacement(linkText) + "</a>";
+            String htmlLink;
+            if (url.startsWith("casedoc:")) {
+                // Case document link — render with data attribute for frontend click handling
+                htmlLink = "<a href=\"#\" data-casedoc=\"" + Matcher.quoteReplacement(url.substring(8))
+                    + "\" class=\"legal-link doc-link\" onclick=\"return false;\">"
+                    + Matcher.quoteReplacement(linkText) + "</a>";
+            } else {
+                htmlLink = "<a href=\"" + Matcher.quoteReplacement(url)
+                    + "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"legal-link\">"
+                    + Matcher.quoteReplacement(linkText) + "</a>";
+            }
             matcher.appendReplacement(sb, Matcher.quoteReplacement(htmlLink));
         }
         matcher.appendTail(sb);

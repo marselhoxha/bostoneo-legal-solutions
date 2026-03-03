@@ -3,9 +3,11 @@ package com.bostoneo.bostoneosolutions.service.implementation;
 import com.bostoneo.bostoneosolutions.dto.PIMedicalRecordDTO;
 import com.bostoneo.bostoneosolutions.exception.ResourceNotFoundException;
 import com.bostoneo.bostoneosolutions.model.FileItem;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
 import com.bostoneo.bostoneosolutions.model.PIMedicalRecord;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.FileItemRepository;
+import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.PIMedicalRecordRepository;
 import com.bostoneo.bostoneosolutions.repository.PIMedicalSummaryRepository;
 import com.bostoneo.bostoneosolutions.service.PIMedicalRecordService;
@@ -47,6 +49,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
     private final PIMedicalRecordRepository repository;
     private final PIMedicalSummaryRepository summaryRepository;
     private final FileItemRepository fileItemRepository;
+    private final LegalCaseRepository legalCaseRepository;
     private final PIDocumentChecklistService documentChecklistService;
     private final TenantService tenantService;
     private final ClaudeSonnet4Service claudeService;
@@ -442,8 +445,15 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                     fileResult.put("provider", record.getProviderName());
                     fileResult.put("recordType", record.getRecordType());
                 } else {
-                    fileResult.put("status", "skipped");
-                    fileResult.put("reason", "Not identified as medical document");
+                    // Not a medical document — check if it's an insurance document
+                    boolean extractedInsurance = tryExtractInsuranceInfo(caseId, orgId, file);
+                    if (extractedInsurance) {
+                        fileResult.put("status", "insurance_extracted");
+                        fileResult.put("reason", "Insurance policy information extracted");
+                    } else {
+                        fileResult.put("status", "skipped");
+                        fileResult.put("reason", "Not identified as medical or insurance document");
+                    }
                 }
                 scannedFiles.add(fileResult);
 
@@ -516,7 +526,37 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             return null;
         }
 
-        // Create medical record from analysis
+        // Normalize provider name for consistent matching
+        String rawProviderName = (String) analysisResult.getOrDefault("providerName", "Unknown Provider");
+        String normalizedProvider = normalizeProviderName(rawProviderName);
+        analysisResult.put("providerName", normalizedProvider);
+
+        // Parse treatment date from analysis
+        String dateStr = (String) analysisResult.get("treatmentDate");
+        LocalDate treatmentDate = null;
+        if (dateStr != null && !dateStr.isEmpty()) {
+            try {
+                treatmentDate = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
+            } catch (Exception e) {
+                treatmentDate = LocalDate.now();
+            }
+        }
+
+        // Check for existing record from same provider + same date — merge instead of duplicating
+        if (treatmentDate != null) {
+            Optional<PIMedicalRecord> existingOpt = repository.findByCaseAndProviderAndDate(
+                    caseId, orgId, normalizedProvider, treatmentDate);
+            if (existingOpt.isPresent()) {
+                PIMedicalRecord existing = existingOpt.get();
+                mergeAnalysisIntoRecord(existing, fileId, analysisResult);
+                PIMedicalRecord saved = repository.save(existing);
+                log.info("Merged file {} into existing record {} (same provider '{}', date {})",
+                        fileId, saved.getId(), normalizedProvider, treatmentDate);
+                return mapToDTO(saved);
+            }
+        }
+
+        // No existing record — create new
         PIMedicalRecord record = createRecordFromAnalysis(caseId, orgId, fileId, analysisResult);
         PIMedicalRecord saved = repository.save(record);
 
@@ -733,6 +773,278 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             case "PRIMARY_CARE" -> "PRIMARY_CARE";
             default -> "FOLLOW_UP";
         };
+    }
+
+    /**
+     * Normalize provider name to title case for consistent matching.
+     * "NORTHEAST IMAGING" and "Northeast Imaging" both become "Northeast Imaging".
+     */
+    private String normalizeProviderName(String name) {
+        if (name == null || name.isBlank()) return "Unknown Provider";
+        String[] words = name.trim().split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < words.length; i++) {
+            String word = words[i];
+            if (word.isEmpty()) continue;
+            // Keep true abbreviations uppercase: all letters, all caps, 2-3 chars (e.g., CHA, MRI, PT)
+            if (word.length() <= 3 && word.matches("[A-Z]{2,3}")) {
+                sb.append(word);
+            } else {
+                sb.append(Character.toUpperCase(word.charAt(0)));
+                if (word.length() > 1) {
+                    sb.append(word.substring(1).toLowerCase());
+                }
+            }
+            if (i < words.length - 1) sb.append(" ");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Merge new analysis data into an existing record (same provider + same date).
+     * Appends key findings and billing, updates fields that were previously empty.
+     */
+    private void mergeAnalysisIntoRecord(PIMedicalRecord existing, Long newFileId,
+                                          Map<String, Object> analysis) {
+        // Append key findings
+        String newFindings = (String) analysis.get("keyFindings");
+        if (newFindings != null && !newFindings.isBlank()) {
+            String existingFindings = existing.getKeyFindings();
+            if (existingFindings == null || existingFindings.isBlank()) {
+                existing.setKeyFindings(newFindings);
+            } else if (!existingFindings.toLowerCase().contains(newFindings.toLowerCase().substring(0, Math.min(30, newFindings.length())))) {
+                existing.setKeyFindings(existingFindings + " | " + newFindings);
+            }
+        }
+
+        // Append treatment provided
+        String newTreatment = (String) analysis.get("treatmentProvided");
+        if (newTreatment != null && !newTreatment.isBlank()) {
+            String existingTreatment = existing.getTreatmentProvided();
+            if (existingTreatment == null || existingTreatment.isBlank()) {
+                existing.setTreatmentProvided(newTreatment);
+            } else if (!existingTreatment.toLowerCase().contains(newTreatment.toLowerCase().substring(0, Math.min(30, newTreatment.length())))) {
+                existing.setTreatmentProvided(existingTreatment + " | " + newTreatment);
+            }
+        }
+
+        // Add billing amount (accumulate)
+        Object billedObj = analysis.get("billedAmount");
+        if (billedObj != null) {
+            BigDecimal newAmount = null;
+            try {
+                if (billedObj instanceof Number) {
+                    newAmount = BigDecimal.valueOf(((Number) billedObj).doubleValue());
+                } else if (billedObj instanceof String) {
+                    String billedStr = ((String) billedObj).replaceAll("[^\\d.]", "");
+                    if (!billedStr.isEmpty()) newAmount = new BigDecimal(billedStr);
+                }
+            } catch (Exception e) {
+                log.warn("Could not parse billed amount during merge: {}", billedObj);
+            }
+            if (newAmount != null && newAmount.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal existingAmount = existing.getBilledAmount() != null ? existing.getBilledAmount() : BigDecimal.ZERO;
+                existing.setBilledAmount(existingAmount.add(newAmount));
+            }
+        }
+
+        // Fill in prognosis if empty
+        String newPrognosis = (String) analysis.get("prognosisNotes");
+        if (newPrognosis != null && !newPrognosis.isBlank() &&
+                (existing.getPrognosisNotes() == null || existing.getPrognosisNotes().isBlank())) {
+            existing.setPrognosisNotes(newPrognosis);
+        }
+
+        // Fill in work restrictions if empty
+        String newRestrictions = (String) analysis.get("workRestrictions");
+        if (newRestrictions != null && !newRestrictions.isBlank() &&
+                (existing.getWorkRestrictions() == null || existing.getWorkRestrictions().isBlank())) {
+            existing.setWorkRestrictions(newRestrictions);
+        }
+
+        // Merge diagnoses
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> newDiagnoses = (List<Map<String, Object>>) analysis.get("diagnoses");
+        if (newDiagnoses != null && !newDiagnoses.isEmpty()) {
+            List<Map<String, Object>> existingDiagnoses = existing.getDiagnoses();
+            if (existingDiagnoses == null || existingDiagnoses.isEmpty()) {
+                existing.setDiagnoses(newDiagnoses);
+            } else {
+                // Add only new diagnoses (by ICD code) — copy to mutable list first
+                List<Map<String, Object>> merged = new ArrayList<>(existingDiagnoses);
+                java.util.Set<String> existingCodes = existingDiagnoses.stream()
+                        .map(d -> String.valueOf(d.getOrDefault("icd_code", "")))
+                        .collect(java.util.stream.Collectors.toSet());
+                for (Map<String, Object> diag : newDiagnoses) {
+                    String code = String.valueOf(diag.getOrDefault("icd_code", ""));
+                    if (!code.isEmpty() && !existingCodes.contains(code)) {
+                        merged.add(diag);
+                    }
+                }
+                existing.setDiagnoses(merged);
+            }
+        }
+
+        existing.setIsComplete(determineCompleteness(existing));
+    }
+
+    // ==========================================
+    // Insurance Document Auto-Extraction
+    // ==========================================
+
+    /**
+     * Attempt to extract insurance information (policy limit, company, adjuster, etc.)
+     * from a non-medical document. If found, saves directly to the case entity.
+     *
+     * @return true if insurance information was extracted and saved
+     */
+    private boolean tryExtractInsuranceInfo(Long caseId, Long orgId, FileItem file) {
+        try {
+            String extractedText = extractTextFromFile(file);
+            if (extractedText == null || extractedText.trim().isEmpty()) {
+                return false;
+            }
+
+            String textForAnalysis = extractedText.length() > 15000
+                    ? extractedText.substring(0, 15000)
+                    : extractedText;
+
+            Map<String, Object> insuranceData = analyzeInsuranceDocumentWithAI(file.getOriginalName(), textForAnalysis);
+            if (insuranceData == null || !Boolean.TRUE.equals(insuranceData.get("isInsuranceDocument"))) {
+                return false;
+            }
+
+            // Load the case with tenant isolation
+            Optional<LegalCase> caseOpt = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId);
+            if (caseOpt.isEmpty()) {
+                log.warn("Case {} not found in org {} for insurance extraction", caseId, orgId);
+                return false;
+            }
+
+            LegalCase legalCase = caseOpt.get();
+            boolean updated = false;
+
+            // Extract policy limit — always overwrite since document is the source of truth
+            Object policyLimitObj = insuranceData.get("policyLimit");
+            if (policyLimitObj != null) {
+                Double policyLimit = parseDoubleValue(policyLimitObj);
+                if (policyLimit != null && policyLimit > 0) {
+                    legalCase.setInsurancePolicyLimit(policyLimit);
+                    updated = true;
+                    log.info("Extracted policy limit ${} from file '{}' for case {}",
+                            String.format("%,.2f", policyLimit), file.getOriginalName(), caseId);
+                }
+            }
+
+            // Extract insurance company (only if not already set)
+            String company = safeString(insuranceData.get("insuranceCompany"));
+            if (company != null && !company.isBlank() &&
+                    (legalCase.getInsuranceCompany() == null || legalCase.getInsuranceCompany().isBlank())) {
+                legalCase.setInsuranceCompany(company);
+                updated = true;
+            }
+
+            // Extract policy number (only if not already set)
+            String policyNumber = safeString(insuranceData.get("policyNumber"));
+            if (policyNumber != null && !policyNumber.isBlank() &&
+                    (legalCase.getInsurancePolicyNumber() == null || legalCase.getInsurancePolicyNumber().isBlank())) {
+                legalCase.setInsurancePolicyNumber(policyNumber);
+                updated = true;
+            }
+
+            // NOTE: We intentionally do NOT extract adjuster name/phone/email.
+            // These are high hallucination risk — the AI fabricates names that don't exist
+            // in the document. Only verifiable data (policy limit, company, policy number)
+            // is safe to auto-extract.
+
+            if (updated) {
+                legalCaseRepository.save(legalCase);
+                log.info("Saved insurance information to case {} from file '{}'", caseId, file.getOriginalName());
+            }
+
+            return updated;
+
+        } catch (Exception e) {
+            log.error("Error extracting insurance info from file {}: {}", file.getId(), e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Use AI to determine if a document is an insurance policy/declaration and extract relevant fields.
+     */
+    private Map<String, Object> analyzeInsuranceDocumentWithAI(String fileName, String documentText) {
+        String prompt = String.format("""
+            Analyze this document and determine if it is an insurance-related document
+            (e.g., insurance declaration page, policy summary, coverage letter, claim correspondence,
+            adjuster letter, or any document containing insurance policy information).
+
+            DOCUMENT NAME: %s
+
+            DOCUMENT CONTENT:
+            %s
+
+            ---
+
+            Return a JSON response with the following structure:
+            {
+                "isInsuranceDocument": true/false,
+                "documentSubtype": "DECLARATION_PAGE|POLICY_SUMMARY|CLAIM_LETTER|ADJUSTER_CORRESPONDENCE|COVERAGE_VERIFICATION|OTHER",
+                "policyLimit": 50000.00,
+                "insuranceCompany": "Company name exactly as printed on the document",
+                "policyNumber": "Policy number exactly as printed on the document",
+                "coverageType": "Type of coverage (e.g., bodily injury, property damage, UM/UIM)"
+            }
+
+            CRITICAL RULES:
+            - Set isInsuranceDocument to true ONLY if this is genuinely an insurance document
+            - For policyLimit, extract the BODILY INJURY per-person limit if multiple limits are shown
+            - If the document shows limits like "$50,000/$100,000", the policyLimit should be 50000 (per-person)
+            - If a combined single limit (CSL) is shown, use that value
+            - Parse dollar amounts as numbers without commas or dollar signs
+            - If a field is not found in the document, set it to null — do NOT guess
+            - NEVER fabricate or infer names, phone numbers, emails, or any contact information
+            - Only extract data that is LITERALLY PRINTED on the document — no inference
+
+            Return ONLY the JSON, no additional text.
+            """, fileName, documentText);
+
+        try {
+            String response = claudeService.generateCompletion(prompt, false).get();
+            String jsonContent = extractJsonFromResponse(response);
+            return objectMapper.readValue(jsonContent, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            log.error("Error analyzing insurance document with AI: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Safely parse a numeric value from AI response (could be Integer, Double, String, etc.)
+     */
+    private Double parseDoubleValue(Object value) {
+        if (value == null) return null;
+        try {
+            if (value instanceof Number) {
+                return ((Number) value).doubleValue();
+            } else if (value instanceof String) {
+                String str = ((String) value).replaceAll("[^\\d.]", "");
+                if (!str.isEmpty()) return Double.parseDouble(str);
+            }
+        } catch (Exception e) {
+            log.warn("Could not parse numeric value: {}", value);
+        }
+        return null;
+    }
+
+    /**
+     * Safely extract a String from an AI response map value.
+     * AI may return non-String types (numbers, nested objects) for fields expected to be strings.
+     */
+    private String safeString(Object value) {
+        if (value == null) return null;
+        if (value instanceof String) return (String) value;
+        return String.valueOf(value);
     }
 
     // ==========================================

@@ -102,6 +102,7 @@ export class CaseListComponent implements OnInit, OnDestroy {
           c.caseNumber?.toLowerCase().includes(query.toLowerCase()) ||
           c.title?.toLowerCase().includes(query.toLowerCase()) ||
           c.clientName?.toLowerCase().includes(query.toLowerCase()) ||
+          (c as any).practiceArea?.toLowerCase().includes(query.toLowerCase()) ||
           c.type?.toLowerCase().includes(query.toLowerCase())
         );
         this.cdr.detectChanges();
@@ -475,6 +476,7 @@ export class CaseListComponent implements OnInit, OnDestroy {
         c.caseNumber?.toLowerCase().includes(term) ||
         c.title?.toLowerCase().includes(term) ||
         c.clientName?.toLowerCase().includes(term) ||
+        (c as any).practiceArea?.toLowerCase().includes(term) ||
         c.type?.toLowerCase().includes(term) ||
         this.getLeadAttorneyName(c)?.toLowerCase().includes(term)
       );

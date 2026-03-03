@@ -31,6 +31,14 @@ public interface EmailService {
     void sendNotificationEmail(String to, String firstName, String title, String message, String notificationType);
 
     /**
+     * Send MFA verification code via email
+     * @param email Recipient email address
+     * @param firstName User's first name for greeting
+     * @param code The 6-digit verification code
+     */
+    void sendMfaVerificationEmail(String email, String firstName, String code);
+
+    /**
      * Send organization invitation email
      * @param email Recipient email address
      * @param organizationName Name of the organization

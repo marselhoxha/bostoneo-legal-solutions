@@ -732,17 +732,15 @@ export class LegalResearchService {
    */
   createGeneralConversation(
     title: string,
-    researchMode: string,
     taskType: string,
     documentType?: string,
     jurisdiction?: string
   ): Observable<AiConversationSession> {
     const userId = this.getUserId();
-    // Unified mode: always use THOROUGH
-    const mode = 'THOROUGH';
+    // Backend auto-selects mode via AIComplexityScorer
     return this.http.post<any>(
       `${this.conversationApiUrl}`,
-      { userId, title, researchMode: mode, taskType, documentType, jurisdiction },
+      { userId, title, taskType, documentType, jurisdiction },
       { withCredentials: true }
     ).pipe(
       map(response => response.data.session),
@@ -758,15 +756,13 @@ export class LegalResearchService {
    */
   sendMessageToConversation(
     conversationId: number,
-    query: string,
-    researchMode: string
+    query: string
   ): Observable<AiConversationMessage> {
     const userId = this.getUserId();
-    // Unified mode: always use THOROUGH
-    const mode = 'THOROUGH';
+    // Backend auto-selects mode via AIComplexityScorer
     return this.http.post<any>(
       `${this.conversationApiUrl}/${conversationId}/query`,
-      { userId, query, researchMode: mode },
+      { userId, query },
       { withCredentials: true }
     ).pipe(
       map(response => response.data.message),

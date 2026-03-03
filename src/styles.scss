@@ -1,8 +1,8 @@
 /* You can add global styles to this file, and also import other style files */
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 
-// Quill Editor Styles
-@import 'quill/dist/quill.snow.css';
+// CKEditor 5 Styles
+@import 'ckeditor5/ckeditor5.css';
 
 // Responsive Design System
 @import './assets/scss/responsive-mixins';
@@ -1132,6 +1132,52 @@ body > div > .dropdown-menu.user-profile-dropdown {
 }
 
 // ==========================================
+// GLOBAL: AI Workspace — Full-Page Drafting Mode
+// When body has this class, hide the entire app shell
+// so the drafting workspace takes over the full viewport.
+// ==========================================
+body.ai-drafting-fullpage {
+  overflow: hidden;
+
+  // Hide the top header bar (logo + user profile icons)
+  #page-topbar {
+    display: none !important;
+  }
+
+  // Hide the horizontal navigation bar (Dashboard, Case Management, etc.)
+  app-horizontal-topbar {
+    display: none !important;
+  }
+
+  // Hide the left sidebar (vertical layout)
+  app-sidebar {
+    display: none !important;
+  }
+
+  // Hide the footer
+  app-footer {
+    display: none !important;
+  }
+
+  // Remove all padding/margin from the content wrappers
+  .main-content {
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  .page-content {
+    padding: 0 !important;
+    min-height: 100vh;
+  }
+
+  .page-content > .container-fluid {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+// ==========================================
 // GLOBAL: Touch Target Sizes
 // ==========================================
 
@@ -1155,6 +1201,110 @@ body > div > .dropdown-menu.user-profile-dropdown {
   .form-check-input {
     width: 1.25rem;
     height: 1.25rem;
+  }
+}
+
+// ── AI Note SweetAlert Modal ──
+// Clean card-based layout matching time entry detail modal style
+.ai-note-modal.swal2-popup {
+  border-radius: 12px;
+  padding: 28px 24px 22px !important;
+  background: var(--vz-secondary-bg);
+}
+
+.ai-note-html-container.swal2-html-container {
+  margin: 0;
+  padding: 0;
+}
+
+.ai-note-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.ai-note-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.ai-note-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.ai-note-title {
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--vz-heading-color);
+  letter-spacing: 0.01em;
+}
+
+.ai-note-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: rgba(247, 184, 75, 0.15);
+  color: #f7b84b;
+}
+
+.ai-note-card {
+  background: var(--vz-light);
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-bottom: 4px;
+  border-left: 3px solid #405189;
+}
+
+.ai-note-body {
+  text-align: left;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--vz-body-color);
+  max-height: 360px;
+  overflow-y: auto;
+
+  strong {
+    color: var(--vz-heading-color);
+    font-weight: 600;
+  }
+
+  ul {
+    margin: 10px 0 4px;
+    padding-left: 18px;
+
+    li {
+      margin-bottom: 5px;
+    }
+  }
+}
+
+.ai-note-confirm-btn.swal2-styled.swal2-confirm {
+  background: transparent;
+  color: var(--vz-body-color);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 6px;
+  padding: 8px 28px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 10px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--vz-light);
+    border-color: var(--vz-body-color);
+  }
+
+  &:focus {
+    box-shadow: none;
   }
 }
 

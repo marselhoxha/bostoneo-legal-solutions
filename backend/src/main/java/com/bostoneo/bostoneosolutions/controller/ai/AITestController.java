@@ -27,7 +27,7 @@ public class AITestController {
                     Map<String, Object> result = new HashMap<>();
                     result.put("success", true);
                     result.put("response", response);
-                    result.put("model", "claude-sonnet-4-20250514");
+                    result.put("model", "claude-sonnet-4-6");
                     return ResponseEntity.ok(result);
                 })
                 .exceptionally(ex -> {

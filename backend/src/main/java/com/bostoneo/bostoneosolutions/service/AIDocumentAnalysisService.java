@@ -42,6 +42,7 @@ public class AIDocumentAnalysisService {
 
     private final AIDocumentAnalysisRepository repository;
     private final ClaudeSonnet4Service claudeService;
+    private final com.bostoneo.bostoneosolutions.service.ai.AIRequestRouter aiRequestRouter;
     private final ObjectMapper objectMapper;
     private final DocumentMetadataExtractor metadataExtractor;
     private final AnalysisTextParser analysisTextParser;
@@ -142,8 +143,10 @@ public class AIDocumentAnalysisService {
             // Use detected type for strategic analysis with context awareness
             String prompt = buildAnalysisPrompt(content, classification.documentType, file.getOriginalFilename(), effectiveContext);
 
-            // Pass sessionId to enable cancellation support (like LegalResearchConversationService)
-            return claudeService.generateCompletion(prompt, null, true, sessionId)
+            // Route through AIRequestRouter — DOCUMENT_ANALYSIS uses Opus for quality
+            return aiRequestRouter.routeSimple(
+                    com.bostoneo.bostoneosolutions.enumeration.AIOperationType.DOCUMENT_ANALYSIS,
+                    prompt, null, true, sessionId)
                     .thenApply(response -> {
                         // CRITICAL: Re-establish security and tenant context for this background thread
                         // Both are ThreadLocal and cleared after the original HTTP request completes
@@ -501,9 +504,10 @@ public class AIDocumentAnalysisService {
         DocumentClassification result = new DocumentClassification();
 
         try {
-            // Synchronous call for classification with temperature=0 for DETERMINISTIC results
-            // This ensures the same document always gets the same classification
-            String response = claudeService.generateCompletion(classificationPrompt, null, false, null, 0.0)
+            // Route CLASSIFICATION through router — uses Sonnet (cheaper) with temperature=0
+            String response = aiRequestRouter.routeSimple(
+                    com.bostoneo.bostoneosolutions.enumeration.AIOperationType.CLASSIFICATION,
+                    classificationPrompt, null, false, null, 0.0)
                 .get(30, java.util.concurrent.TimeUnit.SECONDS);
 
             // Parse JSON response
@@ -2267,8 +2271,10 @@ public class AIDocumentAnalysisService {
             Provide your answer:
             """, contextInstruction, context, question);
 
-        // Call Claude for the response (blocking call)
-        String response = claudeService.generateCompletion(prompt, false).join();
+        // Route Q&A through router — uses Sonnet (cheaper)
+        String response = aiRequestRouter.routeSimple(
+                com.bostoneo.bostoneosolutions.enumeration.AIOperationType.QUESTION_ANSWERING,
+                prompt, null, false, null).join();
 
         log.info("✅ Ask AI response generated for analysis {}", analysisId);
         return response;

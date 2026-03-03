@@ -79,7 +79,8 @@ public class AiWorkspaceController {
                     request.getFullDocumentContent(),
                     request.getSelectedText(),
                     request.getSelectionStartIndex(),
-                    request.getSelectionEndIndex()
+                    request.getSelectionEndIndex(),
+                    request.getCustomPrompt()
                 );
 
                 response = DocumentTransformResponse.builder()
@@ -139,9 +140,27 @@ public class AiWorkspaceController {
                     request.getFullDocumentContent()
                 );
 
+                // Check for no-changes-needed (AI found nothing to change — no second API call)
+                Boolean noChangesNeeded = (Boolean) diffResult.get("noChangesNeeded");
+                if (Boolean.TRUE.equals(noChangesNeeded)) {
+                    @SuppressWarnings("unchecked")
+                    List<DocumentChange> emptyChanges = (List<DocumentChange>) diffResult.get("changes");
+                    response = DocumentTransformResponse.builder()
+                        .documentId(request.getDocumentId())
+                        .newVersion((Integer) diffResult.get("newVersion"))
+                        .transformedContent((String) diffResult.get("transformedContent"))
+                        .explanation("No changes were needed for your request.")
+                        .tokensUsed((Integer) diffResult.get("tokensUsed"))
+                        .costEstimate((BigDecimal) diffResult.get("costEstimate"))
+                        .wordCount((Integer) diffResult.get("wordCount"))
+                        .transformationType("CUSTOM")
+                        .transformationScope(request.getTransformationScope())
+                        .changes(emptyChanges)
+                        .useDiffMode(true)
+                        .build();
+                }
                 // Check if fallback is required (diff parsing failed)
-                Boolean fallbackRequired = (Boolean) diffResult.get("fallbackRequired");
-                if (Boolean.TRUE.equals(fallbackRequired)) {
+                else if (Boolean.TRUE.equals((Boolean) diffResult.get("fallbackRequired"))) {
                     log.info("⚠️ Diff mode failed, falling back to full document mode");
                     // Fall back to traditional full document transformation
                     AiWorkspaceDocumentVersion newVersion = documentService.transformFullDocument(

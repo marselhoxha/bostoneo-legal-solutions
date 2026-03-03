@@ -3,7 +3,7 @@
 <!-- 3-Column Layout: Conversations | Main | Chat -->
 <!-- ============================================ -->
 
-<div class="drafting-container" style="max-width: 100%;">
+<div class="drafting-container" [class.drafting-active]="draftingMode$ | async" style="max-width: 100%;">
 
   <!-- Mobile Menu Toggle Button - Opens history bottom sheet (hidden when in conversation) -->
   <button class="mobile-menu-toggle"
@@ -681,7 +681,7 @@
             <i class="ri-question-answer-line"></i>
           </div>
           <div class="card-content">
-            <span>Ask a legal question</span>
+            <span>Ask a Question</span>
           </div>
         </div>
 
@@ -693,7 +693,7 @@
             <i class="ri-file-edit-line"></i>
           </div>
           <div class="card-content">
-            <span>Generate a draft</span>
+            <span>Generate a Draft</span>
           </div>
         </div>
 
@@ -1334,224 +1334,291 @@
       </div>
     </div>
 
-    <!-- Top Action Bar (when in drafting mode) -->
-    <div class="top-action-bar" *ngIf="draftingMode$ | async">
-      <div class="action-bar-left">
-        <button class="btn btn-link back-btn" (click)="exitDraftingMode()" title="Exit drafting mode">
-          <i class="ri-arrow-left-line"></i>
-        </button>
-        <div class="drafting-mode-indicator">
-          <i class="ri-file-edit-line"></i>
-          <span>Drafting Mode</span>
+    <!-- Split View Container (when document is generated) — Full Page Drafting -->
+    <div class="split-view-container" *ngIf="draftingMode$ | async" [class.chat-closed]="!(showChat$ | async)">
+
+      <!-- Drafting Sidebar: TOC + Exhibits (240px left panel) -->
+      <aside class="drafting-sidebar">
+        <!-- Sidebar Header: Back button + Document title -->
+        <div class="ds-header">
+          <button class="ds-back-btn" (click)="exitDraftingMode()" title="Exit drafting">
+            <i class="ri-arrow-left-line"></i>
+          </button>
+          <span class="ds-doc-title">{{activeDocumentTitle || 'Untitled Document'}}</span>
         </div>
-        <div class="document-stats">
-          <span class="word-count">{{currentDocumentWordCount}}/500000</span>
-          <span class="date-stamp">{{currentDate | date:'MMM d, yyyy'}}</span>
-        </div>
-      </div>
-      <div class="action-bar-right">
-        <!-- Thorough Mode Indicator (static - drafting always uses thorough mode) -->
-        <div class="mode-indicator">
-          <span class="btn btn-soft-primary btn-sm" style="cursor: default; pointer-events: none;">
-            <i class="ri-verified-badge-line me-1"></i>
-            <span class="mode-label">Thorough</span>
-            <span class="mode-badge">~90s</span>
-          </span>
+        <div class="drafting-sidebar-tabs">
+          <button class="ds-tab" [class.active]="(exhibitPanelService.sidebarTab$ | async) === 'contents'"
+                  (click)="exhibitPanelService.setSidebarTab('contents')">
+            Contents
+          </button>
+          <button class="ds-tab" [class.active]="(exhibitPanelService.sidebarTab$ | async) === 'exhibits'"
+                  (click)="exhibitPanelService.setSidebarTab('exhibits')">
+            Exhibits
+          </button>
         </div>
 
-        <!-- Export Dropdown Button -->
-        <div class="btn-group" ngbDropdown>
-          <button id="export-dropdown" ngbDropdownToggle type="button" class="btn btn-primary btn-sm">
-            <i class="ri-download-line"></i>
-            Export
-          </button>
-          <div ngbDropdownMenu class="dropdown-menu dropdown-menu-end">
-            <a class="dropdown-item" (click)="exportToPDF()">
-              <i class="ri-file-pdf-line me-2"></i>
-              Save as PDF
-            </a>
-            <a class="dropdown-item" (click)="exportToWord()">
-              <i class="ri-file-word-line me-2"></i>
-              Save as Word
-            </a>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" (click)="saveToFileManager()">
-              <i class="ri-folder-upload-line me-2"></i>
-              Save to File Manager
-            </a>
+        <!-- Contents Tab: Auto-TOC from editor headings -->
+        <div class="ds-tab-content" *ngIf="(exhibitPanelService.sidebarTab$ | async) === 'contents'">
+          <div class="toc-list" *ngIf="(exhibitPanelService.toc$ | async) as tocEntries">
+            <div *ngIf="tocEntries.length === 0" class="ds-empty-state">
+              <i class="ri-list-ordered"></i>
+              <p>No headings found</p>
+              <span>Add headings to your document to see the table of contents</span>
+            </div>
+            <div *ngFor="let entry of tocEntries"
+                 class="toc-item"
+                 [class.toc-level-1]="entry.level === 1"
+                 [class.toc-level-2]="entry.level === 2"
+                 [class.toc-level-3]="entry.level >= 3"
+                 [class.active]="activeTocId === entry.id"
+                 (click)="scrollToHeading(entry.id)">
+              <span class="toc-number">{{entry.numbering}}</span>
+              <span class="toc-text">{{entry.text}}</span>
+            </div>
           </div>
         </div>
-        <a href="javascript:void(0)" class="help-link" (click)="openHowItWorksModal()">
-          <i class="ri-question-line"></i>
-          How does it work?
-        </a>
-      </div>
-    </div>
 
-    <!-- Split View Container (when document is generated) -->
-    <div class="split-view-container" *ngIf="draftingMode$ | async" [class.chat-closed]="!(showChat$ | async)">
-      <!-- Document Preview Panel (60%) -->
+        <!-- Exhibits Tab: List of attached exhibits -->
+        <div class="ds-tab-content" *ngIf="(exhibitPanelService.sidebarTab$ | async) === 'exhibits'">
+          <div *ngIf="(exhibitPanelService.exhibitList$ | async) as exhibits">
+            <div *ngIf="exhibits.length === 0" class="ds-empty-state">
+              <i class="ri-attachment-2"></i>
+              <p>No exhibits attached</p>
+              <span>Exhibits will appear here when added to the document</span>
+            </div>
+            <div *ngFor="let exhibit of exhibits"
+                 class="exhibit-item"
+                 [class.active]="(exhibitPanelService.currentExhibit$ | async)?.id === exhibit.id"
+                 (click)="openExhibitFromSidebar(exhibit)">
+              <i class="ri-file-pdf-line"></i>
+              <div class="exhibit-info">
+                <span class="exhibit-label">{{exhibit.label}}</span>
+                <span class="exhibit-filename">{{exhibit.fileName}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Document Editor Panel -->
       <div class="document-preview-panel">
-        <div class="document-preview-header">
-          <div class="header-left">
-            <h3 class="document-title">
-              <i class="ri-file-text-line"></i>
-              {{activeDocumentTitle}}
-            </h3>
-            <div class="document-metadata">
-              <span class="meta-item" *ngIf="currentDocumentWordCount > 0">
-                <i class="ri-file-word-line"></i>
-                {{currentDocumentWordCount}} words
-              </span>
-              <span class="meta-item" *ngIf="currentDocumentPageCount > 0">
-                <i class="ri-file-copy-line"></i>
-                {{currentDocumentPageCount}} pages
-              </span>
-              <span class="meta-item generated-by">
-                <i class="ri-sparkling-line"></i>
-                Generated by Legience
-              </span>
 
-              <!-- Version Dropdown -->
-              <div class="version-dropdown" ngbDropdown container="body" placement="bottom-end" *ngIf="documentMetadata.version">
-                <button class="version-dropdown-toggle" ngbDropdownToggle type="button">
-                  <i class="ri-git-commit-line me-1"></i>
-                  v{{documentMetadata.version}}
+        <!-- Editor Toolbar: Stats (left) + Actions (right) -->
+        <div class="editor-toolbar">
+          <div class="toolbar-left">
+            <div class="doc-meta">
+              <span><i class="ri-file-text-line"></i> {{currentDocumentWordCount}} words</span>
+              <span><i class="ri-pages-line"></i> {{currentDocumentPageCount}} pages</span>
+              <span><i class="ri-time-line"></i> {{lastSavedTime ? 'Saved ' + lastSavedTime : 'Not saved'}}</span>
+            </div>
+          </div>
+          <div class="toolbar-right">
+            <button class="toolbar-btn" (click)="saveManualVersion()" title="Version history"><i class="ri-history-line"></i></button>
+            <button class="toolbar-btn" (click)="toggleFullscreen()" [title]="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
+              <i [class]="isFullscreen ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line'"></i>
+            </button>
+            <div class="toolbar-divider"></div>
+            <button class="toolbar-btn" (click)="exhibitPanelService.togglePanel()" title="Toggle exhibit viewer"><i class="ri-layout-right-line"></i></button>
+            <div class="toolbar-divider"></div>
+            <button class="toolbar-btn" (click)="openDocumentPreviewModal()" title="Preview as PDF"><i class="ri-file-pdf-line"></i></button>
+            <div class="toolbar-divider"></div>
+            <button class="btn-save" (click)="saveDocumentManually()" [disabled]="isSaving" title="Save document">
+              <i [class]="isSaving ? 'ri-loader-4-line spin-animation' : 'ri-save-line'"></i> Save
+            </button>
+            <div class="btn-group" ngbDropdown>
+              <button ngbDropdownToggle type="button" class="btn-export">
+                <i class="ri-download-line"></i> Export
+              </button>
+              <div ngbDropdownMenu class="dropdown-menu dropdown-menu-end">
+                <a class="dropdown-item" (click)="exportToPDF()">
+                  <i class="ri-file-pdf-line me-2"></i> Save as PDF
+                </a>
+                <a class="dropdown-item" (click)="exportToWord()">
+                  <i class="ri-file-word-line me-2"></i> Save as Word
+                </a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item" (click)="saveToFileManager()">
+                  <i class="ri-folder-upload-line me-2"></i> Save to File Manager
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="document-preview-content"
+             [class.suppress-native-selection]="floatingToolbarState === 'prompt_editing' || floatingToolbarState === 'loading' || floatingToolbarState === 'preview'">
+
+          <!-- Rich Text Editor (CKEditor 5) -->
+          <!-- showEditor flag toggled OFF→ON to force destruction and recreation -->
+          <ckeditor
+            *ngIf="showEditor"
+            #documentEditor
+            [editor]="documentEditorClass"
+            [config]="editorConfig"
+            (ready)="onEditorCreated($event)"
+            (change)="onDocumentContentChanged($event)">
+          </ckeditor>
+
+          <!-- Multi-State Floating Inline Toolbar -->
+          <div class="floating-edit-toolbar"
+               *ngIf="floatingToolbarState !== 'idle' && !pendingChanges"
+               [style.top.px]="floatingToolbarPosition?.top"
+               [style.left.px]="floatingToolbarPosition?.left"
+               [class.preview-mode]="floatingToolbarState === 'preview'">
+
+            <!-- State 1: Quick Actions -->
+            <div class="toolbar-quick-actions" *ngIf="floatingToolbarState === 'quick_actions'">
+              <div class="prompt-trigger" (click)="enterPromptEditing()">
+                <i class="ri-sparkling-2-line"></i>
+                <span>Write a prompt...</span>
+              </div>
+              <div class="toolbar-divider"></div>
+              <button class="sel-tool-btn" (click)="triggerToolTransform('polish')">
+                <i class="ri-quill-pen-line"></i> Polish
+              </button>
+              <button class="sel-tool-btn" (click)="triggerToolTransform('condense')">
+                <i class="ri-fullscreen-exit-line"></i> Condense
+              </button>
+              <button class="sel-tool-btn" (click)="triggerToolTransform('advocate')">
+                <i class="ri-scales-3-line"></i> Advocate
+              </button>
+              <button class="sel-tool-btn" (click)="triggerToolTransform('elaborate')">
+                <i class="ri-text-wrap"></i> Elaborate
+              </button>
+            </div>
+
+            <!-- State 2: Prompt Editing -->
+            <div class="toolbar-prompt-editing" *ngIf="floatingToolbarState === 'prompt_editing'">
+              <i class="ri-sparkling-2-line prompt-icon"></i>
+              <input #floatingPromptInput
+                     type="text"
+                     class="floating-prompt-input"
+                     [(ngModel)]="floatingPromptText"
+                     placeholder="Tell AI what to do with selected text..."
+                     (keydown.enter)="submitFloatingPrompt()"
+                     (keydown.escape)="cancelPromptEditing()">
+              <button class="btn-toolbar-cancel" (click)="cancelPromptEditing()" title="Cancel (Esc)">
+                <i class="ri-close-line"></i>
+              </button>
+              <button class="btn-toolbar-send" (click)="submitFloatingPrompt()" [disabled]="!floatingPromptText?.trim()" title="Send (Enter)">
+                <i class="ri-send-plane-fill"></i>
+              </button>
+            </div>
+
+            <!-- Loading State -->
+            <div class="toolbar-loading" *ngIf="floatingToolbarState === 'loading'">
+              <div class="loading-dot-pulse">
+                <span></span><span></span><span></span>
+              </div>
+              <span class="loading-text">Writing...</span>
+              <button class="btn-toolbar-cancel" (click)="cancelFloatingGeneration()">
+                <i class="ri-close-line"></i> Stop
+              </button>
+            </div>
+
+            <!-- State 3: AI Response Preview -->
+            <div class="toolbar-preview" *ngIf="floatingToolbarState === 'preview'">
+              <div class="preview-header">
+                <div class="preview-ai-badge">
+                  <i class="ri-sparkling-2-fill"></i>
+                  <span>AI Suggestion</span>
+                </div>
+                <button class="btn-discard" (click)="discardPreview()">
+                  <i class="ri-close-line"></i> Discard
                 </button>
-                <div ngbDropdownMenu class="version-dropdown-menu">
-                  <div class="version-dropdown-header">
-                    <h6 class="mb-0">Version History</h6>
-                  </div>
-
-                  <!-- Loading State -->
-                  <div class="version-dropdown-loading" *ngIf="loadingVersions">
-                    <div class="spinner-border spinner-border-sm text-primary" role="status">
-                      <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <span class="ms-2">Loading versions...</span>
-                  </div>
-
-                  <!-- Empty State -->
-                  <div class="version-dropdown-empty" *ngIf="!loadingVersions && documentVersions.length === 0">
-                    <i class="ri-inbox-line"></i>
-                    <p class="mb-0">No versions found</p>
-                  </div>
-
-                  <!-- Version List -->
-                  <div class="version-dropdown-list" *ngIf="!loadingVersions && documentVersions.length > 0">
-                    <button
-                      *ngFor="let version of documentVersions"
-                      class="version-dropdown-item"
-                      [class.current-version]="version.versionNumber === documentMetadata.version"
-                      (click)="restoreVersionWithConfirmation(version)"
-                      [disabled]="version.versionNumber === documentMetadata.version">
-
-                      <div class="version-item-header">
-                        <span class="version-number">v{{version.versionNumber}}</span>
-                        <span class="version-badge" [ngClass]="{
-                          'badge-primary': version.transformationType === 'INITIAL_GENERATION',
-                          'badge-info': version.transformationType === 'SIMPLIFY' || version.transformationType === 'CONDENSE',
-                          'badge-success': version.transformationType === 'EXPAND',
-                          'badge-warning': version.transformationType === 'REDRAFT',
-                          'badge-secondary': version.transformationType === 'MANUAL_EDIT',
-                          'badge-danger': version.transformationType === 'RESTORE_VERSION'
-                        }">
-                          {{getTransformationLabel(version.transformationType)}}
-                        </span>
-                        <span class="current-badge" *ngIf="version.versionNumber === documentMetadata.version">
-                          <i class="ri-check-line"></i> CURRENT
-                        </span>
-                      </div>
-
-                      <div class="version-item-meta">
-                        <span class="version-date">
-                          <i class="ri-time-line"></i>
-                          {{version.createdAt | date:'MMM d, h:mm a'}}
-                        </span>
-                        <span class="version-words">
-                          <i class="ri-file-word-line"></i>
-                          {{version.wordCount}} words
-                        </span>
-                      </div>
-
-                      <div class="version-item-note" *ngIf="version.versionNote">
-                        <i class="ri-sticky-note-line"></i>
-                        {{version.versionNote}}
-                      </div>
-                    </button>
-                  </div>
+              </div>
+              <div class="preview-content" [innerHTML]="aiPreviewHtml"></div>
+              <div class="preview-actions">
+                <button class="btn-refine" (click)="refinePrompt()">
+                  <i class="ri-edit-line"></i> Refine Prompt
+                </button>
+                <div class="preview-actions-right">
+                  <button class="btn-insert-below" (click)="commitInsertBelow()">
+                    <i class="ri-text-wrap"></i> Insert Below
+                  </button>
+                  <button class="btn-replace" (click)="commitReplace()">
+                    <i class="ri-check-line"></i> Replace
+                  </button>
                 </div>
               </div>
             </div>
           </div>
-          <div class="preview-actions">
-            <button class="btn-icon" (click)="saveManualVersion()"
-                    title="Save Version">
-              <i class="ri-save-line"></i>
+
+          <!-- Inline Change Status Bar (overlays editor top when changes are applied) -->
+          <div class="change-status-bar" *ngIf="pendingChanges">
+            <div class="status-pill">
+              <i class="ri-sparkling-2-fill status-icon"></i>
+              <span class="status-text">
+                {{pendingChanges.changeCount}} change{{pendingChanges.changeCount !== 1 ? 's' : ''}} applied
+                <span class="status-type">· {{pendingChanges.type | titlecase}}</span>
+              </span>
+            </div>
+            <div class="status-actions">
+              <button *ngIf="!pendingChanges.isUndone" class="btn-status-undo" (click)="undoPendingChanges()">
+                <i class="ri-arrow-go-back-line"></i> Undo
+              </button>
+              <button *ngIf="pendingChanges.isUndone" class="btn-status-redo" (click)="redoPendingChanges()">
+                <i class="ri-arrow-go-forward-line"></i> Redo
+              </button>
+              <button class="btn-status-dismiss" (click)="dismissPendingChanges()" title="Dismiss">
+                <i class="ri-close-line"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Resize Handle (between editor and exhibit/chat) -->
+      <div class="resize-handle"
+           *ngIf="(exhibitPanelService.panelOpen$ | async) || (showChat$ | async)"
+           (mousedown)="onResizeStart($event)">
+        <div class="resize-grip"></div>
+      </div>
+
+      <!-- Exhibit Viewer Panel (right side, mutually exclusive with chat) -->
+      <div class="exhibit-viewer-panel" *ngIf="(exhibitPanelService.panelOpen$ | async) && !(showChat$ | async)"
+           [style.width.px]="exhibitPanelWidth">
+        <div class="exhibit-viewer-header">
+          <div class="exhibit-tabs">
+            <button *ngFor="let exhibit of (exhibitPanelService.exhibitList$ | async)"
+                    class="exhibit-tab"
+                    [class.active]="(exhibitPanelService.currentExhibit$ | async)?.id === exhibit.id"
+                    (click)="exhibitPanelService.openExhibit(exhibit)">
+              {{exhibit.label}}
             </button>
-            <button class="btn-icon" (click)="increaseTextSize()" title="Zoom in">
-              <i class="ri-zoom-in-line"></i>
+          </div>
+          <div class="exhibit-controls">
+            <span class="page-info" *ngIf="(exhibitPanelService.currentExhibit$ | async)?.pageCount">
+              Page {{exhibitPanelService.page$ | async}} of {{(exhibitPanelService.currentExhibit$ | async)?.pageCount}}
+            </span>
+            <button class="btn-icon-sm" (click)="exhibitPanelService.prevPage()" title="Previous page">
+              <i class="ri-arrow-left-s-line"></i>
             </button>
-            <button class="btn-icon" (click)="decreaseTextSize()" title="Zoom out">
-              <i class="ri-zoom-out-line"></i>
+            <button class="btn-icon-sm" (click)="exhibitPanelService.nextPage()" title="Next page">
+              <i class="ri-arrow-right-s-line"></i>
             </button>
-            <button class="btn-icon" (click)="toggleFullscreen()" [title]="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
-              <i [class]="isFullscreen ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line'"></i>
-            </button>
-            <button class="btn-icon" (click)="openDocumentPreviewModal()" title="Preview document">
-              <i class="ri-eye-line"></i>
-            </button>
-            <button class="btn-icon" *ngIf="!(showChat$ | async)" (click)="reopenChatPanel()" title="Open conversation">
-              <i class="ri-chat-3-line"></i>
+            <button class="btn-icon-sm" (click)="exhibitPanelService.closePanel()" title="Close exhibit">
+              <i class="ri-close-line"></i>
             </button>
           </div>
         </div>
-
-        <div class="document-preview-content">
-
-          <!-- Rich Text Editor (Quill) -->
-          <!-- showEditor flag toggled OFF→ON to force destruction and recreation -->
-          <quill-editor
-            *ngIf="showEditor"
-            #documentEditor
-            [modules]="quillModules"
-            [formats]="quillFormats"
-            [styles]="{
-              'min-height': '500px',
-              'height': '100%',
-              'font-family': 'Georgia, Times New Roman, serif',
-              'font-size': '16px',
-              'line-height': '1.8'
-            }"
-            (onEditorCreated)="onEditorCreated($event)"
-            (onSelectionChanged)="onTextSelectionChanged($event)"
-            placeholder="Your generated document will appear here...">
-          </quill-editor>
-        </div>
-
-        <!-- Drafting Tools Menu -->
-        <div class="drafting-tools-menu">
-          <button class="tool-btn" (click)="applyDraftingTool('simplify')" [disabled]="isPreviewingVersion" [title]="isPreviewingVersion ? 'Exit preview mode to use tools' : 'Simplify language'">
-            <i class="ri-subtract-line"></i>
-            Simplify
-          </button>
-          <button class="tool-btn" (click)="applyDraftingTool('condense')" [disabled]="isPreviewingVersion" [title]="isPreviewingVersion ? 'Exit preview mode to use tools' : 'Condense document'">
-            <i class="ri-file-reduce-line"></i>
-            Condense
-          </button>
-          <button class="tool-btn" (click)="applyDraftingTool('expand')" [disabled]="isPreviewingVersion" [title]="isPreviewingVersion ? 'Exit preview mode to use tools' : 'Expand with more detail'">
-            <i class="ri-file-add-line"></i>
-            Expand
-          </button>
-          <button class="tool-btn" (click)="applyDraftingTool('redraft')" [disabled]="isPreviewingVersion" [title]="isPreviewingVersion ? 'Exit preview mode to use tools' : 'Redraft entirely'">
-            <i class="ri-refresh-line"></i>
-            Redraft entirely
-          </button>
+        <div class="exhibit-viewer-content">
+          <iframe *ngIf="(exhibitPanelService.currentExhibit$ | async) as exhibit"
+                  [src]="sanitizeUrl(exhibit.fileUrl)"
+                  class="exhibit-pdf-frame"
+                  title="Exhibit viewer">
+          </iframe>
+          <div *ngIf="!(exhibitPanelService.currentExhibit$ | async)" class="exhibit-empty-state">
+            <i class="ri-file-pdf-line"></i>
+            <p>Select an exhibit to preview</p>
+          </div>
         </div>
       </div>
 
-      <!-- Chat Panel (40%) -->
-      <div class="chat-panel-side" *ngIf="showChat$ | async">
+      <!-- Chat Panel (right side — hidden in drafting mode, mutually exclusive with exhibit) -->
+      <div class="chat-panel-side" *ngIf="(showChat$ | async) && !(draftingMode$ | async) && !(exhibitPanelService.panelOpen$ | async)">
         <div class="chat-panel-header">
           <h4>Conversation</h4>
           <button class="btn-close-panel" (click)="closeChatPanel()">
@@ -2494,15 +2561,14 @@
         <div class="header-title-section">
           <h5>{{ activeDocumentTitle || 'Document Preview' }}.pdf</h5>
           <div class="header-subtitle">
-            <span class="meta-item">PDF Preview</span>
+            <span class="meta-item">Document Preview</span>
             <span class="meta-divider">•</span>
-            <span class="meta-item" *ngIf="!isLoadingPreview && previewPdfUrl">Ready to download</span>
-            <span class="meta-item" *ngIf="isLoadingPreview">Generating PDF...</span>
+            <span class="meta-item">{{ currentDocumentWordCount }} words, {{ currentDocumentPageCount }} pages</span>
           </div>
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn-action btn-download" (click)="downloadPreviewedPdf()" [disabled]="isLoadingPreview || !previewPdfUrl">
+        <button class="btn-action btn-download" (click)="downloadPreviewedPdf()" [disabled]="isLoadingPreview">
           <i class="ri-download-2-line"></i>
           <span>Download PDF</span>
         </button>
@@ -2516,35 +2582,10 @@
       </div>
     </div>
 
-    <!-- Modal Body - Actual PDF in iframe -->
+    <!-- Modal Body - HTML preview matching CKEditor rendering -->
     <div class="preview-modal-body">
-      <!-- Loading State -->
-      <div class="pdf-loading-state" *ngIf="isLoadingPreview">
-        <div class="loading-spinner">
-          <div class="spinner-border" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-        </div>
-        <p class="loading-text">Generating PDF...</p>
-        <p class="loading-subtext">Please wait</p>
-      </div>
-
-      <!-- PDF iframe -->
-      <iframe
-        *ngIf="sanitizedPreviewUrl && !isLoadingPreview"
-        [src]="sanitizedPreviewUrl"
-        class="pdf-preview-iframe"
-        frameborder="0">
-      </iframe>
-
-      <!-- Error/Empty State -->
-      <div class="pdf-empty-state" *ngIf="!sanitizedPreviewUrl && !isLoadingPreview">
-        <i class="ri-file-damage-line"></i>
-        <p>Failed to generate PDF preview</p>
-        <button class="btn btn-soft-primary" (click)="generatePdfForPreview()">
-          <i class="ri-refresh-line me-1"></i>
-          Try Again
-        </button>
+      <div class="html-preview-container">
+        <div class="html-preview-page" [innerHTML]="previewHtmlContent"></div>
       </div>
     </div>
   </div>

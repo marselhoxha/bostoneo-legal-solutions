@@ -77,7 +77,8 @@ File: Main Css File
 @import "../../plugins/filepond";
 @import "../../plugins/form-input-spin";
 @import "../../plugins/ckeditor";
-@import "../../plugins/quilljs";
+// Quill removed — replaced by CKEditor 5
+// @import "../../plugins/quilljs";
 @import "../../plugins/gridjs";
 @import "../../plugins/listjs";
 @import "../../plugins/apexcharts";

@@ -14,11 +14,41 @@ import { DocumentCollectionService, DocumentCollection } from '../../../services
 import { DocumentTypeConfig } from '../../../models/document-type-config';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UserService } from '../../../../../service/user.service';
 import { environment } from '@environments/environment';
-import { QuillModule } from 'ngx-quill';
-import Quill from 'quill';
+import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
+import {
+  ClassicEditor,
+  Essentials,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Heading,
+  Paragraph,
+  BlockQuote,
+  HorizontalLine,
+  Link,
+  List,
+  Table,
+  TableToolbar,
+  TableProperties,
+  TableCellProperties,
+  Alignment,
+  Indent,
+  IndentBlock,
+  Font,
+  FindAndReplace,
+  Highlight,
+  Subscript,
+  Superscript,
+  GeneralHtmlSupport,
+  PasteFromOffice,
+  RemoveFormat,
+  Undo,
+  type EditorConfig
+} from 'ckeditor5';
 import { NgbDropdown, NgbDropdownToggle, NgbDropdownMenu, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
 // NEW: Refactored child components
@@ -36,12 +66,14 @@ import { AiDisclaimerComponent } from '../../../../../shared/components/ai-discl
 
 // NEW: Refactored services
 import { NotificationService } from '../../../services/notification.service';
-import { QuillEditorService } from '../../../services/quill-editor.service';
+import { CKEditorService } from '../../../services/ckeditor.service';
+import { QuillHtmlMigrator } from '../../../utils/quill-html-migrator';
 import { AiWorkspaceStateService, AnalyzedDocument } from '../../../services/ai-workspace-state.service';
 import { ConversationOrchestrationService } from '../../../services/conversation-orchestration.service';
 import { DocumentTransformationService } from '../../../services/document-transformation.service';
 import { CaseWorkflowService, WorkflowTemplate, WorkflowRecommendation, WorkflowUrgency } from '../../../services/case-workflow.service';
 import { BackgroundTaskService, BackgroundTask } from '../../../services/background-task.service';
+import { ExhibitPanelService, Exhibit } from '../../../services/exhibit-panel.service';
 
 // NEW: Models and enums
 import { Conversation, Message } from '../../../models/conversation.model';
@@ -60,7 +92,7 @@ import { DocumentState } from '../../../models/document.model';
     ReactiveFormsModule,
     MarkdownToHtmlPipe,
     ApexChartDirective,
-    QuillModule,
+    CKEditorModule,
     NgbDropdown,
     NgbDropdownToggle,
     NgbDropdownMenu,
@@ -436,6 +468,31 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   currentDate = new Date();
 
+  // Computed last saved time for compact header
+  get lastSavedTime(): string {
+    const lastSaved = this.documentMetadata?.lastSaved;
+    if (!lastSaved) return '';
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - new Date(lastSaved).getTime()) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return new Date(lastSaved).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  // Active TOC item tracking
+  activeTocId: string | null = null;
+
+  // Exhibit viewer panel width (resizable)
+  exhibitPanelWidth = 400;
+  private isResizing = false;
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
+
+  // Cached sanitized URL to prevent iframe reload on every change detection
+  private cachedExhibitUrl = '';
+  cachedSafeUrl: SafeResourceUrl = this.sanitizer.bypassSecurityTrustResourceUrl('about:blank');
+
   // Recent drafts
   recentDrafts: any[] = [];
   loadingDrafts = false;
@@ -526,46 +583,121 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   documentUrl: string = '';
   isFetchingUrl: boolean = false;
 
-  // Quill Editor instance and config
+  // CKEditor 5 instance and config
   @ViewChild('documentEditor') documentEditor?: any;
-  quillEditorInstance: any; // Direct reference to Quill instance
+  editorInstance: ClassicEditor | null = null; // Direct reference to CKEditor instance
+  documentEditorClass = ClassicEditor;
+
+  editorConfig: EditorConfig = {
+    licenseKey: 'GPL',
+    plugins: [
+      Essentials, Bold, Italic, Underline, Strikethrough, Subscript, Superscript,
+      Heading, Paragraph, BlockQuote, HorizontalLine, Link, List, Table,
+      TableToolbar, TableProperties, TableCellProperties, Alignment, Indent,
+      IndentBlock, Font, FindAndReplace, Highlight, GeneralHtmlSupport,
+      PasteFromOffice, RemoveFormat, Undo
+    ],
+    toolbar: {
+      items: [
+        'undo', 'redo', '|',
+        'heading', 'fontSize', '|',
+        'bold', 'italic', 'underline', 'strikethrough', 'subscript', 'superscript', '|',
+        'fontColor', 'fontBackgroundColor', 'highlight', '|',
+        'link', 'blockQuote', 'horizontalLine', '|',
+        'alignment', '|',
+        'bulletedList', 'numberedList', 'outdent', 'indent', '|',
+        'insertTable', '|',
+        'findAndReplace', 'removeFormat'
+      ],
+      shouldNotGroupWhenFull: false
+    },
+    heading: {
+      options: [
+        { model: 'paragraph' as const, title: 'Paragraph', class: 'ck-heading_paragraph' },
+        { model: 'heading1' as const, view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+        { model: 'heading2' as const, view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+        { model: 'heading3' as const, view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' },
+        { model: 'heading4' as const, view: 'h4', title: 'Heading 4', class: 'ck-heading_heading4' }
+      ]
+    },
+    fontSize: {
+      options: [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36],
+      supportAllValues: true
+    },
+    table: {
+      contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties']
+    },
+    link: {
+      defaultProtocol: 'https://',
+      decorators: {
+        openInNewTab: {
+          mode: 'manual' as const,
+          label: 'Open in new tab',
+          defaultValue: true,
+          attributes: {
+            target: '_blank',
+            rel: 'noopener noreferrer'
+          }
+        }
+      }
+    },
+    highlight: {
+      options: [
+        { model: 'greenMarker' as const, class: 'marker-green', title: 'Green marker', color: '#d4edda', type: 'marker' as const },
+        { model: 'yellowMarker' as const, class: 'marker-yellow', title: 'Yellow marker', color: '#fff3cd', type: 'marker' as const }
+      ]
+    },
+    htmlSupport: {
+      allow: [
+        { name: 'span', classes: true, styles: true, attributes: true },
+        { name: 'a', classes: true, attributes: true, styles: true },
+        { name: /^(div|section|article)$/, classes: true, styles: true, attributes: true },
+        { name: /^(table|thead|tbody|tr|th|td)$/, classes: true, styles: true, attributes: true },
+        { name: /^(h[1-6]|p|blockquote|pre|ul|ol|li)$/, classes: true, styles: true, attributes: true },
+        { name: 'figure', classes: true, styles: true, attributes: true },
+        { name: 'mark', classes: true, styles: true, attributes: true }
+      ]
+    },
+    placeholder: 'Your generated document will appear here...'
+  };
 
   // Force editor recreation when switching documents by toggling this flag
   // Toggling OFF→ON forces Angular to destroy and recreate the component
   // MUST BE PUBLIC for template access
   showEditor = true;
 
-  quillModules = {
-    toolbar: [
-      [{ 'font': ['sans-serif', 'serif', 'monospace'] }],
-      [{ 'size': ['small', false, 'large', 'huge'] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['blockquote', 'code-block'],
-      [{ 'align': [] }],
-      [{ 'indent': '-1'}, { 'indent': '+1' }],
-      ['link'],
-      [{ 'color': [] }, { 'background': [] }],
-      ['clean']
-    ]
-  };
-
-  quillFormats = [
-    'font', 'size',
-    'bold', 'italic', 'underline', 'strike',
-    'header',
-    'list',
-    'align', 'indent',
-    'link',
-    'blockquote',
-    'code-block',
-    'color', 'background'
-  ];
-
   // Text selection tracking
   selectedText: string = '';
   selectionRange: { index: number; length: number } | null = null;
+
+  // Multi-state floating inline toolbar
+  floatingToolbarState: 'idle' | 'quick_actions' | 'prompt_editing' | 'loading' | 'preview' = 'idle';
+  floatingToolbarPosition: { top: number; left: number } | null = null;
+  floatingPromptText = '';
+  aiPreviewResponse = '';
+  aiPreviewToolType = '';   // 'polish' | 'condense' | 'advocate' | 'elaborate' | 'custom'
+
+  /** Formatted preview: converts markdown tables to HTML, keeps text as escaped paragraphs */
+  get aiPreviewHtml(): string {
+    if (!this.aiPreviewResponse) return '';
+    const blocks = this.aiPreviewResponse.split(/\r?\n\r?\n+/).filter((t: string) => t.trim());
+    const escHtml = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return blocks.map(block => {
+      if (this.isMarkdownTable(block)) {
+        // Strip <figure> wrapper — Angular sanitizer may remove it; only need <table> for preview
+        return this.markdownTableToHtml(block)
+          .replace(/<figure[^>]*>/, '').replace(/<\/figure>/, '');
+      }
+      return `<p>${escHtml(block).replace(/\n/g, '<br>')}</p>`;
+    }).join('');
+  }
+  lastPromptText = '';       // For "Refine Prompt" — remembers last prompt
+  private documentMousedownHandler: ((e: MouseEvent) => void) | null = null;
+  private _lastMousedownInsideEditor = false;
+  private _ignoreSelectionChanges = 0; // Counter: skip N change:range events when we deliberately modify selection
+  private _cachedSelectionRect: DOMRect | null = null; // Cached for repositioning in preview state
+  private originalSelectionBlocks: Array<{ type: string }> = [];
 
   // Pending transformation - stored in message with unique ID
   private transformationMessageIdCounter = 0;
@@ -583,10 +715,24 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // UI Controls
   editorTextSize: number = 14; // Default font size in px
   isFullscreen = false;
+  isSaving = false;
+
+  // Inline change review state
+  pendingChanges: {
+    originalContent: string;
+    transformedContent: string;  // Store transformed HTML for redo
+    changeCount: number;
+    type: string; // 'simplify', 'condense', 'expand', 'redraft', 'custom'
+    response: any;
+    isUndone: boolean;           // Toggled by undo/redo
+  } | null = null;
+  private pendingChangesAutoTimer: any = null;
+  private _applyingPendingChange = false; // Flag to prevent change:data listener from firing during undo/redo
   showDocumentPreviewModal = false; // PDF preview modal state
   previewPdfUrl: string | null = null; // Blob URL for PDF preview
   sanitizedPreviewUrl: SafeResourceUrl | null = null; // Sanitized URL for iframe binding
   isLoadingPreview = false; // Loading state for PDF generation
+  previewHtmlContent: SafeHtml | null = null; // HTML content for preview modal
 
   // Mobile sidebar state (migrated to observable from StateService)
   sidebarOpen$ = this.stateService.sidebarOpen$;
@@ -977,14 +1123,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private collectionService: DocumentCollectionService,
     // NEW: Refactored services
     private notificationService: NotificationService,
-    private quillEditorService: QuillEditorService,
+    private ckEditorService: CKEditorService,
     private stateService: AiWorkspaceStateService,
     private conversationOrchestration: ConversationOrchestrationService,
     private transformationService: DocumentTransformationService,
     private route: ActivatedRoute,
     public caseWorkflowService: CaseWorkflowService,
     private backgroundTaskService: BackgroundTaskService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    public exhibitPanelService: ExhibitPanelService
   ) {}
 
   /**
@@ -1033,6 +1180,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         this.questionConversations = conversations.filter(c => c.type === ConversationType.Question);
         this.draftConversations = conversations.filter(c => c.type === ConversationType.Draft);
         this.cdr.detectChanges();
+      });
+
+    // ===== FULL-PAGE DRAFTING MODE — BODY CLASS TOGGLE =====
+    // When drafting mode activates, add class to body to hide the app shell (header, nav, footer)
+    this.draftingMode$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(isDrafting => {
+        if (isDrafting) {
+          document.body.classList.add('ai-drafting-fullpage');
+        } else {
+          document.body.classList.remove('ai-drafting-fullpage');
+        }
       });
 
     // ===== BACKGROUND TASK SERVICE SETUP =====
@@ -2602,6 +2761,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Remove full-page drafting class from body (safety net)
+    document.body.classList.remove('ai-drafting-fullpage');
+
     // Mark that user left AI Workspace (re-enables notifications)
     this.backgroundTaskService.setIsOnAiWorkspace(false);
 
@@ -2610,6 +2772,21 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Close draft streaming SSE if open
     this.closeDraftStream();
+
+    // Reset exhibit panel state
+    this.exhibitPanelService.reset();
+
+    // Clear auto-dismiss timer for pending changes
+    if (this.pendingChangesAutoTimer) {
+      clearTimeout(this.pendingChangesAutoTimer);
+      this.pendingChangesAutoTimer = null;
+    }
+
+    // Remove floating toolbar document listener
+    if (this.documentMousedownHandler) {
+      document.removeEventListener('mousedown', this.documentMousedownHandler);
+      this.documentMousedownHandler = null;
+    }
 
     this.destroy$.next();
     this.destroy$.complete();
@@ -3021,11 +3198,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               this.cdr.detectChanges();
 
               setTimeout(() => {
-                this.quillEditorInstance = null;
+                this.editorInstance = null;
 
                 // CRITICAL: Set drafting mode FIRST so container becomes visible
                 this.stateService.setDraftingMode(true);
-                this.stateService.setShowChat(true);
+                this.stateService.setShowChat(false); // Chat hidden by default in full-page drafting
                 this.stateService.setShowBottomSearchBar(false);
                 this.cdr.detectChanges(); // Render container first
 
@@ -3103,11 +3280,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   // Recreate editor - content will load automatically in onEditorCreated()
                   setTimeout(() => {
                     // Clear editor instance BEFORE recreating component
-                    this.quillEditorInstance = null;
+                    this.editorInstance = null;
 
                     // CRITICAL: Set drafting mode FIRST so container becomes visible
                     this.stateService.setDraftingMode(true);
-                    this.stateService.setShowChat(true);
+                    this.stateService.setShowChat(false); // Chat hidden by default in full-page drafting
                     this.stateService.setShowBottomSearchBar(false);
                     this.cdr.detectChanges(); // Render container first
 
@@ -3289,6 +3466,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.activeDocumentTitle = 'Generated Document';
     this.currentDocumentId = null;
     this.documentMetadata = {};
+
+    // Reset exhibit panel
+    this.exhibitPanelService.reset();
   }
 
   // ========================================
@@ -3373,13 +3553,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get raw HTML content from Quill editor
+   * Get raw HTML content from CKEditor
    * Returns raw HTML for proper conversion by documentGenerationService.convertHtmlToMarkdown()
    */
   private getEditorContent(): string | null {
-    if (this.quillEditorInstance) {
-      // Return raw HTML from Quill - conversion will be done by caller
-      return this.quillEditorInstance.root.innerHTML;
+    if (this.editorInstance) {
+      return this.editorInstance.getData();
     }
     return this.pendingDocumentContent || null;
   }
@@ -5910,7 +6089,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   private proceedWithUploadAnalysis(title: string, userMessage: string): void {
     // Create conversation in backend first
-    this.legalResearchService.createGeneralConversation(title, this.selectedResearchMode, 'ANALYZE_DOCUMENT')
+    this.legalResearchService.createGeneralConversation(title, 'ANALYZE_DOCUMENT')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (session) => {
@@ -6124,7 +6303,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           const eventSource = this.documentGenerationService.openDraftStream(backendConversationId);
           this.draftEventSource = eventSource;
 
-          // Handle token events — count words and update workflow step (no Quill insertion)
+          // Handle token events — count words and update workflow step
           eventSource.addEventListener('token', (event: MessageEvent) => {
             try {
               const data = JSON.parse(event.data);
@@ -6212,12 +6391,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
               this.stateService.setIsGenerating(false);
 
-              // Store pending content — will be loaded into Quill in onEditorCreated()
+              // Store pending content — will be loaded into CKEditor in onEditorCreated()
               this.pendingDraftContent = data.content;
 
               // NOW enter drafting mode — editor will render the final document
-              this.quillEditorInstance = null;
+              this.editorInstance = null;
               this.stateService.setDraftingMode(true);
+              this.stateService.setShowChat(false); // Chat hidden in drafting mode
               this.showEditor = true;
               this.setModeForDrafting();
               this.cdr.detectChanges();
@@ -6350,7 +6530,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     const researchMode = this.selectedResearchMode; // Use selected mode from UI
 
     // Create conversation
-    this.legalResearchService.createGeneralConversation(title, researchMode, taskType)
+    this.legalResearchService.createGeneralConversation(title, taskType)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (session) => {
@@ -6393,7 +6573,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
             // Subscribe WITHOUT takeUntil(destroy$) so it continues in background
             // Only cancel on explicit user cancellation
-            const subscription = this.legalResearchService.sendMessageToConversation(requestBackendId, userPrompt, researchMode)
+            const subscription = this.legalResearchService.sendMessageToConversation(requestBackendId, userPrompt)
               .pipe(takeUntil(this.cancelGeneration$))
               .subscribe({
                 next: (message) => {
@@ -6502,50 +6682,802 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     return plainText.split(/\s+/).filter(word => word.length > 0).length;
   }
 
-  // Apply drafting tool
-  // Apply drafting tool (simplify, condense, expand, redraft) - REAL BACKEND CALL
-  // Smart button: applies to selection if text is selected, otherwise to full document
+  // Tool button labels map to backend transformation types
+  private readonly toolPromptMap: Record<string, { type: string; prompt?: string }> = {
+    polish:    { type: 'SIMPLIFY' },
+    condense:  { type: 'CONDENSE' },
+    advocate:  { type: 'CUSTOM', prompt: 'Rewrite this text to more strongly advocate for the client\'s legal position. Make the arguments more persuasive, assertive, and favorable while maintaining accuracy and professionalism.' },
+    elaborate: { type: 'EXPAND' },
+  };
+
+  // ── Floating toolbar: state transition methods ──
+
+  enterPromptEditing(): void {
+    // Clear any stale prompt text from previous interactions
+    this.floatingPromptText = '';
+    // Apply yellowMarker to persist highlight when focus moves to input
+    this.highlightSelection();
+    this.floatingToolbarState = 'prompt_editing';
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      const input = document.querySelector('.floating-prompt-input') as HTMLInputElement;
+      input?.focus();
+    }, 0);
+  }
+
+  cancelPromptEditing(): void {
+    this.floatingPromptText = '';
+    this.floatingToolbarState = 'quick_actions';
+    // Restore native selection — remove yellowMarker, refocus editor
+    this.restoreNativeSelection();
+    this.cdr.detectChanges();
+  }
+
+  cancelFloatingGeneration(): void {
+    this.cancelGeneration$.next();
+    this.floatingToolbarState = 'quick_actions';
+    // Restore native selection
+    this.restoreNativeSelection();
+    this.cdr.detectChanges();
+  }
+
+  discardPreview(): void {
+    this.aiPreviewResponse = '';
+    this.aiPreviewToolType = '';
+    this.floatingToolbarState = 'quick_actions';
+    // Restore native selection
+    this.restoreNativeSelection();
+    this.cdr.detectChanges();
+  }
+
+  refinePrompt(): void {
+    this.floatingPromptText = this.lastPromptText;
+    this.floatingToolbarState = 'prompt_editing';
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      const input = document.querySelector('.floating-prompt-input') as HTMLInputElement;
+      input?.focus();
+    }, 0);
+  }
+
+  // ── Floating toolbar: submit methods ──
+
+  submitFloatingPrompt(): void {
+    if (this.floatingToolbarState === 'loading') return; // Prevent double-submit
+    const prompt = this.floatingPromptText?.trim();
+    if (!prompt || !this.selectedText || !this.selectionRange || !this.editorInstance) return;
+
+    // Guard: reject prompts asking for fabricated/fake/sample data
+    if (this.isFabricationRequest(prompt)) {
+      // Keep toolbar in 'loading' state to prevent selection-change listeners from
+      // clearing it before the SweetAlert async import resolves
+      this.floatingToolbarState = 'loading';
+      this.cdr.detectChanges();
+      this.showAiNoteModal(
+        'This document contains placeholder fields that need to be filled with **real case data**.\n\n' +
+        'The AI cannot generate fake, sample, or made-up data for legal documents — this would compromise document integrity.\n\n' +
+        'To fill in the placeholders:\n' +
+        '- Edit the fields directly with actual case information\n' +
+        '- Or link this document to a case with the relevant data and ask the AI to "use case data"'
+      );
+      return;
+    }
+
+    this.lastPromptText = prompt;
+    this.floatingToolbarState = 'loading';
+    this.cdr.detectChanges();
+
+    this.bookmarkSelectionForTransform();
+
+    const editor = this.editorInstance;
+    const fullPlainText = this.ckEditorService.getPlainText(editor);
+
+    const request: any = {
+      documentId: this.currentDocumentId as number,
+      transformationType: 'CUSTOM',
+      transformationScope: 'SELECTION' as const,
+      fullDocumentContent: fullPlainText,
+      selectedText: this.selectedText,
+      selectionStartIndex: this.selectionRange.index,
+      selectionEndIndex: this.selectionRange.index + this.selectionRange.length,
+      jurisdiction: this.selectedJurisdiction,
+      documentType: this.selectedDocTypePill,
+      customPrompt: prompt
+    };
+
+    this.documentGenerationService.transformDocument(request, this.currentUser?.id)
+      .pipe(
+        takeUntil(merge(this.destroy$, this.cancelGeneration$)),
+        finalize(() => this.cdr.detectChanges())
+      )
+      .subscribe({
+        next: (response) => {
+          let rawResponse = response.transformedSelection || response.transformedContent || '';
+          // Strip AI commentary — use only the document content
+          const extracted = this.extractAiNoteFromResponse(rawResponse);
+
+          // If AI returned only an explanation (no usable content), show SweetAlert and reset
+          // Also catches: AI returned unchanged content + explanation note
+          const hasNote = !!extracted.aiNote;
+          const noContent = !extracted.documentContent;
+          const contentUnchanged = extracted.documentContent && this.isContentEssentiallyUnchanged(extracted.documentContent, this.selectedText);
+
+          if (hasNote && (noContent || contentUnchanged)) {
+            const noteText = extracted.aiNote || rawResponse;
+            // Keep toolbar in 'loading' to prevent selection-change listeners from clearing it
+            // before the async SweetAlert import resolves. Cleanup happens in showAiNoteModal's .then()
+            this.showAiNoteModal(noteText);
+            return;
+          }
+
+          this.aiPreviewResponse = extracted.documentContent || rawResponse;
+          this.aiPreviewToolType = 'custom';
+          this.floatingToolbarState = this.aiPreviewResponse ? 'preview' : 'quick_actions';
+          if (!this.aiPreviewResponse) {
+            this.notificationService.info('No Changes', 'AI found no changes needed.', 2000);
+          }
+          this.cdr.detectChanges();
+          if (this.floatingToolbarState === 'preview') {
+            setTimeout(() => this.repositionForPreview(), 0);
+          }
+        },
+        error: (err) => {
+          console.error('Floating prompt error:', err);
+          this.notificationService.error('Error', 'Could not generate revision. Please try again.');
+          this.floatingToolbarState = 'quick_actions';
+          this.cleanupTransformMarker();
+          // Restore native selection — remove yellowMarker, refocus editor
+          this.restoreNativeSelection();
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  triggerToolTransform(tool: string): void {
+    if (this.floatingToolbarState === 'loading') return; // Prevent double-click
+    if (!this.selectedText || !this.selectionRange || !this.editorInstance) return;
+
+    // Apply yellowMarker to persist highlight during AI processing
+    this.highlightSelection();
+    this.aiPreviewToolType = tool;
+    this.lastPromptText = '';
+    this.floatingToolbarState = 'loading';
+    this.cdr.detectChanges();
+
+    this.bookmarkSelectionForTransform();
+
+    const editor = this.editorInstance;
+    const fullPlainText = this.ckEditorService.getPlainText(editor);
+    const toolConfig = this.toolPromptMap[tool] || { type: tool.toUpperCase() };
+
+    const request: any = {
+      documentId: this.currentDocumentId as number,
+      transformationType: toolConfig.type,
+      transformationScope: 'SELECTION' as const,
+      fullDocumentContent: fullPlainText,
+      selectedText: this.selectedText,
+      selectionStartIndex: this.selectionRange.index,
+      selectionEndIndex: this.selectionRange.index + this.selectionRange.length,
+      jurisdiction: this.selectedJurisdiction,
+      documentType: this.selectedDocTypePill,
+    };
+    if (toolConfig.prompt) request.customPrompt = toolConfig.prompt;
+
+    this.documentGenerationService.transformDocument(request, this.currentUser?.id)
+      .pipe(
+        takeUntil(merge(this.destroy$, this.cancelGeneration$)),
+        finalize(() => this.cdr.detectChanges())
+      )
+      .subscribe({
+        next: (response) => {
+          let rawResponse = response.transformedSelection || response.transformedContent || '';
+          // Strip AI commentary — use only the document content
+          const extracted = this.extractAiNoteFromResponse(rawResponse);
+
+          // If AI returned only an explanation (no usable content), show SweetAlert and reset
+          const hasNote = !!extracted.aiNote;
+          const noContent = !extracted.documentContent;
+          const contentUnchanged = extracted.documentContent && this.isContentEssentiallyUnchanged(extracted.documentContent, this.selectedText);
+
+          if (hasNote && (noContent || contentUnchanged)) {
+            const noteText = extracted.aiNote || rawResponse;
+            // Keep toolbar in 'loading' to prevent selection-change listeners from clearing it
+            // before the async SweetAlert import resolves. Cleanup happens in showAiNoteModal's .then()
+            this.showAiNoteModal(noteText);
+            return;
+          }
+
+          this.aiPreviewResponse = extracted.documentContent || rawResponse;
+          this.floatingToolbarState = this.aiPreviewResponse ? 'preview' : 'quick_actions';
+          if (!this.aiPreviewResponse) {
+            this.notificationService.info('No Changes', 'AI found no changes needed.', 2000);
+          }
+          this.cdr.detectChanges();
+          if (this.floatingToolbarState === 'preview') {
+            setTimeout(() => this.repositionForPreview(), 0);
+          }
+        },
+        error: (err) => {
+          console.error('Tool transform error:', err);
+          this.notificationService.error('Error', 'Transform failed. Please try again.');
+          this.floatingToolbarState = 'quick_actions';
+          this.cleanupTransformMarker();
+          // Restore native selection — remove yellowMarker, refocus editor
+          this.restoreNativeSelection();
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  // ── Floating toolbar: commit methods ──
+
+  commitReplace(): void {
+    if (!this.editorInstance || !this.aiPreviewResponse) return;
+    const editor = this.editorInstance;
+    const originalHtml = editor.getData();
+
+    const marker = editor.model.markers.get('pending-selection-transform');
+    if (!marker) {
+      this.notificationService.error('Error', 'Could not locate the selected text.');
+      this.resetFloatingToolbar();
+      return;
+    }
+
+    try {
+      // 2. Build HTML from AI response, mapping blocks to original block types (heading/paragraph)
+      //    Also detect markdown tables and convert them to proper <table> HTML
+      const responseBlocks = this.aiPreviewResponse.split(/\r?\n\r?\n+/).filter((t: string) => t.trim());
+      const htmlParts = responseBlocks.map((text: string, i: number) => {
+        if (this.isMarkdownTable(text)) {
+          return this.markdownTableToHtml(text);
+        }
+        const blockType = this.originalSelectionBlocks[i]?.type || 'paragraph';
+        const tag = this.blockTypeToHtmlTag(blockType);
+        const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const withBreaks = escaped.replace(/\n/g, '<br>');
+        return `<${tag}>${withBreaks}</${tag}>`;
+      });
+      const html = htmlParts.join('');
+
+      // Check if we're replacing inside a table and the AI response contains a table
+      const hasTableInResponse = responseBlocks.some((text: string) => this.isMarkdownTable(text));
+      const isInsideTable = this.originalSelectionBlocks.some(b => b.type === 'table');
+
+      if (isInsideTable && hasTableInResponse) {
+        // Table-to-table replacement: remove the entire parent table, then insert the new content.
+        // Without this, CKEditor would try to nest a new table inside the old table's cells.
+        editor.model.change((writer: any) => {
+          const markerRange = marker.getRange();
+          let tableElement = markerRange.start.parent;
+          while (tableElement && tableElement.name !== 'table' && !tableElement.is?.('rootElement')) {
+            tableElement = tableElement.parent;
+          }
+          writer.removeMarker('pending-selection-transform');
+          if (tableElement && tableElement.name === 'table') {
+            writer.setSelection(writer.createPositionBefore(tableElement));
+            writer.remove(tableElement);
+          } else {
+            // Fallback: select the marker range as usual
+            writer.removeAttribute('highlight', markerRange);
+            writer.setSelection(markerRange);
+          }
+        });
+      } else {
+        // 1. Non-table path: clear highlight, select the range (to be replaced), remove marker
+        editor.model.change((writer: any) => {
+          const range = marker.getRange();
+          writer.removeAttribute('highlight', range);
+          writer.setSelection(range);
+          writer.removeMarker('pending-selection-transform');
+        });
+      }
+
+      // 3. Convert HTML to CKEditor model fragment and insert (replaces current selection)
+      const viewFragment = editor.data.processor.toView(html);
+      const modelFragment = editor.data.toModel(viewFragment);
+      editor.model.insertContent(modelFragment);
+
+      // 4. Apply green highlight to the inserted blocks (skip tables — highlight doesn't work on table internals)
+      try {
+        editor.model.change((writer: any) => {
+          const root = editor.model.document.getRoot();
+          const endPos = editor.model.document.selection.getFirstPosition();
+          if (!root || !endPos) return;
+
+          let endBlock = endPos.parent;
+          while (endBlock && endBlock.parent !== root) {
+            endBlock = endBlock.parent;
+          }
+          if (!endBlock) return;
+
+          const numBlocks = responseBlocks.length;
+          let block = endBlock;
+          for (let i = 0; i < numBlocks && block; i++) {
+            // Skip table elements — greenMarker doesn't apply well to table internals
+            if (block.name !== 'table') {
+              try {
+                const range = writer.createRangeIn(block);
+                writer.setAttribute('highlight', 'greenMarker', range);
+              } catch (_e) { /* skip */ }
+            }
+            if (i < numBlocks - 1) {
+              block = block.previousSibling as any;
+            }
+          }
+        });
+      } catch (_e) { /* highlight is cosmetic — don't let it block the commit */ }
+
+      // Clear any stale DOM selection that might overlap with greenMarker
+      window.getSelection()?.removeAllRanges();
+    } catch (err) {
+      console.error('commitReplace error:', err);
+    }
+
+    this.activeDocumentContent = editor.getData();
+    const plainText = this.ckEditorService.getPlainText(editor);
+    this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+    this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+
+    // Rebuild TOC — headings may have changed after replacement
+    this.exhibitPanelService.buildTocFromHtml(this.activeDocumentContent);
+    this.setDefaultActiveToc();
+
+    this.pendingChanges = {
+      originalContent: originalHtml,
+      transformedContent: editor.getData(),
+      changeCount: 1,
+      type: this.aiPreviewToolType,
+      response: { transformedSelection: this.aiPreviewResponse },
+      isUndone: false
+    };
+    this.startPendingChangesAutoTimer();
+
+    // Remove cached-selection marker BEFORE reset — otherwise removeSelectionHighlight()
+    // would strip the greenMarker we just applied (it operates on the cached-selection range)
+    if (editor.model.markers.has('cached-selection')) {
+      editor.model.change((w: any) => w.removeMarker('cached-selection'));
+    }
+    this.resetFloatingToolbar();
+  }
+
+  private blockTypeToHtmlTag(blockType: string): string {
+    switch (blockType) {
+      case 'heading1': return 'h1';
+      case 'heading2': return 'h2';
+      case 'heading3': return 'h3';
+      case 'heading4': return 'h4';
+      case 'heading5': return 'h5';
+      case 'heading6': return 'h6';
+      default: return 'p';
+    }
+  }
+
+  /**
+   * Detect if a text block is a markdown table (has | separators and a --- separator row).
+   */
+  /**
+   * Extract text from a CKEditor table model element as a markdown table string.
+   * This gives the AI proper structure to understand and modify table content.
+   */
+  private extractTableAsMarkdown(tableElement: any): string {
+    const rows: string[][] = [];
+    for (const row of tableElement.getChildren()) {
+      if (!row.is?.('element') || row.name !== 'tableRow') continue;
+      const cells: string[] = [];
+      for (const cell of row.getChildren()) {
+        if (!cell.is?.('element') || cell.name !== 'tableCell') continue;
+        // Extract text from all paragraphs within the cell
+        let cellText = '';
+        for (const child of cell.getChildren()) {
+          if (child.is?.('element') && child.name === 'paragraph') {
+            for (const textNode of child.getChildren()) {
+              if (textNode.is?.('$text') || textNode.is?.('$textProxy')) {
+                cellText += textNode.data;
+              }
+            }
+          }
+        }
+        cells.push(cellText.trim());
+      }
+      // Skip rows that look like markdown separators (leftover from previous insertions)
+      const isSeparatorRow = cells.length > 0 && cells.every(c => /^:?-{2,}:?$/.test(c.trim()));
+      if (!isSeparatorRow) {
+        rows.push(cells);
+      }
+    }
+    if (rows.length === 0) return '';
+
+    // Build markdown table: first row as header, then separator, then data
+    const header = rows[0];
+    const lines: string[] = [];
+    lines.push('| ' + header.join(' | ') + ' |');
+    lines.push('| ' + header.map(() => '---').join(' | ') + ' |');
+    for (let i = 1; i < rows.length; i++) {
+      lines.push('| ' + rows[i].join(' | ') + ' |');
+    }
+    return lines.join('\n');
+  }
+
+  private isMarkdownTable(text: string): boolean {
+    const lines = text.trim().split('\n');
+    if (lines.length < 3) return false;
+    return lines.some(line =>
+      /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(line.trim())
+    );
+  }
+
+  /**
+   * Convert a markdown table to CKEditor-compatible HTML table.
+   */
+  private markdownTableToHtml(text: string): string {
+    const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
+    const escHtml = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Find separator row (the --- | --- line)
+    const sepIdx = lines.findIndex(line =>
+      /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(line)
+    );
+    if (sepIdx < 1) return `<p>${escHtml(text)}</p>`;
+
+    const parseCells = (line: string): string[] => {
+      let trimmed = line.trim();
+      if (trimmed.startsWith('|')) trimmed = trimmed.substring(1);
+      if (trimmed.endsWith('|')) trimmed = trimmed.substring(0, trimmed.length - 1);
+      return trimmed.split('|').map(c => c.trim());
+    };
+
+    const headers = parseCells(lines[sepIdx - 1]);
+    const dataLines = lines.slice(sepIdx + 1);
+
+    let html = '<figure class="table"><table><thead><tr>';
+    for (const h of headers) {
+      html += `<th>${escHtml(h)}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    for (const dataLine of dataLines) {
+      if (!dataLine.trim()) continue;
+      const cells = parseCells(dataLine);
+      html += '<tr>';
+      for (let i = 0; i < headers.length; i++) {
+        html += `<td>${escHtml(cells[i] || '')}</td>`;
+      }
+      html += '</tr>';
+    }
+
+    html += '</tbody></table></figure>';
+    return html;
+  }
+
+  commitInsertBelow(): void {
+    if (!this.editorInstance || !this.aiPreviewResponse) return;
+    const editor = this.editorInstance;
+    const originalHtml = editor.getData();
+
+    const marker = editor.model.markers.get('pending-selection-transform');
+    if (!marker) {
+      this.notificationService.error('Error', 'Could not locate the insertion point.');
+      this.resetFloatingToolbar();
+      return;
+    }
+
+    // 1. Remove yellowMarker, create new paragraph(s) after the selection end block,
+    //    insert text, and apply greenMarker — all in one model.change() block
+    const responseBlocks = this.aiPreviewResponse.split(/\r?\n\r?\n+/).filter((t: string) => t.trim());
+
+    editor.model.change((writer: any) => {
+      const markerRange = marker.getRange();
+      // Only remove yellowMarker — preserve any greenMarker from previous operations
+      const items = Array.from(markerRange.getItems());
+      for (const item of items) {
+        if ((item.is('$text') || item.is('$textProxy')) && item.getAttribute('highlight') === 'yellowMarker') {
+          writer.removeAttribute('highlight', writer.createRangeOn(item));
+        }
+      }
+      writer.removeMarker('pending-selection-transform');
+
+      // Use the block containing the selection end as the anchor
+      // For table selections, walk up to the table element so we insert after the table
+      let insertAfterBlock = markerRange.end.parent;
+      const root = editor.model.document.getRoot();
+      while (insertAfterBlock && insertAfterBlock.parent && insertAfterBlock.parent !== root) {
+        insertAfterBlock = insertAfterBlock.parent;
+      }
+      // Safety: if walk ended at root or null, use last child of document
+      if (!insertAfterBlock || insertAfterBlock === root || !insertAfterBlock.parent) {
+        insertAfterBlock = root.getChild(root.childCount - 1) as any;
+      }
+
+      for (const blockText of responseBlocks) {
+        if (this.isMarkdownTable(blockText)) {
+          // Tables need the HTML→model pipeline — can't use writer.insertText for tables
+          const tableHtml = this.markdownTableToHtml(blockText);
+          const viewFrag = editor.data.processor.toView(tableHtml);
+          const modelFrag = editor.data.toModel(viewFrag);
+          const children: any[] = Array.from(modelFrag.getChildren() as any);
+          for (const child of children) {
+            writer.insert(child, writer.createPositionAfter(insertAfterBlock));
+            insertAfterBlock = child;
+          }
+        } else {
+          const newParagraph = writer.createElement('paragraph');
+          writer.insert(newParagraph, writer.createPositionAfter(insertAfterBlock));
+          writer.insertText(blockText, newParagraph);
+          writer.setAttribute('highlight', 'greenMarker', writer.createRangeIn(newParagraph));
+          insertAfterBlock = newParagraph;
+        }
+      }
+    });
+
+    // Clear any stale DOM selection that might overlap with greenMarker
+    window.getSelection()?.removeAllRanges();
+
+    this.activeDocumentContent = editor.getData();
+    const plainText = this.ckEditorService.getPlainText(editor);
+    this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+    this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+
+    // Rebuild TOC — content structure may have changed after insertion
+    this.exhibitPanelService.buildTocFromHtml(this.activeDocumentContent);
+    this.setDefaultActiveToc();
+
+    this.pendingChanges = {
+      originalContent: originalHtml,
+      transformedContent: editor.getData(),
+      changeCount: 1,
+      type: this.aiPreviewToolType + ' (insert below)',
+      response: { transformedSelection: this.aiPreviewResponse },
+      isUndone: false
+    };
+    this.startPendingChangesAutoTimer();
+
+    // Remove cached-selection marker BEFORE reset — otherwise removeSelectionHighlight()
+    // would strip the greenMarker we just applied
+    if (editor.model.markers.has('cached-selection')) {
+      editor.model.change((w: any) => w.removeMarker('cached-selection'));
+    }
+    this.resetFloatingToolbar();
+  }
+
+  // ── Floating toolbar: helpers ──
+
+  private resetFloatingToolbar(): void {
+    this.floatingToolbarState = 'idle';
+    this.floatingToolbarPosition = null;
+    this._cachedSelectionRect = null;
+    this.aiPreviewResponse = '';
+    this.aiPreviewToolType = '';
+    this.floatingPromptText = '';
+    this.lastPromptText = '';
+    this.selectedText = '';
+    this.selectionRange = null;
+    this.removeSelectionHighlight();
+    this.cleanupTransformMarker();
+    if (this.editorInstance?.model?.markers?.has('cached-selection')) {
+      this.editorInstance.model.change((w: any) => w.removeMarker('cached-selection'));
+    }
+    this.cdr.detectChanges();
+  }
+
+  private bookmarkSelectionForTransform(): void {
+    if (!this.editorInstance) return;
+    const editor = this.editorInstance;
+
+    // Collect all non-collapsed ranges — handles table multi-cell selections
+    const allRanges: any[] = [];
+    for (const range of editor.model.document.selection.getRanges()) {
+      if (!range.isCollapsed) allRanges.push(range);
+    }
+
+    let selRange: any;
+    if (allRanges.length > 1) {
+      // Multi-range (table selection) — create a spanning range from first start to last end
+      selRange = editor.model.createRange(allRanges[0].start, allRanges[allRanges.length - 1].end);
+    } else if (allRanges.length === 1) {
+      selRange = allRanges[0];
+    } else {
+      // Fallback to cached-selection marker
+      const cachedMarker = editor.model.markers.get('cached-selection');
+      selRange = cachedMarker?.getRange();
+    }
+    if (!selRange || selRange.isCollapsed) return;
+
+    editor.model.change((writer: any) => {
+      if (editor.model.markers.has('pending-selection-transform')) {
+        writer.removeMarker('pending-selection-transform');
+      }
+      writer.addMarker('pending-selection-transform', {
+        range: selRange, usingOperation: false, affectsData: false
+      });
+    });
+
+    this.captureSelectionBlockStructure(selRange);
+  }
+
+  /**
+   * Walk the selection range and record each block element type (heading, paragraph, etc.).
+   * Includes partially-selected start/end blocks (walker only yields fully-contained elements).
+   * This metadata is used by commitReplace() to map AI response blocks back to proper elements.
+   */
+  private captureSelectionBlockStructure(range: any): void {
+    this.originalSelectionBlocks = [];
+    const visited = new Set<any>();
+
+    const addBlock = (node: any) => {
+      if (!node || visited.has(node)) return;
+      visited.add(node);
+      const name = node.name;
+      if (name === 'paragraph' || name?.startsWith('heading')) {
+        this.originalSelectionBlocks.push({ type: name });
+      } else if (name === 'listItem') {
+        this.originalSelectionBlocks.push({ type: 'paragraph' });
+      } else if (name === 'table') {
+        this.originalSelectionBlocks.push({ type: 'table' });
+      }
+    };
+
+    // Walk up from range start to find the nearest block-level ancestor
+    const findBlockAncestor = (node: any): any => {
+      let current = node;
+      while (current && !current.is?.('rootElement')) {
+        const name = current.name;
+        if (name === 'table' || name === 'paragraph' || name?.startsWith('heading') || name === 'listItem') {
+          return current;
+        }
+        // If inside a tableCell, walk up to the containing table
+        if (name === 'tableCell' || name === 'tableRow') {
+          let parent = current.parent;
+          while (parent && parent.name !== 'table') parent = parent.parent;
+          return parent || current;
+        }
+        current = current.parent;
+      }
+      return node;
+    };
+
+    // Include the partially-selected start block
+    addBlock(findBlockAncestor(range.start.parent));
+
+    // Walk fully-contained intermediate blocks
+    const walker = range.getWalker({ shallow: true });
+    for (const value of walker) {
+      const node = value.item;
+      if (node.is?.('element') && !visited.has(node)) {
+        addBlock(node);
+      }
+    }
+
+    // Include the partially-selected end block
+    addBlock(findBlockAncestor(range.end.parent));
+
+    // Fallback: if nothing was found (e.g. selection within a single inline), default to paragraph
+    if (this.originalSelectionBlocks.length === 0) {
+      this.originalSelectionBlocks.push({ type: 'paragraph' });
+    }
+  }
+
+  private cleanupTransformMarker(): void {
+    if (this.editorInstance?.model?.markers?.has('pending-selection-transform')) {
+      this.editorInstance.model.change((w: any) => w.removeMarker('pending-selection-transform'));
+    }
+  }
+
+  /**
+   * Apply yellowMarker highlight to the cached selection range.
+   * Also collapses the CKEditor model selection so native ::selection disappears
+   * (CKEditor fights back if we only collapse DOM selection via removeAllRanges).
+   */
+  private highlightSelection(): void {
+    if (!this.editorInstance) return;
+    const editor = this.editorInstance;
+    const cachedMarker = editor.model.markers.get('cached-selection');
+    if (!cachedMarker) return;
+    const range = cachedMarker.getRange();
+    // Increment counter: setAttribute + setSelection can each fire change:range
+    this._ignoreSelectionChanges += 2;
+    editor.model.change((writer: any) => {
+      // Apply yellowMarker only to text that doesn't already have greenMarker
+      const items = Array.from(range.getItems());
+      let hasNonGreen = false;
+      for (const item of items) {
+        if ((item.is('$text') || item.is('$textProxy')) && item.getAttribute('highlight') !== 'greenMarker') {
+          writer.setAttribute('highlight', 'yellowMarker', writer.createRangeOn(item));
+          hasNonGreen = true;
+        }
+      }
+      // If entire selection is green, still apply yellow so the user sees the selection feedback
+      if (!hasNonGreen) {
+        writer.setAttribute('highlight', 'yellowMarker', range);
+      }
+      // Collapse model selection to end — CKEditor syncs to DOM, removing native blue
+      writer.setSelection(range.end);
+    });
+    // Belt-and-suspenders: explicitly clear DOM selection after CKEditor's render pass.
+    // CKEditor may skip syncing the collapsed model selection to DOM when the editor
+    // is simultaneously losing focus (e.g., user clicked a toolbar button).
+    // The CSS class .suppress-native-selection is the primary fix; this is a safety net.
+    setTimeout(() => {
+      window.getSelection()?.removeAllRanges();
+    }, 0);
+  }
+
+  /**
+   * Remove yellowMarker from the cached selection range.
+   */
+  private removeSelectionHighlight(): void {
+    if (!this.editorInstance) return;
+    const editor = this.editorInstance;
+    const cachedMarker = editor.model.markers.get('cached-selection');
+    if (!cachedMarker) return;
+    editor.model.change((writer: any) => {
+      // Only remove yellowMarker — preserve greenMarker from previous AI replacements
+      const items = Array.from(cachedMarker.getRange().getItems());
+      for (const item of items) {
+        if ((item.is('$text') || item.is('$textProxy')) && item.getAttribute('highlight') === 'yellowMarker') {
+          writer.removeAttribute('highlight', writer.createRangeOn(item));
+        }
+      }
+    });
+  }
+
+  /**
+   * Remove yellowMarker, restore CKEditor model selection to the cached range,
+   * and focus the editor so native ::selection reappears.
+   * Used when canceling back to quick_actions from prompt_editing/loading/preview.
+   */
+  private restoreNativeSelection(): void {
+    if (!this.editorInstance) return;
+    const editor = this.editorInstance;
+    const cachedMarker = editor.model.markers.get('cached-selection');
+    if (!cachedMarker) return;
+    const range = cachedMarker.getRange();
+    // Counter: removeAttribute + setSelection can each fire change:range
+    this._ignoreSelectionChanges += 2;
+    // Remove only yellowMarker (preserve greenMarker) and restore model selection
+    editor.model.change((writer: any) => {
+      const items = Array.from(range.getItems());
+      for (const item of items) {
+        if ((item.is('$text') || item.is('$textProxy')) && item.getAttribute('highlight') === 'yellowMarker') {
+          writer.removeAttribute('highlight', writer.createRangeOn(item));
+        }
+      }
+      writer.setSelection(range);
+    });
+    // Focus editor so native ::selection is visible
+    editor.editing.view.focus();
+  }
+
+  // Apply drafting tool — selection-only, delegates to triggerToolTransform
   applyDraftingTool(tool: 'simplify' | 'condense' | 'expand' | 'redraft'): void {
     if (!this.currentDocumentId) {
       this.notificationService.warning('No Document', 'Please generate a document first before applying revisions.');
       return;
     }
 
-    // Check if text is selected - if so, apply to selection only
+    // Map old tool names to new toolbar tool names
+    const toolMap: Record<string, string> = {
+      simplify: 'polish',
+      condense: 'condense',
+      expand: 'elaborate',
+      redraft: 'polish'
+    };
+
     if (this.selectedText && this.selectionRange) {
-      this.applySelectionTransform(tool);
+      this.triggerToolTransform(toolMap[tool] || tool);
       return;
     }
 
-    // Add user message requesting the tool
-    let toolPrompt = '';
-    switch (tool) {
-      case 'simplify':
-        toolPrompt = 'Please simplify the language in this document to make it more accessible.';
-        break;
-      case 'condense':
-        toolPrompt = 'Please condense this document to make it more concise.';
-        break;
-      case 'expand':
-        toolPrompt = 'Please expand this document with more detail and explanation.';
-        break;
-      case 'redraft':
-        toolPrompt = 'Please redraft this document entirely with a fresh approach.';
-        break;
+    // Dismiss any existing pending changes before starting a new transform
+    if (this.pendingChanges) {
+      this.dismissPendingChanges();
     }
 
-    this.stateService.addConversationMessage({
-      role: 'user',
-      content: toolPrompt,
-      timestamp: new Date()
-    });
+    // Snapshot current editor content for undo
+    const originalHtml = this.editorInstance?.getData() || '';
 
     // Call backend transformation service (AI Workspace API)
     this.stateService.setIsGenerating(true);
-
-    // Initialize and animate workflow steps
-    this.initializeWorkflowSteps('transform');
-    this.animateWorkflowSteps();
 
     const transformRequest = {
       documentId: this.currentDocumentId as number,
@@ -6560,167 +7492,199 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(
         takeUntil(merge(this.destroy$, this.cancelGeneration$)),
         finalize(() => {
-          // ALWAYS clear generating state when observable completes/errors/unsubscribes
           this.stateService.setIsGenerating(false);
-          this.completeAllWorkflowSteps();
           this.cdr.detectChanges();
         })
       )
       .subscribe({
         next: (response) => {
           try {
-            // Generate unique message ID
-            const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
+            let changeCount = 0;
+            let contentToApply = response.transformedContent || '';
 
-            // Build explanation with diff mode indicator
-            let explanation = response.explanation || 'Transformation complete.';
-            if (response.useDiffMode && response.changes?.length) {
-              explanation = `${explanation} (${response.changes.length} changes identified)`;
+            // Detect AI commentary/explanations in non-diff responses
+            if (!response.useDiffMode && contentToApply) {
+              const { aiNote, documentContent } = this.extractAiNoteFromResponse(contentToApply, originalHtml);
+              if (aiNote) {
+                this.showAiNoteModal(aiNote);
+                if (documentContent && documentContent.trim()) {
+                  contentToApply = documentContent;
+                } else {
+                  this.cdr.detectChanges();
+                  return;
+                }
+              }
             }
 
-            // Add assistant message with inline comparison
-            this.stateService.addConversationMessage({
-              id: messageId,
-              role: 'assistant',
-              content: explanation,
-              timestamp: new Date(),
-              transformationComparison: {
-                oldContent: this.activeDocumentContent,
-                newContent: response.transformedContent || '',
-                transformationType: tool,
-                scope: 'FULL_DOCUMENT',
-                response: response,
-                // Pass diff mode data for token-efficient transformations
-                changes: response.changes,
-                useDiffMode: response.useDiffMode
-              }
-            });
+            // Apply changes directly to editor
+            if (response.useDiffMode && response.changes?.length) {
+              // Diff mode: apply find/replace with green highlights
+              changeCount = response.changes.length;
+              this.applyDiffChangesToEditor(response.changes, false); // false = don't auto-remove highlights
+            } else if (contentToApply) {
+              // Full mode: replace entire content
+              this.setCKEditorContentFromMarkdown(contentToApply);
+              this.activeDocumentContent = contentToApply;
+              changeCount = 1; // Treat as single "full document" change
+            }
 
-            this.scrollToBottom();
+            // Update word count
+            if (this.editorInstance) {
+              const plainText = this.ckEditorService.getPlainText(this.editorInstance);
+              this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+              this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+            }
+
+            // Show status bar (only if changes were actually applied)
+            if (changeCount > 0) {
+              this.pendingChanges = {
+                originalContent: originalHtml,
+                transformedContent: this.editorInstance ? this.editorInstance.getData() : contentToApply,
+                changeCount,
+                type: tool,
+                response,
+                isUndone: false
+              };
+              // No auto-dismiss for full-document tool changes — user must explicitly act
+            } else {
+              this.notificationService.info('No Changes', 'No changes were made to the document.', 2000);
+            }
+
+            this.cdr.detectChanges();
           } catch (innerError) {
             console.error('Error processing transform response:', innerError);
-            this.stateService.addConversationMessage({
-              role: 'assistant',
-              content: 'Transformation complete, but there was an issue displaying the result.',
-              timestamp: new Date()
-            });
+            this.notificationService.error('Error', 'Transformation completed but failed to apply changes.');
           }
         },
         error: (error) => {
           console.error('Error applying drafting tool:', error);
-          this.stateService.addConversationMessage({
-            role: 'assistant',
-            content: 'Sorry, I encountered an error applying the revision. Please try again.',
-            timestamp: new Date()
-          });
           this.notificationService.error('Revision Failed', 'Failed to apply document revision. Please try again.', 3000);
         }
       });
   }
 
   // ========================================
-  // QUILL EDITOR EVENT HANDLERS
+  // CKEDITOR 5 EVENT HANDLERS
   // ========================================
 
   /**
-   * Robust helper to set Quill editor content from markdown
-   * Handles clipboard.convert() failures and has multiple fallbacks
-   * Used by: loadDocumentContent, acceptTransformation, restoreVersion
-   * NOTE: Caller should wrap this in setTimeout(100) for Quill clipboard initialization
+   * Set CKEditor content from markdown string.
+   * Converts markdown to HTML, migrates any legacy Quill markup, then loads into editor.
+   * CKEditor's setData() is synchronous — no clipboard delay hacks needed.
    */
-  private setQuillContentFromMarkdown(markdownContent: string): void {
-    if (!this.quillEditorInstance) {
-      console.warn('⚠️ Cannot set content - Quill editor instance not available');
+  private setCKEditorContentFromMarkdown(markdownContent: string): void {
+    if (!this.editorInstance) {
+      console.warn('⚠️ Cannot set content - CKEditor instance not available');
       return;
     }
 
-    // Convert Markdown to HTML
-    const htmlContent = this.markdownConverter.convert(markdownContent);
+    // Convert markdown to HTML (tables become real <table> elements)
+    let htmlContent = this.markdownConverter.convert(markdownContent);
 
-    try {
-      // CRITICAL: Use dangerouslyPasteHTML directly instead of clipboard.convert
-      // This properly handles lists, tables, and all HTML elements
-
-      // Clear existing content first
-      this.quillEditorInstance.setText('');
-
-      // Insert HTML at position 0 using dangerouslyPasteHTML
-      // This converts HTML to proper Quill Delta automatically
-      this.quillEditorInstance.clipboard.dangerouslyPasteHTML(0, htmlContent, 'silent');
-
-    } catch (error) {
-      console.error('Failed to set content via dangerouslyPasteHTML:', error);
-      // Fallback to direct innerHTML if dangerouslyPasteHTML fails
-      this.quillEditorInstance.root.innerHTML = htmlContent;
+    // Migrate any legacy Quill-stored HTML (ql-syntax pre blocks → tables, ql-* classes)
+    if (QuillHtmlMigrator.needsMigration(htmlContent)) {
+      htmlContent = QuillHtmlMigrator.migrate(htmlContent);
     }
+
+    this.editorInstance.setData(htmlContent);
   }
 
   /**
-   * Apply diff-based changes to Quill editor content
-   * Used for token-efficient transformations (SIMPLIFY, CONDENSE)
-   * Applies find/replace pairs directly to the editor's text
+   * Apply diff-based changes to CKEditor content.
+   * Used for token-efficient transformations (SIMPLIFY, CONDENSE).
+   * Applies find/replace pairs directly to the editor's text with highlighting.
+   * @param autoRemoveHighlights If true, highlights auto-remove after 4s. If false, highlights persist (for inline review).
    */
-  private applyDiffChangesToQuill(changes: Array<{find: string; replace: string}>): void {
-    if (!this.quillEditorInstance) {
-      console.error('❌ Cannot apply diff changes - Quill editor not available');
+  private applyDiffChangesToEditor(changes: Array<{find: string; replace: string}>, autoRemoveHighlights = true): void {
+    if (!this.editorInstance) {
+      console.error('❌ Cannot apply diff changes - CKEditor not available');
       return;
     }
 
-    const quill = this.quillEditorInstance;
+    const editor = this.editorInstance;
 
-    // Get current plain text from Quill
-    let currentText = quill.getText();
-
-    // Apply each change
+    // Apply each change using CKEditorService
     for (const change of changes) {
-      if (!change.find || change.replace === undefined) {
-        continue;
-      }
+      if (!change.find || change.replace === undefined) continue;
 
-      // Find the position of the text to replace
-      const index = currentText.indexOf(change.find);
+      // Find and replace in the model with highlight
+      editor.model.change((writer: any) => {
+        const root = editor.model.document.getRoot();
+        const fullRange = writer.createRangeIn(root);
+        let fullText = '';
+        const textNodes: Array<{ node: any; offset: number; text: string }> = [];
 
-      if (index !== -1) {
-        // Found the text - apply the change using Quill's API
-        // Delete the old text and insert the new text
-        quill.deleteText(index, change.find.length);
-        quill.insertText(index, change.replace);
+        for (const value of fullRange.getWalker({ ignoreElementEnd: true })) {
+          if (value.type === 'text') {
+            textNodes.push({ node: value.item, offset: fullText.length, text: value.item.data });
+            fullText += value.item.data;
+          }
+        }
 
-        // Update our tracking text for subsequent changes
-        currentText = quill.getText();
+        const index = fullText.indexOf(change.find);
+        if (index === -1) return;
 
-        // Highlight the changed text briefly
-        const highlightLength = change.replace.length;
-        quill.formatText(index, highlightLength, { 'background': '#d4edda' }); // Green highlight
-      }
+        // Find model positions for the text to replace
+        const startPos = this.textOffsetToModelPos(editor.model, textNodes, index);
+        const endPos = this.textOffsetToModelPos(editor.model, textNodes, index + change.find.length);
+        if (!startPos || !endPos) return;
+
+        const range = writer.createRange(startPos, endPos);
+        writer.remove(range);
+        writer.insertText(change.replace, range.start);
+
+        // Apply highlight marker to the new text
+        const newEndPos = this.textOffsetToModelPos(editor.model, textNodes, index + change.replace.length);
+        if (newEndPos) {
+          const highlightRange = writer.createRange(range.start, newEndPos);
+          writer.setAttribute('highlight', 'greenMarker', highlightRange);
+        }
+      });
     }
 
-    // Remove all highlights after 4 seconds
-    setTimeout(() => {
-      const textLength = quill.getLength();
-      quill.formatText(0, textLength, { 'background': false });
-    }, 4000);
+    // Remove highlights after 4 seconds (only if auto-remove is enabled)
+    if (autoRemoveHighlights) {
+      setTimeout(() => {
+        this.ckEditorService.removeAllHighlights(editor);
+      }, 4000);
+    }
 
-    // Update activeDocumentContent from Quill's current state
-    this.activeDocumentContent = quill.root.innerHTML;
+    // Update activeDocumentContent from CKEditor's current state
+    this.activeDocumentContent = editor.getData();
 
     // Update word count
-    const plainText = quill.getText();
+    const plainText = this.ckEditorService.getPlainText(editor);
     this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
     this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
 
-    // Detect changes for save
     this.cdr.detectChanges();
   }
 
+  /** Helper: convert text offset to CKEditor model position */
+  private textOffsetToModelPos(
+    model: any,
+    textNodes: Array<{ node: any; offset: number; text: string }>,
+    targetOffset: number
+  ): any {
+    for (const entry of textNodes) {
+      const entryEnd = entry.offset + entry.text.length;
+      if (targetOffset >= entry.offset && targetOffset <= entryEnd) {
+        const localOffset = targetOffset - entry.offset;
+        const parent = entry.node.parent;
+        const nodeOffset = entry.node.startOffset;
+        return model.createPositionAt(parent, nodeOffset + localOffset);
+      }
+    }
+    return null;
+  }
+
   /**
-   * Load document content into Quill editor
-   * Handles clearing previous content and pasting new HTML
-   * Can be called from onEditorCreated() or when switching documents
+   * Load document content into CKEditor.
+   * Can be called from onEditorReady() or when switching documents.
    */
   private loadDocumentContent(markdownContent: string): void {
-    if (!this.quillEditorInstance) {
-      console.warn('⚠️ Cannot load content - Quill editor instance not available');
+    if (!this.editorInstance) {
+      console.warn('⚠️ Cannot load content - CKEditor instance not available');
       return;
     }
 
@@ -6729,96 +7693,71 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Set word count immediately from markdown (before any async CKEditor processing)
+    // This ensures the toolbar never shows "0 words" while content is loading
+    const immediateWordCount = this.documentGenerationService.countWords(markdownContent);
+    if (immediateWordCount > 0) {
+      this.currentDocumentWordCount = immediateWordCount;
+      this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(immediateWordCount);
+    }
+
     // CRITICAL: Cancel any pending content load timeout to prevent race conditions
     if (this.contentLoadTimeoutId !== null) {
       clearTimeout(this.contentLoadTimeoutId);
       this.contentLoadTimeoutId = null;
     }
 
-    // Convert Markdown to HTML
-    const htmlContent = this.markdownConverter.convert(markdownContent);
-
-    // CRITICAL: Use Quill's proper Delta API with setTimeout
-    // setTimeout allows Quill's clipboard module to fully initialize
-    // MUST use 100ms delay (matches pattern used successfully elsewhere in codebase)
+    // CKEditor's setData is synchronous, but we use a short delay to let the
+    // editor UI settle after creation/recreation
     this.contentLoadTimeoutId = window.setTimeout(() => {
-      // Clear the timeout ID since it's now executing
       this.contentLoadTimeoutId = null;
+      this.setCKEditorContentFromMarkdown(markdownContent);
 
-      // Use robust helper that handles clipboard.convert() failures
-      this.setQuillContentFromMarkdown(markdownContent);
-
-      // CRITICAL: Sync activeDocumentContent with Quill's actual HTML content
-      // This ensures the drafting mode check works for follow-up messages
+      // Sync activeDocumentContent with CKEditor's actual HTML content after setData
       setTimeout(() => {
-        if (this.quillEditorInstance) {
-          this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
+        if (this.editorInstance) {
+          const html = this.editorInstance.getData();
+          this.activeDocumentContent = html;
+          if (html) {
+            const plainText = html.replace(/<[^>]*>/g, ' ');
+            this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+            this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+            this.exhibitPanelService.buildTocFromHtml(html);
+            this.setDefaultActiveToc();
+            this.cdr.detectChanges();
+          }
         }
-      }, 50); // Small delay after content is set
-    }, 100); // CRITICAL: Must be 100ms, not 0ms!
-
-    // Force contenteditable and selection on the editor root and all children
-    const editorRoot = this.quillEditorInstance.root;
-    if (editorRoot) {
-      editorRoot.setAttribute('contenteditable', 'true');
-      editorRoot.style.userSelect = 'text';
-      editorRoot.style.webkitUserSelect = 'text';
-      editorRoot.style.cursor = 'text';
-
-      // Force selection on all newly created child elements
-      setTimeout(() => {
-        const allChildren = editorRoot.querySelectorAll('*');
-        allChildren.forEach((child: Element) => {
-          const htmlChild = child as HTMLElement;
-          htmlChild.style.userSelect = 'text';
-          htmlChild.style.webkitUserSelect = 'text';
-          htmlChild.style.cursor = 'text';
-        });
-      }, 100);
-    }
+      }, 50);
+    }, 50);
   }
 
   /**
-   * Handle Quill editor creation - capture direct reference
+   * Handle CKEditor ready event - capture editor instance reference
    */
-  onEditorCreated(quill: any): void {
-    this.quillEditorInstance = quill;
+  onEditorCreated(editor: any): void {
+    this.editorInstance = editor;
 
-    // Enable text selection explicitly
-    if (quill) {
-      quill.enable(true);
-
+    if (editor) {
       // CRITICAL: Load content here if pending - this is the ONLY reliable place
-      // onEditorCreated fires when editor is actually ready, not based on setTimeout guessing
       if (this.pendingDraftContent) {
-        this.setQuillContentFromMarkdown(this.pendingDraftContent);
-        this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
+        this.setCKEditorContentFromMarkdown(this.pendingDraftContent);
+        const html = editor.getData();
+        this.activeDocumentContent = html;
+        if (html) {
+          const plainText = html.replace(/<[^>]*>/g, ' ');
+          this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+        }
         this.pendingDraftContent = null;
       } else if (this.pendingDocumentContent) {
         this.loadDocumentContent(this.pendingDocumentContent);
         this.pendingDocumentContent = null;
       }
 
-      // Force ensure the editor and all its children are selectable
-      const editorElement = quill.root;
-      if (editorElement) {
-        editorElement.setAttribute('contenteditable', 'true');
-        editorElement.style.userSelect = 'text';
-        editorElement.style.webkitUserSelect = 'text';
-        editorElement.style.mozUserSelect = 'text';
-        editorElement.style.msUserSelect = 'text';
-        editorElement.style.cursor = 'text';
-
-        // Force selection on all child elements
-        const allChildren = editorElement.querySelectorAll('*');
-        allChildren.forEach((child: Element) => {
-          const htmlChild = child as HTMLElement;
-          htmlChild.style.userSelect = 'text';
-          htmlChild.style.webkitUserSelect = 'text';
-        });
-
-        // Make all links open in new window
-        editorElement.addEventListener('click', (e: MouseEvent) => {
+      // Handle link clicks — open in new window
+      const editableElement = editor.editing.view.getDomRoot();
+      if (editableElement) {
+        editableElement.addEventListener('click', (e: MouseEvent) => {
           const target = e.target as HTMLElement;
           if (target && target.tagName === 'A') {
             e.preventDefault();
@@ -6829,53 +7768,428 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           }
         });
 
-        // Ensure all existing and future links have target="_blank"
-        const updateLinks = () => {
-          const links = editorElement.querySelectorAll('a');
-          links.forEach((link: Element) => {
-            const anchor = link as HTMLAnchorElement;
-            anchor.target = '_blank';
-            anchor.rel = 'noopener noreferrer';
-          });
-        };
-
-        // Update existing links
-        updateLinks();
-
-        // Watch for new links
-        quill.on('text-change', () => {
-          updateLinks();
+        // Selection tracking: capture selection on mouseup inside editor
+        editableElement.addEventListener('mouseup', () => {
+          setTimeout(() => this.updateSelectionState(), 0);
         });
+      }
 
+      // Selection tracking: capture keyboard-based selections (Shift+Arrow, Ctrl+A, etc.)
+      editor.model.document.selection.on('change:range', () => {
+        setTimeout(() => {
+          // Skip if we deliberately changed the selection (highlightSelection/restoreNativeSelection)
+          if (this._ignoreSelectionChanges > 0) {
+            this._ignoreSelectionChanges--;
+            return;
+          }
+          // Don't reset toolbar during active states (loading, preview, prompt editing)
+          if (this.floatingToolbarState === 'loading' || this.floatingToolbarState === 'preview' || this.floatingToolbarState === 'prompt_editing') {
+            return;
+          }
+          // Check ALL ranges — table multi-cell selections have one range per cell
+          let hasSelection = false;
+          for (const range of editor.model.document.selection.getRanges()) {
+            if (range && !range.isCollapsed) { hasSelection = true; break; }
+          }
+          if (hasSelection) {
+            this.updateSelectionState();
+          } else if (this.selectedText && this._lastMousedownInsideEditor) {
+            this.clearSelection();
+          }
+        }, 0);
+      });
+
+      // Allow deleting empty table rows with Backspace/Delete
+      // CKEditor by default only clears cell content, not the row structure.
+      // This handler auto-deletes a row when ALL its cells are empty.
+      editor.editing.view.document.on('keydown', (_evt: any, data: any) => {
+        // Only handle Backspace (8) and Delete (46)
+        if (data.keyCode !== 8 && data.keyCode !== 46) return;
+        const sel = editor.model.document.selection;
+        // Only for collapsed selection (no text selected — user already cleared cells)
+        const firstRange = sel.getFirstRange();
+        if (!firstRange || !firstRange.isCollapsed) return;
+        const pos = firstRange.start;
+        // Walk up to find tableCell
+        let tableCell = pos.parent;
+        while (tableCell && tableCell.name !== 'tableCell') {
+          if (tableCell.is?.('rootElement')) return;
+          tableCell = tableCell.parent;
+        }
+        if (!tableCell || tableCell.name !== 'tableCell') return;
+        const tableRow = tableCell.parent;
+        if (!tableRow || tableRow.name !== 'tableRow') return;
+        const table = tableRow.parent;
+        if (!table || table.name !== 'table') return;
+        // Don't delete if only one row remains
+        if (table.childCount <= 1) return;
+        // Check if ALL cells in this row are empty (only contain empty paragraphs)
+        let allEmpty = true;
+        for (const cell of tableRow.getChildren()) {
+          if (!cell.is?.('element') || cell.name !== 'tableCell') continue;
+          for (const child of cell.getChildren()) {
+            if (child.is?.('element') && child.name === 'paragraph' && child.childCount > 0) {
+              allEmpty = false; break;
+            } else if (child.is?.('$text')) {
+              allEmpty = false; break;
+            }
+          }
+          if (!allEmpty) break;
+        }
+        if (allEmpty) {
+          editor.execute('removeTableRow');
+          data.preventDefault();
+          _evt.stop();
+        }
+      }, { priority: 'high' });
+
+      // Hide floating toolbar when clicking outside the editor/toolbar
+      this.documentMousedownHandler = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (!target) return;
+        // Don't dismiss if clicking inside the floating toolbar
+        if (target.closest('.floating-edit-toolbar')) return;
+        // Don't dismiss if clicking inside a SweetAlert modal
+        if (target.closest('.swal2-container')) return;
+        const editable = this.editorInstance?.editing?.view?.getDomRoot();
+        this._lastMousedownInsideEditor = !!(editable && editable.contains(target));
+        if (this._lastMousedownInsideEditor) return;
+        // Click outside editor AND toolbar → clear if in quick_actions state
+        if (this.floatingToolbarState === 'quick_actions') {
+          this.clearSelection();
+        }
+      };
+      document.addEventListener('mousedown', this.documentMousedownHandler);
+
+      // Detect CKEditor native undo/redo while pendingChanges is active
+      editor.model.document.on('change:data', () => {
+        if (!this.pendingChanges || this._applyingPendingChange) return;
+        const currentData = editor.getData();
+
+        if (!this.pendingChanges.isUndone) {
+          if (this.normalizeHtml(currentData) === this.normalizeHtml(this.pendingChanges.originalContent)) {
+            this.pendingChanges.isUndone = true;
+            this.cdr.detectChanges();
+          }
+        } else {
+          if (this.normalizeHtml(currentData) === this.normalizeHtml(this.pendingChanges.transformedContent)) {
+            this.pendingChanges.isUndone = false;
+            this.cdr.detectChanges();
+          }
+        }
+      });
+
+      // Build initial TOC from editor content (if already loaded synchronously)
+      const initialHtml = editor.getData();
+      if (initialHtml) {
+        this.exhibitPanelService.buildTocFromHtml(initialHtml);
+        this.setDefaultActiveToc();
       }
     }
   }
 
   /**
-   * Handle text selection changes in Quill editor
+   * Scroll the CKEditor to a specific heading by ID.
+   * Used by the drafting sidebar TOC.
    */
-  onTextSelectionChanged(event: any): void {
-    if (!event || !event.range) {
-      // No selection
-      this.selectedText = '';
-      this.selectionRange = null;
+  scrollToHeading(headingId: string): void {
+    this.activeTocId = headingId;
+
+    if (!this.editorInstance) return;
+    const editableElement = this.editorInstance.editing.view.getDomRoot();
+    if (!editableElement) return;
+
+    const headings = Array.from(editableElement.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+    let targetHeading: Element | null = null;
+
+    // Try matching by index from heading-{N} pattern (deterministic IDs from TOC builder)
+    const match = headingId.match(/heading-(\d+)/);
+    if (match) {
+      const index = parseInt(match[1], 10);
+      if (headings[index]) {
+        targetHeading = headings[index];
+      }
+    }
+
+    // Fallback: try matching by ID or text content
+    if (!targetHeading) {
+      for (const heading of headings) {
+        if (heading.id === headingId || heading.textContent?.trim() === headingId) {
+          targetHeading = heading;
+          break;
+        }
+      }
+    }
+
+    if (targetHeading) {
+      // scroll-margin-top in CSS provides the breathing room above the heading
+      targetHeading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  /**
+   * Set the first TOC entry as active if no active item exists or current is invalid.
+   */
+  private setDefaultActiveToc(): void {
+    const entries = this.exhibitPanelService.tocSnapshot;
+    if (!entries || entries.length === 0) return;
+    // If no active item or active item no longer in TOC, default to first
+    if (!this.activeTocId || !entries.some(e => e.id === this.activeTocId)) {
+      this.activeTocId = entries[0].id;
+    }
+  }
+
+  /**
+   * Sanitize a URL for use in iframe src.
+   * Only allows https: and blob: protocols to prevent XSS.
+   * Caches the result to prevent iframe reload on every change detection cycle.
+   */
+  sanitizeUrl(url: string): SafeResourceUrl {
+    if (url === this.cachedExhibitUrl) return this.cachedSafeUrl;
+    this.cachedExhibitUrl = url || '';
+    const allowed = /^(https?:|blob:)/i;
+    if (!url || !allowed.test(url)) {
+      this.cachedSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl('about:blank');
+    } else {
+      this.cachedSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    }
+    return this.cachedSafeUrl;
+  }
+
+  /**
+   * Start resizing the exhibit/chat panel.
+   */
+  onResizeStart(event: MouseEvent): void {
+    event.preventDefault();
+    this.isResizing = true;
+    this.resizeStartX = event.clientX;
+    this.resizeStartWidth = this.exhibitPanelWidth;
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!this.isResizing) return;
+      // Panel is on the right, so moving left = increase width
+      const delta = this.resizeStartX - e.clientX;
+      const newWidth = Math.max(250, Math.min(800, this.resizeStartWidth + delta));
+      this.exhibitPanelWidth = newWidth;
+      this.cdr.detectChanges();
+    };
+
+    const cleanup = () => {
+      this.isResizing = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', cleanup);
+      window.removeEventListener('blur', cleanup);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', cleanup);
+    window.addEventListener('blur', cleanup);
+  }
+
+  /**
+   * Proactively read CKEditor's model selection and update component state.
+   * Called on mouseup and keyboard selection changes.
+   */
+  updateSelectionState(): void {
+    if (!this.editorInstance) {
+      this.clearSelection();
       return;
     }
 
-    const { index, length } = event.range;
+    const editor = this.editorInstance;
+    const selection = editor.model.document.selection;
 
-    if (length > 0 && this.quillEditorInstance) {
-      // User has selected text
-      this.selectedText = this.quillEditorInstance.getText(index, length);
-      this.selectionRange = { index, length };
-    } else {
-      // Selection cleared
-      this.selectedText = '';
-      this.selectionRange = null;
+    // Collect text from ALL ranges — handles table multi-cell selections
+    // (CKEditor creates one range per selected cell)
+    let text = '';
+    const allRanges: any[] = [];
+    for (const range of selection.getRanges()) {
+      if (!range.isCollapsed) {
+        allRanges.push(range);
+        for (const item of range.getItems()) {
+          if (item.is('$text') || item.is('$textProxy')) {
+            text += item.data;
+          }
+        }
+        // Separate text from different cells with a space
+        if (text.length > 0 && !text.endsWith(' ')) {
+          text += ' ';
+        }
+      }
+    }
+    text = text.trim();
+
+    // If selection is inside a table, extract as a structured markdown table
+    // so the AI can understand and modify the table content properly
+    if (text.length > 0 && allRanges.length > 0) {
+      let tableElement: any = null;
+      let node = allRanges[0].start.parent;
+      while (node && !node.is?.('rootElement')) {
+        if (node.name === 'table') { tableElement = node; break; }
+        node = node.parent;
+      }
+      if (tableElement) {
+        const mdTable = this.extractTableAsMarkdown(tableElement);
+        if (mdTable) text = mdTable;
+      }
     }
 
-    // DO NOT call cdr.detectChanges() here - it destroys the selection
-    // Angular's natural change detection handles property updates
+    if (text.length > 0 && allRanges.length > 0) {
+      // Try to get proper text offsets — may return null for complex table selections
+      let offsets = this.ckEditorService.getSelection(editor);
+      if (!offsets) {
+        // Fallback for table selections: synthetic offsets (marker-based approach is what matters)
+        offsets = { index: 0, length: text.length };
+      }
+      this.selectedText = text;
+      this.selectionRange = offsets;
+
+      // Remove old yellowMarker if re-selecting (e.g., user changed selection)
+      this.removeSelectionHighlight();
+
+      // Cache the model selection as a marker so it survives focus changes
+      // For multi-range (table) selections, create a spanning range
+      editor.model.change((writer: any) => {
+        if (editor.model.markers.has('cached-selection')) {
+          writer.removeMarker('cached-selection');
+        }
+        const firstRange = allRanges[0];
+        const lastRange = allRanges[allRanges.length - 1];
+        const spanningRange = allRanges.length === 1
+          ? firstRange
+          : writer.createRange(firstRange.start, lastRange.end);
+        writer.addMarker('cached-selection', {
+          range: spanningRange, usingOperation: false, affectsData: false
+        });
+      });
+
+      const positioned = this.positionFloatingToolbar();
+      if (!positioned) {
+        // DOM selection temporarily unavailable — bail without showing toolbar
+        return;
+      }
+      // NOTE: Don't apply yellowMarker here. During quick_actions,
+      // the native ::selection provides the visual highlight.
+      // yellowMarker is applied only when focus leaves the editor
+      // (enterPromptEditing / triggerToolTransform).
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.clearSelection();
+  }
+
+  /**
+   * Reset selection state and hide floating toolbar.
+   * Only resets to idle if in quick_actions state.
+   * In prompt_editing/loading/preview states, preserve selection data (needed for API calls).
+   */
+  clearSelection(): void {
+    // Don't clear selection data while user is actively working with the toolbar
+    if (this.floatingToolbarState !== 'idle' && this.floatingToolbarState !== 'quick_actions') {
+      return;
+    }
+
+    this.selectedText = '';
+    this.selectionRange = null;
+    // Remove yellowMarker highlight
+    this.removeSelectionHighlight();
+    if (this.floatingToolbarState === 'quick_actions') {
+      this.floatingToolbarState = 'idle';
+      this.floatingToolbarPosition = null;
+    }
+    // Remove cached-selection marker
+    if (this.editorInstance?.model?.markers?.has('cached-selection')) {
+      this.editorInstance.model.change((writer: any) => {
+        writer.removeMarker('cached-selection');
+      });
+    }
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Position the floating toolbar BELOW the browser's current text selection,
+   * relative to the .document-preview-content container.
+   * Flips above if near the bottom of the container.
+   */
+  /**
+   * Returns true if positioning succeeded, false if DOM selection was unavailable.
+   * Does NOT modify floatingToolbarState on failure — caller decides what to do.
+   */
+  positionFloatingToolbar(): boolean {
+    const domSelection = window.getSelection();
+    if (!domSelection || domSelection.rangeCount === 0 || domSelection.isCollapsed) {
+      return false;
+    }
+
+    const selectionRect = domSelection.getRangeAt(0).getBoundingClientRect();
+    this._cachedSelectionRect = selectionRect; // Cache for repositioning in preview state
+
+    const container = this.editorInstance?.editing?.view?.getDomRoot()?.closest('.document-preview-content');
+    if (!container) {
+      return false;
+    }
+
+    const containerRect = (container as HTMLElement).getBoundingClientRect();
+
+    // Wider toolbar (prompt trigger + 4 buttons)
+    const toolbarWidth = 480;
+    const toolbarHeight = 42;
+    const gap = 8;
+
+    // Center horizontally on selection, clamp within container
+    let left = (selectionRect.left + selectionRect.right) / 2 - containerRect.left - toolbarWidth / 2;
+    left = Math.max(8, Math.min(left, containerRect.width - toolbarWidth - 8));
+
+    // Position BELOW selection; flip above if near bottom of container
+    let top = selectionRect.bottom - containerRect.top + gap;
+    if (top + toolbarHeight + 20 > containerRect.height) {
+      top = selectionRect.top - containerRect.top - toolbarHeight - gap;
+    }
+
+    this.floatingToolbarPosition = { top, left };
+    this.floatingToolbarState = 'quick_actions';
+    return true;
+  }
+
+  /**
+   * Reposition the floating toolbar when entering preview state.
+   * The preview panel is much taller (~300px) than the quick-actions bar (42px),
+   * so we need to re-check if it fits below the selection and flip above if not.
+   */
+  private repositionForPreview(): void {
+    const toolbarEl = document.querySelector('.floating-edit-toolbar') as HTMLElement;
+    const container = this.editorInstance?.editing?.view?.getDomRoot()?.closest('.document-preview-content') as HTMLElement;
+    if (!toolbarEl || !container || !this._cachedSelectionRect) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const toolbarHeight = toolbarEl.offsetHeight;
+    const toolbarWidth = toolbarEl.offsetWidth;
+    const selectionRect = this._cachedSelectionRect;
+    const gap = 8;
+
+    let left = (selectionRect.left + selectionRect.right) / 2 - containerRect.left - toolbarWidth / 2;
+    left = Math.max(8, Math.min(left, containerRect.width - toolbarWidth - 8));
+
+    // Try below selection first
+    let top = selectionRect.bottom - containerRect.top + gap;
+
+    // If it overflows the container bottom, flip above
+    if (top + toolbarHeight + 8 > containerRect.height) {
+      top = selectionRect.top - containerRect.top - toolbarHeight - gap;
+    }
+
+    // If still overflows top, clamp to top of container
+    if (top < 8) {
+      top = 8;
+    }
+
+    this.floatingToolbarPosition = { top, left };
+    this.cdr.detectChanges();
   }
 
   /**
@@ -6883,26 +8197,25 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Debounced to avoid disrupting text selection
    */
   onDocumentContentChanged(event: any): void {
-    // Get content directly from Quill editor event
-    const htmlContent = event.html || '';
-    const plainText = event.text || '';
+    // Get content from CKEditor change event
+    const editor = event?.editor || this.editorInstance;
+    const htmlContent = editor ? editor.getData() : '';
+    const plainText = editor ? this.ckEditorService.getPlainText(editor) : '';
 
-    // Let Quill maintain its own internal state
-    // We'll sync activeDocumentContent after debounce for tracking purposes only
+    // Update word/page count IMMEDIATELY (fast operation, no debounce needed)
+    const wordCount = this.documentGenerationService.countWords(plainText);
+    const pageCount = this.documentGenerationService.estimatePageCount(wordCount);
+    this.currentDocumentWordCount = wordCount;
+    this.currentDocumentPageCount = pageCount;
 
     // Clear previous debounce timer
     if (this.contentChangeDebounce) {
       clearTimeout(this.contentChangeDebounce);
     }
 
-    // Debounce the state update to avoid disrupting selection
+    // Debounce heavier operations (state service update, TOC rebuild)
     this.contentChangeDebounce = setTimeout(() => {
-      // Update local property only after debounce (for other components that read it)
       this.activeDocumentContent = htmlContent;
-
-      // Calculate word count and page count
-      this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
-      this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
 
       // Update state service with debounced changes
       this.stateService.updateDocumentContent(
@@ -6910,120 +8223,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         this.currentDocumentWordCount,
         this.currentDocumentPageCount
       );
+
+      // Rebuild TOC for drafting sidebar
+      this.exhibitPanelService.buildTocFromHtml(htmlContent);
     }, 300); // 300ms debounce
   }
 
-  /**
-   * Apply transformation to selected text only
-   */
-  applySelectionTransform(tool: string): void {
-    if (!this.selectedText || !this.selectionRange || !this.quillEditorInstance) {
-      return;
-    }
-
-    // Get transformation prompt
-    let toolPrompt = '';
-    switch (tool) {
-      case 'simplify':
-        toolPrompt = `Please simplify the following text to make it more accessible:\n\n"${this.selectedText}"`;
-        break;
-      case 'condense':
-        toolPrompt = `Please condense the following text to make it more concise:\n\n"${this.selectedText}"`;
-        break;
-      case 'expand':
-        toolPrompt = `Please expand the following text with more detail:\n\n"${this.selectedText}"`;
-        break;
-      case 'redraft':
-        toolPrompt = `Please redraft the following text entirely with a fresh approach:\n\n"${this.selectedText}"`;
-        break;
-      default:
-        toolPrompt = `Please improve the following text:\n\n"${this.selectedText}"`;
-    }
-
-    // Add user message
-    this.stateService.addConversationMessage({
-      role: 'user',
-      content: toolPrompt,
-      timestamp: new Date()
-    });
-
-    // Call backend for selection-based transformation
-    this.stateService.setIsGenerating(true);
-
-    // Initialize and animate workflow steps
-    this.initializeWorkflowSteps('transform');
-    this.animateWorkflowSteps();
-
-    // Get plain text from Quill for accurate index-based replacement
-    const quill = this.quillEditorInstance;
-    const fullPlainText = quill.getText();
-
-    const transformRequest = {
-      documentId: this.currentDocumentId as number,
-      transformationType: tool.toUpperCase(),
-      transformationScope: 'SELECTION' as const,
-      fullDocumentContent: fullPlainText, // Send PLAIN TEXT, not HTML
-      selectedText: this.selectedText,
-      selectionStartIndex: this.selectionRange.index,
-      selectionEndIndex: this.selectionRange.index + this.selectionRange.length,
-      jurisdiction: this.selectedJurisdiction,
-      documentType: this.selectedDocTypePill
-    };
-
-    this.documentGenerationService.transformDocument(transformRequest, this.currentUser?.id)
-      .pipe(
-        takeUntil(merge(this.destroy$, this.cancelGeneration$)),
-        finalize(() => {
-          // ALWAYS clear generating state when observable completes/errors/unsubscribes
-          this.stateService.setIsGenerating(false);
-          this.completeAllWorkflowSteps();
-          this.cdr.detectChanges();
-        })
-      )
-      .subscribe({
-        next: (response) => {
-          try {
-            // Generate unique message ID
-            const messageId = `transform_${Date.now()}_${this.transformationMessageIdCounter++}`;
-
-            // Add AI response to conversation with inline comparison
-            this.stateService.addConversationMessage({
-              id: messageId,
-              role: 'assistant',
-              content: response.explanation || 'Transformation complete.',
-              timestamp: new Date(),
-              transformationComparison: {
-                oldContent: this.selectedText || '',
-                newContent: response.transformedSelection || response.transformedContent || '',
-                transformationType: tool,
-                scope: 'SELECTION',
-                response: response,
-                fullDocumentContent: fullPlainText,
-                selectionRange: { index: this.selectionRange.index, length: this.selectionRange.length }
-              }
-            });
-
-            this.scrollToBottom();
-          } catch (innerError) {
-            console.error('Error processing transform response:', innerError);
-            this.stateService.addConversationMessage({
-              role: 'assistant',
-              content: 'Transformation complete, but there was an issue displaying the result.',
-              timestamp: new Date()
-            });
-          }
-        },
-        error: (error) => {
-          console.error('Error transforming selection:', error);
-          this.stateService.addConversationMessage({
-            role: 'assistant',
-            content: `Sorry, I encountered an error while transforming the text. Please try again.`,
-            timestamp: new Date()
-          });
-          this.notificationService.error('Transformation Failed', 'Failed to transform selected text. Please try again.', 3000);
-        }
-      });
-  }
 
   /**
    * Apply custom revision to full document based on user's natural language request
@@ -7369,22 +8574,21 @@ You can:
 
     // DRAFTING MODE: Apply changes directly to the document
     // Check multiple conditions to detect if we're in document editing mode
-    const isEditorVisible = this.showEditor && this.quillEditorInstance !== null;
+    const isEditorVisible = this.showEditor && this.editorInstance !== null;
     const hasDocumentId = this.currentDocumentId !== null && this.currentDocumentId !== undefined;
 
-    // Check content from multiple sources - activeDocumentContent OR directly from Quill
-    // Quill always has at least '\n', so check for length > 1
-    const quillContent = this.quillEditorInstance?.getText()?.trim() || '';
+    // Check content from multiple sources - activeDocumentContent OR directly from CKEditor
+    const editorContent = this.editorInstance ? this.ckEditorService.getPlainText(this.editorInstance).trim() : '';
     const hasContent = (this.activeDocumentContent && this.activeDocumentContent.trim().length > 0) ||
-                       (quillContent.length > 0);
+                       (editorContent.length > 0);
 
     const hasDocumentOpen = isEditorVisible && hasDocumentId && hasContent;
 
     // If we have a document open in the editor, treat follow-up messages as revisions
     if (hasDocumentOpen) {
-      // Ensure activeDocumentContent is synced from Quill if it's empty
-      if (!this.activeDocumentContent && this.quillEditorInstance) {
-        this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
+      // Ensure activeDocumentContent is synced from CKEditor if it's empty
+      if (!this.activeDocumentContent && this.editorInstance) {
+        this.activeDocumentContent = this.editorInstance!.getData();
       }
 
       this.applyCustomRevision(userMessage);
@@ -7436,8 +8640,7 @@ You can:
     // Subscribe WITHOUT takeUntil(destroy$) so it continues in background
     const subscription = this.legalResearchService.sendMessageToConversation(
       requestBackendId,
-      userMessage,
-      researchMode
+      userMessage
     )
       .pipe(takeUntil(this.cancelGeneration$))
       .subscribe({
@@ -7848,13 +9051,13 @@ You can:
               // Reload version history to show updated list
               this.loadVersionHistory();
 
-              // Update Quill editor with restored content using robust helper
+              // Update CKEditor with restored content
               setTimeout(() => {
-                this.setQuillContentFromMarkdown(restoredVersion.content);
+                this.setCKEditorContentFromMarkdown(restoredVersion.content);
 
                 // Ensure editor is editable
-                if (this.quillEditorInstance) {
-                  this.quillEditorInstance.enable(true);
+                if (this.editorInstance) {
+                  this.ckEditorService.enable(this.editorInstance);
                 }
               }, 100);
 
@@ -7889,8 +9092,8 @@ You can:
       if (note !== null) {
         const versionNote = note || 'Manual edit';
 
-        // Get current content from Quill editor and convert to markdown
-        const htmlContent = this.quillEditorInstance.root.innerHTML;
+        // Get current content from CKEditor and convert to markdown
+        const htmlContent = this.editorInstance!.getData();
         const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
 
         // Call service to save manual version
@@ -7923,6 +9126,464 @@ You can:
         });
       }
     });
+  }
+
+  /**
+   * Quick save document without prompting for a note.
+   * Used by the toolbar Save button for frictionless saving.
+   */
+  saveDocumentManually(): void {
+    if (!this.currentDocumentId || !this.editorInstance || !this.currentUser) {
+      this.notificationService.warning('Cannot Save', 'No document available to save.');
+      return;
+    }
+
+    this.isSaving = true;
+
+    const htmlContent = this.editorInstance.getData();
+    const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
+
+    this.documentGenerationService.saveManualVersion(
+      this.currentDocumentId as number,
+      this.currentUser.id,
+      markdownContent,
+      'Manual save'
+    )
+    .pipe(
+      takeUntil(this.destroy$),
+      finalize(() => {
+        this.isSaving = false;
+        this.cdr.detectChanges();
+      })
+    )
+    .subscribe({
+      next: (response) => {
+        this.documentMetadata.version = response.versionNumber;
+        this.documentMetadata.lastSaved = new Date();
+        this.notificationService.success('Saved', `Version ${response.versionNumber} saved`, 1500);
+        if (this.stateService.getShowVersionHistory()) {
+          this.loadVersionHistory();
+        }
+      },
+      error: (error) => {
+        console.error('Error saving document:', error);
+        this.notificationService.error('Save Failed', 'Failed to save document');
+      }
+    });
+  }
+
+  /**
+   * Accept pending AI changes (legacy — delegates to finalize).
+   */
+  acceptPendingChanges(): void {
+    this.finalizePendingChanges(true);
+  }
+
+  /**
+   * Undo pending AI changes: restore original content, dismiss status bar.
+   */
+  undoPendingChanges(): void {
+    if (!this.pendingChanges || this.pendingChanges.isUndone) return;
+
+    // Clear auto-dismiss timer
+    if (this.pendingChangesAutoTimer) {
+      clearTimeout(this.pendingChangesAutoTimer);
+      this.pendingChangesAutoTimer = null;
+    }
+
+    const originalContent = this.pendingChanges.originalContent;
+
+    // Restore original content to CKEditor (use !== undefined to handle empty strings)
+    if (this.editorInstance && originalContent !== undefined) {
+      this._applyingPendingChange = true;
+      this.editorInstance.setData(originalContent);
+      this._applyingPendingChange = false;
+      this.activeDocumentContent = originalContent;
+
+      // Recalculate word count
+      const plainText = this.ckEditorService.getPlainText(this.editorInstance);
+      this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+      this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+    }
+
+    // Toggle to undone state (preserve for redo)
+    this.pendingChanges.isUndone = true;
+    this.notificationService.info('Changes Reverted', 'Original content restored', 1500);
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Redo pending AI changes: re-apply the transformed content.
+   */
+  redoPendingChanges(): void {
+    if (!this.pendingChanges || !this.pendingChanges.isUndone) return;
+
+    if (this.pendingChangesAutoTimer) {
+      clearTimeout(this.pendingChangesAutoTimer);
+      this.pendingChangesAutoTimer = null;
+    }
+
+    if (this.editorInstance && this.pendingChanges.transformedContent) {
+      this._applyingPendingChange = true;
+      this.editorInstance.setData(this.pendingChanges.transformedContent);
+      this._applyingPendingChange = false;
+      this.activeDocumentContent = this.pendingChanges.transformedContent;
+      const plainText = this.ckEditorService.getPlainText(this.editorInstance);
+      this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+      this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+    }
+
+    this.pendingChanges.isUndone = false;
+    this.notificationService.info('Changes Reapplied', 'AI changes restored', 1500);
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Dismiss the status bar — silently accept and save. Called by X button or auto-dismiss timer.
+   */
+  dismissPendingChanges(): void {
+    this.finalizePendingChanges(false);
+  }
+
+  /**
+   * Shared logic: remove highlights, save version to DB, clear pending state.
+   * @param showToast Whether to show a success notification.
+   */
+  private finalizePendingChanges(showToast: boolean): void {
+    if (!this.pendingChanges) return;
+
+    // If changes were undone, just clear the status bar — don't save original content as a new version
+    const wasUndone = this.pendingChanges.isUndone;
+
+    // Clear auto-dismiss timer
+    if (this.pendingChangesAutoTimer) {
+      clearTimeout(this.pendingChangesAutoTimer);
+      this.pendingChangesAutoTimer = null;
+    }
+
+    const changeType = this.pendingChanges.type;
+    const response = this.pendingChanges.response;
+
+    // Remove highlights
+    if (this.editorInstance) {
+      this.ckEditorService.removeAllHighlights(this.editorInstance);
+    }
+
+    // Update metadata from response
+    if (response) {
+      if (response.newVersion) this.documentMetadata.version = response.newVersion;
+      if (response.tokensUsed) {
+        this.documentMetadata.tokensUsed = (this.documentMetadata.tokensUsed || 0) + response.tokensUsed;
+      }
+    }
+
+    // Sync activeDocumentContent with current CKEditor state
+    if (this.editorInstance) {
+      this.activeDocumentContent = this.editorInstance.getData();
+      const plainText = this.ckEditorService.getPlainText(this.editorInstance);
+      this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+      this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+    }
+
+    // Save version to DB (skip if changes were undone — nothing new to save)
+    if (!wasUndone && this.currentDocumentId && this.currentUser && this.editorInstance) {
+      const htmlContent = this.editorInstance.getData();
+      const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
+      const label = this.getTransformationLabel(changeType.toUpperCase());
+
+      this.documentGenerationService.saveManualVersion(
+        this.currentDocumentId as number,
+        this.currentUser.id,
+        markdownContent,
+        `Applied ${label}`
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (saveResponse) => {
+          if (saveResponse?.versionNumber) {
+            this.documentMetadata.version = saveResponse.versionNumber;
+          }
+          this.documentMetadata.lastSaved = new Date();
+        },
+        error: (error) => {
+          console.error('Error saving transformation:', error);
+          if (showToast) {
+            this.notificationService.error('Save Failed', 'Changes applied but failed to save');
+          }
+        }
+      });
+    }
+
+    // Clear pending state
+    this.pendingChanges = null;
+    if (showToast) {
+      this.notificationService.success('Changes Accepted', 'Transformation saved', 1500);
+    }
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Start auto-dismiss timer for the change status bar.
+   * Auto-saves changes after 10 seconds if user doesn't undo.
+   */
+  private normalizeHtml(html: string): string {
+    return html.replace(/\s+/g, ' ').trim();
+  }
+
+  private startPendingChangesAutoTimer(): void {
+    if (this.pendingChangesAutoTimer) {
+      clearTimeout(this.pendingChangesAutoTimer);
+    }
+    this.pendingChangesAutoTimer = setTimeout(() => {
+      this.dismissPendingChanges();
+    }, 10000);
+  }
+
+  /**
+   * Detect if a user prompt is asking for fabricated, fake, or sample data.
+   * Used as a frontend guard to prevent unnecessary API calls and protect document integrity.
+   */
+  private isFabricationRequest(prompt: string): boolean {
+    const lower = prompt.toLowerCase();
+    // Allow legitimate requests for real/actual/case data
+    if (/\b(real|actual|genuine|existing|case)\s+(data|values?|amounts?|info)\b/.test(lower) &&
+        !/\b(real[\s-]?looking|realistic[\s-]?looking)\b/.test(lower)) {
+      return false;
+    }
+    const fabricationPatterns = [
+      /\b(fake|dummy|mock|sample|test)\s+(data|values?|amounts?|numbers?|names?|dates?|info)/,
+      /\b(made[\s-]?up|fabricat|imaginar|fictitiou|invented)\b/,
+      /\b(real[\s-]?looking|realistic[\s-]?looking)\s+(data|values?|amounts?|numbers?|names?)/,
+      /\bfill\s+(in\s+)?(with\s+)?(fake|random|sample|dummy|made[\s-]?up)/,
+      /\b(add|insert|put|use)\s+(some\s+)?(fake|random|sample|dummy|made[\s-]?up|test)\b/,
+      /\b(add|insert|put|use)\s+(some\s+)?(more\s+)?(fake|random|sample|dummy|test)\b/,
+      /\b(add|insert|generate|create)\s+(some\s+)?(real[\s-]?looking|realistic)\s+(fake\s+)?data\b/,
+      /\brandom\s+(data|values?|amounts?|numbers?|names?)\b/,
+    ];
+    return fabricationPatterns.some(pattern => pattern.test(lower));
+  }
+
+  /**
+   * Detect if an AI response is commentary/explanation rather than a real document revision.
+   * Uses three layers of defense:
+   *   1. Structured [AI_NOTE]/[DOCUMENT] markers (best case — AI followed instructions)
+   *   2. Heuristic first-line pattern matching (catches common conversational openers)
+   *   3. Structural comparison against original content (catches format-destroying responses)
+   *
+   * @param content      The AI's raw response
+   * @param originalHtml The original editor HTML content (for structural comparison)
+   */
+  private extractAiNoteFromResponse(
+    content: string,
+    originalHtml?: string
+  ): { aiNote: string | null; documentContent: string | null } {
+    if (!content) return { aiNote: null, documentContent: null };
+
+    const trimmed = content.trim();
+
+    // 1. Structured approach: check for [AI_NOTE] ... [DOCUMENT] markers
+    if (trimmed.startsWith('[AI_NOTE]')) {
+      const docMarkerIdx = trimmed.indexOf('[DOCUMENT]');
+      if (docMarkerIdx !== -1) {
+        const note = trimmed.substring('[AI_NOTE]'.length, docMarkerIdx).trim();
+        const doc = trimmed.substring(docMarkerIdx + '[DOCUMENT]'.length).trim();
+        return { aiNote: note, documentContent: doc || null };
+      }
+      return { aiNote: trimmed.substring('[AI_NOTE]'.length).trim(), documentContent: null };
+    }
+
+    // 2. Heuristic fallback: detect conversational/explanatory first-line openers
+    const conversationalPatterns = [
+      /^I (need to|cannot|can't|don't|do not|am unable|should|must|want to|'m unable|have to|apologize)/i,
+      /^(Unfortunately|Please note|Important note|Note:|Disclaimer)/i,
+      /^(As an AI|As a language model|I'm an AI)/i,
+      /^(I need to be transparent|I should be transparent|To be transparent)/i,
+      /^(I'm sorry|I apologize|My apologies)/i,
+      /^(Sure|Certainly|Of course|Absolutely)[,!.\s]/i,
+      /^(I've|I have) (made|applied|completed|revised|updated|reviewed)/i,
+      /^(Here's|Here is) (a revised|the revised|the updated|the modified|my revised)/i,
+      /^(Please be aware|Please understand)/i,
+      /^\[\s*(Based on|Note|Important|Regarding|In this|According|The document)/i,
+      /^The (only|available|existing|current|following|document|provided)/i,
+      /^(There is no|There are no|There isn't|There aren't|No (specific|actual|real|concrete))/i,
+      /^(Based on|According to|From the|Looking at|After reviewing|Upon review)/i,
+      /^(This (table|section|document|content) (does not|doesn't|cannot|can't))/i,
+    ];
+
+    const first200 = trimmed.substring(0, 200);
+    const isConversational = conversationalPatterns.some(pattern => pattern.test(first200));
+
+    if (isConversational) {
+      // Check if the AI prefaced with a sentence then included the actual document
+      const newlineSplit = trimmed.indexOf('\n\n');
+      if (newlineSplit !== -1 && newlineSplit < 300) {
+        const preamble = trimmed.substring(0, newlineSplit).trim();
+        const remainder = trimmed.substring(newlineSplit + 2).trim();
+        // Only split if remainder looks like actual document content
+        // (contains structural markers like tables, headings, or HTML block elements)
+        const hasDocumentStructure = /^\s*\|.*\|\s*$/m.test(remainder) ||  // markdown table row (pipes at line boundaries)
+                                      /^#{1,6}\s/m.test(remainder) ||      // markdown headings
+                                      /<(h[1-6]|table|figure|ul|ol|p)\b/i.test(remainder); // HTML
+        if (remainder.length > preamble.length * 2 && hasDocumentStructure) {
+          return { aiNote: preamble, documentContent: remainder };
+        }
+      }
+      // Entire response is conversational/explanatory — no document content
+      return { aiNote: trimmed, documentContent: null };
+    }
+
+    // 3. Structural comparison: if original had rich formatting but response is flat text, reject
+    if (originalHtml && originalHtml.length > 500) {
+      const originalHeadings = (originalHtml.match(/<h[1-6][^>]*>/gi) || []).length;
+      const originalParagraphs = (originalHtml.match(/<p[^>]*>/gi) || []).length;
+      const originalLists = (originalHtml.match(/<li[^>]*>/gi) || []).length;
+
+      // If original was a structured document (has headings/paragraphs)
+      if (originalHeadings >= 2 || originalParagraphs >= 5) {
+        // Check if response preserves structure (contains markdown headings or HTML tags)
+        const responseHeadings = (trimmed.match(/^#{1,6}\s/gm) || []).length + (trimmed.match(/<h[1-6][^>]*>/gi) || []).length;
+        const responseParagraphs = (trimmed.match(/<p[^>]*>/gi) || []).length;
+        const responseNewlines = (trimmed.match(/\n\n/g) || []).length;
+
+        // Response has no structure markers at all — likely flattened/corrupted
+        const hasNoStructure = responseHeadings === 0 && responseParagraphs === 0 && responseNewlines < 3;
+
+        if (hasNoStructure) {
+          console.warn('AI response appears to have lost document structure — treating as commentary');
+          return {
+            aiNote: 'The AI returned a response that would destroy the document\'s formatting and structure. The original document has been preserved.',
+            documentContent: null
+          };
+        }
+      }
+    }
+
+    // Passed all checks — return content as-is
+    return { aiNote: null, documentContent: content };
+  }
+
+  /**
+   * Show an AI explanation/note in a SweetAlert modal without modifying the document.
+   */
+  private showAiNoteModal(note: string): void {
+    // Convert basic markdown to HTML for readable display
+    // First HTML-escape, then apply safe markdown transforms
+    let html = note
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    // Bold: **text** or __text__
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+    // Italic: *text* or _text_ (but not inside words)
+    html = html.replace(/(?<!\w)\*([^*]+?)\*(?!\w)/g, '<em>$1</em>');
+    html = html.replace(/(?<!\w)_([^_]+?)_(?!\w)/g, '<em>$1</em>');
+
+    // Bullet lists: lines starting with - or *
+    html = html.replace(/^[\-\*]\s+(.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul style="margin: 8px 0; padding-left: 20px;">$&</ul>');
+
+    // Numbered lists: lines starting with 1. 2. etc.
+    html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+
+    // Line breaks for remaining newlines
+    html = html.replace(/\n/g, '<br>');
+
+    // Clean up double <br> after list items
+    html = html.replace(/<\/ul><br>/g, '</ul>');
+    html = html.replace(/<\/li><br>/g, '</li>');
+
+    import('sweetalert2').then(Swal => {
+      // Delay opening to ensure any pending Enter key repeat events have been
+      // fully processed — otherwise SweetAlert auto-focuses the confirm button
+      // and an Enter repeat immediately closes the modal
+      setTimeout(() => {
+        Swal.default.fire({
+          html: `
+            <div class="ai-note-header">
+              <img src="/assets/images/new-legal-ai.gif" alt="AI" class="ai-note-avatar">
+              <div class="ai-note-title-group">
+                <span class="ai-note-title">Legience Assistant</span>
+                <span class="ai-note-badge">NOTE</span>
+              </div>
+            </div>
+            <div class="ai-note-card">
+              <div class="ai-note-body">${html}</div>
+            </div>
+          `,
+          showCloseButton: false,
+          allowOutsideClick: false,
+          allowEnterKey: false,
+          focusConfirm: false,
+          confirmButtonText: 'Close',
+          width: 440,
+          padding: 0,
+          customClass: {
+            popup: 'ai-note-modal',
+            confirmButton: 'ai-note-confirm-btn',
+            htmlContainer: 'ai-note-html-container'
+          }
+        }).then(() => {
+          // Clean up toolbar and selection after user acknowledges the note
+          this.cleanupTransformMarker();
+          this.restoreNativeSelection();
+          this.floatingToolbarState = 'quick_actions';
+          this.cdr.detectChanges();
+          this.editorInstance?.focus();
+        });
+      }, 150);
+    });
+  }
+
+  /**
+   * Check if AI-returned content is essentially the same as the original selected text.
+   * Normalizes both strings (strips whitespace, markdown formatting, punctuation differences)
+   * and compares. Returns true if >90% similar or if the normalized forms match.
+   */
+  private isContentEssentiallyUnchanged(aiContent: string, originalText: string): boolean {
+    if (!aiContent || !originalText) return false;
+
+    const normalize = (s: string): string => {
+      return s
+        .replace(/\r\n/g, '\n')
+        // Strip markdown table formatting
+        .replace(/\|/g, '')
+        .replace(/^[\s:]*-{2,}[\s:]*$/gm, '')
+        // Strip markdown bold/italic
+        .replace(/\*{1,3}/g, '')
+        .replace(/_{1,3}/g, '')
+        // Strip HTML tags
+        .replace(/<[^>]+>/g, '')
+        // Collapse whitespace
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    };
+
+    const normAi = normalize(aiContent);
+    const normOriginal = normalize(originalText);
+
+    // Exact match after normalization
+    if (normAi === normOriginal) return true;
+
+    // Check similarity ratio — if >90% of characters match, treat as unchanged
+    if (normAi.length === 0 || normOriginal.length === 0) return false;
+    const shorter = normAi.length < normOriginal.length ? normAi : normOriginal;
+    const longer = normAi.length >= normOriginal.length ? normAi : normOriginal;
+
+    // Quick length check — if lengths differ by >20%, likely changed
+    if (shorter.length / longer.length < 0.8) return false;
+
+    // Simple character-level similarity check
+    let matches = 0;
+    for (let i = 0; i < shorter.length; i++) {
+      if (shorter[i] === longer[i]) matches++;
+    }
+    return (matches / longer.length) > 0.9;
   }
 
   // ========================================
@@ -7962,31 +9623,30 @@ You can:
 
       // Check if this is a diff-based transformation
       if (transformation.useDiffMode && transformation.changes && transformation.changes.length > 0) {
-        // Apply diffs to current content in Quill editor
-        this.applyDiffChangesToQuill(transformation.changes);
+        // Apply diffs to current content in CKEditor
+        this.applyDiffChangesToEditor(transformation.changes);
       } else {
         // Traditional full replacement mode
-        // Update Quill editor with transformed content using robust helper
+        // Update CKEditor with transformed content
         setTimeout(() => {
-          this.setQuillContentFromMarkdown(transformation.newContent);
+          this.setCKEditorContentFromMarkdown(transformation.newContent);
 
-          // CRITICAL: Sync activeDocumentContent with Quill's HTML after markdown conversion
-          // Wait for Quill to finish converting markdown to HTML
+          // Sync activeDocumentContent with CKEditor's HTML after content set
           setTimeout(() => {
-            if (this.quillEditorInstance) {
-              this.activeDocumentContent = this.quillEditorInstance.root.innerHTML;
+            if (this.editorInstance) {
+              this.activeDocumentContent = this.editorInstance.getData();
             }
           }, 50);
-        }, 100);
+        }, 50);
       }
     } else {
-      // Selection-based transformation - use Quill operations for precise replacement
-      if (!this.documentEditor || !this.quillEditorInstance) {
-        console.error('Quill editor not available');
+      // Selection-based transformation - use CKEditor model operations for precise replacement
+      if (!this.documentEditor || !this.editorInstance) {
+        console.error('CKEditor not available');
         return;
       }
 
-      const quill = this.quillEditorInstance;
+      const editor = this.editorInstance;
       const transformedSnippet = transformation.response.transformedSelection || transformation.newContent;
       const selectionRange = transformation.selectionRange;
 
@@ -7995,72 +9655,33 @@ You can:
         return;
       }
 
-      // Use Quill operations for precise text replacement with formatting preserved
+      // Use CKEditorService for precise text replacement with highlight
       setTimeout(() => {
         try {
-          // Convert transformed markdown snippet to HTML
-          const htmlContent = this.markdownConverter.convert(transformedSnippet);
-          let transformedDelta;
+          this.ckEditorService.replaceTextWithHighlight(
+            editor,
+            selectionRange.index,
+            selectionRange.length,
+            transformedSnippet,
+            '#d4edda',
+            4000,
+            transformation.oldContent
+          );
 
-          // Try to convert HTML to Delta using clipboard API
-          try {
-            transformedDelta = quill.clipboard.convert(htmlContent);
+          // Update activeDocumentContent from CKEditor's current state
+          this.activeDocumentContent = editor.getData();
 
-            // Check if Delta is empty (clipboard.convert failed)
-            if (!transformedDelta.ops || transformedDelta.ops.length === 0) {
-              console.warn('⚠️ clipboard.convert() returned empty Delta for selection, using plain text');
-              // Fallback: Create simple Delta with plain text
-              transformedDelta = { ops: [{ insert: transformedSnippet }] };
-            }
-          } catch (error) {
-            console.error('❌ clipboard.convert() failed for selection:', error);
-            // Fallback: Create simple Delta with plain text
-            transformedDelta = { ops: [{ insert: transformedSnippet }] };
-          }
-
-          // 1. Delete old text at the exact selection position
-          quill.deleteText(selectionRange.index, selectionRange.length);
-
-          // 2. Insert the formatted Delta at the same position
-          quill.updateContents({
-            ops: [
-              { retain: selectionRange.index },
-              ...transformedDelta.ops
-            ]
-          });
-
-          // 3. Calculate the length of inserted content for highlighting
-          const insertedLength = transformedDelta.ops.reduce((len: number, op: any) => {
-            return len + (op.insert ? op.insert.length : 0);
-          }, 0);
-
-          // 4. Apply green background highlight to the replaced text
-          quill.formatText(selectionRange.index, insertedLength, {
-            'background': '#d4edda' // Velzon success-subtle green
-          });
-
-          // 5. Update activeDocumentContent from Quill's current state
-          this.activeDocumentContent = quill.root.innerHTML;
-
-          // 6. Auto-remove highlight after 4 seconds
-          setTimeout(() => {
-            quill.formatText(selectionRange.index, insertedLength, {
-              'background': false
-            });
-          }, 4000);
-
-          // 7. Update word count
-          const plainText = quill.getText();
+          // Update word count
+          const plainText = this.ckEditorService.getPlainText(editor);
           this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
           this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
 
-          // 8. Detect changes for save
           this.cdr.detectChanges();
         } catch (error) {
           console.error('❌ Error applying selection transformation:', error);
           this.notificationService.error('Transformation Error', 'Failed to apply transformation to selected text');
         }
-      }, 100);
+      }, 50);
 
       // Update metadata
       this.documentMetadata.version = response.newVersion;
@@ -8075,13 +9696,13 @@ You can:
     // CRITICAL: Save transformed content to database
     // Wait for all async operations (setTimeout callbacks) to complete before saving
     setTimeout(() => {
-      if (!this.currentDocumentId || !this.currentUser || !this.quillEditorInstance) {
+      if (!this.currentDocumentId || !this.currentUser || !this.editorInstance) {
         console.warn('⚠️ Cannot save transformation - missing required data');
         return;
       }
 
-      // Get current HTML content from Quill (already has the transformation applied)
-      const htmlContent = this.quillEditorInstance.root.innerHTML;
+      // Get current HTML content from CKEditor (already has the transformation applied)
+      const htmlContent = this.editorInstance!.getData();
 
       // Convert HTML to Markdown for backend storage
       const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
@@ -8177,8 +9798,8 @@ You can:
       return;
     }
 
-    // Get content from Quill and convert to markdown
-    const htmlContent = this.quillEditorInstance.root.innerHTML;
+    // Get content from CKEditor and convert to markdown
+    const htmlContent = this.editorInstance ? this.editorInstance.getData() : '';
     const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
 
     this.documentGenerationService.saveDocument(this.currentDocumentId, markdownContent, this.activeDocumentTitle)
@@ -8217,12 +9838,11 @@ You can:
   }
 
   /**
-   * Apply text size to Quill editor
+   * Apply text size to CKEditor
    */
   private applyTextSize(): void {
-    if (this.documentEditor?.quillEditor) {
-      const editorElement = this.quillEditorInstance.root;
-      editorElement.style.fontSize = `${this.editorTextSize}px`;
+    if (this.editorInstance) {
+      this.ckEditorService.applyTextSize(this.editorInstance, this.editorTextSize);
     }
   }
 
@@ -8273,20 +9893,19 @@ You can:
   }
 
   /**
-   * Open document preview modal - generates actual PDF and displays it
+   * Open document preview modal - renders editor HTML directly for WYSIWYG preview
    */
   openDocumentPreviewModal(): void {
     this.showDocumentPreviewModal = true;
-    this.isLoadingPreview = true;
     document.body.classList.add('modal-open');
 
-    // Trigger change detection to ensure modal shows immediately
-    this.cdr.detectChanges();
+    // Get editor HTML and render it directly (no backend call needed)
+    const htmlContent = this.getEditorContent();
+    if (htmlContent) {
+      this.previewHtmlContent = this.sanitizer.bypassSecurityTrustHtml(htmlContent);
+    }
 
-    // Generate the actual PDF for preview after a small delay to ensure modal is rendered
-    setTimeout(() => {
-      this.generatePdfForPreview();
-    }, 100);
+    this.cdr.detectChanges();
   }
 
   /**
@@ -8354,6 +9973,7 @@ You can:
   closeDocumentPreviewModal(): void {
     this.showDocumentPreviewModal = false;
     this.isLoadingPreview = false;
+    this.previewHtmlContent = null;
 
     // Clean up blob URL
     if (this.previewPdfUrl) {
@@ -8366,15 +9986,50 @@ You can:
   }
 
   /**
-   * Download the previewed PDF
+   * Download as PDF - generates PDF from editor content on demand
    */
   downloadPreviewedPdf(): void {
+    // If we already have a cached blob URL, use it
     if (this.previewPdfUrl) {
       const link = document.createElement('a');
       link.href = this.previewPdfUrl;
       link.download = this.sanitizeFilename(this.activeDocumentTitle) + '.pdf';
       link.click();
+      return;
     }
+
+    // Otherwise generate PDF on demand via backend (send raw HTML for styled PDF)
+    this.isLoadingPreview = true;
+    this.cdr.detectChanges();
+
+    const htmlContent = this.getEditorContent();
+    if (!htmlContent) {
+      this.isLoadingPreview = false;
+      this.notificationService.error('Error', 'No content to export');
+      return;
+    }
+
+    this.documentGenerationService.exportContentToPDF(htmlContent, this.activeDocumentTitle)
+      .subscribe({
+        next: (response) => {
+          const blob = response.body;
+          if (blob) {
+            this.previewPdfUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = this.previewPdfUrl;
+            link.download = this.sanitizeFilename(this.activeDocumentTitle) + '.pdf';
+            link.click();
+          }
+          this.isLoadingPreview = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error generating PDF:', error);
+          this.isLoadingPreview = false;
+          this.cdr.detectChanges();
+          this.notificationService.error('Error', 'Failed to generate PDF.');
+        }
+      });
   }
 
   /**
@@ -8395,7 +10050,18 @@ You can:
    * Reopen conversation panel
    */
   reopenChatPanel(): void {
+    // Close exhibit panel (mutually exclusive with chat)
+    this.exhibitPanelService.closePanel();
     this.stateService.setShowChat(true);
+  }
+
+  /**
+   * Open an exhibit from the drafting sidebar.
+   * Closes the chat panel since they're mutually exclusive.
+   */
+  openExhibitFromSidebar(exhibit: Exhibit): void {
+    this.stateService.setShowChat(false);
+    this.exhibitPanelService.openExhibit(exhibit);
   }
 
   /**

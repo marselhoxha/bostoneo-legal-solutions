@@ -56,6 +56,8 @@ import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.element.LineSeparator;
 import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
+import com.itextpdf.html2pdf.HtmlConverter;
+import com.itextpdf.html2pdf.ConverterProperties;
 
 @Service
 @RequiredArgsConstructor
@@ -76,6 +78,7 @@ public class AiWorkspaceDocumentService {
     private final AiConversationSessionRepository conversationRepository;
     private final LegalCaseRepository caseRepository;
     private final ClaudeSonnet4Service claudeService;
+    private final com.bostoneo.bostoneosolutions.service.ai.AIRequestRouter aiRequestRouter;
     private final LegalResearchConversationService conversationService;
     private final GenerationCancellationService cancellationService;
     private final AILegalResearchService legalResearchService;  // For citation verification
@@ -97,6 +100,13 @@ public class AiWorkspaceDocumentService {
     private static final Set<String> DIFF_ELIGIBLE_TRANSFORMATIONS = Set.of("SIMPLIFY", "CONDENSE");
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /** Simple transformations that can safely use Sonnet (cheaper model) */
+    private static final Set<String> SIMPLE_TRANSFORMATIONS = Set.of("SIMPLIFY", "CONDENSE");
+
+    private boolean isSimpleTransformation(String transformationType) {
+        return transformationType != null && SIMPLE_TRANSFORMATIONS.contains(transformationType.toUpperCase());
+    }
 
     /**
      * Create a new document with initial content
@@ -191,8 +201,13 @@ public class AiWorkspaceDocumentService {
             transformedContent = generateMockTransformation(transformationType, currentContent, "full");
             log.info("Using MOCK response for transformation (no API cost)");
         } else {
-            // Pass sessionId for proper cancellation support
-            CompletableFuture<String> aiRequest = claudeService.generateCompletion(prompt, null, false, document.getSessionId());
+            // Route through AIRequestRouter for smart model selection
+            // SIMPLIFY/CONDENSE → Sonnet (cheaper), EXPAND/REDRAFT/CUSTOM → Opus (quality)
+            com.bostoneo.bostoneosolutions.enumeration.AIOperationType opType = isSimpleTransformation(transformationType)
+                    ? com.bostoneo.bostoneosolutions.enumeration.AIOperationType.TRANSFORMATION_SIMPLE
+                    : com.bostoneo.bostoneosolutions.enumeration.AIOperationType.TRANSFORMATION_COMPLEX;
+            CompletableFuture<String> aiRequest = aiRequestRouter.routeSimple(
+                    opType, prompt, null, false, document.getSessionId());
 
             try {
                 transformedContent = aiRequest.join();
@@ -200,6 +215,9 @@ public class AiWorkspaceDocumentService {
                 throw e;
             }
         }
+
+        // Strip [AI_NOTE]/[DOCUMENT] markers before persisting
+        transformedContent = stripAiNoteMarkers(transformedContent);
 
         // Calculate tokens and cost (simplified - should use actual metrics)
         int tokensUsed = estimateTokens(transformedContent);
@@ -242,7 +260,8 @@ public class AiWorkspaceDocumentService {
         String fullDocumentContent,
         String selectedText,
         Integer selectionStartIndex,
-        Integer selectionEndIndex
+        Integer selectionEndIndex,
+        String customPrompt
     ) {
         log.info("Transforming selection in document id={}, type={}, selection={}...{}",
             documentId, transformationType, selectionStartIndex, selectionEndIndex);
@@ -251,8 +270,16 @@ public class AiWorkspaceDocumentService {
         AiWorkspaceDocument document = documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
             .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
 
-        // Build transformation prompt for selection with full document context
-        String prompt = buildTransformationPrompt(transformationType, selectedText, "selection", fullDocumentContent);
+        // Enrich with case context if document is linked to a case
+        String caseContext = null;
+        if (document.getCaseId() != null) {
+            caseContext = caseRepository.findByIdAndOrganizationId(document.getCaseId(), getRequiredOrganizationId())
+                .map(this::buildCaseContext)
+                .orElse(null);
+        }
+
+        // Build transformation prompt for selection with full document context + case data
+        String prompt = buildTransformationPrompt(transformationType, selectedText, "selection", fullDocumentContent, customPrompt, caseContext);
 
         // Check if generation has been cancelled (using document's sessionId as conversation ID)
         if (document.getSessionId() != null && cancellationService.isCancelled(document.getSessionId())) {
@@ -267,8 +294,12 @@ public class AiWorkspaceDocumentService {
             transformedSelection = generateMockTransformation(transformationType, selectedText, "selection");
             log.info("Using MOCK response for selection transformation (no API cost)");
         } else {
-            // Pass sessionId for proper cancellation support
-            CompletableFuture<String> aiRequest = claudeService.generateCompletion(prompt, null, false, document.getSessionId());
+            // Route through AIRequestRouter for smart model selection
+            com.bostoneo.bostoneosolutions.enumeration.AIOperationType opType = isSimpleTransformation(transformationType)
+                    ? com.bostoneo.bostoneosolutions.enumeration.AIOperationType.TRANSFORMATION_SIMPLE
+                    : com.bostoneo.bostoneosolutions.enumeration.AIOperationType.TRANSFORMATION_COMPLEX;
+            CompletableFuture<String> aiRequest = aiRequestRouter.routeSimple(
+                    opType, prompt, null, false, document.getSessionId());
 
             try {
                 transformedSelection = aiRequest.join();
@@ -457,7 +488,7 @@ public class AiWorkspaceDocumentService {
 
         // Find the most recent demand letter
         for (AiWorkspaceDocument doc : caseDocuments) {
-            if ("demand_letter".equals(doc.getDocumentType())) {
+            if (isDemandLetterType(doc.getDocumentType())) {
                 // Get the latest version content (using deprecated method with suppressed warning)
                 // Parent document ownership already verified via orgId filter above
                 List<AiWorkspaceDocumentVersion> versions = versionRepository
@@ -500,8 +531,45 @@ public class AiWorkspaceDocumentService {
     // ========================================
 
     private String buildTransformationPrompt(String transformationType, String content, String scope, String fullDocumentContent) {
+        return buildTransformationPrompt(transformationType, content, scope, fullDocumentContent, null, null);
+    }
+
+    private String buildTransformationPrompt(String transformationType, String content, String scope, String fullDocumentContent, String customPrompt) {
+        return buildTransformationPrompt(transformationType, content, scope, fullDocumentContent, customPrompt, null);
+    }
+
+    private String buildTransformationPrompt(String transformationType, String content, String scope, String fullDocumentContent, String customPrompt, String caseContext) {
         // For selection transformations, provide full document context
         if ("selection".equals(scope) && fullDocumentContent != null && !fullDocumentContent.isEmpty()) {
+
+            // CUSTOM type with user prompt — use the user's actual instruction
+            if ("CUSTOM".equalsIgnoreCase(transformationType) && customPrompt != null && !customPrompt.trim().isEmpty()) {
+                String caseSection = (caseContext != null && !caseContext.isBlank())
+                    ? "\n\n---\n\nAVAILABLE CASE DATA (use this to fill in placeholders if applicable):\n" + caseContext + "\n"
+                    : "";
+
+                return String.format(
+                    "Here is the full legal document for context:\n\n%s\n\n" +
+                    "---\n\n" +
+                    "The user has selected the following portion of the document:\n\n%s\n\n" +
+                    "---\n\n" +
+                    "USER'S REQUEST:\n%s\n" +
+                    "%s\n\n" +
+                    "INSTRUCTIONS:\n" +
+                    "- Apply the user's request to the selected text above\n" +
+                    "- Maintain consistency with the rest of the document\n" +
+                    "- Preserve the format (if the selected text is a table, return a table)\n" +
+                    "- Match the document's tone and style\n" +
+                    "- Keep legal terminology consistent\n" +
+                    "- If the selected text contains placeholder brackets like [Date], [Amount], [Name], use data from the document or case context to fill them in. If specific data is not available, keep the original placeholder — do NOT invent fake data.\n" +
+                    "- NEVER generate fake, sample, test, dummy, mock, 'real-looking', or fabricated data — regardless of how the user phrases the request (e.g., 'add some real looking data', 'add fake data', 'fill with sample values'). If no real data is available, respond with a Note: explanation.\n" +
+                    "- If you cannot meaningfully change the selected text based on the request (e.g., no real data available to replace placeholders), respond with ONLY a brief explanation starting with 'Note:' — do NOT return the unchanged table or text.\n" +
+                    "- Return ONLY the transformed version of the selected text (not the full document)\n" +
+                    "- Do NOT include any commentary or notes alongside the result — return EITHER the transformed content OR a 'Note:' explanation, never both",
+                    fullDocumentContent, content, customPrompt.trim(), caseSection
+                );
+            }
+
             // Calculate word count limits for EXPAND operation
             int originalWordCount = countWords(content);
             int maxAllowedWords = (int) Math.ceil(originalWordCount * 1.3); // 30% increase max
@@ -600,16 +668,45 @@ public class AiWorkspaceDocumentService {
 
             INSTRUCTIONS:
             1. Apply the user's requested changes to the document
-            2. Maintain the document's legal formatting and structure
+            2. Maintain the document's EXACT formatting and structure — all headings, paragraphs, lists, tables, and section breaks must be preserved
             3. Preserve section numbering and references
             4. Keep consistent legal terminology and tone
             5. Return the COMPLETE modified document (not just the changed sections)
-            6. Do not add explanations or commentary - return only the revised document content
 
-            Please provide the complete revised document:
+            CRITICAL RULES — VIOLATIONS WILL CORRUPT THE DOCUMENT:
+            - Your output must be the revised document itself. Do NOT output explanations, instructions, or commentary.
+            - Do NOT add bracketed instructions like "[ATTORNEY TO INSERT: describe what goes here]". If a placeholder cannot be filled with real data, leave it EXACTLY as it appears in the original (e.g., "[ATTORNEY TO INSERT]" stays as "[ATTORNEY TO INSERT]").
+            - Do NOT flatten the document structure. Every heading, paragraph break, list item, and table row in the original must appear in your output.
+            - Do NOT add preamble text like "Here is the revised document" or "Based on the document's context".
+            - If you have a note for the user, put ONLY the note on the first line prefixed with "[AI_NOTE]", then "[DOCUMENT]" on the next line, then the full document. Example:
+              [AI_NOTE] Some placeholders require case-specific data I don't have.
+              [DOCUMENT]
+              (full document here with original structure preserved)
+            - If you cannot make any changes, return the original document EXACTLY as provided, with no modifications.
+            - Do not wrap the document in markdown code fences.
+
+            Return the revised document now:
             """,
             userPrompt, documentContent
         );
+    }
+
+    /**
+     * Strip [AI_NOTE]/[DOCUMENT] markers from AI response.
+     * If the response has [AI_NOTE] + [DOCUMENT], extract only the document portion.
+     * If [AI_NOTE] without [DOCUMENT], return original content unchanged (frontend handles the note).
+     */
+    private String stripAiNoteMarkers(String content) {
+        if (content == null) return content;
+        String trimmed = content.trim();
+        if (trimmed.startsWith("[AI_NOTE]")) {
+            int docIdx = trimmed.indexOf("[DOCUMENT]");
+            if (docIdx != -1) {
+                String docContent = trimmed.substring(docIdx + "[DOCUMENT]".length()).trim();
+                return docContent.isEmpty() ? content : docContent;
+            }
+        }
+        return content;
     }
 
     private int countWords(String text) {
@@ -794,8 +891,10 @@ public class AiWorkspaceDocumentService {
             throw new IllegalStateException("Generation cancelled by user");
         }
 
-        // 6. Generate document content using Claude with cancellation support
-        CompletableFuture<String> aiRequest = claudeService.generateCompletion(fullPrompt, null, false, conversation.getId());
+        // 6. Generate document content using Claude with cancellation support (routed through AIRequestRouter)
+        CompletableFuture<String> aiRequest = aiRequestRouter.routeSimple(
+                com.bostoneo.bostoneosolutions.enumeration.AIOperationType.DRAFT_GENERATION,
+                fullPrompt, null, false, conversation.getId());
 
         String content;
         try {
@@ -981,10 +1080,15 @@ public class AiWorkspaceDocumentService {
         StringBuilder accumulated = new StringBuilder();
         final LegalCase finalCase = legalCase;
 
-        claudeService.generateCompletionStreaming(
-                fullPrompt,
-                null, // systemMessage
-                conversationId,
+        // Route streaming through AIRequestRouter for smart model selection
+        com.bostoneo.bostoneosolutions.dto.ai.AIRoutingRequest streamingRequest = com.bostoneo.bostoneosolutions.dto.ai.AIRoutingRequest.builder()
+                .operationType(com.bostoneo.bostoneosolutions.enumeration.AIOperationType.DRAFT_GENERATION_STREAMING)
+                .query(fullPrompt)
+                .sessionId(conversationId)
+                .build();
+
+        aiRequestRouter.routeStreaming(
+                streamingRequest,
                 // tokenConsumer: relay to SSE + accumulate
                 token -> {
                     accumulated.append(token);
@@ -1201,7 +1305,7 @@ public class AiWorkspaceDocumentService {
             """,
             legalCase.getCaseNumber(),
             legalCase.getTitle(),
-            legalCase.getType(),
+            legalCase.getEffectivePracticeArea(),
             legalCase.getCountyName(),
             legalCase.getStatus(),
             legalCase.getClientName(),
@@ -1408,14 +1512,24 @@ public class AiWorkspaceDocumentService {
         prompt.append("- Each major section (##) should be substantive enough to stand on its own\n");
         prompt.append("- Group related short clauses under a single section header rather than giving each its own ## header\n");
         prompt.append("- Place signature blocks and closing sections together — do not split them across separate sections\n");
+        prompt.append("\nTABLE FORMATTING (CRITICAL - tables must render correctly):\n");
+        prompt.append("- Use standard markdown table syntax: | Header | Header |\\n|--------|--------|\\n| Data | Data |\n");
+        prompt.append("- Every table MUST have: (1) header row, (2) separator row with dashes, (3) data rows\n");
+        prompt.append("- Keep each table row on a single line — do NOT break a row across multiple lines\n");
+        prompt.append("- Do NOT add blank lines between table rows (rows must be consecutive)\n");
+        prompt.append("- Always include a **Total** or **Subtotal** row at the bottom of numeric tables\n");
+        prompt.append("- Use bold (**text**) for total rows to make them stand out\n");
 
         // MANDATORY RULE: COMPLETE ALL LISTS WITH PLACEHOLDERS
-        prompt.append("\n**⚠️ MANDATORY RULE - COMPLETE ALL LISTS WITH PLACEHOLDERS**:\n");
-        prompt.append("When you write 'as follows:', 'including:', 'specifically:', 'demonstrates:', 'such as:', etc., ");
-        prompt.append("you MUST complete the list immediately after.\n");
-        prompt.append("This is the #1 most common error. You MUST follow this rule strictly.\n\n");
+        // NOTE: For demand letters, the domain-specific prompt overrides this — it says "NEVER use placeholders"
+        // because demand letters have all case data injected. The rule below applies to other document types.
+        if (!isDemandLetterType(documentType)) {
+            prompt.append("\n**⚠️ MANDATORY RULE - COMPLETE ALL LISTS WITH PLACEHOLDERS**:\n");
+            prompt.append("When you write 'as follows:', 'including:', 'specifically:', 'demonstrates:', 'such as:', etc., ");
+            prompt.append("you MUST complete the list immediately after.\n");
+            prompt.append("This is the #1 most common error. You MUST follow this rule strictly.\n\n");
 
-        prompt.append("**IF YOU HAVE SPECIFIC FACTS** → Use them:\n");
+            prompt.append("**IF YOU HAVE SPECIFIC FACTS** → Use them:\n");
         prompt.append("✓ CORRECT:\n");
         prompt.append("'The evidence demonstrates:\n");
         prompt.append("1. Dashcam footage showing defendant ran red light at 45mph\n");
@@ -1461,6 +1575,18 @@ public class AiWorkspaceDocumentService {
         prompt.append("**ALTERNATIVE**: If you don't have facts, rephrase to avoid the colon:\n");
         prompt.append("✓ RIGHT: 'The dashcam footage provides conclusive evidence of defendant's liability.'\n");
         prompt.append("✓ RIGHT: 'Medical documentation supports the claimed injuries.'\n\n");
+        } else {
+            // DEMAND LETTER: Opposite rule — NEVER use placeholders, use real case data
+            prompt.append("\n**⚠️ CRITICAL RULE FOR DEMAND LETTERS — ZERO PLACEHOLDERS**:\n");
+            prompt.append("This is a demand letter with ALL case data provided. You MUST:\n");
+            prompt.append("- Use ONLY real values from the case data — real names, real dates, real dollar amounts\n");
+            prompt.append("- NEVER use $[Amount], [Date], [ATTORNEY TO INSERT: ...], [Name], or ANY square bracket placeholders\n");
+            prompt.append("- If specific data is not available, write a reasonable narrative without brackets\n");
+            prompt.append("- For dollar amounts, use the exact amounts from medical records and damage calculations\n");
+            prompt.append("- For dates, use the actual dates from treatment records\n");
+            prompt.append("- For provider names, use the actual provider names from medical records\n");
+            prompt.append("- SELF-CHECK: Before submitting, scan your ENTIRE response for [ and ]. If you find ANY square brackets that are not part of legal citations, you have FAILED this rule.\n\n");
+        } // end: placeholder rules
 
         // ATTORNEY REPRESENTATION REQUIREMENTS
         prompt.append("**ATTORNEY REPRESENTATION REQUIREMENTS - CRITICAL**:\n");
@@ -1490,16 +1616,31 @@ public class AiWorkspaceDocumentService {
         prompt.append("  - Disclaimers about attorney fees or suggesting to hire counsel\n\n");
 
         // FINAL CHECKLIST BEFORE GENERATION
-        prompt.append("**📋 FINAL CHECKLIST BEFORE SUBMITTING YOUR RESPONSE**:\n");
+        prompt.append("**FINAL CHECKLIST BEFORE SUBMITTING YOUR RESPONSE**:\n");
         prompt.append("Before you submit, verify:\n");
-        prompt.append("✓ Every 'as follows:', 'including:', 'specifically:', etc. is followed by list items or placeholders\n");
-        prompt.append("✓ All tables have complete rows with placeholder values like $[Amount] for unknown numbers\n");
+        prompt.append("✓ Every 'as follows:', 'including:', 'specifically:', etc. is followed by list items\n");
+        if (!isDemandLetterType(documentType)) {
+            prompt.append("✓ All tables have complete rows (use placeholder values like $[Amount] for unknown numbers)\n");
+            prompt.append("✓ Used [ATTORNEY TO INSERT: ...] format for case-specific details you don't have\n");
+        } else {
+            prompt.append("✓ ZERO square brackets in the entire document — all values are real data from the case\n");
+            prompt.append("✓ All dollar amounts are precise with cents (e.g., $5,234.50)\n");
+        }
         prompt.append("✓ No blank spaces after colons - every list is complete\n");
-        prompt.append("✓ Used [ATTORNEY TO INSERT: ...] format for case-specific details you don't have\n");
         prompt.append("✓ Document is drafted from attorney's perspective, not pro se\n");
         prompt.append("✓ All citations properly formatted (if in THOROUGH mode)\n\n");
 
         return prompt.toString();
+    }
+
+    /**
+     * Check if a document type represents a demand letter.
+     * Handles both "demand_letter" (PI endpoint) and "demand-letter" (AI Workspace) variants.
+     */
+    private boolean isDemandLetterType(String documentType) {
+        if (documentType == null) return false;
+        String normalized = documentType.toLowerCase().replace("-", "_");
+        return "demand_letter".equals(normalized);
     }
 
     /**
@@ -2241,7 +2382,8 @@ public class AiWorkspaceDocumentService {
 
     /**
      * Generate PDF document from raw content (no document ID required)
-     * Used for workflow drafts that haven't been saved to GeneratedDocuments table
+     * Uses iText HtmlConverter to render styled HTML → PDF that matches the preview exactly.
+     * Falls back to markdown pipeline for non-HTML content.
      */
     public byte[] generatePdfDocumentFromContent(String content, String title) {
         log.info("Generating PDF document from content, title={}", title);
@@ -2250,6 +2392,85 @@ public class AiWorkspaceDocumentService {
             throw new IllegalArgumentException("Content cannot be empty");
         }
 
+        // If content is HTML, use HtmlConverter for WYSIWYG PDF matching the preview
+        boolean isHtml = content.contains("<p") || content.contains("<div") ||
+                         content.contains("<strong") || content.contains("<h1") ||
+                         content.contains("<h2") || content.contains("<table");
+
+        if (isHtml) {
+            return generateStyledHtmlPdf(content, title);
+        }
+
+        // Fallback: markdown pipeline for plain text content
+        return generateMarkdownPdf(content, title);
+    }
+
+    /**
+     * Generate PDF from HTML content using iText HtmlConverter.
+     * Wraps the editor HTML in a styled HTML document that matches the frontend preview.
+     */
+    private byte[] generateStyledHtmlPdf(String htmlContent, String title) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdfDoc = new PdfDocument(writer);
+            pdfDoc.setDefaultPageSize(PageSize.LETTER);
+
+            // Add page numbers
+            addPageNumberHandler(pdfDoc);
+
+            // Build a complete HTML document with embedded CSS matching the frontend
+            String styledHtml = buildStyledHtmlDocument(htmlContent, title);
+
+            // Use iText HtmlConverter to render the styled HTML → PDF
+            java.io.ByteArrayInputStream htmlStream = new java.io.ByteArrayInputStream(
+                styledHtml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            HtmlConverter.convertToPdf(htmlStream, pdfDoc, new ConverterProperties());
+
+            log.info("Successfully generated styled HTML PDF ({} bytes)", baos.size());
+            return baos.toByteArray();
+
+        } catch (Exception e) {
+            log.error("Error generating styled HTML PDF, falling back to markdown pipeline", e);
+            // Fallback to markdown pipeline if HtmlConverter fails
+            return generateMarkdownPdf(htmlContent, title);
+        }
+    }
+
+    /**
+     * Build a complete HTML document with CSS that matches the frontend preview styling.
+     */
+    private String buildStyledHtmlDocument(String bodyHtml, String title) {
+        return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/>"
+             + "<style>"
+             + "body { font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.8; "
+             + "color: #343a40; margin: 0; padding: 56px 64px; }"
+             + "h1 { font-size: 22px; font-weight: 700; margin: 8px 0 6px; color: #212529; }"
+             + "h2 { font-size: 17px; font-weight: 600; margin: 28px 0 10px; color: #343a40; }"
+             + "h3 { font-size: 14px; font-weight: 600; margin: 18px 0 6px; color: #495057; }"
+             + "h4 { font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: #343a40; }"
+             + "p { margin: 0 0 10px; }"
+             + "ul, ol { margin: 8px 0 16px; padding-left: 32px; }"
+             + "li { margin-bottom: 8px; }"
+             + "blockquote { border-left: 3px solid #405189; margin: 16px 0 16px 24px; "
+             + "padding: 12px 20px; color: #6c757d; font-style: italic; }"
+             + "table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }"
+             + "th, td { border: 1px solid #dee2e6; padding: 8px 12px; text-align: left; }"
+             + "th { background: #f8f9fa; font-weight: 600; }"
+             + "hr { border: none; border-top: 1px solid #dee2e6; margin: 24px 0; }"
+             + "strong { font-weight: 700; }"
+             + "a { color: #405189; text-decoration: underline; }"
+             + "figure { margin: 16px 0; }"
+             + "</style>"
+             + "</head><body>"
+             + bodyHtml
+             + "</body></html>";
+    }
+
+    /**
+     * Fallback: Generate PDF from markdown/plain-text content using the manual iText pipeline.
+     */
+    private byte[] generateMarkdownPdf(String content, String title) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfWriter writer = new PdfWriter(baos);
@@ -2257,15 +2478,12 @@ public class AiWorkspaceDocumentService {
             Document document = new Document(pdfDoc, PageSize.LETTER);
             document.setMargins(72, 72, 72, 72);
 
-            // Create fonts
             PdfFont titleFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
             PdfFont headerFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
             PdfFont normalFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
 
-            // Add page numbers to every page
             addPageNumberHandler(pdfDoc);
 
-            // Always inject the title — the first H1 in markdown will be skipped
             Paragraph titleParagraph = new Paragraph(title)
                     .setFont(titleFont)
                     .setFontSize(13)
@@ -2274,23 +2492,21 @@ public class AiWorkspaceDocumentService {
                     .setMarginBottom(6);
             document.add(titleParagraph);
 
-            // Thin horizontal rule under title
             SolidLine titleLine = new SolidLine(0.5f);
             titleLine.setColor(new DeviceRgb(180, 180, 180));
             LineSeparator titleRule = new LineSeparator(titleLine);
             titleRule.setMarginBottom(10);
             document.add(titleRule);
 
-            // Convert Markdown content to PDF, skipping the first H1 (title already rendered above)
             convertMarkdownToPdf(content, document, headerFont, normalFont, true);
 
             document.close();
 
-            log.info("Successfully generated PDF document from content ({} bytes)", baos.size());
+            log.info("Successfully generated markdown PDF ({} bytes)", baos.size());
             return baos.toByteArray();
 
         } catch (Exception e) {
-            log.error("Error generating PDF document from content", e);
+            log.error("Error generating markdown PDF", e);
             throw new RuntimeException("Failed to generate PDF document", e);
         }
     }
@@ -2777,7 +2993,40 @@ public class AiWorkspaceDocumentService {
             return matcher.group();
         }
 
+        // Last resort: find first { and try brace matching from there
+        int firstBrace = response.indexOf('{');
+        if (firstBrace >= 0) {
+            String fromBrace = response.substring(firstBrace);
+            int depth = 0;
+            int endIndex = -1;
+            for (int i = 0; i < fromBrace.length(); i++) {
+                char c = fromBrace.charAt(i);
+                if (c == '{') depth++;
+                else if (c == '}') {
+                    depth--;
+                    if (depth == 0) { endIndex = i + 1; break; }
+                }
+            }
+            if (endIndex > 0) return fromBrace.substring(0, endIndex);
+        }
+
         return null;
+    }
+
+    /**
+     * Check if the AI response contains a valid JSON diff structure (even if changes array is empty).
+     * Returns true for {"changes":[]} (valid, no changes needed).
+     * Returns false if JSON parsing fails completely.
+     */
+    private boolean isValidDiffJson(String aiResponse) {
+        try {
+            String jsonStr = extractJsonFromResponse(aiResponse);
+            if (jsonStr == null) return false;
+            JsonNode root = objectMapper.readTree(jsonStr);
+            return root.has("changes") && root.get("changes").isArray();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -2856,11 +3105,15 @@ public class AiWorkspaceDocumentService {
         if (USE_MOCK_MODE) {
             aiResponse = generateMockDiffResponse(transformationType);
         } else {
-            CompletableFuture<String> aiRequest = claudeService.generateCompletion(prompt, null, false, document.getSessionId());
+            com.bostoneo.bostoneosolutions.enumeration.AIOperationType opType = isSimpleTransformation(transformationType)
+                    ? com.bostoneo.bostoneosolutions.enumeration.AIOperationType.TRANSFORMATION_SIMPLE
+                    : com.bostoneo.bostoneosolutions.enumeration.AIOperationType.TRANSFORMATION_COMPLEX;
+            CompletableFuture<String> aiRequest = aiRequestRouter.routeSimple(
+                    opType, prompt, null, false, document.getSessionId());
             try {
                 aiResponse = aiRequest.join();
             } catch (Exception e) {
-                log.error("❌ AI call failed for diff transformation: {}", e.getMessage());
+                log.error("AI call failed for diff transformation: {}", e.getMessage());
                 throw e;
             }
         }
@@ -3015,8 +3268,10 @@ public class AiWorkspaceDocumentService {
             3. If the user asks to change placeholders like [COURT NAME], find the exact placeholder text
             4. If the user asks to fix dates, find each date that needs changing
             5. Include enough context in "find" to make each match unique
-            6. If no changes are needed, return: {"changes":[]}
+            6. If no changes are needed or you cannot determine specific replacements, return: {"changes":[]}
             7. Do NOT include any text before or after the JSON
+            8. Do NOT replace placeholders with longer instructions or explanations. If a placeholder cannot be filled with real data, do NOT include it in the changes array.
+            9. Each "replace" value must be actual content, not meta-instructions like "[ATTORNEY TO INSERT: describe what goes here]"
 
             Return your JSON response now:
             """, userPrompt, documentContent);
@@ -3055,11 +3310,13 @@ public class AiWorkspaceDocumentService {
         if (USE_MOCK_MODE) {
             aiResponse = generateMockCustomDiffResponse(customPrompt);
         } else {
-            CompletableFuture<String> aiRequest = claudeService.generateCompletion(prompt, null, false, document.getSessionId());
+            CompletableFuture<String> aiRequest = aiRequestRouter.routeSimple(
+                    com.bostoneo.bostoneosolutions.enumeration.AIOperationType.TRANSFORMATION_COMPLEX,
+                    prompt, null, false, document.getSessionId());
             try {
                 aiResponse = aiRequest.join();
             } catch (Exception e) {
-                log.error("❌ AI call failed for custom diff transformation: {}", e.getMessage());
+                log.error("AI call failed for custom diff transformation: {}", e.getMessage());
                 throw e;
             }
         }
@@ -3067,14 +3324,31 @@ public class AiWorkspaceDocumentService {
         // Parse the diff response
         List<DocumentChange> changes = parseDiffResponse(aiResponse);
 
-        // If parsing failed or no changes found, return with fallback flag
+        // If no changes found, distinguish "AI found nothing to change" from "JSON parsing failed"
         if (changes.isEmpty()) {
-            log.warn("⚠️ Custom diff mode returned no changes, flagging for fallback");
-            Map<String, Object> result = new HashMap<>();
-            result.put("useDiffMode", false);
-            result.put("fallbackRequired", true);
-            result.put("reason", "No valid changes extracted from AI response");
-            return result;
+            if (isValidDiffJson(aiResponse)) {
+                // AI understood the request but found nothing to change — return success, no fallback
+                log.info("✅ Custom diff mode: AI found no changes needed");
+                Map<String, Object> result = new HashMap<>();
+                result.put("fallbackRequired", false);
+                result.put("noChangesNeeded", true);
+                result.put("useDiffMode", true);
+                result.put("transformedContent", currentContent);
+                result.put("changes", Collections.emptyList());
+                result.put("newVersion", document.getCurrentVersion());
+                result.put("tokensUsed", estimateTokens(aiResponse));
+                result.put("costEstimate", calculateCost(estimateTokens(aiResponse)));
+                result.put("wordCount", countWords(currentContent));
+                return result;
+            } else {
+                // JSON parsing failed — flag for full-document fallback
+                log.warn("⚠️ Custom diff mode: JSON parsing failed, flagging for fallback");
+                Map<String, Object> result = new HashMap<>();
+                result.put("useDiffMode", false);
+                result.put("fallbackRequired", true);
+                result.put("reason", "No valid changes extracted from AI response");
+                return result;
+            }
         }
 
         // Apply diffs to get the transformed content
@@ -3137,7 +3411,9 @@ public class AiWorkspaceDocumentService {
         String systemMessage = buildPromptEnhancerSystemMessage(documentType, jurisdiction);
         String userMessage = "Transform this rough idea into a detailed, structured prompt for generating a legal document:\n\n" + roughPrompt;
 
-        CompletableFuture<String> result = claudeService.generateCompletion(userMessage, systemMessage, false, null);
+        CompletableFuture<String> result = aiRequestRouter.routeSimple(
+                com.bostoneo.bostoneosolutions.enumeration.AIOperationType.QUESTION_ANSWERING,
+                userMessage, systemMessage, false, null);
         return result.join();
     }
 

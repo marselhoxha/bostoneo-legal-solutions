@@ -273,28 +273,17 @@ public class PIPortfolioServiceImpl implements PIPortfolioService {
      * Check if a case is a Personal Injury case based on practice area or type
      */
     private boolean isPICase(LegalCase c) {
-        // Check practice area field
-        if (c.getPracticeArea() != null) {
-            String pa = c.getPracticeArea().toLowerCase();
-            if (pa.contains("personal injury") || pa.equals("pi")) {
-                return true;
-            }
-        }
-
-        // Check type field as fallback
-        if (c.getType() != null) {
-            String type = c.getType().toLowerCase();
-            return type.contains("personal injury") ||
-                   type.contains("pi") ||
-                   type.contains("injury") ||
-                   type.contains("accident") ||
-                   type.contains("negligence") ||
-                   type.contains("premises liability") ||
-                   type.contains("medical malpractice") ||
-                   type.contains("slip and fall") ||
-                   type.contains("motor vehicle");
-        }
-
-        return false;
+        String area = c.getEffectivePracticeArea();
+        if (area == null) return false;
+        String lower = area.toLowerCase();
+        return lower.contains("personal injury") ||
+               lower.equals("pi") ||
+               lower.contains("injury") ||
+               lower.contains("accident") ||
+               lower.contains("negligence") ||
+               lower.contains("premises liability") ||
+               lower.contains("medical malpractice") ||
+               lower.contains("slip and fall") ||
+               lower.contains("motor vehicle");
     }
 }

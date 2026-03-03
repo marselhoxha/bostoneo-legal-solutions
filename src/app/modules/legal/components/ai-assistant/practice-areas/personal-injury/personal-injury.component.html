@@ -498,12 +498,12 @@
                         </div>
 
                         <!-- Policy Limit -->
-                        <div class="case-info-item policy" *ngIf="linkedCase.policyLimit">
+                        <div class="case-info-item policy" *ngIf="linkedCase.insurancePolicyLimit">
                           <div class="info-icon">
                             <i class="ri-money-dollar-circle-line"></i>
                           </div>
                           <div class="info-content">
-                            <span class="info-value text-success">{{ formatCurrency(linkedCase.policyLimit) }}</span>
+                            <span class="info-value text-success">{{ formatCurrency(linkedCase.insurancePolicyLimit) }}</span>
                             <span class="info-label">Policy Limit</span>
                           </div>
                         </div>
@@ -617,15 +617,15 @@
                       <div class="range-labels">
                         <div class="range-label low">
                           <span class="label-text">LOW</span>
-                          <span class="label-value">{{ formatCurrency(damageCalculation?.lowValue || calculatedValue?.settlementRangeLow || 0) }}</span>
+                          <span class="label-value">{{ formatCurrency(calculatedValue?.settlementRangeLow || damageCalculation?.lowValue || 0) }}</span>
                         </div>
                         <div class="range-label likely">
                           <span class="label-text">LIKELY</span>
-                          <span class="label-value">{{ formatCurrency(damageCalculation?.midValue || calculatedValue?.realisticRecovery || 0) }}</span>
+                          <span class="label-value">{{ formatCurrency(calculatedValue?.realisticRecovery || damageCalculation?.midValue || 0) }}</span>
                         </div>
                         <div class="range-label high">
                           <span class="label-text">HIGH</span>
-                          <span class="label-value">{{ formatCurrency(damageCalculation?.highValue || calculatedValue?.settlementRangeHigh || 0) }}</span>
+                          <span class="label-value">{{ formatCurrency(calculatedValue?.settlementRangeHigh || damageCalculation?.highValue || 0) }}</span>
                         </div>
                       </div>
                     </div>
@@ -808,15 +808,15 @@
                             <div class="range-values">
                               <div class="range-item">
                                 <span class="percentile">25th</span>
-                                <span class="amount">{{ formatCurrency(damageCalculation?.lowValue || calculatedValue?.settlementRangeLow || 0) }}</span>
+                                <span class="amount">{{ formatCurrency(calculatedValue?.settlementRangeLow || damageCalculation?.lowValue || 0) }}</span>
                               </div>
                               <div class="range-item median">
                                 <span class="percentile">Median</span>
-                                <span class="amount">{{ formatCurrency(damageCalculation?.midValue || calculatedValue?.realisticRecovery || 0) }}</span>
+                                <span class="amount">{{ formatCurrency(calculatedValue?.realisticRecovery || damageCalculation?.midValue || 0) }}</span>
                               </div>
                               <div class="range-item">
                                 <span class="percentile">75th</span>
-                                <span class="amount">{{ formatCurrency(damageCalculation?.highValue || calculatedValue?.settlementRangeHigh || 0) }}</span>
+                                <span class="amount">{{ formatCurrency(calculatedValue?.settlementRangeHigh || damageCalculation?.highValue || 0) }}</span>
                               </div>
                             </div>
                           </div>

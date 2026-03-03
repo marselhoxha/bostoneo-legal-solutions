@@ -81,8 +81,14 @@
                   </span>
                   <span class="meta-separator">•</span>
                   <span class="meta-item-inline">
-                    <i class="ri-calendar-line"></i>{{ case.filingDate | date:'MMM dd, yyyy' }}
+                    <i class="ri-time-line"></i>Created {{ case.createdAt | date:'MMM dd, yyyy' }}
                   </span>
+                  <ng-container *ngIf="case.filingDate">
+                    <span class="meta-separator">•</span>
+                    <span class="meta-item-inline">
+                      <i class="ri-calendar-line"></i>Filed {{ case.filingDate | date:'MMM dd, yyyy' }}
+                    </span>
+                  </ng-container>
                 </div>
               </div>
             </div>
@@ -248,6 +254,16 @@
                   </div>
 
                   <div class="info-item">
+                    <div class="info-icon-sm">
+                      <i class="ri-time-line"></i>
+                    </div>
+                    <div class="info-details">
+                      <span class="info-label">Case Created</span>
+                      <span class="info-value">{{ case.createdAt | date:'longDate' }}</span>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="case.filingDate">
                     <div class="info-icon-sm">
                       <i class="ri-calendar-check-line"></i>
                     </div>

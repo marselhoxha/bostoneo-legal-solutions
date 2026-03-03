@@ -47,6 +47,7 @@ public class AILegalResearchService {
     private final ResearchAnnotationRepository annotationRepository;
     private final LegalCaseRepository legalCaseRepository;
     private final ClaudeSonnet4Service claudeService;
+    private final com.bostoneo.bostoneosolutions.service.ai.AIRequestRouter aiRequestRouter;
     private final CourtListenerService courtListenerService;
     private final FederalRegisterService federalRegisterService;
     private final MassachusettsLegalService massachusettsLegalService;
@@ -454,7 +455,9 @@ public class AILegalResearchService {
         String prompt = buildAIPrompt(query, searchResults, queryType, caseId, conversationHistory);
         String systemMessage = buildSystemMessage();
 
-        return claudeService.generateCompletion(prompt, systemMessage, false)
+        return aiRequestRouter.routeSimple(
+                com.bostoneo.bostoneosolutions.enumeration.AIOperationType.RESEARCH_ANALYSIS,
+                prompt, systemMessage, false, null)
             .exceptionally(throwable -> {
                 log.error("AI analysis failed: ", throwable);
                 return "AI analysis temporarily unavailable. Please review the search results manually.";
@@ -772,27 +775,10 @@ public class AILegalResearchService {
             prompt.append("Reference the previous conversation naturally without repeating information already provided. ");
             prompt.append("Build on what was already discussed. Be concise and focused on the new question.\n\n");
 
-            // CRITICAL: Explicit anti-repetition rules (OVERRIDES all other formatting instructions)
-            prompt.append("⚠️⚠️⚠️ CRITICAL - DO NOT REPEAT INFORMATION ⚠️⚠️⚠️\n");
-            prompt.append("Since this is a FOLLOW-UP in an ongoing conversation, you MUST NOT repeat:\n");
-            prompt.append("❌ DO NOT repeat: Case basics (case number, title, parties, case type) - already discussed\n");
-            prompt.append("❌ DO NOT repeat: Court information (court name, judge name, courtroom) - already mentioned\n");
-            prompt.append("❌ DO NOT repeat: Deadline/hearing dates that were already stated - unless there's a NEW update\n");
-            prompt.append("❌ DO NOT repeat: Jurisdictional warnings (\"this is federal court\") - already established\n");
-            prompt.append("❌ DO NOT repeat: Legal framework already explained - build on it instead\n");
-            prompt.append("❌ DO NOT repeat: Case law or statutes already cited - reference them briefly if needed\n\n");
-
-            prompt.append("✅ INSTEAD, use conversational references:\n");
-            prompt.append("✅ GOOD: \"Building on the preliminary injunction strategy we discussed...\"\n");
-            prompt.append("✅ GOOD: \"For the expedited discovery I mentioned earlier...\"\n");
-            prompt.append("✅ GOOD: \"As noted in my analysis of the DTSA claim...\"\n");
-            prompt.append("✅ GOOD: \"Regarding the M.G.L. c. 149, § 24L issue we covered...\"\n\n");
-
-            prompt.append("**EXAMPLE - BAD vs GOOD Follow-Up:**\n");
-            prompt.append("❌ BAD: \"Your case is in US District Court for Massachusetts (federal court). You have a hearing on November 15, 2025 (24 days from now) before Hon. William Rodriguez. Under the DTSA...\"\n");
-            prompt.append("✅ GOOD: \"Building on the DTSA strategy we outlined, structure your preliminary injunction motion to emphasize...\"\n\n");
-
-            prompt.append("THIS INSTRUCTION OVERRIDES THE STANDARD TEMPLATE FORMAT. For follow-ups, be conversational and avoid repetition.\n\n");
+            // Compact anti-repetition instruction (replaces verbose ~400 token block)
+            prompt.append("CRITICAL: Never repeat case basics, court info, dates, jurisdiction, or legal framework already discussed. ");
+            prompt.append("Use conversational back-references (e.g. \"Building on the strategy we discussed...\"). ");
+            prompt.append("This overrides standard template format.\n\n");
         }
 
         // Add comprehensive case context if available
@@ -805,622 +791,11 @@ public class AILegalResearchService {
                 Optional<LegalCase> caseOpt = orgId != null
                     ? legalCaseRepository.findByIdAndOrganizationId(caseIdLong, orgId)
                     : Optional.empty();
-                caseOpt.ifPresent(legalCase -> {
-                    // Smart context filtering: Skip basic case info for follow-ups (already in conversation history)
-                    boolean isFollowUp = questionType == QuestionType.FOLLOW_UP_CLARIFICATION;
-
-                    // Declare these outside the conditional so they're available later
-                    String countyName = legalCase.getCountyName();
-                    String jurisdictionType = "UNKNOWN";
-                    String applicableRules = "applicable procedural rules";
-
-                    if (!isFollowUp) {
-                        // Full case context for initial questions
-                        prompt.append("**CRITICAL - CASE-SPECIFIC CONTEXT**:\n");
-                        prompt.append("This research is for a SPECIFIC active case. Your response MUST be tailored to this case's details.\n\n");
-
-                        // Basic Case Information
-                        prompt.append("**Case Identification:**\n");
-                        prompt.append("- Case Number: ").append(legalCase.getCaseNumber()).append("\n");
-                        prompt.append("- Case Title: ").append(legalCase.getTitle()).append("\n");
-                        prompt.append("- Case Type: ").append(legalCase.getType() != null ? legalCase.getType() : "General").append("\n");
-
-                        // Full description (not truncated) - STRIP OUT stale date calculations
-                        if (legalCase.getDescription() != null && !legalCase.getDescription().isEmpty()) {
-                            String cleanDescription = removeStaleDateCalculations(legalCase.getDescription());
-                            prompt.append("- Case Description: ").append(cleanDescription).append("\n");
-                        }
-
-                        // County and Jurisdiction Information
-
-                        if (countyName != null && !countyName.isEmpty()) {
-                            prompt.append("- County: ").append(countyName).append("\n");
-
-                            // Determine jurisdiction from county name
-                            String countyLower = countyName.toLowerCase();
-                            if (countyLower.contains("u.s. district") || countyLower.contains("federal") ||
-                                countyLower.contains("usdc") || countyLower.contains("united states district")) {
-                                jurisdictionType = "FEDERAL";
-                                applicableRules = "Federal Rules of Civil Procedure (FRCP)";
-                            } else if (countyLower.contains("superior") || countyLower.contains("massachusetts") ||
-                                       countyLower.contains("district court") || countyLower.contains("ma ")) {
-                                jurisdictionType = "STATE";
-                                applicableRules = "Massachusetts Rules of Civil Procedure (Mass. R. Civ. P.)";
-                            }
-
-                            if (legalCase.getCourtroom() != null && !legalCase.getCourtroom().isEmpty()) {
-                                prompt.append("- Courtroom: ").append(legalCase.getCourtroom()).append("\n");
-                            }
-                            if (legalCase.getJudgeName() != null && !legalCase.getJudgeName().isEmpty()) {
-                                prompt.append("- Judge: ").append(legalCase.getJudgeName()).append("\n");
-                            }
-                        }
-
-                        // Add court-specific rules and standing orders
-                        String caseDetails = String.format("County: %s, Type: %s, Description: %s",
-                            countyName != null ? countyName : "",
-                            legalCase.getType() != null ? legalCase.getType() : "",
-                            legalCase.getDescription() != null ? legalCase.getDescription() : ""
-                        );
-                        CourtRulesService.CourtRulesContext courtRules = courtRulesService.getApplicableRules(caseDetails);
-                        if (courtRules != null) {
-                            prompt.append("\n").append(courtRules.generatePromptAddition());
-                        }
-
-                        // Case Status and Priority
-                        if (legalCase.getStatus() != null) {
-                            prompt.append("- Status: ").append(legalCase.getStatus()).append("\n");
-                        }
-                        if (legalCase.getPriority() != null) {
-                            prompt.append("- Priority: ").append(legalCase.getPriority()).append("\n");
-                        }
-                    } else {
-                        // Minimal context reminder for follow-ups
-                        prompt.append("**CASE CONTEXT** (for reference - do not repeat in your response):\n");
-                        prompt.append("- Case: ").append(legalCase.getCaseNumber()).append(" - ").append(legalCase.getTitle()).append("\n");
-                    }
-
-                    // Important Dates and Procedural Posture (always include - can change)
-                    prompt.append("\n**Procedural Timeline:**\n");
-                    String proceduralStage = "Unknown stage";
-
-                    if (legalCase.getFilingDate() != null) {
-                        prompt.append("- Filing Date: ").append(legalCase.getFilingDate()).append("\n");
-
-                        // Calculate days since filing
-                        long daysSinceFiling = (new Date().getTime() - legalCase.getFilingDate().getTime()) / (1000 * 60 * 60 * 24);
-
-                        if (daysSinceFiling < 90) {
-                            proceduralStage = "Early litigation (within 90 days of filing)";
-                        } else if (daysSinceFiling < 180) {
-                            proceduralStage = "Active discovery phase";
-                        } else {
-                            proceduralStage = "Advanced litigation";
-                        }
-                    } else {
-                        proceduralStage = "Pre-filing stage (case not yet filed)";
-                    }
-
-                    if (legalCase.getNextHearing() != null) {
-                        long daysToHearing = (legalCase.getNextHearing().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
-                        String timeDescription = daysToHearing >= 0
-                            ? daysToHearing + " days from now"
-                            : Math.abs(daysToHearing) + " days ago (DEADLINE PASSED)";
-
-                        prompt.append("- Next Hearing: ").append(legalCase.getNextHearing())
-                              .append(" (").append(timeDescription).append(")\n");
-                        proceduralStage = daysToHearing >= 0 ? "Active litigation with upcoming hearing" : "Active litigation - hearing deadline passed";
-                    }
-                    if (legalCase.getTrialDate() != null) {
-                        long daysToTrial = (legalCase.getTrialDate().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
-                        String timeDescription = daysToTrial >= 0
-                            ? daysToTrial + " days from now"
-                            : Math.abs(daysToTrial) + " days ago (PAST)";
-
-                        prompt.append("- Trial Date: ").append(legalCase.getTrialDate())
-                              .append(" (").append(timeDescription).append(")\n");
-                        proceduralStage = daysToTrial >= 0 ? "Trial preparation phase" : "Post-trial phase";
-                    }
-
-                    prompt.append("- Current Procedural Stage: ").append(proceduralStage).append("\n");
-
-                    // Client Information
-                    prompt.append("\n**Client Information:**\n");
-                    prompt.append("(Remember: You are addressing the ATTORNEY representing this client, not the client themselves)\n");
-                    prompt.append("- Client: ").append(legalCase.getClientName()).append("\n");
-
-                    // CRITICAL INSTRUCTIONS FOR AI
-                    prompt.append("\n**CRITICAL INSTRUCTIONS - READ CAREFULLY**:\n");
-                    prompt.append("1. JURISDICTION: This case is in ").append(jurisdictionType).append(" court.\n");
-                    prompt.append("   - You MUST use ONLY ").append(applicableRules).append("\n");
-                    prompt.append("   - DO NOT mix federal and state procedural rules\n");
-                    prompt.append("   - DO NOT contradict yourself about which court system applies\n\n");
-
-                    prompt.append("2. PROCEDURAL POSTURE: This case is in the \"").append(proceduralStage).append("\" stage.\n");
-                    prompt.append("   - Tailor your recommendations to what is appropriate at THIS specific stage\n");
-                    prompt.append("   - If suggesting motions, specify deadlines based on the filing date and procedural rules\n\n");
-
-                    // Case-type-specific instructions
-                    String caseType = legalCase.getType() != null ? legalCase.getType().toLowerCase() : "";
-                    log.info("🔍 DEBUG - Case type for case {}: '{}' (original: '{}')",
-                             legalCase.getCaseNumber(), caseType, legalCase.getType());
-
-                    if (caseType.contains("data breach") || caseType.contains("privacy")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a DATA BREACH/PRIVACY case.\n");
-                        prompt.append("   - Address Article III standing issues (injury-in-fact requirements for data breach)\n");
-                        prompt.append("   - Consider credit monitoring, identity theft concerns, and notification obligations\n");
-                        prompt.append("   - Reference applicable consumer protection statutes (e.g., state data breach laws, FCRA)\n");
-                        prompt.append("   - If class action, address data breach-specific class certification challenges\n");
-                        prompt.append("   - **COSTS**: Cybersecurity expert $30K-$60K, class notification $50K-$200K, forensics expert $25K-$50K\n");
-                        prompt.append("   - **TIMELINE**: Class certification typically 9-15 months; settlement negotiations 12-24 months\n\n");
-                    } else if (caseType.contains("malpractice") || caseType.contains("medical negligence")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a MEDICAL MALPRACTICE case.\n");
-                        prompt.append("   - **Massachusetts Requirements**: Expert testimony REQUIRED to establish standard of care and causation (Mass. G.L. c. 231, §60B)\n");
-                        prompt.append("   - **Tribunal Requirement**: If in state court, must go through medical malpractice tribunal first; if in FEDERAL court, tribunal MAY NOT apply under Erie doctrine\n");
-                        prompt.append("   - **Res Ipsa Loquitur**: Rarely applies in Massachusetts medical malpractice - expert testimony generally required even for obvious errors\n");
-                        prompt.append("   - **Statute of Limitations**: 3 years from date of injury or discovery of injury (Mass. G.L. c. 260, §2A), but not more than 7 years from act/omission\n");
-                        prompt.append("   - **Expert Disclosure**: Critical to retain board-certified experts early - deadline typically 90-120 days before trial or per scheduling order\n");
-                        prompt.append("   - **Informed Consent**: Consider separate informed consent claims under Massachusetts common law if applicable\n");
-                        prompt.append("   - **Damages Cap**: Massachusetts has NO cap on medical malpractice damages (unlike many states)\n");
-                        prompt.append("   - **COSTS**: Medical expert $15K-$30K, causation expert $10K-$25K, economic damages expert $15K-$25K, life care planner (catastrophic injury) $25K-$50K\n");
-                        prompt.append("   - **TIMELINE**: Tribunal hearing 3-9 months; if proceeds past tribunal, trial typically 18-30 months from filing\n\n");
-                    } else if (caseType.contains("class action")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a CLASS ACTION.\n");
-                        prompt.append("   - Address Rule 23 requirements (numerosity, commonality, typicality, adequacy)\n");
-                        prompt.append("   - Consider class certification timing and strategy\n");
-                        prompt.append("   - Address notice requirements and settlement approval procedures\n\n");
-                    } else if (caseType.contains("employment")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is an EMPLOYMENT case.\n");
-                        prompt.append("   - **McDonnell Douglas Framework**: For discrimination/retaliation claims: (1) prima facie case, (2) employer legitimate reason, (3) pretext showing\n");
-                        prompt.append("   - **Administrative Exhaustion**: Title VII requires EEOC charge within 300 days (deferral states) or 180 days; right-to-sue letter required before filing\n");
-                        prompt.append("   - **Comparator Evidence**: Identify similarly situated employees treated differently - comparator analysis critical for discrimination claims\n");
-                        prompt.append("   - **Temporal Proximity**: Protected activity followed by adverse action within short timeframe creates retaliation inference (weeks/months, not years)\n");
-                        prompt.append("   - **Discovery Focus**: Personnel files, performance reviews, comparator data, decision-maker emails, handbook/policy violations\n");
-                        prompt.append("   - **Costs**: Employment litigation experts (HR, economists) $15K-$30K; typically 12-18 months to trial in federal court\n");
-                        prompt.append("   - **Key Statutes**: Title VII (discrimination), ADEA (age 40+), ADA (disability), FMLA (medical leave), FLSA (wage/hour), state employment laws\n\n");
-                    } else if (caseType.contains("trade secret") || caseType.contains("misappropriation")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a TRADE SECRETS case.\n");
-                        prompt.append("   - Address Defend Trade Secrets Act (DTSA) federal claims and/or state trade secret law\n");
-                        prompt.append("   - **Identification Requirement**: Must identify trade secrets with reasonable particularity\n");
-                        prompt.append("   - **Protection Measures**: Show reasonable steps taken to maintain secrecy (NDAs, access controls, etc.)\n");
-                        prompt.append("   - **Preliminary Injunction**: Consider immediate injunctive relief to prevent ongoing misappropriation\n");
-                        prompt.append("   - **Irreparable Harm**: Trade secrets lose value once disclosed - emphasize cannot be \"un-rung\"\n\n");
-                    } else if (caseType.contains("immigration") || caseType.contains("removal") || caseType.contains("asylum")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is an IMMIGRATION case.\n");
-                        prompt.append("   - **Dual Proceedings**: If criminal charges exist, coordinate immigration and criminal defense strategy carefully\n");
-                        prompt.append("   - **Aggravated Felony**: Any aggravated felony conviction = mandatory removal with no relief\n");
-                        prompt.append("   - **Asylum Requirements**: Must show past persecution or well-founded fear on account of protected ground\n");
-                        prompt.append("   - **Country Conditions**: Expert testimony on home country conditions often critical\n");
-                        prompt.append("   - **Padilla Warning**: Criminal defense counsel MUST advise on immigration consequences of pleas\n\n");
-                    } else if (caseType.contains("bankruptcy")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a BANKRUPTCY case.\n");
-                        prompt.append("   - **First-Day Motions**: In Chapter 11, priorities are: (1) cash collateral (11 U.S.C. § 363(c)), (2) DIP financing (§ 364), (3) critical vendor payments, (4) employee wages/benefits, (5) utilities, (6) customer programs, (7) insurance\n");
-                        prompt.append("   - **Automatic Stay**: 11 U.S.C. § 362 halts all collection efforts immediately upon filing - violations are sanctionable\n");
-                        prompt.append("   - **Procedural Rules**: Apply Fed. R. Bankr. P., NOT Federal Rules of Civil Procedure\n");
-                        prompt.append("   - **First-Day Hearing**: Typically occurs 24-48 hours after petition filing - extremely tight deadlines\n");
-                        prompt.append("   - **DIP Financing**: § 364(c) superpriority and § 364(d) priming liens require showing no less burdensome financing available\n");
-                        prompt.append("   - **Key Sections**: § 365 (executory contracts/leases), § 503(b)(9) (reclamation claims), § 1129 (plan confirmation)\n\n");
-                    } else if (caseType.contains("tax")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a TAX case.\n");
-                        prompt.append("   - **Tax Court Jurisdiction**: If this involves IRS deficiency notice, must file petition within 90 days (150 if abroad) or jurisdiction is lost forever\n");
-                        prompt.append("   - **Burden of Proof**: IRS has burden for fraud penalties (IRC § 7491(c)); taxpayer has burden for most other issues unless § 7491(a) applies (credible records, cooperation, net worth under threshold)\n");
-                        prompt.append("   - **Deficiency Procedures**: Tax Court reviews deficiency before payment; District Court/Court of Federal Claims require payment first then sue for refund\n");
-                        prompt.append("   - **Statute of Limitations**: Generally 3 years (IRC § 6501(a)), but 6 years for 25%+ understatement (§ 6501(e)), unlimited for fraud (§ 6501(c)(1))\n");
-                        prompt.append("   - **Penalties**: Accuracy-related (§ 6662, 20%), civil fraud (§ 6663, 75%), failure to file (§ 6651(a)(1), 5%/month up to 25%)\n");
-                        prompt.append("   - **Administrative Precedents**: Cite Tax Court Memorandum opinions (T.C. Memo.), Revenue Rulings, Chief Counsel Advice when applicable\n");
-                        prompt.append("   - **Golsen Rule**: Tax Court bound by circuit law of taxpayer's residence for appeal purposes\n\n");
-                    } else if (caseType.contains("securities") || caseType.contains("fraud") && (caseType.contains("stock") || caseType.contains("investment"))) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a SECURITIES case.\n");
-                        prompt.append("   - **Rule 10b-5 Elements**: (1) material misrepresentation/omission, (2) scienter (intent to deceive/defraud), (3) connection with purchase/sale, (4) reliance, (5) economic loss, (6) loss causation\n");
-                        prompt.append("   - **PSLRA Pleading**: Private Securities Litigation Reform Act requires pleading scienter with particularity - must allege facts giving rise to strong inference of fraudulent intent\n");
-                        prompt.append("   - **Loss Causation**: Must show misrepresentation caused economic loss (Dura Pharmaceuticals) - price drop alone insufficient\n");
-                        prompt.append("   - **Scienter**: Motive + opportunity insufficient alone; need strong inference from facts pled (Tellabs standard)\n");
-                        prompt.append("   - **Statute of Limitations**: 2 years from discovery, 5 years from violation (Sarbanes-Oxley amended period)\n");
-                        prompt.append("   - **Administrative Precedents**: Reference SEC no-action letters, ALJ decisions, and SEC enforcement releases when applicable\n\n");
-                    } else if (caseType.contains("patent") || caseType.contains("intellectual property") || caseType.contains("ip")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a PATENT/IP case.\n");
-                        prompt.append("   - **Federal Circuit Precedent**: Patent appeals go to Federal Circuit exclusively - cite Federal Circuit cases, not regional circuits\n");
-                        prompt.append("   - **Alice/§ 101**: Abstract ideas, laws of nature, natural phenomena not patentable - must claim significantly more than abstract concept\n");
-                        prompt.append("   - **Obviousness (§ 103)**: Apply KSR factors - combination of prior art must be more than predictable; need motivation to combine\n");
-                        prompt.append("   - **Claim Construction (Markman)**: Court construes claims as matter of law; Markman hearing often case-dispositive\n");
-                        prompt.append("   - **Willfulness**: Enhanced damages (up to 3x) under § 284 for willful infringement (Halo standard: subjective recklessness)\n");
-                        prompt.append("   - **Expert Costs**: Budget $50K-$150K+ for technical experts; damages experts often $75K-$200K for complex cases\n");
-                        prompt.append("   - **Timeline**: Markman hearing typically 12-18 months after filing; trial 24-36 months; PTAB parallel proceedings may stay district court case\n\n");
-                    } else if (caseType.contains("antitrust")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is an ANTITRUST case.\n");
-                        prompt.append("   - **Sherman Act § 1**: Requires agreement/conspiracy - parallel conduct insufficient without plus factors (Matsushita, Twombly)\n");
-                        prompt.append("   - **Sherman Act § 2**: Monopolization requires (1) monopoly power (>65% market share), (2) willful acquisition/maintenance through exclusionary conduct (Grinnell)\n");
-                        prompt.append("   - **Market Definition Critical**: Product market (SSNIP test - Small but Significant Non-transitory Increase in Price), geographic market (customer substitution patterns)\n");
-                        prompt.append("   - **Damages**: Treble damages under § 4 Clayton Act - but must prove antitrust injury (harm to competition, not just competitor)\n");
-                        prompt.append("   - **Expert Testimony**: Economic expert essential for market definition, damages calculation, competitive effects analysis - budget $75K-$200K+\n");
-                        prompt.append("   - **Predatory Pricing**: Brooke Group standard - pricing below cost + dangerous probability of recoupment required\n\n");
-                    } else if (caseType.contains("environmental") || caseType.contains("cercla") || caseType.contains("epa")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is an ENVIRONMENTAL case.\n");
-                        prompt.append("   - **CERCLA Liability**: Strict, joint and several, retroactive - no proof of fault required; defendant bears burden to prove divisibility\n");
-                        prompt.append("   - **Defenses**: (1) Innocent landowner (§ 9601(35)(A) - all appropriate inquiries before acquisition), (2) Third-party (§ 9607(b)(3) - no contractual relationship), (3) BFPP (§ 9607(r) - acquired after Jan 2002)\n");
-                        prompt.append("   - **All Appropriate Inquiries**: Must meet 40 C.F.R. Part 312 standards - Phase I ESA following ASTM E1527\n");
-                        prompt.append("   - **PRP Categories**: Current owner, past owner, operator, arranger/transporter under § 9607(a)\n");
-                        prompt.append("   - **Settlement**: Administrative Settlement Agreements and Orders on Consent under § 9622 provide contribution protection\n");
-                        prompt.append("   - **Divisibility**: Burden on defendant to prove harm separable by volumetric or toxicity contribution - requires expert testimony\n\n");
-                    } else if (caseType.contains("civil rights") || caseType.contains("§ 1983") || caseType.contains("1983")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a CIVIL RIGHTS case.\n");
-                        prompt.append("   - **Qualified Immunity**: Two prongs: (1) constitutional violation? (2) clearly established law? Can address either first (Pearson v. Callahan)\n");
-                        prompt.append("   - **Clearly Established Standard**: Must have Supreme Court or circuit precedent with particularized facts providing fair warning (al-Kidd, Wesby)\n");
-                        prompt.append("   - **High Specificity Required**: General constitutional principles insufficient - need case law with materially similar facts (White v. Pauly)\n");
-                        prompt.append("   - **Immunity from Suit**: Qualified immunity protects from litigation burdens, not just liability - denials immediately appealable (Mitchell v. Forsyth)\n");
-                        prompt.append("   - **Factual Distinctions Crucial**: Even one factual difference can defeat \"clearly established\" showing (City of Escondido v. Emmons)\n");
-                        prompt.append("   - **Distinguish Absolute Immunity**: Prosecutors, judges, legislators have absolute immunity for certain functions - qualified immunity doesn't apply\n\n");
-                    }
-
-                    // Cost & Timeline requirements moved to system message for higher priority
-
-                    prompt.append("4. PRACTICAL FOCUS: Provide SPECIFIC, ACTIONABLE guidance for THIS case.\n");
-                    prompt.append("   - Base your answer on the case facts and procedural posture provided above\n");
-                    prompt.append("   - Do NOT give generic legal education; give specific next steps\n");
-                    prompt.append("   - If the user's question doesn't make sense at this procedural stage, explain why\n\n");
-
-                    // Judge personalization
-                    if (legalCase.getJudgeName() != null && !legalCase.getJudgeName().isEmpty()) {
-                        prompt.append("6. PERSONALIZATION: Reference the assigned judge by name when discussing hearings, motions, or rulings.\n");
-                        prompt.append("   - The judge assigned to this case is: ").append(legalCase.getJudgeName()).append("\n");
-                        prompt.append("   - Example: \"").append(legalCase.getJudgeName()).append(" will hear the motion on...\"\n");
-                        prompt.append("   - Example: \"You should file with ").append(legalCase.getJudgeName()).append("'s courtroom procedures in mind\"\n\n");
-                    }
-
-                    // Deadline urgency calculation - SKIP for follow-ups (already mentioned)
-                    if (!isFollowUp && legalCase.getNextHearing() != null) {
-                        long daysToHearing = (legalCase.getNextHearing().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
-
-                        if (daysToHearing < 0) {
-                            // PAST DEADLINE - CRITICAL ALERT
-                            prompt.append("7. 🚨 CRITICAL ALERT - PAST DEADLINE:\n");
-                            prompt.append("   - Next hearing/deadline: ").append(legalCase.getNextHearing())
-                                  .append(" (").append(Math.abs(daysToHearing)).append(" days ago - DEADLINE HAS PASSED)\n");
-                            prompt.append("   - **IMMEDIATE EMERGENCY ACTION REQUIRED**\n");
-                            prompt.append("   - User must address this missed deadline immediately (file emergency motion for extension, explain to court, etc.)\n");
-                            prompt.append("   - DO NOT say 'X days from now' - this deadline is PAST\n\n");
-                        } else if (daysToHearing < 45) {
-                            String urgencyLevel = daysToHearing < 15 ? "CRITICAL URGENCY" :
-                                                 daysToHearing < 30 ? "URGENT" : "TIME-SENSITIVE";
-                            prompt.append("7. ").append(urgencyLevel).append(" - UPCOMING DEADLINE:\n");
-                            prompt.append("   - Next hearing/deadline: ").append(legalCase.getNextHearing())
-                                  .append(" (").append(daysToHearing).append(" days from now)\n");
-                            if (daysToHearing < 30 && legalCase.getPriority() != null &&
-                                (legalCase.getPriority().toString().equals("URGENT") || legalCase.getPriority().toString().equals("HIGH"))) {
-                                prompt.append("   - **EMPHASIZE IMMEDIATE ACTION REQUIRED** - This is a high-priority case with imminent deadline\n");
-                                prompt.append("   - User needs to act NOW to meet this deadline\n");
-                            }
-                            prompt.append("\n");
-                        }
-                    }
-
-                    // Legal citation disclaimer
-                    prompt.append("**CRITICAL - LEGAL CITATION DISCLAIMER**:\n");
-                    prompt.append("⚠️ IMPORTANT: If you cite any cases, statutes, or legal authorities in your response:\n");
-                    prompt.append("   - Include this disclaimer: \"⚠️ VERIFY ALL CASE CITATIONS: I cannot guarantee the accuracy of specific case citations, pin cites, or holdings. Always independently verify any cases, statutes, or legal authorities cited before relying on them in court filings or legal advice.\"\n");
-                    prompt.append("   - Use phrases like: \"Research cases such as [Case Name]\" or \"Cases addressing this issue include...\" rather than stating holdings as definitive facts\n");
-                    prompt.append("   - If uncertain about a citation, say: \"Consult Westlaw/Lexis to find controlling authority on [issue]\"\n");
-                    prompt.append("   - NEVER invent case names, citations, or holdings\n\n");
-
-                    // Administrative precedent citation guidance
-                    prompt.append("**ADMINISTRATIVE PRECEDENTS - CITE WHERE APPLICABLE**:\n");
-                    prompt.append("   - **Immigration**: Cite BIA precedent decisions (Matter of [Name]) and AAO decisions when addressing immigration procedures, eligibility, relief from removal\n");
-                    prompt.append("   - **Tax**: Cite Tax Court Memorandum opinions (T.C. Memo. [Year]-[Number]), Revenue Rulings (Rev. Rul. [Year]-[Number]), Chief Counsel Advice, and IRS guidance\n");
-                    prompt.append("   - **Securities**: Reference SEC no-action letters, ALJ decisions, and SEC enforcement releases for interpretive guidance\n");
-                    prompt.append("   - **Employment**: Cite EEOC guidance, DOL opinion letters, and NLRB decisions for federal employment law questions\n");
-                    prompt.append("   - **Environmental**: Reference EPA guidance documents, administrative orders, and settlement precedents\n");
-                    prompt.append("   - **Administrative Law**: These precedents carry significant weight in their respective domains - use them alongside published court opinions\n\n");
-
-                    // Document drafting capabilities
-                    prompt.append("**DOCUMENT DRAFTING CAPABILITIES**:\n");
-                    prompt.append("   - When drafting legal documents: Generate complete professional documents with proper structure, verified citations, and compelling arguments\n");
-                    prompt.append("   - Follow court rules and professional standards with numbered paragraphs and clear headings\n");
-                    prompt.append("   - For questions: Provide detailed analysis with structure, legal standards, key arguments, and strategic considerations\n\n");
-                });
+                caseOpt.ifPresent(legalCase -> appendCaseContext(prompt, legalCase, questionType));
             } catch (NumberFormatException e) {
                 // If not a numeric ID, try looking up by case_number
                 log.info("CaseId '{}' is not numeric, trying lookup by case_number", caseId);
-                legalCaseRepository.findByCaseNumber(caseId).ifPresent(legalCase -> {
-                    // Duplicate the same logic as above
-                    boolean isFollowUp = questionType == QuestionType.FOLLOW_UP_CLARIFICATION;
-
-                    String countyName = legalCase.getCountyName();
-                    String jurisdictionType = "UNKNOWN";
-                    String applicableRules = "applicable procedural rules";
-
-                    if (!isFollowUp) {
-                        prompt.append("**CRITICAL - CASE-SPECIFIC CONTEXT**:\n");
-                        prompt.append("This research is for a SPECIFIC active case. Your response MUST be tailored to this case's details.\n\n");
-
-                        prompt.append("**Case Identification:**\n");
-                        prompt.append("- Case Number: ").append(legalCase.getCaseNumber()).append("\n");
-                        prompt.append("- Case Title: ").append(legalCase.getTitle()).append("\n");
-                        prompt.append("- Case Type: ").append(legalCase.getType() != null ? legalCase.getType() : "General").append("\n");
-
-                        if (legalCase.getDescription() != null && !legalCase.getDescription().isEmpty()) {
-                            String cleanDescription = removeStaleDateCalculations(legalCase.getDescription());
-                            prompt.append("- Case Description: ").append(cleanDescription).append("\n");
-                        }
-
-                        if (countyName != null && !countyName.isEmpty()) {
-                            prompt.append("- County: ").append(countyName).append("\n");
-
-                            String countyLower = countyName.toLowerCase();
-                            if (countyLower.contains("u.s. district") || countyLower.contains("federal") ||
-                                countyLower.contains("usdc") || countyLower.contains("united states district")) {
-                                jurisdictionType = "FEDERAL";
-                                applicableRules = "Federal Rules of Civil Procedure (FRCP)";
-                            } else if (countyLower.contains("superior") || countyLower.contains("massachusetts") ||
-                                       countyLower.contains("district court") || countyLower.contains("ma ")) {
-                                jurisdictionType = "STATE";
-                                applicableRules = "Massachusetts Rules of Civil Procedure (Mass. R. Civ. P.)";
-                            }
-
-                            if (legalCase.getCourtroom() != null && !legalCase.getCourtroom().isEmpty()) {
-                                prompt.append("- Courtroom: ").append(legalCase.getCourtroom()).append("\n");
-                            }
-                            if (legalCase.getJudgeName() != null && !legalCase.getJudgeName().isEmpty()) {
-                                prompt.append("- Judge: ").append(legalCase.getJudgeName()).append("\n");
-                            }
-                        }
-
-                        String caseDetails = String.format("County: %s, Type: %s, Description: %s",
-                            countyName != null ? countyName : "",
-                            legalCase.getType() != null ? legalCase.getType() : "",
-                            legalCase.getDescription() != null ? legalCase.getDescription() : ""
-                        );
-                        CourtRulesService.CourtRulesContext courtRules = courtRulesService.getApplicableRules(caseDetails);
-                        if (courtRules != null) {
-                            prompt.append("\n").append(courtRules.generatePromptAddition());
-                        }
-
-                        if (legalCase.getStatus() != null) {
-                            prompt.append("- Status: ").append(legalCase.getStatus()).append("\n");
-                        }
-                        if (legalCase.getPriority() != null) {
-                            prompt.append("- Priority: ").append(legalCase.getPriority()).append("\n");
-                        }
-                    } else {
-                        prompt.append("**CASE CONTEXT** (for reference - do not repeat in your response):\n");
-                        prompt.append("- Case: ").append(legalCase.getCaseNumber()).append(" - ").append(legalCase.getTitle()).append("\n");
-                    }
-
-                    prompt.append("\n**Procedural Timeline:**\n");
-                    String proceduralStage = "Unknown stage";
-
-                    if (legalCase.getFilingDate() != null) {
-                        prompt.append("- Filing Date: ").append(legalCase.getFilingDate()).append("\n");
-
-                        long daysSinceFiling = (new Date().getTime() - legalCase.getFilingDate().getTime()) / (1000 * 60 * 60 * 24);
-
-                        if (daysSinceFiling < 90) {
-                            proceduralStage = "Early litigation (within 90 days of filing)";
-                        } else if (daysSinceFiling < 180) {
-                            proceduralStage = "Active discovery phase";
-                        } else {
-                            proceduralStage = "Advanced litigation";
-                        }
-                    } else {
-                        proceduralStage = "Pre-filing stage (case not yet filed)";
-                    }
-
-                    if (legalCase.getNextHearing() != null) {
-                        long daysToHearing = (legalCase.getNextHearing().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
-                        String timeDescription = daysToHearing >= 0
-                            ? daysToHearing + " days from now"
-                            : Math.abs(daysToHearing) + " days ago (DEADLINE PASSED)";
-
-                        prompt.append("- Next Hearing: ").append(legalCase.getNextHearing())
-                              .append(" (").append(timeDescription).append(")\n");
-                        proceduralStage = daysToHearing >= 0 ? "Active litigation with upcoming hearing" : "Active litigation - hearing deadline passed";
-                    }
-                    if (legalCase.getTrialDate() != null) {
-                        long daysToTrial = (legalCase.getTrialDate().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
-                        String timeDescription = daysToTrial >= 0
-                            ? daysToTrial + " days from now"
-                            : Math.abs(daysToTrial) + " days ago (PAST)";
-
-                        prompt.append("- Trial Date: ").append(legalCase.getTrialDate())
-                              .append(" (").append(timeDescription).append(")\n");
-                        proceduralStage = daysToTrial >= 0 ? "Trial preparation phase" : "Post-trial phase";
-                    }
-
-                    prompt.append("- Current Procedural Stage: ").append(proceduralStage).append("\n");
-
-                    prompt.append("\n**Client Information:**\n");
-                    prompt.append("(Remember: You are addressing the ATTORNEY representing this client, not the client themselves)\n");
-                    prompt.append("- Client: ").append(legalCase.getClientName()).append("\n");
-
-                    prompt.append("\n**CRITICAL INSTRUCTIONS - READ CAREFULLY**:\n");
-                    prompt.append("1. JURISDICTION: This case is in ").append(jurisdictionType).append(" court.\n");
-                    prompt.append("   - You MUST use ONLY ").append(applicableRules).append("\n");
-                    prompt.append("   - DO NOT mix federal and state procedural rules\n");
-                    prompt.append("   - DO NOT contradict yourself about which court system applies\n\n");
-
-                    prompt.append("2. PROCEDURAL POSTURE: This case is in the \"").append(proceduralStage).append("\" stage.\n");
-                    prompt.append("   - Tailor your recommendations to what is appropriate at THIS specific stage\n");
-                    prompt.append("   - If suggesting motions, specify deadlines based on the filing date and procedural rules\n\n");
-
-                    String caseType = legalCase.getType() != null ? legalCase.getType().toLowerCase() : "";
-                    log.info("🔍 DEBUG - Case type for case {}: '{}' (original: '{}')",
-                             legalCase.getCaseNumber(), caseType, legalCase.getType());
-
-                    // Case-specific instructions based on type
-                    if (caseType.contains("data breach") || caseType.contains("privacy")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a DATA BREACH/PRIVACY case.\n");
-                        prompt.append("   - Address Article III standing issues (injury-in-fact requirements for data breach)\n");
-                        prompt.append("   - Consider credit monitoring, identity theft concerns, and notification obligations\n");
-                        prompt.append("   - Reference applicable consumer protection statutes (e.g., state data breach laws, FCRA)\n");
-                        prompt.append("   - If class action, address data breach-specific class certification challenges\n");
-                        prompt.append("   - **COSTS**: Cybersecurity expert $30K-$60K, class notification $50K-$200K, forensics expert $25K-$50K\n");
-                        prompt.append("   - **TIMELINE**: Class certification typically 9-15 months; settlement negotiations 12-24 months\n\n");
-                    } else if (caseType.contains("malpractice") || caseType.contains("medical negligence")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a MEDICAL MALPRACTICE case.\n");
-                        prompt.append("   - **Massachusetts Requirements**: Expert testimony REQUIRED to establish standard of care and causation (Mass. G.L. c. 231, §60B)\n");
-                        prompt.append("   - **Tribunal Requirement**: If in state court, must go through medical malpractice tribunal first; if in FEDERAL court, tribunal MAY NOT apply under Erie doctrine\n");
-                        prompt.append("   - **Res Ipsa Loquitur**: Rarely applies in Massachusetts medical malpractice - expert testimony generally required even for obvious errors\n");
-                        prompt.append("   - **Statute of Limitations**: 3 years from date of injury or discovery of injury (Mass. G.L. c. 260, §2A), but not more than 7 years from act/omission\n");
-                        prompt.append("   - **Expert Disclosure**: Critical to retain board-certified experts early - deadline typically 90-120 days before trial or per scheduling order\n");
-                        prompt.append("   - **Informed Consent**: Consider separate informed consent claims under Massachusetts common law if applicable\n");
-                        prompt.append("   - **Damages Cap**: Massachusetts has NO cap on medical malpractice damages (unlike many states)\n");
-                        prompt.append("   - **COSTS**: Medical expert $15K-$30K, causation expert $10K-$25K, economic damages expert $15K-$25K, life care planner (catastrophic injury) $25K-$50K\n");
-                        prompt.append("   - **TIMELINE**: Tribunal hearing 3-9 months; if proceeds past tribunal, trial typically 18-30 months from filing\n\n");
-                    } else if (caseType.contains("class action")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a CLASS ACTION.\n");
-                        prompt.append("   - Address Rule 23 requirements (numerosity, commonality, typicality, adequacy)\n");
-                        prompt.append("   - Consider class certification timing and strategy\n");
-                        prompt.append("   - Address notice requirements and settlement approval procedures\n\n");
-                    } else if (caseType.contains("employment")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is an EMPLOYMENT case.\n");
-                        prompt.append("   - **McDonnell Douglas Framework**: For discrimination/retaliation claims: (1) prima facie case, (2) employer legitimate reason, (3) pretext showing\n");
-                        prompt.append("   - **Administrative Exhaustion**: Title VII requires EEOC charge within 300 days (deferral states) or 180 days; right-to-sue letter required before filing\n");
-                        prompt.append("   - **Comparator Evidence**: Identify similarly situated employees treated differently - comparator analysis critical for discrimination claims\n");
-                        prompt.append("   - **Temporal Proximity**: Protected activity followed by adverse action within short timeframe creates retaliation inference (weeks/months, not years)\n");
-                        prompt.append("   - **Discovery Focus**: Personnel files, performance reviews, comparator data, decision-maker emails, handbook/policy violations\n");
-                        prompt.append("   - **Costs**: Employment litigation experts (HR, economists) $15K-$30K; typically 12-18 months to trial in federal court\n");
-                        prompt.append("   - **Key Statutes**: Title VII (discrimination), ADEA (age 40+), ADA (disability), FMLA (medical leave), FLSA (wage/hour), state employment laws\n\n");
-                    } else if (caseType.contains("family") || caseType.contains("divorce") || caseType.contains("custody")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a FAMILY LAW case.\n");
-                        prompt.append("   - **Best Interests Standard**: Child custody determined by best interests factors - no presumption for either parent in Massachusetts\n");
-                        prompt.append("   - **Modification Standard**: Must show material change in circumstances since prior order; burden on moving party\n");
-                        prompt.append("   - **Guardian ad Litem**: Court may appoint GAL to investigate and recommend custody arrangement - cost typically $3K-$10K split between parties\n");
-                        prompt.append("   - **Parenting Plan**: Required under Mass. law - detailed schedule including holidays, vacations, transportation, decision-making authority\n");
-                        prompt.append("   - **Child Support**: Massachusetts Child Support Guidelines establish presumptive amount; deviation requires written findings\n");
-                        prompt.append("   - **Timeline**: Temporary orders hearing typically 2-4 weeks; trial 6-12 months depending on court congestion; contempt motions expedited\n");
-                        prompt.append("   - **Evidence**: Focus on stability, school involvement, daily caregiving, mental health, substance abuse if alleged\n\n");
-                    } else if (caseType.contains("estate") || caseType.contains("probate") || caseType.contains("will")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is an ESTATE/PROBATE case.\n");
-                        prompt.append("   - **Will Contest Grounds**: (1) Lack of testamentary capacity, (2) Undue influence, (3) Fraud, (4) Improper execution (Mass. G.L. c. 190B, § 2-502), (5) Revocation\n");
-                        prompt.append("   - **Standing**: Only interested persons (heirs, beneficiaries, creditors) have standing to contest will\n");
-                        prompt.append("   - **Burden of Proof**: Proponent bears burden to prove valid execution; contestant bears burden on undue influence/incapacity\n");
-                        prompt.append("   - **Timeline**: Citation to interested parties, allowance hearing (typically 3-6 months), discovery, trial; appeals common\n");
-                        prompt.append("   - **Fiduciary Duties**: Personal representative/trustee owes duties of loyalty, prudence, impartiality to beneficiaries\n");
-                        prompt.append("   - **Accounting Requirements**: Annual accountings required; intermediate and final accountings subject to approval\n");
-                        prompt.append("   - **Costs**: Will contest litigation $50K-$200K+; expert witnesses (medical for capacity, handwriting, financial) $10K-$25K each\n\n");
-                    } else if (caseType.contains("real estate") || caseType.contains("property")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a REAL ESTATE case.\n");
-                        prompt.append("   - **Specific Performance**: Available for breach of real estate contract due to unique nature of land; inadequate remedy at law requirement\n");
-                        prompt.append("   - **Marketable Title**: Seller must deliver marketable title free from encumbrances; buyer may rescind for title defects\n");
-                        prompt.append("   - **Purchase and Sale Agreement**: Massachusetts standard form creates binding contract; deposit at risk if buyer defaults without valid contingency\n");
-                        prompt.append("   - **Time of Essence**: Closing date extensions common by agreement; party may declare time of essence with reasonable notice\n");
-                        prompt.append("   - **Title Insurance**: Covers defects in title; read exceptions carefully - survey, zoning, building code violations often excluded\n");
-                        prompt.append("   - **Remedies**: Specific performance, rescission + return of deposit, damages (difference between contract price and market value)\n");
-                        prompt.append("   - **Timeline**: Title exam 2-4 weeks, closing typically 30-60 days from P&S; litigation 12-18 months if specific performance sought\n\n");
-                    } else if (caseType.contains("trade secret") || caseType.contains("misappropriation")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a TRADE SECRETS case.\n");
-                        prompt.append("   - Address Defend Trade Secrets Act (DTSA) federal claims and/or state trade secret law\n");
-                        prompt.append("   - **Identification Requirement**: Must identify trade secrets with reasonable particularity\n");
-                        prompt.append("   - **Protection Measures**: Show reasonable steps taken to maintain secrecy (NDAs, access controls, etc.)\n");
-                        prompt.append("   - **Preliminary Injunction**: Consider immediate injunctive relief to prevent ongoing misappropriation\n");
-                        prompt.append("   - **Irreparable Harm**: Trade secrets lose value once disclosed - emphasize cannot be \"un-rung\"\n\n");
-                    } else if (caseType.contains("immigration") || caseType.contains("removal") || caseType.contains("asylum")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is an IMMIGRATION case.\n");
-                        prompt.append("   - **Dual Proceedings**: If criminal charges exist, coordinate immigration and criminal defense strategy carefully\n");
-                        prompt.append("   - **Aggravated Felony**: Any aggravated felony conviction = mandatory removal with no relief\n");
-                        prompt.append("   - **Asylum Requirements**: Must show past persecution or well-founded fear on account of protected ground\n");
-                        prompt.append("   - **Country Conditions**: Expert testimony on home country conditions often critical\n");
-                        prompt.append("   - **Padilla Warning**: Criminal defense counsel MUST advise on immigration consequences of pleas\n\n");
-                    } else if (caseType.contains("bankruptcy")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a BANKRUPTCY case.\n");
-                        prompt.append("   - **First-Day Motions**: In Chapter 11, priorities are: (1) cash collateral (11 U.S.C. § 363(c)), (2) DIP financing (§ 364), (3) critical vendor payments, (4) employee wages/benefits, (5) utilities, (6) customer programs, (7) insurance\n");
-                        prompt.append("   - **Automatic Stay**: 11 U.S.C. § 362 halts all collection efforts immediately upon filing - violations are sanctionable\n");
-                        prompt.append("   - **Procedural Rules**: Apply Fed. R. Bankr. P., NOT Federal Rules of Civil Procedure\n");
-                        prompt.append("   - **First-Day Hearing**: Typically occurs 24-48 hours after petition filing - extremely tight deadlines\n");
-                        prompt.append("   - **DIP Financing**: § 364(c) superpriority and § 364(d) priming liens require showing no less burdensome financing available\n");
-                        prompt.append("   - **Key Sections**: § 365 (executory contracts/leases), § 503(b)(9) (reclamation claims), § 1129 (plan confirmation)\n\n");
-                    } else if (caseType.contains("tax")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a TAX case.\n");
-                        prompt.append("   - **Tax Court Jurisdiction**: If this involves IRS deficiency notice, must file petition within 90 days (150 if abroad) or jurisdiction is lost forever\n");
-                        prompt.append("   - **Burden of Proof**: IRS has burden for fraud penalties (IRC § 7491(c)); taxpayer has burden for most other issues unless § 7491(a) applies (credible records, cooperation, net worth under threshold)\n");
-                        prompt.append("   - **Deficiency Procedures**: Tax Court reviews deficiency before payment; District Court/Court of Federal Claims require payment first then sue for refund\n");
-                        prompt.append("   - **Statute of Limitations**: Generally 3 years (IRC § 6501(a)), but 6 years for 25%+ understatement (§ 6501(e)), unlimited for fraud (§ 6501(c)(1))\n");
-                        prompt.append("   - **Penalties**: Accuracy-related (§ 6662, 20%), civil fraud (§ 6663, 75%), failure to file (§ 6651(a)(1), 5%/month up to 25%)\n");
-                        prompt.append("   - **Administrative Precedents**: Cite Tax Court Memorandum opinions (T.C. Memo.), Revenue Rulings, Chief Counsel Advice when applicable\n");
-                        prompt.append("   - **Golsen Rule**: Tax Court bound by circuit law of taxpayer's residence for appeal purposes\n\n");
-                    } else if (caseType.contains("securities") || caseType.contains("fraud") && (caseType.contains("stock") || caseType.contains("investment"))) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a SECURITIES case.\n");
-                        prompt.append("   - **Rule 10b-5 Elements**: (1) material misrepresentation/omission, (2) scienter (intent to deceive/defraud), (3) connection with purchase/sale, (4) reliance, (5) economic loss, (6) loss causation\n");
-                        prompt.append("   - **PSLRA Pleading**: Private Securities Litigation Reform Act requires pleading scienter with particularity - must allege facts giving rise to strong inference of fraudulent intent\n");
-                        prompt.append("   - **Loss Causation**: Must show misrepresentation caused economic loss (Dura Pharmaceuticals) - price drop alone insufficient\n");
-                        prompt.append("   - **Scienter**: Motive + opportunity insufficient alone; need strong inference from facts pled (Tellabs standard)\n");
-                        prompt.append("   - **Statute of Limitations**: 2 years from discovery, 5 years from violation (Sarbanes-Oxley amended period)\n");
-                        prompt.append("   - **Administrative Precedents**: Reference SEC no-action letters, ALJ decisions, and SEC enforcement releases when applicable\n\n");
-                    } else if (caseType.contains("patent") || caseType.contains("intellectual property") || caseType.contains("ip")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a PATENT/IP case.\n");
-                        prompt.append("   - **Federal Circuit Precedent**: Patent appeals go to Federal Circuit exclusively - cite Federal Circuit cases, not regional circuits\n");
-                        prompt.append("   - **Alice/§ 101**: Abstract ideas, laws of nature, natural phenomena not patentable - must claim significantly more than abstract concept\n");
-                        prompt.append("   - **Obviousness (§ 103)**: Apply KSR factors - combination of prior art must be more than predictable; need motivation to combine\n");
-                        prompt.append("   - **Claim Construction (Markman)**: Court construes claims as matter of law; Markman hearing often case-dispositive\n");
-                        prompt.append("   - **Willfulness**: Enhanced damages (up to 3x) under § 284 for willful infringement (Halo standard: subjective recklessness)\n");
-                        prompt.append("   - **Expert Costs**: Budget $50K-$150K+ for technical experts; damages experts often $75K-$200K for complex cases\n");
-                        prompt.append("   - **Timeline**: Markman hearing typically 12-18 months after filing; trial 24-36 months; PTAB parallel proceedings may stay district court case\n\n");
-                    } else if (caseType.contains("antitrust")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is an ANTITRUST case.\n");
-                        prompt.append("   - **Sherman Act § 1**: Requires agreement/conspiracy - parallel conduct insufficient without plus factors (Matsushita, Twombly)\n");
-                        prompt.append("   - **Sherman Act § 2**: Monopolization requires (1) monopoly power (>65% market share), (2) willful acquisition/maintenance through exclusionary conduct (Grinnell)\n");
-                        prompt.append("   - **Market Definition Critical**: Product market (SSNIP test - Small but Significant Non-transitory Increase in Price), geographic market (customer substitution patterns)\n");
-                        prompt.append("   - **Damages**: Treble damages under § 4 Clayton Act - but must prove antitrust injury (harm to competition, not just competitor)\n");
-                        prompt.append("   - **Expert Testimony**: Economic expert essential for market definition, damages calculation, competitive effects analysis - budget $75K-$200K+\n");
-                        prompt.append("   - **Predatory Pricing**: Brooke Group standard - pricing below cost + dangerous probability of recoupment required\n\n");
-                    } else if (caseType.contains("environmental") || caseType.contains("cercla") || caseType.contains("epa")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is an ENVIRONMENTAL case.\n");
-                        prompt.append("   - **CERCLA Liability**: Strict, joint and several, retroactive - no proof of fault required; defendant bears burden to prove divisibility\n");
-                        prompt.append("   - **Defenses**: (1) Innocent landowner (§ 9601(35)(A) - all appropriate inquiries before acquisition), (2) Third-party (§ 9607(b)(3) - no contractual relationship), (3) BFPP (§ 9607(r) - acquired after Jan 2002)\n");
-                        prompt.append("   - **All Appropriate Inquiries**: Must meet 40 C.F.R. Part 312 standards - Phase I ESA following ASTM E1527\n");
-                        prompt.append("   - **PRP Categories**: Current owner, past owner, operator, arranger/transporter under § 9607(a)\n");
-                        prompt.append("   - **Settlement**: Administrative Settlement Agreements and Orders on Consent under § 9622 provide contribution protection\n");
-                        prompt.append("   - **Divisibility**: Burden on defendant to prove harm separable by volumetric or toxicity contribution - requires expert testimony\n\n");
-                    } else if (caseType.contains("civil rights") || caseType.contains("§ 1983") || caseType.contains("1983")) {
-                        prompt.append("3. CASE-SPECIFIC FOCUS: This is a CIVIL RIGHTS case.\n");
-                        prompt.append("   - **Qualified Immunity**: Two prongs: (1) constitutional violation? (2) clearly established law? Can address either first (Pearson v. Callahan)\n");
-                        prompt.append("   - **Clearly Established Standard**: Must have Supreme Court or circuit precedent with particularized facts providing fair warning (al-Kidd, Wesby)\n");
-                        prompt.append("   - **High Specificity Required**: General constitutional principles insufficient - need case law with materially similar facts (White v. Pauly)\n");
-                        prompt.append("   - **Immunity from Suit**: Qualified immunity protects from litigation burdens, not just liability - denials immediately appealable (Mitchell v. Forsyth)\n");
-                        prompt.append("   - **Factual Distinctions Crucial**: Even one factual difference can defeat \"clearly established\" showing (City of Escondido v. Emmons)\n");
-                        prompt.append("   - **Distinguish Absolute Immunity**: Prosecutors, judges, legislators have absolute immunity for certain functions - qualified immunity doesn't apply\n\n");
-                    }
-
-                    // Cost & Timeline requirements moved to system message for higher priority
-
-                    prompt.append("4. PRACTICAL FOCUS: Provide SPECIFIC, ACTIONABLE guidance for THIS case.\n");
-                    prompt.append("   - Base your answer on the case facts and procedural posture provided above\n");
-                    prompt.append("   - Do NOT give generic legal education; give specific next steps\n");
-                    prompt.append("   - If the user's question doesn't make sense at this procedural stage, explain why\n\n");
-
-                    if (legalCase.getJudgeName() != null && !legalCase.getJudgeName().isEmpty()) {
-                        prompt.append("6. PERSONALIZATION: Reference the assigned judge by name when discussing hearings, motions, or rulings.\n");
-                        prompt.append("   - The judge assigned to this case is: ").append(legalCase.getJudgeName()).append("\n");
-                        prompt.append("   - Example: \"").append(legalCase.getJudgeName()).append(" will hear the motion on...\"\n");
-                        prompt.append("   - Example: \"You should file with ").append(legalCase.getJudgeName()).append("'s courtroom procedures in mind\"\n\n");
-                    }
-
-                    if (!isFollowUp && legalCase.getNextHearing() != null) {
-                        long daysToHearing = (legalCase.getNextHearing().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
-
-                        if (daysToHearing < 0) {
-                            prompt.append("7. 🚨 CRITICAL ALERT - PAST DEADLINE:\n");
-                            prompt.append("   - Next hearing/deadline: ").append(legalCase.getNextHearing())
-                                  .append(" (").append(Math.abs(daysToHearing)).append(" days ago - DEADLINE HAS PASSED)\n");
-                            prompt.append("   - **IMMEDIATE EMERGENCY ACTION REQUIRED**\n");
-                            prompt.append("   - User must address this missed deadline immediately (file emergency motion for extension, explain to court, etc.)\n");
-                            prompt.append("   - DO NOT say 'X days from now' - this deadline is PAST\n\n");
-                        } else if (daysToHearing < 45) {
-                            String urgencyLevel = daysToHearing < 15 ? "CRITICAL URGENCY" :
-                                                 daysToHearing < 30 ? "URGENT" : "TIME-SENSITIVE";
-                            prompt.append("7. ").append(urgencyLevel).append(" - UPCOMING DEADLINE:\n");
-                            prompt.append("   - Next hearing/deadline: ").append(legalCase.getNextHearing())
-                                  .append(" (").append(daysToHearing).append(" days from now)\n");
-                            if (daysToHearing < 30 && legalCase.getPriority() != null &&
-                                (legalCase.getPriority().toString().equals("URGENT") || legalCase.getPriority().toString().equals("HIGH"))) {
-                                prompt.append("   - **EMPHASIZE IMMEDIATE ACTION REQUIRED** - This is a high-priority case with imminent deadline\n");
-                                prompt.append("   - User needs to act NOW to meet this deadline\n");
-                            }
-                            prompt.append("\n");
-                        }
-                    }
-
-                    // Citation disclaimer, administrative precedents, and document drafting limitations moved to system message
-                });
+                legalCaseRepository.findByCaseNumber(caseId).ifPresent(legalCase -> appendCaseContext(prompt, legalCase, questionType));
             }
         }
 
@@ -2006,6 +1381,239 @@ public class AILegalResearchService {
         prompt.append(getFollowUpTemplatesByPracticeArea(query, questionType)).append("\n");
 
         return prompt.toString();
+    }
+
+    /**
+     * Append case-specific context to the prompt. Extracted to eliminate duplication
+     * between numeric ID lookup and case_number lookup paths.
+     * Uses compact JSON for basic case data to reduce token usage.
+     */
+    private void appendCaseContext(StringBuilder prompt, LegalCase legalCase, QuestionType questionType) {
+        boolean isFollowUp = questionType == QuestionType.FOLLOW_UP_CLARIFICATION;
+        String countyName = legalCase.getCountyName();
+        String jurisdictionType = "UNKNOWN";
+        String applicableRules = "applicable procedural rules";
+
+        if (!isFollowUp) {
+            // Full case context for initial questions — compact JSON format
+            prompt.append("**CASE CONTEXT** (tailor response to this case):\n");
+
+            // Build case data as compact JSON to reduce tokens
+            java.util.LinkedHashMap<String, Object> caseData = new java.util.LinkedHashMap<>();
+            caseData.put("caseNumber", legalCase.getCaseNumber());
+            caseData.put("title", legalCase.getTitle());
+            caseData.put("type", legalCase.getEffectivePracticeArea() != null ? legalCase.getEffectivePracticeArea() : "General");
+            if (legalCase.getDescription() != null && !legalCase.getDescription().isEmpty()) {
+                caseData.put("description", removeStaleDateCalculations(legalCase.getDescription()));
+            }
+            if (countyName != null && !countyName.isEmpty()) {
+                caseData.put("county", countyName);
+                String countyLower = countyName.toLowerCase();
+                if (countyLower.contains("u.s. district") || countyLower.contains("federal") ||
+                    countyLower.contains("usdc") || countyLower.contains("united states district")) {
+                    jurisdictionType = "FEDERAL";
+                    applicableRules = "Federal Rules of Civil Procedure (FRCP)";
+                } else if (countyLower.contains("superior") || countyLower.contains("massachusetts") ||
+                           countyLower.contains("district court") || countyLower.contains("ma ")) {
+                    jurisdictionType = "STATE";
+                    applicableRules = "Massachusetts Rules of Civil Procedure (Mass. R. Civ. P.)";
+                }
+            }
+            if (legalCase.getCourtroom() != null && !legalCase.getCourtroom().isEmpty()) {
+                caseData.put("courtroom", legalCase.getCourtroom());
+            }
+            if (legalCase.getJudgeName() != null && !legalCase.getJudgeName().isEmpty()) {
+                caseData.put("judge", legalCase.getJudgeName());
+            }
+            if (legalCase.getStatus() != null) {
+                caseData.put("status", legalCase.getStatus().toString());
+            }
+            if (legalCase.getPriority() != null) {
+                caseData.put("priority", legalCase.getPriority().toString());
+            }
+            caseData.put("client", legalCase.getClientName());
+            try {
+                prompt.append(objectMapper.writeValueAsString(caseData)).append("\n\n");
+            } catch (Exception e) {
+                log.warn("Could not serialize case data to JSON, falling back to text", e);
+                prompt.append("Case: ").append(legalCase.getCaseNumber()).append(" - ").append(legalCase.getTitle()).append("\n\n");
+            }
+
+            // Court-specific rules
+            String caseDetails = String.format("County: %s, Type: %s, Description: %s",
+                countyName != null ? countyName : "",
+                legalCase.getEffectivePracticeArea() != null ? legalCase.getEffectivePracticeArea() : "",
+                legalCase.getDescription() != null ? legalCase.getDescription() : ""
+            );
+            CourtRulesService.CourtRulesContext courtRules = courtRulesService.getApplicableRules(caseDetails);
+            if (courtRules != null) {
+                prompt.append(courtRules.generatePromptAddition()).append("\n");
+            }
+        } else {
+            // Minimal context for follow-ups (do not repeat)
+            prompt.append("**CASE CONTEXT** (reference only - do not repeat):\n");
+            prompt.append("Case: ").append(legalCase.getCaseNumber()).append(" - ").append(legalCase.getTitle()).append("\n");
+        }
+
+        // Procedural timeline (always include — dates can change)
+        prompt.append("\n**Procedural Timeline:**\n");
+        String proceduralStage = "Unknown stage";
+
+        if (legalCase.getFilingDate() != null) {
+            prompt.append("- Filing Date: ").append(legalCase.getFilingDate()).append("\n");
+            long daysSinceFiling = (new Date().getTime() - legalCase.getFilingDate().getTime()) / (1000 * 60 * 60 * 24);
+            if (daysSinceFiling < 90) {
+                proceduralStage = "Early litigation (within 90 days of filing)";
+            } else if (daysSinceFiling < 180) {
+                proceduralStage = "Active discovery phase";
+            } else {
+                proceduralStage = "Advanced litigation";
+            }
+        } else {
+            proceduralStage = "Pre-filing stage (case not yet filed)";
+        }
+
+        if (legalCase.getNextHearing() != null) {
+            long daysToHearing = (legalCase.getNextHearing().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
+            String timeDescription = daysToHearing >= 0
+                ? daysToHearing + " days from now"
+                : Math.abs(daysToHearing) + " days ago (DEADLINE PASSED)";
+            prompt.append("- Next Hearing: ").append(legalCase.getNextHearing())
+                  .append(" (").append(timeDescription).append(")\n");
+            proceduralStage = daysToHearing >= 0 ? "Active litigation with upcoming hearing" : "Active litigation - hearing deadline passed";
+        }
+        if (legalCase.getTrialDate() != null) {
+            long daysToTrial = (legalCase.getTrialDate().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
+            String timeDescription = daysToTrial >= 0
+                ? daysToTrial + " days from now"
+                : Math.abs(daysToTrial) + " days ago (PAST)";
+            prompt.append("- Trial Date: ").append(legalCase.getTrialDate())
+                  .append(" (").append(timeDescription).append(")\n");
+            proceduralStage = daysToTrial >= 0 ? "Trial preparation phase" : "Post-trial phase";
+        }
+        prompt.append("- Stage: ").append(proceduralStage).append("\n");
+
+        // Client info
+        prompt.append("- Client: ").append(legalCase.getClientName()).append(" (address the ATTORNEY, not the client)\n");
+
+        // Jurisdiction and procedural posture instructions
+        prompt.append("\n**CRITICAL INSTRUCTIONS**:\n");
+        prompt.append("1. JURISDICTION: ").append(jurisdictionType).append(" court. Use ONLY ").append(applicableRules).append(". Do not mix federal/state rules.\n");
+        prompt.append("2. PROCEDURAL STAGE: \"").append(proceduralStage).append("\" — tailor recommendations accordingly.\n");
+
+        // Case-type-specific instructions
+        String caseType = legalCase.getEffectivePracticeArea() != null ? legalCase.getEffectivePracticeArea().toLowerCase() : "";
+        log.info("Case type for case {}: '{}' (practiceArea: '{}', type: '{}')",
+                 legalCase.getCaseNumber(), caseType, legalCase.getPracticeArea(), legalCase.getType());
+
+        appendCaseTypeInstructions(prompt, caseType);
+
+        prompt.append("4. PRACTICAL FOCUS: Provide SPECIFIC, ACTIONABLE guidance for THIS case. No generic legal education.\n\n");
+
+        // Judge personalization
+        if (legalCase.getJudgeName() != null && !legalCase.getJudgeName().isEmpty()) {
+            prompt.append("5. Reference judge ").append(legalCase.getJudgeName()).append(" by name when discussing hearings, motions, or rulings.\n\n");
+        }
+
+        // Deadline urgency — skip for follow-ups
+        if (!isFollowUp && legalCase.getNextHearing() != null) {
+            long daysToHearing = (legalCase.getNextHearing().getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
+            if (daysToHearing < 0) {
+                prompt.append("🚨 PAST DEADLINE: ").append(legalCase.getNextHearing())
+                      .append(" (").append(Math.abs(daysToHearing)).append(" days ago). IMMEDIATE EMERGENCY ACTION REQUIRED.\n\n");
+            } else if (daysToHearing < 45) {
+                String urgencyLevel = daysToHearing < 15 ? "CRITICAL URGENCY" :
+                                     daysToHearing < 30 ? "URGENT" : "TIME-SENSITIVE";
+                prompt.append(urgencyLevel).append(": Next hearing ").append(legalCase.getNextHearing())
+                      .append(" (").append(daysToHearing).append(" days).");
+                if (daysToHearing < 30 && legalCase.getPriority() != null &&
+                    (legalCase.getPriority().toString().equals("URGENT") || legalCase.getPriority().toString().equals("HIGH"))) {
+                    prompt.append(" HIGH-PRIORITY — emphasize immediate action.");
+                }
+                prompt.append("\n\n");
+            }
+        }
+    }
+
+    /**
+     * Append case-type-specific legal instructions to the prompt.
+     */
+    private void appendCaseTypeInstructions(StringBuilder prompt, String caseType) {
+        if (caseType.contains("data breach") || caseType.contains("privacy")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: DATA BREACH/PRIVACY case.\n");
+            prompt.append("   - Article III standing, credit monitoring, notification obligations, consumer protection statutes (FCRA)\n");
+            prompt.append("   - If class action: class certification challenges. COSTS: Cyber expert $30K-$60K, notification $50K-$200K, forensics $25K-$50K\n");
+            prompt.append("   - TIMELINE: Class cert 9-15 months; settlement 12-24 months\n\n");
+        } else if (caseType.contains("malpractice") || caseType.contains("medical negligence")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: MEDICAL MALPRACTICE case.\n");
+            prompt.append("   - Expert testimony REQUIRED (Mass. G.L. c. 231, §60B). Tribunal requirement (state court); Erie doctrine (federal)\n");
+            prompt.append("   - SOL: 3 years from discovery, max 7 years (Mass. G.L. c. 260, §2A). No damages cap in MA\n");
+            prompt.append("   - COSTS: Medical expert $15K-$30K, causation $10K-$25K, economics $15K-$25K, life care $25K-$50K\n");
+            prompt.append("   - TIMELINE: Tribunal 3-9 months; trial 18-30 months from filing\n\n");
+        } else if (caseType.contains("class action")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: CLASS ACTION. Address Rule 23 (numerosity, commonality, typicality, adequacy), certification timing, notice, settlement approval.\n\n");
+        } else if (caseType.contains("employment")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: EMPLOYMENT case.\n");
+            prompt.append("   - McDonnell Douglas framework (prima facie → legitimate reason → pretext). Administrative exhaustion (EEOC 300/180 days)\n");
+            prompt.append("   - Comparator evidence, temporal proximity for retaliation. Discovery: personnel files, reviews, emails\n");
+            prompt.append("   - Key statutes: Title VII, ADEA, ADA, FMLA, FLSA. COSTS: Experts $15K-$30K; 12-18 months to trial\n\n");
+        } else if (caseType.contains("family") || caseType.contains("divorce") || caseType.contains("custody")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: FAMILY LAW case.\n");
+            prompt.append("   - Best interests standard (no parental presumption in MA). Modification: material change required\n");
+            prompt.append("   - GAL ($3K-$10K), parenting plan required, MA Child Support Guidelines. Evidence: stability, caregiving, mental health\n");
+            prompt.append("   - TIMELINE: Temporary orders 2-4 weeks; trial 6-12 months\n\n");
+        } else if (caseType.contains("estate") || caseType.contains("probate") || caseType.contains("will")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: ESTATE/PROBATE case.\n");
+            prompt.append("   - Contest grounds: capacity, undue influence, fraud, improper execution (Mass. G.L. c. 190B, §2-502), revocation\n");
+            prompt.append("   - Standing: interested persons only. Fiduciary duties: loyalty, prudence, impartiality\n");
+            prompt.append("   - COSTS: $50K-$200K+; experts $10K-$25K each. TIMELINE: 3-6 months to hearing\n\n");
+        } else if (caseType.contains("real estate") || caseType.contains("property")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: REAL ESTATE case.\n");
+            prompt.append("   - Specific performance (unique land), marketable title, P&S agreement, time of essence, title insurance exceptions\n");
+            prompt.append("   - Remedies: specific performance, rescission + deposit return, damages\n");
+            prompt.append("   - TIMELINE: Title exam 2-4 weeks, closing 30-60 days, litigation 12-18 months\n\n");
+        } else if (caseType.contains("trade secret") || caseType.contains("misappropriation")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: TRADE SECRETS case.\n");
+            prompt.append("   - DTSA federal + state claims. Identification with reasonable particularity. Protection measures (NDAs, access controls)\n");
+            prompt.append("   - Preliminary injunction for ongoing misappropriation. Irreparable harm — cannot be un-rung\n\n");
+        } else if (caseType.contains("immigration") || caseType.contains("removal") || caseType.contains("asylum")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: IMMIGRATION case.\n");
+            prompt.append("   - Dual proceedings coordination. Aggravated felony = mandatory removal. Asylum: persecution on protected ground\n");
+            prompt.append("   - Country conditions expert testimony. Padilla: counsel MUST advise on immigration consequences of pleas\n\n");
+        } else if (caseType.contains("bankruptcy")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: BANKRUPTCY case.\n");
+            prompt.append("   - Ch. 11 first-day motions: cash collateral (§363(c)), DIP financing (§364), critical vendors, wages, utilities\n");
+            prompt.append("   - Automatic stay (§362). Fed. R. Bankr. P. (NOT FRCP). First-day hearing 24-48 hours post-petition\n");
+            prompt.append("   - Key: §365 (executory contracts), §503(b)(9) (reclamation), §1129 (plan confirmation)\n\n");
+        } else if (caseType.contains("tax")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: TAX case.\n");
+            prompt.append("   - Tax Court: 90-day petition deadline (150 abroad) — jurisdictional. Burden: IRS for fraud (§7491(c)), taxpayer otherwise\n");
+            prompt.append("   - SOL: 3 years (§6501(a)), 6 years for 25%+ understatement, unlimited for fraud. Golsen Rule: circuit of residence\n");
+            prompt.append("   - Penalties: accuracy 20% (§6662), fraud 75% (§6663), failure to file 5%/month up to 25%\n\n");
+        } else if (caseType.contains("securities") || caseType.contains("fraud") && (caseType.contains("stock") || caseType.contains("investment"))) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: SECURITIES case.\n");
+            prompt.append("   - 10b-5: material misrep, scienter, connection with purchase/sale, reliance, economic loss, loss causation\n");
+            prompt.append("   - PSLRA: plead scienter with particularity (Tellabs strong inference). Loss causation per Dura Pharmaceuticals\n");
+            prompt.append("   - SOL: 2 years from discovery, 5 years from violation (SOX)\n\n");
+        } else if (caseType.contains("patent") || caseType.contains("intellectual property") || caseType.contains("ip")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: PATENT/IP case.\n");
+            prompt.append("   - Federal Circuit exclusive. Alice/§101 (abstract ideas). KSR/§103 (obviousness). Markman claim construction\n");
+            prompt.append("   - Willfulness: 3x damages under §284 (Halo standard). COSTS: Tech experts $50K-$150K+, damages $75K-$200K\n");
+            prompt.append("   - TIMELINE: Markman 12-18 months, trial 24-36 months. PTAB may stay district court\n\n");
+        } else if (caseType.contains("antitrust")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: ANTITRUST case.\n");
+            prompt.append("   - Sherman §1: agreement required (Twombly). §2: monopoly power (>65%) + exclusionary conduct (Grinnell)\n");
+            prompt.append("   - Market definition: SSNIP test. Treble damages (§4 Clayton). Predatory pricing: Brooke Group\n");
+            prompt.append("   - COSTS: Econ expert $75K-$200K+\n\n");
+        } else if (caseType.contains("environmental") || caseType.contains("cercla") || caseType.contains("epa")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: ENVIRONMENTAL case.\n");
+            prompt.append("   - CERCLA: strict, joint/several, retroactive. Defenses: innocent landowner, third-party, BFPP\n");
+            prompt.append("   - AAI: 40 CFR Part 312, ASTM E1527. PRP categories under §9607(a). Settlement under §9622\n\n");
+        } else if (caseType.contains("civil rights") || caseType.contains("§ 1983") || caseType.contains("1983")) {
+            prompt.append("3. CASE-SPECIFIC FOCUS: CIVIL RIGHTS case.\n");
+            prompt.append("   - Qualified immunity: (1) constitutional violation? (2) clearly established? (Pearson). High specificity required (White v. Pauly)\n");
+            prompt.append("   - Immunity from suit — immediately appealable (Mitchell). Distinguish absolute immunity (prosecutors, judges)\n\n");
+        }
     }
 
     /**
@@ -3243,7 +2851,7 @@ public class AILegalResearchService {
                     ? legalCaseRepository.findByIdAndOrganizationId(caseIdLong, orgIdForCase)
                     : Optional.empty();
                 caseOptForPrompt.ifPresent(legalCase -> {
-                    caseTypeHolder[0] = legalCase.getType(); // Capture for practice-area guidance
+                    caseTypeHolder[0] = legalCase.getEffectivePracticeArea(); // Capture for practice-area guidance
                     boolean isFollowUp = questionType == QuestionType.FOLLOW_UP_CLARIFICATION;
 
                     String countyName = legalCase.getCountyName();
@@ -3257,7 +2865,7 @@ public class AILegalResearchService {
                         prompt.append("**Case Identification:**\n");
                         prompt.append("- Case Number: ").append(legalCase.getCaseNumber()).append("\n");
                         prompt.append("- Case Title: ").append(legalCase.getTitle()).append("\n");
-                        prompt.append("- Case Type: ").append(legalCase.getType() != null ? legalCase.getType() : "General").append("\n");
+                        prompt.append("- Case Type: ").append(legalCase.getEffectivePracticeArea() != null ? legalCase.getEffectivePracticeArea() : "General").append("\n");
 
                         // Full description (not truncated)
                         if (legalCase.getDescription() != null && !legalCase.getDescription().isEmpty()) {
@@ -3289,7 +2897,7 @@ public class AILegalResearchService {
                         // Court rules
                         String caseDetails = String.format("County: %s, Type: %s, Description: %s",
                             countyName != null ? countyName : "",
-                            legalCase.getType() != null ? legalCase.getType() : "",
+                            legalCase.getEffectivePracticeArea() != null ? legalCase.getEffectivePracticeArea() : "",
                             legalCase.getDescription() != null ? legalCase.getDescription() : "");
                         CourtRulesService.CourtRulesContext courtRules = courtRulesService.getApplicableRules(caseDetails);
                         if (courtRules != null) {
@@ -3360,7 +2968,7 @@ public class AILegalResearchService {
                         prompt.append("   - Tailor recommendations to what is appropriate at THIS stage\n\n");
 
                         // Case-type-specific instructions (ported from buildAIPrompt)
-                        String caseType = legalCase.getType() != null ? legalCase.getType().toLowerCase() : "";
+                        String caseType = legalCase.getEffectivePracticeArea() != null ? legalCase.getEffectivePracticeArea().toLowerCase() : "";
                         if (caseType.contains("data breach") || caseType.contains("privacy")) {
                             prompt.append("3. CASE-SPECIFIC: DATA BREACH/PRIVACY - Address Article III standing, notification obligations, consumer protection statutes.\n\n");
                         } else if (caseType.contains("malpractice") || caseType.contains("medical negligence")) {
@@ -3489,6 +3097,18 @@ public class AILegalResearchService {
         Long userId = searchRequest.containsKey("userId") ?
             Long.valueOf(searchRequest.get("userId").toString()) : null;
 
+        // Fetch case documents for source-link matching in CitationUrlInjector
+        List<com.bostoneo.bostoneosolutions.dto.CaseDocumentSummary> caseDocs = Collections.emptyList();
+        if (caseId != null) {
+            try {
+                Long caseIdLong = Long.parseLong(caseId);
+                Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+                if (orgId != null) {
+                    caseDocs = caseDocumentService.getDocumentInventory(caseIdLong, orgId);
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+
         log.info("🎯 Starting THOROUGH agentic research for query: {}", query);
 
         // NEW: Extract conversation history for context-aware responses
@@ -3548,7 +3168,9 @@ public class AILegalResearchService {
 
             // POST-PROCESSING for cached response: Convert bullets BEFORE citation injection
             cachedResponse = convertBulletsToNumberedLists(cachedResponse);
-            String processedCachedResponse = citationUrlInjector.inject(cachedResponse);
+            String processedCachedResponse = caseDocs.isEmpty()
+                ? citationUrlInjector.inject(cachedResponse)
+                : citationUrlInjector.inject(cachedResponse, caseId, caseDocs);
 
             result.put("aiAnalysis", processedCachedResponse);
             result.put("hasAIAnalysis", true);
@@ -3602,7 +3224,9 @@ public class AILegalResearchService {
             String processedResponse = verifyAllCitationsInResponse(aiResponse);
 
             // POST-PROCESSING Step 3: Inject URLs for statutory/rule citations (FRCP, M.G.L., CFR, etc.)
-            processedResponse = citationUrlInjector.inject(processedResponse);
+            processedResponse = caseDocs.isEmpty()
+                ? citationUrlInjector.inject(processedResponse)
+                : citationUrlInjector.inject(processedResponse, caseId, caseDocs);
 
             // Validate response for temporal consistency
             ResponseValidator.ValidationResult validationResult =
@@ -3684,7 +3308,7 @@ public class AILegalResearchService {
                     cacheRepository.upsertCache(
                         currentOrgId, queryHash, query, searchType.toUpperCase(),
                         jurisdiction, "THOROUGH", caseId, aiResponse,
-                        "claude-sonnet-4.5", new BigDecimal("0.90"),
+                        "claude-sonnet-4-6", new BigDecimal("0.90"),
                         LocalDateTime.now().plusDays(cacheDays)
                     );
                     log.info("✓ Cached THOROUGH result (TTL: {} days, quality: {}/10): {}", cacheDays, scoreOutOf10, queryHash.substring(0, 16) + "...");

@@ -3,6 +3,7 @@ package com.bostoneo.bostoneosolutions.model;
 import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -88,18 +89,22 @@ public class LegalCase {
     // Important Dates
     @Column(name = "filing_date")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date filingDate;
 
     @Column(name = "next_hearing")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date nextHearing;
 
     @Column(name = "trial_date")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date trialDate;
 
     @Column(name = "closed_date")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date closedDate;
 
     // Billing Information
@@ -141,8 +146,7 @@ public class LegalCase {
 
     // Injury Information
     @Column(name = "injury_date")
-    @Temporal(TemporalType.DATE)
-    private Date injuryDate;
+    private java.time.LocalDate injuryDate;
 
     @Column(name = "injury_type")
     private String injuryType;
@@ -189,6 +193,7 @@ public class LegalCase {
 
     @Column(name = "settlement_date")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date settlementDate;
 
     // Insurance Information
@@ -256,6 +261,7 @@ public class LegalCase {
 
     @Column(name = "arrest_date")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date arrestDate;
 
     @Column(name = "prosecutor_name")
@@ -272,10 +278,12 @@ public class LegalCase {
 
     @Column(name = "marriage_date")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date marriageDate;
 
     @Column(name = "separation_date")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date separationDate;
 
     @Column(name = "has_minor_children")
@@ -304,6 +312,7 @@ public class LegalCase {
 
     @Column(name = "priority_date")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date priorityDate;
 
     @Column(name = "visa_category")
@@ -323,6 +332,7 @@ public class LegalCase {
 
     @Column(name = "closing_date")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date closingDate;
 
     @Column(name = "buyer_name")
@@ -342,6 +352,7 @@ public class LegalCase {
 
     @Column(name = "ip_filing_date")
     @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date ipFilingDate;
 
     @Column(name = "inventor_name")
@@ -349,6 +360,14 @@ public class LegalCase {
 
     @Column(name = "technology_area")
     private String technologyArea;
+
+    /**
+     * Returns practiceArea if set, otherwise falls back to type for old data.
+     * Single place to change if we ever drop the type column.
+     */
+    public String getEffectivePracticeArea() {
+        return practiceArea != null ? practiceArea : type;
+    }
 
     @PrePersist
     protected void onCreate() {

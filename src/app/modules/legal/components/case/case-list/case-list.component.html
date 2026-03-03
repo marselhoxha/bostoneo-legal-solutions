@@ -219,8 +219,8 @@
                   <td>
                     <div class="d-flex align-items-start gap-2">
                       <div class="avatar-xs flex-shrink-0">
-                        <span class="avatar-title rounded-circle" [ngClass]="getCaseTypeIconClass(case.type)">
-                          <i [class]="getCaseTypeIcon(case.type)"></i>
+                        <span class="avatar-title rounded-circle" [ngClass]="getCaseTypeIconClass(case.practiceArea || case.type)">
+                          <i [class]="getCaseTypeIcon(case.practiceArea || case.type)"></i>
                         </span>
                       </div>
                       <div class="flex-grow-1 overflow-hidden">
@@ -230,7 +230,7 @@
                           <small class="text-muted">
                             <i class="ri-user-3-line me-1"></i>{{ case.clientName || 'No Client' }}
                           </small>
-                          <span class="badge fs-10" [ngClass]="getCaseTypeBadgeClass(case.type)" *ngIf="case.type">{{ case.type }}</span>
+                          <span class="badge fs-10" [ngClass]="getCaseTypeBadgeClass(case.practiceArea || case.type)" *ngIf="case.practiceArea || case.type">{{ case.practiceArea || case.type }}</span>
                         </div>
                       </div>
                     </div>

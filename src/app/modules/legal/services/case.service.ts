@@ -93,6 +93,15 @@ export class CaseService {
     );
   }
 
+  /** Partial update — sends only the provided fields without requiring all mandatory fields */
+  patchCase(id: string, caseData: Partial<LegalCase>): Observable<any> {
+    return this.http.patch<ApiResponse<{ case: LegalCase }>>(
+      `${this.apiUrl}/update/${id}`,
+      caseData,
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
   deleteCase(id: string): Observable<void> {
     return this.http.delete<void>(
       `${this.apiUrl}/delete/${id}`,

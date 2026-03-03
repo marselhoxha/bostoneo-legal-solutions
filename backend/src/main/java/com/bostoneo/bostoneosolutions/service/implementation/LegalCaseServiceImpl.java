@@ -121,9 +121,15 @@ public class LegalCaseServiceImpl implements LegalCaseService {
             log.warn("Case created without conflict check for client: {}. Conflict check is recommended.", caseDTO.getClientName());
         }
 
+        log.info("📋 createCase DTO - clientAddress: '{}', defendantAddress: '{}'",
+            caseDTO.getClientAddress(), caseDTO.getDefendantAddress());
         LegalCase legalCase = legalCaseDTOMapper.toEntity(caseDTO);
+        log.info("📋 createCase Entity BEFORE save - clientAddress: '{}', defendantAddress: '{}'",
+            legalCase.getClientAddress(), legalCase.getDefendantAddress());
         legalCase.setOrganizationId(orgId);
         legalCase = legalCaseRepository.save(legalCase);
+        log.info("📋 createCase Entity AFTER save - id: {}, clientAddress: '{}', defendantAddress: '{}'",
+            legalCase.getId(), legalCase.getClientAddress(), legalCase.getDefendantAddress());
         return legalCaseDTOMapper.toDTO(legalCase);
     }
 
@@ -139,6 +145,8 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         String oldPriority = existingCase.getPriority() != null ? existingCase.getPriority().toString() : null;
         
         // Update fields from DTO
+        log.info("📋 updateCase DTO - clientAddress: '{}', defendantAddress: '{}'",
+            caseDTO.getClientAddress(), caseDTO.getDefendantAddress());
         existingCase.setTitle(caseDTO.getTitle());
         existingCase.setClientName(caseDTO.getClientName());
         existingCase.setClientEmail(caseDTO.getClientEmail());
@@ -146,7 +154,6 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         existingCase.setClientAddress(caseDTO.getClientAddress());
         existingCase.setStatus(caseDTO.getStatus());
         existingCase.setPriority(caseDTO.getPriority());
-        existingCase.setType(caseDTO.getType());
         existingCase.setDescription(caseDTO.getDescription());
         
         // Update court info
@@ -193,7 +200,51 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         if (caseDTO.getEmployerPhone() != null) existingCase.setEmployerPhone(caseDTO.getEmployerPhone());
         if (caseDTO.getEmployerHrContact() != null) existingCase.setEmployerHrContact(caseDTO.getEmployerHrContact());
         if (caseDTO.getDefendantName() != null) existingCase.setDefendantName(caseDTO.getDefendantName());
+        // Update defendantAddress when present in request (even if empty string, to allow clearing)
         if (caseDTO.getDefendantAddress() != null) existingCase.setDefendantAddress(caseDTO.getDefendantAddress());
+
+        // Practice Area
+        if (caseDTO.getPracticeArea() != null) existingCase.setPracticeArea(caseDTO.getPracticeArea());
+
+        // Criminal Defense fields
+        if (caseDTO.getPrimaryCharge() != null) existingCase.setPrimaryCharge(caseDTO.getPrimaryCharge());
+        if (caseDTO.getChargeLevel() != null) existingCase.setChargeLevel(caseDTO.getChargeLevel());
+        if (caseDTO.getDocketNumber() != null) existingCase.setDocketNumber(caseDTO.getDocketNumber());
+        if (caseDTO.getBailAmount() != null) existingCase.setBailAmount(caseDTO.getBailAmount().doubleValue());
+        if (caseDTO.getArrestDate() != null) existingCase.setArrestDate(caseDTO.getArrestDate());
+        if (caseDTO.getProsecutorName() != null) existingCase.setProsecutorName(caseDTO.getProsecutorName());
+
+        // Family Law fields
+        if (caseDTO.getCaseSubtype() != null) existingCase.setCaseSubtype(caseDTO.getCaseSubtype());
+        if (caseDTO.getSpouseName() != null) existingCase.setSpouseName(caseDTO.getSpouseName());
+        if (caseDTO.getMarriageDate() != null) existingCase.setMarriageDate(caseDTO.getMarriageDate());
+        if (caseDTO.getSeparationDate() != null) existingCase.setSeparationDate(caseDTO.getSeparationDate());
+        if (caseDTO.getHasMinorChildren() != null) existingCase.setHasMinorChildren(caseDTO.getHasMinorChildren());
+        if (caseDTO.getChildrenCount() != null) existingCase.setChildrenCount(caseDTO.getChildrenCount());
+        if (caseDTO.getCustodyArrangement() != null) existingCase.setCustodyArrangement(caseDTO.getCustodyArrangement());
+
+        // Immigration fields
+        if (caseDTO.getFormType() != null) existingCase.setFormType(caseDTO.getFormType());
+        if (caseDTO.getUscisNumber() != null) existingCase.setUscisNumber(caseDTO.getUscisNumber());
+        if (caseDTO.getPetitionerName() != null) existingCase.setPetitionerName(caseDTO.getPetitionerName());
+        if (caseDTO.getBeneficiaryName() != null) existingCase.setBeneficiaryName(caseDTO.getBeneficiaryName());
+        if (caseDTO.getPriorityDate() != null) existingCase.setPriorityDate(caseDTO.getPriorityDate());
+        if (caseDTO.getVisaCategory() != null) existingCase.setVisaCategory(caseDTO.getVisaCategory());
+
+        // Real Estate fields
+        if (caseDTO.getTransactionType() != null) existingCase.setTransactionType(caseDTO.getTransactionType());
+        if (caseDTO.getPropertyAddress() != null) existingCase.setPropertyAddress(caseDTO.getPropertyAddress());
+        if (caseDTO.getPurchasePrice() != null) existingCase.setPurchasePrice(caseDTO.getPurchasePrice().doubleValue());
+        if (caseDTO.getClosingDate() != null) existingCase.setClosingDate(caseDTO.getClosingDate());
+        if (caseDTO.getBuyerName() != null) existingCase.setBuyerName(caseDTO.getBuyerName());
+        if (caseDTO.getSellerName() != null) existingCase.setSellerName(caseDTO.getSellerName());
+
+        // Intellectual Property fields
+        if (caseDTO.getIpType() != null) existingCase.setIpType(caseDTO.getIpType());
+        if (caseDTO.getApplicationNumber() != null) existingCase.setApplicationNumber(caseDTO.getApplicationNumber());
+        if (caseDTO.getIpFilingDate() != null) existingCase.setIpFilingDate(caseDTO.getIpFilingDate());
+        if (caseDTO.getInventorName() != null) existingCase.setInventorName(caseDTO.getInventorName());
+        if (caseDTO.getTechnologyArea() != null) existingCase.setTechnologyArea(caseDTO.getTechnologyArea());
 
         existingCase = legalCaseRepository.save(existingCase);
 
@@ -279,6 +330,58 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         }
 
         return legalCaseDTOMapper.toDTO(existingCase);
+    }
+
+    @Override
+    public LegalCaseDTO patchCaseFields(Long id, LegalCaseDTO dto) {
+        Long orgId = getRequiredOrganizationId();
+        LegalCase c = legalCaseRepository.findByIdAndOrganizationId(id, orgId)
+                .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + id));
+
+        // Only set fields that are explicitly provided (non-null)
+        if (dto.getTitle() != null) c.setTitle(dto.getTitle());
+        if (dto.getClientName() != null) c.setClientName(dto.getClientName());
+        if (dto.getClientEmail() != null) c.setClientEmail(dto.getClientEmail());
+        if (dto.getClientPhone() != null) c.setClientPhone(dto.getClientPhone());
+        if (dto.getClientAddress() != null) c.setClientAddress(dto.getClientAddress());
+        if (dto.getStatus() != null) c.setStatus(dto.getStatus());
+        if (dto.getPriority() != null) c.setPriority(dto.getPriority());
+        if (dto.getDescription() != null) c.setDescription(dto.getDescription());
+        if (dto.getPaymentStatus() != null) c.setPaymentStatus(dto.getPaymentStatus());
+
+        // PI fields
+        if (dto.getInjuryDate() != null) c.setInjuryDate(dto.getInjuryDate());
+        if (dto.getInjuryType() != null) c.setInjuryType(dto.getInjuryType());
+        if (dto.getInjuryDescription() != null) c.setInjuryDescription(dto.getInjuryDescription());
+        if (dto.getAccidentLocation() != null) c.setAccidentLocation(dto.getAccidentLocation());
+        if (dto.getLiabilityAssessment() != null) c.setLiabilityAssessment(dto.getLiabilityAssessment());
+        if (dto.getComparativeNegligencePercent() != null) c.setComparativeNegligencePercent(dto.getComparativeNegligencePercent());
+        if (dto.getMedicalProviders() != null) c.setMedicalProviders(dto.getMedicalProviders());
+        if (dto.getMedicalExpensesTotal() != null) c.setMedicalExpensesTotal(dto.getMedicalExpensesTotal().doubleValue());
+        if (dto.getLostWages() != null) c.setLostWages(dto.getLostWages().doubleValue());
+        if (dto.getFutureMedicalEstimate() != null) c.setFutureMedicalEstimate(dto.getFutureMedicalEstimate().doubleValue());
+        if (dto.getPainSufferingMultiplier() != null) c.setPainSufferingMultiplier(dto.getPainSufferingMultiplier().doubleValue());
+        if (dto.getSettlementDemandAmount() != null) c.setSettlementDemandAmount(dto.getSettlementDemandAmount().doubleValue());
+        if (dto.getSettlementOfferAmount() != null) c.setSettlementOfferAmount(dto.getSettlementOfferAmount().doubleValue());
+        if (dto.getSettlementFinalAmount() != null) c.setSettlementFinalAmount(dto.getSettlementFinalAmount().doubleValue());
+        if (dto.getSettlementDate() != null) c.setSettlementDate(dto.getSettlementDate());
+        if (dto.getInsuranceCompany() != null) c.setInsuranceCompany(dto.getInsuranceCompany());
+        if (dto.getInsurancePolicyNumber() != null) c.setInsurancePolicyNumber(dto.getInsurancePolicyNumber());
+        if (dto.getInsurancePolicyLimit() != null) c.setInsurancePolicyLimit(dto.getInsurancePolicyLimit().doubleValue());
+        if (dto.getInsuranceAdjusterName() != null) c.setInsuranceAdjusterName(dto.getInsuranceAdjusterName());
+        if (dto.getInsuranceAdjusterContact() != null) c.setInsuranceAdjusterContact(dto.getInsuranceAdjusterContact());
+        if (dto.getInsuranceAdjusterEmail() != null) c.setInsuranceAdjusterEmail(dto.getInsuranceAdjusterEmail());
+        if (dto.getInsuranceAdjusterPhone() != null) c.setInsuranceAdjusterPhone(dto.getInsuranceAdjusterPhone());
+        if (dto.getEmployerName() != null) c.setEmployerName(dto.getEmployerName());
+        if (dto.getEmployerEmail() != null) c.setEmployerEmail(dto.getEmployerEmail());
+        if (dto.getEmployerPhone() != null) c.setEmployerPhone(dto.getEmployerPhone());
+        if (dto.getEmployerHrContact() != null) c.setEmployerHrContact(dto.getEmployerHrContact());
+        if (dto.getDefendantName() != null) c.setDefendantName(dto.getDefendantName());
+        if (dto.getDefendantAddress() != null) c.setDefendantAddress(dto.getDefendantAddress());
+        if (dto.getPracticeArea() != null) c.setPracticeArea(dto.getPracticeArea());
+
+        c = legalCaseRepository.save(c);
+        return legalCaseDTOMapper.toDTO(c);
     }
 
     @Override

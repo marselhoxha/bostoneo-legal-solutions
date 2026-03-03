@@ -182,14 +182,14 @@ export class ConversationOrchestrationService {
       const backendTaskType = this.mapToBackendTaskType(request.taskType);
 
       // Create conversation
-      this.legalResearchService.createGeneralConversation(request.title, request.researchMode, backendTaskType)
+      this.legalResearchService.createGeneralConversation(request.title, backendTaskType)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (session) => {
             const conversationId = session.id;
 
-            // Send initial message
-            this.legalResearchService.sendMessageToConversation(conversationId, request.prompt, request.researchMode)
+            // Send initial message — backend auto-selects mode
+            this.legalResearchService.sendMessageToConversation(conversationId, request.prompt)
               .pipe(takeUntil(this.destroy$))
               .subscribe({
                 next: (message) => {
@@ -232,7 +232,7 @@ export class ConversationOrchestrationService {
       this.stateService.setWorkflowSteps(steps);
       this.animateWorkflowSteps(steps);
 
-      this.legalResearchService.sendMessageToConversation(conversationId, message, researchMode)
+      this.legalResearchService.sendMessageToConversation(conversationId, message)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {

@@ -14,6 +14,7 @@ import { CaseTaskService } from '../../../../../service/case-task.service';
 import { TaskType, TaskPriority } from '../../../../../interface/case-task';
 import { CalendarService } from '../../../services/calendar.service';
 import { UserService } from '../../../../../service/user.service';
+import { CaseDocumentsService } from '../../../services/case-documents.service';
 import { environment } from '../../../../../../environments/environment';
 
 // Conversation interface for multi-conversation support
@@ -115,6 +116,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     private caseTaskService: CaseTaskService,
     private calendarService: CalendarService,
     private userService: UserService,
+    private caseDocumentsService: CaseDocumentsService,
     private cdr: ChangeDetectorRef,
     private elementRef: ElementRef
   ) {}
@@ -198,6 +200,52 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   ngAfterViewInit(): void {
     // Try to set up observers (may not exist yet if showChat is false)
     this.setupScrollObservers();
+
+    // Listen for clicks on casedoc: links (document source chips)
+    this.elementRef.nativeElement.addEventListener('click', (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const docLink = target.closest('[data-casedoc]') as HTMLElement;
+      if (docLink) {
+        event.preventDefault();
+        event.stopPropagation();
+        const casedocRef = docLink.getAttribute('data-casedoc'); // format: "caseId:docId"
+        if (casedocRef) {
+          const parts = casedocRef.split(':');
+          if (parts.length === 2) {
+            this.openDocumentPreview(parts[0], parts[1]);
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Opens a document preview in a new browser tab.
+   * Downloads the document blob and creates a temporary object URL.
+   */
+  private openDocumentPreview(caseId: string, documentId: string): void {
+    this.caseDocumentsService.downloadDocument(caseId, documentId, true).subscribe({
+      next: (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        // Revoke after a delay to allow the tab to load
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      },
+      error: (err: any) => {
+        console.error('Error opening document preview:', err);
+        // Fallback: try direct download without preview flag
+        this.caseDocumentsService.downloadDocument(caseId, documentId, false).subscribe({
+          next: (blob: Blob) => {
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+          },
+          error: () => {
+            Swal.fire('Error', 'Could not open document preview. The document may not be available.', 'error');
+          }
+        });
+      }
+    });
   }
 
   setupScrollObservers(): void {

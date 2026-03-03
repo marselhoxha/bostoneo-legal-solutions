@@ -108,6 +108,11 @@ public interface SuperAdminService {
     void toggleUserStatus(Long userId, boolean enabled);
 
     /**
+     * Enable or disable MFA for a user (SuperAdmin override — no phone check)
+     */
+    void toggleUserMfa(Long userId, boolean enabled);
+
+    /**
      * Resend verification email to user
      */
     void resendVerificationEmail(Long userId);

@@ -53,6 +53,17 @@
               <span *ngIf="!user.enabled" class="badge bg-danger-subtle text-danger me-1">Disabled</span>
               <span *ngIf="!user.accountNonLocked" class="badge bg-warning-subtle text-warning me-1">Locked</span>
               <span *ngIf="user.usingMfa" class="badge bg-info-subtle text-info">MFA Enabled</span>
+              <span *ngIf="!user.usingMfa" class="badge bg-secondary-subtle text-secondary">MFA Disabled</span>
+            </div>
+
+            <!-- MFA Toggle -->
+            <div class="mt-2">
+              <button class="btn btn-sm"
+                      [ngClass]="user.usingMfa ? 'btn-outline-danger' : 'btn-outline-info'"
+                      (click)="toggleMfa()">
+                <i [class]="user.usingMfa ? 'ri-shield-keyhole-line me-1' : 'ri-shield-check-line me-1'"></i>
+                {{ user.usingMfa ? 'Disable MFA' : 'Enable MFA' }}
+              </button>
             </div>
 
             <!-- Role Change Section -->

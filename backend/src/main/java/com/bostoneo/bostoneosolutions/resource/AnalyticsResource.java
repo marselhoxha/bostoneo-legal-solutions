@@ -94,19 +94,19 @@ public class AnalyticsResource {
         analytics.put("pendingCases", statusCounts.getOrDefault("PENDING", 0L));
         analytics.put("casesByStatus", statusCounts);
         
-        // Count by type
+        // Count by practice area
         Map<String, Long> typeCounts = allCases.stream()
             .collect(Collectors.groupingBy(
-                case_ -> case_.getType() != null ? case_.getType() : "UNKNOWN",
+                case_ -> case_.getEffectivePracticeArea() != null ? case_.getEffectivePracticeArea() : "Other",
                 Collectors.counting()
             ));
         analytics.put("casesByType", typeCounts);
-        
-        // Revenue by type
+
+        // Revenue by practice area
         Map<String, Double> revenueByType = allCases.stream()
             .filter(case_ -> case_.getTotalAmount() != null)
             .collect(Collectors.groupingBy(
-                case_ -> case_.getType() != null ? case_.getType() : "UNKNOWN",
+                case_ -> case_.getEffectivePracticeArea() != null ? case_.getEffectivePracticeArea() : "Other",
                 Collectors.summingDouble(LegalCaseDTO::getTotalAmount)
             ));
         analytics.put("revenueByType", revenueByType);
@@ -341,118 +341,41 @@ public class AnalyticsResource {
         Page<LegalCaseDTO> allCasesPage = legalCaseService.getAllCases(0, 1000);
         List<LegalCaseDTO> allCases = allCasesPage.getContent();
         
-        // Calculate actual revenue by case type
+        // Calculate actual revenue by practice area (values are already human-readable)
         Map<String, Double> actualRevenue = allCases.stream()
-            .filter(case_ -> case_.getTotalAmount() != null && case_.getType() != null)
+            .filter(case_ -> case_.getTotalAmount() != null && case_.getEffectivePracticeArea() != null)
             .collect(Collectors.groupingBy(
-                LegalCaseDTO::getType,
+                LegalCaseDTO::getEffectivePracticeArea,
                 Collectors.summingDouble(LegalCaseDTO::getTotalAmount)
             ));
-        
-        log.debug("Actual revenue by case type: " + actualRevenue);
-        
-        // Calculate total revenue from all cases
+
+        log.debug("Actual revenue by practice area: " + actualRevenue);
+
         double totalCaseRevenue = actualRevenue.values().stream().mapToDouble(Double::doubleValue).sum();
-        
+
         if (totalCaseRevenue > 0) {
-            // Use real data and map case types to practice areas
-            revenueData.put("Personal Injury", 
-                actualRevenue.getOrDefault("PERSONAL_INJURY", 0.0));
-            
-            revenueData.put("Corporate Law", 
-                actualRevenue.getOrDefault("BUSINESS", 0.0) + 
-                actualRevenue.getOrDefault("CONTRACT", 0.0) +
-                actualRevenue.getOrDefault("EMPLOYMENT_LITIGATION", 0.0) +
-                actualRevenue.getOrDefault("INTELLECTUAL_PROPERTY", 0.0));
-            
-            revenueData.put("Family Law", 
-                actualRevenue.getOrDefault("FAMILY", 0.0));
-            
-            revenueData.put("Criminal Defense", 
-                actualRevenue.getOrDefault("CRIMINAL", 0.0));
-            
-            revenueData.put("Real Estate", 
-                actualRevenue.getOrDefault("REAL_ESTATE", 0.0) + 
-                actualRevenue.getOrDefault("ESTATE_PLANNING", 0.0));
-            
-            revenueData.put("Immigration Law", 
-                actualRevenue.getOrDefault("IMMIGRATION", 0.0));
-            
-            revenueData.put("Bankruptcy Law", 
-                actualRevenue.getOrDefault("BANKRUPTCY", 0.0));
-            
-            revenueData.put("Other Practice Areas",
-                actualRevenue.getOrDefault("CLASS_ACTION", 0.0) +
-                actualRevenue.getOrDefault("ENVIRONMENTAL", 0.0) +
-                actualRevenue.getOrDefault("TAX", 0.0));
-            
-            // Remove any zero-value entries for cleaner display
+            revenueData.putAll(actualRevenue);
             revenueData.entrySet().removeIf(entry -> entry.getValue() <= 0);
-            
-            log.debug("Mapped revenue by practice area: " + revenueData);
-            
         } else {
-            // If no case revenue data, use actual invoice totals with realistic distribution
+            // If no case revenue data, use invoice totals with proportional distribution
             double totalInvoiceRevenue = invoiceService.calculateTotalEarnings();
             log.debug("Using total invoice revenue for distribution: " + totalInvoiceRevenue);
-            
-            // Get case type counts from database for proportional distribution
-            Map<String, Long> caseTypeCounts = allCases.stream()
-                .filter(case_ -> case_.getType() != null)
+
+            Map<String, Long> practiceAreaCounts = allCases.stream()
+                .filter(case_ -> case_.getEffectivePracticeArea() != null)
                 .collect(Collectors.groupingBy(
-                    LegalCaseDTO::getType,
+                    LegalCaseDTO::getEffectivePracticeArea,
                     Collectors.counting()
                 ));
-            
-            if (!caseTypeCounts.isEmpty() && totalInvoiceRevenue > 0) {
-                double totalCases = caseTypeCounts.values().stream().mapToLong(Long::longValue).sum();
-                
-                // Distribute revenue proportionally based on actual case counts
-                double personalInjuryRevenue = totalInvoiceRevenue * (caseTypeCounts.getOrDefault("PERSONAL_INJURY", 0L) / totalCases);
-                if (personalInjuryRevenue > 0) {
-                    revenueData.put("Personal Injury", personalInjuryRevenue);
-                }
-                
-                double corporateRevenue = totalInvoiceRevenue * ((caseTypeCounts.getOrDefault("BUSINESS", 0L) + 
-                                           caseTypeCounts.getOrDefault("CONTRACT", 0L) + 
-                                           caseTypeCounts.getOrDefault("EMPLOYMENT_LITIGATION", 0L) + 
-                                           caseTypeCounts.getOrDefault("INTELLECTUAL_PROPERTY", 0L)) / totalCases);
-                if (corporateRevenue > 0) {
-                    revenueData.put("Corporate Law", corporateRevenue);
-                }
-                
-                double familyRevenue = totalInvoiceRevenue * (caseTypeCounts.getOrDefault("FAMILY", 0L) / totalCases);
-                if (familyRevenue > 0) {
-                    revenueData.put("Family Law", familyRevenue);
-                }
-                
-                double criminalRevenue = totalInvoiceRevenue * (caseTypeCounts.getOrDefault("CRIMINAL", 0L) / totalCases);
-                if (criminalRevenue > 0) {
-                    revenueData.put("Criminal Defense", criminalRevenue);
-                }
-                
-                double realEstateRevenue = totalInvoiceRevenue * ((caseTypeCounts.getOrDefault("REAL_ESTATE", 0L) + 
-                                            caseTypeCounts.getOrDefault("ESTATE_PLANNING", 0L)) / totalCases);
-                if (realEstateRevenue > 0) {
-                    revenueData.put("Real Estate", realEstateRevenue);
-                }
-                
-                double immigrationRevenue = totalInvoiceRevenue * (caseTypeCounts.getOrDefault("IMMIGRATION", 0L) / totalCases);
-                if (immigrationRevenue > 0) {
-                    revenueData.put("Immigration Law", immigrationRevenue);
-                }
-                
-                double bankruptcyRevenue = totalInvoiceRevenue * (caseTypeCounts.getOrDefault("BANKRUPTCY", 0L) / totalCases);
-                if (bankruptcyRevenue > 0) {
-                    revenueData.put("Bankruptcy Law", bankruptcyRevenue);
-                }
-                
-                double otherRevenue = totalInvoiceRevenue * ((caseTypeCounts.getOrDefault("CLASS_ACTION", 0L) + 
-                                       caseTypeCounts.getOrDefault("ENVIRONMENTAL", 0L) + 
-                                       caseTypeCounts.getOrDefault("TAX", 0L)) / totalCases);
-                if (otherRevenue > 0) {
-                    revenueData.put("Other Practice Areas", otherRevenue);
-                }
+
+            if (!practiceAreaCounts.isEmpty() && totalInvoiceRevenue > 0) {
+                double totalCases = practiceAreaCounts.values().stream().mapToLong(Long::longValue).sum();
+                practiceAreaCounts.forEach((area, count) -> {
+                    double revenue = totalInvoiceRevenue * (count / totalCases);
+                    if (revenue > 0) {
+                        revenueData.put(area, revenue);
+                    }
+                });
             }
         }
         

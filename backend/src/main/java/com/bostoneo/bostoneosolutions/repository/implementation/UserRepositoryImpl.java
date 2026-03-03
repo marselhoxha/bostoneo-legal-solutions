@@ -47,7 +47,8 @@ import static com.bostoneo.bostoneosolutions.enumeration.VerificationType.PASSWO
 import static com.bostoneo.bostoneosolutions.query.UserQuery.*;
 import static java.util.Map.of;
 import static java.util.Objects.requireNonNull;
-import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
+import static org.apache.commons.lang3.RandomStringUtils.randomNumeric;
+import static org.apache.commons.lang3.time.DateUtils.addMinutes;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.time.DateFormatUtils.format;
 import static org.apache.commons.lang3.time.DateUtils.addDays;
@@ -357,15 +358,15 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
 
     @Override
     public void sendVerificationCode(UserDTO user) {
-        String expirationDate = format(addDays(new Date(), 1), "yyyy-MM-dd HH:mm:ss");
-        String verificationCode = randomAlphabetic(8).toUpperCase();
+        java.sql.Timestamp expirationDate = new java.sql.Timestamp(addMinutes(new Date(), 10).getTime());
+        String verificationCode = randomNumeric(6);
         try {
             jdbc.update(DELETE_VERIFICATION_CODE_BY_USER_ID, of("id", user.getId()));
             jdbc.update(INSERT_VERIFICATION_CODE_QUERY, of("userId", user.getId(), "code", verificationCode, "expirationDate", expirationDate));
-            //sendSMS(user.getPhone(), "From: Bostoneo Solutions \nVerification code\n" + verificationCode);
-            log.info("Verification Code: {}", verificationCode);
+            emailService.sendMfaVerificationEmail(user.getEmail(), user.getFirstName(), verificationCode);
+            log.info("MFA verification code sent to email: {}", user.getEmail());
         } catch (Exception exception) {
-            log.error(exception.getMessage());
+            log.error("Failed to send verification code for user {}: {}", user.getEmail(), exception.getMessage(), exception);
             throw new ApiException("An error occurred. Please try again.");
         }
     }
@@ -502,7 +503,6 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     @Override
     public User toggleMfa(String email) {
         User user = getUserByEmail(email);
-        if(isBlank(user.getPhone())) { throw new ApiException("You need a phone number to change Multi-Factor Authentication"); }
         user.setUsingMFA(!user.isUsingMFA());
         try {
             jdbc.update(TOGGLE_USER_MFA_QUERY, of("email", email, "isUsingMfa", user.isUsingMFA()));

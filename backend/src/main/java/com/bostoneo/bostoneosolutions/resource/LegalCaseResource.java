@@ -267,6 +267,28 @@ public class LegalCaseResource {
                         .build());
     }
 
+    /**
+     * Partial update — accepts any subset of LegalCaseDTO fields without requiring
+     * all mandatory fields. Only non-null fields are applied to the existing case.
+     * Used by PI workspace to save individual field groups
+     * (e.g., painSufferingMultiplier, medicalExpensesTotal) without sending the full case.
+     */
+    @PatchMapping("/update/{id}")
+    @PreAuthorize("hasAuthority('CASE:EDIT') or hasRole('ROLE_ADMIN')")
+    public ResponseEntity<HttpResponse> patchCase(
+            @AuthenticationPrincipal UserDTO user,
+            @PathVariable("id") Long id,
+            @RequestBody LegalCaseDTO legalCaseDTO) {
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("case", legalCaseService.patchCaseFields(id, legalCaseDTO)))
+                        .message("Case fields updated successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
     @PutMapping("/status/{id}/{status}")
     @PreAuthorize("hasAuthority('CASE:EDIT') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "UPDATE", entityType = "LEGAL_CASE", description = "Updated legal case status")

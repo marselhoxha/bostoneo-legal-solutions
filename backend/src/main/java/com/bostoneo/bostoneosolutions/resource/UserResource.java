@@ -316,8 +316,13 @@ public class UserResource {
     }
 
     @GetMapping(value = "/image/{fileName}", produces = IMAGE_PNG_VALUE)
-    public byte[] getProfileImage(@PathVariable("fileName") String fileName) throws Exception {
-        return fileStorageService.loadFileAsResource("profile-images/" + fileName).getInputStream().readAllBytes();
+    public ResponseEntity<byte[]> getProfileImage(@PathVariable("fileName") String fileName) {
+        try {
+            byte[] imageBytes = fileStorageService.loadFileAsResource("profile-images/" + fileName).getInputStream().readAllBytes();
+            return ResponseEntity.ok(imageBytes);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @GetMapping("/refresh/token")

@@ -23,10 +23,8 @@ import org.springframework.web.context.request.async.DeferredResult;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -319,153 +317,13 @@ public class AIPersonalInjuryController {
             log.info("Case data fetched for demand letter, caseId={}", caseId);
         }
 
-        // Build comprehensive user prompt with MA-specific legal requirements
-        String userPrompt = String.format("""
-            Generate a %s demand letter for a Massachusetts personal injury case.
-
-            CLAIM INFORMATION:
-            Claimant: %s
-            Defendant (At-Fault Party): %s
-            Insurance Company: %s
-            Adjuster Name: %s
-            Claim Number: %s
-            Policy Limit: %s
-
-            ACCIDENT DETAILS:
-            Date of Accident: %s
-            Location: %s
-
-            INJURIES:
-            Injury Type: %s
-            Description: %s
-
-            LIABILITY:
-            %s
-
-            DAMAGES (use these as starting values, but calculate final totals from itemized data below):
-            Medical Expenses: %s
-            Lost Wages: %s
-            Future Medical Expenses: %s
-            Pain & Suffering (calculated): %s
-            %s
-
-            ============================================================
-            DEMAND LETTER REQUIREMENTS (ATTORNEY-READY STANDARDS)
-            ============================================================
-
-            CRITICAL RULES:
-            - NEVER use placeholders like [Amount], [Date], or [Name]. Use actual values from the data provided, or "$0.00" if unknown.
-            - NEVER leave meta-instructions like "[ATTORNEY TO INSERT...]" in the final letter.
-            - All dates must be chronologically consistent (treatment cannot precede accident).
-            - MATHEMATICAL CONSISTENCY IS MANDATORY: The TOTAL DEMAND must EXACTLY equal the sum of all itemized damages (Economic + Non-Economic). Do NOT use any pre-calculated total - calculate it yourself from the line items.
-            - Use precise dollar amounts that sum correctly in tables.
-
-            LAW FIRM LETTERHEAD INFORMATION:
-            %s
-
-            REQUIRED SECTIONS:
-
-            1. HEADING
-               - Use the law firm information above for the letterhead (name, address, phone, email)
-               - Format as professional centered letterhead at the top
-               - Date: %s
-               - Via Certified Mail, Return Receipt Requested
-               - Addressee with full insurance company address
-
-            2. RE: LINE
-               - Claimant name, Insured/Defendant name, Date of Loss, Claim Number
-
-            3. REPRESENTATION STATEMENT
-               - State representation of claimant
-               - Include attorney lien notice: "Please be advised that this office maintains a lien on any and all proceeds of any settlement or judgment obtained in this matter."
-               - Direct all communications to this office only
-
-            4. LIABILITY SECTION - PRESUMPTION OF NEGLIGENCE (for rear-end collisions)
-               - Clear narrative establishing defendant's negligence
-               - Reference M.G.L. c. 90, § 14 (following too closely) if rear-end collision
-               - IMPORTANT: For rear-end collisions, cite "presumption of negligence" or "inference of negligence" - NOT "negligence per se"
-               - Massachusetts courts hold that rear-end collisions create a rebuttable presumption of negligence on the following driver
-               - Do NOT use the phrase "negligence per se" for rear-end collision cases
-
-            5. INJURIES AND TREATMENT SECTION
-               - Chronological treatment narrative using medical records above
-               - Include all providers, dates, diagnoses, and procedures
-               - Reference specific ICD-10 and CPT codes where provided
-
-            6. MEDICAL EXPENSES ITEMIZATION
-               - Detailed table with Provider, Date(s), Service, Amount
-               - Every row must have actual dollar amounts (no placeholders)
-               - Total must match sum of line items exactly
-               - Include PIP COORDINATION STATEMENT: "Client's PIP benefits under M.G.L. c. 90, § 34A have been exhausted/coordinated, entitling recovery of the full medical special damages from the bodily injury coverage."
-
-            7. LOST WAGES SECTION (if applicable)
-               - If no lost wages claimed, briefly note work impact without claiming economic loss
-
-            8. FUTURE MEDICAL EXPENSES (if applicable)
-               - Use phrase "within a reasonable degree of medical certainty" (NOT "possible" or "may need")
-               - Base on treating physician recommendations from medical records
-
-            9. PAIN AND SUFFERING NARRATIVE
-               - %s
-               - QUANTIFY duration: "Client has endured daily pain for [X] days since the accident"
-               - Describe specific impacts on daily activities, work, family, sleep
-               - Use concrete examples, not vague generalizations
-               - CRITICAL VALUATION RULES:
-                 * NEVER state a specific multiplier (e.g., "1.0x", "2.0x multiplier") in the letter
-                 * NEVER do the insurer's math for them by showing how you calculated pain & suffering
-                 * For disc herniation/structural injuries: Pain & suffering should be AT LEAST 2.5-3.0x medical specials
-                 * For cases with permanency/chronic symptoms: Use higher valuation (3.0-4.0x)
-                 * Simply state the pain & suffering amount without explaining the calculation method
-
-            10. DAMAGES SUMMARY TABLE
-                - Economic Damages subtotal (sum of: medical expenses + lost wages + future medical + other economic)
-                - Non-Economic Damages subtotal (pain & suffering) - DO NOT show multiplier or calculation method
-                - GROSS TOTAL = Economic + Non-Economic (MUST be mathematically correct)
-                - Comparative negligence reduction (if any percentage applies)
-                - TOTAL DEMAND = Gross Total minus any reduction (this is your final demand amount)
-                - CRITICAL: The TOTAL DEMAND stated here MUST match the demand amount in the closing section
-                - NEVER include language like "(1.0 multiplier)" or "(2.0x medical specials)" in the table - just show the amounts
-
-            11. STATUTORY BAD FAITH NOTICE (MASSACHUSETTS-SPECIFIC)
-                - Include this paragraph: "Please be advised that failure to tender policy limits under circumstances where liability is clear and damages substantially exceed the policy limits may constitute an unfair claim settlement practice under M.G.L. c. 176D, § 3(9) and an unfair or deceptive act under M.G.L. c. 93A, §§ 2 and 9. We reserve all rights to pursue such claims if this matter is not resolved promptly and fairly."
-
-            12. DEMAND AND RESPONSE DEADLINE
-                - State the specific demand amount
-                - If damages exceed policy limits: Make a STRONG, UNCONDITIONAL policy limits demand
-                  * Use assertive language: "Tender of the policy limits is the only reasonable course of action to protect your insured from personal exposure"
-                  * Do NOT use weak/conditional language like "we will consider a tender" or "we may accept limits"
-                  * Frame limits tender as the insurer's OBLIGATION, not an option
-                - 30-day response deadline from date of letter
-                - Consequences of non-response (litigation, bad faith exposure)
-
-            13. CLOSING
-                - Professional closing
-                - Attorney signature block with Bar number
-                - List of enclosures (medical records, bills, photos if applicable)
-
-            %s
-            """,
-            isDetailed ? "comprehensive, detailed" : "concise but complete",
+        // Build comprehensive user prompt modeled on professional demand package format
+        String userPrompt = buildDemandLetterPrompt(
             clientName,
-            request.getOrDefault("defendantName", "Unknown Defendant"),
-            request.getOrDefault("insuranceCompany", "Unknown Insurance Company"),
-            request.getOrDefault("adjusterName", "Claims Department"),
-            request.getOrDefault("claimNumber", "See Policy Number"),
-            formatCurrency(getDoubleValue(request, "policyLimit")),
-            request.getOrDefault("accidentDate", "Date Unknown"),
-            request.getOrDefault("accidentLocation", "Location Unknown"),
-            request.getOrDefault("injuryType", "Personal Injury"),
-            request.getOrDefault("injuryDescription", ""),
-            request.getOrDefault("liabilityDetails", ""),
-            formatCurrency(getDoubleValue(request, "medicalExpenses")),
-            formatCurrency(getDoubleValue(request, "lostWages")),
-            formatCurrency(getDoubleValue(request, "futureMedical")),
-            formatCurrency(getDoubleValue(request, "painSufferingAmount")),
+            request,
             caseDataSection,
-            letterheadSection, // Law firm letterhead info
-            LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy")), // Letter date
-            isDetailed ? "Provide comprehensive pain and suffering narrative with specific examples of impact on daily life, quantifying the duration of suffering" : "Include specific impacts on daily activities with duration",
-            isDetailed ? "Make the letter thorough and compelling, suitable for policy limits demands. This is a serious injury case warranting detailed documentation." : "Keep the letter focused and professional while including all required Massachusetts-specific elements."
+            letterheadSection,
+            isDetailed
         );
 
         String title = String.format("Demand Letter - %s v. %s", clientName, defendantName);
@@ -765,10 +623,7 @@ public class AIPersonalInjuryController {
             try {
                 LegalCaseDTO legalCase = legalCaseService.getCase(caseId);
                 if (legalCase != null && legalCase.getInjuryDate() != null) {
-                    Date injuryDate = legalCase.getInjuryDate();
-                    accidentDate = injuryDate.toInstant()
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDate();
+                    accidentDate = legalCase.getInjuryDate();
                     log.debug("Accident date for case {}: {}", caseId, accidentDate);
                 }
             } catch (Exception e) {
@@ -1102,5 +957,221 @@ public class AIPersonalInjuryController {
             Phone: [FIRM PHONE]
             Email: [FIRM EMAIL]
             """;
+    }
+
+    /**
+     * Build demand letter prompt modeled on professional demand package format.
+     * Structure follows the EvenUp demand package standard:
+     * 1. Facts & Liability (narrative), 2. Injuries & Treatments (ICD table + provider summaries),
+     * 3. Damages (itemized tables per category + per diem analysis), 4. Demand to Settle, 5. Exhibit List.
+     */
+    private String buildDemandLetterPrompt(
+            String clientName,
+            Map<String, Object> request,
+            String caseDataSection,
+            String letterheadSection,
+            boolean isDetailed
+    ) {
+        String letterDate = LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy"));
+
+        return String.format("""
+            Generate a professional demand package for a Massachusetts personal injury case.
+            This must read as a polished, attorney-ready demand letter — NOT a template or outline.
+
+            ============================================================
+            CASE DATA (USE THESE VALUES — DO NOT INVENT OR USE BRACKETS)
+            ============================================================
+
+            CLAIM INFORMATION:
+            Claimant: %s
+            Defendant (At-Fault Party): %s
+            Insurance Company: %s
+            Adjuster Name: %s
+            Claim Number: %s
+            Policy Limit: %s
+
+            ACCIDENT DETAILS:
+            Date of Accident: %s
+            Location: %s
+
+            INJURIES:
+            Injury Type: %s
+            Description: %s
+
+            LIABILITY NARRATIVE:
+            %s
+
+            DAMAGE VALUES (starting values — recalculate totals from itemized medical records below):
+            Medical Expenses: %s
+            Lost Wages: %s
+            Future Medical Expenses: %s
+            Pain & Suffering (calculated): %s
+
+            LAW FIRM LETTERHEAD:
+            %s
+
+            %s
+
+            ============================================================
+            ABSOLUTE RULES (VIOLATION = FAILURE)
+            ============================================================
+
+            1. ZERO PLACEHOLDERS: The letter must contain ZERO square brackets. Never write $[amount], [Date], [Name], [N], [Provider], [ATTORNEY TO INSERT], or ANY text inside square brackets. Every value must be a real number, real name, or real date from the CASE DATA above. If a value is truly missing, write $0.00 for amounts or "N/A" for text — never brackets.
+
+            2. REAL DATA ONLY: Every provider name, diagnosis, ICD code, dollar amount, and date in the letter MUST come from the MEDICAL TREATMENT RECORDS, DAMAGES CALCULATION, or MEDICAL SUMMARY sections in the CASE DATA above. Read those sections carefully and extract the actual values.
+
+            3. MATH MUST ADD UP: Every table total must exactly equal the sum of its line items. The total demand must equal Economic + Non-Economic damages. Double-check all arithmetic.
+
+            4. NARRATIVE PROSE: Write the Facts & Liability and Pain & Suffering sections as compelling narrative paragraphs, not bullet points.
+
+            5. PRECISE DOLLARS: Use exact dollar amounts with cents (e.g., $5,234.50).
+
+            6. TABLE FORMAT: Use standard markdown pipe tables. Every table needs: header row, separator row (|---|---|), data rows, and a bold Total row at the bottom.
+
+            ============================================================
+            SECTION 1: LETTERHEAD & SALUTATION
+            ============================================================
+            - Centered law firm letterhead (firm name, address, phone, email) from the LAW FIRM LETTERHEAD data
+            - Date: %s
+            - "Via Certified Mail, Return Receipt Requested"
+            - Addressee: Use the actual Adjuster Name and Insurance Company from the CASE DATA
+            - RE: line with the actual Claimant name, Defendant name, Date of Loss, and Claim Number
+            - "Dear [actual adjuster name from CASE DATA]:" — use their real name, not a bracket
+            - Brief representation statement (1-2 paragraphs):
+              * State that this office represents the claimant
+              * Attorney lien notice
+              * Direct all communications to this office
+              * State this is a good-faith attempt to resolve the claim
+
+            ============================================================
+            SECTION 2: FACTS & LIABILITY
+            ============================================================
+            Write this as a COMPELLING NARRATIVE (like telling a story to a jury), NOT as bullet points.
+
+            Structure:
+            - Opening paragraph: Set the scene. Describe the client's day before the accident in human terms.
+            - Accident narrative: Describe what happened in vivid, chronological detail. Use the actual accident location and date from CASE DATA.
+            - Defendant's negligence: Explain clearly how the defendant was at fault.
+            - Legal standard for liability:
+              * For rear-end collisions: "Under Massachusetts law, a rear-end collision creates a rebuttable presumption of negligence on the following driver." Reference M.G.L. c. 90, § 14.
+              * IMPORTANT: Use "presumption of negligence" — NEVER "negligence per se" for rear-end cases.
+              * For other collisions: State the applicable duty of care and how it was breached.
+            - Conclude with a strong statement that liability is clear and undisputed.
+
+            ============================================================
+            SECTION 3: INJURIES & TREATMENTS
+            ============================================================
+
+            ### 3.1 Summary of Injuries
+            Create a table listing every diagnosis found in the MEDICAL TREATMENT RECORDS. Extract the actual diagnosis names and ICD-10 codes from the records. The table columns are: Injury/Diagnosis and ICD Code.
+
+            ### 3.2 Treatment by Provider
+            For EACH medical provider found in the MEDICAL TREATMENT RECORDS, create a structured summary:
+
+            Start with the provider's actual name in bold, then a small table with Treatment Timeline (actual first date to last date from records) and Number of Visits (actual count from records).
+
+            Then write 1-3 narrative paragraphs describing the treatment chronologically. Include: presenting complaints, examination findings, diagnoses, treatment plan, procedures performed, medications prescribed, and prognosis/recommendations. Use the actual ICD-10 and CPT codes from the medical records.
+
+            End with "Supporting Documents: Exhibit N — [actual provider name] Medical Records" where N is the exhibit number.
+
+            Order providers chronologically by first treatment date.
+
+            ============================================================
+            SECTION 4: DAMAGES
+            ============================================================
+
+            ### 4.1 Total Projected Claim Value
+            Present a summary table with columns: Elements of Damages and Amount.
+            Include rows for: Past Medical Expenses, Future Medical Expenses, Loss of Income, Loss of Household Services (if applicable), and Past and Future Pain and Suffering. Use the actual dollar amounts from the DAMAGES CALCULATION in CASE DATA. Include a bold Total Damages row that sums everything.
+
+            ### 4.2 Past Medical Expenses
+            Create an itemized table with columns: Provider, Date of Service, Amount Charged, Supporting Document.
+            List every medical provider from the MEDICAL TREATMENT RECORDS with their actual billed amounts and treatment dates. The Total row must match the Past Medical Expenses total from the DAMAGES CALCULATION.
+
+            After the table, include: "If you claim any of the medical treatment above was unnecessary, or that any of the bills associated with such treatment were unreasonable, then please identify in writing which bills you dispute and the factual basis for such dispute."
+
+            PIP COORDINATION: "Client's PIP benefits under M.G.L. c. 90, § 34A have been exhausted/coordinated, entitling recovery of the full medical special damages from the bodily injury coverage."
+
+            ### 4.3 Future Medical Expenses (if applicable)
+            If future medical expense data exists in the DAMAGES CALCULATION, create a table with columns: Procedure, Years, Frequency/Year, Cost Each, Total. Use actual projected treatment data. Include a bold Total Future Medical row.
+            Use the phrase "within a reasonable degree of medical certainty" for all future medical projections.
+
+            ### 4.4 Loss of Income (if applicable)
+            If lost wages data exists in the DAMAGES CALCULATION, present a Loss of Income Schedule table with columns: Start of Loss Date, End of Loss Date, Lost Income. Use actual dates and amounts. Include a bold Total row.
+            If no lost wages are claimed, briefly note work impact without claiming economic loss.
+
+            ### 4.5 Past and Future Pain and Suffering
+            Write a COMPELLING NARRATIVE (not bullet points) describing:
+            - How the injuries changed the client's daily life (sleep, work, family, hobbies, independence)
+            - The duration of suffering: calculate the exact number of days from the accident date to today (%s)
+            - Specific concrete examples of activities the client can no longer perform
+            - Emotional and psychological impact
+
+            CRITICAL VALUATION RULES:
+            * NEVER state a specific multiplier (e.g., "1.0x", "2.0x multiplier") in the letter
+            * NEVER show the insurer how you calculated pain and suffering
+            * For disc herniation/structural injuries: value at LEAST 2.5-3.0x medical specials
+            * For cases with permanency/chronic symptoms: use 3.0-4.0x
+            * Simply state the pain and suffering amount confidently using the actual value from CASE DATA
+
+            Per Diem Analysis: Include a per diem calculation table to justify the pain and suffering amount. Calculate days from accident to a medical milestone, multiply by 16 waking hours per day, multiply by a reasonable hourly rate. Show the math with actual numbers — no brackets. Split into Initial and Subsequent periods if the case spans years.
+
+            State confidently that the calculated amount is fair and equitable compensation for the client's pain and suffering.
+
+            ============================================================
+            SECTION 5: BAD FAITH NOTICE & DEMAND TO SETTLE
+            ============================================================
+
+            Statutory Bad Faith Notice (Massachusetts-Specific):
+            "Please be advised that failure to tender policy limits under circumstances where liability is clear and damages substantially exceed the policy limits may constitute an unfair claim settlement practice under M.G.L. c. 176D, § 3(9) and an unfair or deceptive act under M.G.L. c. 93A, §§ 2 and 9. We reserve all rights to pursue such claims if this matter is not resolved promptly and fairly."
+
+            Demand:
+            - State the total demand amount using the actual Total Damages calculated in Section 4.1
+            - If damages exceed policy limits: Make a STRONG, UNCONDITIONAL policy limits demand.
+              Use assertive language: "Tender of the policy limits is the only reasonable course of action to protect your insured from personal exposure."
+              Do NOT use weak language like "we will consider" or "we may accept."
+            - 30-day response deadline from date of letter
+            - Consequences of non-response: "Failure to respond within this timeframe will result in the immediate filing of a civil action, at which time we will seek all available damages including those provided under M.G.L. c. 93A."
+
+            Closing:
+            - "Please do not hesitate to contact me if you have any additional questions or concerns."
+            - Professional closing: "Respectfully submitted," or "Sincerely,"
+            - Attorney signature block with Bar number
+
+            ============================================================
+            SECTION 6: EXHIBIT LIST
+            ============================================================
+            Create a numbered exhibit list table (Exhibit No. and Description columns) referencing all supporting documents mentioned throughout the letter. Use actual provider names and document types — no brackets.
+
+            ============================================================
+            FINAL SELF-CHECK BEFORE RESPONDING
+            ============================================================
+            Before you submit, scan your entire response for the characters [ and ]. If you find ANY square brackets (except in statute citations like M.G.L. c. 90), you have FAILED. Replace them with actual data from the CASE DATA sections above.
+
+            %s
+            """,
+            clientName,
+            request.getOrDefault("defendantName", "Unknown Defendant"),
+            request.getOrDefault("insuranceCompany", "Unknown Insurance Company"),
+            request.getOrDefault("adjusterName", "Claims Department"),
+            request.getOrDefault("claimNumber", "See Policy Number"),
+            formatCurrency(getDoubleValue(request, "policyLimit")),
+            request.getOrDefault("accidentDate", "Date Unknown"),
+            request.getOrDefault("accidentLocation", "Location Unknown"),
+            request.getOrDefault("injuryType", "Personal Injury"),
+            request.getOrDefault("injuryDescription", ""),
+            request.getOrDefault("liabilityDetails", ""),
+            formatCurrency(getDoubleValue(request, "medicalExpenses")),
+            formatCurrency(getDoubleValue(request, "lostWages")),
+            formatCurrency(getDoubleValue(request, "futureMedical")),
+            formatCurrency(getDoubleValue(request, "painSufferingAmount")),
+            letterheadSection,
+            caseDataSection,
+            letterDate,
+            letterDate, // also used for pain & suffering days calculation reference
+            isDetailed
+                ? "Make the letter thorough and compelling, suitable for policy limits demands. This is a serious injury case warranting detailed documentation."
+                : "Keep the letter focused and professional while including all required Massachusetts-specific elements."
+        );
     }
 }
