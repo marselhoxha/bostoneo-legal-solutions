@@ -7,10 +7,18 @@ import { Component, OnInit } from '@angular/core';
       <div class="navbar-brand-box">
         <a routerLink="/" class="logo logo-dark">
           <span class="logo-sm">
-            <img src="assets/images/logo-sm.png" alt="" height="22">
+            <img src="assets/images/legience-logo-blue.svg" alt="" height="80">
           </span>
           <span class="logo-lg">
-            <img src="assets/images/bostoneo-logo.svg" alt="" height="30">
+            <img src="assets/images/legience-logo-blue.svg" alt="" height="90">
+          </span>
+        </a>
+        <a routerLink="/" class="logo logo-light">
+          <span class="logo-sm">
+            <img src="assets/images/legience-logo-white.svg" alt="" height="80">
+          </span>
+          <span class="logo-lg">
+            <img src="assets/images/legience-logo-white.svg" alt="" height="90">
           </span>
         </a>
       </div>

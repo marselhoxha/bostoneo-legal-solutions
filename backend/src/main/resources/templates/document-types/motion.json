@@ -1,0 +1,9 @@
+{
+  "type": "motion",
+  "aliases": ["motion_to_dismiss", "motion_for_summary_judgment", "motion_to_compel", "motion_for_default_judgment"],
+  "displayName": "Motion",
+  "category": "pleading",
+  "citationLevel": "COMPREHENSIVE",
+  "template": "**DOCUMENT FORMAT — MOTION**:\nFormal court filing. Use proper legal formatting with court caption.\n\nSTRUCTURE:\n1. COURT CAPTION: Court name, parties (Plaintiff v. Defendant), case number, document title\n2. INTRODUCTION: 1-2 paragraphs stating what relief is sought and the legal basis\n3. FACTUAL BACKGROUND: Relevant facts in chronological order, with record citations where applicable\n4. LEGAL STANDARD: Applicable legal standard for the type of motion\n5. ARGUMENT: Numbered sections with legal analysis applying facts to law\n6. CONCLUSION: Specific relief requested\n7. RESPECTFULLY SUBMITTED + attorney signature block (unless stationery handles it)\n\nUse formal court filing tone. Cite relevant statutes and case law.\nNumber paragraphs if jurisdiction requires it.",
+  "hints": "Key elements to address: relief sought, legal standard, factual basis, supporting authorities, procedural history, argument structure."
+}

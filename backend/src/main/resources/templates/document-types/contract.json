@@ -1,0 +1,9 @@
+{
+  "type": "contract",
+  "aliases": ["service_agreement", "employment_agreement", "agreement"],
+  "displayName": "Contract/Agreement",
+  "category": "contract",
+  "citationLevel": "NONE",
+  "template": "**DOCUMENT FORMAT — CONTRACT/AGREEMENT**:\nFormal legal agreement between parties.\n\nSTRUCTURE:\n1. TITLE: Descriptive title (e.g., \"SERVICE AGREEMENT\", \"EMPLOYMENT AGREEMENT\")\n2. PREAMBLE: Date, parties with full legal names and addresses, recitals\n3. DEFINITIONS: Key terms used throughout\n4. SCOPE OF SERVICES/OBLIGATIONS: Detailed description of what each party must do\n5. COMPENSATION/PAYMENT: Amount, schedule, method, late payment terms\n6. TERM AND TERMINATION: Effective date, duration, renewal, termination triggers, notice period\n7. REPRESENTATIONS AND WARRANTIES: What each party guarantees\n8. INDEMNIFICATION: Who bears liability for what\n9. CONFIDENTIALITY: Protection of proprietary information (if not covered by separate NDA)\n10. LIMITATION OF LIABILITY: Caps, exclusions of consequential damages\n11. DISPUTE RESOLUTION: Mediation, arbitration, or litigation; governing law; venue\n12. GENERAL PROVISIONS: Notices, assignment, entire agreement, amendments, severability, force majeure, waiver\n13. SIGNATURE BLOCKS: Lines for all parties\n\nFORMAT: Numbered sections with lettered subsections. Formal contract language.",
+  "hints": "Key elements to address: parties and roles, scope of services/obligations, payment terms, term and termination, representations and warranties, indemnification, dispute resolution."
+}

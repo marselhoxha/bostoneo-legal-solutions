@@ -1,0 +1,9 @@
+{
+  "type": "opposing_counsel_letter",
+  "aliases": ["letter_to_counsel"],
+  "displayName": "Letter to Opposing Counsel",
+  "category": "letter",
+  "citationLevel": "MINIMAL",
+  "template": "**DOCUMENT FORMAT — LETTER TO OPPOSING COUNSEL**:\nProfessional attorney-to-attorney correspondence (1-2 pages max).\nDO NOT generate a title header. Start with date and recipient address.\nDO NOT use Roman numerals or numbered section headers.\n\nSTRUCTURE:\n1. Date (or recipient address if letterhead has date)\n2. Recipient: attorney name, firm name, address\n3. \"Re:\" line — Case name, court, docket number\n4. \"Dear [Attorney Name]:\" — use actual name\n5. Body: 2-4 paragraphs, direct and professional\n6. Closing: \"Very truly yours,\" or \"Sincerely,\"\n\nTONE: Professional, firm, direct. Attorney-to-attorney, not attorney-to-client.",
+  "hints": "Key elements to address: case reference, specific requests or proposals, deadlines, professional tone. Attorney-to-attorney correspondence."
+}

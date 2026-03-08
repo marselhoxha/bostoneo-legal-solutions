@@ -430,6 +430,17 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
               hierarchyLevel: 100,
               roles: ['ROLE_ADMIN']
             }
+          },
+          {
+            id: 85,
+            label: 'Stationery Templates',
+            link: '/legal/ai-assistant/stationery-settings',
+            parentId: 8,
+            permission: {
+              resource: 'SYSTEM',
+              action: 'VIEW',
+              hierarchyLevel: 30
+            }
           }
         ]
       },

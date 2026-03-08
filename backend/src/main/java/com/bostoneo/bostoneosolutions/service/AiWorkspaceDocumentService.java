@@ -1,17 +1,28 @@
 package com.bostoneo.bostoneosolutions.service;
 
 import com.bostoneo.bostoneosolutions.dto.DocumentChange;
+import com.bostoneo.bostoneosolutions.dto.LegalCaseDTO;
+import com.bostoneo.bostoneosolutions.dto.PIDamageCalculationDTO;
+import com.bostoneo.bostoneosolutions.dto.PIMedicalRecordDTO;
+import com.bostoneo.bostoneosolutions.dto.PIMedicalSummaryDTO;
 import com.bostoneo.bostoneosolutions.dto.ai.DraftGenerationResponse;
 import com.bostoneo.bostoneosolutions.model.AiConversationSession;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocument;
+import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocumentExhibit;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocumentVersion;
 import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.model.FileItem;
+import com.bostoneo.bostoneosolutions.model.LegalDocument;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.repository.AiConversationSessionRepository;
+import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentExhibitRepository;
 import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentRepository;
 import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentVersionRepository;
+import com.bostoneo.bostoneosolutions.repository.FileItemRepository;
 import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
+import com.bostoneo.bostoneosolutions.repository.LegalDocumentRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
+import com.bostoneo.bostoneosolutions.service.ai.DocumentTypeTemplateRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,10 +32,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.ByteArrayOutputStream;
@@ -34,6 +48,7 @@ import org.apache.poi.xwpf.usermodel.*;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
 
 // iText PDF imports
+import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.colors.DeviceRgb;
@@ -75,9 +90,11 @@ public class AiWorkspaceDocumentService {
 
     private final AiWorkspaceDocumentRepository documentRepository;
     private final AiWorkspaceDocumentVersionRepository versionRepository;
+    private final AiWorkspaceDocumentExhibitRepository exhibitRepository;
     private final AiConversationSessionRepository conversationRepository;
     private final LegalCaseRepository caseRepository;
     private final ClaudeSonnet4Service claudeService;
+    private final AiWorkspaceExhibitService exhibitService;
     private final com.bostoneo.bostoneosolutions.service.ai.AIRequestRouter aiRequestRouter;
     private final LegalResearchConversationService conversationService;
     private final GenerationCancellationService cancellationService;
@@ -86,6 +103,17 @@ public class AiWorkspaceDocumentService {
     private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
     private final DraftStreamingPublisher draftStreamingPublisher;
     private final org.springframework.transaction.PlatformTransactionManager transactionManager;
+    private final StationeryService stationeryService;
+    private final LegalCaseService legalCaseService;
+    private final PIMedicalRecordService medicalRecordService;
+    private final PIDamageCalculationService damageCalculationService;
+    private final PIMedicalSummaryService medicalSummaryService;
+    private final LegalDocumentRepository legalDocumentRepository;
+    private final FileItemRepository fileItemRepository;
+    private final DocumentTypeTemplateRegistry templateRegistry;
+
+    /** Holds system + user message for draft generation */
+    record DraftPrompt(String systemMessage, String userMessage) {}
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -183,7 +211,14 @@ public class AiWorkspaceDocumentService {
         // Build transformation prompt - use custom prompt for CUSTOM type
         String prompt;
         if ("CUSTOM".equalsIgnoreCase(transformationType) && customPrompt != null && !customPrompt.isEmpty()) {
-            prompt = buildCustomTransformationPrompt(customPrompt, currentContent);
+            // Include exhibit text so the AI can reference actual exhibit content
+            String exhibitText = "";
+            try {
+                exhibitText = exhibitService.getExhibitTextForPrompt(documentId, getRequiredOrganizationId());
+            } catch (Exception e) {
+                log.warn("Failed to fetch exhibit text for transform: {}", e.getMessage());
+            }
+            prompt = buildCustomTransformationPrompt(customPrompt, currentContent, exhibitText);
         } else {
             prompt = buildTransformationPrompt(transformationType, currentContent, null, null);
         }
@@ -655,14 +690,19 @@ public class AiWorkspaceDocumentService {
      * Build prompt for custom user-directed transformation
      * User provides natural language instructions for document changes
      */
-    private String buildCustomTransformationPrompt(String userPrompt, String documentContent) {
+    private String buildCustomTransformationPrompt(String userPrompt, String documentContent, String exhibitText) {
+        // exhibitText already includes EXHIBIT REFERENCE RULES from getExhibitTextForPrompt()
+        String exhibitSection = (exhibitText != null && !exhibitText.isEmpty())
+            ? "\n" + exhibitText
+            : "";
+
         return String.format(
             """
             You are an expert legal document editor. The user has requested specific changes to their document.
 
             USER'S REQUEST:
             %s
-
+            %s
             CURRENT DOCUMENT:
             %s
 
@@ -687,7 +727,7 @@ public class AiWorkspaceDocumentService {
 
             Return the revised document now:
             """,
-            userPrompt, documentContent
+            userPrompt, exhibitSection, documentContent
         );
     }
 
@@ -838,7 +878,10 @@ public class AiWorkspaceDocumentService {
         String jurisdiction,
         String sessionName,
         Long conversationId,
-        String researchMode
+        String researchMode,
+        Long documentId,
+        Long stationeryTemplateId,
+        Long stationeryAttorneyId
     ) {
         log.info("Generating draft with conversation: userId={}, caseId={}, type={}, conversationId={}, researchMode={}",
                  userId, caseId, documentType, conversationId, researchMode);
@@ -850,7 +893,15 @@ public class AiWorkspaceDocumentService {
         if (caseId != null) {
             legalCase = caseRepository.findByIdAndOrganizationId(caseId, orgId).orElse(null);
             if (legalCase != null) {
-                caseContext = buildCaseContext(legalCase);
+                if (isDemandLetterType(documentType)) {
+                    caseContext = buildDemandLetterCaseData(caseId, orgId);
+                    log.info("Using comprehensive demand letter case data for type: {}", documentType);
+                } else if (isLetterType(documentType)) {
+                    caseContext = buildFullCaseData(caseId);
+                    log.info("Enriched case context with full case data for letter type: {}", documentType);
+                } else {
+                    caseContext = buildCaseContext(legalCase);
+                }
             }
         }
 
@@ -881,20 +932,32 @@ public class AiWorkspaceDocumentService {
             conversationService.addMessage(conversation.getId(), userId, "user", prompt, null);
         }
 
-        // 4. Build AI prompt with case context
-        String fullPrompt = buildDraftPromptWithCaseContext(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode);
+        // 4. Fetch exhibits if a workspace document already exists
+        List<AiWorkspaceDocumentExhibit> exhibits = Collections.emptyList();
+        if (documentId != null) {
+            exhibits = exhibitRepository.findByDocumentIdAndOrgId(documentId, orgId);
+            if (!exhibits.isEmpty()) {
+                log.info("Found {} exhibits for document {} to include in prompt", exhibits.size(), documentId);
+            }
+        }
 
-        // 5. Check if generation has been cancelled
+        // 5. Look up stationery context if document has stationery applied
+        String stationeryContext = resolveStationeryContext(documentId, orgId, stationeryTemplateId, stationeryAttorneyId);
+
+        // 5b. Build AI prompt with case context, exhibits, and stationery awareness
+        DraftPrompt draftPrompt = buildDraftPrompt(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode, exhibits, stationeryContext);
+
+        // 6. Check if generation has been cancelled
         if (cancellationService.isCancelled(conversation.getId())) {
             log.warn("🛑 Generation cancelled for conversation {} before AI call", conversation.getId());
             cancellationService.clearCancellation(conversation.getId());
             throw new IllegalStateException("Generation cancelled by user");
         }
 
-        // 6. Generate document content using Claude with cancellation support (routed through AIRequestRouter)
+        // 7. Generate document content using Claude with cancellation support (routed through AIRequestRouter)
         CompletableFuture<String> aiRequest = aiRequestRouter.routeSimple(
                 com.bostoneo.bostoneosolutions.enumeration.AIOperationType.DRAFT_GENERATION,
-                fullPrompt, null, false, conversation.getId());
+                draftPrompt.userMessage(), draftPrompt.systemMessage(), false, conversation.getId());
 
         String content;
         try {
@@ -966,10 +1029,9 @@ public class AiWorkspaceDocumentService {
         int wordCount = countWords(content);
 
         // 8. Create document
-        Long docOrgId = getRequiredOrganizationId();
         AiWorkspaceDocument document = AiWorkspaceDocument.builder()
             .userId(userId)
-            .organizationId(docOrgId)  // SECURITY: Set organization ID for tenant isolation
+            .organizationId(orgId)  // SECURITY: Set organization ID for tenant isolation
             .caseId(caseId)
             .sessionId(conversation.getId())
             .title(sessionName)
@@ -996,6 +1058,16 @@ public class AiWorkspaceDocumentService {
             .build();
 
         versionRepository.save(initialVersion);
+
+        // 9b. Auto-attach case documents as exhibits AFTER transaction commits
+        // (runs in separate connection to avoid PostgreSQL 25P02 cascade on failure)
+        final Long docId = document.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                CompletableFuture.runAsync(() -> autoAttachCaseDocumentsAsExhibits(docId, caseId, orgId));
+            }
+        });
 
         // 10. Update conversation with relatedDraftId
         conversation.setRelatedDraftId(document.getId().toString());
@@ -1050,10 +1122,16 @@ public class AiWorkspaceDocumentService {
             String jurisdiction,
             String sessionName,
             Long conversationId,
-            String researchMode
+            String researchMode,
+            Long documentId,
+            Long stationeryTemplateId,
+            Long stationeryAttorneyId
     ) {
         log.info("Starting streaming draft generation: userId={}, conversationId={}, type={}",
                 userId, conversationId, documentType);
+
+        // Set tenant context for this async thread — orgId was captured from the request thread
+        TenantContext.setCurrentTenant(orgId);
 
         // 1. Fetch case context
         String caseContext = "";
@@ -1061,12 +1139,32 @@ public class AiWorkspaceDocumentService {
         if (caseId != null) {
             legalCase = caseRepository.findByIdAndOrganizationId(caseId, orgId).orElse(null);
             if (legalCase != null) {
-                caseContext = buildCaseContext(legalCase);
+                if (isDemandLetterType(documentType)) {
+                    caseContext = buildDemandLetterCaseData(caseId, orgId);
+                    log.info("Using comprehensive demand letter case data for type: {}", documentType);
+                } else if (isLetterType(documentType)) {
+                    caseContext = buildFullCaseData(caseId);
+                    log.info("Enriched case context with full case data for letter type: {}", documentType);
+                } else {
+                    caseContext = buildCaseContext(legalCase);
+                }
             }
         }
 
-        // 2. Build prompt
-        String fullPrompt = buildDraftPromptWithCaseContext(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode);
+        // 2a. Fetch exhibits if a workspace document already exists
+        List<AiWorkspaceDocumentExhibit> exhibits = Collections.emptyList();
+        if (documentId != null) {
+            exhibits = exhibitRepository.findByDocumentIdAndOrgId(documentId, orgId);
+            if (!exhibits.isEmpty()) {
+                log.info("Found {} exhibits for document {} to include in streaming prompt", exhibits.size(), documentId);
+            }
+        }
+
+        // 2b. Look up stationery context if document has stationery applied
+        String stationeryContext = resolveStationeryContext(documentId, orgId, stationeryTemplateId, stationeryAttorneyId);
+
+        // 2c. Build prompt with stationery awareness (system + user message split)
+        DraftPrompt draftPrompt = buildDraftPrompt(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode, exhibits, stationeryContext);
 
         // 3. Check cancellation
         if (cancellationService.isCancelled(conversationId)) {
@@ -1083,7 +1181,8 @@ public class AiWorkspaceDocumentService {
         // Route streaming through AIRequestRouter for smart model selection
         com.bostoneo.bostoneosolutions.dto.ai.AIRoutingRequest streamingRequest = com.bostoneo.bostoneosolutions.dto.ai.AIRoutingRequest.builder()
                 .operationType(com.bostoneo.bostoneosolutions.enumeration.AIOperationType.DRAFT_GENERATION_STREAMING)
-                .query(fullPrompt)
+                .query(draftPrompt.userMessage())
+                .systemMessage(draftPrompt.systemMessage())
                 .sessionId(conversationId)
                 .build();
 
@@ -1184,6 +1283,36 @@ public class AiWorkspaceDocumentService {
     }
 
     /**
+     * Auto-attach all case documents as exhibits for the given workspace document.
+     * Non-blocking: failures are logged as warnings and do not propagate.
+     */
+    private void autoAttachCaseDocumentsAsExhibits(Long documentId, Long caseId, Long orgId) {
+        if (caseId == null) {
+            return;
+        }
+        try {
+            List<FileItem> caseFiles = fileItemRepository.findByCaseIdAndDeletedFalseAndOrganizationId(caseId, orgId);
+            if (caseFiles.isEmpty()) {
+                return;
+            }
+            int attached = 0;
+            for (FileItem file : caseFiles) {
+                try {
+                    exhibitService.addExhibitFromFileItem(documentId, file, orgId);
+                    attached++;
+                } catch (Exception e) {
+                    log.warn("Failed to auto-attach file_item {} as exhibit: {}", file.getId(), e.getMessage());
+                }
+            }
+            if (attached > 0) {
+                log.info("Auto-attached {} case files as exhibits for document {}", attached, documentId);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to auto-attach case files as exhibits: {}", e.getMessage());
+        }
+    }
+
+    /**
      * Save the draft document + version + update conversation in a single transaction.
      * Uses TransactionTemplate programmatically because this method is called from
      * async callbacks where @Transactional proxy interception does not work (self-invocation
@@ -1197,7 +1326,7 @@ public class AiWorkspaceDocumentService {
         org.springframework.transaction.support.TransactionTemplate txTemplate =
                 new org.springframework.transaction.support.TransactionTemplate(transactionManager);
 
-        return txTemplate.execute(status -> {
+        Map<String, Object> txResult = txTemplate.execute(status -> {
             int tokensUsed = estimateTokens(content);
             BigDecimal cost = calculateCost(tokensUsed);
             int wordCount = countWords(content);
@@ -1251,8 +1380,18 @@ public class AiWorkspaceDocumentService {
             result.put("costEstimate", cost);
 
             log.info("Saved streaming draft: documentId={}, wordCount={}", savedDocument.getId(), wordCount);
+
             return result;
         });
+
+        // Auto-attach case documents as exhibits AFTER transaction commits
+        // (runs in separate connection to avoid PostgreSQL 25P02 cascade on failure)
+        if (txResult != null && txResult.get("documentId") != null) {
+            final Long savedDocId = (Long) txResult.get("documentId");
+            CompletableFuture.runAsync(() -> autoAttachCaseDocumentsAsExhibits(savedDocId, caseId, orgId));
+        }
+
+        return txResult;
     }
 
     /**
@@ -1275,12 +1414,15 @@ public class AiWorkspaceDocumentService {
                 Map<String, Object> result = new HashMap<>();
                 result.put("id", doc.getId());
                 result.put("title", doc.getTitle());
+                result.put("documentType", doc.getDocumentType());
                 result.put("content", latestVersion.getContent());
                 result.put("wordCount", latestVersion.getWordCount());
                 result.put("version", latestVersion.getVersionNumber());
                 result.put("tokensUsed", latestVersion.getTokensUsed());
                 result.put("costEstimate", latestVersion.getCostEstimate());
                 result.put("generatedAt", latestVersion.getCreatedAt());
+                result.put("stationeryTemplateId", doc.getStationeryTemplateId());
+                result.put("stationeryAttorneyId", doc.getStationeryAttorneyId());
                 return result;
             });
     }
@@ -1314,77 +1456,817 @@ public class AiWorkspaceDocumentService {
         );
     }
 
+    private static final java.text.NumberFormat CURRENCY_FORMAT = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.US);
+
     /**
-     * Determine citation level based on document type
+     * Build full case data for letter types (representation letters, demand letters, settlement letters).
+     * Fetches party details, insurance info, medical records, damages, and medical summary.
+     * This is the equivalent of AIPersonalInjuryController.fetchCaseDataForDemandLetter() but accessible
+     * from the drafting taskcard.
      */
-    private CitationLevel getCitationLevel(String documentType) {
-        if (documentType == null) {
-            return CitationLevel.COMPREHENSIVE; // Default to comprehensive if not specified
+    private String buildFullCaseData(Long caseId) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n============= CASE DATA (USE REAL VALUES) =============\n");
+
+        try {
+            // Fetch full case details via LegalCaseService (DTO has insurance, defendant, etc.)
+            LegalCaseDTO caseDto = legalCaseService.getCase(caseId);
+            if (caseDto != null) {
+                sb.append("\nPARTIES & CLAIM INFORMATION:\n");
+                sb.append(String.format("Client Name: %s\n", caseDto.getClientName() != null ? caseDto.getClientName() : "N/A"));
+                if (caseDto.getDefendantName() != null && !caseDto.getDefendantName().isEmpty()) {
+                    sb.append(String.format("Defendant Name: %s\n", caseDto.getDefendantName()));
+                }
+                if (caseDto.getDefendantAddress() != null && !caseDto.getDefendantAddress().isEmpty()) {
+                    sb.append(String.format("Defendant Address: %s\n", caseDto.getDefendantAddress()));
+                }
+                if (caseDto.getInsuranceCompany() != null && !caseDto.getInsuranceCompany().isEmpty()) {
+                    sb.append(String.format("Insurance Company: %s\n", caseDto.getInsuranceCompany()));
+                }
+                if (caseDto.getInsuranceAdjusterName() != null && !caseDto.getInsuranceAdjusterName().isEmpty()) {
+                    sb.append(String.format("Adjuster Name: %s\n", caseDto.getInsuranceAdjusterName()));
+                }
+                if (caseDto.getInsuranceAdjusterContact() != null && !caseDto.getInsuranceAdjusterContact().isEmpty()) {
+                    sb.append(String.format("Adjuster Contact: %s\n", caseDto.getInsuranceAdjusterContact()));
+                }
+                if (caseDto.getInsuranceAdjusterEmail() != null && !caseDto.getInsuranceAdjusterEmail().isEmpty()) {
+                    sb.append(String.format("Adjuster Email: %s\n", caseDto.getInsuranceAdjusterEmail()));
+                }
+                if (caseDto.getInsuranceAdjusterPhone() != null && !caseDto.getInsuranceAdjusterPhone().isEmpty()) {
+                    sb.append(String.format("Adjuster Phone: %s\n", caseDto.getInsuranceAdjusterPhone()));
+                }
+                if (caseDto.getInsurancePolicyNumber() != null && !caseDto.getInsurancePolicyNumber().isEmpty()) {
+                    sb.append(String.format("Policy/Claim Number: %s\n", caseDto.getInsurancePolicyNumber()));
+                }
+                if (caseDto.getInsurancePolicyLimit() != null) {
+                    sb.append(String.format("Policy Limit: %s\n", CURRENCY_FORMAT.format(caseDto.getInsurancePolicyLimit())));
+                }
+                if (caseDto.getInjuryDate() != null) {
+                    sb.append(String.format("Date of Incident: %s\n", caseDto.getInjuryDate()));
+                }
+
+                sb.append(String.format("\nCase Number: %s\n", caseDto.getCaseNumber()));
+                sb.append(String.format("Case Type: %s\n", caseDto.getPracticeArea() != null ? caseDto.getPracticeArea() : "N/A"));
+                if (caseDto.getDescription() != null && !caseDto.getDescription().isEmpty()) {
+                    sb.append(String.format("Case Description: %s\n", caseDto.getDescription()));
+                }
+            }
+
+            // Fetch medical records summary (for PI cases)
+            try {
+                List<PIMedicalRecordDTO> records = medicalRecordService.getRecordsByCaseId(caseId);
+                if (records != null && !records.isEmpty()) {
+                    sb.append("\n\nMEDICAL TREATMENT RECORDS:\n");
+                    java.math.BigDecimal totalBilled = java.math.BigDecimal.ZERO;
+                    for (PIMedicalRecordDTO rec : records) {
+                        sb.append(String.format("- Provider: %s", rec.getProviderName() != null ? rec.getProviderName() : "Unknown"));
+                        if (rec.getTreatmentDate() != null) {
+                            sb.append(String.format(", Date: %s", rec.getTreatmentDate()));
+                        }
+                        if (rec.getDiagnoses() != null && !rec.getDiagnoses().isEmpty()) {
+                            sb.append(String.format(", Diagnoses: %s", rec.getDiagnoses().stream()
+                                .map(d -> String.format("%s (ICD: %s)",
+                                    d.getOrDefault("name", d.getOrDefault("description", "Unknown")),
+                                    d.getOrDefault("icdCode", d.getOrDefault("code", "N/A"))))
+                                .collect(java.util.stream.Collectors.joining("; "))));
+                        }
+                        if (rec.getBilledAmount() != null) {
+                            sb.append(String.format(", Billed: %s", CURRENCY_FORMAT.format(rec.getBilledAmount())));
+                            totalBilled = totalBilled.add(rec.getBilledAmount());
+                        }
+                        sb.append("\n");
+                        if (rec.getKeyFindings() != null && !rec.getKeyFindings().isEmpty()) {
+                            sb.append(String.format("  Key Findings: %s\n", rec.getKeyFindings()));
+                        }
+                        if (rec.getTreatmentProvided() != null && !rec.getTreatmentProvided().isEmpty()) {
+                            sb.append(String.format("  Treatment: %s\n", rec.getTreatmentProvided()));
+                        }
+                    }
+                    sb.append(String.format("Total Medical Expenses: %s\n", CURRENCY_FORMAT.format(totalBilled)));
+                }
+            } catch (Exception e) {
+                log.debug("No medical records for case {}: {}", caseId, e.getMessage());
+            }
+
+            // Fetch damages calculation
+            try {
+                PIDamageCalculationDTO damages = damageCalculationService.getDamageCalculation(caseId);
+                if (damages != null) {
+                    sb.append("\nDAMAGES CALCULATION:\n");
+                    if (damages.getPastMedicalTotal() != null) {
+                        sb.append(String.format("Past Medical: %s\n", CURRENCY_FORMAT.format(damages.getPastMedicalTotal())));
+                    }
+                    if (damages.getFutureMedicalTotal() != null && damages.getFutureMedicalTotal().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                        sb.append(String.format("Future Medical: %s\n", CURRENCY_FORMAT.format(damages.getFutureMedicalTotal())));
+                    }
+                    if (damages.getLostWagesTotal() != null && damages.getLostWagesTotal().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                        sb.append(String.format("Lost Wages: %s\n", CURRENCY_FORMAT.format(damages.getLostWagesTotal())));
+                    }
+                    if (damages.getPainSufferingTotal() != null && damages.getPainSufferingTotal().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                        sb.append(String.format("Pain & Suffering: %s\n", CURRENCY_FORMAT.format(damages.getPainSufferingTotal())));
+                    }
+                    if (damages.getAdjustedDamagesTotal() != null) {
+                        sb.append(String.format("Total Damages: %s\n", CURRENCY_FORMAT.format(damages.getAdjustedDamagesTotal())));
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("No damage calculation for case {}: {}", caseId, e.getMessage());
+            }
+
+            // Fetch medical summary
+            try {
+                PIMedicalSummaryDTO summary = medicalSummaryService.getMedicalSummary(caseId);
+                if (summary != null) {
+                    if (summary.getDiagnosisList() != null && !summary.getDiagnosisList().isEmpty()) {
+                        sb.append("\nDIAGNOSES:\n");
+                        for (Map<String, Object> diag : summary.getDiagnosisList()) {
+                            String name = (String) diag.getOrDefault("name", "Unknown");
+                            String icdCode = (String) diag.getOrDefault("icdCode", null);
+                            sb.append("- ").append(name);
+                            if (icdCode != null && !"N/A".equals(icdCode)) {
+                                sb.append(" (ICD: ").append(icdCode).append(")");
+                            }
+                            sb.append("\n");
+                        }
+                    }
+                    if (summary.getPrognosisAssessment() != null && !"Not available".equals(summary.getPrognosisAssessment())) {
+                        sb.append(String.format("Prognosis: %s\n", summary.getPrognosisAssessment()));
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("No medical summary for case {}: {}", caseId, e.getMessage());
+            }
+
+        } catch (Exception e) {
+            log.warn("Error building full case data for case {}: {}", caseId, e.getMessage());
         }
 
-        String type = documentType.toLowerCase();
+        sb.append("\n=======================================================\n");
+        return sb.toString();
+    }
 
-        // NO CITATIONS: Contracts and transactional documents
-        if (type.contains("contract") ||
-            type.contains("nda") ||
-            type.contains("amendment") ||
-            type.contains("clause") && !type.contains("legal") ||
-            type.contains("employment") && type.contains("agreement") ||
-            type.contains("purchase") && type.contains("agreement") ||
-            type.contains("service") && type.contains("agreement")) {
-            return CitationLevel.NONE;
+    // ── Demand-letter-specific data & prompt (ported from AIPersonalInjuryController) ──
+
+    private static final DateTimeFormatter DL_DATE_FORMATTER = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+    private static final DateTimeFormatter DL_LETTER_DATE_FORMATTER = DateTimeFormatter.ofPattern("MMMM d, yyyy");
+
+    /**
+     * Comprehensive case data fetch for demand letters.
+     * Full medical records with ICD/CPT codes, key findings, treatment details,
+     * billing breakdown per provider, itemized damages, medical summary with chronology.
+     */
+    private String buildDemandLetterCaseData(Long caseId, Long orgId) {
+        StringBuilder sb = new StringBuilder();
+
+        try {
+            // Fetch legal case to get accident/injury date for validation
+            LocalDate accidentDate = null;
+            try {
+                LegalCaseDTO legalCase = legalCaseService.getCase(caseId);
+                if (legalCase != null && legalCase.getInjuryDate() != null) {
+                    accidentDate = legalCase.getInjuryDate();
+                    log.debug("Accident date for case {}: {}", caseId, accidentDate);
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch legal case {} for date validation: {}", caseId, e.getMessage());
+            }
+
+            // Fetch medical records with full details
+            List<PIMedicalRecordDTO> medicalRecords = null;
+            try {
+                medicalRecords = medicalRecordService.getRecordsByCaseId(caseId);
+            } catch (Exception e) {
+                log.warn("Could not fetch medical records for demand letter, caseId={}: {}", caseId, e.getMessage());
+            }
+            if (medicalRecords != null && !medicalRecords.isEmpty()) {
+                sb.append("\n\n=== MEDICAL TREATMENT RECORDS ===\n");
+
+                BigDecimal totalBilled = BigDecimal.ZERO;
+                BigDecimal totalAdjusted = BigDecimal.ZERO;
+                BigDecimal totalPaid = BigDecimal.ZERO;
+
+                for (PIMedicalRecordDTO record : medicalRecords) {
+                    sb.append("\n--- MEDICAL PROVIDER ---\n");
+                    sb.append(String.format("Provider: %s\n", record.getProviderName() != null ? record.getProviderName() : "Unknown"));
+                    sb.append(String.format("Record Type: %s\n", record.getRecordType() != null ? record.getRecordType() : "N/A"));
+                    sb.append(String.format("Treatment Date: %s\n", record.getTreatmentDate() != null ? record.getTreatmentDate().format(DL_DATE_FORMATTER) : "N/A"));
+
+                    if (record.getKeyFindings() != null && !record.getKeyFindings().isEmpty()) {
+                        sb.append(String.format("Key Findings: %s\n", record.getKeyFindings()));
+                    }
+                    if (record.getTreatmentProvided() != null && !record.getTreatmentProvided().isEmpty()) {
+                        sb.append(String.format("Treatment Provided: %s\n", record.getTreatmentProvided()));
+                    }
+                    if (record.getDiagnoses() != null && !record.getDiagnoses().isEmpty()) {
+                        sb.append(String.format("Diagnoses: %s\n", dlFormatDiagnoses(record.getDiagnoses())));
+                    }
+                    if (record.getProcedures() != null && !record.getProcedures().isEmpty()) {
+                        sb.append(String.format("Procedures: %s\n", dlFormatProcedures(record.getProcedures())));
+                    }
+                    if (record.getPrognosisNotes() != null && !record.getPrognosisNotes().isEmpty()) {
+                        sb.append(String.format("Prognosis: %s\n", record.getPrognosisNotes()));
+                    }
+                    if (record.getWorkRestrictions() != null && !record.getWorkRestrictions().isEmpty()) {
+                        sb.append(String.format("Work Restrictions: %s\n", record.getWorkRestrictions()));
+                    }
+
+                    if (record.getBilledAmount() != null) {
+                        sb.append(String.format("Billed Amount: %s\n", dlFormatCurrency(record.getBilledAmount().doubleValue())));
+                        totalBilled = totalBilled.add(record.getBilledAmount());
+                    }
+                    if (record.getAdjustedAmount() != null && record.getAdjustedAmount().compareTo(BigDecimal.ZERO) > 0) {
+                        sb.append(String.format("Adjusted Amount: %s\n", dlFormatCurrency(record.getAdjustedAmount().doubleValue())));
+                        totalAdjusted = totalAdjusted.add(record.getAdjustedAmount());
+                    }
+                    if (record.getPaidAmount() != null && record.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+                        sb.append(String.format("Paid Amount: %s\n", dlFormatCurrency(record.getPaidAmount().doubleValue())));
+                        totalPaid = totalPaid.add(record.getPaidAmount());
+                    }
+                }
+
+                sb.append("\n--- MEDICAL EXPENSES SUMMARY ---\n");
+                sb.append(String.format("Total Billed: %s\n", dlFormatCurrency(totalBilled.doubleValue())));
+                if (totalAdjusted.compareTo(BigDecimal.ZERO) > 0) {
+                    sb.append(String.format("Total Adjusted: %s\n", dlFormatCurrency(totalAdjusted.doubleValue())));
+                }
+                if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
+                    sb.append(String.format("Total Paid: %s\n", dlFormatCurrency(totalPaid.doubleValue())));
+                }
+
+                String dateValidationWarning = dlValidateMedicalRecordDates(medicalRecords, accidentDate);
+                if (!dateValidationWarning.isEmpty()) {
+                    sb.append(dateValidationWarning);
+                    log.warn("Date validation issues found for case {}", caseId);
+                }
+            }
+
+            // Fetch damage calculation with itemized elements
+            PIDamageCalculationDTO damageCalc = null;
+            try {
+                damageCalc = damageCalculationService.getDamageCalculation(caseId);
+            } catch (Exception e) {
+                log.warn("Could not fetch damage calculation for demand letter, caseId={}: {}", caseId, e.getMessage());
+            }
+            if (damageCalc != null) {
+                sb.append("\n\n=== DAMAGES CALCULATION ===\n");
+
+                sb.append("\n--- ECONOMIC DAMAGES ---\n");
+                sb.append(String.format("Past Medical Expenses: %s\n",
+                    damageCalc.getPastMedicalTotal() != null ? dlFormatCurrency(damageCalc.getPastMedicalTotal().doubleValue()) : "$0"));
+                sb.append(String.format("Future Medical Expenses: %s\n",
+                    damageCalc.getFutureMedicalTotal() != null ? dlFormatCurrency(damageCalc.getFutureMedicalTotal().doubleValue()) : "$0"));
+                sb.append(String.format("Lost Wages: %s\n",
+                    damageCalc.getLostWagesTotal() != null ? dlFormatCurrency(damageCalc.getLostWagesTotal().doubleValue()) : "$0"));
+
+                if (damageCalc.getEarningCapacityTotal() != null && damageCalc.getEarningCapacityTotal().compareTo(BigDecimal.ZERO) > 0) {
+                    sb.append(String.format("Loss of Earning Capacity: %s\n", dlFormatCurrency(damageCalc.getEarningCapacityTotal().doubleValue())));
+                }
+                if (damageCalc.getHouseholdServicesTotal() != null && damageCalc.getHouseholdServicesTotal().compareTo(BigDecimal.ZERO) > 0) {
+                    sb.append(String.format("Household Services: %s\n", dlFormatCurrency(damageCalc.getHouseholdServicesTotal().doubleValue())));
+                }
+                if (damageCalc.getMileageTotal() != null && damageCalc.getMileageTotal().compareTo(BigDecimal.ZERO) > 0) {
+                    sb.append(String.format("Mileage/Transportation: %s\n", dlFormatCurrency(damageCalc.getMileageTotal().doubleValue())));
+                }
+                if (damageCalc.getOtherDamagesTotal() != null && damageCalc.getOtherDamagesTotal().compareTo(BigDecimal.ZERO) > 0) {
+                    sb.append(String.format("Other Economic Damages: %s\n", dlFormatCurrency(damageCalc.getOtherDamagesTotal().doubleValue())));
+                }
+
+                sb.append(String.format("TOTAL ECONOMIC DAMAGES: %s\n",
+                    damageCalc.getEconomicDamagesTotal() != null ? dlFormatCurrency(damageCalc.getEconomicDamagesTotal().doubleValue()) : "$0"));
+
+                sb.append("\n--- NON-ECONOMIC DAMAGES ---\n");
+                sb.append(String.format("Pain and Suffering: %s\n",
+                    damageCalc.getPainSufferingTotal() != null ? dlFormatCurrency(damageCalc.getPainSufferingTotal().doubleValue()) : "$0"));
+                sb.append(String.format("TOTAL NON-ECONOMIC DAMAGES: %s\n",
+                    damageCalc.getNonEconomicDamagesTotal() != null ? dlFormatCurrency(damageCalc.getNonEconomicDamagesTotal().doubleValue()) : "$0"));
+
+                sb.append("\n--- DAMAGES SUMMARY ---\n");
+                sb.append(String.format("Gross Total Damages: %s\n",
+                    damageCalc.getGrossDamagesTotal() != null ? dlFormatCurrency(damageCalc.getGrossDamagesTotal().doubleValue()) : "$0"));
+
+                Integer compNeg = damageCalc.getComparativeNegligencePercent() != null ? damageCalc.getComparativeNegligencePercent() : 0;
+                if (compNeg > 0) {
+                    sb.append(String.format("Comparative Negligence: %d%%\n", compNeg));
+                }
+                sb.append(String.format("Adjusted Total Damages: %s\n",
+                    damageCalc.getAdjustedDamagesTotal() != null ? dlFormatCurrency(damageCalc.getAdjustedDamagesTotal().doubleValue()) : "$0"));
+
+                if (damageCalc.getLowValue() != null || damageCalc.getMidValue() != null || damageCalc.getHighValue() != null) {
+                    sb.append("\n--- CASE VALUE RANGE ---\n");
+                    if (damageCalc.getLowValue() != null) {
+                        sb.append(String.format("Low Value Estimate: %s\n", dlFormatCurrency(damageCalc.getLowValue().doubleValue())));
+                    }
+                    if (damageCalc.getMidValue() != null) {
+                        sb.append(String.format("Mid Value Estimate: %s\n", dlFormatCurrency(damageCalc.getMidValue().doubleValue())));
+                    }
+                    if (damageCalc.getHighValue() != null) {
+                        sb.append(String.format("High Value Estimate: %s\n", dlFormatCurrency(damageCalc.getHighValue().doubleValue())));
+                    }
+                }
+            }
+
+            // Fetch medical summary for treatment chronology and prognosis
+            PIMedicalSummaryDTO medicalSummary = null;
+            try {
+                medicalSummary = medicalSummaryService.getMedicalSummary(caseId);
+            } catch (Exception e) {
+                log.warn("Could not fetch medical summary for demand letter, caseId={}: {}", caseId, e.getMessage());
+            }
+            if (medicalSummary != null) {
+                sb.append("\n\n=== MEDICAL SUMMARY ===\n");
+
+                sb.append("\n--- TREATMENT OVERVIEW ---\n");
+                if (medicalSummary.getTreatmentDurationDays() != null) {
+                    sb.append(String.format("Treatment Duration: %d days\n", medicalSummary.getTreatmentDurationDays()));
+                }
+                if (medicalSummary.getTotalProviders() != null) {
+                    sb.append(String.format("Total Providers: %d\n", medicalSummary.getTotalProviders()));
+                }
+                if (medicalSummary.getTotalVisits() != null) {
+                    sb.append(String.format("Total Visits: %d\n", medicalSummary.getTotalVisits()));
+                }
+                if (medicalSummary.getTreatmentGapDays() != null && medicalSummary.getTreatmentGapDays() > 0) {
+                    sb.append(String.format("Treatment Gap Days: %d\n", medicalSummary.getTreatmentGapDays()));
+                }
+
+                if (medicalSummary.getTreatmentChronology() != null && !medicalSummary.getTreatmentChronology().isEmpty()) {
+                    sb.append("\n--- TREATMENT CHRONOLOGY ---\n");
+                    sb.append(medicalSummary.getTreatmentChronology());
+                    sb.append("\n");
+                }
+
+                if (medicalSummary.getKeyHighlights() != null && !medicalSummary.getKeyHighlights().isEmpty()) {
+                    sb.append("\n--- KEY MEDICAL HIGHLIGHTS ---\n");
+                    sb.append(medicalSummary.getKeyHighlights());
+                    sb.append("\n");
+                }
+
+                if (medicalSummary.getPrognosisAssessment() != null && !"Not available".equals(medicalSummary.getPrognosisAssessment())) {
+                    sb.append(String.format("\n--- PROGNOSIS ---\n%s\n", medicalSummary.getPrognosisAssessment()));
+                }
+
+                if (medicalSummary.getDiagnosisList() != null && !medicalSummary.getDiagnosisList().isEmpty()) {
+                    sb.append("\n--- DIAGNOSES ---\n");
+                    for (Map<String, Object> diagnosis : medicalSummary.getDiagnosisList()) {
+                        String name = (String) diagnosis.getOrDefault("name", "Unknown");
+                        String icdCode = (String) diagnosis.getOrDefault("icdCode", null);
+                        String status = (String) diagnosis.getOrDefault("status", null);
+                        StringBuilder diagLine = new StringBuilder();
+                        diagLine.append("- ").append(name);
+                        if (icdCode != null && !"N/A".equals(icdCode)) {
+                            diagLine.append(" (ICD: ").append(icdCode).append(")");
+                        }
+                        if (status != null) {
+                            diagLine.append(" - ").append(status);
+                        }
+                        sb.append(diagLine).append("\n");
+                    }
+                }
+
+                if (medicalSummary.getRedFlags() != null && !medicalSummary.getRedFlags().isEmpty()) {
+                    sb.append("\n--- CASE CONSIDERATIONS ---\n");
+                    for (Map<String, Object> flag : medicalSummary.getRedFlags()) {
+                        sb.append(String.format("- %s: %s\n",
+                            flag.getOrDefault("type", "Note"),
+                            flag.getOrDefault("description", "")
+                        ));
+                    }
+                }
+            }
+
+            // Fetch case file inventory for exhibit references
+            try {
+                List<FileItem> caseFiles = fileItemRepository.findByCaseIdAndDeletedFalseAndOrganizationId(caseId, orgId);
+                if (caseFiles != null && !caseFiles.isEmpty()) {
+                    sb.append("\n\n=== CASE DOCUMENT INVENTORY ===\n");
+                    sb.append("The following case documents will be attached as exhibits. ");
+                    sb.append("You MUST reference them using their exact exhibit labels (Exhibit A, Exhibit B, etc.) — NOT numeric labels.\n");
+                    char label = 'A';
+                    for (FileItem file : caseFiles) {
+                        sb.append(String.format("- Exhibit %c: %s\n",
+                            label++,
+                            file.getOriginalName() != null ? file.getOriginalName() : file.getName()));
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch case files for demand letter: {}", e.getMessage());
+            }
+
+        } catch (Exception e) {
+            log.error("Error fetching comprehensive demand letter case data, caseId={}: {}", caseId, e.getMessage());
         }
 
-        // MINIMAL CITATIONS: Correspondence, discovery, business documents
-        if (type.contains("letter") ||
-            type.contains("demand") ||
-            type.contains("email") ||
-            type.contains("correspondence") ||
-            type.contains("settlement-offer") ||
-            type.contains("opinion-letter") ||
-            type.contains("opposing-counsel") ||
-            type.contains("client-email") ||
-            type.contains("interrogator") ||
-            type.contains("rfp") ||
-            type.contains("rfa") ||
-            type.contains("request") && type.contains("production") ||
-            type.contains("request") && type.contains("admission") ||
-            type.contains("subpoena") ||
-            type.contains("deposition") && type.contains("notice") ||
-            type.contains("notice") ||
-            type.contains("stipulation") ||
-            type.contains("affidavit") ||
-            type.contains("settlement-agreement")) {
-            return CitationLevel.MINIMAL;
+        return sb.toString();
+    }
+
+    /** Format diagnoses list with ICD codes for demand letter */
+    private String dlFormatDiagnoses(List<Map<String, Object>> diagnoses) {
+        if (diagnoses == null || diagnoses.isEmpty()) return "N/A";
+        return diagnoses.stream()
+            .map(d -> String.format("%s (ICD: %s)",
+                d.getOrDefault("name", d.getOrDefault("description", "Unknown")),
+                d.getOrDefault("icdCode", d.getOrDefault("code", "N/A"))))
+            .collect(java.util.stream.Collectors.joining("; "));
+    }
+
+    /** Format procedures list with CPT codes for demand letter */
+    private String dlFormatProcedures(List<Map<String, Object>> procedures) {
+        if (procedures == null || procedures.isEmpty()) return "N/A";
+        return procedures.stream()
+            .map(p -> String.format("%s (CPT: %s)",
+                p.getOrDefault("name", p.getOrDefault("description", "Unknown")),
+                p.getOrDefault("cptCode", p.getOrDefault("code", "N/A"))))
+            .collect(java.util.stream.Collectors.joining("; "));
+    }
+
+    /** Format currency for demand letter (takes double) */
+    private String dlFormatCurrency(double value) {
+        if (value == 0) return "$0";
+        return CURRENCY_FORMAT.format(value);
+    }
+
+    /** Validate medical record dates against accident date */
+    private String dlValidateMedicalRecordDates(List<PIMedicalRecordDTO> records, LocalDate accidentDate) {
+        if (accidentDate == null || records == null || records.isEmpty()) return "";
+
+        List<String> issues = new ArrayList<>();
+        for (PIMedicalRecordDTO record : records) {
+            if (record.getTreatmentDate() != null && record.getTreatmentDate().isBefore(accidentDate)) {
+                issues.add(String.format("- %s: treatment date %s is BEFORE accident date %s",
+                    record.getProviderName() != null ? record.getProviderName() : "Unknown Provider",
+                    record.getTreatmentDate().format(DL_DATE_FORMATTER),
+                    accidentDate.format(DL_DATE_FORMATTER)));
+            }
         }
 
-        // COMPREHENSIVE CITATIONS: Legal arguments, motions, briefs, pleadings, memos
-        // This includes: complaint, answer, counterclaim, motion-*, appellate-*, legal-memo, legal-argument
-        return CitationLevel.COMPREHENSIVE;
+        if (issues.isEmpty()) return "";
+
+        StringBuilder warning = new StringBuilder();
+        warning.append("\n\n⚠️ DATA VALIDATION WARNING ⚠️\n");
+        warning.append("The following medical records have treatment dates BEFORE the accident date:\n");
+        for (String issue : issues) {
+            warning.append(issue).append("\n");
+        }
+        warning.append("\nATTORNEY: Please verify these dates before sending this letter.\n");
+        warning.append("DO NOT send this demand letter until the date discrepancies are resolved.\n");
+        return warning.toString();
     }
 
     /**
-     * Build draft prompt with case context
+     * Build EvenUp-style demand letter prompt using LegalCaseDTO fields.
+     * Produces a 6-section demand package: Salutation, Facts & Liability, Injuries & Treatments,
+     * Damages (per diem analysis), Bad Faith Notice (M.G.L. c. 176D, c. 93A), Exhibit List.
      */
-    private String buildDraftPromptWithCaseContext(
+    private String buildDemandLetterPrompt(LegalCaseDTO caseDto, PIDamageCalculationDTO damages, String caseDataSection, boolean isDetailed) {
+        String letterDate = LocalDate.now().format(DL_LETTER_DATE_FORMATTER);
+
+        // Safely extract values from DTO
+        String clientName = caseDto.getClientName() != null ? caseDto.getClientName() : "Unknown Client";
+        String defendantName = caseDto.getDefendantName() != null ? caseDto.getDefendantName() : "Unknown Defendant";
+        String insuranceCompany = caseDto.getInsuranceCompany() != null ? caseDto.getInsuranceCompany() : "Unknown Insurance Company";
+        String adjusterName = caseDto.getInsuranceAdjusterName() != null ? caseDto.getInsuranceAdjusterName() : "Claims Department";
+        String claimNumber = caseDto.getInsurancePolicyNumber() != null ? caseDto.getInsurancePolicyNumber() : "See Policy Number";
+        String policyLimit = caseDto.getInsurancePolicyLimit() != null ? dlFormatCurrency(caseDto.getInsurancePolicyLimit().doubleValue()) : "$0";
+        String accidentDate = caseDto.getInjuryDate() != null ? caseDto.getInjuryDate().format(DL_DATE_FORMATTER) : "Date Unknown";
+        long daysSinceAccident = caseDto.getInjuryDate() != null
+            ? java.time.temporal.ChronoUnit.DAYS.between(caseDto.getInjuryDate(), LocalDate.now()) : 0;
+        String daysSinceAccidentStr = daysSinceAccident > 0 ? String.valueOf(daysSinceAccident) : "unknown";
+        String accidentLocation = caseDto.getAccidentLocation() != null ? caseDto.getAccidentLocation() : "Location Unknown";
+        String injuryType = caseDto.getInjuryType() != null ? caseDto.getInjuryType() : "Personal Injury";
+        String injuryDescription = caseDto.getInjuryDescription() != null ? caseDto.getInjuryDescription() : "";
+        String liabilityDetails = caseDto.getLiabilityAssessment() != null ? caseDto.getLiabilityAssessment() : "";
+
+        // Extract damage values
+        String medicalExpenses = damages != null && damages.getPastMedicalTotal() != null
+            ? dlFormatCurrency(damages.getPastMedicalTotal().doubleValue()) : "$0";
+        String lostWages = damages != null && damages.getLostWagesTotal() != null
+            ? dlFormatCurrency(damages.getLostWagesTotal().doubleValue()) : "$0";
+        String futureMedical = damages != null && damages.getFutureMedicalTotal() != null
+            ? dlFormatCurrency(damages.getFutureMedicalTotal().doubleValue()) : "$0";
+        String painSuffering = damages != null && damages.getPainSufferingTotal() != null
+            ? dlFormatCurrency(damages.getPainSufferingTotal().doubleValue()) : "$0";
+
+        return String.format("""
+            Generate a professional demand package for a Massachusetts personal injury case.
+            This must read as a polished, attorney-ready demand letter — NOT a template or outline.
+
+            ============================================================
+            CASE DATA (USE THESE VALUES — DO NOT INVENT OR USE BRACKETS)
+            ============================================================
+
+            CLAIM INFORMATION:
+            Claimant: %s
+            Defendant (At-Fault Party): %s
+            Insurance Company: %s
+            Adjuster Name: %s
+            Claim Number: %s
+            Policy Limit: %s
+
+            ACCIDENT DETAILS:
+            Date of Accident: %s
+            Location: %s
+
+            INJURIES:
+            Injury Type: %s
+            Description: %s
+
+            LIABILITY NARRATIVE:
+            %s
+
+            DAMAGE VALUES (starting values — recalculate totals from itemized medical records below):
+            Medical Expenses: %s
+            Lost Wages: %s
+            Future Medical Expenses: %s
+            Pain & Suffering (calculated): %s
+
+            %s
+
+            ============================================================
+            ABSOLUTE RULES (VIOLATION = FAILURE)
+            ============================================================
+
+            1. ZERO PLACEHOLDERS: The letter must contain ZERO square brackets. Never write $[amount], [Date], [Name], [N], [Provider], [ATTORNEY TO INSERT], or ANY text inside square brackets. Every value must be a real number, real name, or real date from the CASE DATA above. If a value is truly missing, write $0.00 for amounts or "N/A" for text — never brackets.
+
+            2. REAL DATA ONLY: Every provider name, diagnosis, ICD code, dollar amount, and date in the letter MUST come from the MEDICAL TREATMENT RECORDS, DAMAGES CALCULATION, or MEDICAL SUMMARY sections in the CASE DATA above. Read those sections carefully and extract the actual values.
+
+            3. MATH MUST ADD UP: Every table total must exactly equal the sum of its line items. The total demand must equal Economic + Non-Economic damages. Double-check all arithmetic.
+
+            4. NARRATIVE PROSE: Write the Facts & Liability and Pain & Suffering sections as compelling narrative paragraphs, not bullet points.
+
+            5. PRECISE DOLLARS: Use exact dollar amounts with cents (e.g., $5,234.50).
+
+            6. TABLE FORMAT: Use standard markdown pipe tables. Every table needs: header row, separator row (|---|---|), data rows, and a bold Total row at the bottom.
+
+            ============================================================
+            SECTION 1: SALUTATION & INTRODUCTION
+            ============================================================
+            IMPORTANT: Do NOT generate a firm name header, logo placeholder, or letterhead block.
+            The document already has firm stationery applied externally (letterhead with logo and contact info).
+            NEVER write [LAW FIRM NAME], [Attorney Name, Esq.], [Firm Address], [Phone] | [Fax] | [Email] — firm stationery is applied externally.
+            Start the document body directly with the date and salutation.
+
+            - Date: %s
+            - "Via Certified Mail, Return Receipt Requested"
+            - Addressee: Use the actual Adjuster Name and Insurance Company from the CASE DATA
+            - RE: line with the actual Claimant name, Defendant name, Date of Loss, and Claim Number
+            - "Dear [actual adjuster name from CASE DATA]:" — use their real name, not a bracket
+            - Brief representation statement (1-2 paragraphs):
+              * State that this office represents the claimant
+              * Attorney lien notice
+              * Direct all communications to this office
+              * State this is a good-faith attempt to resolve the claim
+
+            ============================================================
+            SECTION 2: FACTS & LIABILITY
+            ============================================================
+            Write this as a COMPELLING NARRATIVE (like telling a story to a jury), NOT as bullet points.
+
+            Structure:
+            - Opening paragraph: Set the scene. Describe the client's day before the accident in human terms.
+            - Accident narrative: Describe what happened in vivid, chronological detail. Use the actual accident location and date from CASE DATA.
+            - Defendant's negligence: Explain clearly how the defendant was at fault.
+            - Legal standard for liability:
+              * For rear-end collisions: "Under Massachusetts law, a rear-end collision creates a rebuttable presumption of negligence on the following driver." Reference M.G.L. c. 90, § 14.
+              * IMPORTANT: Use "presumption of negligence" — NEVER "negligence per se" for rear-end cases.
+              * For other collisions: State the applicable duty of care and how it was breached.
+            - Conclude with a strong statement that liability is clear and undisputed.
+
+            ============================================================
+            SECTION 3: INJURIES & TREATMENTS
+            ============================================================
+
+            ### 3.1 Summary of Injuries
+            Create a table listing every diagnosis found in the MEDICAL TREATMENT RECORDS. Extract the actual diagnosis names and ICD-10 codes from the records. The table columns are: Injury/Diagnosis and ICD Code.
+
+            ### 3.2 Treatment by Provider
+            For EACH medical provider found in the MEDICAL TREATMENT RECORDS, create a structured summary:
+
+            Start with the provider's actual name in bold, then a small table with Treatment Timeline (actual first date to last date from records) and Number of Visits (actual count from records).
+
+            Then write 1-3 narrative paragraphs describing the treatment chronologically. Include: presenting complaints, examination findings, diagnoses, treatment plan, procedures performed, medications prescribed, and prognosis/recommendations. Use the actual ICD-10 and CPT codes from the medical records.
+
+            End with "Supporting Documents: Exhibit N — [actual provider name] Medical Records" where N is the exhibit number.
+
+            Order providers chronologically by first treatment date.
+
+            ============================================================
+            SECTION 4: DAMAGES
+            ============================================================
+
+            ### 4.1 Total Projected Claim Value
+            Present a summary table with columns: Elements of Damages and Amount.
+            Include rows for: Past Medical Expenses, Future Medical Expenses, Loss of Income, Loss of Household Services (if applicable), and Past and Future Pain and Suffering. Use the actual dollar amounts from the DAMAGES CALCULATION in CASE DATA. Include a bold Total Damages row that sums everything.
+
+            ### 4.2 Past Medical Expenses
+            Create an itemized table with columns: Provider, Date of Service, Amount Charged, Supporting Document.
+            List every medical provider from the MEDICAL TREATMENT RECORDS with their actual billed amounts and treatment dates. The Total row must match the Past Medical Expenses total from the DAMAGES CALCULATION.
+
+            After the table, include: "If you claim any of the medical treatment above was unnecessary, or that any of the bills associated with such treatment were unreasonable, then please identify in writing which bills you dispute and the factual basis for such dispute."
+
+            PIP COORDINATION: "Client's PIP benefits under M.G.L. c. 90, § 34A have been exhausted/coordinated, entitling recovery of the full medical special damages from the bodily injury coverage."
+
+            ### 4.3 Future Medical Expenses (if applicable)
+            If future medical expense data exists in the DAMAGES CALCULATION, create a table with columns: Procedure, Years, Frequency/Year, Cost Each, Total. Use actual projected treatment data. Include a bold Total Future Medical row.
+            Use the phrase "within a reasonable degree of medical certainty" for all future medical projections.
+
+            ### 4.4 Loss of Income (if applicable)
+            If lost wages data exists in the DAMAGES CALCULATION, present a Loss of Income Schedule table with columns: Start of Loss Date, End of Loss Date, Lost Income. Use actual dates and amounts. Include a bold Total row.
+            If no lost wages are claimed, briefly note work impact without claiming economic loss.
+
+            ### 4.5 Past and Future Pain and Suffering
+            Write a COMPELLING NARRATIVE (not bullet points) describing:
+            - How the injuries changed the client's daily life (sleep, work, family, hobbies, independence)
+            - The duration of suffering: the client has endured EXACTLY %s days of pain since the accident (this number is pre-computed — use it as-is, do NOT recalculate)
+            - Specific concrete examples of activities the client can no longer perform
+            - Emotional and psychological impact
+
+            CRITICAL VALUATION RULES:
+            * NEVER state a specific multiplier (e.g., "1.0x", "2.0x multiplier") in the letter
+            * NEVER show the insurer how you calculated pain and suffering
+            * For disc herniation/structural injuries: value at LEAST 2.5-3.0x medical specials
+            * For cases with permanency/chronic symptoms: use 3.0-4.0x
+            * Simply state the pain and suffering amount confidently using the actual value from CASE DATA
+
+            Per Diem Analysis: Include a per diem calculation table to justify the pain and suffering amount. Calculate days from accident to a medical milestone, multiply by 16 waking hours per day, multiply by a reasonable hourly rate. Show the math with actual numbers — no brackets. Split into Initial and Subsequent periods if the case spans years.
+
+            State confidently that the calculated amount is fair and equitable compensation for the client's pain and suffering.
+
+            ============================================================
+            SECTION 5: BAD FAITH NOTICE & DEMAND TO SETTLE
+            ============================================================
+
+            Statutory Bad Faith Notice (Massachusetts-Specific):
+            "Please be advised that failure to tender policy limits under circumstances where liability is clear and damages substantially exceed the policy limits may constitute an unfair claim settlement practice under M.G.L. c. 176D, § 3(9) and an unfair or deceptive act under M.G.L. c. 93A, §§ 2 and 9. We reserve all rights to pursue such claims if this matter is not resolved promptly and fairly."
+
+            Demand:
+            - State the total demand amount using the actual Total Damages calculated in Section 4.1
+            - If damages exceed policy limits: Make a STRONG, UNCONDITIONAL policy limits demand.
+              Use assertive language: "Tender of the policy limits is the only reasonable course of action to protect your insured from personal exposure."
+              Do NOT use weak language like "we will consider" or "we may accept."
+            - 30-day response deadline from date of letter
+            - Consequences of non-response: "Failure to respond within this timeframe will result in the immediate filing of a civil action, at which time we will seek all available damages including those provided under M.G.L. c. 93A."
+
+            Closing:
+            - "Please do not hesitate to contact me if you have any additional questions or concerns."
+            - End with "Respectfully submitted," — do NOT add attorney name, firm name, or signature block after this (the document stationery handles the signature block externally)
+
+            ============================================================
+            SECTION 6: EXHIBIT LIST
+            ============================================================
+            Create a numbered exhibit list table (Exhibit No. and Description columns) referencing only the supporting documents that were actually cited or referenced in the letter body. Use actual provider names and document types — no brackets.
+
+            CRITICAL — NEVER include privileged or confidential attorney-client documents in the exhibit list. The following must NEVER appear as exhibits in a demand letter:
+            - Contingent fee agreements or retainer agreements
+            - Attorney-client communications or correspondence
+            - Attorney work product, internal memos, or case strategy notes
+            - Billing records, invoices, or fee schedules
+            - Settlement authority memos or internal valuations
+            Only include documents that support the CLAIM being presented to the insurance company: medical records, bills, police reports, photographs, employment records, expert reports, and similar evidence.
+
+            ============================================================
+            FINAL SELF-CHECK BEFORE RESPONDING
+            ============================================================
+            Before you submit, scan your entire response for the characters [ and ]. If you find ANY square brackets (except in statute citations like M.G.L. c. 90), you have FAILED. Replace them with actual data from the CASE DATA sections above.
+
+            %s
+            """,
+            clientName,
+            defendantName,
+            insuranceCompany,
+            adjusterName,
+            claimNumber,
+            policyLimit,
+            accidentDate,
+            accidentLocation,
+            injuryType,
+            injuryDescription,
+            liabilityDetails,
+            medicalExpenses,
+            lostWages,
+            futureMedical,
+            painSuffering,
+            caseDataSection,
+            letterDate,
+            daysSinceAccidentStr, // pre-computed days since accident for pain & suffering narrative
+            isDetailed
+                ? "Make the letter thorough and compelling, suitable for policy limits demands. This is a serious injury case warranting detailed documentation."
+                : "Keep the letter focused and professional while including all required Massachusetts-specific elements."
+        );
+    }
+
+    private CitationLevel getCitationLevel(String documentType) {
+        return templateRegistry.getCitationLevel(documentType);
+    }
+
+    /**
+     * Look up stationery context for AI prompt.
+     * Tries direct IDs first (for first-generation), falls back to document lookup.
+     */
+    private String resolveStationeryContext(Long documentId, Long orgId, Long stationeryTemplateId, Long stationeryAttorneyId) {
+        // Priority 1: Direct IDs from request (for first-generation) — treat as atomic pair
+        Long templateId = stationeryTemplateId;
+        Long attorneyId = stationeryAttorneyId;
+
+        // Priority 2: Fall back to document lookup (for re-generation)
+        // Use document IDs only when BOTH direct IDs are missing (avoid mixing sources)
+        if (templateId == null && attorneyId == null && documentId != null) {
+            AiWorkspaceDocument doc = documentRepository.findByIdAndOrganizationId(documentId, orgId).orElse(null);
+            if (doc != null) {
+                templateId = doc.getStationeryTemplateId();
+                attorneyId = doc.getStationeryAttorneyId();
+            }
+        }
+
+        if (templateId == null || attorneyId == null) return null;
+
+        try {
+            return stationeryService.getStationeryContextForPrompt(templateId, attorneyId, orgId);
+        } catch (Exception e) {
+            log.warn("Failed to load stationery context for prompt: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Build draft prompt split into system message (static instructions) and user message (dynamic context).
+     * The system message is loaded from templates/system-prompt.txt.
+     * The user message contains only per-request dynamic content: date, stationery, template, case data, exhibits, citation policy.
+     */
+    private DraftPrompt buildDraftPrompt(
         String userPrompt,
         String documentType,
         String jurisdiction,
         String caseContext,
         LegalCase legalCase,
-        String researchMode
+        String researchMode,
+        List<AiWorkspaceDocumentExhibit> exhibits,
+        String stationeryContext
     ) {
+        // ── SYSTEM MESSAGE (static instructions loaded once at startup) ──
+        String systemMessage = templateRegistry.getSystemPrompt();
+
+        // ── USER MESSAGE (dynamic, per-request content) ──
         StringBuilder prompt = new StringBuilder();
 
-        // CRITICAL CONTEXT: Establish attorney-client relationship
-        prompt.append("**ATTORNEY-CLIENT CONTEXT**:\n");
-        prompt.append("You are assisting a licensed attorney who is representing a client.\n");
-        prompt.append("This is a law firm document management system.\n");
-        prompt.append("The attorney is already retained and representing the client in this matter.\n");
-        prompt.append("All documents MUST be drafted from the attorney's perspective representing the client.\n");
-        prompt.append("DO NOT draft as if the client is representing themselves (pro se).\n\n");
+        // Today's date for letter date lines
+        prompt.append("Today's date: ").append(java.time.LocalDate.now(java.time.ZoneId.of("America/New_York")).format(java.time.format.DateTimeFormatter.ofPattern("MMMM d, yyyy"))).append("\n\n");
 
-        prompt.append("Generate a professional legal ").append(documentType).append(" document.\n\n");
+        // Stationery awareness: tell AI what's already in the letterhead/signature/footer
+        if (stationeryContext != null && !stationeryContext.isEmpty()) {
+            prompt.append("**LETTERHEAD STATIONERY APPLIED TO THIS DOCUMENT**:\n");
+            prompt.append(stationeryContext).append("\n");
+            prompt.append("Because letterhead stationery is applied:\n");
+            if (stationeryContext.contains("LETTERHEAD")) {
+                prompt.append("- DO NOT generate a firm name/address header at the top — it's in the letterhead\n");
+                prompt.append("- For letters: start with date, then recipient address block, then 'Dear...'\n");
+                prompt.append("- For motions/pleadings: start with the court caption\n");
+            }
+            if (stationeryContext.contains("SIGNATURE")) {
+                prompt.append("- The stationery signature block ALREADY includes the closing salutation (e.g., 'Very Truly Yours,'),\n");
+                prompt.append("  the attorney name, bar number, and signature line.\n");
+                prompt.append("  DO NOT generate ANY of these in the document body.\n");
+                prompt.append("- For letters: end with your last paragraph of body content. Do NOT write\n");
+                prompt.append("  'Very truly yours,', 'Sincerely,', 'Respectfully,' or any closing phrase.\n");
+                prompt.append("- For motions/pleadings: end with the conclusion paragraph. Do NOT add a signature block.\n");
+            }
+            if (stationeryContext.contains("FOOTER")) {
+                prompt.append("- DO NOT generate a footer with firm contact info — it's in the stationery footer\n");
+            }
+            prompt.append("NEVER include firm name, address, phone, fax, email, or logo in the document body — all handled by stationery.\n\n");
+            // Page-layout awareness: letterhead reduces first-page space
+            if (stationeryContext.contains("LETTERHEAD")) {
+                prompt.append("**PAGE LAYOUT — LETTERHEAD IMPACT**:\n");
+                prompt.append("The letterhead takes approximately 1 inch of space at the top of page 1, reducing available content on that page.\n");
+                prompt.append("Structure your content with this in mind:\n");
+                prompt.append("- Make the opening section (before the first ## heading) substantial enough to fill the reduced first page naturally\n");
+                prompt.append("- NEVER place a section heading (##) with only 1-2 short lines before a page would break — always ensure each heading has meaningful content immediately following it\n");
+                prompt.append("- Avoid starting with a very short paragraph followed immediately by a large table — spread introductory text to flow naturally across the first page\n");
+                prompt.append("- Keep sections balanced in length so page breaks fall mid-paragraph rather than right after a heading\n");
+            }
+            prompt.append("\n");
+        }
+
+        // Demand letters get the EvenUp-style prompt; all other types get the generic template path
+        if (isDemandLetterType(documentType) && legalCase != null) {
+            try {
+                LegalCaseDTO caseDto = legalCaseService.getCase(legalCase.getId());
+                PIDamageCalculationDTO dmg = null;
+                try { dmg = damageCalculationService.getDamageCalculation(legalCase.getId()); } catch (Exception ignored) {}
+                boolean isDetailed = "THOROUGH".equalsIgnoreCase(researchMode);
+                String demandPrompt = buildDemandLetterPrompt(caseDto, dmg, caseContext, isDetailed);
+                prompt.append(demandPrompt).append("\n\n");
+                log.info("Using EvenUp-style demand letter prompt for type: {}", documentType);
+            } catch (Exception e) {
+                log.warn("Failed to build demand letter prompt, falling back to generic template: {}", e.getMessage());
+                // Fall through to generic path below
+                appendGenericDocumentPrompt(prompt, documentType);
+            }
+        } else {
+            if (isDemandLetterType(documentType)) {
+                log.warn("Demand letter type '{}' requested but no case linked — using generic prompt", documentType);
+            }
+            appendGenericDocumentPrompt(prompt, documentType);
+        }
 
         // Indicate research mode for token allocation and citation behavior
         if ("THOROUGH".equalsIgnoreCase(researchMode)) {
@@ -1396,6 +2278,32 @@ public class AiWorkspaceDocumentService {
 
         if (caseContext != null && !caseContext.isEmpty()) {
             prompt.append(caseContext).append("\n");
+        }
+
+        // Append exhibit content if exhibits are attached to this document
+        if (exhibits != null && !exhibits.isEmpty()) {
+            prompt.append("\n\nAVAILABLE EXHIBITS:\n");
+            for (AiWorkspaceDocumentExhibit exhibit : exhibits) {
+                prompt.append("- Exhibit ").append(exhibit.getLabel())
+                      .append(": ").append(exhibit.getFileName()).append("\n");
+                if (exhibit.getExtractedText() != null && !exhibit.getExtractedText().isEmpty()
+                    && "COMPLETED".equals(exhibit.getTextExtractionStatus())) {
+                    String text = exhibit.getExtractedText();
+                    if (text.length() > 15000) {
+                        text = text.substring(0, 15000) + "\n[... truncated ...]";
+                    }
+                    prompt.append(text).append("\n\n");
+                } else {
+                    prompt.append("[Text extraction pending -- reference by exhibit label only]\n\n");
+                }
+            }
+            prompt.append("\nEXHIBIT REFERENCE RULES:\n");
+            prompt.append("- When referencing supporting evidence from exhibits, use the format [Exhibit A, p.X]\n");
+            prompt.append("- Include specific page numbers when citing particular facts or passages\n");
+            prompt.append("- Only reference exhibits that genuinely support the point being made\n");
+            prompt.append("- Do not fabricate exhibit content -- only reference what appears in the exhibit text above\n");
+            prompt.append("- NEVER include privileged or confidential documents (fee agreements, retainer agreements, attorney-client communications, internal memos, billing records) in any exhibit list sent to opposing parties or third parties\n\n");
+            log.info("Included {} exhibits in draft prompt", exhibits.size());
         }
 
         prompt.append("USER REQUEST:\n");
@@ -1415,64 +2323,49 @@ public class AiWorkspaceDocumentService {
 
         // DETERMINE CITATION POLICY based on document type
         CitationLevel citationLevel = getCitationLevel(documentType);
-        log.info("📋 Document type '{}' has citation level: {}", documentType, citationLevel);
+        log.info("Document type '{}' has citation level: {}", documentType, citationLevel);
 
         // CONDITIONAL CITATION POLICY based on research mode AND document type
         if ("THOROUGH".equalsIgnoreCase(researchMode)) {
             switch (citationLevel) {
                 case NONE:
-                    // NO CITATIONS: Contracts and transactional documents
-                    prompt.append("\n**📋 CITATION POLICY - NONE (Transactional/Contract Document)**:\n");
+                    prompt.append("\n**CITATION POLICY - NONE (Transactional/Contract Document)**:\n");
                     prompt.append("This is a transactional or contract document.\n");
                     prompt.append("DO NOT include any legal citations (no case law, no statutes).\n");
                     prompt.append("Focus on clear business terms, obligations, and commercial language.\n\n");
-
                     prompt.append("**FOCUS YOUR WRITING ON**:\n");
                     prompt.append("- Clear contractual terms and obligations\n");
                     prompt.append("- Rights and responsibilities of parties\n");
                     prompt.append("- Payment terms, deadlines, deliverables\n");
                     prompt.append("- Warranties, representations, and indemnification\n");
                     prompt.append("- Dispute resolution mechanisms\n\n");
-
                     prompt.append("**CITATION RULES - ABSOLUTE**:\n");
-                    prompt.append("✗ DO NOT cite any case law\n");
-                    prompt.append("✗ DO NOT cite any statutes\n");
-                    prompt.append("✗ DO NOT include legal precedents\n");
-                    prompt.append("✓ Use standard contract language and business terms\n\n");
+                    prompt.append("DO NOT cite any case law, statutes, or legal precedents.\n");
+                    prompt.append("Use standard contract language and business terms.\n\n");
                     break;
 
                 case MINIMAL:
-                    // MINIMAL CITATIONS: Demand letters, correspondence, discovery
-                    prompt.append("\n**📋 CITATION POLICY - MINIMAL (Business/Demand Document)**:\n");
+                    prompt.append("\n**CITATION POLICY - MINIMAL (Business/Demand Document)**:\n");
                     prompt.append("This is a business/demand document, NOT a legal brief or motion.\n");
                     prompt.append("Insurance adjusters and business parties care about FACTS and DAMAGES, not case law.\n\n");
-
                     prompt.append("**FOCUS YOUR WRITING ON**:\n");
                     prompt.append("- Specific factual allegations (what happened, when, where, how)\n");
                     prompt.append("- Documented damages (medical bills, lost wages, repair costs)\n");
                     prompt.append("- Settlement value and business pressure\n");
                     prompt.append("- Clear liability narrative (defendant's fault)\n\n");
-
                     prompt.append("**CITATION RULES - STRICT**:\n");
-                    prompt.append("✗ DO NOT cite case law precedents (no 'See Smith v. Jones, 123 Mass. 456')\n");
-                    prompt.append("✗ DO NOT cite court decisions or judicial opinions\n");
-                    prompt.append("✓ You MAY cite 1-2 directly applicable STATUTES if essential (e.g., 'G.L. c. 231, § 6')\n");
-                    prompt.append("✓ You MAY reference general legal standards WITHOUT case names (e.g., 'Under Massachusetts law, rear-end collisions create a presumption of negligence')\n\n");
-
-                    prompt.append("**EXAMPLE - CORRECT APPROACH** (No case citations):\n");
-                    prompt.append("'Under Massachusetts law, a rear-end collision creates a presumption of negligence on the part of the following driver. ");
+                    prompt.append("DO NOT cite case law precedents (no 'See Smith v. Jones, 123 Mass. 456').\n");
+                    prompt.append("DO NOT cite court decisions or judicial opinions.\n");
+                    prompt.append("You MAY cite 1-2 directly applicable STATUTES if essential (e.g., 'G.L. c. 231, § 6').\n");
+                    prompt.append("You MAY reference general legal standards WITHOUT case names.\n\n");
+                    prompt.append("**EXAMPLE - CORRECT**: 'Under Massachusetts law, a rear-end collision creates a presumption of negligence on the part of the following driver. ");
                     prompt.append("Your insured failed to maintain a safe distance and proper control, directly causing this collision and our client's injuries.'\n\n");
-
-                    prompt.append("**EXAMPLE - INCORRECT APPROACH** (Avoid this):\n");
-                    prompt.append("'Under Massachusetts law, a rear-end collision creates a rebuttable presumption of negligence. See Haddad v. Burns, 59 Mass. App. Ct. 582 (2003); ");
-                    prompt.append("Meuse v. Fox, 39 Mass. App. Ct. (1995). The operator has a duty... See G.L. c. 89, § 7A; Mass. Model Civil Jury Instruction 5.10.'\n\n");
-
-                    prompt.append("Remember: This is about BUSINESS and SETTLEMENT, not legal scholarship. Keep it focused and persuasive.\n\n");
+                    prompt.append("**EXAMPLE - INCORRECT**: 'See Haddad v. Burns, 59 Mass. App. Ct. 582 (2003); Meuse v. Fox, 39 Mass. App. Ct. (1995)...'\n\n");
+                    prompt.append("Remember: This is about BUSINESS and SETTLEMENT, not legal scholarship.\n\n");
                     break;
 
                 case COMPREHENSIVE:
-                    // COMPREHENSIVE CITATIONS: Motions, briefs, pleadings, memos
-                    prompt.append("\n✓ CITATION VERIFICATION ENABLED (THOROUGH MODE - Legal Brief/Motion):\n");
+                    prompt.append("\nCITATION VERIFICATION ENABLED (THOROUGH MODE - Legal Brief/Motion):\n");
                     prompt.append("You may include verified case citations and legal precedents to support your arguments.\n");
                     prompt.append("All citations will be automatically verified via CourtListener and legal databases.\n");
                     prompt.append("Generate complete lists and detailed legal analysis with proper citations.\n");
@@ -1481,103 +2374,42 @@ public class AiWorkspaceDocumentService {
             }
         } else {
             // FAST mode: Keep strict anti-fabrication policy
-            prompt.append("\n⚠️ CRITICAL CITATION POLICY - PREVENT MALPRACTICE:\n");
+            prompt.append("\nCRITICAL CITATION POLICY - PREVENT MALPRACTICE:\n");
             prompt.append("DO NOT include specific case citations, statute numbers, or regulatory citations.\n");
             prompt.append("Fabricated citations can result in court sanctions and attorney malpractice.\n\n");
             prompt.append("CITATION RULES:\n");
-            prompt.append("✓ ALLOWED:\n");
+            prompt.append("ALLOWED:\n");
             prompt.append("  - General legal principles: 'Under Massachusetts law...' or 'Federal courts have held...'\n");
             prompt.append("  - Descriptive placeholders: [CITE: Massachusetts personal jurisdiction standard]\n");
             prompt.append("  - Generic references: 'Courts apply a three-part test [CITATION NEEDED: specific standard]'\n");
             prompt.append("  - Legal concepts: 'The purposeful availment doctrine requires...'\n\n");
-            prompt.append("✗ PROHIBITED:\n");
+            prompt.append("PROHIBITED:\n");
             prompt.append("  - Specific case names: 'Copy Cop, Inc. v. Task Printing, Inc., 325 F. Supp. 2d 242'\n");
             prompt.append("  - Statute numbers: '28 U.S.C. § 1331'\n");
             prompt.append("  - Regulatory citations: '8 C.F.R. § 1003.38'\n");
             prompt.append("  - ANY citation that could be fabricated or hallucinated\n\n");
-            prompt.append("EXAMPLES:\n");
-            prompt.append("✓ CORRECT: 'To establish personal jurisdiction, Massachusetts courts apply a three-part test [CITE: personal jurisdiction standard]. The plaintiff must demonstrate...'\n");
-            prompt.append("✗ INCORRECT: 'To establish personal jurisdiction, see Copy Cop, Inc., 325 F. Supp. 2d at 247.'\n\n");
             prompt.append("REMINDER: All citations must be added manually by attorney after verification with legal research tools.\n");
         }
 
+        // FORMATTING: Letter-specific vs structured document
         prompt.append("\nFORMATTING REQUIREMENTS:\n");
-        prompt.append("- Use Markdown formatting for structure and emphasis\n");
-        prompt.append("- Use # for main title, ## for sections, ### for subsections\n");
-        prompt.append("- Use **bold** for important terms and emphasis\n");
-        prompt.append("- Use numbered lists (1. 2. 3.) for sequential items\n");
-        prompt.append("- Use bullet lists (- ) for non-sequential items\n");
-        prompt.append("- Use proper paragraph breaks for readability\n");
-        prompt.append("- Keep sections balanced in length — avoid very short (1-2 sentence) sections followed by very long ones\n");
-        prompt.append("- Each major section (##) should be substantive enough to stand on its own\n");
-        prompt.append("- Group related short clauses under a single section header rather than giving each its own ## header\n");
-        prompt.append("- Place signature blocks and closing sections together — do not split them across separate sections\n");
-        prompt.append("\nTABLE FORMATTING (CRITICAL - tables must render correctly):\n");
-        prompt.append("- Use standard markdown table syntax: | Header | Header |\\n|--------|--------|\\n| Data | Data |\n");
-        prompt.append("- Every table MUST have: (1) header row, (2) separator row with dashes, (3) data rows\n");
-        prompt.append("- Keep each table row on a single line — do NOT break a row across multiple lines\n");
-        prompt.append("- Do NOT add blank lines between table rows (rows must be consecutive)\n");
-        prompt.append("- Always include a **Total** or **Subtotal** row at the bottom of numeric tables\n");
-        prompt.append("- Use bold (**text**) for total rows to make them stand out\n");
-
-        // MANDATORY RULE: COMPLETE ALL LISTS WITH PLACEHOLDERS
-        // NOTE: For demand letters, the domain-specific prompt overrides this — it says "NEVER use placeholders"
-        // because demand letters have all case data injected. The rule below applies to other document types.
-        if (!isDemandLetterType(documentType)) {
-            prompt.append("\n**⚠️ MANDATORY RULE - COMPLETE ALL LISTS WITH PLACEHOLDERS**:\n");
-            prompt.append("When you write 'as follows:', 'including:', 'specifically:', 'demonstrates:', 'such as:', etc., ");
-            prompt.append("you MUST complete the list immediately after.\n");
-            prompt.append("This is the #1 most common error. You MUST follow this rule strictly.\n\n");
-
-            prompt.append("**IF YOU HAVE SPECIFIC FACTS** → Use them:\n");
-        prompt.append("✓ CORRECT:\n");
-        prompt.append("'The evidence demonstrates:\n");
-        prompt.append("1. Dashcam footage showing defendant ran red light at 45mph\n");
-        prompt.append("2. Police report #12345 confirming defendant's fault\n");
-        prompt.append("3. Witness testimony from [Witness Name] corroborating collision sequence'\n\n");
-
-        prompt.append("**IF YOU DON'T HAVE SPECIFIC FACTS** → Use structured placeholders:\n");
-        prompt.append("✓ CORRECT:\n");
-        prompt.append("'The evidence demonstrates:\n");
-        prompt.append("1. [ATTORNEY TO INSERT: specific evidence from case file]\n");
-        prompt.append("2. [ATTORNEY TO INSERT: supporting documentation]\n");
-        prompt.append("3. [ATTORNEY TO INSERT: witness testimony or expert reports]'\n\n");
-
-        prompt.append("**PLACEHOLDER FORMATS BY CONTEXT**:\n");
-        prompt.append("- Dollar amounts: $[Amount] or [Dollar Amount]\n");
-        prompt.append("- Dates: [Date] or [MM/DD/YYYY]\n");
-        prompt.append("- Names: [Defendant Name], [Witness Name], [Doctor Name]\n");
-        prompt.append("- Evidence: [ATTORNEY TO INSERT: specific evidence]\n");
-        prompt.append("- Medical: [ATTORNEY TO INSERT: medical records and bills]\n");
-        prompt.append("- Tables: Use [Amount], [Date], [Description] in table cells\n\n");
-
-        prompt.append("**❌ ABSOLUTELY PROHIBITED - INCOMPLETE LISTS**:\n");
-        prompt.append("✗ WRONG: 'The damages include:'\n");
-        prompt.append("          [blank space or jumps to new topic]\n\n");
-        prompt.append("✗ WRONG: 'Dashcam footage that conclusively documents:'\n");
-        prompt.append("          [next paragraph starts without list items]\n\n");
-        prompt.append("✗ WRONG: 'Total damages as follows:'\n");
-        prompt.append("          [table with empty cells or missing rows]\n\n");
-
-        prompt.append("**✓ ALWAYS ACCEPTABLE - COMPLETE WITH PLACEHOLDERS**:\n");
-        prompt.append("✓ RIGHT: 'The damages include:\n");
-        prompt.append("1. Medical expenses: $[Amount]\n");
-        prompt.append("2. Lost wages: $[Amount]\n");
-        prompt.append("3. Pain and suffering: $[Amount]'\n\n");
-
-        prompt.append("✓ RIGHT: 'Total damages as follows:\n");
-        prompt.append("| Category | Amount |\n");
-        prompt.append("|----------|--------|\n");
-        prompt.append("| Medical | $[Amount] |\n");
-        prompt.append("| Lost Wages | $[Amount] |\n");
-        prompt.append("| Pain & Suffering | $[Amount] |'\n\n");
-
-        prompt.append("**ALTERNATIVE**: If you don't have facts, rephrase to avoid the colon:\n");
-        prompt.append("✓ RIGHT: 'The dashcam footage provides conclusive evidence of defendant's liability.'\n");
-        prompt.append("✓ RIGHT: 'Medical documentation supports the claimed injuries.'\n\n");
+        if (isLetterType(documentType) && !isDemandLetterType(documentType)) {
+            prompt.append("- This is a LETTER — do NOT use markdown headers (#, ##, ###) in the body\n");
+            prompt.append("- Write as flowing prose paragraphs, not sections with headers\n");
         } else {
-            // DEMAND LETTER: Opposite rule — NEVER use placeholders, use real case data
-            prompt.append("\n**⚠️ CRITICAL RULE FOR DEMAND LETTERS — ZERO PLACEHOLDERS**:\n");
+            prompt.append("- Use Markdown formatting for structure and emphasis\n");
+            prompt.append("- Use # for main title, ## for sections, ### for subsections\n");
+        }
+
+        // STATIONERY RULE: For letter types without stationery, give softer guidance
+        if (isLetterType(documentType) && (stationeryContext == null || stationeryContext.isEmpty())) {
+            prompt.append("\n**FIRM INFO PLACEHOLDERS**: Do not write generic placeholders like [LAW FIRM NAME], [Firm Address], etc.\n");
+            prompt.append("Use the actual firm/attorney name from context, or use structured [ATTORNEY TO INSERT: firm name] format.\n\n");
+        }
+
+        // PLACEHOLDER RULES: Different rules for different document types
+        if (isDemandLetterType(documentType)) {
+            prompt.append("\n**CRITICAL RULE FOR DEMAND LETTERS — ZERO PLACEHOLDERS**:\n");
             prompt.append("This is a demand letter with ALL case data provided. You MUST:\n");
             prompt.append("- Use ONLY real values from the case data — real names, real dates, real dollar amounts\n");
             prompt.append("- NEVER use $[Amount], [Date], [ATTORNEY TO INSERT: ...], [Name], or ANY square bracket placeholders\n");
@@ -1586,61 +2418,62 @@ public class AiWorkspaceDocumentService {
             prompt.append("- For dates, use the actual dates from treatment records\n");
             prompt.append("- For provider names, use the actual provider names from medical records\n");
             prompt.append("- SELF-CHECK: Before submitting, scan your ENTIRE response for [ and ]. If you find ANY square brackets that are not part of legal citations, you have FAILED this rule.\n\n");
-        } // end: placeholder rules
-
-        // ATTORNEY REPRESENTATION REQUIREMENTS
-        prompt.append("**ATTORNEY REPRESENTATION REQUIREMENTS - CRITICAL**:\n");
-        prompt.append("All documents MUST be drafted from the attorney's perspective representing the client.\n");
-        prompt.append("DO NOT draft as if the client is representing themselves (pro se).\n\n");
-
-        prompt.append("MANDATORY REQUIREMENTS:\n");
-        prompt.append("- Draft from attorney's perspective: 'This office represents...', 'On behalf of my client...'\n");
-        prompt.append("- Signature blocks must show attorney information, NOT client as self-represented\n");
-        prompt.append("- DO NOT include pro se disclaimers or suggestions to 'consider retaining an attorney'\n");
-        prompt.append("- The attorney IS already retained - do not suggest hiring one\n");
-        prompt.append("- DO NOT discuss contingency fees or attorney costs\n");
-        prompt.append("- Use professional attorney-to-opposing-party tone\n\n");
-
-        prompt.append("✓ CORRECT ATTORNEY REPRESENTATION:\n");
-        prompt.append("  - 'This office represents Mr. Hoxha in connection with the collision on [date]'\n");
-        prompt.append("  - 'On behalf of my client, I demand full compensation for all damages sustained'\n");
-        prompt.append("  - 'Please contact the undersigned to discuss settlement'\n");
-        prompt.append("  - Signature: 'Respectfully, [Attorney Name] / [Law Firm] / Attorney for Plaintiff Marsel Hoxha'\n\n");
-
-        prompt.append("✗ PROHIBITED - NEVER INCLUDE:\n");
-        prompt.append("  - 'This demand letter is drafted as a pro se document (claimant representing self)'\n");
-        prompt.append("  - 'If the case becomes more complex, you should consider retaining an attorney'\n");
-        prompt.append("  - 'Personal injury attorneys typically work on contingency (33-40% of recovery)'\n");
-        prompt.append("  - Any suggestion that the claimant is self-represented\n");
-        prompt.append("  - Signature showing client's name only without attorney representation\n");
-        prompt.append("  - Disclaimers about attorney fees or suggesting to hire counsel\n\n");
-
-        // FINAL CHECKLIST BEFORE GENERATION
-        prompt.append("**FINAL CHECKLIST BEFORE SUBMITTING YOUR RESPONSE**:\n");
-        prompt.append("Before you submit, verify:\n");
-        prompt.append("✓ Every 'as follows:', 'including:', 'specifically:', etc. is followed by list items\n");
-        if (!isDemandLetterType(documentType)) {
-            prompt.append("✓ All tables have complete rows (use placeholder values like $[Amount] for unknown numbers)\n");
-            prompt.append("✓ Used [ATTORNEY TO INSERT: ...] format for case-specific details you don't have\n");
+        } else if (isLetterType(documentType) && caseContext != null && !caseContext.isEmpty()) {
+            prompt.append("\n**CRITICAL RULE — USE REAL CASE DATA, ZERO PLACEHOLDERS**:\n");
+            prompt.append("Case data is provided above. You MUST use real values from the case data:\n");
+            prompt.append("- Use the actual client name, defendant name, insurance company, dates, claim number\n");
+            prompt.append("- NEVER use [Client Name], [Insurance Company], [Date of Incident], etc.\n");
+            prompt.append("- If a specific value is not in the case data, write naturally without brackets (e.g., 'your insured' instead of '[Insured Name]')\n");
+            prompt.append("- SELF-CHECK: Scan your response for [ and ]. Square brackets = FAILURE.\n\n");
         } else {
+            prompt.append("\n**MANDATORY RULE - COMPLETE ALL LISTS WITH PLACEHOLDERS**:\n");
+            prompt.append("When you write 'as follows:', 'including:', 'specifically:', 'demonstrates:', 'such as:', etc., ");
+            prompt.append("you MUST complete the list immediately after.\n\n");
+            prompt.append("**IF YOU HAVE SPECIFIC FACTS** → Use them.\n");
+            prompt.append("**IF YOU DON'T HAVE SPECIFIC FACTS** → Use structured placeholders:\n");
+            prompt.append("  [ATTORNEY TO INSERT: specific evidence from case file]\n\n");
+            prompt.append("**PLACEHOLDER FORMATS**: $[Amount], [Date], [Defendant Name], [ATTORNEY TO INSERT: ...]\n\n");
+            prompt.append("NEVER leave a list incomplete after a colon — always follow through with items or placeholders.\n\n");
+        }
+
+        // DYNAMIC CHECKLIST items based on document type
+        prompt.append("**FINAL CHECKLIST**:\n");
+        if (isDemandLetterType(documentType) || (isLetterType(documentType) && caseContext != null && !caseContext.isEmpty())) {
             prompt.append("✓ ZERO square brackets in the entire document — all values are real data from the case\n");
             prompt.append("✓ All dollar amounts are precise with cents (e.g., $5,234.50)\n");
+        } else {
+            prompt.append("✓ All tables have complete rows (use placeholder values like $[Amount] for unknown numbers)\n");
+            prompt.append("✓ Used [ATTORNEY TO INSERT: ...] format for case-specific details you don't have\n");
         }
-        prompt.append("✓ No blank spaces after colons - every list is complete\n");
-        prompt.append("✓ Document is drafted from attorney's perspective, not pro se\n");
-        prompt.append("✓ All citations properly formatted (if in THOROUGH mode)\n\n");
+        if (isLetterType(documentType) && stationeryContext != null && !stationeryContext.isEmpty()) {
+            prompt.append("✓ NO firm name, address, phone, or attorney name/signature in the body (stationery handles it)\n");
+        }
+        prompt.append("\n");
 
-        return prompt.toString();
+        return new DraftPrompt(systemMessage, prompt.toString());
     }
 
-    /**
-     * Check if a document type represents a demand letter.
-     * Handles both "demand_letter" (PI endpoint) and "demand-letter" (AI Workspace) variants.
-     */
+    /** Generic document prompt (non-demand-letter types) */
+    private void appendGenericDocumentPrompt(StringBuilder prompt, String documentType) {
+        prompt.append("Generate a professional legal ").append(documentType).append(" document.\n\n");
+        String documentTemplate = templateRegistry.getTemplateText(documentType);
+        if (!documentTemplate.isEmpty()) {
+            prompt.append(documentTemplate).append("\n");
+        } else {
+            String hints = templateRegistry.getHints(documentType);
+            if (hints != null && !hints.isEmpty()) {
+                prompt.append("**DOCUMENT STRUCTURE GUIDANCE**:\n");
+                prompt.append(hints).append("\n\n");
+            }
+        }
+    }
+
     private boolean isDemandLetterType(String documentType) {
-        if (documentType == null) return false;
-        String normalized = documentType.toLowerCase().replace("-", "_");
-        return "demand_letter".equals(normalized);
+        return templateRegistry.isDemandLetterType(documentType);
+    }
+
+    private boolean isLetterType(String documentType) {
+        return templateRegistry.isLetterType(documentType);
     }
 
     /**
@@ -1655,11 +2488,17 @@ public class AiWorkspaceDocumentService {
         }
 
         Map<String, Object> data = docData.get();
+        String title = (String) data.get("title");
         String content = (String) data.get("content");
         String documentType = (String) data.get("documentType");
 
-        // Extract and sanitize title from content
-        String filename = extractDocumentTitle(content, documentType);
+        // Prefer database title (set from case-aware naming), fall back to content heading
+        String filename;
+        if (title != null && !title.trim().isEmpty() && !title.startsWith("conv_")) {
+            filename = sanitizeFilename(title);
+        } else {
+            filename = extractDocumentTitle(content, documentType);
+        }
         return filename + "." + extension;
     }
 
@@ -1702,6 +2541,7 @@ public class AiWorkspaceDocumentService {
         // Remove or replace special characters
         String sanitized = input
             .replaceAll("[^a-zA-Z0-9\\s-]", "") // Remove special chars except spaces and hyphens
+            .replaceAll("\\s*-\\s*", " ") // Replace hyphens (with surrounding spaces) with a single space
             .replaceAll("\\s+", "_") // Replace spaces with underscores
             .replaceAll("_+", "_") // Collapse multiple underscores
             .replaceAll("^_|_$", ""); // Remove leading/trailing underscores
@@ -1734,6 +2574,13 @@ public class AiWorkspaceDocumentService {
         }
 
         return finalName.isEmpty() ? "Document" : finalName;
+    }
+
+    /**
+     * Public accessor for filename sanitization — used by controller for Content-Disposition headers
+     */
+    public String sanitizeFilenamePublic(String input) {
+        return sanitizeFilename(input);
     }
 
     /**
@@ -1858,6 +2705,325 @@ public class AiWorkspaceDocumentService {
     }
 
     /**
+     * Convert HTML content directly to Word document elements.
+     * Parses HTML with regex and creates XWPFParagraph/XWPFTable objects directly,
+     * avoiding the lossy HTML→markdown→Word pipeline.
+     */
+    private void convertHtmlToWord(String html, XWPFDocument document) {
+        if (html == null || html.isEmpty()) return;
+
+        // Extract and remove stationery footer (will be appended at end)
+        String footerText = null;
+        String processedHtml = html;
+        int fStart = html.indexOf("<!--STATIONERY_FOOTER_START-->");
+        int fEnd = html.indexOf("<!--STATIONERY_FOOTER_END-->");
+        if (fStart != -1 && fEnd != -1) {
+            String footerBlock = html.substring(fStart, fEnd + "<!--STATIONERY_FOOTER_END-->".length());
+            footerText = footerBlock.replaceAll("<[^>]+>", "").replaceAll("<!--[^>]+-->", "")
+                .replace("&middot;", "\u00B7").replace("&nbsp;", " ").replace("&amp;", "&").trim();
+            processedHtml = html.replace(footerBlock, "");
+        }
+
+        // Decode HTML entities first
+        processedHtml = processedHtml.replace("&nbsp;", " ").replace("&amp;", "&")
+            .replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"")
+            .replace("&#39;", "'").replace("&middot;", "\u00B7");
+
+        // Process HTML tables first — extract them and replace with placeholders
+        java.util.List<String> tableHtmlBlocks = new java.util.ArrayList<>();
+        String lowerHtml = processedHtml.toLowerCase();
+        StringBuilder withPlaceholders = new StringBuilder();
+        int searchFrom = 0;
+        while (true) {
+            int tableStart = lowerHtml.indexOf("<table", searchFrom);
+            if (tableStart == -1) break;
+            int tableEndTag = lowerHtml.indexOf("</table>", tableStart);
+            if (tableEndTag == -1) break;
+            int tableEnd = tableEndTag + 8;
+
+            // Check if table is inside a <figure> — include the figure tag
+            String before = processedHtml.substring(Math.max(0, tableStart - 100), tableStart);
+            int figureStart = before.toLowerCase().lastIndexOf("<figure");
+            int actualStart = tableStart;
+            int actualEnd = tableEnd;
+            if (figureStart != -1) {
+                actualStart = tableStart - (before.length() - figureStart);
+                int figEnd = lowerHtml.indexOf("</figure>", tableEnd);
+                if (figEnd != -1) actualEnd = figEnd + 9;
+            }
+
+            withPlaceholders.append(processedHtml, searchFrom, actualStart);
+            withPlaceholders.append("__TABLE_PLACEHOLDER_").append(tableHtmlBlocks.size()).append("__");
+            tableHtmlBlocks.add(processedHtml.substring(tableStart, tableEnd));
+            searchFrom = actualEnd;
+        }
+        if (searchFrom < processedHtml.length()) {
+            withPlaceholders.append(processedHtml.substring(searchFrom));
+        }
+
+        String textContent = withPlaceholders.toString();
+
+        // Strip remaining HTML tags but preserve structure via newlines
+        textContent = textContent.replaceAll("(?i)</p>\\s*<p[^>]*>", "\n\n");
+        textContent = textContent.replaceAll("(?i)<h1[^>]*>(.*?)</h1>", "\n__H1__$1__/H1__\n");
+        textContent = textContent.replaceAll("(?i)<h2[^>]*>(.*?)</h2>", "\n__H2__$1__/H2__\n");
+        textContent = textContent.replaceAll("(?i)<h3[^>]*>(.*?)</h3>", "\n__H3__$1__/H3__\n");
+        textContent = textContent.replaceAll("(?i)<h4[^>]*>(.*?)</h4>", "\n__H4__$1__/H4__\n");
+        textContent = textContent.replaceAll("(?i)<h5[^>]*>(.*?)</h5>", "\n__H5__$1__/H5__\n");
+        textContent = textContent.replaceAll("(?i)<h6[^>]*>(.*?)</h6>", "\n__H6__$1__/H6__\n");
+        textContent = textContent.replaceAll("(?i)<strong[^>]*>(.*?)</strong>", "__BOLD__$1__/BOLD__");
+        textContent = textContent.replaceAll("(?i)<b[^>]*>(.*?)</b>", "__BOLD__$1__/BOLD__");
+        textContent = textContent.replaceAll("(?i)<em[^>]*>(.*?)</em>", "__ITALIC__$1__/ITALIC__");
+        textContent = textContent.replaceAll("(?i)<i[^>]*>(.*?)</i>", "__ITALIC__$1__/ITALIC__");
+        textContent = textContent.replaceAll("(?i)<u[^>]*>(.*?)</u>", "__UNDERLINE__$1__/UNDERLINE__");
+        textContent = textContent.replaceAll("(?i)<li[^>]*>", "\n__LI__");
+        textContent = textContent.replaceAll("(?i)</li>", "__/LI__");
+        textContent = textContent.replaceAll("(?i)<hr[^>]*/?>", "\n__HR__\n");
+        textContent = textContent.replaceAll("(?i)<br\\s*/?>", "\n");
+        textContent = textContent.replaceAll("(?i)<p[^>]*>", "");
+        textContent = textContent.replaceAll("(?i)</p>", "\n");
+        textContent = textContent.replaceAll("(?i)</?[uo]l[^>]*>", "\n");
+        textContent = textContent.replaceAll("<[^>]+>", ""); // Strip all remaining HTML tags
+        textContent = textContent.replaceAll("[ \\t]+", " ");
+        textContent = textContent.replaceAll("\n{3,}", "\n\n");
+
+        // Process line by line, inserting tables at placeholders
+        String[] lines = textContent.split("\n");
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) continue;
+
+            // Check for table placeholder
+            if (trimmed.matches("__TABLE_PLACEHOLDER_\\d+__")) {
+                int idx = Integer.parseInt(trimmed.replaceAll("\\D+", ""));
+                if (idx < tableHtmlBlocks.size()) {
+                    addHtmlTableToWord(document, tableHtmlBlocks.get(idx));
+                }
+                continue;
+            }
+
+            // Headings
+            java.util.regex.Matcher hMatcher = java.util.regex.Pattern.compile("__H(\\d)__(.*)__/H\\d__").matcher(trimmed);
+            if (hMatcher.find()) {
+                int level = Integer.parseInt(hMatcher.group(1));
+                String text = stripFormattingMarkers(hMatcher.group(2)).trim();
+                if (text.isEmpty()) continue;
+                XWPFParagraph para = document.createParagraph();
+                para.setSpacingBefore(level == 1 ? 400 : 300);
+                para.setSpacingAfter(200);
+                XWPFRun run = para.createRun();
+                run.setText(text);
+                run.setBold(true);
+                run.setFontFamily("Georgia");
+                run.setFontSize(level == 1 ? 16 : (level == 2 ? 14 : 12));
+                continue;
+            }
+
+            // Horizontal rule
+            if (trimmed.equals("__HR__")) {
+                XWPFParagraph para = document.createParagraph();
+                para.setSpacingBefore(200);
+                para.setSpacingAfter(200);
+                para.setBorderBottom(Borders.SINGLE);
+                continue;
+            }
+
+            // List items
+            if (trimmed.startsWith("__LI__")) {
+                String itemText = trimmed.replace("__LI__", "").replace("__/LI__", "").trim();
+                itemText = stripFormattingMarkers(itemText);
+                XWPFParagraph para = document.createParagraph();
+                para.setIndentationLeft(720);
+                XWPFRun bullet = para.createRun();
+                bullet.setText("\u2022 ");
+                bullet.setFontFamily("Georgia");
+                bullet.setFontSize(12);
+                XWPFRun run = para.createRun();
+                run.setText(itemText);
+                run.setFontFamily("Georgia");
+                run.setFontSize(12);
+                continue;
+            }
+
+            // Regular paragraph with inline formatting
+            XWPFParagraph para = document.createParagraph();
+            para.setSpacingAfter(150);
+            addFormattedRuns(para, trimmed);
+        }
+
+        // Append footer at end
+        if (footerText != null && !footerText.isBlank()) {
+            XWPFParagraph spacer = document.createParagraph();
+            spacer.setSpacingBefore(600);
+            XWPFParagraph sep = document.createParagraph();
+            sep.setBorderBottom(Borders.SINGLE);
+            XWPFParagraph footerPara = document.createParagraph();
+            footerPara.setAlignment(ParagraphAlignment.CENTER);
+            footerPara.setSpacingBefore(100);
+            XWPFRun footerRun = footerPara.createRun();
+            footerRun.setText(footerText);
+            footerRun.setFontSize(8);
+            footerRun.setColor("555555");
+            footerRun.setFontFamily("Times New Roman");
+        }
+    }
+
+    /**
+     * Parse an HTML table and add it to the Word document as XWPFTable
+     */
+    private void addHtmlTableToWord(XWPFDocument document, String tableHtml) {
+        // Extract rows
+        java.util.regex.Pattern rowPat = java.util.regex.Pattern.compile(
+            "(?i)<tr[^>]*>(.*?)</tr>", java.util.regex.Pattern.DOTALL);
+        java.util.regex.Matcher rowMatcher = rowPat.matcher(tableHtml);
+
+        java.util.List<java.util.List<String>> allRows = new java.util.ArrayList<>();
+        while (rowMatcher.find()) {
+            String rowContent = rowMatcher.group(1);
+            java.util.regex.Pattern cellPat = java.util.regex.Pattern.compile(
+                "(?i)<t([hd])[^>]*>(.*?)</t[hd]>", java.util.regex.Pattern.DOTALL);
+            java.util.regex.Matcher cellMatcher = cellPat.matcher(rowContent);
+
+            java.util.List<String> cells = new java.util.ArrayList<>();
+            while (cellMatcher.find()) {
+                String cellContent = cellMatcher.group(2);
+                // Convert <p> tags to newlines, strip remaining HTML
+                cellContent = cellContent.replaceAll("(?i)</p>\\s*<p[^>]*>", "\n");
+                cellContent = cellContent.replaceAll("(?i)<br\\s*/?>", "\n");
+                cellContent = cellContent.replaceAll("<[^>]+>", "");
+                cellContent = cellContent.replace("&nbsp;", " ").replace("&amp;", "&").trim();
+                cells.add(cellContent);
+            }
+            if (!cells.isEmpty()) {
+                allRows.add(cells);
+            }
+        }
+
+        if (allRows.isEmpty()) return;
+
+        int colCount = allRows.stream().mapToInt(java.util.List::size).max().orElse(0);
+        if (colCount == 0) return;
+
+        // Create table
+        XWPFTable table = document.createTable(allRows.size(), colCount);
+
+        // Set proper widths via XML
+        int cellWidthTwips = 9360 / colCount;
+        CTTbl ctTbl = table.getCTTbl();
+        CTTblPr tblPr = ctTbl.getTblPr();
+        if (tblPr == null) tblPr = ctTbl.addNewTblPr();
+
+        // CRITICAL: Set FIXED layout — without this Word auto-fits and ignores widths
+        CTTblLayoutType layout = tblPr.getTblLayout();
+        if (layout == null) layout = tblPr.addNewTblLayout();
+        layout.setType(STTblLayoutType.FIXED);
+
+        CTTblWidth tblWidth = tblPr.getTblW();
+        if (tblWidth == null) tblWidth = tblPr.addNewTblW();
+        tblWidth.setType(STTblWidth.DXA);
+        tblWidth.setW(java.math.BigInteger.valueOf(9360));
+
+        // Rebuild grid columns with proper widths
+        CTTblGrid grid = ctTbl.getTblGrid();
+        if (grid == null) grid = ctTbl.addNewTblGrid();
+        // Clear existing grid cols
+        while (grid.sizeOfGridColArray() > 0) {
+            grid.removeGridCol(0);
+        }
+        // Add grid cols with correct widths
+        for (int i = 0; i < colCount; i++) {
+            grid.addNewGridCol().setW(java.math.BigInteger.valueOf(cellWidthTwips));
+        }
+
+        for (int r = 0; r < allRows.size(); r++) {
+            java.util.List<String> cells = allRows.get(r);
+            XWPFTableRow tableRow = table.getRow(r);
+            boolean isHeader = r == 0;
+
+            for (int c = 0; c < colCount; c++) {
+                String cellText = c < cells.size() ? cells.get(c) : "";
+                XWPFTableCell cell = tableRow.getCell(c);
+
+                // Set cell width
+                CTTc ctTc = cell.getCTTc();
+                CTTcPr tcPr = ctTc.getTcPr();
+                if (tcPr == null) tcPr = ctTc.addNewTcPr();
+                CTTblWidth cw = tcPr.getTcW();
+                if (cw == null) cw = tcPr.addNewTcW();
+                cw.setType(STTblWidth.DXA);
+                cw.setW(java.math.BigInteger.valueOf(cellWidthTwips));
+
+                // Clear default paragraph
+                cell.removeParagraph(0);
+
+                // Cell content may have multiple lines (from <p> elements)
+                String[] cellLines = cellText.split("\n");
+                for (String cellLine : cellLines) {
+                    String trimmedLine = cellLine.trim();
+                    if (trimmedLine.isEmpty() && cellLines.length > 1) continue;
+                    XWPFParagraph cellPara = cell.addParagraph();
+                    XWPFRun run = cellPara.createRun();
+                    run.setText(trimmedLine);
+                    run.setFontFamily("Georgia");
+                    run.setFontSize(11);
+                    if (isHeader) {
+                        run.setBold(true);
+                    }
+                }
+
+                // Ensure at least one paragraph
+                if (cell.getParagraphs().isEmpty()) {
+                    cell.addParagraph();
+                }
+
+                if (isHeader) {
+                    cell.setColor("E8E8E8");
+                }
+            }
+        }
+    }
+
+    /**
+     * Strip formatting markers (__BOLD__, __ITALIC__, __UNDERLINE__) and return plain text
+     */
+    private String stripFormattingMarkers(String text) {
+        return text.replaceAll("__(BOLD|ITALIC|UNDERLINE|/BOLD|/ITALIC|/UNDERLINE)__", "");
+    }
+
+    /**
+     * Add formatted runs to a paragraph, parsing __BOLD__, __ITALIC__, __UNDERLINE__ markers
+     */
+    private void addFormattedRuns(XWPFParagraph para, String text) {
+        // Simple approach: process bold markers
+        String cleaned = text.replaceAll("__(ITALIC|/ITALIC|UNDERLINE|/UNDERLINE)__", "");
+        String[] parts = cleaned.split("__(?:BOLD|/BOLD)__");
+
+        boolean isBold = cleaned.startsWith("__BOLD__");
+        for (int i = 0; i < parts.length; i++) {
+            if (parts[i].isEmpty()) {
+                isBold = !isBold;
+                continue;
+            }
+            XWPFRun run = para.createRun();
+            run.setText(parts[i]);
+            run.setFontFamily("Georgia");
+            run.setFontSize(12);
+            if (isBold) {
+                run.setBold(true);
+            }
+            isBold = !isBold;
+        }
+
+        // If no parts were added, add the raw text
+        if (para.getRuns().isEmpty()) {
+            XWPFRun run = para.createRun();
+            run.setText(stripFormattingMarkers(text));
+            run.setFontFamily("Georgia");
+            run.setFontSize(12);
+        }
+    }
+
+    /**
      * Convert Markdown content to Word document paragraphs
      * Handles headers (#, ##, ###), bold (**text**), lists, and paragraphs
      */
@@ -1867,14 +3033,37 @@ public class AiWorkspaceDocumentService {
         }
 
         String[] lines = markdown.split("\n");
-        boolean inList = false;
-        XWPFNumbering numbering = null;
+        int i = 0;
 
-        for (String line : lines) {
-            String trimmed = line.trim();
+        while (i < lines.length) {
+            String trimmed = lines[i].trim();
 
             if (trimmed.isEmpty()) {
-                // Skip empty lines
+                i++;
+                continue;
+            }
+
+            // Check for markdown table rows (| col1 | col2 |)
+            if (isMarkdownTableRow(trimmed)) {
+                // Collect consecutive table rows
+                java.util.List<String> tableRows = new java.util.ArrayList<>();
+                while (i < lines.length) {
+                    String t = lines[i].trim();
+                    if (isMarkdownTableRow(t) || isMarkdownTableSeparator(t)) {
+                        if (!isMarkdownTableSeparator(t)) {
+                            tableRows.add(t);
+                        }
+                        i++;
+                    } else if (t.isEmpty()) {
+                        i++;
+                        break;
+                    } else {
+                        break;
+                    }
+                }
+                if (!tableRows.isEmpty()) {
+                    addMarkdownTableToWord(document, tableRows);
+                }
                 continue;
             }
 
@@ -1896,7 +3085,7 @@ public class AiWorkspaceDocumentService {
                 run.setFontFamily("Georgia");
                 run.setFontSize(level == 1 ? 16 : (level == 2 ? 14 : 12));
 
-                inList = false;
+                i++;
                 continue;
             }
 
@@ -1910,7 +3099,7 @@ public class AiWorkspaceDocumentService {
                 run.setFontFamily("Georgia");
                 run.setFontSize(12);
 
-                inList = true;
+                i++;
                 continue;
             }
 
@@ -1930,19 +3119,140 @@ public class AiWorkspaceDocumentService {
                 run.setFontFamily("Georgia");
                 run.setFontSize(12);
 
-                inList = true;
+                i++;
+                continue;
+            }
+
+            // Check for horizontal rule (--- or ___ or ***)
+            if (trimmed.matches("^[-_*]{3,}$")) {
+                XWPFParagraph para = document.createParagraph();
+                para.setSpacingBefore(200);
+                para.setSpacingAfter(200);
+                para.setBorderBottom(Borders.SINGLE);
+                i++;
                 continue;
             }
 
             // Regular paragraph
-            inList = false;
             XWPFParagraph para = document.createParagraph();
             para.setSpacingAfter(150);
             para.setAlignment(ParagraphAlignment.LEFT);
 
             // Process inline formatting (bold, italic)
             processInlineFormattingAdvanced(trimmed, para);
+            i++;
         }
+    }
+
+    /**
+     * Check if a line looks like a markdown table row (contains pipes)
+     */
+    private boolean isMarkdownTableRow(String line) {
+        if (line == null || line.isEmpty()) return false;
+        String t = line.trim();
+        return t.contains("|") && t.split("\\|").length >= 3;
+    }
+
+    /**
+     * Check if a line is a markdown table separator (|---|---|)
+     */
+    private boolean isMarkdownTableSeparator(String line) {
+        if (line == null || line.isEmpty()) return false;
+        return line.trim().matches("^[|\\s\\-:]+$");
+    }
+
+    /**
+     * Add a markdown table to the Word document using Apache POI XWPFTable
+     */
+    private void addMarkdownTableToWord(XWPFDocument document, java.util.List<String> rows) {
+        if (rows.isEmpty()) return;
+
+        // Parse first row to determine column count
+        String[] firstCells = parseMarkdownTableCells(rows.get(0));
+        int colCount = firstCells.length;
+        if (colCount == 0) return;
+
+        // Create table
+        XWPFTable table = document.createTable(rows.size(), colCount);
+
+        // Set table width to full page width (9360 twips = 6.5 inches)
+        int cellWidthTwips = 9360 / colCount;
+
+        table.setTableAlignment(TableRowAlign.CENTER);
+        CTTbl ctTbl = table.getCTTbl();
+        CTTblPr tblPr = ctTbl.getTblPr();
+        if (tblPr == null) tblPr = ctTbl.addNewTblPr();
+
+        // CRITICAL: Set FIXED layout — without this Word auto-fits and ignores widths
+        CTTblLayoutType layout = tblPr.getTblLayout();
+        if (layout == null) layout = tblPr.addNewTblLayout();
+        layout.setType(STTblLayoutType.FIXED);
+
+        // Override table width
+        CTTblWidth tblWidth = tblPr.getTblW();
+        if (tblWidth == null) tblWidth = tblPr.addNewTblW();
+        tblWidth.setType(STTblWidth.DXA);
+        tblWidth.setW(java.math.BigInteger.valueOf(9360));
+
+        // Rebuild grid columns with proper widths
+        CTTblGrid grid = ctTbl.getTblGrid();
+        if (grid == null) grid = ctTbl.addNewTblGrid();
+        while (grid.sizeOfGridColArray() > 0) {
+            grid.removeGridCol(0);
+        }
+        for (int i = 0; i < colCount; i++) {
+            grid.addNewGridCol().setW(java.math.BigInteger.valueOf(cellWidthTwips));
+        }
+
+        for (int r = 0; r < rows.size(); r++) {
+            String[] cells = parseMarkdownTableCells(rows.get(r));
+            XWPFTableRow tableRow = table.getRow(r);
+
+            for (int c = 0; c < colCount; c++) {
+                String cellText = c < cells.length ? cells[c] : "";
+                XWPFTableCell cell = tableRow.getCell(c);
+
+                // Set cell width explicitly
+                CTTc ctTc = cell.getCTTc();
+                CTTcPr tcPr = ctTc.getTcPr();
+                if (tcPr == null) tcPr = ctTc.addNewTcPr();
+                CTTblWidth cw = tcPr.getTcW();
+                if (cw == null) cw = tcPr.addNewTcW();
+                cw.setType(STTblWidth.DXA);
+                cw.setW(java.math.BigInteger.valueOf(cellWidthTwips));
+
+                // Clear default paragraph and create styled one
+                cell.removeParagraph(0);
+                XWPFParagraph cellPara = cell.addParagraph();
+                XWPFRun run = cellPara.createRun();
+                run.setText(processInlineFormatting(cellText));
+                run.setFontFamily("Georgia");
+                run.setFontSize(11);
+
+                // Bold for header row
+                if (r == 0) {
+                    run.setBold(true);
+                    cell.setColor("E8E8E8");
+                }
+            }
+        }
+    }
+
+    /**
+     * Parse cells from a markdown table row string
+     */
+    private String[] parseMarkdownTableCells(String row) {
+        // Split by pipe and trim
+        String[] parts = row.split("\\|");
+        java.util.List<String> cells = new java.util.ArrayList<>();
+        for (int i = 0; i < parts.length; i++) {
+            String cell = parts[i].trim();
+            // Skip empty leading/trailing cells from pipes
+            if (i == 0 && cell.isEmpty()) continue;
+            if (i == parts.length - 1 && cell.isEmpty()) continue;
+            cells.add(cell);
+        }
+        return cells.toArray(new String[0]);
     }
 
     /**
@@ -2345,26 +3655,31 @@ public class AiWorkspaceDocumentService {
             throw new IllegalArgumentException("Content cannot be empty");
         }
 
+        // Detect HTML content (same check as PDF path)
+        boolean isHtml = content.contains("<p") || content.contains("<div") ||
+                         content.contains("<strong") || content.contains("<h1") ||
+                         content.contains("<h2") || content.contains("<table");
+
         try {
             XWPFDocument document = new XWPFDocument();
 
-            // Only add title if content doesn't already have a markdown title
-            if (!contentHasMarkdownTitle(content)) {
-                log.info("Content has no markdown title, adding document title: {}", title);
-                XWPFParagraph titlePara = document.createParagraph();
-                titlePara.setAlignment(ParagraphAlignment.CENTER);
-                titlePara.setSpacingAfter(400);
-                XWPFRun titleRun = titlePara.createRun();
-                titleRun.setText(title);
-                titleRun.setBold(true);
-                titleRun.setFontSize(18);
-                titleRun.setFontFamily("Georgia");
+            if (isHtml) {
+                log.info("Detected HTML content — using direct HTML-to-Word conversion");
+                convertHtmlToWord(content, document);
             } else {
-                log.info("Content has markdown title, skipping title injection");
+                // Markdown content — use existing pipeline
+                if (!contentHasMarkdownTitle(content)) {
+                    XWPFParagraph titlePara = document.createParagraph();
+                    titlePara.setAlignment(ParagraphAlignment.CENTER);
+                    titlePara.setSpacingAfter(400);
+                    XWPFRun titleRun = titlePara.createRun();
+                    titleRun.setText(title);
+                    titleRun.setBold(true);
+                    titleRun.setFontSize(18);
+                    titleRun.setFontFamily("Georgia");
+                }
+                convertMarkdownToWord(content, document);
             }
-
-            // Convert Markdown content to Word
-            convertMarkdownToWord(content, document);
 
             // Convert to byte array
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -2411,6 +3726,18 @@ public class AiWorkspaceDocumentService {
      */
     private byte[] generateStyledHtmlPdf(String htmlContent, String title) {
         try {
+            // Extract footer from HTML — it will be drawn at absolute page bottom via PdfCanvas
+            String footerText = null;
+            int fStart = htmlContent.indexOf("<!--STATIONERY_FOOTER_START-->");
+            int fEnd = htmlContent.indexOf("<!--STATIONERY_FOOTER_END-->");
+            if (fStart != -1 && fEnd != -1) {
+                String footerBlock = htmlContent.substring(fStart, fEnd + "<!--STATIONERY_FOOTER_END-->".length());
+                footerText = footerBlock.replaceAll("<[^>]+>", "").replaceAll("<!--[^>]+-->", "")
+                    .replace("&middot;", "\u00B7").replace("&nbsp;", " ").replace("&amp;", "&").trim();
+                htmlContent = htmlContent.replace(footerBlock, "");
+            }
+            boolean hasFooter = footerText != null && !footerText.isBlank();
+
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfWriter writer = new PdfWriter(baos);
             PdfDocument pdfDoc = new PdfDocument(writer);
@@ -2419,16 +3746,26 @@ public class AiWorkspaceDocumentService {
             // Add page numbers
             addPageNumberHandler(pdfDoc);
 
+            // Preprocess: wrap heading+content groups in keep-together divs for page breaks
+            htmlContent = wrapSectionsForPageBreaks(htmlContent);
+
             // Build a complete HTML document with embedded CSS matching the frontend
-            String styledHtml = buildStyledHtmlDocument(htmlContent, title);
+            String styledHtml = buildStyledHtmlDocument(htmlContent, title, hasFooter);
 
             // Use iText HtmlConverter to render the styled HTML → PDF
             java.io.ByteArrayInputStream htmlStream = new java.io.ByteArrayInputStream(
                 styledHtml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             HtmlConverter.convertToPdf(htmlStream, pdfDoc, new ConverterProperties());
 
-            log.info("Successfully generated styled HTML PDF ({} bytes)", baos.size());
-            return baos.toByteArray();
+            byte[] pdfBytes = baos.toByteArray();
+            log.info("Successfully generated styled HTML PDF ({} bytes)", pdfBytes.length);
+
+            // Draw footer at absolute bottom of last page using PdfCanvas
+            if (hasFooter) {
+                pdfBytes = addFooterToLastPage(pdfBytes, footerText);
+            }
+
+            return pdfBytes;
 
         } catch (Exception e) {
             log.error("Error generating styled HTML PDF, falling back to markdown pipeline", e);
@@ -2441,30 +3778,126 @@ public class AiWorkspaceDocumentService {
      * Build a complete HTML document with CSS that matches the frontend preview styling.
      */
     private String buildStyledHtmlDocument(String bodyHtml, String title) {
+        return buildStyledHtmlDocument(bodyHtml, title, false);
+    }
+
+    private String buildStyledHtmlDocument(String bodyHtml, String title, boolean hasFooter) {
+        // Extra bottom padding when footer will be drawn at page bottom via PdfCanvas
+        String bottomPadding = hasFooter ? "96px" : "64px";
         return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/>"
              + "<style>"
-             + "body { font-family: Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.8; "
-             + "color: #343a40; margin: 0; padding: 56px 64px; }"
-             + "h1 { font-size: 22px; font-weight: 700; margin: 8px 0 6px; color: #212529; }"
-             + "h2 { font-size: 17px; font-weight: 600; margin: 28px 0 10px; color: #343a40; }"
-             + "h3 { font-size: 14px; font-weight: 600; margin: 18px 0 6px; color: #495057; }"
-             + "h4 { font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: #343a40; }"
-             + "p { margin: 0 0 10px; }"
-             + "ul, ol { margin: 8px 0 16px; padding-left: 32px; }"
-             + "li { margin-bottom: 8px; }"
-             + "blockquote { border-left: 3px solid #405189; margin: 16px 0 16px 24px; "
-             + "padding: 12px 20px; color: #6c757d; font-style: italic; }"
-             + "table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }"
-             + "th, td { border: 1px solid #dee2e6; padding: 8px 12px; text-align: left; }"
-             + "th { background: #f8f9fa; font-weight: 600; }"
-             + "hr { border: none; border-top: 1px solid #dee2e6; margin: 24px 0; }"
-             + "strong { font-weight: 700; }"
+             // Body: professional legal document styling — serif font, 12pt
+             + "body { font-family: 'Times New Roman', Georgia, serif; "
+             + "font-size: 12pt; line-height: 1.6; color: #212529; margin: 0; padding: 36px 64px " + bottomPadding + " 64px; }"
+             // Headings: subtle, legal-appropriate sizes
+             + "h1 { font-size: 16pt; font-weight: 700; margin: 20px 0 10px; color: #212529; line-height: 1.3; }"
+             + "h2 { font-size: 14pt; font-weight: 600; margin: 18px 0 8px; color: #212529; line-height: 1.3; }"
+             + "h3 { font-size: 13pt; font-weight: 600; margin: 16px 0 8px; color: #212529; line-height: 1.3; }"
+             + "h4 { font-size: 12pt; font-weight: 600; margin: 14px 0 6px; color: #212529; line-height: 1.3; }"
+             // Paragraphs
+             + "p { margin: 0 0 12px; }"
+             // Tables: dark header matching CKEditor preview, clean body rows
+             + "table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 11pt; }"
+             + "th, td { border: 1px solid #dee2e6; padding: 10px 12px; text-align: left; vertical-align: top; }"
+             + "th { background-color: #2d2d2d; font-weight: 700; color: #ffffff; text-transform: uppercase; }"
+             + "tr:nth-child(even) td { background-color: #ffffff; }"
+             // Lists: proper indentation matching CKEditor
+             + "ul, ol { margin: 8px 0 12px 0; padding-left: 24px; }"
+             + "li { margin-bottom: 6px; line-height: 1.5; }"
+             // Blockquote
+             + "blockquote { border-left: 4px solid #dee2e6; margin: 16px 0; "
+             + "padding: 12px 20px; color: #6c757d; background: #f8f9fa; }"
+             // Inline formatting
+             + "strong { font-weight: 600; }"
+             + "em { font-style: italic; }"
              + "a { color: #405189; text-decoration: underline; }"
+             // Horizontal rule
+             + "hr { border: none; border-top: 1px solid #dee2e6; margin: 24px 0; }"
+             // CKEditor figure/table wrapper
+             + "figure.table { margin: 16px 0; display: block; }"
              + "figure { margin: 16px 0; }"
+             // Legal document specific
+             + ".exhibit-ref { color: #405189; text-decoration: underline; text-decoration-style: dotted; }"
+             // Stationery frames: borderless tables, serif font (must match CKEditor frame CSS)
+             + ".stationery-letterhead table, .stationery-signature table, .stationery-footer table "
+             + "{ border: none !important; border-collapse: collapse !important; margin: 0; }"
+             + ".stationery-letterhead td, .stationery-letterhead th, "
+             + ".stationery-signature td, .stationery-signature th, "
+             + ".stationery-footer td, .stationery-footer th "
+             + "{ border: none !important; padding: 2px 4px; background: none !important; }"
+             + ".stationery-letterhead img, .stationery-signature img, .stationery-footer img "
+             + "{ max-width: 100%; height: auto; }"
+             + ".stationery-letterhead { margin-bottom: 72pt; padding-bottom: 2px; }" // 1 inch — US legal convention
+             + ".stationery-letterhead p, .stationery-letterhead td, .stationery-letterhead span, "
+             + ".stationery-letterhead div, .stationery-letterhead th "
+             + "{ font-family: 'Times New Roman', Georgia, serif !important; }"
+             // Signature: body-matching font size, color, and line-height
+             + ".stationery-signature p, .stationery-signature span, .stationery-signature div "
+             + "{ font-size: 12pt !important; font-family: 'Times New Roman', Georgia, serif !important; "
+             + "color: #212529 !important; line-height: 1.6 !important; }"
+             // Footer: professional dark text, readable font size, matching serif font
+             + ".stationery-footer { text-align: center !important; }"
+             + ".stationery-footer p, .stationery-footer td, .stationery-footer span, "
+             + ".stationery-footer div, .stationery-footer th "
+             + "{ font-family: 'Times New Roman', Georgia, serif !important; "
+             + "font-size: 9pt !important; color: #333333 !important; "
+             + "text-align: center !important; }"
+             // Page-break rules: keep headings with their following content
+             + "h1, h2, h3, h4, h5, h6 { page-break-after: avoid; }"
+             + "p { orphans: 3; widows: 3; }"
+             + "table { page-break-inside: avoid; }" // iText treats as hint — oversized tables will still break
+             + "ul, ol { page-break-inside: avoid; }"
+             + "li { page-break-inside: avoid; }"
+             + "blockquote { page-break-inside: avoid; }"
              + "</style>"
              + "</head><body>"
              + bodyHtml
              + "</body></html>";
+    }
+
+    /**
+     * Preprocess HTML to prevent page-break orphans.
+     * Wraps each heading + its first following block element in a keep-together div.
+     * iText html2pdf reliably respects page-break-inside:avoid on container divs,
+     * whereas page-break-after:avoid on individual heading elements is only a weak hint.
+     * Also injects inline page-break-after:avoid on each heading as a belt-and-suspenders approach.
+     *
+     * Note: three layers of defense exist (CSS stylesheet, wrapper divs, inline styles)
+     * because iText's paged-media CSS support is inconsistent — do not remove any layer.
+     */
+    private static final java.util.regex.Pattern HEADING_BLOCK_PAIR = java.util.regex.Pattern.compile(
+        "(<h[1-6][^>]*>.*?</h[1-6]>)(\\s*)(<(p|ul|ol|table|figure|blockquote)[^>]*>.*?</\\4>)",
+        java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL
+    );
+    private static final java.util.regex.Pattern HEADING_WITH_STYLE = java.util.regex.Pattern.compile(
+        "(<h[1-6]\\b[^>]*?)style=\"([^\"]*?)\"", java.util.regex.Pattern.CASE_INSENSITIVE
+    );
+    private static final java.util.regex.Pattern HEADING_WITHOUT_STYLE = java.util.regex.Pattern.compile(
+        "<(h[1-6])\\b(?![^>]*style=)([^>]*)>", java.util.regex.Pattern.CASE_INSENSITIVE
+    );
+
+    private String wrapSectionsForPageBreaks(String html) {
+        if (html == null || html.isBlank()) return html;
+
+        // Step 1: Wrap each heading + first following block element in a keep-together div.
+        // Uses backreference \4 so the closing tag matches the opening tag name.
+        // Covers heading+paragraph, heading+table, heading+list, heading+blockquote, heading+figure.
+        html = HEADING_BLOCK_PAIR.matcher(html).replaceAll(
+            "<div style=\"page-break-inside:avoid;\">$1$2$3</div>"
+        );
+
+        // Step 2: Inject inline page-break-after:avoid on headings (iText respects inline styles more reliably).
+        // Headings WITH an existing style attribute — append to it (skip if already present)
+        html = HEADING_WITH_STYLE.matcher(html).replaceAll(m -> {
+            if (m.group(2).contains("page-break-after")) return m.group(0); // already has it
+            return m.group(1) + "style=\"" + m.group(2) + ";page-break-after:avoid\"";
+        });
+        // Headings WITHOUT a style attribute — add one
+        html = HEADING_WITHOUT_STYLE.matcher(html).replaceAll(
+            "<$1 style=\"page-break-after:avoid\"$2>"
+        );
+
+        return html;
     }
 
     /**
@@ -2614,15 +4047,15 @@ public class AiWorkspaceDocumentService {
                     marginTop = 0;
                     marginBottom = 10;
                 } else if (level == 1) {
-                    fontSize = 12;
+                    fontSize = 14;
                     marginTop = 20;
                     marginBottom = 8;
                 } else if (level == 2) {
-                    fontSize = 11;
+                    fontSize = 13;
                     marginTop = 14;
                     marginBottom = 6;
                 } else {
-                    fontSize = 10;
+                    fontSize = 12;
                     marginTop = 8;
                     marginBottom = 4;
                 }
@@ -2645,7 +4078,7 @@ public class AiWorkspaceDocumentService {
                 String itemText = trimmed.replaceFirst("^\\d+\\.\\s+", "");
                 Paragraph para = new Paragraph(processInlineFormatting(itemText))
                         .setFont(normalFont)
-                        .setFontSize(11)
+                        .setFontSize(12)
                         .setMultipliedLeading(1.4f)
                         .setMarginLeft(20)
                         .setMarginBottom(3);
@@ -2658,7 +4091,7 @@ public class AiWorkspaceDocumentService {
                 String itemText = trimmed.substring(2).trim();
                 Paragraph para = new Paragraph("\u2022 " + processInlineFormatting(itemText))
                         .setFont(normalFont)
-                        .setFontSize(11)
+                        .setFontSize(12)
                         .setMultipliedLeading(1.4f)
                         .setMarginLeft(20)
                         .setMarginBottom(3);
@@ -2693,13 +4126,14 @@ public class AiWorkspaceDocumentService {
         table.setMarginTop(10);
         table.setMarginBottom(10);
 
-        // Add header row
+        // Add header row — dark background matching CKEditor preview
         for (String cell : headerCells) {
             Cell headerCell = new Cell()
-                    .add(new Paragraph(processInlineFormatting(cell.trim()))
+                    .add(new Paragraph(processInlineFormatting(cell.trim()).toUpperCase())
                             .setFont(headerFont)
-                            .setFontSize(10))
-                    .setBackgroundColor(new DeviceRgb(240, 240, 240))
+                            .setFontSize(11)
+                            .setFontColor(new DeviceRgb(255, 255, 255)))
+                    .setBackgroundColor(new DeviceRgb(45, 45, 45))
                     .setPadding(5);
             table.addHeaderCell(headerCell);
         }
@@ -2712,7 +4146,7 @@ public class AiWorkspaceDocumentService {
                 Cell dataCell = new Cell()
                         .add(new Paragraph(processInlineFormatting(cellText))
                                 .setFont(normalFont)
-                                .setFontSize(10))
+                                .setFontSize(11))
                         .setPadding(5);
                 table.addCell(dataCell);
             }
@@ -2741,7 +4175,7 @@ public class AiWorkspaceDocumentService {
 
         Paragraph para = new Paragraph()
                 .setFont(normalFont)
-                .setFontSize(11)
+                .setFontSize(12)
                 .setMultipliedLeading(1.4f)
                 .setMarginBottom(6)
                 .setTextAlignment(TextAlignment.JUSTIFIED);
@@ -2808,11 +4242,13 @@ public class AiWorkspaceDocumentService {
                     PdfFont font = PdfFontFactory.createFont(StandardFonts.HELVETICA);
                     PdfCanvas canvas = new PdfCanvas(page);
                     String pageText = String.valueOf(pageNumber);
-                    float textWidth = font.getWidth(pageText, 9);
+                    float textWidth = font.getWidth(pageText, 10);
 
-                    canvas.beginText()
-                            .setFontAndSize(font, 9)
-                            .moveText((pageSize.getWidth() - textWidth) / 2, 36)
+                    // Subtle gray page number, centered at bottom
+                    canvas.setFillColor(new DeviceRgb(150, 150, 150))
+                            .beginText()
+                            .setFontAndSize(font, 10)
+                            .moveText((pageSize.getWidth() - textWidth) / 2, 32)
                             .showText(pageText)
                             .endText();
                     canvas.release();
@@ -2821,6 +4257,59 @@ public class AiWorkspaceDocumentService {
                 }
             }
         });
+    }
+
+    /**
+     * Draw footer text at the absolute bottom of the last page using PdfCanvas.
+     * iText's HtmlConverter doesn't support CSS positioning, so we post-process
+     * the PDF to place the footer precisely — above the page number, below the body.
+     */
+    private byte[] addFooterToLastPage(byte[] pdfBytes, String footerText) {
+        try {
+            java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(pdfBytes);
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            PdfReader reader = new PdfReader(bais);
+            PdfWriter writer = new PdfWriter(result);
+            PdfDocument pdfDoc = new PdfDocument(reader, writer);
+
+            PdfPage lastPage = pdfDoc.getPage(pdfDoc.getNumberOfPages());
+            Rectangle pageSize = lastPage.getPageSize();
+
+            PdfFont font = PdfFontFactory.createFont(StandardFonts.TIMES_ROMAN);
+            PdfCanvas canvas = new PdfCanvas(lastPage);
+
+            // Draw separator line (matching body left/right padding: x=64 to x=pageWidth-64)
+            float lineY = 62;
+            canvas.setStrokeColor(new DeviceRgb(200, 200, 200))
+                  .setLineWidth(0.5f)
+                  .moveTo(64, lineY)
+                  .lineTo(pageSize.getWidth() - 64, lineY)
+                  .stroke();
+
+            // Draw footer text centered at y=48, font: Times Roman 8pt, color: #555555
+            float fontSize = 8;
+            float textWidth = font.getWidth(footerText, fontSize);
+            float textX = (pageSize.getWidth() - textWidth) / 2;
+            // Clamp to left margin if footer text is very wide
+            if (textX < 64) textX = 64;
+
+            canvas.setFillColor(new DeviceRgb(0x55, 0x55, 0x55))
+                  .beginText()
+                  .setFontAndSize(font, fontSize)
+                  .moveText(textX, 48)
+                  .showText(footerText)
+                  .endText();
+
+            canvas.release();
+            pdfDoc.close();
+
+            log.info("Added footer to last page of PDF");
+            return result.toByteArray();
+
+        } catch (Exception e) {
+            log.error("Error adding footer to last page, returning PDF without footer", e);
+            return pdfBytes;
+        }
     }
 
     // ========================================
@@ -3405,10 +4894,10 @@ public class AiWorkspaceDocumentService {
      * Enhance a rough user prompt into a detailed, structured legal document prompt.
      * Stateless — no DB writes. Just calls Claude with a prompt-engineering system message.
      */
-    public String enhancePrompt(String roughPrompt, String documentType, String jurisdiction) {
+    public String enhancePrompt(String roughPrompt, String documentType, String jurisdiction, Long caseId) {
         getRequiredOrganizationId(); // tenant guard
 
-        String systemMessage = buildPromptEnhancerSystemMessage(documentType, jurisdiction);
+        String systemMessage = buildPromptEnhancerSystemMessage(documentType, jurisdiction, caseId);
         String userMessage = "Transform this rough idea into a detailed, structured prompt for generating a legal document:\n\n" + roughPrompt;
 
         CompletableFuture<String> result = aiRequestRouter.routeSimple(
@@ -3421,7 +4910,7 @@ public class AiWorkspaceDocumentService {
      * Build system message for the prompt enhancer.
      * Instructs Claude to refine a rough idea into a structured prompt — NOT to generate the document itself.
      */
-    private String buildPromptEnhancerSystemMessage(String documentType, String jurisdiction) {
+    private String buildPromptEnhancerSystemMessage(String documentType, String jurisdiction, Long caseId) {
         StringBuilder sb = new StringBuilder();
 
         sb.append("You are an expert legal document specialist helping attorneys structure their document generation requests.\n\n");
@@ -3429,13 +4918,35 @@ public class AiWorkspaceDocumentService {
         sb.append("YOUR TASK: Transform the attorney's rough idea into a detailed, well-structured prompt that will produce a high-quality legal document. ");
         sb.append("You are NOT generating the document itself — you are crafting the perfect instruction for another AI to generate it.\n\n");
 
-        sb.append("OUTPUT RULES:\n");
-        sb.append("- Output ONLY the enhanced prompt text, no preamble or explanation\n");
-        sb.append("- Use [PLACEHOLDER] format for names, dates, amounts, and case-specific details (e.g., [Client Name], [Opposing Party], [Date of Incident])\n");
-        sb.append("- Keep under 400 words\n");
-        sb.append("- Be specific and actionable\n");
-        sb.append("- Include relevant legal elements specific to the document type\n");
-        sb.append("- Structure the prompt so it reads as a clear instruction\n\n");
+        // If case data is available, inject it and tell AI to use real values
+        String caseData = null;
+        if (caseId != null) {
+            try {
+                caseData = buildFullCaseData(caseId);
+            } catch (Exception e) {
+                log.debug("Could not fetch case data for prompt enhancement: {}", e.getMessage());
+            }
+        }
+
+        if (caseData != null && !caseData.isEmpty()) {
+            sb.append("OUTPUT RULES:\n");
+            sb.append("- Output ONLY the enhanced prompt text, no preamble or explanation\n");
+            sb.append("- Use REAL VALUES from the case data below — actual names, dates, insurance companies, claim numbers\n");
+            sb.append("- Do NOT use generic [PLACEHOLDER] for values that exist in the case data\n");
+            sb.append("- Keep under 400 words\n");
+            sb.append("- Be specific and actionable\n");
+            sb.append("- Include relevant legal elements specific to the document type\n");
+            sb.append("- Structure the prompt so it reads as a clear instruction\n\n");
+            sb.append(caseData).append("\n");
+        } else {
+            sb.append("OUTPUT RULES:\n");
+            sb.append("- Output ONLY the enhanced prompt text, no preamble or explanation\n");
+            sb.append("- Use [PLACEHOLDER] format for names, dates, amounts, and case-specific details (e.g., [Client Name], [Opposing Party], [Date of Incident])\n");
+            sb.append("- Keep under 400 words\n");
+            sb.append("- Be specific and actionable\n");
+            sb.append("- Include relevant legal elements specific to the document type\n");
+            sb.append("- Structure the prompt so it reads as a clear instruction\n\n");
+        }
 
         if (jurisdiction != null && !jurisdiction.isEmpty()) {
             sb.append("JURISDICTION: ").append(jurisdiction).append("\n");
@@ -3451,36 +4962,8 @@ public class AiWorkspaceDocumentService {
         return sb.toString();
     }
 
-    /**
-     * Returns document-type-specific hints for the prompt enhancer.
-     */
     private String getDocumentTypeHints(String documentType) {
-        String type = documentType.toLowerCase().replaceAll("[^a-z]", "");
-
-        return switch (type) {
-            case "nda", "nondisclosureagreement" ->
-                "Key elements to address: mutual vs one-way, definition of confidential information, term/duration, exclusions from confidentiality, permitted disclosures, remedies for breach, return/destruction of materials.";
-            case "motion", "motiontodismiss", "motionfordefaultjudgment", "motionforsummaryjudgment", "motiontocompel", "motioninsupportof" ->
-                "Key elements to address: relief sought, legal standard, factual basis, supporting authorities, procedural history, argument structure.";
-            case "demandletter" ->
-                "Key elements to address: liability theory, factual narrative, damages breakdown (medical, lost wages, pain/suffering), settlement demand amount, response deadline.";
-            case "contract", "serviceagreement", "employmentagreement" ->
-                "Key elements to address: parties and roles, scope of services/obligations, payment terms, term and termination, representations and warranties, indemnification, dispute resolution.";
-            case "complaint" ->
-                "Key elements to address: parties, jurisdiction and venue, factual allegations, causes of action, damages sought, prayer for relief.";
-            case "brief", "legalmemorandum", "memo" ->
-                "Key elements to address: question presented, short answer, statement of facts, argument with authorities, conclusion.";
-            case "interrogatories" ->
-                "Key elements to address: number of interrogatories, topics to cover (liability, damages, witnesses, insurance), instructions and definitions.";
-            case "discovery", "requestforproduction" ->
-                "Key elements to address: categories of documents, time period, relevant custodians, format specifications.";
-            case "settlement", "settlementagreement" ->
-                "Key elements to address: settlement amount, payment terms, release scope, confidentiality, dismissal with prejudice.";
-            case "lease", "leasereview" ->
-                "Key elements to address: premises description, term, rent and escalation, maintenance responsibilities, permitted use, default provisions.";
-            default ->
-                "Include all standard legal elements appropriate for this document type. Address parties, key terms, obligations, and any jurisdiction-specific requirements.";
-        };
+        return templateRegistry.getHints(documentType);
     }
 
     /**
@@ -3497,5 +4980,19 @@ public class AiWorkspaceDocumentService {
                 {"find":"[ATTORNEY NAME]","replace":"Sarah J. Thompson, Esq."}
             ]}
             """;
+    }
+
+    /**
+     * Update stationery association on a document.
+     * Pass null for both IDs to clear stationery.
+     */
+    @Transactional
+    public void updateDocumentStationery(Long documentId, Long userId, Long stationeryTemplateId, Long stationeryAttorneyId) {
+        Long orgId = getRequiredOrganizationId();
+        AiWorkspaceDocument document = documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, orgId)
+                .orElseThrow(() -> new RuntimeException("Document not found or access denied"));
+        document.setStationeryTemplateId(stationeryTemplateId);
+        document.setStationeryAttorneyId(stationeryAttorneyId);
+        documentRepository.save(document);
     }
 }

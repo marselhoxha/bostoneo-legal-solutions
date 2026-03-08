@@ -1,0 +1,9 @@
+{
+  "type": "legal_memo",
+  "aliases": ["legal_memorandum", "memo", "brief"],
+  "displayName": "Legal Memorandum/Brief",
+  "category": "pleading",
+  "citationLevel": "COMPREHENSIVE",
+  "template": "**DOCUMENT FORMAT — LEGAL MEMORANDUM/BRIEF**:\nFormal legal analysis document. Structured analytical format.\n\nSTRUCTURE:\n1. HEADING: \"MEMORANDUM OF LAW\" or \"LEGAL MEMORANDUM\"\n2. TO/FROM/DATE/RE block (if internal memo)\n3. QUESTION(S) PRESENTED: Precise legal question(s) to be analyzed\n4. SHORT ANSWER: 1-2 paragraph summary of conclusions\n5. STATEMENT OF FACTS: Objective factual narrative, relevant to the legal questions\n6. DISCUSSION/ARGUMENT:\n   - Organize by issue with clear headings (I, II, III or A, B, C)\n   - State the legal rule, cite authority\n   - Apply facts to law\n   - Address counterarguments\n7. CONCLUSION: Restate answers to questions presented with recommended course of action\n\nTONE: Objective and analytical (memo) or persuasive (brief).\nCITATIONS: Include relevant statutes and case law with proper citation format.",
+  "hints": "Key elements to address: question presented, short answer, statement of facts, argument with authorities, conclusion."
+}

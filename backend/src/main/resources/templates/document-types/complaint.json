@@ -1,0 +1,9 @@
+{
+  "type": "complaint",
+  "aliases": [],
+  "displayName": "Complaint",
+  "category": "pleading",
+  "citationLevel": "COMPREHENSIVE",
+  "template": "**DOCUMENT FORMAT — COMPLAINT**:\nFormal pleading initiating a lawsuit. Use proper legal formatting.\n\nSTRUCTURE:\n1. COURT CAPTION: Court name, parties, \"COMPLAINT AND DEMAND FOR JURY TRIAL\" (if applicable)\n2. PARTIES: Identify plaintiff(s) and defendant(s) with addresses and relationships\n3. JURISDICTION AND VENUE: Basis for court jurisdiction and venue\n4. FACTUAL ALLEGATIONS: Numbered paragraphs with factual basis\n5. CAUSES OF ACTION: Each count as a separate section (Count I, Count II, etc.)\n   - Incorporate prior paragraphs by reference\n   - State legal elements and how facts satisfy each element\n6. DAMAGES: Specify types and amounts of damages sought\n7. PRAYER FOR RELIEF: \"WHEREFORE, Plaintiff respectfully requests...\"\n8. JURY DEMAND (if applicable)\n9. RESPECTFULLY SUBMITTED + attorney signature block (unless stationery handles it)\n\nNumber all factual paragraphs sequentially. Use formal pleading tone.",
+  "hints": "Key elements to address: parties, jurisdiction and venue, factual allegations, causes of action, damages sought, prayer for relief."
+}

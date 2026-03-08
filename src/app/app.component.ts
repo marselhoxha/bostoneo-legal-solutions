@@ -91,7 +91,7 @@ export class AppComponent implements OnInit, OnDestroy {
         }
         if (route!.snapshot.data['title']) {
           routeTitle = route!.snapshot.data['title'];
-          this.titleService.setTitle(`${routeTitle} | Bostoneo Solutions`);
+          this.titleService.setTitle(`${routeTitle} | Legience`);
         }
       });
 

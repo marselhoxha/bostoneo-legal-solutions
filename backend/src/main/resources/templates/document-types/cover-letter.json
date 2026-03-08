@@ -1,0 +1,9 @@
+{
+  "type": "cover_letter",
+  "aliases": [],
+  "displayName": "Cover Letter",
+  "category": "letter",
+  "citationLevel": "MINIMAL",
+  "template": "**DOCUMENT FORMAT — COVER LETTER**:\nBrief transmittal letter (half page to 1 page).\nDO NOT use section headers or tables.\n\nSTRUCTURE:\n1. Date and recipient\n2. \"Re:\" line\n3. \"Dear [Name]:\"\n4. 1-2 paragraphs: State what is enclosed/attached and any required actions\n5. \"Very truly yours,\"",
+  "hints": "Key elements to address: what is enclosed/attached, any required actions or deadlines, brief and professional."
+}

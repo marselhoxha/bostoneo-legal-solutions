@@ -20,41 +20,18 @@ export class CaseDocumentsService {
       return throwError(() => new Error('Case ID is required'));
     }
 
-    // Use the direct document service endpoint that doesn't apply role filtering
-    const url = `${environment.apiUrl}/legal/documents/case/${caseId}`;
+    // Case files live in file_items table, served by the file-manager endpoint
+    const url = `${environment.apiUrl}/api/file-manager/cases/${caseId}/files`;
     const headers = this.getAuthHeaders(false);
 
-    return this.http.get<any>(url, { headers }).pipe(
+    return this.http.get<any[]>(url, { headers }).pipe(
       map(response => {
-        // Handle the actual backend response structure
-        if (!response) {
-          return [];
-        }
-
-        if (Array.isArray(response)) {
-          return response;
-        }
-
-        if (response.documents && Array.isArray(response.documents)) {
-          return response.documents;
-        }
-
-        if (response.data && response.data.documents && Array.isArray(response.data.documents)) {
-          return response.data.documents;
-        }
-
-        if (response.data && Array.isArray(response.data)) {
-          return response.data;
-        }
-
-        if (response.data) {
-          return response.data;
-        }
-
-        return response;
+        if (!response) return [];
+        // Endpoint returns List<FileItemDTO> directly (no wrapper)
+        return Array.isArray(response) ? response : [];
       }),
       catchError(error => {
-        console.error('Error fetching documents:', error);
+        console.error('Error fetching case documents:', error);
         return throwError(() => error);
       })
     );

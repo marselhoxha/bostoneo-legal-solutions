@@ -40,6 +40,8 @@ export interface GeneratedDocument {
   wordCount?: number;
   pageCount?: number;
   version?: number;
+  stationeryTemplateId?: number | null;
+  stationeryAttorneyId?: number | null;
 }
 
 export interface DocumentRevisionRequest {
@@ -101,6 +103,7 @@ export interface PromptEnhanceRequest {
   prompt: string;
   documentType?: string;
   jurisdiction?: string;
+  caseId?: number | null;
 }
 
 export interface PromptEnhanceResponse {
@@ -588,6 +591,16 @@ export class DocumentGenerationService {
   }
 
   /**
+   * Update stationery association on a document (template + attorney IDs)
+   */
+  updateDocumentStationery(documentId: number, stationeryTemplateId: number | null, stationeryAttorneyId: number | null): Observable<any> {
+    return this.http.patch(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/stationery`,
+      { stationeryTemplateId, stationeryAttorneyId }
+    );
+  }
+
+  /**
    * Generate Word document from HTML content using docx.js
    * This provides proper formatting support (bold, italic, headings, tables, lists)
    * Returns a Promise that resolves when the download is complete
@@ -597,8 +610,23 @@ export class DocumentGenerationService {
       throw new Error('No content to export');
     }
 
+    // Extract stationery footer from comment markers before parsing
+    let footerText: string | null = null;
+    let processedHtml = html;
+    const fStartMarker = '<!--STATIONERY_FOOTER_START-->';
+    const fEndMarker = '<!--STATIONERY_FOOTER_END-->';
+    const fStart = html.indexOf(fStartMarker);
+    const fEnd = html.indexOf(fEndMarker);
+    if (fStart !== -1 && fEnd !== -1) {
+      const footerBlock = html.substring(fStart, fEnd + fEndMarker.length);
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = footerBlock;
+      footerText = tempDiv.textContent?.trim() || null;
+      processedHtml = html.replace(footerBlock, '');
+    }
+
     const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
+    const doc = parser.parseFromString(processedHtml, 'text/html');
     const docElements: (Paragraph | Table)[] = [];
 
     // Add title as heading
@@ -614,6 +642,20 @@ export class DocumentGenerationService {
 
     // Process all child nodes of body with table row collection
     this.processHtmlNodesWithTableDetection(doc.body.childNodes, docElements);
+
+    // Append stationery footer at document end with separator
+    if (footerText) {
+      docElements.push(new Paragraph({ children: [], spacing: { before: 600 } }));
+      docElements.push(new Paragraph({
+        children: [],
+        border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' } }
+      }));
+      docElements.push(new Paragraph({
+        children: [new TextRun({ text: footerText, size: 16, color: '555555', font: 'Times New Roman' })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 100 }
+      }));
+    }
 
     // Create the Word document
     const wordDoc = new Document({
@@ -782,10 +824,12 @@ export class DocumentGenerationService {
         break;
       case 'hr':
         elements.push(new Paragraph({
-          children: [new TextRun({ text: '─'.repeat(50) })],
+          children: [],
+          border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CCCCCC' } },
           spacing: { before: 200, after: 200 }
         }));
         break;
+      case 'figure':
       case 'div':
       case 'section':
       case 'article':
@@ -988,10 +1032,12 @@ export class DocumentGenerationService {
             break;
           case 'hr':
             elements.push(new Paragraph({
-              children: [new TextRun({ text: '─'.repeat(50) })],
+              children: [],
+              border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CCCCCC' } },
               spacing: { before: 200, after: 200 }
             }));
             break;
+          case 'figure':
           case 'div':
           case 'section':
           case 'article':
@@ -1052,6 +1098,86 @@ export class DocumentGenerationService {
   }
 
   /**
+   * Extract multiple Paragraphs from a table cell, preserving line breaks between block elements.
+   * Each <p>, <div>, or <br> inside the cell becomes its own Paragraph.
+   */
+  private extractCellParagraphs(cell: Element, isHeader: boolean): Paragraph[] {
+    const paragraphs: Paragraph[] = [];
+    const blockTags = new Set(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li']);
+
+    // Check if cell has block-level children
+    const hasBlockChildren = Array.from(cell.children).some(
+      child => blockTags.has(child.tagName.toLowerCase())
+    );
+
+    if (!hasBlockChildren) {
+      // No block children — single paragraph with all text runs
+      const runs = this.extractTextRuns(cell);
+      if (isHeader) {
+        return [new Paragraph({
+          children: runs.length > 0 ? runs.map(r => new TextRun({
+            text: (r as any).text || '',
+            bold: true,
+            italics: (r as any).italics,
+            underline: (r as any).underline
+          })) : [new TextRun({ text: cell.textContent || '', bold: true })]
+        })];
+      }
+      return [new Paragraph({ children: runs.length > 0 ? runs : [new TextRun(cell.textContent || '')] })];
+    }
+
+    // Process each child node — block elements become separate paragraphs
+    cell.childNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent?.trim();
+        if (text) {
+          paragraphs.push(new Paragraph({
+            children: [new TextRun({ text, bold: isHeader })]
+          }));
+        }
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as Element;
+        const tag = el.tagName.toLowerCase();
+
+        if (tag === 'br') {
+          paragraphs.push(new Paragraph({ children: [new TextRun('')] }));
+        } else if (blockTags.has(tag)) {
+          const runs = this.extractTextRuns(el);
+          if (isHeader && runs.length > 0) {
+            paragraphs.push(new Paragraph({
+              children: runs.map(r => new TextRun({
+                text: (r as any).text || '',
+                bold: true,
+                italics: (r as any).italics,
+                underline: (r as any).underline
+              }))
+            }));
+          } else {
+            paragraphs.push(new Paragraph({
+              children: runs.length > 0 ? runs : [new TextRun(el.textContent || '')]
+            }));
+          }
+        } else {
+          // Inline element — extract runs
+          const runs = this.extractTextRuns(el);
+          if (runs.length > 0) {
+            paragraphs.push(new Paragraph({
+              children: isHeader ? runs.map(r => new TextRun({
+                text: (r as any).text || '',
+                bold: true,
+                italics: (r as any).italics,
+                underline: (r as any).underline
+              })) : runs
+            }));
+          }
+        }
+      }
+    });
+
+    return paragraphs;
+  }
+
+  /**
    * Process list items (ul/ol)
    */
   private processListItems(listElement: Element, elements: (Paragraph | Table)[], isOrdered: boolean): void {
@@ -1101,22 +1227,11 @@ export class DocumentGenerationService {
 
       cells.forEach(cell => {
         const isHeader = cell.tagName.toLowerCase() === 'th' || rowIndex === 0;
-        const textRuns = this.extractTextRuns(cell);
-
-        // Make header cells bold
-        if (isHeader && textRuns.length > 0) {
-          textRuns.forEach(run => {
-            const index = textRuns.indexOf(run);
-            textRuns[index] = new TextRun({
-              text: (run as any).text || cell.textContent || '',
-              bold: true
-            });
-          });
-        }
+        const cellParagraphs = this.extractCellParagraphs(cell, isHeader);
 
         tableCells.push(
           new TableCell({
-            children: [new Paragraph({ children: textRuns.length > 0 ? textRuns : [new TextRun(cell.textContent || '')] })],
+            children: cellParagraphs.length > 0 ? cellParagraphs : [new Paragraph({ children: [new TextRun('')] })],
             shading: isHeader ? { fill: 'E8E8E8' } : undefined
           })
         );

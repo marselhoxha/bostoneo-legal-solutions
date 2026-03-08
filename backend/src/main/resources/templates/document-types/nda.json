@@ -1,0 +1,9 @@
+{
+  "type": "nda",
+  "aliases": ["non_disclosure_agreement", "confidentiality_agreement"],
+  "displayName": "Non-Disclosure Agreement",
+  "category": "contract",
+  "citationLevel": "NONE",
+  "template": "**DOCUMENT FORMAT — NON-DISCLOSURE AGREEMENT**:\nFormal contract protecting confidential information.\n\nSTRUCTURE:\n1. TITLE: \"NON-DISCLOSURE AGREEMENT\" or \"CONFIDENTIALITY AGREEMENT\"\n2. PREAMBLE: Date, parties with addresses, recitals (\"WHEREAS...\")\n3. Section 1 — DEFINITIONS: Define \"Confidential Information\", \"Disclosing Party\", \"Receiving Party\"\n4. Section 2 — OBLIGATIONS: Non-disclosure, non-use, standard of care\n5. Section 3 — EXCLUSIONS: Public knowledge, prior possession, independent development, compelled disclosure\n6. Section 4 — TERM: Duration of obligations (typically 2-5 years)\n7. Section 5 — RETURN/DESTRUCTION: Return or destroy confidential materials upon termination\n8. Section 6 — REMEDIES: Injunctive relief, acknowledgment of irreparable harm\n9. Section 7 — GENERAL PROVISIONS: Governing law, entire agreement, amendments, severability, assignment, notices\n10. SIGNATURE BLOCKS: Lines for both parties with name, title, date\n\nFORMAT: Use numbered sections and subsections. Formal contract language.\nTONE: Precise legal drafting. Every obligation must be clearly defined.",
+  "hints": "Key elements to address: mutual vs one-way, definition of confidential information, term/duration, exclusions from confidentiality, permitted disclosures, remedies for breach, return/destruction of materials."
+}

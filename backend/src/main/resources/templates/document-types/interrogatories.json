@@ -1,0 +1,9 @@
+{
+  "type": "interrogatories",
+  "aliases": [],
+  "displayName": "Interrogatories",
+  "category": "discovery",
+  "citationLevel": "MINIMAL",
+  "template": "**DOCUMENT FORMAT — INTERROGATORIES**:\nWritten questions served on opposing party under rules of civil procedure.\n\nSTRUCTURE:\n1. COURT CAPTION: Court, parties, case number\n2. TITLE: \"[PLAINTIFF'S/DEFENDANT'S] FIRST SET OF INTERROGATORIES\"\n3. INSTRUCTIONS AND DEFINITIONS:\n   - Define key terms (e.g., \"you\", \"document\", \"identify\", \"describe\")\n   - Reference applicable rules (Mass. R. Civ. P. 33 or federal equivalent)\n   - Continuing duty to supplement\n4. INTERROGATORIES: Numbered questions covering:\n   - Party identification and background\n   - Factual basis for claims/defenses\n   - Witnesses with knowledge\n   - Documents supporting positions\n   - Insurance coverage\n   - Damages calculation\n   - Expert witnesses\n5. SIGNATURE BLOCK\n\nLIMIT: Observe jurisdiction's interrogatory limit (Mass. = 30 including subparts).\nFORMAT: Number each interrogatory. Use clear, unambiguous language. One question per interrogatory.",
+  "hints": "Key elements to address: number of interrogatories, topics to cover (liability, damages, witnesses, insurance), instructions and definitions."
+}

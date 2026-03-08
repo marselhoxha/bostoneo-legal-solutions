@@ -1,0 +1,9 @@
+{
+  "type": "correspondence",
+  "aliases": [],
+  "displayName": "General Correspondence",
+  "category": "letter",
+  "citationLevel": "MINIMAL",
+  "template": "",
+  "hints": "Include all standard legal elements appropriate for this document type. Address parties, key terms, obligations, and any jurisdiction-specific requirements."
+}

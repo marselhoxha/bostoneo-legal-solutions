@@ -61,6 +61,12 @@ public class AiWorkspaceDocument {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Column(name = "stationery_template_id")
+    private Long stationeryTemplateId;
+
+    @Column(name = "stationery_attorney_id")
+    private Long stationeryAttorneyId;
+
     // Relationships
     @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

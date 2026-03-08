@@ -1133,130 +1133,6 @@
                 <p class="text-muted mt-2">No workflow templates available</p>
               </div>
             </div>
-
-            <!-- Step 2: Document Selection - NOW MOVED TO MODAL (hidden) -->
-            <div *ngIf="false && selectedWorkflowTemplate" class="workflow-document-selection">
-              <div class="d-flex align-items-center justify-content-between mb-3">
-                <div class="d-flex align-items-center">
-                  <button class="btn btn-link text-muted p-0 me-2" (click)="clearWorkflowTemplate()">
-                    <i class="ri-arrow-left-line"></i>
-                  </button>
-                  <div class="template-icon-small me-2" [style.background-color]="getWorkflowTemplateColor(selectedWorkflowTemplate.templateType)">
-                    <span class="template-emoji-small">{{ getWorkflowTemplateIcon(selectedWorkflowTemplate.templateType) }}</span>
-                  </div>
-                  <div>
-                    <h5 class="mb-0">{{ selectedWorkflowTemplate.name }}</h5>
-                    <small class="text-muted">{{ selectedWorkflowTemplate.description }}</small>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Workflow Steps Preview -->
-              <div class="workflow-steps-preview mb-4">
-                <h6 class="mb-2">
-                  <i class="ri-list-ordered me-1"></i>
-                  Workflow Steps
-                </h6>
-                <div class="steps-list">
-                  <div class="step-item" *ngFor="let step of selectedWorkflowTemplate.stepsConfig?.steps; let i = index">
-                    <span class="step-number">{{ i + 1 }}</span>
-                    <span class="step-name">{{ step.name }}</span>
-                    <span class="step-type badge" [ngClass]="{
-                      'bg-info': step.type === 'display',
-                      'bg-warning': step.type === 'synthesis',
-                      'bg-danger': step.type === 'generation',
-                      'bg-primary': step.type === 'integration',
-                      'bg-secondary': step.type === 'action'
-                    }">{{ step.type }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Workflow Name Input -->
-              <div class="workflow-name-section mb-4">
-                <h6 class="mb-2">
-                  <i class="ri-pencil-line me-1"></i>
-                  Workflow Name
-                </h6>
-                <input
-                  type="text"
-                  class="form-control"
-                  [(ngModel)]="workflowName"
-                  placeholder="e.g., Smith v. Acme, TechCorp Contract Review..."
-                  maxlength="100">
-                <small class="text-muted">Give your workflow a descriptive name for easy identification</small>
-              </div>
-
-              <!-- Document Selection -->
-              <div class="document-selection-section">
-                <h6 class="mb-2">
-                  <i class="ri-file-list-3-line me-1"></i>
-                  Select Documents for This Workflow
-                </h6>
-                <p class="text-muted small mb-3">
-                  Choose from your analyzed documents or
-                  <a href="javascript:void(0)" (click)="selectTask('upload')" class="text-primary">
-                    <i class="ri-upload-2-line"></i> analyze new documents
-                  </a>
-                </p>
-
-                <!-- Documents list from analyzed documents -->
-                <div class="analyzed-documents-list" *ngIf="(analyzedDocuments$ | async) as docs">
-                  <div *ngIf="docs.length === 0" class="text-center py-3 text-muted">
-                    <i class="ri-file-search-line" style="font-size: 2rem;"></i>
-                    <p class="mt-2 mb-0">No analyzed documents yet</p>
-                    <button class="btn btn-outline-primary btn-sm mt-2" (click)="selectTask('upload')">
-                      <i class="ri-upload-2-line me-1"></i>
-                      Analyze Documents
-                    </button>
-                  </div>
-
-                  <div class="document-checkbox-list" *ngIf="docs.length > 0">
-                    <div
-                      class="document-checkbox-item"
-                      *ngFor="let doc of docs"
-                      [class.selected]="isDocumentSelectedForWorkflow(doc.databaseId)"
-                      (click)="toggleWorkflowDocument(doc.databaseId)">
-                      <div class="form-check">
-                        <input
-                          class="form-check-input"
-                          type="checkbox"
-                          [checked]="isDocumentSelectedForWorkflow(doc.databaseId)"
-                          (click)="$event.stopPropagation()">
-                        <label class="form-check-label d-flex align-items-center">
-                          <i class="ri-file-text-line me-2 text-primary"></i>
-                          <div>
-                            <div class="doc-name">{{ getCleanFileName(doc.fileName) }}</div>
-                            <small class="text-muted">{{ doc.documentType || 'Unknown type' }}</small>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Selected count and Start button -->
-                <div class="workflow-actions mt-4 d-flex justify-content-between align-items-center">
-                  <span class="text-muted">
-                    <i class="ri-checkbox-circle-line me-1"></i>
-                    {{ workflowSelectedDocuments.length }} document(s) selected
-                  </span>
-                  <button
-                    class="btn btn-primary"
-                    [disabled]="workflowSelectedDocuments.length === 0 || startingWorkflow"
-                    (click)="startWorkflow()">
-                    <span *ngIf="!startingWorkflow">
-                      <i class="ri-play-line me-1"></i>
-                      Start Workflow
-                    </span>
-                    <span *ngIf="startingWorkflow">
-                      <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                      Starting...
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1275,8 +1151,8 @@
               [placeholder]="promptPlaceholder"
               rows="3"></textarea>
 
-            <!-- Enhance Prompt (Draft mode only, when textarea has content) -->
-            <div class="enhance-prompt-section" *ngIf="selectedTask === 'draft' && customPrompt && customPrompt.trim().length > 0">
+            <!-- Enhance Prompt (Draft mode only, when textarea has content, not for demand letters) -->
+            <div class="enhance-prompt-section" *ngIf="selectedTask === 'draft' && customPrompt && customPrompt.trim().length > 0 && selectedDocTypePill !== 'demand-letter'">
               <div class="enhance-prompt-row" *ngIf="!isEnhancingPrompt">
                 <button type="button" class="btn btn-enhance-prompt" (click)="enhanceCurrentPrompt()">
                   <i class="ri-magic-line"></i> Enhance Prompt
@@ -1289,6 +1165,10 @@
                 <span class="spinner-border spinner-border-sm"></span>
                 <span>Structuring your prompt...</span>
               </div>
+            </div>
+            <!-- Demand letters use a specialized EvenUp-style prompt — enhancement not needed -->
+            <div class="enhance-prompt-section" *ngIf="selectedTask === 'draft' && customPrompt && customPrompt.trim().length > 0 && selectedDocTypePill === 'demand-letter'">
+              <span class="text-muted small"><i class="ri-information-line me-1"></i>Demand letters use a specialized format with your case data — no enhancement needed</span>
             </div>
 
             <!-- Case Selector (Draft task only) -->
@@ -1337,71 +1217,193 @@
     <!-- Split View Container (when document is generated) — Full Page Drafting -->
     <div class="split-view-container" *ngIf="draftingMode$ | async" [class.chat-closed]="!(showChat$ | async)">
 
-      <!-- Drafting Sidebar: TOC + Exhibits (240px left panel) -->
-      <aside class="drafting-sidebar">
-        <!-- Sidebar Header: Back button + Document title -->
-        <div class="ds-header">
-          <button class="ds-back-btn" (click)="exitDraftingMode()" title="Exit drafting">
-            <i class="ri-arrow-left-line"></i>
-          </button>
-          <span class="ds-doc-title">{{activeDocumentTitle || 'Untitled Document'}}</span>
-        </div>
-        <div class="drafting-sidebar-tabs">
-          <button class="ds-tab" [class.active]="(exhibitPanelService.sidebarTab$ | async) === 'contents'"
-                  (click)="exhibitPanelService.setSidebarTab('contents')">
-            Contents
-          </button>
-          <button class="ds-tab" [class.active]="(exhibitPanelService.sidebarTab$ | async) === 'exhibits'"
-                  (click)="exhibitPanelService.setSidebarTab('exhibits')">
-            Exhibits
-          </button>
-        </div>
+      <!-- Drafting Sidebar: TOC + Exhibits — collapses to icon strip when exhibit panel is open -->
+      <aside class="drafting-sidebar" [class.collapsed]="exhibitPanelService.panelOpen$ | async">
 
-        <!-- Contents Tab: Auto-TOC from editor headings -->
-        <div class="ds-tab-content" *ngIf="(exhibitPanelService.sidebarTab$ | async) === 'contents'">
-          <div class="toc-list" *ngIf="(exhibitPanelService.toc$ | async) as tocEntries">
-            <div *ngIf="tocEntries.length === 0" class="ds-empty-state">
-              <i class="ri-list-ordered"></i>
-              <p>No headings found</p>
-              <span>Add headings to your document to see the table of contents</span>
-            </div>
-            <div *ngFor="let entry of tocEntries"
-                 class="toc-item"
-                 [class.toc-level-1]="entry.level === 1"
-                 [class.toc-level-2]="entry.level === 2"
-                 [class.toc-level-3]="entry.level >= 3"
-                 [class.active]="activeTocId === entry.id"
-                 (click)="scrollToHeading(entry.id)">
-              <span class="toc-number">{{entry.numbering}}</span>
-              <span class="toc-text">{{entry.text}}</span>
-            </div>
+        <!-- === EXPANDED STATE (normal sidebar) === -->
+        <ng-container *ngIf="!(exhibitPanelService.panelOpen$ | async)">
+          <div class="ds-header">
+            <button class="ds-back-btn" (click)="exitDraftingMode()" title="Exit drafting">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <span class="ds-doc-title">{{activeDocumentTitle || 'Untitled Document'}}</span>
           </div>
-        </div>
+          <div class="drafting-sidebar-tabs">
+            <button class="ds-tab" [class.active]="(exhibitPanelService.sidebarTab$ | async) === 'contents'"
+                    (click)="exhibitPanelService.setSidebarTab('contents')">
+              Contents
+            </button>
+            <button class="ds-tab" [class.active]="(exhibitPanelService.sidebarTab$ | async) === 'exhibits'"
+                    (click)="exhibitPanelService.setSidebarTab('exhibits')">
+              Exhibits
+            </button>
+          </div>
 
-        <!-- Exhibits Tab: List of attached exhibits -->
-        <div class="ds-tab-content" *ngIf="(exhibitPanelService.sidebarTab$ | async) === 'exhibits'">
-          <div *ngIf="(exhibitPanelService.exhibitList$ | async) as exhibits">
-            <div *ngIf="exhibits.length === 0" class="ds-empty-state">
-              <i class="ri-attachment-2"></i>
-              <p>No exhibits attached</p>
-              <span>Exhibits will appear here when added to the document</span>
-            </div>
-            <div *ngFor="let exhibit of exhibits"
-                 class="exhibit-item"
-                 [class.active]="(exhibitPanelService.currentExhibit$ | async)?.id === exhibit.id"
-                 (click)="openExhibitFromSidebar(exhibit)">
-              <i class="ri-file-pdf-line"></i>
-              <div class="exhibit-info">
-                <span class="exhibit-label">{{exhibit.label}}</span>
-                <span class="exhibit-filename">{{exhibit.fileName}}</span>
+          <!-- Contents Tab -->
+          <div class="ds-tab-content" *ngIf="(exhibitPanelService.sidebarTab$ | async) === 'contents'">
+            <div class="toc-list" *ngIf="(exhibitPanelService.toc$ | async) as tocEntries">
+              <div *ngIf="tocEntries.length === 0" class="ds-empty-state">
+                <div class="empty-icon-wrap">
+                  <i class="ri-list-ordered"></i>
+                </div>
+                <p>No headings yet</p>
+                <span>Add headings to your document to build the table of contents</span>
+              </div>
+              <div *ngFor="let entry of tocEntries"
+                   class="toc-item"
+                   [class.toc-level-1]="entry.level === 1"
+                   [class.toc-level-2]="entry.level === 2"
+                   [class.toc-level-3]="entry.level >= 3"
+                   [class.active]="activeTocId === entry.id"
+                   (click)="scrollToHeading(entry.id)">
+                <span class="toc-number">{{entry.numbering}}</span>
+                <span class="toc-text">{{entry.text}}</span>
               </div>
             </div>
           </div>
-        </div>
+
+          <!-- Exhibits Tab -->
+          <div class="ds-tab-content ds-exhibits-tab" *ngIf="(exhibitPanelService.sidebarTab$ | async) === 'exhibits'">
+
+            <!-- Loading state while async attach is in progress -->
+            <div *ngIf="exhibitPanelService.exhibitsLoading$ | async" class="ds-empty-state">
+              <div class="empty-icon-wrap">
+                <i class="ri-loader-4-line ri-spin"></i>
+              </div>
+              <p>Retrieving exhibits</p>
+              <span>Please wait while we attach case documents...</span>
+            </div>
+
+            <ng-container *ngIf="!(exhibitPanelService.exhibitsLoading$ | async)">
+              <div *ngIf="(exhibitPanelService.exhibitList$ | async) as exhibits">
+                <div class="ds-section-header" *ngIf="exhibits.length > 0">Attached Exhibits</div>
+
+                <div *ngIf="exhibits.length === 0" class="ds-empty-state">
+                  <div class="empty-icon-wrap">
+                    <i class="ri-file-pdf-2-line"></i>
+                  </div>
+                  <p>No exhibits yet</p>
+                  <span>Attach case documents or upload files as supporting evidence</span>
+                </div>
+
+                <div class="ds-exhibits-list">
+                  <div *ngFor="let exhibit of exhibits"
+                       class="exhibit-card"
+                       [class.active]="(exhibitPanelService.currentExhibit$ | async)?.id === exhibit.id"
+                       (click)="openExhibitFromSidebar(exhibit)">
+                    <div class="exhibit-card-icon">
+                      <i class="ri-file-text-line"></i>
+                    </div>
+                    <div class="exhibit-card-body">
+                      <span class="exhibit-card-label">EXHIBIT {{ exhibit.label }}</span>
+                      <span class="exhibit-card-name">{{ exhibit.fileName }}</span>
+                      <span class="exhibit-card-pages">{{ exhibit.pageCount ? exhibit.pageCount + (exhibit.pageCount === 1 ? ' page' : ' pages') : 'PDF document' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button class="ds-add-exhibit-btn" (click)="openAddExhibitModal()">
+                <i class="ri-add-line"></i>
+                <span>Add Exhibit</span>
+              </button>
+            </ng-container>
+          </div>
+        </ng-container>
+
+        <!-- === COLLAPSED STATE (icon strip when exhibit panel is open) === -->
+        <ng-container *ngIf="exhibitPanelService.panelOpen$ | async">
+          <div class="ds-icon-strip">
+            <button class="ds-icon-btn" (click)="exitDraftingMode()" title="Exit drafting">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div class="ds-icon-divider"></div>
+            <button class="ds-icon-btn"
+                    [class.active]="sidebarOverlayOpen && sidebarOverlayTab === 'contents'"
+                    (click)="toggleSidebarOverlay('contents')" title="Contents">
+              <i class="ri-list-ordered"></i>
+            </button>
+            <button class="ds-icon-btn"
+                    [class.active]="sidebarOverlayOpen && sidebarOverlayTab === 'exhibits'"
+                    (click)="toggleSidebarOverlay('exhibits')" title="Exhibits">
+              <i class="ri-attachment-2"></i>
+            </button>
+          </div>
+
+          <!-- Overlay Panel (floats over editor) -->
+          <div class="sidebar-overlay-panel" *ngIf="sidebarOverlayOpen" [class.tab-contents]="sidebarOverlayTab === 'contents'" [class.tab-exhibits]="sidebarOverlayTab === 'exhibits'">
+            <div class="overlay-header">
+              <span class="overlay-title">{{ sidebarOverlayTab === 'contents' ? 'Contents' : 'Exhibits' }}</span>
+              <button class="overlay-close" (click)="closeSidebarOverlay()"><i class="ri-close-line"></i></button>
+            </div>
+
+            <!-- Contents in overlay -->
+            <div class="overlay-body" *ngIf="sidebarOverlayTab === 'contents'">
+              <div class="toc-list" *ngIf="(exhibitPanelService.toc$ | async) as tocEntries">
+                <div *ngIf="tocEntries.length === 0" class="ds-empty-state">
+                  <i class="ri-list-ordered"></i>
+                  <p>No headings found</p>
+                </div>
+                <div *ngFor="let entry of tocEntries"
+                     class="toc-item"
+                     [class.toc-level-1]="entry.level === 1"
+                     [class.toc-level-2]="entry.level === 2"
+                     [class.toc-level-3]="entry.level >= 3"
+                     [class.active]="activeTocId === entry.id"
+                     (click)="scrollToHeading(entry.id)">
+                  <span class="toc-number">{{entry.numbering}}</span>
+                  <span class="toc-text">{{entry.text}}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Exhibits in overlay -->
+            <div class="overlay-body" *ngIf="sidebarOverlayTab === 'exhibits'">
+              <!-- Loading state -->
+              <div *ngIf="exhibitPanelService.exhibitsLoading$ | async" class="ds-empty-state">
+                <div class="empty-icon-wrap">
+                  <i class="ri-loader-4-line ri-spin"></i>
+                </div>
+                <p>Retrieving exhibits...</p>
+              </div>
+              <ng-container *ngIf="!(exhibitPanelService.exhibitsLoading$ | async)">
+              <div *ngIf="(exhibitPanelService.exhibitList$ | async) as exhibits">
+                <div *ngIf="exhibits.length === 0" class="ds-empty-state">
+                  <div class="empty-icon-wrap">
+                    <i class="ri-attachment-2"></i>
+                  </div>
+                  <p>No exhibits attached</p>
+                </div>
+                <div *ngFor="let exhibit of exhibits"
+                     class="exhibit-item"
+                     [class.active]="(exhibitPanelService.currentExhibit$ | async)?.id === exhibit.id"
+                     (click)="openExhibitFromSidebar(exhibit)">
+                  <div class="exhibit-label-badge">{{ exhibit.label }}</div>
+                  <div class="exhibit-info">
+                    <span class="exhibit-name">{{ exhibit.fileName }}</span>
+                    <span class="exhibit-meta">
+                      <i class="ri-file-pdf-2-line"></i>
+                      <span *ngIf="exhibit.pageCount">{{ exhibit.pageCount }} pg</span>
+                      <span *ngIf="!exhibit.pageCount">PDF</span>
+                    </span>
+                  </div>
+                  <button class="exhibit-remove-btn" (click)="removeExhibit(exhibit, $event)" title="Remove exhibit">
+                    <i class="ri-close-line"></i>
+                  </button>
+                </div>
+              </div>
+              <button class="ds-add-exhibit-btn" (click)="openAddExhibitModal()">
+                <i class="ri-add-line"></i>
+                <span>Add Exhibit</span>
+              </button>
+              </ng-container>
+            </div>
+          </div>
+        </ng-container>
       </aside>
 
       <!-- Document Editor Panel -->
-      <div class="document-preview-panel">
+      <div class="document-preview-panel" [class.exhibit-open]="exhibitPanelService.panelOpen$ | async">
 
         <!-- Editor Toolbar: Stats (left) + Actions (right) -->
         <div class="editor-toolbar">
@@ -1413,14 +1415,108 @@
             </div>
           </div>
           <div class="toolbar-right">
-            <button class="toolbar-btn" (click)="saveManualVersion()" title="Version history"><i class="ri-history-line"></i></button>
-            <button class="toolbar-btn" (click)="toggleFullscreen()" [title]="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
-              <i [class]="isFullscreen ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line'"></i>
-            </button>
-            <div class="toolbar-divider"></div>
-            <button class="toolbar-btn" (click)="exhibitPanelService.togglePanel()" title="Toggle exhibit viewer"><i class="ri-layout-right-line"></i></button>
+            <button class="toolbar-btn" (click)="toggleVersionHistory()" title="Version history" [class.active]="showVersionHistory$ | async"><i class="ri-history-line"></i></button>
             <div class="toolbar-divider"></div>
             <button class="toolbar-btn" (click)="openDocumentPreviewModal()" title="Preview as PDF"><i class="ri-file-pdf-line"></i></button>
+            <div class="toolbar-divider"></div>
+            <!-- Stationery Dropdown -->
+            <div class="btn-group" ngbDropdown #stationeryDropdown="ngbDropdown">
+              <button class="toolbar-btn" ngbDropdownToggle title="Attorney Stationery"
+                      (click)="onStationeryDropdownOpen()">
+                <i class="ri-stamp-line"></i>
+              </button>
+              <div ngbDropdownMenu class="dropdown-menu dropdown-menu-end stationery-dropdown">
+                <div class="stationery-dropdown-header">
+                  <span>Attorney Stationery</span>
+                </div>
+
+                <!-- Loading state -->
+                <div *ngIf="loadingStationery" class="stationery-loading">
+                  <i class="ri-loader-4-line spin-animation"></i> Loading...
+                </div>
+
+                <!-- No templates configured -->
+                <div *ngIf="!loadingStationery && stationeryTemplates.length === 0" class="stationery-empty">
+                  <p>No stationery templates configured.</p>
+                  <a routerLink="/legal/ai-assistant/stationery-settings" (click)="stationeryDropdown.close()">
+                    <i class="ri-settings-3-line me-1"></i> Configure Templates
+                  </a>
+                </div>
+
+                <!-- Templates loaded -->
+                <ng-container *ngIf="!loadingStationery && stationeryTemplates.length > 0">
+
+                  <!-- ===== WHEN STATIONERY IS ALREADY APPLIED ===== -->
+                  <ng-container *ngIf="stationeryInserted">
+                    <div class="stationery-applied-status">
+                      <i class="ri-checkbox-circle-fill text-success me-2"></i>
+                      <div>
+                        <div class="stationery-applied-label">Letterhead Applied</div>
+                        <div class="stationery-applied-attorney" *ngIf="activeAttorneyName">{{activeAttorneyName}}</div>
+                      </div>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" (click)="removeStationery(); stationeryDropdown.close()">
+                      <i class="ri-delete-bin-line me-2"></i> Remove Letterhead
+                    </a>
+                  </ng-container>
+
+                  <!-- ===== WHEN STATIONERY IS NOT YET APPLIED ===== -->
+                  <ng-container *ngIf="!stationeryInserted">
+
+                    <!-- One-click apply (if user has an attorney profile + default template) -->
+                    <div *ngIf="autoStationeryReady" class="stationery-auto-apply">
+                      <a class="dropdown-item stationery-auto-btn"
+                         (click)="applyAutoStationery(); stationeryDropdown.close()">
+                        <i class="ri-stamp-line me-2"></i>
+                        Apply Letterhead as {{myAttorneyProfile!.firstName}} {{myAttorneyProfile!.lastName}}
+                      </a>
+                    </div>
+
+                    <!-- No attorney profile message -->
+                    <div *ngIf="!autoStationeryReady && stationeryAttorneys.length === 0" class="stationery-empty-sm">
+                      <i class="ri-information-line me-1"></i> No attorney profiles found.
+                    </div>
+
+                    <!-- Advanced: choose a different attorney -->
+                    <div *ngIf="stationeryAttorneys.length > 0">
+                      <div class="dropdown-divider" *ngIf="autoStationeryReady"></div>
+                      <a class="dropdown-item stationery-advanced-toggle"
+                         (click)="showAdvancedStationery = !showAdvancedStationery; $event.stopPropagation()">
+                        <i class="ri-arrow-down-s-line me-1" [class.rotate-180]="showAdvancedStationery"></i>
+                        {{ autoStationeryReady ? 'Choose different attorney...' : 'Select Attorney' }}
+                      </a>
+                      <div *ngIf="showAdvancedStationery || !autoStationeryReady" class="stationery-advanced-section">
+                        <!-- Template selector (if more than one) -->
+                        <div *ngIf="stationeryTemplates.length > 1" class="stationery-section">
+                          <label class="stationery-label">Template</label>
+                          <select class="stationery-select" [(ngModel)]="selectedStationeryTemplateId">
+                            <option *ngFor="let t of stationeryTemplates" [value]="t.id">
+                              {{t.name}} {{t.isDefault ? '(Default)' : ''}}
+                            </option>
+                          </select>
+                        </div>
+                        <!-- Attorney list -->
+                        <a *ngFor="let atty of stationeryAttorneys" class="dropdown-item stationery-attorney-item"
+                           (click)="insertStationery(atty.id); stationeryDropdown.close()">
+                          <i class="ri-user-line me-2"></i>
+                          {{atty.firstName}} {{atty.lastName}}
+                          <span class="stationery-bar-info" *ngIf="atty.barNumber">{{atty.licenseState}} #{{atty.barNumber}}</span>
+                        </a>
+                      </div>
+                    </div>
+
+                  </ng-container>
+
+                  <!-- Configure link (always visible) -->
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item stationery-configure-link" routerLink="/legal/ai-assistant/stationery-settings"
+                     (click)="stationeryDropdown.close()">
+                    <i class="ri-settings-3-line me-2"></i> Configure Templates
+                  </a>
+                </ng-container>
+              </div>
+            </div>
             <div class="toolbar-divider"></div>
             <button class="btn-save" (click)="saveDocumentManually()" [disabled]="isSaving" title="Save document">
               <i [class]="isSaving ? 'ri-loader-4-line spin-animation' : 'ri-save-line'"></i> Save
@@ -1445,11 +1541,22 @@
           </div>
         </div>
 
+        <!-- Version Preview Banner -->
+        <div class="version-preview-banner" *ngIf="previewingVersion">
+          <i class="ri-history-line"></i>
+          <span>Viewing version {{ previewingVersion.versionNumber }}
+            <small class="text-muted ms-2">{{ previewingVersion.versionNote || previewingVersion.transformationType }}</small>
+          </span>
+          <button class="btn btn-sm btn-soft-primary" (click)="restoreVersion(previewingVersion.versionNumber)">Restore this version</button>
+          <button class="btn btn-sm btn-soft-secondary" (click)="exitVersionPreview()">Back to current</button>
+        </div>
+
         <div class="document-preview-content"
-             [class.suppress-native-selection]="floatingToolbarState === 'prompt_editing' || floatingToolbarState === 'loading' || floatingToolbarState === 'preview'">
+             [class.suppress-native-selection]="floatingToolbarState === 'prompt_editing' || floatingToolbarState === 'loading' || floatingToolbarState === 'preview'"
+             [class.editor-locked]="isGenerating$ | async">
 
           <!-- Rich Text Editor (CKEditor 5) -->
-          <!-- showEditor flag toggled OFF→ON to force destruction and recreation -->
+          <!-- Stationery frames are injected via DOM into .ck-editor__main after editor init -->
           <ckeditor
             *ngIf="showEditor"
             #documentEditor
@@ -1566,6 +1673,21 @@
             </div>
           </div>
 
+          <!-- AI Generating Status Bar (visible in drafting mode) -->
+          <div class="generating-status-bar" *ngIf="(isGenerating$ | async) && !pendingChanges">
+            <div class="status-pill">
+              <div class="generating-dot-pulse">
+                <span></span><span></span><span></span>
+              </div>
+              <span class="status-text">AI is analyzing and revising the document...</span>
+            </div>
+            <div class="status-actions">
+              <button class="btn-status-cancel" (click)="stopGeneration()">
+                <i class="ri-stop-circle-line"></i> Stop
+              </button>
+            </div>
+          </div>
+
         </div>
 
       </div>
@@ -1579,42 +1701,66 @@
 
       <!-- Exhibit Viewer Panel (right side, mutually exclusive with chat) -->
       <div class="exhibit-viewer-panel" *ngIf="(exhibitPanelService.panelOpen$ | async) && !(showChat$ | async)"
-           [style.width.px]="exhibitPanelWidth">
+           [style.width.px]="exhibitPanelWidth"
+           [class.default-width]="!exhibitPanelWidth">
         <div class="exhibit-viewer-header">
-          <div class="exhibit-tabs">
+          <div class="exhibit-badge-tabs">
             <button *ngFor="let exhibit of (exhibitPanelService.exhibitList$ | async)"
-                    class="exhibit-tab"
+                    class="exhibit-badge-tab"
                     [class.active]="(exhibitPanelService.currentExhibit$ | async)?.id === exhibit.id"
-                    (click)="exhibitPanelService.openExhibit(exhibit)">
+                    (click)="openExhibitFromSidebar(exhibit)"
+                    [title]="exhibit.fileName">
               {{exhibit.label}}
             </button>
           </div>
-          <div class="exhibit-controls">
-            <span class="page-info" *ngIf="(exhibitPanelService.currentExhibit$ | async)?.pageCount">
-              Page {{exhibitPanelService.page$ | async}} of {{(exhibitPanelService.currentExhibit$ | async)?.pageCount}}
-            </span>
-            <button class="btn-icon-sm" (click)="exhibitPanelService.prevPage()" title="Previous page">
-              <i class="ri-arrow-left-s-line"></i>
-            </button>
-            <button class="btn-icon-sm" (click)="exhibitPanelService.nextPage()" title="Next page">
-              <i class="ri-arrow-right-s-line"></i>
-            </button>
-            <button class="btn-icon-sm" (click)="exhibitPanelService.closePanel()" title="Close exhibit">
-              <i class="ri-close-line"></i>
-            </button>
-          </div>
+          <span class="exhibit-filename" *ngIf="(exhibitPanelService.currentExhibit$ | async) as exhibit">
+            {{exhibit.fileName}}
+          </span>
+          <button class="btn-close-exhibit" (click)="exhibitPanelService.closePanel()" title="Close exhibit panel">
+            <i class="ri-close-line"></i>
+          </button>
         </div>
         <div class="exhibit-viewer-content">
-          <iframe *ngIf="(exhibitPanelService.currentExhibit$ | async) as exhibit"
-                  [src]="sanitizeUrl(exhibit.fileUrl)"
-                  class="exhibit-pdf-frame"
-                  title="Exhibit viewer">
-          </iframe>
+          <ngx-extended-pdf-viewer
+            *ngIf="(exhibitPanelService.currentExhibit$ | async) as exhibit"
+            [src]="exhibit.fileUrl"
+            [zoom]="'page-width'"
+            [showToolbar]="false"
+            [showSidebarButton]="false"
+            [showFindButton]="false"
+            [showPagingButtons]="false"
+            [showZoomButtons]="false"
+            [showPresentationModeButton]="false"
+            [showOpenFileButton]="false"
+            [showPrintButton]="false"
+            [showDownloadButton]="false"
+            [showSecondaryToolbarButton]="false"
+            [showRotateButton]="false"
+            [showHandToolButton]="false"
+            [showScrollingButton]="false"
+            [showSpreadButton]="false"
+            [showPropertiesButton]="false"
+            [textLayer]="false"
+            [handTool]="false"
+            height="100%"
+          ></ngx-extended-pdf-viewer>
           <div *ngIf="!(exhibitPanelService.currentExhibit$ | async)" class="exhibit-empty-state">
             <i class="ri-file-pdf-line"></i>
             <p>Select an exhibit to preview</p>
           </div>
         </div>
+      </div>
+
+      <!-- Version History Panel (right side, slide-in) -->
+      <div class="version-history-panel" *ngIf="showVersionHistory$ | async">
+        <app-version-history
+          [versions]="documentVersions"
+          [currentVersionNumber]="currentVersionNumber"
+          [loading]="loadingVersions"
+          (versionPreview)="previewVersion($event)"
+          (versionRestore)="restoreVersion($event)"
+          (close)="closeVersionHistory()">
+        </app-version-history>
       </div>
 
       <!-- Chat Panel (right side — hidden in drafting mode, mutually exclusive with exhibit) -->
@@ -2568,7 +2714,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn-action btn-download" (click)="downloadPreviewedPdf()" [disabled]="isLoadingPreview">
+        <button class="btn-action btn-download" (click)="downloadPreviewedPdf()" [disabled]="isLoadingPreview || !previewPdfBlob">
           <i class="ri-download-2-line"></i>
           <span>Download PDF</span>
         </button>
@@ -2582,10 +2728,103 @@
       </div>
     </div>
 
-    <!-- Modal Body - HTML preview matching CKEditor rendering -->
+    <!-- Modal Body - Real PDF via backend -->
     <div class="preview-modal-body">
-      <div class="html-preview-container">
-        <div class="html-preview-page" [innerHTML]="previewHtmlContent"></div>
+      <div *ngIf="isLoadingPreview" class="preview-loading">
+        <div class="spinner-border text-primary" role="status"></div>
+        <span>Generating PDF preview...</span>
+      </div>
+      <iframe *ngIf="sanitizedPreviewUrl && !isLoadingPreview"
+              [src]="sanitizedPreviewUrl"
+              class="pdf-preview-iframe">
+      </iframe>
+    </div>
+  </div>
+</div>
+
+<!-- Add Exhibit Modal -->
+<div class="add-exhibit-overlay" *ngIf="showAddExhibitModal" (click)="closeAddExhibitModal()">
+  <div class="add-exhibit-modal" (click)="$event.stopPropagation()">
+    <div class="aem-header">
+      <h5>Add Exhibit</h5>
+      <button class="btn-close-modal" (click)="closeAddExhibitModal()"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="aem-tabs">
+      <button [class.active]="addExhibitTab === 'case'" (click)="addExhibitTab = 'case'">
+        <i class="ri-folder-line me-1"></i> Case Documents
+      </button>
+      <button [class.active]="addExhibitTab === 'upload'" (click)="addExhibitTab = 'upload'">
+        <i class="ri-upload-cloud-line me-1"></i> Upload
+      </button>
+    </div>
+    <div class="aem-body">
+      <!-- Case Documents tab -->
+      <div *ngIf="addExhibitTab === 'case'">
+        <!-- Case selector -->
+        <div class="aem-case-selector">
+          <select class="form-select form-select-sm" [(ngModel)]="exhibitModalCaseId" (ngModelChange)="onExhibitCaseSelected($event)">
+            <option [ngValue]="null">Select a case...</option>
+            <option *ngFor="let c of userCases" [ngValue]="c.id">{{ c.caseNumber ? c.caseNumber + ' — ' : '' }}{{ c.title }}</option>
+          </select>
+        </div>
+        <div *ngIf="!exhibitModalCaseId" class="aem-empty">
+          <i class="ri-folder-open-line"></i>
+          <p>Select a case above</p>
+          <span>Choose a case to browse its documents</span>
+        </div>
+        <div *ngIf="exhibitModalCaseId">
+          <input type="text" class="form-control form-control-sm mb-2" placeholder="Search documents..."
+                 [(ngModel)]="caseDocSearchTerm">
+          <div *ngIf="loadingCaseDocs" class="aem-empty">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+            <p>Loading documents...</p>
+          </div>
+          <div *ngIf="!loadingCaseDocs && caseDocuments.length === 0" class="aem-empty">
+            <i class="ri-file-unknow-line"></i>
+            <p>No documents in this case</p>
+          </div>
+          <div class="aem-doc-list" *ngIf="!loadingCaseDocs && caseDocuments.length > 0">
+            <div *ngFor="let doc of filteredCaseDocuments" class="aem-doc-item"
+                 (click)="toggleDocSelection(doc)" [class.selected]="isDocSelected(doc)">
+              <i class="ri-file-pdf-line aem-doc-icon"></i>
+              <div class="aem-doc-info">
+                <span class="aem-doc-name">{{ doc.originalName || doc.name || doc.fileName || doc.title }}</span>
+                <span class="aem-doc-meta">{{ doc.formattedSize || formatFileSize(doc.size || doc.fileSize) }}</span>
+              </div>
+              <i class="ri-check-line aem-check" *ngIf="isDocSelected(doc)"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Upload tab -->
+      <div *ngIf="addExhibitTab === 'upload'">
+        <div class="aem-dropzone"
+             (drop)="onExhibitDrop($event)" (dragover)="$event.preventDefault()" (dragenter)="$event.preventDefault()"
+             [class.dragover]="isDraggingExhibit">
+          <i class="ri-upload-cloud-2-line"></i>
+          <p>Drag & drop files here</p>
+          <label for="exhibitFileInput" class="btn btn-sm btn-soft-primary mt-2">Browse files</label>
+          <input id="exhibitFileInput" type="file" hidden multiple (change)="onExhibitFilesSelected($event)">
+        </div>
+        <div *ngFor="let file of pendingUploadFiles; let i = index" class="aem-pending-file">
+          <i class="ri-file-line"></i>
+          <span>{{ file.name }}</span>
+          <small class="text-muted">{{ formatFileSize(file.size) }}</small>
+          <button class="btn-remove-file" (click)="removePendingFile(i)"><i class="ri-close-line"></i></button>
+        </div>
+      </div>
+    </div>
+    <div class="aem-footer">
+      <span class="aem-selection-count" *ngIf="selectedCaseDocs.length + pendingUploadFiles.length > 0">
+        {{ selectedCaseDocs.length + pendingUploadFiles.length }} selected
+      </span>
+      <div class="aem-footer-btns">
+        <button class="btn btn-sm btn-light" (click)="closeAddExhibitModal()">Cancel</button>
+        <button class="btn btn-sm btn-primary" (click)="confirmAddExhibits()"
+                [disabled]="addingExhibits || (selectedCaseDocs.length === 0 && pendingUploadFiles.length === 0)">
+          <span *ngIf="addingExhibits" class="spinner-border spinner-border-sm me-1"></span>
+          Add {{ selectedCaseDocs.length + pendingUploadFiles.length || '' }} Exhibit{{ (selectedCaseDocs.length + pendingUploadFiles.length) > 1 ? 's' : '' }}
+        </button>
       </div>
     </div>
   </div>

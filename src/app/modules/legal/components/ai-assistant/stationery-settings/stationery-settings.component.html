@@ -1,0 +1,398 @@
+<div class="stationery-page">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <h4><i class="ri-stamp-line me-2"></i>Stationery Templates</h4>
+      <p class="text-muted mb-0">Build professional letterheads for your legal documents.</p>
+    </div>
+    <div class="header-right">
+      <a routerLink="/legal/ai-assistant/ai-workspace" class="btn btn-soft-secondary btn-sm">
+        <i class="ri-arrow-left-line me-1"></i> Back to Workspace
+      </a>
+    </div>
+  </div>
+
+  <div class="stationery-layout">
+    <!-- Left: Template List -->
+    <div class="template-list-panel">
+      <div class="panel-header">
+        <span class="panel-title">Templates</span>
+        <button class="btn btn-sm btn-soft-primary" (click)="newTemplate()">
+          <i class="ri-add-line"></i> New
+        </button>
+      </div>
+
+      <div *ngIf="loading" class="panel-loading">
+        <i class="ri-loader-4-line spin-animation"></i> Loading...
+      </div>
+
+      <div *ngIf="!loading && templates.length === 0 && !isNew" class="panel-empty">
+        <i class="ri-file-list-3-line"></i>
+        <p>No stationery templates yet.</p>
+        <button class="btn btn-sm btn-primary" (click)="newTemplate()">Create First Template</button>
+      </div>
+
+      <div class="template-items">
+        <div *ngFor="let t of templates"
+             class="template-item"
+             [class.active]="selectedTemplate?.id === t.id"
+             (click)="selectTemplate(t)">
+          <div class="template-item-name">
+            {{t.name}}
+            <span *ngIf="t.isDefault" class="badge bg-soft-primary text-primary ms-1">Default</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Builder + Preview (unified panel) -->
+    <div class="builder-main-panel" *ngIf="(selectedTemplate || isNew) && !isLegacy">
+
+      <!-- Sticky header: template name + default -->
+      <div class="builder-top-bar">
+        <div class="top-bar-fields">
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="templateName"
+                 placeholder="Template name (e.g., Standard Firm Letterhead)">
+          <div class="form-check ms-3">
+            <input type="checkbox" class="form-check-input" id="isDefault" [(ngModel)]="isDefault">
+            <label class="form-check-label" for="isDefault">Set as Default</label>
+          </div>
+        </div>
+        <div class="top-bar-actions">
+          <button class="btn btn-primary btn-sm" (click)="saveTemplate()" [disabled]="saving || !templateName.trim()">
+            <i [class]="saving ? 'ri-loader-4-line spin-animation' : 'ri-save-line'"></i>
+            {{saving ? 'Saving...' : (isNew ? 'Create' : 'Save')}}
+          </button>
+          <button class="btn btn-soft-secondary btn-sm" (click)="cancelEdit()">Cancel</button>
+          <button *ngIf="!isNew && selectedTemplate" class="btn btn-soft-danger btn-sm" (click)="deleteTemplate()">
+            <i class="ri-delete-bin-line"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="builder-scroll">
+
+        <!-- ▸ Logo -->
+        <div class="collapsible-section">
+          <div class="section-header" (click)="toggleSection('logo')">
+            <i class="ri-image-line me-2"></i>
+            <span>Logo</span>
+            <i [class]="sectionOpen['logo'] ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" class="ms-auto"></i>
+          </div>
+          <div class="section-body" *ngIf="sectionOpen['logo']">
+            <!-- Logo upload area -->
+            <div class="logo-upload-area">
+              <div *ngIf="config.letterhead.logoBase64">
+                <img [src]="config.letterhead.logoBase64" alt="Logo preview" class="logo-preview"
+                     [style.max-height.px]="config.letterhead.logoMaxHeight">
+              </div>
+              <div *ngIf="config.letterhead.logoBase64" class="logo-actions">
+                <button class="btn btn-sm btn-soft-danger" (click)="removeLogo()">
+                  <i class="ri-delete-bin-line me-1"></i> Remove
+                </button>
+              </div>
+              <div *ngIf="!config.letterhead.logoBase64" class="logo-upload-placeholder">
+                <input type="file" accept="image/*" (change)="onLogoSelected($event)" id="logoUpload" class="d-none">
+                <label for="logoUpload" class="btn btn-sm btn-soft-primary">
+                  <i class="ri-upload-2-line me-1"></i> Upload Logo
+                </label>
+                <small class="text-muted ms-2">Max 2MB &middot; PNG, JPG, SVG</small>
+              </div>
+            </div>
+
+            <!-- Logo size controls -->
+            <div class="form-group mt-3">
+              <label class="form-label">Logo Size</label>
+              <div class="size-row">
+                <div class="size-presets">
+                  <button *ngFor="let preset of logoSizePresets"
+                          class="size-preset"
+                          [class.active]="config.letterhead.logoMaxHeight === preset.value"
+                          (click)="setLogoSize(preset.value)">
+                    {{preset.label}}
+                  </button>
+                </div>
+                <input type="range" class="size-slider" min="40" max="200" step="1"
+                       [(ngModel)]="config.letterhead.logoMaxHeight"
+                       (ngModelChange)="onFormChange()">
+                <span class="size-value">{{config.letterhead.logoMaxHeight}}px</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ▸ Layout Position -->
+        <div class="collapsible-section">
+          <div class="section-header" (click)="toggleSection('layout')">
+            <i class="ri-layout-grid-line me-2"></i>
+            <span>Layout Position</span>
+            <i [class]="sectionOpen['layout'] ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" class="ms-auto"></i>
+          </div>
+          <div class="section-body" *ngIf="sectionOpen['layout']">
+            <div class="grid-label">
+              <i class="ri-drag-move-line me-1"></i> Drag blocks to position them on the letterhead
+            </div>
+            <div class="grid-canvas">
+              <div class="grid" cdkDropListGroup>
+                <div *ngFor="let zone of gridZones"
+                     class="grid-zone"
+                     [class.occupied]="getBlockInZone(zone)"
+                     cdkDropList
+                     [cdkDropListData]="zone"
+                     (cdkDropListDropped)="onGridDrop($event)">
+                  <div *ngIf="getBlockInZone(zone) === 'logo'"
+                       class="block-in-grid logo"
+                       cdkDrag [cdkDragData]="'logo'">
+                    <i class="ri-image-line"></i> Logo
+                  </div>
+                  <div *ngIf="getBlockInZone(zone) === 'contact'"
+                       class="block-in-grid contact"
+                       cdkDrag [cdkDragData]="'contact'">
+                    <i class="ri-contacts-line"></i> Contact
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="drag-hint">
+              <span>Blocks:</span>
+              <span class="block-chip logo-chip" [class.placed]="config.layout.logoPosition">
+                <i class="ri-image-line"></i> Logo
+              </span>
+              <span class="block-chip contact-chip" [class.placed]="config.layout.contactPosition">
+                <i class="ri-contacts-line"></i> Contact
+              </span>
+              <span *ngIf="config.layout.logoPosition && config.layout.contactPosition" class="placed-hint">&larr; placed in grid above</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ▸ Contact Info -->
+        <div class="collapsible-section">
+          <div class="section-header" (click)="toggleSection('contact')">
+            <i class="ri-contacts-line me-2"></i>
+            <span>Contact Info</span>
+            <i [class]="sectionOpen['contact'] ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" class="ms-auto"></i>
+          </div>
+          <div class="section-body" *ngIf="sectionOpen['contact']">
+            <div class="form-group">
+              <label class="form-label">Fields to Show</label>
+              <div class="contact-toggles">
+                <div *ngFor="let cf of contactFieldOptions" class="form-check form-check-inline">
+                  <input type="checkbox" class="form-check-input" [id]="'cf-' + cf.key"
+                         [checked]="isContactFieldSelected(cf.key)"
+                         (change)="toggleContactField(cf.key)">
+                  <label class="form-check-label" [for]="'cf-' + cf.key">{{cf.label}}</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact value overrides — leave blank to use your firm's profile data -->
+            <div class="contact-overrides">
+              <small class="text-muted d-block mb-2">
+                <i class="ri-information-line me-1"></i>Enter values below. Leave blank to use your firm's profile data.
+              </small>
+              <div class="form-group">
+                <label class="form-label">Firm Display Name</label>
+                <input type="text" class="form-control form-control-sm"
+                       [(ngModel)]="config.letterhead.contactOverrides.firmName"
+                       (ngModelChange)="onFormChange()" placeholder="e.g., Altman Nussbaum Shunnarah Trial Attorneys">
+              </div>
+              <div class="form-group" *ngIf="isContactFieldSelected('address')">
+                <label class="form-label">Address</label>
+                <input type="text" class="form-control form-control-sm"
+                       [(ngModel)]="config.letterhead.contactOverrides.firmAddress"
+                       (ngModelChange)="onFormChange()" placeholder="e.g., 675 Massachusetts Ave., Floor 9, Cambridge, MA 02139">
+              </div>
+              <div class="form-group" *ngIf="isContactFieldSelected('phone')">
+                <label class="form-label">Phone</label>
+                <input type="text" class="form-control form-control-sm"
+                       [(ngModel)]="config.letterhead.contactOverrides.firmPhone"
+                       (ngModelChange)="onFormChange()" placeholder="e.g., (857) 242-4846">
+              </div>
+              <div class="form-group" *ngIf="isContactFieldSelected('fax')">
+                <label class="form-label">Fax Number</label>
+                <input type="text" class="form-control form-control-sm" [(ngModel)]="config.letterhead.faxNumber"
+                       (ngModelChange)="onFormChange()" placeholder="e.g., (617) 314-8201">
+              </div>
+              <div class="form-group" *ngIf="isContactFieldSelected('email')">
+                <label class="form-label">Email</label>
+                <input type="text" class="form-control form-control-sm"
+                       [(ngModel)]="config.letterhead.contactOverrides.firmEmail"
+                       (ngModelChange)="onFormChange()" placeholder="e.g., info@ansfirm.com">
+              </div>
+              <div class="form-group" *ngIf="isContactFieldSelected('website')">
+                <label class="form-label">Website</label>
+                <input type="text" class="form-control form-control-sm"
+                       [(ngModel)]="config.letterhead.contactOverrides.firmWebsite"
+                       (ngModelChange)="onFormChange()" placeholder="e.g., www.ansfirm.com">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ▸ Appearance -->
+        <div class="collapsible-section">
+          <div class="section-header" (click)="toggleSection('appearance')">
+            <i class="ri-palette-line me-2"></i>
+            <span>Appearance</span>
+            <i [class]="sectionOpen['appearance'] ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" class="ms-auto"></i>
+          </div>
+          <div class="section-body" *ngIf="sectionOpen['appearance']">
+            <div class="form-group">
+              <label class="form-label">Accent Color</label>
+              <div class="color-picker-row">
+                <input type="color" class="form-control form-control-color" [(ngModel)]="config.letterhead.accentColor"
+                       (ngModelChange)="onFormChange()">
+                <input type="text" class="form-control form-control-sm color-hex-input" [(ngModel)]="config.letterhead.accentColor"
+                       (ngModelChange)="onFormChange()" maxlength="7">
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="showSeparator"
+                       [(ngModel)]="config.letterhead.showSeparator" (ngModelChange)="onFormChange()">
+                <label class="form-check-label" for="showSeparator">Show separator line below letterhead</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ▸ Signature Block -->
+        <div class="collapsible-section">
+          <div class="section-header" (click)="toggleSection('signature')">
+            <i class="ri-pen-nib-line me-2"></i>
+            <span>Signature Block</span>
+            <i [class]="sectionOpen['signature'] ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" class="ms-auto"></i>
+          </div>
+          <div class="section-body" *ngIf="sectionOpen['signature']">
+            <div class="form-group">
+              <label class="form-label">Closing Text</label>
+              <input type="text" class="form-control form-control-sm" [(ngModel)]="config.signature.closingText"
+                     (ngModelChange)="onFormChange()" placeholder="Sincerely,">
+            </div>
+            <div class="form-group">
+              <div class="form-check mb-2">
+                <input type="checkbox" class="form-check-input" id="showBarNumber"
+                       [(ngModel)]="config.signature.showBarNumber" (ngModelChange)="onFormChange()">
+                <label class="form-check-label" for="showBarNumber">Show Bar Number</label>
+              </div>
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="showLicenseState"
+                       [(ngModel)]="config.signature.showLicenseState" (ngModelChange)="onFormChange()">
+                <label class="form-check-label" for="showLicenseState">Show License State</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ▸ Footer Offices -->
+        <div class="collapsible-section">
+          <div class="section-header" (click)="toggleSection('footer')">
+            <i class="ri-layout-bottom-line me-2"></i>
+            <span>Footer Offices</span>
+            <i [class]="sectionOpen['footer'] ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" class="ms-auto"></i>
+          </div>
+          <div class="section-body" *ngIf="sectionOpen['footer']">
+            <div class="offices-list">
+              <div *ngFor="let office of config.footer.offices; let i = index" class="office-row">
+                <div class="office-fields">
+                  <input type="text" class="form-control form-control-sm" [(ngModel)]="office.city"
+                         (ngModelChange)="onFormChange()" placeholder="City">
+                  <input type="text" class="form-control form-control-sm" [(ngModel)]="office.address"
+                         (ngModelChange)="onFormChange()" placeholder="Address">
+                  <input type="text" class="form-control form-control-sm" [(ngModel)]="office.phone"
+                         (ngModelChange)="onFormChange()" placeholder="Phone">
+                </div>
+                <button class="btn btn-sm btn-soft-danger office-remove" (click)="removeOffice(i)">
+                  <i class="ri-close-line"></i>
+                </button>
+              </div>
+              <button class="btn btn-sm btn-soft-primary mt-2" (click)="addOffice()">
+                <i class="ri-add-line me-1"></i> Add Office
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PREVIEW ─────────────────────────── -->
+        <div class="preview-section">
+          <div class="preview-label">
+            <i class="ri-eye-line me-1"></i> Preview
+          </div>
+          <div class="preview-desk">
+            <div class="preview-page">
+              <!-- Letterhead -->
+              <div class="preview-letterhead" [innerHTML]="previewLetterhead"></div>
+
+              <!-- Sample body -->
+              <div class="preview-body">
+                <p class="preview-date">March 4, 2026</p>
+                <p class="preview-via">Via Certified Mail, Return Receipt Requested</p>
+                <p class="preview-recipient">MAPFRE Insurance<br>Claims Department<br>11 Gore Road<br>Webster, MA 01570</p>
+                <p class="preview-re">Re: Doe v. Smith &mdash; Claim No. 2024-MA-48291</p>
+                <p class="preview-text">Dear Claims Adjuster,<br><br>Please be advised that this office represents Jane Doe in connection with injuries sustained in a motor vehicle collision that occurred on September 15, 2025. This letter serves as formal notice of our representation and a demand to preserve all evidence...</p>
+              </div>
+
+              <!-- Signature -->
+              <div class="preview-signature" [innerHTML]="previewSignature"></div>
+
+              <!-- Footer -->
+              <div class="preview-footer" [innerHTML]="previewFooter"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Legacy Template View -->
+    <div class="builder-main-panel" *ngIf="selectedTemplate && isLegacy">
+      <div class="legacy-notice">
+        <div class="legacy-icon"><i class="ri-information-line"></i></div>
+        <h5>Legacy Template</h5>
+        <p class="text-muted mb-2">This template was created with the old HTML editor. It still works in the workspace. You can also re-create it with the new builder.</p>
+        <button class="btn btn-sm btn-soft-primary" (click)="recreateFromBuilder()">
+          <i class="ri-refresh-line me-1"></i> Re-create with Builder
+        </button>
+      </div>
+
+      <div class="preview-section">
+        <div class="preview-label">
+          <i class="ri-eye-line me-1"></i> Legacy Preview
+        </div>
+        <div class="preview-desk">
+          <div class="preview-page">
+            <div class="preview-letterhead" [innerHTML]="legacyLetterhead"></div>
+            <div class="preview-body">
+              <p class="preview-date">March 4, 2026</p>
+              <p class="preview-recipient">
+                [Recipient Name]<br/>
+                [Recipient Address]<br/>
+                [City, State ZIP]
+              </p>
+              <p class="preview-re">Re: [Case/Matter Reference]</p>
+              <p class="preview-text">Dear [Recipient],<br/><br/>Lorem ipsum dolor sit amet...</p>
+            </div>
+            <div class="preview-signature" [innerHTML]="legacySignature"></div>
+            <div class="preview-footer" [innerHTML]="legacyFooter"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="editor-actions">
+        <button *ngIf="selectedTemplate" class="btn btn-soft-danger btn-sm ms-auto" (click)="deleteTemplate()">
+          <i class="ri-delete-bin-line me-1"></i> Delete
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="builder-main-panel empty-state" *ngIf="!selectedTemplate && !isNew">
+      <div class="empty-state-content">
+        <i class="ri-stamp-line"></i>
+        <h5>Select a template or create a new one</h5>
+        <p class="text-muted">Build professional letterheads using the form-based builder.</p>
+      </div>
+    </div>
+  </div>
+</div>

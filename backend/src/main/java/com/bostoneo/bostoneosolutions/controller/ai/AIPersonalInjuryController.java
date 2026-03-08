@@ -302,13 +302,12 @@ public class AIPersonalInjuryController {
         String mode = "detailed";
         boolean isDetailed = true;
         Long caseId = request.get("caseId") != null ? Long.valueOf(request.get("caseId").toString()) : null;
+        // Optional documentId — when provided, fetches exhibits attached to this workspace document
+        Long documentId = request.get("documentId") != null ? Long.valueOf(request.get("documentId").toString()) : null;
 
         // Build the user prompt with all the form data
         String clientName = (String) request.getOrDefault("clientName", "");
         String defendantName = (String) request.getOrDefault("defendantName", "");
-
-        // Fetch organization info for letterhead
-        String letterheadSection = buildLetterheadSection();
 
         // Fetch case data if caseId is provided
         String caseDataSection = "";
@@ -322,7 +321,6 @@ public class AIPersonalInjuryController {
             clientName,
             request,
             caseDataSection,
-            letterheadSection,
             isDetailed
         );
 
@@ -339,7 +337,10 @@ public class AIPersonalInjuryController {
                 "Massachusetts",
                 title,
                 null, // conversationId - create new
-                isDetailed ? "THOROUGH" : "FAST" // research mode
+                isDetailed ? "THOROUGH" : "FAST", // research mode
+                documentId,  // when provided, includes exhibits attached to this document
+                null, // stationeryTemplateId - PI controller doesn't pass stationery
+                null  // stationeryAttorneyId
             );
 
             Map<String, Object> response = new HashMap<>();
@@ -948,15 +949,11 @@ public class AIPersonalInjuryController {
     }
 
     /**
-     * Returns default letterhead placeholder when organization data is unavailable.
+     * Returns empty string — firm stationery is now applied externally.
+     * Kept as a safety net for any remaining callers.
      */
     private String getDefaultLetterhead() {
-        return """
-            Firm Name: [LAW FIRM NAME - Configure in Organization Settings]
-            Address: [FIRM ADDRESS]
-            Phone: [FIRM PHONE]
-            Email: [FIRM EMAIL]
-            """;
+        return "";
     }
 
     /**
@@ -969,7 +966,6 @@ public class AIPersonalInjuryController {
             String clientName,
             Map<String, Object> request,
             String caseDataSection,
-            String letterheadSection,
             boolean isDetailed
     ) {
         String letterDate = LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy"));
@@ -1007,9 +1003,6 @@ public class AIPersonalInjuryController {
             Future Medical Expenses: %s
             Pain & Suffering (calculated): %s
 
-            LAW FIRM LETTERHEAD:
-            %s
-
             %s
 
             ============================================================
@@ -1029,9 +1022,13 @@ public class AIPersonalInjuryController {
             6. TABLE FORMAT: Use standard markdown pipe tables. Every table needs: header row, separator row (|---|---|), data rows, and a bold Total row at the bottom.
 
             ============================================================
-            SECTION 1: LETTERHEAD & SALUTATION
+            SECTION 1: SALUTATION & INTRODUCTION
             ============================================================
-            - Centered law firm letterhead (firm name, address, phone, email) from the LAW FIRM LETTERHEAD data
+            IMPORTANT: Do NOT generate a firm name header, logo placeholder, or letterhead block.
+            The document already has firm stationery applied externally (letterhead with logo and contact info).
+            NEVER write [LAW FIRM NAME], [Attorney Name, Esq.], [Firm Address], [Phone] | [Fax] | [Email] — firm stationery is applied externally.
+            Start the document body directly with the date and salutation.
+
             - Date: %s
             - "Via Certified Mail, Return Receipt Requested"
             - Addressee: Use the actual Adjuster Name and Insurance Company from the CASE DATA
@@ -1135,8 +1132,7 @@ public class AIPersonalInjuryController {
 
             Closing:
             - "Please do not hesitate to contact me if you have any additional questions or concerns."
-            - Professional closing: "Respectfully submitted," or "Sincerely,"
-            - Attorney signature block with Bar number
+            - End with "Respectfully submitted," — do NOT add attorney name, firm name, or signature block after this (the document stationery handles the signature block externally)
 
             ============================================================
             SECTION 6: EXHIBIT LIST
@@ -1165,7 +1161,6 @@ public class AIPersonalInjuryController {
             formatCurrency(getDoubleValue(request, "lostWages")),
             formatCurrency(getDoubleValue(request, "futureMedical")),
             formatCurrency(getDoubleValue(request, "painSufferingAmount")),
-            letterheadSection,
             caseDataSection,
             letterDate,
             letterDate, // also used for pain & suffering days calculation reference

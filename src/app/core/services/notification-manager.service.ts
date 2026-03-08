@@ -261,7 +261,7 @@ export class NotificationManagerService {
             notification: {
               title: backendNotif.title || 'Notification',
               body: backendNotif.message || 'You have a new notification',
-              icon: '/assets/images/logo-sm.png'
+              icon: '/assets/images/legience-logo-blue.svg'
             },
             data: {
               type: backendNotif.type?.toLowerCase() || 'default',

@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, TemplateRef
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Subject, lastValueFrom, merge } from 'rxjs';
+import { Subject, lastValueFrom, merge, forkJoin, Observable } from 'rxjs';
 import { takeUntil, switchMap, finalize } from 'rxjs/operators';
 import { LegalResearchService } from '../../../services/legal-research.service';
 import { DocumentGenerationService } from '../../../services/document-generation.service';
@@ -14,7 +14,7 @@ import { DocumentCollectionService, DocumentCollection } from '../../../services
 import { DocumentTypeConfig } from '../../../models/document-type-config';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
-import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
+import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { UserService } from '../../../../../service/user.service';
 import { environment } from '@environments/environment';
 import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
@@ -41,12 +41,16 @@ import {
   Font,
   FindAndReplace,
   Highlight,
-  Subscript,
-  Superscript,
   GeneralHtmlSupport,
   PasteFromOffice,
   RemoveFormat,
   Undo,
+  Image,
+  ImageInsert,
+  ImageResize,
+  ImageStyle,
+  ImageToolbar,
+  Base64UploadAdapter,
   type EditorConfig
 } from 'ckeditor5';
 import { NgbDropdown, NgbDropdownToggle, NgbDropdownMenu, NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -63,6 +67,7 @@ import { DocumentAnalysisViewerComponent, AnalyzedDocumentData } from '../docume
 import { CollectionViewerComponent } from '../collection-viewer/collection-viewer.component';
 import { BackgroundTasksIndicatorComponent } from './background-tasks-indicator/background-tasks-indicator.component';
 import { AiDisclaimerComponent } from '../../../../../shared/components/ai-disclaimer/ai-disclaimer.component';
+import { NgxExtendedPdfViewerModule } from 'ngx-extended-pdf-viewer';
 
 // NEW: Refactored services
 import { NotificationService } from '../../../services/notification.service';
@@ -74,6 +79,8 @@ import { DocumentTransformationService } from '../../../services/document-transf
 import { CaseWorkflowService, WorkflowTemplate, WorkflowRecommendation, WorkflowUrgency } from '../../../services/case-workflow.service';
 import { BackgroundTaskService, BackgroundTask } from '../../../services/background-task.service';
 import { ExhibitPanelService, Exhibit } from '../../../services/exhibit-panel.service';
+import { StationeryService, StationeryTemplate, AttorneyInfo, StationeryRenderResponse } from '../../../services/stationery.service';
+import { CaseDocumentsService } from '../../../services/case-documents.service';
 
 // NEW: Models and enums
 import { Conversation, Message } from '../../../models/conversation.model';
@@ -107,7 +114,8 @@ import { DocumentState } from '../../../models/document.model';
     DocumentAnalysisViewerComponent,
     CollectionViewerComponent,
     BackgroundTasksIndicatorComponent,
-    AiDisclaimerComponent
+    AiDisclaimerComponent,
+    NgxExtendedPdfViewerModule
   ],
   templateUrl: './ai-workspace.component.html',
   styleUrls: ['./ai-workspace.component.scss']
@@ -131,6 +139,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   showBottomSearchBar$ = this.stateService.showBottomSearchBar$;
   isGenerating$ = this.stateService.isGenerating$;
   draftingMode$ = this.stateService.draftingMode$;
+  showVersionHistory$ = this.stateService.showVersionHistory$;
 
   // Document Analysis Viewer state
   analyzedDocuments$ = this.stateService.analyzedDocuments$;
@@ -480,14 +489,24 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     return new Date(lastSaved).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  // Active TOC item tracking
+  // Active TOC item tracking (updated by scroll spy as user scrolls the document)
   activeTocId: string | null = null;
 
-  // Exhibit viewer panel width (resizable)
-  exhibitPanelWidth = 400;
+  // Scroll spy: tracks which heading is visible in the editor viewport
+  private scrollSpyFrameId: number | null = null;
+  private scrollSpyListener: (() => void) | null = null;
+  private scrollSpyElement: HTMLElement | null = null;
+  private scrollSpySuppressed = false;
+
+  // Exhibit viewer panel width (null = use CSS default %, set on manual resize)
+  exhibitPanelWidth: number | null = null;
   private isResizing = false;
   private resizeStartX = 0;
   private resizeStartWidth = 0;
+
+  // Sidebar collapse state (auto-collapses when exhibit panel opens)
+  sidebarOverlayOpen = false;
+  sidebarOverlayTab: 'contents' | 'exhibits' = 'contents';
 
   // Cached sanitized URL to prevent iframe reload on every change detection
   private cachedExhibitUrl = '';
@@ -503,6 +522,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Case selection for draft generation
   selectedCaseId: number | null = null;
   userCases: any[] = [];
+
+  // Add Exhibit Modal state
+  showAddExhibitModal = false;
+  addExhibitTab: 'case' | 'upload' = 'case';
+  caseDocuments: any[] = [];
+  selectedCaseDocs: any[] = [];
+  caseDocSearchTerm = '';
+  pendingUploadFiles: File[] = [];
+  addingExhibits = false;
+  isDraggingExhibit = false;
+  exhibitModalCaseId: number | null = null;
+  loadingCaseDocs = false;
 
   // Upload document functionality
   createCollectionOnUpload = false;
@@ -591,17 +622,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   editorConfig: EditorConfig = {
     licenseKey: 'GPL',
     plugins: [
-      Essentials, Bold, Italic, Underline, Strikethrough, Subscript, Superscript,
+      Essentials, Bold, Italic, Underline, Strikethrough,
       Heading, Paragraph, BlockQuote, HorizontalLine, Link, List, Table,
       TableToolbar, TableProperties, TableCellProperties, Alignment, Indent,
       IndentBlock, Font, FindAndReplace, Highlight, GeneralHtmlSupport,
-      PasteFromOffice, RemoveFormat, Undo
+      PasteFromOffice, RemoveFormat, Undo,
+      Image, ImageInsert, ImageResize, ImageStyle, ImageToolbar, Base64UploadAdapter
     ],
     toolbar: {
       items: [
         'undo', 'redo', '|',
         'heading', 'fontSize', '|',
-        'bold', 'italic', 'underline', 'strikethrough', 'subscript', 'superscript', '|',
+        'bold', 'italic', 'underline', 'strikethrough', '|',
         'fontColor', 'fontBackgroundColor', 'highlight', '|',
         'link', 'blockQuote', 'horizontalLine', '|',
         'alignment', '|',
@@ -647,6 +679,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         { model: 'yellowMarker' as const, class: 'marker-yellow', title: 'Yellow marker', color: '#fff3cd', type: 'marker' as const }
       ]
     },
+    image: {
+      toolbar: ['imageStyle:inline', 'imageStyle:block', 'imageStyle:side', '|', 'imageTextAlternative'],
+      insert: { type: 'auto' }
+    },
     htmlSupport: {
       allow: [
         { name: 'span', classes: true, styles: true, attributes: true },
@@ -655,7 +691,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         { name: /^(table|thead|tbody|tr|th|td)$/, classes: true, styles: true, attributes: true },
         { name: /^(h[1-6]|p|blockquote|pre|ul|ol|li)$/, classes: true, styles: true, attributes: true },
         { name: 'figure', classes: true, styles: true, attributes: true },
-        { name: 'mark', classes: true, styles: true, attributes: true }
+        { name: 'mark', classes: true, styles: true, attributes: true },
+        { name: 'img', classes: true, styles: true, attributes: true },
+        { name: 'strong', classes: true, styles: true, attributes: true }
       ]
     },
     placeholder: 'Your generated document will appear here...'
@@ -706,6 +744,25 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   documentVersions: any[] = [];
   loadingVersions = false;
   currentVersionNumber: number = 1;
+  previewingVersion: any = null;
+
+  // Stationery (DOM injection into .ck-editor__main)
+  stationeryTemplates: StationeryTemplate[] = [];
+  stationeryAttorneys: AttorneyInfo[] = [];
+  private stationeryRenderTimeoutId: number | null = null;
+  selectedStationeryTemplateId: number | null = null;
+  loadingStationery = false;
+  stationeryInserted = false;
+  activeStationeryRendered: { letterhead: SafeHtml | null; signature: SafeHtml | null; footer: SafeHtml | null } | null = null;
+  activeStationeryRawHtml: { letterhead: string; signature: string; footer: string } | null = null;
+  activeStationeryTemplateId: number | null = null;
+  activeStationeryAttorneyId: number | null = null;
+  // One-click stationery UX
+  myAttorneyProfile: AttorneyInfo | null = null;
+  defaultStationeryTemplate: StationeryTemplate | null = null;
+  autoStationeryReady = false;
+  showAdvancedStationery = false;
+  activeAttorneyName = '';
 
   @ViewChild('transformationPreviewModal') transformationPreviewModal!: TemplateRef<any>;
   @ViewChild('howItWorksModal') howItWorksModal!: TemplateRef<any>;
@@ -714,7 +771,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // UI Controls
   editorTextSize: number = 14; // Default font size in px
-  isFullscreen = false;
   isSaving = false;
 
   // Inline change review state
@@ -732,7 +788,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   previewPdfUrl: string | null = null; // Blob URL for PDF preview
   sanitizedPreviewUrl: SafeResourceUrl | null = null; // Sanitized URL for iframe binding
   isLoadingPreview = false; // Loading state for PDF generation
-  previewHtmlContent: SafeHtml | null = null; // HTML content for preview modal
+  previewPdfBlob: Blob | null = null; // Cached PDF blob for download
 
   // Mobile sidebar state (migrated to observable from StateService)
   sidebarOpen$ = this.stateService.sidebarOpen$;
@@ -1131,7 +1187,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     public caseWorkflowService: CaseWorkflowService,
     private backgroundTaskService: BackgroundTaskService,
     private sanitizer: DomSanitizer,
-    public exhibitPanelService: ExhibitPanelService
+    public exhibitPanelService: ExhibitPanelService,
+    private caseDocumentsService: CaseDocumentsService,
+    private stationeryService: StationeryService
   ) {}
 
   /**
@@ -1143,18 +1201,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     if (this.stateService.getDraftingMode() && this.currentDocumentId) {
       event.preventDefault();
       this.openSaveVersionModal();
-    }
-  }
-
-  /**
-   * Keyboard shortcut: Ctrl+Shift+F - Toggle fullscreen
-   */
-  @HostListener('window:keydown.control.shift.f', ['$event'])
-  @HostListener('window:keydown.meta.shift.f', ['$event']) // For Mac
-  handleFullscreenShortcut(event: KeyboardEvent): void {
-    if (this.stateService.getDraftingMode()) {
-      event.preventDefault();
-      this.toggleFullscreen();
     }
   }
 
@@ -1191,6 +1237,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           document.body.classList.add('ai-drafting-fullpage');
         } else {
           document.body.classList.remove('ai-drafting-fullpage');
+        }
+      });
+
+    // ===== RESET SIDEBAR OVERLAY WHEN EXHIBIT PANEL CLOSES =====
+    this.exhibitPanelService.panelOpen$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(open => {
+        if (!open) {
+          this.sidebarOverlayOpen = false;
+          this.exhibitPanelWidth = null; // Reset to CSS default on close
         }
       });
 
@@ -1576,6 +1632,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.stateService.setIsGenerating(false);
     this.stateService.setDraftingMode(false);
     this.stateService.clearFollowUpQuestions();
+    this.exhibitPanelService.reset();
   }
 
   // Load user's cases for case selector
@@ -2773,8 +2830,20 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Close draft streaming SSE if open
     this.closeDraftStream();
 
+    // Clean up scroll spy listener
+    this.destroyScrollSpy();
+
     // Reset exhibit panel state
     this.exhibitPanelService.reset();
+
+    // Clean up stationery DOM injections
+    this.clearStationeryFrames();
+
+    // Revoke PDF preview blob URL if still open
+    if (this.previewPdfUrl) {
+      URL.revokeObjectURL(this.previewPdfUrl);
+      this.previewPdfUrl = null;
+    }
 
     // Clear auto-dismiss timer for pending changes
     if (this.pendingChangesAutoTimer) {
@@ -2985,6 +3054,25 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.stateService.setSidebarOpen(false);
   }
 
+  // ========================================
+  // SIDEBAR OVERLAY (collapsed state when exhibit panel is open)
+  // ========================================
+
+  toggleSidebarOverlay(tab: 'contents' | 'exhibits'): void {
+    if (this.sidebarOverlayOpen && this.sidebarOverlayTab === tab) {
+      // Clicking the same tab closes the overlay
+      this.sidebarOverlayOpen = false;
+    } else {
+      this.sidebarOverlayTab = tab;
+      this.sidebarOverlayOpen = true;
+      this.exhibitPanelService.setSidebarTab(tab);
+    }
+  }
+
+  closeSidebarOverlay(): void {
+    this.sidebarOverlayOpen = false;
+  }
+
   // Go back to task selection from conversation view (mobile)
   goBackToTaskSelection(): void {
     // Clear active conversation
@@ -3004,6 +3092,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Reset workflow steps
     this.resetWorkflowSteps();
+
+    // Reset exhibit panel
+    this.exhibitPanelService.reset();
   }
 
   // Get title of active conversation for mobile header
@@ -3180,7 +3271,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
               // Populate document state
               this.currentDocumentId = null; // No GeneratedDocument for workflow drafts
-              this.activeDocumentTitle = this.extractTitleFromMarkdown(draftContent) || conv.title;
+              this.activeDocumentTitle = conv.title || this.extractTitleFromMarkdown(draftContent) || 'Untitled Document';
               this.currentDocumentWordCount = this.countWords(draftContent);
               this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
               this.documentMetadata = {
@@ -3251,7 +3342,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   // Populate document state
                   this.currentDocumentId = document.id;
                   // Extract professional title from document content (first # heading)
-                  this.activeDocumentTitle = this.extractTitleFromMarkdown(document.content) || conv.title;
+                  this.activeDocumentTitle = conv.title || this.extractTitleFromMarkdown(document.content) || 'Untitled Document';
                   this.currentDocumentWordCount = document.wordCount || this.countWords(document.content);
                   this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
                   this.documentMetadata = {
@@ -3263,6 +3354,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
                   // Load version history for dropdown
                   this.loadVersionHistory();
+
+                  // Auto-load stationery frame if document has stationery association
+                  this.loadDocumentStationery(document);
 
                   // CRITICAL: Cancel any pending content load from previous document
                   if (this.contentLoadTimeoutId !== null) {
@@ -3295,6 +3389,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     this.setModeForDrafting();
 
                     this.cdr.detectChanges();
+
+                    // Load exhibits for this document
+                    if (document.id) {
+                      this.loadDocumentExhibits(Number(document.id));
+                    }
                   }, 0);
                 },
                 error: (error) => {
@@ -3443,6 +3542,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Reset workflow steps
     this.resetWorkflowSteps();
 
+    // Reset exhibit panel
+    this.exhibitPanelService.reset();
+
     // Close mobile sidebar if open
     this.closeSidebar();
   }
@@ -3467,13 +3569,116 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.currentDocumentId = null;
     this.documentMetadata = {};
 
-    // Reset exhibit panel
+    // Clean up scroll spy and reset exhibit panel
+    this.destroyScrollSpy();
     this.exhibitPanelService.reset();
+
+    // Reset stationery state
+    this.clearStationeryFrames();
+    this.stationeryInserted = false;
+    this.activeStationeryRendered = null;
+    this.activeStationeryRawHtml = null;
+    this.activeStationeryTemplateId = null;
+    this.activeStationeryAttorneyId = null;
+    this.activeAttorneyName = '';
+    this.selectedStationeryTemplateId = null;
   }
 
   // ========================================
   // EXPORT METHODS
   // ========================================
+
+  /**
+   * Wrap editor body content with stationery HTML for export/preview.
+   * Returns the body as-is if no stationery is active.
+   *
+   * Assembly order (legal convention):
+   *   Letterhead → Body (without exhibit list) → Signature → Footer → Exhibit List
+   */
+  private wrapContentWithStationery(bodyHtml: string): string {
+    if (!this.activeStationeryRawHtml) return bodyHtml;
+    const { letterhead, signature, footer } = this.activeStationeryRawHtml;
+    const parts: string[] = [];
+
+    // Extract exhibit list from end of body so it can be placed after footer (legal convention)
+    let mainBody = bodyHtml;
+    let exhibitSection = '';
+    if (signature || footer) {
+      const extracted = this.extractExhibitSection(bodyHtml);
+      mainBody = extracted.mainBody;
+      exhibitSection = extracted.exhibitSection;
+    }
+
+    // Inline styles match the CKEditor .stationery-frame CSS exactly so PDF = editor view
+    if (letterhead) {
+      // Ensure all <td> and <p> tags have font-family inline (stored HTML may lack it)
+      const fontFixedLetterhead = letterhead
+        .replace(/<td\s+style="([^"]*?)"/g, (match: string, styles: string) => {
+          if (styles.includes('font-family')) return match;
+          return `<td style="${styles};font-family:'Times New Roman',Georgia,serif"`;
+        })
+        .replace(/<p\s+style="([^"]*?)"/g, (match: string, styles: string) => {
+          if (styles.includes('font-family')) return match;
+          return `<p style="${styles};font-family:'Times New Roman',Georgia,serif"`;
+        });
+      parts.push(`<div class="stationery-letterhead" style="font-family:'Times New Roman',Georgia,serif;font-size:12px;color:#222;line-height:1.4;padding:0 0 2px;margin-bottom:72pt;">${fontFixedLetterhead}</div>`);
+    }
+
+    // Strip trailing empty paragraphs from body — AI often generates these, creating a large gap before signature
+    mainBody = mainBody.replace(/(\s*<p>(\s|&nbsp;|<br\/?>)*<\/p>)*\s*$/gi, '');
+
+    parts.push(mainBody);
+
+    if (signature) {
+      // Normalize old saved templates: replace any font-size in px with 12pt so iText renders consistently
+      const normalizedSignature = signature.replace(/font-size:\s*\d+px/gi, 'font-size:12pt');
+      parts.push(`<div class="stationery-signature" style="font-family:'Times New Roman',Georgia,serif;font-size:12pt;color:#212529;line-height:1.6;padding-top:12px;margin-top:0;">${normalizedSignature}</div>`);
+    }
+
+    if (footer) {
+      // Wrap footer in comment markers so backend can extract it and draw at absolute page bottom via PdfCanvas
+      const footerDiv = `<div class="stationery-footer" style="font-family:'Times New Roman',Georgia,serif;font-size:9pt;color:#333333;text-align:center;padding-top:4px;margin-top:16px;">${footer}</div>`;
+      parts.push(`<!--STATIONERY_FOOTER_START-->${footerDiv}<!--STATIONERY_FOOTER_END-->`);
+    }
+
+    // Exhibit list follows footer as a legal appendix — starts on a new page
+    if (exhibitSection) {
+      parts.push(`<div style="page-break-before:always;">${exhibitSection}</div>`);
+    }
+
+    return parts.join('\n');
+  }
+
+  /**
+   * Extract the exhibit list section from the end of the body HTML.
+   * Looks for the last heading (h1-h6) whose text contains "exhibit" and splits there.
+   * Returns { mainBody, exhibitSection } — exhibitSection is empty string if none found.
+   */
+  private extractExhibitSection(bodyHtml: string): { mainBody: string; exhibitSection: string } {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<div id="ck-root">${bodyHtml}</div>`, 'text/html');
+    const root = doc.getElementById('ck-root');
+    if (!root) return { mainBody: bodyHtml, exhibitSection: '' };
+
+    const children = Array.from(root.children);
+    let exhibitStartIndex = -1;
+
+    // Find the LAST heading containing "exhibit" (case-insensitive)
+    for (let i = 0; i < children.length; i++) {
+      const el = children[i];
+      const tagName = el.tagName.toLowerCase();
+      const text = el.textContent?.trim().toLowerCase() || '';
+      if (/^h[1-6]$/.test(tagName) && text.includes('exhibit')) {
+        exhibitStartIndex = i;
+      }
+    }
+
+    if (exhibitStartIndex === -1) return { mainBody: bodyHtml, exhibitSection: '' };
+
+    const mainBody = children.slice(0, exhibitStartIndex).map(el => el.outerHTML).join('');
+    const exhibitSection = children.slice(exhibitStartIndex).map(el => el.outerHTML).join('');
+    return { mainBody, exhibitSection };
+  }
 
   /**
    * Export document to PDF
@@ -3488,11 +3693,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Clean the HTML for PDF generation (backend uses iText which expects HTML)
-    const cleanHtml = this.documentGenerationService.cleanHtmlForExport(htmlContent);
+    // Clean body content first (strips CKEditor artifacts), then wrap with stationery
+    // (stationery HTML retains its inline styles so the PDF matches the CKEditor view)
+    const cleanBody = this.documentGenerationService.cleanHtmlForExport(htmlContent);
+    const exportHtml = this.wrapContentWithStationery(cleanBody);
 
-    // Use content export with clean HTML - backend converts HTML to PDF
-    this.documentGenerationService.exportContentToPDF(cleanHtml, this.activeDocumentTitle)
+    // Use content export — backend converts HTML to PDF
+    this.documentGenerationService.exportContentToPDF(exportHtml, this.activeDocumentTitle)
       .subscribe({
         next: (response) => this.handleExportResponse(response, 'pdf'),
         error: (error) => {
@@ -3504,9 +3711,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   /**
    * Export document to Word (DOCX)
-   * Uses frontend docx.js library for proper formatting support
+   * Uses backend API for proper conversion (same flow as PDF export)
    */
-  async exportToWord(): Promise<void> {
+  exportToWord(): void {
     this.notificationService.loading('Preparing Word document', 'Please wait...');
 
     const htmlContent = this.getEditorContent();
@@ -3515,14 +3722,19 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    try {
-      // Use frontend Word generation with proper formatting
-      await this.documentGenerationService.generateWordFromHtml(htmlContent, this.activeDocumentTitle);
-      this.notificationService.success('Word Document Exported', `${this.activeDocumentTitle}.docx downloaded successfully`);
-    } catch (error) {
-      console.error('Error exporting Word:', error);
-      this.notificationService.error('Error', 'Failed to export Word document.');
-    }
+    // Clean body content first, then wrap with stationery — same as PDF export
+    const cleanBody = this.documentGenerationService.cleanHtmlForExport(htmlContent);
+    const exportHtml = this.wrapContentWithStationery(cleanBody);
+
+    // Use content export — backend converts HTML to Word
+    this.documentGenerationService.exportContentToWord(exportHtml, this.activeDocumentTitle)
+      .subscribe({
+        next: (response) => this.handleExportResponse(response, 'docx'),
+        error: (error) => {
+          console.error('Error exporting Word:', error);
+          this.notificationService.error('Error', 'Failed to export Word document.');
+        }
+      });
   }
 
   /**
@@ -3567,7 +3779,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    * Sanitize filename for safe file system use
    */
   private sanitizeFilename(name: string): string {
-    return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    return name
+      .replace(/[^a-z0-9]/gi, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '')
+      .toLowerCase();
   }
 
   /**
@@ -5595,9 +5811,19 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       expanded: false,
       types: [
         {
+          id: 'letter-of-representation',
+          name: 'Letter of Representation',
+          placeholderExample: 'Draft a letter of representation to the insurance company notifying them of our representation of the client...'
+        },
+        {
           id: 'demand-letter',
           name: 'Demand Letter',
           placeholderExample: 'Draft a demand letter seeking $50,000 in damages for personal injuries sustained in a car accident...'
+        },
+        {
+          id: 'settlement-letter',
+          name: 'Settlement Letter',
+          placeholderExample: 'Draft a settlement proposal offering resolution of all claims for $75,000 with a 30-day response deadline...'
         },
         {
           id: 'settlement-offer',
@@ -6158,7 +6384,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.documentGenerationService.enhancePrompt({
       prompt: this.customPrompt.trim(),
       documentType: documentType,
-      jurisdiction: this.selectedJurisdiction
+      jurisdiction: this.selectedJurisdiction,
+      caseId: this.selectedCaseId
     }).subscribe({
       next: (response) => {
         this.customPrompt = response.enhancedPrompt;
@@ -6230,14 +6457,23 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Document generation flow for 'draft' task
   private generateDocumentFlow(userPrompt: string): void {
-    const title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
-
     // Determine document type: use selected pill OR auto-detect from prompt
     let documentType: string;
     if (this.selectedDocTypePill) {
       documentType = this.selectedDocTypePill;
     } else {
       documentType = this.detectDocumentTypeFromPrompt(userPrompt);
+    }
+
+    // Build case-aware title: "Demand Letter - Marsel Hoxha vs Hanover Insurance"
+    let title: string;
+    if (this.selectedCaseId && documentType) {
+      const selectedCase = this.userCases.find((c: any) => c.id === this.selectedCaseId);
+      const caseName = selectedCase?.title || selectedCase?.caseNumber || '';
+      const docTypeName = documentType.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+      title = caseName ? `${docTypeName} - ${caseName}` : docTypeName;
+    } else {
+      title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
     }
 
     // Create temporary conversation immediately so stop button can find it
@@ -6261,7 +6497,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.stateService.setActiveConversationId(tempConvId);
 
     // Prepare draft generation request
-    const draftRequest = {
+    const draftRequest: any = {
       userId: this.currentUser.id,
       caseId: this.selectedCaseId,
       prompt: userPrompt,
@@ -6270,6 +6506,17 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       sessionName: title,
       researchMode: this.selectedResearchMode  // Pass selected research mode (FAST or THOROUGH)
     };
+
+    // Include documentId when available so backend can inject attached exhibits
+    if (this.currentDocumentId && typeof this.currentDocumentId === 'number') {
+      draftRequest.documentId = this.currentDocumentId;
+    }
+
+    // Include stationery IDs for first-generation awareness
+    if (this.stationeryInserted && this.activeStationeryTemplateId) {
+      draftRequest.stationeryTemplateId = this.activeStationeryTemplateId;
+      draftRequest.stationeryAttorneyId = this.activeStationeryAttorneyId;
+    }
 
     // First, initialize the conversation to get backend ID immediately
     this.documentGenerationService.initDraftConversation(draftRequest)
@@ -6370,7 +6617,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
               // Store document metadata
               this.currentDocumentId = data.documentId;
-              this.activeDocumentTitle = this.extractTitleFromMarkdown(data.content) || title;
+              this.activeDocumentTitle = title || this.extractTitleFromMarkdown(data.content) || 'Untitled Document';
               this.currentDocumentWordCount = data.wordCount || 0;
               this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(data.wordCount || 0);
               this.documentMetadata = {
@@ -6381,6 +6628,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               };
 
               this.loadVersionHistory();
+
+              // Poll for exhibits — async attach may still be in progress
+              if (data.documentId) {
+                this.exhibitPanelService.setExhibitsLoading(true);
+                this.pollForExhibits(data.documentId);
+              }
 
               // Add assistant message
               this.stateService.addConversationMessage({
@@ -6937,7 +7190,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         const withBreaks = escaped.replace(/\n/g, '<br>');
         return `<${tag}>${withBreaks}</${tag}>`;
       });
-      const html = htmlParts.join('');
+      const html = this.convertExhibitReferences(htmlParts.join(''));
 
       // Check if we're replacing inside a table and the AI response contains a table
       const hasTableInResponse = responseBlocks.some((text: string) => this.isMarkdownTable(text));
@@ -7478,6 +7731,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Call backend transformation service (AI Workspace API)
     this.stateService.setIsGenerating(true);
+    if (this.editorInstance) {
+      this.editorInstance.enableReadOnlyMode('ai-generation');
+    }
 
     const transformRequest = {
       documentId: this.currentDocumentId as number,
@@ -7493,6 +7749,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         takeUntil(merge(this.destroy$, this.cancelGeneration$)),
         finalize(() => {
           this.stateService.setIsGenerating(false);
+          if (this.editorInstance) {
+            this.editorInstance.disableReadOnlyMode('ai-generation');
+          }
           this.cdr.detectChanges();
         })
       )
@@ -7584,6 +7843,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Migrate any legacy Quill-stored HTML (ql-syntax pre blocks → tables, ql-* classes)
     if (QuillHtmlMigrator.needsMigration(htmlContent)) {
       htmlContent = QuillHtmlMigrator.migrate(htmlContent);
+    }
+
+    // Convert AI exhibit references like [Exhibit A, p.3] to clickable links
+    htmlContent = this.convertExhibitReferences(htmlContent);
+
+    // Strip any legacy stationery HTML baked into the content (from old approach)
+    if (htmlContent.includes('data-stationery=')) {
+      htmlContent = this.stripStationeryFromHtml(htmlContent);
     }
 
     this.editorInstance.setData(htmlContent);
@@ -7724,6 +7991,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
             this.exhibitPanelService.buildTocFromHtml(html);
             this.setDefaultActiveToc();
+            this.setupScrollSpy();
             this.cdr.detectChanges();
           }
         }
@@ -7754,12 +8022,34 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         this.pendingDocumentContent = null;
       }
 
-      // Handle link clicks — open in new window
+      // If stationery is active (e.g. document reopened with stationery), inject frames into DOM
+      if (this.activeStationeryRawHtml && this.stationeryInserted) {
+        // Small delay to ensure CKEditor DOM is fully rendered
+        this.stationeryRenderTimeoutId = window.setTimeout(() => this.renderStationeryFrames(), 50);
+      }
+
+      // Handle link clicks — open in new window or open exhibit references
       const editableElement = editor.editing.view.getDomRoot();
       if (editableElement) {
         editableElement.addEventListener('click', (e: MouseEvent) => {
           const target = e.target as HTMLElement;
-          if (target && target.tagName === 'A') {
+          if (!target) return;
+
+          // Check for exhibit reference links first
+          const exhibitRef = target.classList?.contains('exhibit-ref') ? target : target.closest('.exhibit-ref') as HTMLElement;
+          if (exhibitRef) {
+            e.preventDefault();
+            e.stopPropagation();
+            const exhibitLabel = exhibitRef.getAttribute('data-exhibit');
+            const page = exhibitRef.getAttribute('data-page');
+            if (exhibitLabel) {
+              this.openExhibitByLabel(exhibitLabel, page ? parseInt(page, 10) : 1);
+            }
+            return;
+          }
+
+          // Regular links — open in new window
+          if (target.tagName === 'A') {
             e.preventDefault();
             const href = target.getAttribute('href');
             if (href) {
@@ -7884,6 +8174,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       if (initialHtml) {
         this.exhibitPanelService.buildTocFromHtml(initialHtml);
         this.setDefaultActiveToc();
+        this.setupScrollSpy();
       }
     }
   }
@@ -7894,6 +8185,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   scrollToHeading(headingId: string): void {
     this.activeTocId = headingId;
+    this.sidebarOverlayOpen = false; // Close overlay after navigating
+
+    // Suppress scroll spy during smooth scroll animation to prevent flickering
+    this.scrollSpySuppressed = true;
+    setTimeout(() => { this.scrollSpySuppressed = false; }, 600);
 
     if (!this.editorInstance) return;
     const editableElement = this.editorInstance.editing.view.getDomRoot();
@@ -7928,15 +8224,97 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Set the first TOC entry as active if no active item exists or current is invalid.
+   * Set the first TOC entry as active.
+   * Always resets to first entry — scroll spy will update to the visible section as user scrolls.
+   * Previous logic preserved stale IDs from other documents (heading IDs are index-based,
+   * so heading-5 in document A maps to a different section than heading-5 in document B).
    */
   private setDefaultActiveToc(): void {
     const entries = this.exhibitPanelService.tocSnapshot;
-    if (!entries || entries.length === 0) return;
-    // If no active item or active item no longer in TOC, default to first
-    if (!this.activeTocId || !entries.some(e => e.id === this.activeTocId)) {
-      this.activeTocId = entries[0].id;
+    if (!entries || entries.length === 0) {
+      this.activeTocId = null;
+      return;
     }
+    this.activeTocId = entries[0].id;
+  }
+
+  /**
+   * Set up scroll spy: listens for scroll events on CKEditor's editable element
+   * and updates activeTocId to the heading nearest the top of the viewport.
+   * Throttled via requestAnimationFrame to avoid performance issues.
+   */
+  private setupScrollSpy(): void {
+    this.destroyScrollSpy();
+
+    const editableElement = this.editorInstance?.editing?.view?.getDomRoot();
+    if (!editableElement) return;
+
+    // The scroll container is .ck.ck-editor (has overflow-y: auto), NOT the editable element.
+    // The editable grows to full content height with no overflow — scroll events fire on its ancestor.
+    const scrollContainer = editableElement.closest('.ck-editor') as HTMLElement;
+    if (!scrollContainer) return;
+
+    // Store direct reference for reliable teardown (editorInstance may be nulled before destroy)
+    this.scrollSpyElement = scrollContainer;
+
+    this.scrollSpyListener = () => {
+      if (this.scrollSpyFrameId) return; // Throttle: one update per animation frame
+      this.scrollSpyFrameId = requestAnimationFrame(() => {
+        this.scrollSpyFrameId = null;
+        // Query headings from editable, but measure positions relative to scroll container
+        this.updateActiveTocOnScroll(editableElement, scrollContainer);
+      });
+    };
+
+    scrollContainer.addEventListener('scroll', this.scrollSpyListener, { passive: true });
+  }
+
+  /**
+   * Determine which heading is currently at or above the top of the scroll container
+   * and update activeTocId accordingly. Suppressed during smooth-scroll animations.
+   * @param editable  The CKEditor editable element (contains the headings)
+   * @param scrollContainer  The .ck-editor wrapper (has overflow-y: auto)
+   */
+  private updateActiveTocOnScroll(editable: HTMLElement, scrollContainer: HTMLElement): void {
+    if (this.scrollSpySuppressed) return;
+
+    const headings = Array.from(editable.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+    if (!headings.length) return;
+
+    const containerRect = scrollContainer.getBoundingClientRect();
+    // Threshold: heading is "active" when it scrolls past top + 100px of the scroll container
+    const threshold = containerRect.top + 100;
+
+    let activeIndex = 0;
+    for (let i = 0; i < headings.length; i++) {
+      const rect = headings[i].getBoundingClientRect();
+      if (rect.top <= threshold) {
+        activeIndex = i;
+      }
+    }
+
+    const newId = `heading-${activeIndex}`;
+    if (this.activeTocId !== newId) {
+      this.activeTocId = newId;
+      this.cdr.detectChanges();
+    }
+  }
+
+  /**
+   * Clean up scroll spy listener and pending animation frame.
+   * Uses stored element reference rather than editorInstance (which may already be nulled).
+   */
+  private destroyScrollSpy(): void {
+    if (this.scrollSpyFrameId) {
+      cancelAnimationFrame(this.scrollSpyFrameId);
+      this.scrollSpyFrameId = null;
+    }
+    if (this.scrollSpyListener && this.scrollSpyElement) {
+      this.scrollSpyElement.removeEventListener('scroll', this.scrollSpyListener);
+    }
+    this.scrollSpyListener = null;
+    this.scrollSpyElement = null;
+    this.scrollSpySuppressed = false;
   }
 
   /**
@@ -7963,13 +8341,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     event.preventDefault();
     this.isResizing = true;
     this.resizeStartX = event.clientX;
-    this.resizeStartWidth = this.exhibitPanelWidth;
+    // Get actual rendered width (handles both CSS % default and pixel override)
+    const panel = (event.target as HTMLElement).closest('.exhibit-viewer-panel') as HTMLElement;
+    this.resizeStartWidth = panel ? panel.offsetWidth : (this.exhibitPanelWidth || 600);
 
     const onMouseMove = (e: MouseEvent) => {
       if (!this.isResizing) return;
       // Panel is on the right, so moving left = increase width
       const delta = this.resizeStartX - e.clientX;
-      const newWidth = Math.max(250, Math.min(800, this.resizeStartWidth + delta));
+      const newWidth = Math.max(400, Math.min(900, this.resizeStartWidth + delta));
       this.exhibitPanelWidth = newWidth;
       this.cdr.detectChanges();
     };
@@ -8240,8 +8620,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Start generating state
+    // Start generating state + lock editor
     this.stateService.setIsGenerating(true);
+    if (this.editorInstance) {
+      this.editorInstance.enableReadOnlyMode('ai-generation');
+    }
 
     // Initialize and animate workflow steps
     this.initializeWorkflowSteps('transform');
@@ -8262,6 +8645,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         takeUntil(merge(this.destroy$, this.cancelGeneration$)),
         finalize(() => {
           this.stateService.setIsGenerating(false);
+          if (this.editorInstance) {
+            this.editorInstance.disableReadOnlyMode('ai-generation');
+          }
           this.completeAllWorkflowSteps();
           this.stateService.setShowBottomSearchBar(true);
           this.cdr.detectChanges();
@@ -8976,6 +9362,55 @@ You can:
   // ========================================
 
   /**
+   * Toggle the version history slide-in panel.
+   * Closes the exhibit panel when opening (mutually exclusive).
+   */
+  toggleVersionHistory(): void {
+    const isCurrentlyOpen = this.stateService.getShowVersionHistory();
+    if (!isCurrentlyOpen) {
+      // Close exhibit panel & chat — mutually exclusive with version history
+      this.exhibitPanelService.closePanel();
+      this.loadVersionHistory();
+    }
+    this.stateService.setShowVersionHistory(!isCurrentlyOpen);
+  }
+
+  /**
+   * Close the version history panel (called from template).
+   */
+  closeVersionHistory(): void {
+    this.stateService.setShowVersionHistory(false);
+    this.exitVersionPreview();
+  }
+
+  /**
+   * Preview a specific version in the editor (read-only mode).
+   */
+  previewVersion(version: any): void {
+    this.previewingVersion = version;
+    if (this.editorInstance) {
+      this.editorInstance.setData(version.contentHtml || version.content || '');
+      this.editorInstance.enableReadOnlyMode('version-preview');
+    }
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Exit version preview and restore current document content.
+   */
+  exitVersionPreview(): void {
+    this.previewingVersion = null;
+    if (this.editorInstance) {
+      this.editorInstance.disableReadOnlyMode('version-preview');
+      const doc = this.stateService.getCurrentDocument();
+      if (doc?.content) {
+        this.setCKEditorContentFromMarkdown(doc.content);
+      }
+    }
+    this.cdr.detectChanges();
+  }
+
+  /**
    * Load version history from backend (for dropdown)
    */
   loadVersionHistory(): void {
@@ -9234,6 +9669,12 @@ You can:
     }
 
     this.pendingChanges.isUndone = false;
+
+    // Re-apply exhibit highlights if this was an exhibit incorporation
+    if (this.pendingChanges.type === 'exhibit references added') {
+      this.highlightExhibitReferences();
+    }
+
     this.notificationService.info('Changes Reapplied', 'AI changes restored', 1500);
     this.cdr.detectChanges();
   }
@@ -9330,13 +9771,13 @@ You can:
     return html.replace(/\s+/g, ' ').trim();
   }
 
-  private startPendingChangesAutoTimer(): void {
+  private startPendingChangesAutoTimer(durationMs: number = 10000): void {
     if (this.pendingChangesAutoTimer) {
       clearTimeout(this.pendingChangesAutoTimer);
     }
     this.pendingChangesAutoTimer = setTimeout(() => {
       this.dismissPendingChanges();
-    }, 10000);
+    }, durationMs);
   }
 
   /**
@@ -9460,6 +9901,70 @@ You can:
 
     // Passed all checks — return content as-is
     return { aiNote: null, documentContent: content };
+  }
+
+  /**
+   * Convert AI-generated exhibit references into clickable HTML links.
+   * Matches patterns like:
+   *   [Exhibit A, p.3]  [Exhibit B]  [Exhibit AA]
+   *   (See Exhibit A, p.3)  (Exhibit C, p. 12)  (Exhibit B)
+   *
+   * Already-converted references (inside <a> tags) are skipped to avoid double-conversion.
+   */
+  private convertExhibitReferences(html: string): string {
+    if (!html) return html;
+
+    // Skip content inside existing <a> tags to avoid double-wrapping.
+    // Split the HTML into: inside-a-tag segments vs outside segments.
+    // Only process the outside segments.
+    const parts = html.split(/(<a\b[^>]*>.*?<\/a>)/gi);
+
+    return parts.map(part => {
+      // If this part is already an <a> tag, leave it untouched
+      if (/^<a\b/i.test(part)) return part;
+
+      // Match [Exhibit X] or [Exhibit X, p.Y]
+      let processed = part.replace(
+        /\[(Exhibit\s+([A-Z]{1,3})(?:,?\s*p\.?\s*(\d+))?)\]/gi,
+        (_match, fullRef, label, page) => {
+          const pageAttr = page ? ` data-page="${page}"` : '';
+          return `<a class="exhibit-ref" data-exhibit="${label.toUpperCase()}"${pageAttr} title="Open ${fullRef}">[${fullRef}]</a>`;
+        }
+      );
+
+      // Match (See Exhibit X, p.Y) or (Exhibit X, p.Y) or (See Exhibit X) or (Exhibit X)
+      processed = processed.replace(
+        /\((See\s+)?(Exhibit\s+([A-Z]{1,3})(?:,?\s*p\.?\s*(\d+))?)\)/gi,
+        (_match, seePrefix, fullRef, label, page) => {
+          const pageAttr = page ? ` data-page="${page}"` : '';
+          const displayPrefix = seePrefix || '';
+          return `<a class="exhibit-ref" data-exhibit="${label.toUpperCase()}"${pageAttr} title="Open ${fullRef}">(${displayPrefix}${fullRef})</a>`;
+        }
+      );
+
+      return processed;
+    }).join('');
+  }
+
+  /**
+   * Open an exhibit by its label (e.g. "A", "B", "AA") from a clickable reference.
+   * Finds the matching exhibit in the panel service and opens it at the specified page.
+   */
+  private openExhibitByLabel(label: string, page: number = 1): void {
+    const exhibits = this.exhibitPanelService.exhibitListSnapshot;
+    const exhibit = exhibits.find(e =>
+      e.label.toUpperCase() === label.toUpperCase() ||
+      e.label.toUpperCase() === `EXHIBIT ${label.toUpperCase()}`
+    );
+    if (exhibit) {
+      // Reuse openExhibitFromSidebar which handles blob URL fetching
+      this.openExhibitFromSidebar(exhibit);
+      if (page > 1) {
+        this.exhibitPanelService.setPage(page);
+      }
+    } else {
+      this.notificationService.info('Exhibit Not Found', `Exhibit ${label} is not attached to this document.`, 2500);
+    }
   }
 
   /**
@@ -9880,91 +10385,64 @@ You can:
   }
 
   /**
-   * Toggle fullscreen mode
-   */
-  toggleFullscreen(): void {
-    this.isFullscreen = !this.isFullscreen;
-
-    if (this.isFullscreen) {
-      document.body.classList.add('ai-workspace-fullscreen');
-    } else {
-      document.body.classList.remove('ai-workspace-fullscreen');
-    }
-  }
-
-  /**
-   * Open document preview modal - renders editor HTML directly for WYSIWYG preview
+   * Open document preview modal - generates a real PDF via backend and displays in iframe
    */
   openDocumentPreviewModal(): void {
     this.showDocumentPreviewModal = true;
-    document.body.classList.add('modal-open');
-
-    // Get editor HTML and render it directly (no backend call needed)
-    const htmlContent = this.getEditorContent();
-    if (htmlContent) {
-      this.previewHtmlContent = this.sanitizer.bypassSecurityTrustHtml(htmlContent);
-    }
-
-    this.cdr.detectChanges();
-  }
-
-  /**
-   * Generate PDF and create blob URL for preview
-   * Sends clean HTML to backend for PDF generation (iText expects HTML)
-   */
-  generatePdfForPreview(): void {
     this.isLoadingPreview = true;
+    this.sanitizedPreviewUrl = null;
+    this.previewPdfBlob = null;
+    document.body.classList.add('modal-open');
     this.cdr.detectChanges();
 
     const htmlContent = this.getEditorContent();
     if (!htmlContent) {
       this.isLoadingPreview = false;
+      this.showDocumentPreviewModal = false;
+      document.body.classList.remove('modal-open');
       this.cdr.detectChanges();
       this.notificationService.error('Error', 'No content to preview');
       return;
     }
 
-    // Clean the HTML for PDF generation (backend uses iText which expects HTML)
-    const cleanHtml = this.documentGenerationService.cleanHtmlForExport(htmlContent);
+    // Clean body first, then wrap with stationery (preserves stationery inline styles)
+    const cleanBody = this.documentGenerationService.cleanHtmlForExport(htmlContent);
+    const exportHtml = this.wrapContentWithStationery(cleanBody);
 
-    // Use content export with clean HTML - backend converts HTML to PDF
-    this.documentGenerationService.exportContentToPDF(cleanHtml, this.activeDocumentTitle)
+    this.documentGenerationService.exportContentToPDF(exportHtml, this.activeDocumentTitle)
       .subscribe({
-        next: (response) => this.handlePreviewResponse(response),
-        error: (error) => {
-          console.error('Error generating PDF preview:', error);
+        next: (response) => {
+          const blob = response.body;
+          if (!blob) {
+            console.error('No blob in response body');
+            this.isLoadingPreview = false;
+            this.showDocumentPreviewModal = false;
+            document.body.classList.remove('modal-open');
+            this.cdr.detectChanges();
+            this.notificationService.error('Error', 'Failed to generate PDF preview.');
+            return;
+          }
+
+          // Revoke previous URL if exists
+          if (this.previewPdfUrl) {
+            URL.revokeObjectURL(this.previewPdfUrl);
+          }
+
+          this.previewPdfBlob = blob;
+          this.previewPdfUrl = URL.createObjectURL(blob);
+          this.sanitizedPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.previewPdfUrl);
           this.isLoadingPreview = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('PDF preview error:', err);
+          this.isLoadingPreview = false;
+          this.showDocumentPreviewModal = false;
+          document.body.classList.remove('modal-open');
           this.cdr.detectChanges();
           this.notificationService.error('Error', 'Failed to generate PDF preview.');
         }
       });
-  }
-
-  /**
-   * Handle PDF response for preview - create blob URL
-   */
-  private handlePreviewResponse(response: any): void {
-    const blob = response.body;
-    if (!blob) {
-      console.error('No blob in response body');
-      this.isLoadingPreview = false;
-      this.cdr.detectChanges();
-      this.notificationService.error('Error', 'Failed to generate PDF preview.');
-      return;
-    }
-
-    // Revoke previous URL if exists
-    if (this.previewPdfUrl) {
-      URL.revokeObjectURL(this.previewPdfUrl);
-    }
-
-    // Create blob URL for iframe
-    this.previewPdfUrl = URL.createObjectURL(blob);
-    // Sanitize URL for iframe binding (bypass Angular security)
-    this.sanitizedPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.previewPdfUrl);
-    this.isLoadingPreview = false;
-    // Force change detection to update the view immediately
-    this.cdr.detectChanges();
   }
 
   /**
@@ -9973,7 +10451,7 @@ You can:
   closeDocumentPreviewModal(): void {
     this.showDocumentPreviewModal = false;
     this.isLoadingPreview = false;
-    this.previewHtmlContent = null;
+    this.previewPdfBlob = null;
 
     // Clean up blob URL
     if (this.previewPdfUrl) {
@@ -9986,50 +10464,17 @@ You can:
   }
 
   /**
-   * Download as PDF - generates PDF from editor content on demand
+   * Download the previewed PDF using the cached blob
    */
   downloadPreviewedPdf(): void {
-    // If we already have a cached blob URL, use it
-    if (this.previewPdfUrl) {
-      const link = document.createElement('a');
-      link.href = this.previewPdfUrl;
-      link.download = this.sanitizeFilename(this.activeDocumentTitle) + '.pdf';
-      link.click();
-      return;
-    }
-
-    // Otherwise generate PDF on demand via backend (send raw HTML for styled PDF)
-    this.isLoadingPreview = true;
-    this.cdr.detectChanges();
-
-    const htmlContent = this.getEditorContent();
-    if (!htmlContent) {
-      this.isLoadingPreview = false;
-      this.notificationService.error('Error', 'No content to export');
-      return;
-    }
-
-    this.documentGenerationService.exportContentToPDF(htmlContent, this.activeDocumentTitle)
-      .subscribe({
-        next: (response) => {
-          const blob = response.body;
-          if (blob) {
-            this.previewPdfUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = this.previewPdfUrl;
-            link.download = this.sanitizeFilename(this.activeDocumentTitle) + '.pdf';
-            link.click();
-          }
-          this.isLoadingPreview = false;
-          this.cdr.detectChanges();
-        },
-        error: (error) => {
-          console.error('Error generating PDF:', error);
-          this.isLoadingPreview = false;
-          this.cdr.detectChanges();
-          this.notificationService.error('Error', 'Failed to generate PDF.');
-        }
-      });
+    if (!this.previewPdfBlob) return;
+    const filename = this.sanitizeFilename(this.activeDocumentTitle) + '.pdf';
+    const url = URL.createObjectURL(this.previewPdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   /**
@@ -10060,8 +10505,623 @@ You can:
    * Closes the chat panel since they're mutually exclusive.
    */
   openExhibitFromSidebar(exhibit: Exhibit): void {
+    this.stateService.setShowVersionHistory(false);
     this.stateService.setShowChat(false);
-    this.exhibitPanelService.openExhibit(exhibit);
+
+    const docId = this.currentDocumentId;
+    if (!docId) return;
+
+    // If exhibit already has a blob URL, open directly
+    if (exhibit.fileUrl && exhibit.fileUrl.startsWith('blob:')) {
+      this.exhibitPanelService.openExhibit(exhibit);
+      return;
+    }
+
+    // Fetch file via HttpClient (with auth headers) and create blob URL
+    this.exhibitPanelService.getExhibitFileBlob(Number(docId), Number(exhibit.id))
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const rawBlobUrl = URL.createObjectURL(blob);
+          exhibit.fileUrl = rawBlobUrl;
+          this.exhibitPanelService.openExhibit(exhibit);
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Failed to load exhibit file:', err);
+          this.notificationService.error('Error', 'Failed to load exhibit file');
+        }
+      });
+  }
+
+  /**
+   * Download the currently open exhibit file.
+   */
+  downloadCurrentExhibit(): void {
+    const exhibit = this.exhibitPanelService.activeExhibitSnapshot;
+    if (!exhibit?.fileUrl) return;
+
+    const a = document.createElement('a');
+    a.href = exhibit.fileUrl;
+    a.download = exhibit.fileName || `${exhibit.label}.pdf`;
+    a.click();
+  }
+
+  /**
+   * Print the currently open exhibit file.
+   */
+  printCurrentExhibit(): void {
+    const exhibit = this.exhibitPanelService.activeExhibitSnapshot;
+    if (exhibit?.fileUrl) {
+      const printWindow = window.open(exhibit.fileUrl);
+      if (printWindow) {
+        printWindow.addEventListener('load', () => printWindow.print());
+      }
+    }
+  }
+
+  // ===== ADD EXHIBIT MODAL =====
+
+  get linkedCaseId(): number | null {
+    return this.selectedCaseId || null;
+  }
+
+  get filteredCaseDocuments(): any[] {
+    if (!this.caseDocSearchTerm) return this.caseDocuments;
+    const term = this.caseDocSearchTerm.toLowerCase();
+    return this.caseDocuments.filter((d: any) =>
+      (d.originalName || d.name || d.fileName || d.title || '').toLowerCase().includes(term)
+    );
+  }
+
+  openAddExhibitModal(): void {
+    this.showAddExhibitModal = true;
+    this.addExhibitTab = 'case';
+    this.selectedCaseDocs = [];
+    this.pendingUploadFiles = [];
+    this.caseDocSearchTerm = '';
+    this.caseDocuments = [];
+
+    // Pre-select the linked case if one exists
+    this.exhibitModalCaseId = this.linkedCaseId;
+
+    // Ensure cases are loaded for the dropdown
+    if (this.userCases.length === 0) {
+      this.loadUserCases();
+    }
+
+    // If a case is already linked, load its documents
+    if (this.exhibitModalCaseId) {
+      this.loadCaseDocsForExhibitModal(this.exhibitModalCaseId);
+    }
+  }
+
+  onExhibitCaseSelected(caseId: number | null): void {
+    this.selectedCaseDocs = [];
+    this.caseDocuments = [];
+    this.caseDocSearchTerm = '';
+    if (caseId) {
+      this.loadCaseDocsForExhibitModal(caseId);
+    }
+  }
+
+  private loadCaseDocsForExhibitModal(caseId: number): void {
+    this.loadingCaseDocs = true;
+    this.caseDocuments = [];
+    this.caseDocumentsService.getDocuments(caseId.toString())
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (docs) => {
+          // Defensive extraction — service should return an array, but handle edge cases
+          if (Array.isArray(docs)) {
+            this.caseDocuments = docs;
+          } else if (docs?.content && Array.isArray(docs.content)) {
+            // Spring Page wrapper: { content: [...], totalElements, ... }
+            this.caseDocuments = docs.content;
+          } else if (docs?.data && Array.isArray(docs.data)) {
+            // CustomHttpResponse not yet unwrapped
+            this.caseDocuments = docs.data;
+          } else {
+            this.caseDocuments = [];
+          }
+          this.loadingCaseDocs = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Failed to load case documents:', err);
+          this.caseDocuments = [];
+          this.loadingCaseDocs = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  closeAddExhibitModal(): void {
+    this.showAddExhibitModal = false;
+  }
+
+  toggleDocSelection(doc: any): void {
+    const idx = this.selectedCaseDocs.findIndex((d: any) => d.id === doc.id);
+    if (idx >= 0) this.selectedCaseDocs.splice(idx, 1);
+    else this.selectedCaseDocs.push(doc);
+  }
+
+  isDocSelected(doc: any): boolean {
+    return this.selectedCaseDocs.some((d: any) => d.id === doc.id);
+  }
+
+  onExhibitDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDraggingExhibit = false;
+    if (event.dataTransfer?.files) {
+      this.pendingUploadFiles.push(...Array.from(event.dataTransfer.files));
+    }
+  }
+
+  onExhibitFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+      this.pendingUploadFiles.push(...Array.from(input.files));
+      input.value = '';
+    }
+  }
+
+  removePendingFile(index: number): void {
+    this.pendingUploadFiles.splice(index, 1);
+  }
+
+  confirmAddExhibits(): void {
+    this.addingExhibits = true;
+    const docId = this.currentDocumentId as number;
+    if (!docId) { this.addingExhibits = false; return; }
+
+    // Check for duplicates against existing exhibits
+    const existingFileNames = new Set(
+      this.exhibitPanelService.exhibitListSnapshot.map(e => e.fileName.toLowerCase())
+    );
+
+    // Filter out case docs that are already exhibits
+    const newCaseDocs = this.selectedCaseDocs.filter((doc: any) => {
+      const name = (doc.originalName || doc.name || doc.fileName || '').toLowerCase();
+      return !existingFileNames.has(name);
+    });
+    const skippedCaseDocs = this.selectedCaseDocs.length - newCaseDocs.length;
+
+    // Filter out upload files that are already exhibits
+    const newUploadFiles = this.pendingUploadFiles.filter((file: File) => {
+      return !existingFileNames.has(file.name.toLowerCase());
+    });
+    const skippedUploads = this.pendingUploadFiles.length - newUploadFiles.length;
+
+    const totalSkipped = skippedCaseDocs + skippedUploads;
+    if (totalSkipped > 0) {
+      this.notificationService.info('Duplicates Skipped',
+        `${totalSkipped} file${totalSkipped > 1 ? 's' : ''} already added as exhibit${totalSkipped > 1 ? 's' : ''}`, 3000);
+    }
+
+    const requests: Observable<any>[] = [];
+
+    // Case document exhibits
+    for (const doc of newCaseDocs) {
+      requests.push(this.exhibitPanelService.addFromCaseDocument(docId, doc.id));
+    }
+
+    // Upload exhibits
+    for (const file of newUploadFiles) {
+      requests.push(this.exhibitPanelService.uploadExhibit(docId, file, this.exhibitModalCaseId));
+    }
+
+    if (requests.length === 0) { this.addingExhibits = false; return; }
+
+    forkJoin(requests).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (results) => {
+        results.forEach((exhibit: any) => {
+          if (exhibit) {
+            this.exhibitPanelService.addExhibit({
+              id: exhibit.id?.toString() || '',
+              label: exhibit.label || '',
+              fileName: exhibit.fileName || '',
+              fileUrl: this.exhibitPanelService.getExhibitFileUrl(docId, exhibit.id),
+              pageCount: exhibit.pageCount
+            });
+          }
+        });
+        this.closeAddExhibitModal();
+        this.addingExhibits = false;
+        this.notificationService.success('Exhibits Added', `${results.length} exhibit${results.length > 1 ? 's' : ''} added successfully`);
+        this.cdr.detectChanges();
+
+        // Prompt user to incorporate exhibits via AI
+        this.promptIncorporateExhibits(results);
+      },
+      error: (err) => {
+        console.error('Failed to add exhibits:', err);
+        this.addingExhibits = false;
+        this.notificationService.error('Error', 'Failed to add one or more exhibits');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
+   * Load exhibits for a document when entering drafting mode.
+   */
+  loadDocumentExhibits(documentId: number): void {
+    this.exhibitPanelService.setExhibitsLoading(true);
+    this.exhibitPanelService.getExhibits(documentId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (exhibits) => {
+        this.exhibitPanelService.setExhibits(exhibits.map((e: any) => ({
+          id: String(e.id),
+          label: e.label,
+          fileName: e.fileName,
+          fileUrl: this.exhibitPanelService.getExhibitFileUrl(documentId, e.id),
+          pageCount: e.pageCount
+        })));
+        this.exhibitPanelService.setExhibitsLoading(false);
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load exhibits:', err);
+        this.exhibitPanelService.setExhibitsLoading(false);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
+   * Poll for exhibits after document generation.
+   * Backend auto-attach is async — retries every 3s until exhibits stabilize or 30s max.
+   */
+  private pollForExhibits(documentId: number): void {
+    let attempts = 0;
+    let lastCount = 0;
+    let stableRounds = 0;
+    const maxAttempts = 10; // 10 × 3s = 30s max
+    const intervalMs = 3000;
+
+    const poll = () => {
+      if (attempts >= maxAttempts) {
+        // Give up — show whatever we have
+        this.loadDocumentExhibits(documentId);
+        return;
+      }
+      attempts++;
+      this.exhibitPanelService.getExhibits(documentId).pipe(takeUntil(this.destroy$)).subscribe({
+        next: (exhibits) => {
+          const count = exhibits.length;
+          if (count > 0 && count === lastCount) {
+            stableRounds++;
+          } else {
+            stableRounds = 0;
+          }
+          lastCount = count;
+
+          // Stable for 2 consecutive polls (6s) → done
+          if (count > 0 && stableRounds >= 2) {
+            this.exhibitPanelService.setExhibits(exhibits.map((e: any) => ({
+              id: String(e.id),
+              label: e.label,
+              fileName: e.fileName,
+              fileUrl: this.exhibitPanelService.getExhibitFileUrl(documentId, e.id),
+              pageCount: e.pageCount
+            })));
+            this.exhibitPanelService.setExhibitsLoading(false);
+            return;
+          }
+
+          // Keep polling
+          this.setTrackedTimeout(poll, intervalMs);
+        },
+        error: () => {
+          // Retry on error
+          this.setTrackedTimeout(poll, intervalMs);
+        }
+      });
+    };
+
+    // Start first poll after 3s (give backend time to start async inserts)
+    this.setTrackedTimeout(poll, intervalMs);
+  }
+
+  /**
+   * Remove an exhibit from the document.
+   */
+  removeExhibit(exhibit: any, event: Event): void {
+    event.stopPropagation();
+    const docId = this.currentDocumentId;
+    if (!docId) return;
+
+    import('sweetalert2').then(Swal => {
+      Swal.default.fire({
+        html: `
+          <div class="ai-note-header">
+            <div class="ai-note-icon"><i class="ri-delete-bin-line"></i></div>
+            <h2 class="ai-note-title">Remove Exhibit ${exhibit.label}?</h2>
+          </div>
+          <div class="ai-note-content">
+            <p>This will remove <strong>${exhibit.fileName}</strong> from this document. The file will remain in the case file manager.</p>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Remove',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#f17171',
+        customClass: {
+          popup: 'ai-note-popup',
+          confirmButton: 'btn btn-sm btn-danger',
+          cancelButton: 'btn btn-sm btn-light ms-2'
+        },
+        buttonsStyling: false
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.exhibitPanelService.deleteExhibit(docId as number, Number(exhibit.id))
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: () => {
+                this.exhibitPanelService.removeExhibit(exhibit.id);
+
+                // Check if the document contains references to this exhibit
+                const currentContent = this.editorInstance?.getData() || '';
+                const escapedLabel = exhibit.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const refPattern = new RegExp(`\\[Exhibit\\s+${escapedLabel}(?:,\\s*p\\.?\\s*\\d+(?:\\s*-\\s*\\d+)?)?\\]`, 'gi');
+                const hasReferences = refPattern.test(currentContent);
+
+                if (hasReferences && currentContent.trim()) {
+                  this.cleanupExhibitReferencesViaAI(exhibit.label);
+                } else {
+                  this.notificationService.success('Exhibit Removed', `Exhibit ${exhibit.label} has been removed`, 2500);
+                }
+              },
+              error: (err) => console.error('Failed to remove exhibit:', err)
+            });
+        }
+      });
+    });
+  }
+
+  /**
+   * Use AI to remove references to a deleted exhibit and adjust surrounding sentences.
+   */
+  private cleanupExhibitReferencesViaAI(label: string): void {
+    if (!this.editorInstance) return;
+    this.activeDocumentContent = this.editorInstance.getData();
+
+    if (!this.currentDocumentId || !this.activeDocumentContent?.trim()) {
+      this.notificationService.success('Exhibit Removed', `Exhibit ${label} has been removed`, 2500);
+      return;
+    }
+
+    const originalContent = this.activeDocumentContent;
+    const prompt = `Remove all citations and references to Exhibit ${label} from the document, in any format (e.g. [Exhibit ${label}], [Exhibit ${label}, p.3], [Exhibit ${label}, pp. 3-5], [Exhibit ${label} at 7], or any similar citation pattern). Adjust surrounding sentences to read naturally without the exhibit citation. Do NOT re-letter or renumber remaining exhibits. Only remove references to Exhibit ${label}.`;
+
+    // Lock editor + show overlay
+    this.stateService.setIsGenerating(true);
+    this.editorInstance.enableReadOnlyMode('ai-generation');
+    this.initializeWorkflowSteps('transform');
+    this.animateWorkflowSteps();
+
+    const transformRequest = {
+      documentId: this.currentDocumentId as number,
+      transformationType: 'CUSTOM',
+      transformationScope: 'FULL_DOCUMENT' as const,
+      fullDocumentContent: this.activeDocumentContent,
+      customPrompt: prompt,
+      jurisdiction: this.selectedJurisdiction,
+      documentType: this.selectedDocTypePill
+    };
+
+    this.documentGenerationService.transformDocument(transformRequest, this.currentUser?.id)
+      .pipe(
+        takeUntil(merge(this.destroy$, this.cancelGeneration$)),
+        finalize(() => {
+          this.stateService.setIsGenerating(false);
+          if (this.editorInstance) {
+            this.editorInstance.disableReadOnlyMode('ai-generation');
+          }
+          this.completeAllWorkflowSteps();
+          this.cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.transformedContent && this.editorInstance) {
+            this.editorInstance.setData(response.transformedContent);
+            this.activeDocumentContent = response.transformedContent;
+
+            // Update word/page count
+            const plainText = this.ckEditorService.getPlainText(this.editorInstance);
+            this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+            this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+
+            // Rebuild TOC
+            this.exhibitPanelService.buildTocFromHtml(this.activeDocumentContent);
+            this.setDefaultActiveToc();
+
+            // Show pending changes bar with undo capability
+            this.pendingChanges = {
+              originalContent: originalContent,
+              transformedContent: response.transformedContent,
+              changeCount: 1,
+              type: 'exhibit references removed',
+              response: response,
+              isUndone: false
+            };
+            this.startPendingChangesAutoTimer(30000);
+
+            this.notificationService.success('References Cleaned', `Exhibit ${label} references removed from document`, 2500);
+          } else {
+            this.notificationService.success('Exhibit Removed', `Exhibit ${label} removed (no reference changes needed)`, 2500);
+          }
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error cleaning exhibit references:', error);
+          this.notificationService.error('Exhibit Removed', `Exhibit ${label} removed, but failed to clean up references automatically. You may need to edit them manually.`);
+        }
+      });
+  }
+
+  /**
+   * After adding exhibits, prompt the user to incorporate references via AI.
+   */
+  promptIncorporateExhibits(newExhibits: any[]): void {
+    if (newExhibits.length === 0) return;
+
+    const exhibitNames = newExhibits
+      .map((e: any) => `Exhibit ${e.label} (${e.fileName})`)
+      .join(', ');
+
+    import('sweetalert2').then(Swal => {
+      setTimeout(() => {
+        Swal.default.fire({
+          html: `
+            <div class="ai-note-header">
+              <img src="/assets/images/new-legal-ai.gif" alt="AI" class="ai-note-avatar">
+              <div class="ai-note-title-group">
+                <span class="ai-note-title">Legience Assistant</span>
+              </div>
+            </div>
+            <div class="ai-note-card">
+              <div class="ai-note-body">
+                <p><strong>${exhibitNames}</strong> added successfully.</p>
+                <p>Would you like me to analyze ${newExhibits.length > 1 ? 'these exhibits' : 'this exhibit'} and incorporate references into the document?</p>
+              </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: 'Yes, incorporate',
+          cancelButtonText: 'No thanks',
+          allowEnterKey: false,
+          focusConfirm: false,
+          width: 440,
+          padding: 0,
+          customClass: {
+            popup: 'ai-note-modal',
+            confirmButton: 'btn btn-sm btn-primary',
+            cancelButton: 'btn btn-sm btn-light ms-2'
+          }
+        }).then(result => {
+          if (result.isConfirmed) {
+            this.incorporateExhibitsViaAI(newExhibits);
+          }
+        });
+      }, 150);
+    });
+  }
+
+  /**
+   * Use the full-document AI transform to incorporate exhibit references.
+   * Directly applies changes to the editor and shows the pending changes bar
+   * (visible in drafting mode), rather than routing through the chat panel.
+   */
+  incorporateExhibitsViaAI(exhibits: any[]): void {
+    // Make sure we have the latest editor content
+    if (this.editorInstance) {
+      this.activeDocumentContent = this.editorInstance.getData();
+    }
+
+    if (!this.currentDocumentId || !this.activeDocumentContent) {
+      this.notificationService.error('Error', 'No document content available to revise');
+      return;
+    }
+
+    const exhibitList = exhibits
+      .map((e: any) => {
+        const pages = e.pageCount ? ` — ${e.pageCount} page${e.pageCount === 1 ? '' : 's'}` : '';
+        return `Exhibit ${e.label} (${e.fileName}${pages})`;
+      })
+      .join(', ');
+    const prompt = `Analyze the newly added ${exhibitList} and incorporate appropriate references throughout the document where the exhibit evidence supports the arguments being made. Use plain text [Exhibit X] for single-page exhibits or [Exhibit X, p.Y] for multi-page exhibits when citing a specific page. Do NOT use markdown links. Cite sparingly — one reference per factual point, not after every clause.`;
+
+    // Save original content for undo
+    const originalContent = this.activeDocumentContent;
+
+    // Start generating state + lock editor
+    this.stateService.setIsGenerating(true);
+    if (this.editorInstance) {
+      this.editorInstance.enableReadOnlyMode('ai-generation');
+    }
+    this.initializeWorkflowSteps('transform');
+    this.animateWorkflowSteps();
+
+    const transformRequest = {
+      documentId: this.currentDocumentId as number,
+      transformationType: 'CUSTOM',
+      transformationScope: 'FULL_DOCUMENT' as const,
+      fullDocumentContent: this.activeDocumentContent,
+      customPrompt: prompt,
+      jurisdiction: this.selectedJurisdiction,
+      documentType: this.selectedDocTypePill
+    };
+
+    this.documentGenerationService.transformDocument(transformRequest, this.currentUser?.id)
+      .pipe(
+        takeUntil(merge(this.destroy$, this.cancelGeneration$)),
+        finalize(() => {
+          this.stateService.setIsGenerating(false);
+          if (this.editorInstance) {
+            this.editorInstance.disableReadOnlyMode('ai-generation');
+          }
+          this.completeAllWorkflowSteps();
+          this.cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.transformedContent && this.editorInstance) {
+            // Apply the transformed content to the editor
+            this.editorInstance.setData(response.transformedContent);
+            this.activeDocumentContent = response.transformedContent;
+
+            // Update word/page count
+            const plainText = this.ckEditorService.getPlainText(this.editorInstance);
+            this.currentDocumentWordCount = this.documentGenerationService.countWords(plainText);
+            this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+
+            // Rebuild TOC
+            this.exhibitPanelService.buildTocFromHtml(this.activeDocumentContent);
+            this.setDefaultActiveToc();
+
+            // Unlock editor before highlighting — model.change() is blocked in read-only mode
+            this.editorInstance.disableReadOnlyMode('ai-generation');
+
+            // Highlight newly-added exhibit references so user can see what changed
+            const refCount = this.highlightExhibitReferences();
+
+            // Show pending changes bar with undo capability
+            this.pendingChanges = {
+              originalContent: originalContent,
+              transformedContent: response.transformedContent,
+              changeCount: refCount || 1,
+              type: 'exhibit references added',
+              response: response,
+              isUndone: false
+            };
+            // Give user more time to review highlighted references before auto-dismiss
+            this.startPendingChangesAutoTimer(30000);
+
+            this.notificationService.success('Exhibits Incorporated', 'References have been added to the document', 2500);
+          } else {
+            this.notificationService.info('No Changes', 'AI did not suggest any changes to the document');
+          }
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Error incorporating exhibits:', error);
+          this.notificationService.error('Error', 'Failed to incorporate exhibit references. Please try again.');
+        }
+      });
+  }
+
+  /**
+   * Highlight exhibit reference patterns in the editor (e.g., [Exhibit A], [Exhibit B, p.3]).
+   * Uses CKEditor's yellow highlight marker so users can see where references were added.
+   * Highlights are cleared when finalizePendingChanges() calls removeAllHighlights().
+   */
+  private highlightExhibitReferences(): number {
+    if (!this.editorInstance) return 0;
+    const pattern = /\[Exhibit\s+[A-Z](?:,\s*p\.?\s*\d+(?:\s*-\s*\d+)?)?\]/gi;
+    return this.ckEditorService.highlightAllMatches(this.editorInstance, pattern, 'yellowMarker');
   }
 
   /**
@@ -10328,6 +11388,306 @@ You can:
         this.notificationService.error('Error', 'Failed to toggle bookmark');
       }
     });
+  }
+
+  // ==================== STATIONERY ====================
+
+  /**
+   * Auto-load stationery frame when opening a document that has stationery association.
+   * Called after document data is loaded from backend.
+   */
+  private loadDocumentStationery(document: any): void {
+    const templateId = document.stationeryTemplateId;
+    const attorneyId = document.stationeryAttorneyId;
+
+    if (!templateId || !attorneyId) {
+      // No stationery on this document — clear any previous frame
+      this.clearStationeryFrames();
+      this.activeStationeryRendered = null;
+      this.activeStationeryRawHtml = null;
+      this.activeStationeryTemplateId = null;
+      this.activeStationeryAttorneyId = null;
+      this.stationeryInserted = false;
+      return;
+    }
+
+    // Render the stationery frame
+    this.stationeryService.renderStationery(templateId, attorneyId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (rendered: StationeryRenderResponse) => {
+          this.activeStationeryRawHtml = {
+            letterhead: rendered.letterheadHtml || '',
+            signature: rendered.signatureBlockHtml || '',
+            footer: rendered.footerHtml || ''
+          };
+          this.activeStationeryRendered = {
+            letterhead: rendered.letterheadHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.letterheadHtml) : null,
+            signature: rendered.signatureBlockHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.signatureBlockHtml) : null,
+            footer: rendered.footerHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.footerHtml) : null
+          };
+          this.activeStationeryTemplateId = templateId;
+          this.activeStationeryAttorneyId = attorneyId;
+          this.selectedStationeryTemplateId = templateId;
+          this.stationeryInserted = true;
+
+          // Inject stationery frames into CKEditor DOM (small delay to ensure DOM is ready)
+          this.stationeryRenderTimeoutId = window.setTimeout(() => this.renderStationeryFrames(), 50);
+
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Failed to auto-load stationery:', err);
+          // Non-fatal — document still opens without stationery frame
+        }
+      });
+  }
+
+  /**
+   * Load templates, attorneys, and current user's attorney profile when the stationery dropdown opens.
+   * Determines if one-click auto-apply is available (default template + user is an attorney).
+   */
+  onStationeryDropdownOpen(): void {
+    this.loadingStationery = true;
+    this.showAdvancedStationery = false;
+    this.cdr.detectChanges();
+
+    forkJoin({
+      templates: this.stationeryService.getTemplates(),
+      attorneys: this.stationeryService.getAttorneys(),
+      myProfile: this.stationeryService.getMyAttorneyProfile()
+    }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: ({ templates, attorneys, myProfile }) => {
+        this.stationeryTemplates = templates;
+        this.stationeryAttorneys = attorneys;
+        this.myAttorneyProfile = myProfile;
+        this.defaultStationeryTemplate = templates.find(t => t.isDefault) || templates[0] || null;
+        // Auto-select default template
+        if (this.defaultStationeryTemplate) {
+          this.selectedStationeryTemplateId = this.defaultStationeryTemplate.id!;
+        }
+        this.autoStationeryReady = !!myProfile && !!this.defaultStationeryTemplate;
+        this.loadingStationery = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load stationery data:', err);
+        this.loadingStationery = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /**
+   * One-click apply: uses the default template + current user's attorney profile.
+   */
+  applyAutoStationery(): void {
+    if (!this.myAttorneyProfile || !this.defaultStationeryTemplate) return;
+    this.selectedStationeryTemplateId = this.defaultStationeryTemplate.id!;
+    this.activeAttorneyName = `${this.myAttorneyProfile.firstName} ${this.myAttorneyProfile.lastName}`;
+    this.insertStationery(this.myAttorneyProfile.id);
+  }
+
+  /**
+   * Render stationery as CSS page frame (outside CKEditor).
+   * Stores rendered HTML in component properties and saves template/attorney IDs to document.
+   */
+  insertStationery(attorneyId: number): void {
+    if (!this.selectedStationeryTemplateId) return;
+
+    const templateId = this.selectedStationeryTemplateId;
+    this.stationeryService.renderStationery(templateId, attorneyId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (rendered: StationeryRenderResponse) => {
+          // Store raw HTML for export use
+          this.activeStationeryRawHtml = {
+            letterhead: rendered.letterheadHtml || '',
+            signature: rendered.signatureBlockHtml || '',
+            footer: rendered.footerHtml || ''
+          };
+
+          // Keep sanitized copy for legacy compatibility (e.g. export previews)
+          this.activeStationeryRendered = {
+            letterhead: rendered.letterheadHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.letterheadHtml) : null,
+            signature: rendered.signatureBlockHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.signatureBlockHtml) : null,
+            footer: rendered.footerHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.footerHtml) : null
+          };
+
+          this.activeStationeryTemplateId = templateId;
+          this.activeStationeryAttorneyId = attorneyId;
+          this.stationeryInserted = true;
+
+          // Set active attorney name for display (find from attorneys list or myProfile)
+          const matchedAtty = this.stationeryAttorneys.find(a => a.id === attorneyId);
+          if (matchedAtty) {
+            this.activeAttorneyName = `${matchedAtty.firstName} ${matchedAtty.lastName}`;
+          } else if (this.myAttorneyProfile && this.myAttorneyProfile.id === attorneyId) {
+            this.activeAttorneyName = `${this.myAttorneyProfile.firstName} ${this.myAttorneyProfile.lastName}`;
+          }
+
+          // Inject stationery frames into CKEditor DOM
+          this.renderStationeryFrames();
+
+          // Persist stationery association on the document
+          if (this.currentDocumentId) {
+            this.documentGenerationService.updateDocumentStationery(
+              this.currentDocumentId as number, templateId, attorneyId
+            ).pipe(takeUntil(this.destroy$)).subscribe({
+              error: (err) => console.error('Failed to persist stationery association:', err)
+            });
+          }
+
+          // Strip any old stationery HTML that may be baked into CKEditor content (migration from old approach)
+          if (this.editorInstance) {
+            const content = this.editorInstance.getData();
+            if (content.includes('data-stationery=')) {
+              const cleaned = this.stripStationeryFromHtml(content);
+              this.editorInstance.setData(cleaned);
+              this.activeDocumentContent = cleaned;
+            }
+          }
+
+          this.notificationService.success('Stationery Applied', 'Letterhead and signature block applied', 2500);
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Failed to render stationery:', err);
+          this.notificationService.error('Error', 'Failed to apply stationery. Please try again.');
+        }
+      });
+  }
+
+  /**
+   * Remove stationery frame from the document view.
+   * Clears component properties and nulls out IDs on the document.
+   */
+  removeStationery(): void {
+    // Remove injected DOM elements from CKEditor
+    this.clearStationeryFrames();
+
+    this.activeStationeryRendered = null;
+    this.activeStationeryRawHtml = null;
+    this.activeStationeryTemplateId = null;
+    this.activeStationeryAttorneyId = null;
+    this.stationeryInserted = false;
+
+    // Clear stationery association on the document
+    if (this.currentDocumentId) {
+      this.documentGenerationService.updateDocumentStationery(
+        this.currentDocumentId as number, null, null
+      ).pipe(takeUntil(this.destroy$)).subscribe({
+        error: (err) => console.error('Failed to clear stationery association:', err)
+      });
+    }
+
+    // Also strip any legacy stationery HTML from CKEditor content
+    if (this.editorInstance) {
+      const content = this.editorInstance.getData();
+      if (content.includes('data-stationery=')) {
+        const cleaned = this.stripStationeryFromHtml(content);
+        this.editorInstance.setData(cleaned);
+        this.activeDocumentContent = cleaned;
+      }
+    }
+
+    this.notificationService.success('Stationery Removed', 'Letterhead and signature block removed', 2500);
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Strip all data-stationery marked divs and adjacent <hr> from HTML string.
+   * Uses DOMParser to correctly handle nested HTML within stationery blocks.
+   */
+  private stripStationeryFromHtml(html: string): string {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    doc.querySelectorAll('[data-stationery]').forEach(el => {
+      // Remove adjacent <hr> separators
+      const next = el.nextElementSibling;
+      const prev = el.previousElementSibling;
+      if (next?.tagName === 'HR') next.remove();
+      if (prev?.tagName === 'HR') prev.remove();
+      el.remove();
+    });
+    return doc.body.innerHTML.trim();
+  }
+
+  /**
+   * Inject stationery HTML frames into CKEditor's .ck-editor__main container as DOM siblings
+   * of .ck-content. This places them INSIDE the editor scroll area but OUTSIDE the editable
+   * content, so getData() stays clean while the user sees letterhead/signature/footer.
+   */
+  private renderStationeryFrames(): void {
+    if (!this.editorInstance || !this.activeStationeryRawHtml) return;
+
+    const editableEl = this.editorInstance.editing.view.getDomRoot();
+    const mainContainer = editableEl?.closest('.ck-editor__main');
+    if (!mainContainer) return;
+
+    // Clear existing frames first
+    this.clearStationeryFrames();
+
+    // Add unified-page class for seamless stationery appearance
+    mainContainer.classList.add('stationery-active');
+
+    // Letterhead — insert BEFORE .ck-content
+    if (this.activeStationeryRawHtml.letterhead) {
+      const letterhead = document.createElement('div');
+      letterhead.className = 'stationery-frame stationery-letterhead-frame';
+      letterhead.setAttribute('contenteditable', 'false');
+      letterhead.innerHTML = this.activeStationeryRawHtml.letterhead;
+      // Force serif font on all text elements — stored HTML may lack font-family
+      const serifFont = "'Times New Roman', Georgia, serif";
+      letterhead.querySelectorAll('p, td, span, div, th').forEach((el: Element) => {
+        (el as HTMLElement).style.fontFamily = serifFont;
+      });
+      mainContainer.insertBefore(letterhead, editableEl);
+    }
+
+    // Signature — insert AFTER .ck-content
+    if (this.activeStationeryRawHtml.signature) {
+      const signature = document.createElement('div');
+      signature.className = 'stationery-frame stationery-signature-frame';
+      signature.setAttribute('contenteditable', 'false');
+      signature.innerHTML = this.activeStationeryRawHtml.signature;
+      mainContainer.appendChild(signature);
+    }
+
+    // Footer — insert AFTER signature
+    if (this.activeStationeryRawHtml.footer) {
+      const footer = document.createElement('div');
+      footer.className = 'stationery-frame stationery-footer-frame';
+      footer.setAttribute('contenteditable', 'false');
+      footer.innerHTML = this.activeStationeryRawHtml.footer;
+      mainContainer.appendChild(footer);
+    }
+  }
+
+  /**
+   * Remove all injected stationery frames from the CKEditor DOM.
+   */
+  private clearStationeryFrames(): void {
+    // Cancel any pending render timeout
+    if (this.stationeryRenderTimeoutId !== null) {
+      clearTimeout(this.stationeryRenderTimeoutId);
+      this.stationeryRenderTimeoutId = null;
+    }
+
+    // Try via editor instance first
+    if (this.editorInstance) {
+      const editableEl = this.editorInstance.editing.view.getDomRoot();
+      const mainContainer = editableEl?.closest('.ck-editor__main');
+      if (mainContainer) {
+        mainContainer.classList.remove('stationery-active');
+        mainContainer.querySelectorAll('.stationery-frame').forEach(el => el.remove());
+        return;
+      }
+    }
+
+    // Fallback: query from document directly (editor may already be destroyed)
+    document.querySelectorAll('.ck-editor__main.stationery-active').forEach(el => el.classList.remove('stationery-active'));
+    document.querySelectorAll('.ck-editor__main .stationery-frame').forEach(el => el.remove());
   }
 
 }

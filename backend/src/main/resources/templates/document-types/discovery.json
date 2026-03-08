@@ -1,0 +1,9 @@
+{
+  "type": "discovery",
+  "aliases": ["request_for_production", "document_request"],
+  "displayName": "Request for Production of Documents",
+  "category": "discovery",
+  "citationLevel": "MINIMAL",
+  "template": "**DOCUMENT FORMAT — REQUEST FOR PRODUCTION OF DOCUMENTS**:\nFormal request for documents and tangible things under rules of civil procedure.\n\nSTRUCTURE:\n1. COURT CAPTION: Court, parties, case number\n2. TITLE: \"[PLAINTIFF'S/DEFENDANT'S] FIRST REQUEST FOR PRODUCTION OF DOCUMENTS\"\n3. INSTRUCTIONS AND DEFINITIONS:\n   - Define \"document\" broadly (papers, electronic records, photos, videos, etc.)\n   - Reference applicable rules (Mass. R. Civ. P. 34 or federal equivalent)\n   - Production format (native electronic, paper copies)\n4. REQUESTS: Numbered requests covering:\n   - Communications between parties\n   - Contracts and agreements\n   - Financial records\n   - Insurance policies\n   - Medical records (if applicable)\n   - Photographs and videos\n   - Electronic communications (email, text)\n   - Expert reports\n5. SIGNATURE BLOCK\n\nFORMAT: Number each request. Define time period covered. Be specific about categories.",
+  "hints": "Key elements to address: categories of documents, time period, relevant custodians, format specifications."
+}

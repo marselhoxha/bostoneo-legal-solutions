@@ -6,10 +6,12 @@ import com.bostoneo.bostoneosolutions.dto.DocumentTransformResponse;
 import com.bostoneo.bostoneosolutions.dto.ai.DraftGenerationRequest;
 import com.bostoneo.bostoneosolutions.dto.ai.DraftGenerationResponse;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocument;
+import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocumentExhibit;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocumentVersion;
 import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.AiWorkspaceDocumentService;
+import com.bostoneo.bostoneosolutions.service.AiWorkspaceExhibitService;
 import com.bostoneo.bostoneosolutions.service.DraftStreamingPublisher;
 import com.bostoneo.bostoneosolutions.service.GenerationCancellationService;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +21,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
@@ -40,6 +44,7 @@ import java.util.concurrent.CompletableFuture;
 public class AiWorkspaceController {
 
     private final AiWorkspaceDocumentService documentService;
+    private final AiWorkspaceExhibitService exhibitService;
     private final GenerationCancellationService cancellationService;
     private final DraftStreamingPublisher draftStreamingPublisher;
 
@@ -290,7 +295,10 @@ public class AiWorkspaceController {
                         request.getJurisdiction(),
                         request.getSessionName(),
                         conversationId,
-                        request.getResearchMode()
+                        request.getResearchMode(),
+                        request.getDocumentId(),
+                        request.getStationeryTemplateId(),
+                        request.getStationeryAttorneyId()
                 );
             });
 
@@ -572,7 +580,10 @@ public class AiWorkspaceController {
                 request.getJurisdiction(),
                 request.getSessionName(),
                 request.getConversationId(),
-                request.getResearchMode()
+                request.getResearchMode(),
+                request.getDocumentId(),
+                request.getStationeryTemplateId(),
+                request.getStationeryAttorneyId()
             );
 
             return ResponseEntity.ok(response);
@@ -592,7 +603,7 @@ public class AiWorkspaceController {
      */
     @PostMapping("/drafts/enhance-prompt")
     public ResponseEntity<Map<String, Object>> enhancePrompt(
-        @RequestBody Map<String, String> request,
+        @RequestBody Map<String, Object> request,
         @AuthenticationPrincipal UserDTO userDto
     ) {
         try {
@@ -601,17 +612,18 @@ public class AiWorkspaceController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
-            String prompt = request.get("prompt");
-            String documentType = request.get("documentType");
-            String jurisdiction = request.get("jurisdiction");
+            String prompt = (String) request.get("prompt");
+            String documentType = (String) request.get("documentType");
+            String jurisdiction = (String) request.get("jurisdiction");
+            Long caseId = request.get("caseId") != null ? Long.valueOf(request.get("caseId").toString()) : null;
 
             if (prompt == null || prompt.trim().isEmpty()) {
                 return ResponseEntity.badRequest().build();
             }
 
-            log.info("Enhancing prompt for user={}, docType={}, jurisdiction={}", userDto.getId(), documentType, jurisdiction);
+            log.info("Enhancing prompt for user={}, docType={}, jurisdiction={}, caseId={}", userDto.getId(), documentType, jurisdiction, caseId);
 
-            String enhancedPrompt = documentService.enhancePrompt(prompt.trim(), documentType, jurisdiction);
+            String enhancedPrompt = documentService.enhancePrompt(prompt.trim(), documentType, jurisdiction, caseId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("enhancedPrompt", enhancedPrompt);
@@ -769,6 +781,202 @@ public class AiWorkspaceController {
         }
     }
 
+    // ===== EXHIBIT ENDPOINTS =====
+
+    /**
+     * Get all exhibits for a workspace document
+     * GET /api/legal/ai-workspace/documents/{documentId}/exhibits
+     */
+    @GetMapping("/documents/{documentId}/exhibits")
+    public ResponseEntity<List<AiWorkspaceDocumentExhibit>> getExhibits(
+        @PathVariable Long documentId,
+        @AuthenticationPrincipal User user
+    ) {
+        try {
+            Long orgId = TenantContext.getCurrentTenant();
+            if (orgId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            List<AiWorkspaceDocumentExhibit> exhibits = exhibitService.getExhibitsForDocument(documentId, orgId);
+            return ResponseEntity.ok(exhibits);
+        } catch (Exception e) {
+            log.error("Error retrieving exhibits for document {}: {}", documentId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Add an exhibit from an existing case document
+     * POST /api/legal/ai-workspace/documents/{documentId}/exhibits/from-case
+     */
+    @PostMapping("/documents/{documentId}/exhibits/from-case")
+    public ResponseEntity<AiWorkspaceDocumentExhibit> addExhibitFromCase(
+        @PathVariable Long documentId,
+        @RequestBody Map<String, Long> body,
+        @AuthenticationPrincipal User user
+    ) {
+        try {
+            Long orgId = TenantContext.getCurrentTenant();
+            if (orgId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            Long caseDocumentId = body.get("caseDocumentId");
+            if (caseDocumentId == null) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            AiWorkspaceDocumentExhibit exhibit = exhibitService.addExhibitFromCaseDocument(documentId, caseDocumentId, orgId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(exhibit);
+        } catch (Exception e) {
+            log.error("Error adding exhibit from case document for workspace doc {}: {}", documentId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Upload a file and attach it as an exhibit
+     * POST /api/legal/ai-workspace/documents/{documentId}/exhibits/upload
+     */
+    @PostMapping("/documents/{documentId}/exhibits/upload")
+    public ResponseEntity<AiWorkspaceDocumentExhibit> uploadExhibit(
+        @PathVariable Long documentId,
+        @RequestParam("file") MultipartFile file,
+        @RequestParam(value = "caseId", required = false) Long caseId
+    ) {
+        try {
+            Long orgId = TenantContext.getCurrentTenant();
+            if (orgId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            // Get userId from SecurityContext — @AuthenticationPrincipal doesn't resolve for multipart requests
+            Long effectiveUserId = null;
+            Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof User) {
+                effectiveUserId = ((User) auth.getPrincipal()).getId();
+            }
+
+            AiWorkspaceDocumentExhibit exhibit = exhibitService.addExhibitFromUpload(
+                documentId, file, caseId, orgId, effectiveUserId
+            );
+            return ResponseEntity.status(HttpStatus.CREATED).body(exhibit);
+        } catch (Exception e) {
+            log.error("Error uploading exhibit for workspace doc {}: {}", documentId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Remove an exhibit
+     * DELETE /api/legal/ai-workspace/documents/{documentId}/exhibits/{exhibitId}
+     */
+    @DeleteMapping("/documents/{documentId}/exhibits/{exhibitId}")
+    public ResponseEntity<Map<String, Object>> removeExhibit(
+        @PathVariable Long documentId,
+        @PathVariable Long exhibitId,
+        @AuthenticationPrincipal User user
+    ) {
+        try {
+            Long orgId = TenantContext.getCurrentTenant();
+            if (orgId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            exhibitService.removeExhibit(exhibitId, orgId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Exhibit removed successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error removing exhibit {} for workspace doc {}: {}", exhibitId, documentId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get the raw exhibit file for preview (inline display in iframe)
+     * GET /api/legal/ai-workspace/documents/{documentId}/exhibits/{exhibitId}/file
+     */
+    @GetMapping("/documents/{documentId}/exhibits/{exhibitId}/file")
+    public ResponseEntity<byte[]> getExhibitFile(
+        @PathVariable Long documentId,
+        @PathVariable Long exhibitId
+    ) {
+        try {
+            Long orgId = TenantContext.getCurrentTenant();
+            if (orgId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            // Get exhibit metadata for Content-Type
+            AiWorkspaceDocumentExhibit exhibit = exhibitService.findById(exhibitId, orgId)
+                .orElse(null);
+            if (exhibit == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Verify exhibit belongs to the requested document
+            if (!exhibit.getDocumentId().equals(documentId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
+            byte[] fileBytes = exhibitService.getExhibitFile(exhibitId, orgId);
+
+            String mimeType = exhibit.getMimeType() != null ? exhibit.getMimeType() : "application/octet-stream";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(mimeType));
+            headers.setContentLength(fileBytes.length);
+            // Use inline disposition for PDF preview in iframe
+            ContentDisposition contentDisposition = ContentDisposition.inline()
+                .filename(exhibit.getFileName() != null ? exhibit.getFileName() : "exhibit", StandardCharsets.UTF_8)
+                .build();
+            headers.setContentDisposition(contentDisposition);
+
+            return ResponseEntity.ok()
+                .headers(headers)
+                .body(fileBytes);
+        } catch (Exception e) {
+            log.error("Error retrieving file for exhibit {} in document {}: {}", exhibitId, documentId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Reorder exhibits for a document
+     * PUT /api/legal/ai-workspace/documents/{documentId}/exhibits/reorder
+     */
+    @PutMapping("/documents/{documentId}/exhibits/reorder")
+    public ResponseEntity<Map<String, Object>> reorderExhibits(
+        @PathVariable Long documentId,
+        @RequestBody List<Map<String, Object>> orderList,
+        @AuthenticationPrincipal User user
+    ) {
+        try {
+            Long orgId = TenantContext.getCurrentTenant();
+            if (orgId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            if (orderList == null || orderList.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            exhibitService.reorderExhibits(orderList, orgId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Exhibits reordered successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error reordering exhibits for document {}: {}", documentId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     /**
      * Build explanation message for transformation
      */
@@ -807,12 +1015,8 @@ public class AiWorkspaceController {
             // Generate Word document from content
             byte[] wordDoc = documentService.generateWordDocumentFromContent(content, title);
 
-            // Sanitize filename
-            String safeTitle = title.replaceAll("[^a-zA-Z0-9\\s\\-_]", "").replaceAll("\\s+", "_");
-            if (safeTitle.length() > 50) {
-                safeTitle = safeTitle.substring(0, 50);
-            }
-            String filename = safeTitle + ".docx";
+            // Sanitize filename — use document service for consistent naming
+            String filename = documentService.sanitizeFilenamePublic(title) + ".docx";
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
@@ -854,12 +1058,8 @@ public class AiWorkspaceController {
             // Generate PDF document from content
             byte[] pdfDoc = documentService.generatePdfDocumentFromContent(content, title);
 
-            // Sanitize filename
-            String safeTitle = title.replaceAll("[^a-zA-Z0-9\\s\\-_]", "").replaceAll("\\s+", "_");
-            if (safeTitle.length() > 50) {
-                safeTitle = safeTitle.substring(0, 50);
-            }
-            String filename = safeTitle + ".pdf";
+            // Sanitize filename — use document service for consistent naming
+            String filename = documentService.sanitizeFilenamePublic(title) + ".pdf";
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
@@ -878,6 +1078,37 @@ public class AiWorkspaceController {
         } catch (Exception e) {
             log.error("Error exporting content to PDF", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * PATCH /api/legal/ai-workspace/documents/{documentId}/stationery
+     * Update stationery association on a document.
+     * Body: { "stationeryTemplateId": 1, "stationeryAttorneyId": 2 }
+     * Pass nulls to clear stationery.
+     */
+    @PatchMapping("/documents/{documentId}/stationery")
+    public ResponseEntity<?> updateDocumentStationery(
+        @PathVariable Long documentId,
+        @RequestBody Map<String, Object> body,
+        @AuthenticationPrincipal UserDTO userDto
+    ) {
+        try {
+            Long userId = (userDto != null) ? userDto.getId() : null;
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            Long templateId = body.get("stationeryTemplateId") != null
+                    ? ((Number) body.get("stationeryTemplateId")).longValue() : null;
+            Long attorneyId = body.get("stationeryAttorneyId") != null
+                    ? ((Number) body.get("stationeryAttorneyId")).longValue() : null;
+            documentService.updateDocumentStationery(documentId, userId, templateId, attorneyId);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            log.error("Error updating document stationery: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

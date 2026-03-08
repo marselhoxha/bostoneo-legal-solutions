@@ -91,6 +91,12 @@ const routes: Routes = [
     loadComponent: () => import('./collaboration/collaboration.component').then(m => m.CollaborationComponent),
     canActivate: [AuthenticationGuard],
     data: { title: 'Collaborative Editing' }
+  },
+  {
+    path: 'stationery-settings',
+    loadComponent: () => import('./stationery-settings/stationery-settings.component').then(m => m.StationerySettingsComponent),
+    canActivate: [AuthenticationGuard],
+    data: { title: 'Stationery Templates' }
   }
 ];
 

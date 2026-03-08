@@ -1,0 +1,9 @@
+{
+  "type": "settlement_agreement",
+  "aliases": ["release"],
+  "displayName": "Settlement Agreement and Release",
+  "category": "contract",
+  "citationLevel": "NONE",
+  "template": "**DOCUMENT FORMAT — SETTLEMENT AGREEMENT AND RELEASE**:\nFormal agreement resolving legal claims between parties.\n\nSTRUCTURE:\n1. TITLE: \"SETTLEMENT AGREEMENT AND GENERAL RELEASE\"\n2. PREAMBLE: Date, parties with full legal names, recitals describing the dispute\n3. SETTLEMENT AMOUNT: Specific dollar amount, payment method, timeline\n4. RELEASE: Broad release of all claims, known and unknown, arising from the dispute\n5. DISMISSAL: Agreement to dismiss pending action with prejudice within specified timeframe\n6. CONFIDENTIALITY: Non-disclosure of settlement terms (if applicable)\n7. NO ADMISSION: Neither party admits liability\n8. REPRESENTATIONS: Authority to sign, no prior assignment of claims\n9. GENERAL PROVISIONS: Governing law, entire agreement, amendments, severability\n10. SIGNATURE BLOCKS: All parties, with witness/notary if required\n\nTONE: Neutral, precise. Both parties' interests balanced.\nINCLUDE specific dollar amounts from case data if available.",
+  "hints": "Key elements to address: settlement amount, payment terms, release scope, confidentiality, dismissal with prejudice."
+}

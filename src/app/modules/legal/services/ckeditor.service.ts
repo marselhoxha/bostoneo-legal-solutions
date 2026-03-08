@@ -185,6 +185,47 @@ export class CKEditorService {
     });
   }
 
+  /** Highlight all regex matches in the document with a given marker */
+  highlightAllMatches(editor: any, pattern: RegExp, marker: string = 'yellowMarker'): number {
+    if (!editor) return 0;
+    let matchCount = 0;
+
+    editor.model.change((writer: any) => {
+      const model = editor.model;
+      const root = model.document.getRoot();
+
+      // Collect all text nodes with their offsets
+      const textNodes: Array<{ node: any; offset: number; text: string }> = [];
+      let fullText = '';
+      const treeWalker = model.createRangeIn(root).getWalker({ ignoreElementEnd: true });
+      for (const value of treeWalker) {
+        if (value.type === 'text') {
+          textNodes.push({ node: value.item, offset: fullText.length, text: value.item.data });
+          fullText += value.item.data;
+        }
+      }
+
+      // Find all matches
+      let match: RegExpExecArray | null;
+      const globalPattern = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g');
+      while ((match = globalPattern.exec(fullText)) !== null) {
+        const startOffset = match.index;
+        const endOffset = match.index + match[0].length;
+
+        const startPos = this.textOffsetToModelPosition(model, textNodes, startOffset);
+        const endPos = this.textOffsetToModelPosition(model, textNodes, endOffset);
+
+        if (startPos && endPos) {
+          const range = writer.createRange(startPos, endPos);
+          writer.setAttribute('highlight', marker, range);
+          matchCount++;
+        }
+      }
+    });
+
+    return matchCount;
+  }
+
   // ── Content setting ────────────────────────────────
 
   /** Set editor content from HTML */

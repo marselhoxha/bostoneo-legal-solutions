@@ -1,0 +1,9 @@
+{
+  "type": "client_email",
+  "aliases": [],
+  "displayName": "Client Communication",
+  "category": "letter",
+  "citationLevel": "MINIMAL",
+  "template": "**DOCUMENT FORMAT — CLIENT COMMUNICATION**:\nProfessional but accessible email/letter to client.\nDO NOT use legal jargon unnecessarily — explain in plain language.\nKeep under 1 page unless complex topic requires more.\n\nTONE: Warm but professional. The client should feel informed and supported.",
+  "hints": "Key elements to address: clear explanation in plain language, next steps, any deadlines or required actions from client."
+}

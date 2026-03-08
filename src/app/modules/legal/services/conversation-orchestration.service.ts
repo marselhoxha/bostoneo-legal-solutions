@@ -18,6 +18,7 @@ export interface GenerateDocumentRequest {
   jurisdiction: string;
   sessionName: string;
   researchMode: string;  // Research mode: FAST or THOROUGH
+  documentId?: number;   // When provided, includes exhibits attached to this workspace document
 }
 
 export interface GenerateConversationRequest {

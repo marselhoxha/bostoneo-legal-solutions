@@ -1,0 +1,9 @@
+{
+  "type": "opinion_letter",
+  "aliases": [],
+  "displayName": "Opinion Letter",
+  "category": "letter",
+  "citationLevel": "MINIMAL",
+  "template": "",
+  "hints": "Key elements to address: legal question analyzed, applicable law, analysis of facts against legal standards, conclusion with recommended course of action."
+}

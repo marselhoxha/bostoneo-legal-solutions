@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 export interface Exhibit {
   id: string;
@@ -18,6 +20,42 @@ export interface TocEntry {
 
 @Injectable({ providedIn: 'root' })
 export class ExhibitPanelService {
+  private apiUrl = `${environment.apiUrl}/api/legal/ai-workspace`;
+
+  constructor(private http: HttpClient) {}
+
+  // ===== HTTP METHODS =====
+
+  getExhibits(documentId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/documents/${documentId}/exhibits`);
+  }
+
+  addFromCaseDocument(documentId: number, caseDocumentId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/documents/${documentId}/exhibits/from-case`, { caseDocumentId });
+  }
+
+  uploadExhibit(documentId: number, file: File, caseId?: number | null): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (caseId) formData.append('caseId', caseId.toString());
+    return this.http.post(`${this.apiUrl}/documents/${documentId}/exhibits/upload`, formData);
+  }
+
+  deleteExhibit(documentId: number, exhibitId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/documents/${documentId}/exhibits/${exhibitId}`);
+  }
+
+  getExhibitFileUrl(documentId: number, exhibitId: number): string {
+    return `${this.apiUrl}/documents/${documentId}/exhibits/${exhibitId}/file`;
+  }
+
+  /** Fetch exhibit file as blob (uses HttpClient with auth interceptor) */
+  getExhibitFileBlob(documentId: number, exhibitId: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/documents/${documentId}/exhibits/${exhibitId}/file`, {
+      responseType: 'blob'
+    });
+  }
+
   // Drafting sidebar tab
   private activeSidebarTab$ = new BehaviorSubject<'contents' | 'exhibits'>('contents');
   readonly sidebarTab$ = this.activeSidebarTab$.asObservable();
@@ -29,6 +67,10 @@ export class ExhibitPanelService {
   // Exhibits list
   private exhibits$ = new BehaviorSubject<Exhibit[]>([]);
   readonly exhibitList$ = this.exhibits$.asObservable();
+
+  // Exhibits loading state — true while async attach is still in progress
+  private _exhibitsLoading$ = new BehaviorSubject<boolean>(false);
+  readonly exhibitsLoading$ = this._exhibitsLoading$.asObservable();
 
   // Active exhibit (shown in the right panel)
   private activeExhibit$ = new BehaviorSubject<Exhibit | null>(null);
@@ -45,6 +87,16 @@ export class ExhibitPanelService {
   // --- TOC Snapshot ---
   get tocSnapshot(): TocEntry[] {
     return this.tocEntries$.value;
+  }
+
+  // --- Exhibit List Snapshot ---
+  get exhibitListSnapshot(): Exhibit[] {
+    return this.exhibits$.value;
+  }
+
+  // --- Active Exhibit Snapshot ---
+  get activeExhibitSnapshot(): Exhibit | null {
+    return this.activeExhibit$.value;
   }
 
   // --- Sidebar Tab ---
@@ -92,6 +144,10 @@ export class ExhibitPanelService {
   }
 
   // --- Exhibits ---
+  setExhibitsLoading(loading: boolean): void {
+    this._exhibitsLoading$.next(loading);
+  }
+
   setExhibits(exhibits: Exhibit[]): void {
     this.exhibits$.next(exhibits);
   }
@@ -154,8 +210,17 @@ export class ExhibitPanelService {
 
   // --- Reset ---
   reset(): void {
+    // Revoke any blob URLs to prevent memory leaks
+    for (const exhibit of this.exhibits$.value) {
+      if (exhibit.fileUrl && exhibit.fileUrl.startsWith('blob:')) {
+        // Strip hash fragment (#toolbar=1) before revoking
+        const cleanUrl = exhibit.fileUrl.split('#')[0];
+        URL.revokeObjectURL(cleanUrl);
+      }
+    }
     this.tocEntries$.next([]);
     this.exhibits$.next([]);
+    this._exhibitsLoading$.next(false);
     this.activeExhibit$.next(null);
     this.exhibitPanelOpen$.next(false);
     this.currentPage$.next(1);

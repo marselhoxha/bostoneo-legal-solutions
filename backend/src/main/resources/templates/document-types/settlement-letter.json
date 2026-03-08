@@ -1,0 +1,9 @@
+{
+  "type": "settlement_letter",
+  "aliases": ["settlement_offer"],
+  "displayName": "Settlement Letter/Proposal",
+  "category": "letter",
+  "citationLevel": "MINIMAL",
+  "template": "**DOCUMENT FORMAT — SETTLEMENT LETTER/PROPOSAL**:\nProfessional settlement proposal (2-3 pages max).\nStart with date and recipient address, not a title header.\n\nSTRUCTURE:\n1. Date and recipient address\n2. \"Re:\" line with case details\n3. \"Dear [Name]:\"\n4. Opening: State purpose — settlement proposal to resolve all claims\n5. Body: Brief factual summary, liability position, damages overview\n6. Settlement terms: Specific amount, payment timeline, release terms, response deadline\n7. Consequences of non-acceptance (litigation costs, trial risk, potential for higher verdict)\n8. Closing: \"Very truly yours,\"\n\nINCLUDE: Settlement amount, terms, 30-day response deadline.\nTONE: Professional but persuasive. Make settlement the rational choice.",
+  "hints": "Key elements to address: settlement amount, payment terms, release scope, response deadline, consequences of non-acceptance."
+}
