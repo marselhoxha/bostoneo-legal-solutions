@@ -367,7 +367,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             log.info("MFA verification code sent to email: {}", user.getEmail());
         } catch (Exception exception) {
             log.error("Failed to send verification code for user {}: {}", user.getEmail(), exception.getMessage(), exception);
-            throw new ApiException("An error occurred. Please try again.");
+            throw new ApiException("Unable to send verification code. Please contact support.");
         }
     }
 

@@ -65,9 +65,10 @@ export class LoginComponent implements OnInit{
             this.notificationService.onSuccess(response.message)
             this.phoneSubject.next(response.data.user.phone);
             this.emailSubject.next(response.data.user.email);
+            const phone = response.data.user.phone;
             return {
               dataState: DataState.LOADED, isUsingMfa: true, loginSuccess: false,
-              phone: response.data.user.phone.substring(response.data.user.phone.length - 4)
+              phone: phone ? phone.substring(phone.length - 4) : ''
             };
           } else {
             this.notificationService.onSuccess(response.message)
@@ -83,6 +84,10 @@ export class LoginComponent implements OnInit{
   }
 
   verifyCode(verifyCodeForm: NgForm): void {
+    if (!this.emailSubject.value) {
+      this.loginState$ = of({ dataState: DataState.ERROR, isUsingMfa: false, loginSuccess: false, error: 'Session expired. Please log in again.' });
+      return;
+    }
     this.loginState$ = this.userService.verifyCode$(this.emailSubject.value, verifyCodeForm.value.code)
       .pipe(
         map(response => {
@@ -92,10 +97,10 @@ export class LoginComponent implements OnInit{
           return { dataState: DataState.LOADED, loginSuccess: true };
         }),
         startWith({ dataState: DataState.LOADING, isUsingMfa: true, loginSuccess: false,
-          phone: this.phoneSubject.value.substring(this.phoneSubject.value.length - 4) }),
+          phone: this.phoneSubject.value ? this.phoneSubject.value.substring(this.phoneSubject.value.length - 4) : '' }),
         catchError((error: string) => {
           return of({ dataState: DataState.ERROR, isUsingMfa: true, loginSuccess: false, error,
-            phone: this.phoneSubject.value.substring(this.phoneSubject.value.length - 4) })
+            phone: this.phoneSubject.value ? this.phoneSubject.value.substring(this.phoneSubject.value.length - 4) : '' })
         })
       )
   }

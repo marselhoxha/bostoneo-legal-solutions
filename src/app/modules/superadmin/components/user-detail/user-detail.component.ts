@@ -187,7 +187,10 @@ export class UserDetailComponent implements OnInit, OnDestroy {
             Swal.fire('Success', `MFA ${action}d successfully`, 'success');
             this.loadUser();
           },
-          error: () => Swal.fire('Error', `Failed to ${action} MFA`, 'error')
+          error: (err: any) => {
+            const reason = err?.error?.reason || err?.error?.message || err?.message || `Failed to ${action} MFA`;
+            Swal.fire('Error', reason, 'error');
+          }
         });
     }
   }

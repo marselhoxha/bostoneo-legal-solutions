@@ -23,8 +23,8 @@ RUN chown -R legience:legience /app
 # Switch to non-root user
 USER legience:legience
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=120s --retries=3 \
+# Health check — start-period must exceed app startup time (~200s on Fargate)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=300s --retries=3 \
   CMD curl -f http://localhost:8085/health || exit 1
 
 EXPOSE 8085

@@ -466,16 +466,45 @@ jobs:
           TG_ARN=$(aws elbv2 describe-target-groups --names $TG_NAME --query 'TargetGroups[0].TargetGroupArn' --output text)
           aws elbv2 modify-target-group --target-group-arn $TG_ARN --health-check-path /health --matcher HttpCode=200
 
+      - name: Update task definition health check
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            FAMILY="legience-production-api"
+          else
+            FAMILY="legience-staging-api"
+          fi
+          # Get current task definition and update container health check
+          CURRENT_TD=$(aws ecs describe-task-definition --task-definition $FAMILY --query 'taskDefinition' --output json)
+          NEW_TD=$(echo "$CURRENT_TD" | python3 -c "
+          import json, sys
+          td = json.load(sys.stdin)
+          for key in ['taskDefinitionArn','revision','status','requiresAttributes','compatibilities','registeredAt','registeredBy']:
+              td.pop(key, None)
+          for c in td['containerDefinitions']:
+              c['healthCheck'] = {
+                  'command': ['CMD-SHELL', 'curl -f http://localhost:8085/health || exit 1'],
+                  'interval': 30, 'timeout': 5, 'retries': 3, 'startPeriod': 300
+              }
+          print(json.dumps(td, default=str))
+          ")
+          aws ecs register-task-definition --cli-input-json "$NEW_TD" > /dev/null
+          echo "Registered new task definition with correct health check"
+
       - name: Deploy to ECS
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             CLUSTER="legience-production"
             SERVICE="legience-production-api"
+            FAMILY="legience-production-api"
           else
             CLUSTER="legience-staging"
             SERVICE="legience-staging-api"
+            FAMILY="legience-staging-api"
           fi
-          aws ecs update-service --cluster $CLUSTER --service $SERVICE --force-new-deployment
+          aws ecs update-service --cluster $CLUSTER --service $SERVICE \
+            --task-definition $FAMILY \
+            --health-check-grace-period-seconds 360 \
+            --force-new-deployment
 
       - name: Wait for deployment
         run: |
