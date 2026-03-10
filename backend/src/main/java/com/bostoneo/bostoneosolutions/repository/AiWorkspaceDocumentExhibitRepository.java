@@ -63,6 +63,15 @@ public class AiWorkspaceDocumentExhibitRepository {
         "SET display_order = :displayOrder, updated_at = CURRENT_TIMESTAMP " +
         "WHERE id = :id AND organization_id = :orgId";
 
+    private static final String DELETE_STALE_EXHIBITS =
+        "DELETE FROM ai_workspace_document_exhibits e " +
+        "WHERE e.document_id = :documentId AND e.organization_id = :orgId " +
+        "AND e.case_document_id IS NOT NULL " +
+        "AND NOT EXISTS (" +
+        "  SELECT 1 FROM file_items fi " +
+        "  WHERE fi.id = e.case_document_id AND fi.is_deleted = false AND fi.organization_id = :orgId" +
+        ")";
+
     /**
      * Find all exhibits for a document within an organization.
      */
@@ -209,6 +218,27 @@ public class AiWorkspaceDocumentExhibitRepository {
         } catch (Exception e) {
             log.error("Error updating display order for exhibit {}: {}", id, e.getMessage());
             throw new ApiException("Error updating exhibit display order");
+        }
+    }
+
+    /**
+     * Delete stale exhibits whose source file_items have been soft-deleted.
+     * Only affects exhibits linked to case documents (case_document_id IS NOT NULL).
+     */
+    public int deleteStaleExhibits(Long documentId, Long orgId) {
+        log.debug("Deleting stale exhibits for document {} in org {}", documentId, orgId);
+        try {
+            MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("documentId", documentId)
+                .addValue("orgId", orgId);
+            int deleted = jdbc.update(DELETE_STALE_EXHIBITS, params);
+            if (deleted > 0) {
+                log.info("Deleted {} stale exhibits for document {} in org {}", deleted, documentId, orgId);
+            }
+            return deleted;
+        } catch (Exception e) {
+            log.error("Error deleting stale exhibits for document {}: {}", documentId, e.getMessage());
+            return 0;
         }
     }
 

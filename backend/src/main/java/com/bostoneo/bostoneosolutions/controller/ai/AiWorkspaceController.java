@@ -678,6 +678,32 @@ public class AiWorkspaceController {
     }
 
     /**
+     * Get document by conversation (session) ID — used by frontend polling fallback
+     * when SSE connection drops mid-stream but backend completes successfully.
+     * GET /api/legal/ai-workspace/drafts/by-conversation/{conversationId}
+     */
+    @GetMapping("/drafts/by-conversation/{conversationId}")
+    public ResponseEntity<Map<String, Object>> getDraftByConversation(
+        @PathVariable Long conversationId,
+        @AuthenticationPrincipal User user,
+        @RequestParam(required = false) Long userId
+    ) {
+        try {
+            Long effectiveUserId = (user != null) ? user.getId() : userId;
+            if (effectiveUserId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            return documentService.getDocumentByConversationId(conversationId, effectiveUserId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            log.error("Error fetching draft by conversation {}: {}", conversationId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * Export document to Word (DOCX)
      * GET /api/legal/ai-workspace/documents/{documentId}/export/word
      */

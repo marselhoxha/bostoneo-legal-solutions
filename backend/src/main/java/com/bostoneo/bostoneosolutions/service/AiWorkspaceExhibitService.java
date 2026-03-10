@@ -407,6 +407,51 @@ public class AiWorkspaceExhibitService {
         }
     }
 
+    // ===== EXHIBIT VALIDATION =====
+
+    /**
+     * Filter out exhibits whose source file_items have been soft-deleted.
+     * Only checks exhibits linked to case documents (caseDocumentId != null).
+     * Uploaded exhibits (no caseDocumentId) are kept as-is.
+     */
+    public List<AiWorkspaceDocumentExhibit> filterActiveExhibits(List<AiWorkspaceDocumentExhibit> exhibits) {
+        if (exhibits == null || exhibits.isEmpty()) return exhibits;
+
+        // Collect case document IDs that need validation
+        List<Long> caseDocIds = exhibits.stream()
+                .map(AiWorkspaceDocumentExhibit::getCaseDocumentId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+
+        if (caseDocIds.isEmpty()) return exhibits;
+
+        // Batch query: find which file_items are still active
+        Set<Long> activeIds = getActiveFileItemIds(caseDocIds);
+
+        // Filter: keep exhibits that are either uploaded (no caseDocumentId) or still active
+        List<AiWorkspaceDocumentExhibit> filtered = exhibits.stream()
+                .filter(e -> e.getCaseDocumentId() == null || activeIds.contains(e.getCaseDocumentId()))
+                .collect(java.util.stream.Collectors.toList());
+
+        int removed = exhibits.size() - filtered.size();
+        if (removed > 0) {
+            log.info("Filtered out {} exhibits linked to deleted file_items", removed);
+        }
+        return filtered;
+    }
+
+    /**
+     * Batch query to find which file_item IDs are still active (not soft-deleted).
+     */
+    private Set<Long> getActiveFileItemIds(List<Long> ids) {
+        if (ids.isEmpty()) return Collections.emptySet();
+        String sql = "SELECT id FROM file_items WHERE id IN (:ids) AND is_deleted = false";
+        MapSqlParameterSource params = new MapSqlParameterSource().addValue("ids", ids);
+        List<Long> activeList = jdbc.queryForList(sql, params, Long.class);
+        return new HashSet<>(activeList);
+    }
+
     // ===== PROMPT HELPER =====
 
     /**
@@ -416,6 +461,7 @@ public class AiWorkspaceExhibitService {
      */
     public String getExhibitTextForPrompt(Long documentId, Long orgId) {
         List<AiWorkspaceDocumentExhibit> exhibits = exhibitRepository.findByDocumentIdAndOrgId(documentId, orgId);
+        exhibits = filterActiveExhibits(exhibits);
         if (exhibits.isEmpty()) return "";
 
         StringBuilder sb = new StringBuilder("\n\nAVAILABLE EXHIBITS:\n");

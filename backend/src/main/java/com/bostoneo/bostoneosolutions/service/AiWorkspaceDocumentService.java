@@ -1151,12 +1151,13 @@ public class AiWorkspaceDocumentService {
             }
         }
 
-        // 2a. Fetch exhibits if a workspace document already exists
+        // 2a. Fetch exhibits if a workspace document already exists, filtering out deleted source docs
         List<AiWorkspaceDocumentExhibit> exhibits = Collections.emptyList();
         if (documentId != null) {
             exhibits = exhibitRepository.findByDocumentIdAndOrgId(documentId, orgId);
+            exhibits = exhibitService.filterActiveExhibits(exhibits);
             if (!exhibits.isEmpty()) {
-                log.info("Found {} exhibits for document {} to include in streaming prompt", exhibits.size(), documentId);
+                log.info("Found {} active exhibits for document {} to include in streaming prompt", exhibits.size(), documentId);
             }
         }
 
@@ -1291,12 +1292,20 @@ public class AiWorkspaceDocumentService {
             return;
         }
         try {
+            // Clean up exhibits linked to since-deleted file_items before attaching fresh ones
+            exhibitRepository.deleteStaleExhibits(documentId, orgId);
+
             List<FileItem> caseFiles = fileItemRepository.findByCaseIdAndDeletedFalseAndOrganizationId(caseId, orgId);
             if (caseFiles.isEmpty()) {
                 return;
             }
             int attached = 0;
+            int skippedPrivileged = 0;
             for (FileItem file : caseFiles) {
+                if (isPrivilegedDocument(file)) {
+                    skippedPrivileged++;
+                    continue;
+                }
                 try {
                     exhibitService.addExhibitFromFileItem(documentId, file, orgId);
                     attached++;
@@ -1304,12 +1313,54 @@ public class AiWorkspaceDocumentService {
                     log.warn("Failed to auto-attach file_item {} as exhibit: {}", file.getId(), e.getMessage());
                 }
             }
+            if (skippedPrivileged > 0) {
+                log.info("Skipped {} privileged documents from auto-attach for document {}", skippedPrivileged, documentId);
+            }
             if (attached > 0) {
                 log.info("Auto-attached {} case files as exhibits for document {}", attached, documentId);
             }
         } catch (Exception e) {
             log.warn("Failed to auto-attach case files as exhibits: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Check if a file is a privileged/internal document that should NOT be exposed as an exhibit.
+     * Uses category when set, falls back to filename pattern matching.
+     */
+    private boolean isPrivilegedDocument(FileItem file) {
+        // Check document category if set
+        String category = file.getDocumentCategory();
+        if (category != null && !category.isBlank()) {
+            String upper = category.toUpperCase();
+            if (upper.contains("INTERNAL") || upper.contains("CONFIDENTIAL")
+                    || upper.contains("ATTORNEY_CLIENT") || upper.contains("PRIVILEGE")
+                    || upper.contains("WORK_PRODUCT")) {
+                return true;
+            }
+        }
+
+        // Fallback: check filename patterns for common privileged document types
+        String name = "";
+        if (file.getOriginalName() != null) name = file.getOriginalName().toLowerCase();
+        else if (file.getName() != null) name = file.getName().toLowerCase();
+
+        String[] privilegedPatterns = {
+            "fee-agreement", "fee agreement", "fee_agreement",
+            "retainer", "billing", "invoice",
+            "attorney-client", "attorney_client", "attorney client",
+            "work-product", "work product", "work_product",
+            "settlement-authority", "settlement_authority",
+            "internal-memo", "internal_memo", "internal memo",
+            "contingent-fee", "contingent_fee", "contingent fee"
+        };
+
+        for (String pattern : privilegedPatterns) {
+            if (name.contains(pattern)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -1424,6 +1475,35 @@ public class AiWorkspaceDocumentService {
                 result.put("stationeryTemplateId", doc.getStationeryTemplateId());
                 result.put("stationeryAttorneyId", doc.getStationeryAttorneyId());
                 return result;
+            });
+    }
+
+    /**
+     * Find a completed document by conversation (session) ID.
+     * Used by the frontend polling fallback when SSE drops mid-stream.
+     */
+    public Optional<Map<String, Object>> getDocumentByConversationId(Long conversationId, Long userId) {
+        return documentRepository.findBySessionIdAndUserIdAndOrganizationId(conversationId, userId, getRequiredOrganizationId())
+            .flatMap(doc -> {
+                AiWorkspaceDocumentVersion latestVersion = versionRepository
+                    .findByDocumentIdOrderByVersionNumberDesc(doc.getId())
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+
+                if (latestVersion == null) {
+                    return Optional.empty();
+                }
+
+                Map<String, Object> result = new HashMap<>();
+                result.put("documentId", doc.getId());
+                result.put("title", doc.getTitle());
+                result.put("content", latestVersion.getContent());
+                result.put("wordCount", latestVersion.getWordCount());
+                result.put("version", latestVersion.getVersionNumber());
+                result.put("tokensUsed", latestVersion.getTokensUsed());
+                result.put("costEstimate", latestVersion.getCostEstimate());
+                return Optional.of(result);
             });
     }
 
@@ -1834,7 +1914,7 @@ public class AiWorkspaceDocumentService {
                 }
             }
 
-            // Fetch case file inventory for exhibit references
+            // Fetch case file inventory for exhibit references (excluding privileged and deleted docs)
             try {
                 List<FileItem> caseFiles = fileItemRepository.findByCaseIdAndDeletedFalseAndOrganizationId(caseId, orgId);
                 if (caseFiles != null && !caseFiles.isEmpty()) {
@@ -1843,6 +1923,7 @@ public class AiWorkspaceDocumentService {
                     sb.append("You MUST reference them using their exact exhibit labels (Exhibit A, Exhibit B, etc.) — NOT numeric labels.\n");
                     char label = 'A';
                     for (FileItem file : caseFiles) {
+                        if (isPrivilegedDocument(file)) continue;
                         sb.append(String.format("- Exhibit %c: %s\n",
                             label++,
                             file.getOriginalName() != null ? file.getOriginalName() : file.getName()));

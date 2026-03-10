@@ -458,6 +458,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   private draftEventSource: EventSource | null = null;
   // Word count tracker for streaming tokens
   private streamWordCount = 0;
+  // Tracks whether the 'complete' SSE event was received before connection closed
+  private draftStreamCompleted = false;
+  // Polling interval ID for draft recovery (cleared on destroy)
+  private draftPollInterval: ReturnType<typeof setInterval> | null = null;
   // Pending draft content to load into editor once created
   private pendingDraftContent: string | null = null;
 
@@ -6544,6 +6548,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           // Stay in conversation view — user sees workflow steps during generation.
           // Editor will open only when the document is fully ready (on 'complete' event).
           this.streamWordCount = 0;
+          this.draftStreamCompleted = false;
 
           // Open SSE connection BEFORE triggering generation
           this.closeDraftStream();
@@ -6591,6 +6596,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           // Handle complete event — enter drafting mode with final content
           eventSource.addEventListener('complete', (event: MessageEvent) => {
             try {
+              this.draftStreamCompleted = true;
               const data = JSON.parse(event.data);
               this.closeDraftStream();
 
@@ -6703,7 +6709,19 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           // Draft streaming is one-shot; reconnection would create a duplicate emitter.
           eventSource.onerror = () => {
             if (this.draftEventSource === eventSource) {
+              // Capture state before closeDraftStream() resets streamWordCount
+              const hadTokens = this.streamWordCount > 0;
+              const wasCompleted = this.draftStreamCompleted;
               this.closeDraftStream();
+
+              // If complete was already received, this is just normal SSE close — ignore
+              if (wasCompleted) return;
+
+              // If tokens were received (generation started), the backend may still complete.
+              // Poll for the finished document instead of showing a false error.
+              if (hadTokens) {
+                this.pollForCompletedDraft(backendConversationId, taskId, tempConvId, title, documentType);
+              }
             }
           };
 
@@ -6765,7 +6783,114 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.draftEventSource.close();
       this.draftEventSource = null;
     }
+    if (this.draftPollInterval) {
+      clearInterval(this.draftPollInterval);
+      this.draftPollInterval = null;
+    }
     this.streamWordCount = 0;
+  }
+
+  /**
+   * Poll for a completed draft when SSE drops mid-stream but backend may still complete.
+   * Polls every 2s for up to 30s.
+   */
+  private pollForCompletedDraft(
+    conversationId: number, taskId: string, tempConvId: string, title: string, documentType: string
+  ): void {
+    this.stateService.updateWorkflowStep(2, {
+      description: 'Connection interrupted — checking for completed document...'
+    });
+    this.cdr.detectChanges();
+
+    let attempts = 0;
+    const maxAttempts = 15; // 15 * 2s = 30s
+
+    // Clear any previous poll
+    if (this.draftPollInterval) {
+      clearInterval(this.draftPollInterval);
+    }
+
+    this.draftPollInterval = setInterval(() => {
+      attempts++;
+      this.documentGenerationService.getDraftByConversation(conversationId).subscribe({
+        next: (data: any) => {
+          if (this.draftPollInterval) {
+            clearInterval(this.draftPollInterval);
+            this.draftPollInterval = null;
+          }
+
+          // Simulate the 'complete' event handling
+          this.draftStreamCompleted = true;
+          this.backgroundTaskService.completeTask(taskId, data);
+          this.completeAllWorkflowSteps();
+
+          const conversations = this.stateService.getConversations();
+          const tempConvIndex = conversations.findIndex(c => c.id === tempConvId);
+          if (tempConvIndex !== -1) {
+            conversations[tempConvIndex] = {
+              ...conversations[tempConvIndex],
+              id: `conv_${conversationId}`,
+              title: title,
+              backendConversationId: conversationId,
+              relatedDraftId: data.documentId?.toString(),
+              taskType: TaskType.GenerateDraft
+            };
+            this.stateService.setActiveConversationId(`conv_${conversationId}`);
+          }
+
+          this.loadConversations();
+          this.currentDocumentId = data.documentId;
+          this.activeDocumentTitle = title || this.extractTitleFromMarkdown(data.content) || 'Untitled Document';
+          this.currentDocumentWordCount = data.wordCount || 0;
+          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(data.wordCount || 0);
+          this.documentMetadata = {
+            tokensUsed: data.tokensUsed,
+            costEstimate: data.costEstimate,
+            generatedAt: new Date(),
+            version: data.version || 1
+          };
+
+          this.loadVersionHistory();
+
+          if (data.documentId) {
+            this.exhibitPanelService.setExhibitsLoading(true);
+            this.pollForExhibits(data.documentId);
+          }
+
+          this.stateService.addConversationMessage({
+            role: 'assistant',
+            content: `I've generated your ${this.selectedDocTypePill || 'document'}${this.selectedCaseId ? ' for the selected case' : ''}. You can view it in the document preview panel.`,
+            timestamp: new Date()
+          });
+
+          this.stateService.setIsGenerating(false);
+          this.pendingDraftContent = data.content;
+          this.editorInstance = null;
+          this.stateService.setDraftingMode(true);
+          this.stateService.setShowChat(false);
+          this.showEditor = true;
+          this.setModeForDrafting();
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          if (attempts >= maxAttempts) {
+            if (this.draftPollInterval) {
+              clearInterval(this.draftPollInterval);
+              this.draftPollInterval = null;
+            }
+            // Polling exhausted — show a gentle error
+            this.stateService.addConversationMessage({
+              role: 'assistant',
+              content: 'The document generation is still in progress. Please check your documents list in a moment.',
+              timestamp: new Date()
+            });
+            this.stateService.setIsGenerating(false);
+            this.stateService.setShowBottomSearchBar(true);
+            this.cdr.detectChanges();
+          }
+        }
+      });
+    }, 2000);
   }
 
   // EXISTING METHOD: Conversation flow for Q&A tasks (extracted from startCustomDraft)

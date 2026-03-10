@@ -59,8 +59,10 @@ public class DraftStreamingPublisher {
                     .name("token")
                     .data(Map.of("text", text)));
             } catch (IOException e) {
+                // Don't remove emitter here — let onError/onCompletion callbacks handle cleanup.
+                // Removing early causes sendComplete() to find no emitter, so the client
+                // never receives the 'complete' event even though the backend succeeds.
                 log.debug("Failed to send token for conversation {}: {}", conversationId, e.getMessage());
-                emitters.remove(conversationId);
             }
         }
     }
@@ -77,7 +79,6 @@ public class DraftStreamingPublisher {
                     .data(Map.of("message", message)));
             } catch (IOException e) {
                 log.debug("Failed to send post_processing for conversation {}: {}", conversationId, e.getMessage());
-                emitters.remove(conversationId);
             }
         }
     }

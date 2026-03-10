@@ -249,6 +249,15 @@ export class DocumentGenerationService {
   }
 
   /**
+   * Get a completed draft by conversation ID — polling fallback when SSE drops.
+   */
+  getDraftByConversation(conversationId: number): Observable<any> {
+    return this.http.get(
+      `${environment.apiUrl}/api/legal/ai-workspace/drafts/by-conversation/${conversationId}`
+    );
+  }
+
+  /**
    * Enhance a rough prompt into a detailed, structured legal document prompt
    */
   enhancePrompt(request: PromptEnhanceRequest): Observable<PromptEnhanceResponse> {

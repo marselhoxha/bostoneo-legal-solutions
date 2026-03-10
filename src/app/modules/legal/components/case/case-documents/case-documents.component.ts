@@ -1983,90 +1983,11 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
 
 
   loadDocuments(): void {
-    this.isLoading = true;
-    const caseIdStr = String(this.caseId);
-
-    this.documentsService.getDocuments(caseIdStr).subscribe({
-      next: (response) => {
-        try {
-          // Enhanced response processing
-          let docsArray: any[] = [];
-
-          if (Array.isArray(response)) {
-            docsArray = response;
-          } else if (response && response.data && Array.isArray(response.data)) {
-            docsArray = response.data;
-          } else if (response && response.data && response.data.documents && Array.isArray(response.data.documents)) {
-            docsArray = response.data.documents;
-          } else {
-            console.error('Unexpected response format:', response);
-            this.toastr.warning('Unexpected document format received. Contact support if documents are missing.');
-            docsArray = [];
-          }
-
-          // Process and normalize each document
-          this.documents = docsArray.map(doc => {
-            if (!doc || typeof doc !== 'object') {
-              return null;
-            }
-
-            // Normalize category from string to enum if needed
-            let normalizedCategory = doc.category || 'OTHER';
-
-            // Create a normalized document object with default values
-            const normalizedDoc: any = {
-              id: doc.id,
-              title: doc.title || 'Untitled Document',
-              type: doc.type || DocumentType.OTHER,
-              category: normalizedCategory,
-              status: doc.status || 'FINAL',
-              description: doc.description || '',
-              fileName: doc.fileName || '',
-              fileUrl: doc.fileUrl || doc.url || '',
-              uploadedAt: doc.uploadedAt ? new Date(doc.uploadedAt) : new Date(),
-              uploadedBy: doc.uploadedBy || null,
-              tags: Array.isArray(doc.tags) ? doc.tags : [],
-              currentVersion: doc.currentVersion || 1,
-              versions: Array.isArray(doc.versions) ? doc.versions : []
-            };
-
-            return normalizedDoc;
-          }).filter(doc => doc !== null);
-
-          this.combineCaseDocuments();
-        } catch (err) {
-          console.error('Error processing documents response:', err);
-          this.toastr.error('Error processing documents data. Please try again or contact support.');
-          this.documents = [];
-        }
-        
-        this.isLoading = false;
-        this.cdr.detectChanges();
-        
-        // Re-initialize dropdowns after data is loaded
-        this.initDropdowns();
-      },
-      error: (error) => {
-        console.error('Error loading documents:', error);
-        let errorMessage = 'Failed to load documents';
-        
-        if (error.status === 401) {
-          errorMessage = 'Authentication error. Please log in again.';
-        } else if (error.status === 403) {
-          errorMessage = 'You do not have permission to access these documents.';
-        } else if (error.status === 404) {
-          errorMessage = 'Case or documents not found.';
-        } else if (error.status >= 500) {
-          errorMessage = 'Server error. Please try again later.';
-        }
-        
-        this.toastr.error(errorMessage);
-        this.documents = [];
-        this.filteredDocuments = [];
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }
-    });
+    // Legacy documents endpoint now points to file-manager, which is already
+    // loaded correctly by loadFileManagerFiles(). Setting documents to empty
+    // prevents duplicate "Untitled Document" ghost entries caused by field
+    // name mismatch (title/fileName/fileUrl vs name/originalName/downloadUrl).
+    this.documents = [];
   }
 
   filterDocuments(): void {
@@ -2520,9 +2441,9 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
 
       this.documentsService.uploadNewVersion(String(this.caseId), this.documentForNewVersion, formData).subscribe({
         next: () => {
-          this.loadDocuments();
+          this.loadFileManagerFiles();
           this.closeNewVersionUpload();
-          
+
           // Show sweet alert success message
           Swal.fire({
             title: 'Success!',
@@ -2558,7 +2479,7 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = this.documents.find(d => d.id === documentId)?.fileName || 'document';
+        link.download = this.combinedDocuments.find(d => d.id === documentId)?.fileName || 'document';
         link.click();
         window.URL.revokeObjectURL(url);
       },
@@ -2576,7 +2497,7 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = this.documents.find(d => d.id === documentId)?.fileName || 'document';
+        link.download = this.combinedDocuments.find(d => d.id === documentId)?.fileName || 'document';
         link.click();
         window.URL.revokeObjectURL(url);
       },
