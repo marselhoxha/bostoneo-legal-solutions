@@ -936,8 +936,9 @@ public class AiWorkspaceDocumentService {
         List<AiWorkspaceDocumentExhibit> exhibits = Collections.emptyList();
         if (documentId != null) {
             exhibits = exhibitRepository.findByDocumentIdAndOrgId(documentId, orgId);
+            exhibits = exhibitService.filterActiveExhibits(exhibits);
             if (!exhibits.isEmpty()) {
-                log.info("Found {} exhibits for document {} to include in prompt", exhibits.size(), documentId);
+                log.info("Found {} active exhibits for document {} to include in prompt", exhibits.size(), documentId);
             }
         }
 
@@ -1329,13 +1330,12 @@ public class AiWorkspaceDocumentService {
      * Uses category when set, falls back to filename pattern matching.
      */
     private boolean isPrivilegedDocument(FileItem file) {
-        // Check document category if set
+        // Check document category if set — only block ATTORNEY_CLIENT_PRIVILEGE
+        // CONFIDENTIAL and INTERNAL are access-control tiers, not privilege markers
         String category = file.getDocumentCategory();
         if (category != null && !category.isBlank()) {
             String upper = category.toUpperCase();
-            if (upper.contains("INTERNAL") || upper.contains("CONFIDENTIAL")
-                    || upper.contains("ATTORNEY_CLIENT") || upper.contains("PRIVILEGE")
-                    || upper.contains("WORK_PRODUCT")) {
+            if (upper.contains("ATTORNEY_CLIENT") || upper.contains("WORK_PRODUCT")) {
                 return true;
             }
         }

@@ -121,6 +121,7 @@ public class FileManagerServiceImpl implements FileManagerService {
     private final RoleService roleService;
     private final TenantService tenantService;
     private final FileStorageConfiguration fileStorageConfig;
+    private final AiWorkspaceDocumentExhibitRepository aiWorkspaceDocumentExhibitRepository;
 
     /**
      * Get the current organization ID from tenant context.
@@ -381,25 +382,47 @@ public class FileManagerServiceImpl implements FileManagerService {
     }
 
     @Override
+    @Transactional
     public void deleteFile(Long fileId) {
-        log.info("Soft deleting file with ID: {}", fileId);
+        log.info("Permanently deleting file with ID: {}", fileId);
         Long orgId = getRequiredOrganizationId();
 
         // SECURITY: Verify file belongs to current organization
         FileItem fileItem = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new RuntimeException("File not found with ID: " + fileId));
-        
-        if (Boolean.TRUE.equals(fileItem.getDeleted())) {
-            log.warn("File {} is already deleted", fileId);
-            return;
+
+        String filePath = fileItem.getFilePath();
+
+        try {
+            // Delete related data first to avoid foreign key constraints
+            fileAccessLogRepository.deleteByFileIdAndOrganizationId(fileId, orgId);
+            fileCommentRepository.deleteByFileIdAndOrganizationId(fileId, orgId);
+            fileTagRepository.deleteByOrganizationIdAndFileId(orgId, fileId);
+            fileShareRepository.deleteByFileIdAndOrganizationId(fileId, orgId);
+            fileVersionRepository.deleteByFileIdAndOrganizationId(fileId, orgId);
+
+            // Delete exhibit records referencing this file
+            aiWorkspaceDocumentExhibitRepository.deleteByCaseDocumentId(fileId, orgId);
+
+            // Delete the file item row
+            fileItemRepository.delete(fileItem);
+            fileItemRepository.flush();
+
+            log.info("File {} deleted from database", fileId);
+
+            // Delete physical file from S3
+            try {
+                fileStorageService.deleteFile(filePath);
+                log.info("Physical file deleted: {}", filePath);
+            } catch (Exception e) {
+                log.warn("Failed to delete physical file {}: {}", filePath, e.getMessage());
+            }
+
+            log.info("File {} permanently deleted successfully", fileId);
+        } catch (Exception e) {
+            log.error("Error permanently deleting file {}: {}", fileId, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete file: " + e.getMessage(), e);
         }
-        
-        fileItem.setDeleted(true);
-        fileItem.setDeletedAt(LocalDateTime.now());
-        fileItemRepository.save(fileItem);
-        
-        log.info("File {} soft deleted at {}", fileId, fileItem.getDeletedAt());
-        logFileAccess(fileId, FileAccessLog.ActionType.DELETE, true, null);
     }
 
     @Override
@@ -468,7 +491,10 @@ public class FileManagerServiceImpl implements FileManagerService {
             log.info("Deleting file versions for file ID: {}", fileId);
             fileVersionRepository.deleteByFileIdAndOrganizationId(fileId, orgId);
             log.info("Deleted file versions");
-            
+
+            // Delete exhibit records referencing this file
+            aiWorkspaceDocumentExhibitRepository.deleteByCaseDocumentId(fileId, orgId);
+
             // Now delete the file item
             log.info("Deleting file item from database");
             fileItemRepository.delete(fileItem);

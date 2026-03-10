@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, AfterViewInit, Renderer2, OnDestroy, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit, Renderer2, OnDestroy, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { CalendarService } from '../../../services/calendar.service';
 import { CalendarEvent } from '../interfaces/calendar-event.interface';
@@ -12,7 +12,8 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import listPlugin from '@fullcalendar/list';
 import interactionPlugin from '@fullcalendar/interaction';
 import { FullCalendarComponent } from '@fullcalendar/angular';
-import { Subscription } from 'rxjs';
+import { Subscription, of } from 'rxjs';
+import { finalize, timeout, catchError } from 'rxjs/operators';
 
 // Interface for backend response structure
 interface ApiResponse {
@@ -133,7 +134,8 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
     private modalService: NgbModal,
     private renderer: Renderer2,
     private toastr: ToastrService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -183,45 +185,34 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
   loadEvents(): void {
     this.loading = true;
     this.error = null;
-    
-    // Always load from API
-    this.calendarService.getEvents().subscribe({
-      next: (response: any) => {
-        // Check if the response contains a data structure with events array
-        if (response && typeof response === 'object' && 'data' in response && response.data && Array.isArray(response.data.events)) {
-          // API response with data.events structure
-          this.events = this.convertToCalendarEvents(response.data.events);
-        } else if (Array.isArray(response)) {
-          // Direct array response
-          this.events = this.convertToCalendarEvents(response);
-        } else if (response && typeof response === 'object' && 'data' in response && response.data && response.data.events) {
-          // Single event or non-array format
-          this.events = this.convertToCalendarEvents([response.data.events]);
-        } else {
-          // Empty or unexpected format
+
+    this.calendarService.getEvents()
+      .pipe(
+        timeout(10000),
+        catchError(() => of([])),
+        finalize(() => {
+          this.loading = false;
+          this.cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: (response: any) => {
+          if (response && typeof response === 'object' && 'data' in response && response.data && Array.isArray(response.data.events)) {
+            this.events = this.convertToCalendarEvents(response.data.events);
+          } else if (Array.isArray(response)) {
+            this.events = this.convertToCalendarEvents(response);
+          } else if (response && typeof response === 'object' && 'data' in response && response.data && response.data.events) {
+            this.events = this.convertToCalendarEvents([response.data.events]);
+          } else {
+            this.events = [];
+          }
+          this.mapEventsToCalendar();
+        },
+        error: () => {
           this.events = [];
-          console.warn('Unexpected API response format:', response);
+          this.mapEventsToCalendar();
         }
-        
-        this.mapEventsToCalendar();
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error('Error loading calendar events:', err);
-        // Don't show error message to the user
-        this.error = null;
-        this.loading = false;
-        this.events = [];
-        
-        // Show empty calendar even on error
-        if (this.calendarComponent && this.calendarComponent.getApi()) {
-          this.calendarComponent.getApi().removeAllEvents();
-        }
-        
-        // Continue with empty calendar and no error message
-        this.mapEventsToCalendar();
-      }
-    });
+      });
   }
   
   // Convert backend event format to CalendarEvent format

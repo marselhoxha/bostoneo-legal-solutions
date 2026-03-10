@@ -63,6 +63,10 @@ public class AiWorkspaceDocumentExhibitRepository {
         "SET display_order = :displayOrder, updated_at = CURRENT_TIMESTAMP " +
         "WHERE id = :id AND organization_id = :orgId";
 
+    private static final String DELETE_BY_CASE_DOCUMENT_ID =
+        "DELETE FROM ai_workspace_document_exhibits " +
+        "WHERE case_document_id = :caseDocId AND organization_id = :orgId";
+
     private static final String DELETE_STALE_EXHIBITS =
         "DELETE FROM ai_workspace_document_exhibits e " +
         "WHERE e.document_id = :documentId AND e.organization_id = :orgId " +
@@ -219,6 +223,22 @@ public class AiWorkspaceDocumentExhibitRepository {
             log.error("Error updating display order for exhibit {}: {}", id, e.getMessage());
             throw new ApiException("Error updating exhibit display order");
         }
+    }
+
+    /**
+     * Delete all exhibits referencing a specific case document (file_item).
+     * Used when a case file is permanently deleted to clean up exhibit references.
+     */
+    public int deleteByCaseDocumentId(Long caseDocId, Long orgId) {
+        log.debug("Deleting exhibits for case document {} in org {}", caseDocId, orgId);
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("caseDocId", caseDocId)
+            .addValue("orgId", orgId);
+        int deleted = jdbc.update(DELETE_BY_CASE_DOCUMENT_ID, params);
+        if (deleted > 0) {
+            log.info("Deleted {} exhibit records for case document {} in org {}", deleted, caseDocId, orgId);
+        }
+        return deleted;
     }
 
     /**

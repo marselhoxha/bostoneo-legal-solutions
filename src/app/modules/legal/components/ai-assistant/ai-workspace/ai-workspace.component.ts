@@ -6665,14 +6665,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             }
           });
 
-          // Handle error events
+          // Handle error events — only process if event.data exists (backend error).
+          // Connection drops fire this event with no data; let onerror handle those.
           eventSource.addEventListener('error', (event: MessageEvent) => {
             try {
-              let errorMsg = 'Failed to generate document';
-              if (event.data) {
-                const data = JSON.parse(event.data);
-                errorMsg = data.message || errorMsg;
+              if (!event.data) {
+                // Connection drop — not a backend error. Let onerror polling fallback handle it.
+                return;
               }
+
+              let errorMsg = 'Failed to generate document';
+              const data = JSON.parse(event.data);
+              errorMsg = data.message || errorMsg;
 
               this.closeDraftStream();
               this.backgroundTaskService.failTask(taskId, errorMsg);

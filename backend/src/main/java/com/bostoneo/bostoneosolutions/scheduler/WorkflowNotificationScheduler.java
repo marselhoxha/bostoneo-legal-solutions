@@ -43,7 +43,7 @@ public class WorkflowNotificationScheduler {
     @Autowired
     private OrganizationRepository organizationRepository;
 
-    @Value("${app.workflow.notifications.enabled:true}")
+    @Value("${app.workflow.notifications.enabled:false}")
     private boolean notificationsEnabled;
 
     // Days before deadline to trigger notifications
