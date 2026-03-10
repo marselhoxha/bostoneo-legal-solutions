@@ -124,8 +124,7 @@ export const PARALEGAL_MENU: MenuItem[] = [
     link: '/time-tracking/dashboard',
     subItems: [
       { id: 'para-time-dashboard', label: 'Dashboard', link: '/time-tracking/dashboard', parentId: 'para-time' },
-      { id: 'para-time-entry', label: 'Log Time', link: '/time-tracking/entry', parentId: 'para-time' },
-      { id: 'para-time-timesheet', label: 'Timesheet', link: '/time-tracking/timesheet', parentId: 'para-time' }
+      { id: 'para-time-entry', label: 'Log Time', link: '/time-tracking/entry', parentId: 'para-time' }
     ]
   },
   {
@@ -188,7 +187,6 @@ export const FINANCE_MENU: MenuItem[] = [
       { id: 'fin-time-dashboard', label: 'Dashboard', link: '/time-tracking/dashboard', parentId: 'fin-time-billing' },
       { id: 'fin-time-approval', label: 'Approval', link: '/time-tracking/approval', parentId: 'fin-time-billing' },
       { id: 'fin-time-rates', label: 'Billing Rates', link: '/time-tracking/rates', parentId: 'fin-time-billing' },
-      { id: 'fin-time-rate-mgmt', label: 'Rate Management', link: '/time-tracking/rate-management', parentId: 'fin-time-billing' },
       { id: 'fin-time-invoice-gen', label: 'Invoice Generation', link: '/time-tracking/billing/invoice-generation', parentId: 'fin-time-billing' }
     ]
   },
@@ -246,7 +244,6 @@ export const ATTORNEY_MENU: MenuItem[] = [
     subItems: [
       { id: 'att-time-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/time-tracking/dashboard', parentId: 'att-time-billing' },
       { id: 'att-time-entry', label: 'Log Time', icon: 'ri-timer-line', link: '/time-tracking/entry', parentId: 'att-time-billing' },
-      { id: 'att-time-timesheet', label: 'Timesheet', icon: 'ri-file-list-line', link: '/time-tracking/timesheet', parentId: 'att-time-billing' },
       { id: 'att-time-approval', label: 'Approval', icon: 'ri-checkbox-circle-line', link: '/time-tracking/approval', parentId: 'att-time-billing' },
       { id: 'att-time-rates', label: 'Billing Rates', icon: 'ri-price-tag-3-line', link: '/time-tracking/rates', parentId: 'att-time-billing' }
     ]
@@ -358,12 +355,9 @@ export const ADMIN_MENU: MenuItem[] = [
     subItems: [
       { id: 'admin-time-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/time-tracking/dashboard', parentId: 'admin-time-billing' },
       { id: 'admin-time-entry', label: 'Log Time', icon: 'ri-timer-line', link: '/time-tracking/entry', parentId: 'admin-time-billing' },
-      { id: 'admin-time-timesheet', label: 'Timesheet', icon: 'ri-file-list-line', link: '/time-tracking/timesheet', parentId: 'admin-time-billing' },
       { id: 'admin-time-approval', label: 'Approval', icon: 'ri-checkbox-circle-line', link: '/time-tracking/approval', parentId: 'admin-time-billing' },
       { id: 'admin-time-rates', label: 'Billing Rates', icon: 'ri-price-tag-3-line', link: '/time-tracking/rates', parentId: 'admin-time-billing' },
-      { id: 'admin-time-rate-mgmt', label: 'Rate Management', icon: 'ri-settings-4-line', link: '/time-tracking/rate-management', parentId: 'admin-time-billing' },
-      { id: 'admin-time-invoice-gen', label: 'Invoice Generation', icon: 'ri-bill-line', link: '/time-tracking/billing/invoice-generation', parentId: 'admin-time-billing' },
-      { id: 'admin-time-analytics', label: 'Analytics', icon: 'ri-bar-chart-line', link: '/time-tracking/billing/analytics', parentId: 'admin-time-billing' }
+      { id: 'admin-time-invoice-gen', label: 'Invoice Generation', icon: 'ri-bill-line', link: '/time-tracking/billing/invoice-generation', parentId: 'admin-time-billing' }
     ]
   },
   {
@@ -423,8 +417,6 @@ export const ADMIN_MENU: MenuItem[] = [
     link: '/file-manager',
     subItems: [
       { id: 'admin-files-main', label: 'My Documents', link: '/file-manager', parentId: 'admin-files' },
-      { id: 'admin-files-deleted', label: 'Deleted Files', link: '/file-manager/deleted', parentId: 'admin-files' },
-      { id: 'admin-files-templates', label: 'Templates', link: '/file-manager/templates', parentId: 'admin-files' },
       { id: 'admin-files-firm', label: 'Firm Templates', link: '/file-manager/firm-templates', parentId: 'admin-files' },
       { id: 'admin-files-permissions', label: 'Permissions', link: '/file-manager/permissions', parentId: 'admin-files' }
     ]
@@ -435,10 +427,8 @@ export const ADMIN_MENU: MenuItem[] = [
     icon: 'ri-admin-line',
     link: '/admin/roles',
     subItems: [
-      { id: 'admin-admin-users', label: 'Users', link: '/users', parentId: 'admin-admin' },
       { id: 'admin-admin-roles', label: 'Role Management', link: '/admin/roles', parentId: 'admin-admin' },
       { id: 'admin-admin-user-roles', label: 'User Roles', link: '/admin/user-roles', parentId: 'admin-admin' },
-      { id: 'admin-admin-hierarchy', label: 'Role Hierarchy', link: '/admin/hierarchy', parentId: 'admin-admin' },
       { id: 'admin-admin-audit', label: 'Audit Logs', link: '/admin/audit-logs', parentId: 'admin-admin' }
     ]
   }

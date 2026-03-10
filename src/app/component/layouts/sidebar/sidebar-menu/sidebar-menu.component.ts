@@ -385,11 +385,11 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
         ]
       },
 
-      // Administration
+      // Analytics
       {
         id: 8,
-        label: 'Administration',
-        icon: 'ri-settings-2-line',
+        label: 'Analytics',
+        icon: 'ri-bar-chart-2-line',
         isParent: true,
         permission: { resource: 'USER', action: 'VIEW', hierarchyLevel: 50 },
         subItems: [

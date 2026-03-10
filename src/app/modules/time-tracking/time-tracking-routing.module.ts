@@ -3,11 +3,9 @@ import { RouterModule, Routes } from '@angular/router';
 import { RbacGuard, RoutePermissions } from '../../guard/rbac.guard';
 
 import { TimeEntryFormComponent } from './components/time-entry-form/time-entry-form.component';
-import { TimesheetViewComponent } from './components/timesheet-view/timesheet-view.component';
 import { TimeApprovalComponent } from './components/time-approval/time-approval.component';
 import { BillingRatesComponent } from './components/billing-rates/billing-rates.component';
 import { InvoiceGenerationComponent } from './components/invoice-generation/invoice-generation.component';
-import { RateManagementComponent } from './components/rate-management/rate-management.component';
 import { BillingAnalyticsComponent } from './components/billing-analytics/billing-analytics.component';
 import { TimeDashboardComponent } from './components/time-dashboard/time-dashboard.component';
 
@@ -39,35 +37,6 @@ const routes: Routes = [
         component: TimeEntryFormComponent,
         data: { 
           title: 'Edit Time Entry'
-        }
-      },
-
-      // Personal Timesheet - Own time entries only
-      {
-        path: 'timesheet',
-        component: TimesheetViewComponent,
-        data: { 
-          title: 'My Timesheet'
-        }
-      },
-
-      // Team Timesheet
-      {
-        path: 'timesheet/team',
-        component: TimesheetViewComponent,
-        data: { 
-          title: 'Team Timesheet',
-          viewMode: 'team'
-        }
-      },
-
-      // All Timesheet
-      {
-        path: 'timesheet/all',
-        component: TimesheetViewComponent,
-        data: { 
-          title: 'All Timesheets',
-          viewMode: 'all'
         }
       },
 
@@ -113,15 +82,6 @@ const routes: Routes = [
         component: BillingRatesComponent,
         data: { 
           title: 'Billing Rates Management'
-        }
-      },
-
-      // Rate Management
-      {
-        path: 'rate-management',
-        component: RateManagementComponent,
-        data: { 
-          title: 'Rate Management'
         }
       },
 
