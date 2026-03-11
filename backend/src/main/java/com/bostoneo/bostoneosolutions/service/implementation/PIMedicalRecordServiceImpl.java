@@ -602,13 +602,21 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             try (InputStream stream = resource.getInputStream()) {
                 BodyContentHandler handler = new BodyContentHandler(-1);
                 Metadata metadata = new Metadata();
+                // Set filename so Tika picks the correct parser (critical for S3 ByteArrayResource
+                // which lacks file extension context unlike local FileUrlResource)
+                metadata.set(org.apache.tika.metadata.TikaCoreProperties.RESOURCE_NAME_KEY, file.getOriginalName());
+                if (file.getMimeType() != null) {
+                    metadata.set(Metadata.CONTENT_TYPE, file.getMimeType());
+                }
                 AutoDetectParser parser = new AutoDetectParser();
                 ParseContext context = new ParseContext();
                 parser.parse(stream, handler, metadata, context);
-                return handler.toString();
+                String text = handler.toString();
+                log.info("Tika extracted {} chars from file {}", text != null ? text.length() : 0, file.getOriginalName());
+                return text;
             }
         } catch (Exception e) {
-            log.error("Error extracting text from file {}: {}", file.getId(), e.getMessage());
+            log.error("Error extracting text from file {} (id={}): {}", file.getOriginalName(), file.getId(), e.getMessage(), e);
             return null;
         }
     }
