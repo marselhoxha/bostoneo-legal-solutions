@@ -381,6 +381,26 @@ public class PIDamageCalculationController {
                         .build());
     }
 
+    /**
+     * Clear all damage elements and calculation for a case
+     */
+    @DeleteMapping("/clear-all")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> clearAllDamageData(@PathVariable("caseId") Long caseId) {
+
+        log.info("Clearing all damage data for case: {}", caseId);
+
+        damageService.deleteAllDamageData(caseId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message("All damage elements and calculation cleared successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
     // ===== Quick Damage Calculators =====
 
     /**

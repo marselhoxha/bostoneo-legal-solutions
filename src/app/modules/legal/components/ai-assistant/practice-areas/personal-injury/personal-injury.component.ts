@@ -897,16 +897,16 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   /**
-   * Get case value from damage calculation or settlement demand
+   * Get estimated case value for the all-cases table.
+   * Priority: DB-persisted damage calculation midValue > settlement demand.
    */
   getCaseValueDisplay(caseItem: LegalCase): number {
-    // Prefer settlement demand amount as the case value indicator
-    if (caseItem.settlementDemandAmount) {
-      return caseItem.settlementDemandAmount;
+    // estimatedCaseValue = midValue from PIDamageCalculation, set by backend
+    if (caseItem.estimatedCaseValue && caseItem.estimatedCaseValue > 0) {
+      return caseItem.estimatedCaseValue;
     }
-    // Fallback to medical expenses total as a base
-    if (caseItem.medicalExpensesTotal) {
-      return caseItem.medicalExpensesTotal;
+    if (caseItem.settlementDemandAmount && caseItem.settlementDemandAmount > 0) {
+      return caseItem.settlementDemandAmount;
     }
     return 0;
   }
@@ -3156,30 +3156,21 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
   // Get dashboard stats from linked case
   getLinkedCaseValue(): number {
-    // 1. Prefer latestCaseValue — set from the most recent AI calculation (persisted in localStorage)
-    if (this.latestCaseValue > 0) {
-      return this.latestCaseValue;
-    }
-    // 2. In-memory AI result from current session
+    // 1. In-memory AI result from current session (freshest — just calculated)
     if (this.calculatedValue?.realisticRecovery && this.calculatedValue.realisticRecovery > 0) {
       return this.calculatedValue.realisticRecovery;
     }
-    // 3. DB-persisted damage calculation total (includes multiplier-based non-economic)
+    // 2. DB-persisted damage calculation midValue (the "LIKELY" value shown on Valuation tab)
+    if (this.damageCalculation?.midValue && this.damageCalculation.midValue > 0) {
+      return this.damageCalculation.midValue;
+    }
+    // 3. DB-persisted adjusted total as fallback
     if (this.damageCalculation?.adjustedDamagesTotal && this.damageCalculation.adjustedDamagesTotal > 0) {
       return this.damageCalculation.adjustedDamagesTotal;
     }
-    // 4. Compute from actual medical records + multiplier as last resort
-    if (this.linkedCase) {
-      const medical = this.linkedCase.medicalExpensesTotal || this.getTotalMedicalBills();
-      const wages = this.linkedCase.lostWages || 0;
-      const future = this.linkedCase.futureMedicalEstimate || 0;
-      const multiplier = this.linkedCase.painSufferingMultiplier || 2;
-      const economic = medical + wages + future;
-      if (economic > 0) {
-        const total = economic + (economic * multiplier);
-        const negligence = this.linkedCase.comparativeNegligencePercent || 0;
-        return total * (1 - negligence / 100);
-      }
+    // 4. Settlement demand amount
+    if (this.linkedCase?.settlementDemandAmount && this.linkedCase.settlementDemandAmount > 0) {
+      return this.linkedCase.settlementDemandAmount;
     }
     return 0;
   }
@@ -3260,7 +3251,13 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
             <div class="text-start">
               <p><strong>Documents Scanned:</strong> ${result.documentsScanned}</p>
               <p><strong>Records Created:</strong> ${result.recordsCreated}</p>
-              ${result.errors?.length > 0 ? `<p class="text-warning"><strong>Errors:</strong> ${result.errors.length}</p>` : ''}
+              ${result.errors?.length > 0 ? `
+              <div class="mt-2 text-start">
+                <strong class="text-danger">Errors (${result.errors.length}):</strong>
+                <ul class="mb-0 mt-1" style="font-size:0.85rem;">
+                  ${result.errors.map((e: string) => `<li>${e}</li>`).join('')}
+                </ul>
+              </div>` : ''}
             </div>
             ${result.recordsCreated > 0 ? '<p class="text-success mt-2">Medical records have been auto-populated from your documents.</p>' : '<p class="text-muted mt-2">No new medical documents found to process.</p>'}
           `,
@@ -3409,6 +3406,74 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     });
   }
 
+  clearAllMedicalRecords(): void {
+    if (!this.linkedCase?.id || !this.medicalRecords?.length) return;
+
+    Swal.fire({
+      title: 'Clear All Records?',
+      text: 'This will permanently delete all medical records for this case. You can re-scan documents afterwards to repopulate them.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, clear all',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        confirmButton: 'btn btn-danger me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.medicalRecordService.deleteAllRecords(Number(this.linkedCase!.id)).subscribe({
+          next: () => {
+            // Clear stale case value state so dashboard shows $0 immediately
+            this.latestCaseValue = 0;
+            this.calculatedValue = null;
+            this.damageCalculation = null;
+            localStorage.removeItem('pi_latest_case_value');
+            localStorage.removeItem('pi_calculated_value');
+            // Sync medical expenses to valuation tab — triggers deletion of stale
+            // PAST_MEDICAL damage element (backend returns null when totalBilled = $0)
+            this.damageCalculationService.syncMedicalExpenses(Number(this.linkedCase!.id)).subscribe({
+              next: () => this.loadDamageElements(),
+              error: () => this.loadDamageElements()
+            });
+            // Reload case to pick up the zeroed medicalExpensesTotal from backend,
+            // then show confirmation toast only after the UI state is updated
+            const showClearedToast = () => Swal.fire({
+              icon: 'success',
+              title: 'Cleared',
+              text: 'All medical records deleted. You can now re-scan documents.',
+              timer: 3000,
+              showConfirmButton: false
+            });
+            this.caseService.getCaseById(String(this.linkedCase!.id)).subscribe({
+              next: (response) => {
+                if (response?.data?.case) {
+                  this.linkedCase = response.data.case as any;
+                }
+                this.loadMedicalRecords();
+                this.cdr.detectChanges();
+                showClearedToast();
+              },
+              error: () => {
+                this.loadMedicalRecords();
+                showClearedToast();
+              }
+            });
+          },
+          error: (err) => {
+            console.error('Error clearing records:', err);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Failed to delete medical records'
+            });
+          }
+        });
+      }
+    });
+  }
+
   resetMedicalRecordForm(): void {
     this.editingMedicalRecord = null;
     this.medicalRecordForm.reset({
@@ -3446,6 +3511,17 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     if (!this.linkedCase?.id) return;
 
     this.isGeneratingSummary = true;
+    this.cdr.detectChanges();
+
+    Swal.fire({
+      title: 'Generating Medical Summary',
+      html: 'AI is analyzing your medical records...<br><small>This may take a minute.</small>',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
     this.medicalSummaryService.generateMedicalSummary(Number(this.linkedCase.id)).subscribe({
       next: (summary) => {
         this.medicalSummary = summary;
@@ -3455,9 +3531,15 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
         Swal.fire({
           icon: 'success',
           title: 'Summary Generated',
-          text: `Completeness Score: ${summary.completenessScore}%`,
-          timer: 3000,
-          showConfirmButton: false
+          html: `
+            <div class="text-start">
+              <p><strong>Completeness Score:</strong> ${summary.completenessScore}%</p>
+              <p><strong>Providers:</strong> ${summary.providerSummary?.length || 0}</p>
+              <p><strong>Diagnoses:</strong> ${summary.diagnosisList?.length || 0}</p>
+              ${summary.redFlags?.length > 0 ? `<p class="text-danger"><strong>Red Flags:</strong> ${summary.redFlags.length}</p>` : ''}
+            </div>
+          `,
+          confirmButtonText: 'View Summary'
         });
       },
       error: (err) => {
@@ -3466,7 +3548,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
         this.cdr.detectChanges();
         Swal.fire({
           icon: 'error',
-          title: 'Error',
+          title: 'Generation Failed',
           text: err.error?.message || 'Failed to generate medical summary. Make sure you have medical records entered.'
         });
       }
@@ -4270,6 +4352,54 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           },
           error: (err) => {
             console.error('Error deleting element:', err);
+          }
+        });
+      }
+    });
+  }
+
+  clearValuation(): void {
+    if (!this.linkedCase?.id || !this.damageElements?.length) return;
+
+    Swal.fire({
+      title: 'Clear All Valuation Data?',
+      text: 'This will delete all damage elements and the calculation for this case. You can re-calculate afterwards.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, clear all',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        confirmButton: 'btn btn-danger me-2',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.damageCalculationService.clearAllDamageData(Number(this.linkedCase!.id)).subscribe({
+          next: () => {
+            this.damageElements = [];
+            this.damageCalculation = null;
+            this.calculatedValue = null;
+            this.latestCaseValue = 0;
+            localStorage.removeItem('pi_latest_case_value');
+            localStorage.removeItem('pi_calculated_value');
+            this.loadDamageElements();
+            this.cdr.detectChanges();
+            Swal.fire({
+              icon: 'success',
+              title: 'Cleared',
+              text: 'All valuation data has been removed.',
+              timer: 2500,
+              showConfirmButton: false
+            });
+          },
+          error: (err) => {
+            console.error('Error clearing valuation:', err);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Failed to clear valuation data'
+            });
           }
         });
       }

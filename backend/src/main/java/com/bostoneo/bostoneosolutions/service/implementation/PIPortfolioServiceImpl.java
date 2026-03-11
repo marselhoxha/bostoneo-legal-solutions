@@ -198,6 +198,9 @@ public class PIPortfolioServiceImpl implements PIPortfolioService {
                 ? allPICases.subList(start, end)
                 : Collections.emptyList();
 
+        // Enrich each case with its damage calculation midValue for the table display
+        enrichWithCaseValuation(pageContent, orgId);
+
         return new PageImpl<>(pageContent, pageable, allPICases.size());
     }
 
@@ -248,6 +251,21 @@ public class PIPortfolioServiceImpl implements PIPortfolioService {
                 : Collections.emptyList();
 
         return new PageImpl<>(pageContent, pageable, filtered.size());
+    }
+
+    /**
+     * Enrich LegalCase objects with estimatedCaseValue from damage calculations.
+     * Uses midValue (the "LIKELY" estimate) so the table matches the workspace dashboard.
+     */
+    private void enrichWithCaseValuation(List<LegalCase> cases, Long orgId) {
+        for (LegalCase c : cases) {
+            damageCalculationRepository.findByCaseIdAndOrganizationId(c.getId(), orgId)
+                    .ifPresent(calc -> {
+                        if (calc.getMidValue() != null) {
+                            c.setEstimatedCaseValue(calc.getMidValue().doubleValue());
+                        }
+                    });
+        }
     }
 
     /**

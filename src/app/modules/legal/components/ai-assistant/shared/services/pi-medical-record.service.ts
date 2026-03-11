@@ -59,6 +59,15 @@ export class PIMedicalRecordService {
   }
 
   /**
+   * Delete ALL medical records for a case — enables a fresh re-scan
+   */
+  deleteAllRecords(caseId: number): Observable<void> {
+    return this.http.delete<any>(`${this.baseUrl}/${caseId}/medical-records`).pipe(
+      map(() => undefined)
+    );
+  }
+
+  /**
    * Get provider summary for a case
    */
   getProviderSummary(caseId: number): Observable<any> {

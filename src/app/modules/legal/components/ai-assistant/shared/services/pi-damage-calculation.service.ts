@@ -155,6 +155,15 @@ export class PIDamageCalculationService {
     );
   }
 
+  /**
+   * Clear all damage elements and calculation for a case
+   */
+  clearAllDamageData(caseId: number): Observable<void> {
+    return this.http.delete<any>(`${this.baseUrl}/${caseId}/damages/clear-all`).pipe(
+      map(() => undefined)
+    );
+  }
+
   // ===== Quick Damage Calculators =====
 
   /**

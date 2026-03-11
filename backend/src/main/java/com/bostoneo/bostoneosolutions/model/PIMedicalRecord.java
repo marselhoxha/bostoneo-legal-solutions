@@ -81,7 +81,7 @@ public class PIMedicalRecord {
     @Column(name = "record_type", nullable = false, length = 50)
     private String recordType; // ER, Follow-up, Surgery, PT, Imaging, Lab, Consultation
 
-    @Column(name = "treatment_date", nullable = false)
+    @Column(name = "treatment_date")
     private LocalDate treatmentDate;
 
     @Column(name = "treatment_end_date")

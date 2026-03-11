@@ -196,6 +196,10 @@ public class LegalCase {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date settlementDate;
 
+    // Computed case valuation — populated from PIDamageCalculation.midValue at query time, not persisted
+    @Transient
+    private Double estimatedCaseValue;
+
     // Insurance Information
     @Column(name = "insurance_company")
     private String insuranceCompany;

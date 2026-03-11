@@ -4,10 +4,12 @@ import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.model.LegalCase;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -133,4 +135,13 @@ public interface LegalCaseRepository extends PagingAndSortingRepository<LegalCas
      * SECURITY: Find cases by type within organization (tenant isolation)
      */
     Page<LegalCase> findByOrganizationIdAndType(Long organizationId, String type, Pageable pageable);
+
+    /**
+     * Zero out medical_expenses_total when all medical records are deleted for a case.
+     * Ensures the case dashboard reflects the cleared state immediately.
+     */
+    @Transactional
+    @Modifying
+    @Query("UPDATE LegalCase c SET c.medicalExpensesTotal = 0 WHERE c.id = :caseId AND c.organizationId = :orgId")
+    void resetMedicalExpensesTotal(@Param("caseId") Long caseId, @Param("orgId") Long orgId);
 } 

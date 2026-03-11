@@ -113,4 +113,9 @@ public interface PIDamageCalculationService {
     PIDamageElementDTO calculatePainSuffering(Long caseId, String calculationMethod,
                                                BigDecimal economicBase, BigDecimal multiplierOrPerDiem,
                                                Integer durationDays, String notes);
+
+    /**
+     * Delete all damage elements and calculation for a case (Clear Valuation)
+     */
+    void deleteAllDamageData(Long caseId);
 }

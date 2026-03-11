@@ -6721,11 +6721,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               // If complete was already received, this is just normal SSE close — ignore
               if (wasCompleted) return;
 
-              // If tokens were received (generation started), the backend may still complete.
-              // Poll for the finished document instead of showing a false error.
-              if (hadTokens) {
-                this.pollForCompletedDraft(backendConversationId, taskId, tempConvId, title, documentType);
-              }
+              // Poll for the finished document regardless of whether tokens arrived.
+              // If the ALB dropped the SSE connection during "Analyzing" (before any tokens),
+              // the backend async task may still complete — polling will catch it.
+              this.pollForCompletedDraft(backendConversationId, taskId, tempConvId, title, documentType);
             }
           };
 

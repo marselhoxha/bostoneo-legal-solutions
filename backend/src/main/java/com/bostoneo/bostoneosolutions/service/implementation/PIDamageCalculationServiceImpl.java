@@ -693,4 +693,13 @@ public class PIDamageCalculationServiceImpl implements PIDamageCalculationServic
                 .updatedAt(entity.getUpdatedAt())
                 .build();
     }
+
+    @Override
+    public void deleteAllDamageData(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        log.info("Deleting all damage elements and calculation for case: {} in org: {}", caseId, orgId);
+        elementRepository.deleteByCaseIdAndOrganizationId(caseId, orgId);
+        calculationRepository.deleteByCaseIdAndOrganizationId(caseId, orgId);
+        log.info("All damage data cleared for case {}", caseId);
+    }
 }

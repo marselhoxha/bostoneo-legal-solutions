@@ -45,6 +45,11 @@ public interface PIMedicalRecordService {
     void deleteRecord(Long id);
 
     /**
+     * Delete all medical records for a case (allows fresh re-scan)
+     */
+    int deleteAllRecordsByCase(Long caseId);
+
+    /**
      * Get records by provider name
      */
     List<PIMedicalRecordDTO> getRecordsByProvider(Long caseId, String providerName);

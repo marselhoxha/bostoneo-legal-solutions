@@ -12,6 +12,7 @@ import com.bostoneo.bostoneosolutions.repository.PIMedicalRecordRepository;
 import com.bostoneo.bostoneosolutions.repository.PIMedicalSummaryRepository;
 import com.bostoneo.bostoneosolutions.service.PIMedicalRecordService;
 import com.bostoneo.bostoneosolutions.service.PIDocumentChecklistService;
+import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,7 +22,6 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.sax.BodyContentHandler;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,9 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -54,9 +51,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
     private final TenantService tenantService;
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
-
-    @Value("${app.uploads.path:uploads}")
-    private String uploadsPath;
+    private final FileStorageService fileStorageService;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -142,6 +137,19 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         summaryRepository.markAsStale(caseId, orgId);
 
         log.info("Medical record deleted successfully");
+    }
+
+    @Override
+    public int deleteAllRecordsByCase(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        log.info("Deleting all medical records for case: {} in org: {}", caseId, orgId);
+        repository.deleteByCaseIdAndOrganizationId(caseId, orgId);
+        summaryRepository.deleteByCaseIdAndOrganizationId(caseId, orgId);
+        // Zero out the case-level medical total so the dashboard reflects the cleared state immediately
+        legalCaseRepository.resetMedicalExpensesTotal(caseId, orgId);
+        log.info("All medical records, summary, and medical total cleared for case {}", caseId);
+        // Return count is best-effort; JPA deleteBy returns void so we return 0 to signal success
+        return 0;
     }
 
     @Override
@@ -410,6 +418,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
 
         Map<String, Object> result = new HashMap<>();
         List<PIMedicalRecordDTO> createdRecords = new ArrayList<>();
+        Set<Long> countedRecordIds = new HashSet<>();
         List<Map<String, Object>> scannedFiles = new ArrayList<>();
         List<String> errors = new ArrayList<>();
 
@@ -438,9 +447,15 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
 
                 // Analyze the file and create record
                 PIMedicalRecordDTO record = analyzeFileAndCreateRecord(caseId, file.getId());
-                if (record != null) {
+                if (record != null && countedRecordIds.add(record.getId())) {
                     createdRecords.add(record);
                     fileResult.put("status", "success");
+                    fileResult.put("recordId", record.getId());
+                    fileResult.put("provider", record.getProviderName());
+                    fileResult.put("recordType", record.getRecordType());
+                } else if (record != null) {
+                    // Merged into an existing record — mark as success but don't double-count
+                    fileResult.put("status", "merged");
                     fileResult.put("recordId", record.getId());
                     fileResult.put("provider", record.getProviderName());
                     fileResult.put("recordType", record.getRecordType());
@@ -506,6 +521,14 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         FileItem file = fileItemRepository.findByIdAndOrganizationId(fileId, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("File not found with ID: " + fileId));
 
+        // Guard: if a record already exists for this document, return it without re-processing.
+        // Prevents billing amounts from doubling if the same file is analyzed more than once.
+        Optional<PIMedicalRecord> existingByDoc = repository.findByDocumentIdAndOrganizationId(fileId, orgId);
+        if (existingByDoc.isPresent()) {
+            log.info("Record already exists for document {}, returning existing record {}", fileId, existingByDoc.get().getId());
+            return mapToDTO(existingByDoc.get());
+        }
+
         // Extract text from PDF
         String extractedText = extractTextFromFile(file);
         if (extractedText == null || extractedText.trim().isEmpty()) {
@@ -531,27 +554,35 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         String normalizedProvider = normalizeProviderName(rawProviderName);
         analysisResult.put("providerName", normalizedProvider);
 
-        // Parse treatment date from analysis
+        // Parse treatment date from analysis — leave null if AI couldn't extract one.
+        // A null date is better than defaulting to today which corrupts timeline analysis.
         String dateStr = (String) analysisResult.get("treatmentDate");
         LocalDate treatmentDate = null;
         if (dateStr != null && !dateStr.isEmpty()) {
             try {
                 treatmentDate = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
             } catch (Exception e) {
-                treatmentDate = LocalDate.now();
+                log.warn("Could not parse treatment date '{}' from AI response — leaving null", dateStr);
+                treatmentDate = null;
             }
         }
 
-        // Check for existing record from same provider + same date — merge instead of duplicating
-        if (treatmentDate != null) {
-            Optional<PIMedicalRecord> existingOpt = repository.findByCaseAndProviderAndDate(
-                    caseId, orgId, normalizedProvider, treatmentDate);
+        // Check for existing record from same provider + same date + same record type — merge instead of duplicating.
+        // Three-key merge: provider + date + recordType prevents ER records from absorbing PT records
+        // that share a provider name (after normalization) and date.
+        // BILLING documents are always separate records — never merged.
+        String newDocType = (String) analysisResult.getOrDefault("documentType", "OTHER");
+        String mappedRecordType = mapDocumentTypeToRecordType(newDocType);
+        boolean isBillingDoc = "BILLING".equals(mappedRecordType);
+        if (treatmentDate != null && !isBillingDoc) {
+            Optional<PIMedicalRecord> existingOpt = repository.findByCaseAndProviderAndDateAndRecordType(
+                    caseId, orgId, normalizedProvider, treatmentDate, mappedRecordType);
             if (existingOpt.isPresent()) {
                 PIMedicalRecord existing = existingOpt.get();
                 mergeAnalysisIntoRecord(existing, fileId, analysisResult);
                 PIMedicalRecord saved = repository.save(existing);
-                log.info("Merged file {} into existing record {} (same provider '{}', date {})",
-                        fileId, saved.getId(), normalizedProvider, treatmentDate);
+                log.info("Merged file {} into existing record {} (provider '{}', date {}, type {})",
+                        fileId, saved.getId(), normalizedProvider, treatmentDate, mappedRecordType);
                 return mapToDTO(saved);
             }
         }
@@ -566,22 +597,13 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
 
     private String extractTextFromFile(FileItem file) {
         try {
-            Path filePath = Paths.get(uploadsPath, file.getFilePath());
-            if (!Files.exists(filePath)) {
-                // Try alternate path
-                filePath = Paths.get(file.getFilePath());
-            }
-            if (!Files.exists(filePath)) {
-                log.error("File not found at path: {}", file.getFilePath());
-                return null;
-            }
-
-            try (InputStream stream = Files.newInputStream(filePath)) {
-                BodyContentHandler handler = new BodyContentHandler(-1); // No limit
+            // Load file via FileStorageService — works for both local and S3 storage
+            org.springframework.core.io.Resource resource = fileStorageService.loadFileAsResource(file.getFilePath());
+            try (InputStream stream = resource.getInputStream()) {
+                BodyContentHandler handler = new BodyContentHandler(-1);
                 Metadata metadata = new Metadata();
                 AutoDetectParser parser = new AutoDetectParser();
                 ParseContext context = new ParseContext();
-
                 parser.parse(stream, handler, metadata, context);
                 return handler.toString();
             }
@@ -610,7 +632,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             Provide a JSON response with the following structure:
             {
                 "isMedicalDocument": true/false,
-                "documentType": "ER|PT|IMAGING|CHIROPRACTIC|SURGERY|CONSULTATION|LAB|PRIMARY_CARE|OTHER",
+                "documentType": "ER|PT|IMAGING|CHIROPRACTIC|SURGERY|CONSULTATION|LAB|PRIMARY_CARE|BILLING|OTHER",
                 "providerName": "Name of the medical provider/facility",
                 "providerType": "HOSPITAL|PHYSICAL_THERAPY|CHIROPRACTIC|RADIOLOGY|ORTHOPEDICS|NEUROLOGY|PRIMARY_CARE|OTHER",
                 "treatmentDate": "YYYY-MM-DD format if found",
@@ -641,6 +663,9 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
 
             Important:
             - If this is NOT a medical document (e.g., insurance form, legal document), set isMedicalDocument to false
+            - Work excuse letters, work excuse notes, return-to-work letters, administrative correspondence, attorney letters, and authorizations are NOT medical documents — set isMedicalDocument to false
+            - BILLING documents (invoices, billing statements, itemized charges) ARE medical documents — always set isMedicalDocument to true for them. They track costs tied to treatment. Set documentType to BILLING
+            - For providerName, always use the OFFICIAL institution name exactly as it appears on the letterhead/header of the document. Do not combine or abbreviate differently across documents from the same facility.
             - Extract the most accurate provider name from the letterhead or document header
             - Include all diagnoses with ICD codes if available
             - Extract billing amounts if shown
@@ -696,16 +721,17 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         String docType = (String) analysis.getOrDefault("documentType", "OTHER");
         record.setRecordType(mapDocumentTypeToRecordType(docType));
 
-        // Dates
+        // Dates — leave null if AI couldn't extract a date; today's date would corrupt timeline analysis
         String dateStr = (String) analysis.get("treatmentDate");
         if (dateStr != null && !dateStr.isEmpty()) {
             try {
                 record.setTreatmentDate(LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE));
             } catch (Exception e) {
-                record.setTreatmentDate(LocalDate.now()); // Fallback
+                log.warn("Could not parse treatment date '{}' — storing null", dateStr);
+                record.setTreatmentDate(null);
             }
         } else {
-            record.setTreatmentDate(LocalDate.now()); // Fallback
+            record.setTreatmentDate(null);
         }
 
         String endDateStr = (String) analysis.get("treatmentEndDate");
@@ -771,6 +797,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             case "CONSULTATION" -> "CONSULTATION";
             case "LAB" -> "LAB";
             case "PRIMARY_CARE" -> "PRIMARY_CARE";
+            case "BILLING", "INVOICE" -> "BILLING";
             default -> "FOLLOW_UP";
         };
     }
@@ -844,6 +871,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             }
             if (newAmount != null && newAmount.compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal existingAmount = existing.getBilledAmount() != null ? existing.getBilledAmount() : BigDecimal.ZERO;
+                // Sum billing amounts — two docs from same visit should accumulate, not take the higher value
                 existing.setBilledAmount(existingAmount.add(newAmount));
             }
         }

@@ -165,6 +165,27 @@ public class PIMedicalRecordController {
     }
 
     /**
+     * Delete ALL medical records for a case — allows a fresh re-scan
+     */
+    @DeleteMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> deleteAllRecords(
+            @PathVariable("caseId") Long caseId) {
+
+        log.info("Deleting all medical records for case: {}", caseId);
+
+        medicalRecordService.deleteAllRecordsByCase(caseId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message("All medical records deleted. You can now re-scan documents.")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
      * Get records by provider name
      */
     @GetMapping("/by-provider")

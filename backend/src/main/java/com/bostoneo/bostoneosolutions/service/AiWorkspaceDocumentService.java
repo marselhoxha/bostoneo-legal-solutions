@@ -1134,6 +1134,9 @@ public class AiWorkspaceDocumentService {
         // Set tenant context for this async thread — orgId was captured from the request thread
         TenantContext.setCurrentTenant(orgId);
 
+        // Note: ALB heartbeats are handled automatically by DraftStreamingPublisher
+        // (every 20s via ScheduledExecutorService) — no manual pings needed here.
+
         // 1. Fetch case context
         String caseContext = "";
         LegalCase legalCase = null;

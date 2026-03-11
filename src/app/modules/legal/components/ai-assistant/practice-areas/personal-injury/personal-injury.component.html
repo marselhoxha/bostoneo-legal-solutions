@@ -204,11 +204,11 @@
                       <span class="text-muted" *ngIf="getCaseValueDisplay(caseItem) === 0">—</span>
                     </td>
                     <td>
-                      <div class="d-flex align-items-center gap-1" *ngIf="caseItem.medicalExpenses > 0">
+                      <div class="d-flex align-items-center gap-1" *ngIf="caseItem.medicalExpensesTotal > 0">
                         <i class="ri-heart-pulse-line text-danger"></i>
-                        <span class="fw-medium">{{ formatCurrency(caseItem.medicalExpenses) }}</span>
+                        <span class="fw-medium">{{ formatCurrency(caseItem.medicalExpensesTotal) }}</span>
                       </div>
-                      <span class="text-muted" *ngIf="!caseItem.medicalExpenses">—</span>
+                      <span class="text-muted" *ngIf="!caseItem.medicalExpensesTotal">—</span>
                     </td>
                     <td>
                       <span class="badge bg-light text-body d-inline-flex align-items-center gap-1">
@@ -586,6 +586,9 @@
                       </span>
                       <button class="btn btn-soft-success" (click)="syncMedicalExpenses()" [disabled]="!linkedCase" title="Sync damage elements from medical records">
                         <i class="ri-refresh-line me-1"></i> Sync Medical
+                      </button>
+                      <button class="btn btn-soft-danger" (click)="clearValuation()" [disabled]="!linkedCase || !damageElements?.length" title="Clear all damage elements and calculation">
+                        <i class="ri-delete-bin-line me-1"></i> Clear Valuation
                       </button>
                       <button class="btn btn-primary" (click)="calculateAndAnalyze()" [disabled]="caseValueForm.invalid || isCalculating || isCalculatingDamages">
                         <span *ngIf="!isCalculating && !isCalculatingDamages">
@@ -1798,6 +1801,9 @@
                               <span class="spinner-border spinner-border-sm me-1"></span>
                             </span>
                           </button>
+                          <button class="btn btn-soft-danger" (click)="clearAllMedicalRecords()" [disabled]="!linkedCase || !medicalRecords?.length" title="Delete all records and re-scan">
+                            <i class="ri-delete-bin-line me-1"></i> Clear All
+                          </button>
                         </div>
                       </div>
 
@@ -1961,8 +1967,9 @@
                           </div>
                           <h4>No Medical Summary Generated</h4>
                           <p class="text-muted">Generate an AI-powered comprehensive medical summary based on your medical records.</p>
-                          <button class="btn btn-primary btn-lg" (click)="generateMedicalSummary()">
-                            <i class="ri-magic-line me-2"></i> Generate Medical Summary
+                          <button class="btn btn-primary btn-lg" (click)="generateMedicalSummary()" [disabled]="isGeneratingSummary">
+                            <span *ngIf="!isGeneratingSummary"><i class="ri-magic-line me-2"></i> Generate Medical Summary</span>
+                            <span *ngIf="isGeneratingSummary"><span class="spinner-border spinner-border-sm me-2"></span> Generating...</span>
                           </button>
                         </div>
 
@@ -2259,8 +2266,9 @@
                       </div>
                       <h4>No Medical Summary Generated</h4>
                       <p class="text-muted">Generate an AI-powered comprehensive medical summary based on your medical records.</p>
-                      <button class="btn btn-primary btn-lg" (click)="generateMedicalSummary()">
-                        <i class="ri-magic-line me-2"></i> Generate Medical Summary
+                      <button class="btn btn-primary btn-lg" (click)="generateMedicalSummary()" [disabled]="isGeneratingSummary">
+                        <span *ngIf="!isGeneratingSummary"><i class="ri-magic-line me-2"></i> Generate Medical Summary</span>
+                        <span *ngIf="isGeneratingSummary"><span class="spinner-border spinner-border-sm me-2"></span> Generating...</span>
                       </button>
                     </div>
 

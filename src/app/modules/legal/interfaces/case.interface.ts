@@ -122,6 +122,7 @@ export interface LegalCase {
   lostWages?: number;
   futureMedicalEstimate?: number;
   painSufferingMultiplier?: number;
+  estimatedCaseValue?: number;
   settlementDemandAmount?: number;
   settlementOfferAmount?: number;
   settlementFinalAmount?: number;

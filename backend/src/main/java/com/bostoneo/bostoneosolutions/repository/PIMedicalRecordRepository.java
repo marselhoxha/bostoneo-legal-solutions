@@ -114,6 +114,21 @@ public interface PIMedicalRecordRepository extends JpaRepository<PIMedicalRecord
             @Param("providerName") String providerName, @Param("treatmentDate") LocalDate treatmentDate);
 
     /**
+     * Find existing record for same provider, treatment date, AND record type.
+     * More precise merge key: an ER record must never absorb a PT record even if
+     * provider name and date happen to match after normalization.
+     */
+    @Query("SELECT m FROM PIMedicalRecord m " +
+           "WHERE m.caseId = :caseId AND m.organizationId = :orgId " +
+           "AND LOWER(m.providerName) = LOWER(:providerName) " +
+           "AND m.treatmentDate = :treatmentDate " +
+           "AND m.recordType = :recordType")
+    Optional<PIMedicalRecord> findByCaseAndProviderAndDateAndRecordType(
+            @Param("caseId") Long caseId, @Param("orgId") Long organizationId,
+            @Param("providerName") String providerName, @Param("treatmentDate") LocalDate treatmentDate,
+            @Param("recordType") String recordType);
+
+    /**
      * Check if a medical record already exists for a specific document
      */
     boolean existsByDocumentIdAndOrganizationId(Long documentId, Long organizationId);
