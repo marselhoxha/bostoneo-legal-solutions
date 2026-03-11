@@ -36,8 +36,17 @@ public class OrganizationController {
     private final TenantService tenantService;
 
     /**
-     * Check if current user has SUPERADMIN role
+     * Common PreAuthorize expression for org-level read access.
+     * Includes all admin-tier law firm hierarchy roles that the frontend treats as admin.
+     * Inner method checks still enforce own-org-only access for non-SUPERADMIN users.
      */
+    private static final String ORG_READ_ACCESS =
+        "hasRole('ROLE_SUPERADMIN') or hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN') " +
+        "or hasRole('ROLE_ATTORNEY') or hasRole('ROLE_MANAGING_PARTNER') " +
+        "or hasRole('ROLE_SENIOR_PARTNER') or hasRole('ROLE_EQUITY_PARTNER') " +
+        "or hasRole('ROLE_COO') or hasRole('ROLE_CFO') " +
+        "or hasAuthority('organization:read') or hasAuthority('ORGANIZATION:VIEW')";
+
     private boolean isSuperAdmin() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return false;
@@ -58,7 +67,7 @@ public class OrganizationController {
      * - ADMIN/other: sees only their own organization
      */
     @GetMapping
-    @PreAuthorize("hasAuthority('organization:read') or hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN') or hasRole('ROLE_SUPERADMIN')")
+    @PreAuthorize(ORG_READ_ACCESS)
     public ResponseEntity<HttpResponse> getAllOrganizations() {
         List<OrganizationDTO> organizations;
 
@@ -96,7 +105,7 @@ public class OrganizationController {
      * - ADMIN/other: can only access their own organization
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('organization:read') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY') or hasRole('ROLE_SYSADMIN') or hasRole('ROLE_SUPERADMIN')")
+    @PreAuthorize(ORG_READ_ACCESS)
     public ResponseEntity<HttpResponse> getOrganizationById(@PathVariable Long id) {
         // Check access: SUPERADMIN can access any, others only their own
         if (!isSuperAdmin()) {
@@ -313,7 +322,7 @@ public class OrganizationController {
      * - ADMIN/other: sees only their own organization
      */
     @GetMapping("/paginated")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_SUPERADMIN')")
+    @PreAuthorize(ORG_READ_ACCESS)
     public ResponseEntity<HttpResponse> getAllOrganizationsPaginated(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -368,7 +377,7 @@ public class OrganizationController {
      * - ADMIN/other: can only access their own organization's stats
      */
     @GetMapping("/{id}/stats")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_SUPERADMIN')")
+    @PreAuthorize(ORG_READ_ACCESS)
     public ResponseEntity<HttpResponse> getOrganizationStats(@PathVariable Long id) {
         // Check access: SUPERADMIN can access any, others only their own
         if (!isSuperAdmin()) {
@@ -403,7 +412,7 @@ public class OrganizationController {
      * - ADMIN/other: can only access their own organization's users
      */
     @GetMapping("/{id}/users")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_SUPERADMIN')")
+    @PreAuthorize(ORG_READ_ACCESS)
     public ResponseEntity<HttpResponse> getOrganizationUsers(
             @PathVariable Long id,
             @RequestParam(defaultValue = "0") int page,

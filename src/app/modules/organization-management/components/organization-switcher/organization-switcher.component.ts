@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { Subject } from 'rxjs';
-import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
-import { OrganizationService, Organization } from '../../../../core/services/organization.service';
+import { Router } from '@angular/router';
+import { Subject, forkJoin, of } from 'rxjs';
+import { takeUntil, debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
+import { OrganizationService, Organization, OrganizationStats } from '../../../../core/services/organization.service';
 import { RbacService } from '../../../../core/services/rbac.service';
 import Swal from 'sweetalert2';
 
@@ -21,10 +22,18 @@ export class OrganizationSwitcherComponent implements OnInit, OnDestroy {
   searchSubject = new Subject<string>();
   isAdmin = false;
 
+  // Role-aware state
+  isSuperAdmin = false;
+  orgStats: OrganizationStats | null = null;
+  orgDetails: Organization | null = null;
+  isLoadingStats = false;
+  private searchSetup = false;
+
   constructor(
     private organizationService: OrganizationService,
     private rbacService: RbacService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -49,14 +58,17 @@ export class OrganizationSwitcherComponent implements OnInit, OnDestroy {
   private checkAdminStatus(): void {
     const wasAdmin = this.isAdmin;
     this.isAdmin = this.rbacService.hasRole('ROLE_ADMIN') || this.rbacService.isAdmin();
+    this.isSuperAdmin = this.rbacService.hasRole('ROLE_SUPERADMIN');
 
-    // If just became admin and organizations not loaded yet, load them
-    if (this.isAdmin && !wasAdmin) {
+    // If just became admin and organizations not loaded yet, load them (SUPERADMIN only)
+    if (this.isAdmin && !wasAdmin && this.isSuperAdmin) {
       if (this.organizations.length === 0) {
         this.loadOrganizations();
         this.setupSearch();
       }
-      // Trigger change detection to show the component
+    }
+
+    if (this.isAdmin && !wasAdmin) {
       this.cdr.detectChanges();
     }
   }
@@ -67,6 +79,9 @@ export class OrganizationSwitcherComponent implements OnInit, OnDestroy {
   }
 
   private setupSearch(): void {
+    if (this.searchSetup) return;
+    this.searchSetup = true;
+
     this.searchSubject.pipe(
       debounceTime(200),
       distinctUntilChanged(),
@@ -93,8 +108,14 @@ export class OrganizationSwitcherComponent implements OnInit, OnDestroy {
   }
 
   onDropdownToggle(isOpen: boolean): void {
-    if (isOpen && this.organizations.length === 0) {
-      this.loadOrganizations();
+    if (!isOpen) return;
+
+    if (this.isSuperAdmin) {
+      if (this.organizations.length === 0) {
+        this.loadOrganizations();
+      }
+    } else {
+      this.loadOrgInfo();
     }
   }
 
@@ -155,6 +176,47 @@ export class OrganizationSwitcherComponent implements OnInit, OnDestroy {
 
   isInSwitchedContext(): boolean {
     return this.organizationService.isInSwitchedContext();
+  }
+
+  // --- ROLE_ADMIN info card methods ---
+
+  private loadOrgInfo(): void {
+    const orgId = this.organizationService.getCurrentOrganizationId();
+    if (!orgId || this.isLoadingStats || this.orgStats) return;
+
+    this.isLoadingStats = true;
+    this.cdr.detectChanges();
+
+    forkJoin({
+      details: this.organizationService.getOrganizationById(orgId).pipe(catchError(() => of(null))),
+      stats: this.organizationService.getOrganizationStats(orgId).pipe(catchError(() => of(null)))
+    }).pipe(takeUntil(this.destroy$)).subscribe(({ details, stats }) => {
+      this.orgDetails = details;
+      this.orgStats = stats;
+      this.isLoadingStats = false;
+      this.cdr.detectChanges();
+    });
+  }
+
+  navigateToSettings(): void {
+    const orgId = this.organizationService.getCurrentOrganizationId();
+    if (orgId) {
+      this.router.navigate(['/organizations/details', orgId, 'settings']);
+    }
+  }
+
+  navigateToTeam(): void {
+    const orgId = this.organizationService.getCurrentOrganizationId();
+    if (orgId) {
+      this.router.navigate(['/organizations/details', orgId], { queryParams: { tab: 'team' } });
+    }
+  }
+
+  navigateToInvitations(): void {
+    const orgId = this.organizationService.getCurrentOrganizationId();
+    if (orgId) {
+      this.router.navigate(['/organizations/details', orgId], { queryParams: { tab: 'invitations' } });
+    }
   }
 
   getPlanBadgeClass(planType: string | undefined): string {

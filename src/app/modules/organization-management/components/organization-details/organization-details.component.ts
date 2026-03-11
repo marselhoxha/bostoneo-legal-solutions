@@ -37,6 +37,15 @@ export class OrganizationDetailsComponent implements OnInit, OnDestroy {
         this.loadStats();
       }
     });
+
+    // Support deep-linking via ?tab=team, ?tab=invitations, etc.
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(queryParams => {
+      const tab = queryParams['tab'];
+      if (tab && ['overview', 'team', 'invitations'].includes(tab)) {
+        this.activeTab = tab;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   ngOnDestroy(): void {

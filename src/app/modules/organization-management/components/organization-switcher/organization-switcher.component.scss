@@ -123,6 +123,31 @@ code {
   }
 }
 
+// ==================== ROLE_ADMIN Info Card ====================
+.org-stat-card {
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+
+  &:hover {
+    border-color: var(--vz-border-color);
+    background-color: var(--vz-light) !important;
+  }
+}
+
+.org-quick-action {
+  transition: all 0.2s ease;
+  border-radius: 0;
+
+  &:hover {
+    background-color: rgba(var(--vz-primary-rgb), 0.06) !important;
+  }
+
+  i {
+    width: 24px;
+    text-align: center;
+  }
+}
+
 // ==================== Dark Mode ====================
 [data-bs-theme="dark"] {
   .org-switcher-dropdown {
