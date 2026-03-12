@@ -305,6 +305,34 @@ public class AIPersonalInjuryController {
         // Optional documentId — when provided, fetches exhibits attached to this workspace document
         Long documentId = request.get("documentId") != null ? Long.valueOf(request.get("documentId").toString()) : null;
 
+        // Validate medical records and summary exist before generating demand letter
+        if (caseId != null) {
+            List<PIMedicalRecordDTO> records = medicalRecordService.getRecordsByCaseId(caseId);
+            if (records == null || records.isEmpty()) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("error", "MEDICAL_RECORDS_REQUIRED");
+                error.put("message", "Medical records must be scanned before generating a demand letter. Go to the Medical Records tab and scan your case documents first.");
+                return ResponseEntity.badRequest().body(error);
+            }
+            try {
+                PIMedicalSummaryDTO summary = medicalSummaryService.getMedicalSummary(caseId);
+                if (summary == null) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("success", false);
+                    error.put("error", "MEDICAL_SUMMARY_REQUIRED");
+                    error.put("message", "A medical summary must be generated before creating a demand letter. Go to the Medical Summary tab and click Generate Summary.");
+                    return ResponseEntity.badRequest().body(error);
+                }
+            } catch (Exception e) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("error", "MEDICAL_SUMMARY_REQUIRED");
+                error.put("message", "A medical summary must be generated before creating a demand letter. Go to the Medical Summary tab and click Generate Summary.");
+                return ResponseEntity.badRequest().body(error);
+            }
+        }
+
         // Build the user prompt with all the form data
         String clientName = (String) request.getOrDefault("clientName", "");
         String defendantName = (String) request.getOrDefault("defendantName", "");

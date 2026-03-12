@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, AfterViewInit, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subject, BehaviorSubject, Observable, of } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, switchMap, catchError, map } from 'rxjs/operators';
@@ -469,6 +469,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
     private router: Router,
+    private route: ActivatedRoute,
     private aiModalService: AiResponseModalService,
     private workspaceState: WorkspaceStateService,
     private caseService: CaseService,
@@ -548,6 +549,41 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   ngOnInit(): void {
+    // Handle deep-link query params (e.g., ?caseId=123&tab=medical&subtab=records)
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const targetTab = params['tab'];
+      const targetSubTab = params['subtab'];
+      const caseId = params['caseId'];
+
+      if (caseId && !this.linkedCase) {
+        // Auto-link the case, then navigate to the target tab after data loads
+        this.caseService.getCaseById(caseId).subscribe({
+          next: (response) => {
+            if (response?.data?.case) {
+              const caseData = response.data.case as LegalCase;
+              this.caseSwitch$.next();
+              this.resetCaseData();
+              this.linkedCase = caseData;
+              this.workspaceState.setLinkedCase(Number(caseData.id));
+              this.previousMode = 'dashboard';
+              this.viewMode = 'workspace';
+              this.loadCaseData(String(caseData.id));
+              // Set target tab after case is linked
+              if (targetTab) {
+                this.activeTab = targetTab;
+                if (targetSubTab) this.medicalSubTab = targetSubTab;
+              }
+              this.cdr.detectChanges();
+            }
+          }
+        });
+      } else if (targetTab) {
+        this.activeTab = targetTab;
+        if (targetSubTab) this.medicalSubTab = targetSubTab;
+        this.cdr.detectChanges();
+      }
+    });
+
     this.loadSavedData();
     this.loadRecentActivity();
     this.loadProviders();
@@ -1573,6 +1609,40 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       return;
     }
 
+    // Check medical records + summary prerequisites — demand letters need structured medical data
+    if (this.medicalRecords.length === 0 || !this.medicalSummary) {
+      const missingRecords = this.medicalRecords.length === 0;
+      const missingSummary = !this.medicalSummary;
+      let message = '';
+      if (missingRecords && missingSummary) {
+        message = 'You need to scan your medical documents and generate a medical summary before creating a demand letter.<br><br>' +
+          '<strong>Step 1:</strong> Go to the <strong>Medical Records</strong> tab and click <strong>"Scan Case Documents"</strong>.<br>' +
+          '<strong>Step 2:</strong> Go to the <strong>Medical Summary</strong> tab and click <strong>"Generate Summary"</strong>.';
+      } else if (missingRecords) {
+        message = 'You need to scan your medical documents before generating a demand letter.<br><br>Go to the <strong>Medical Records</strong> tab and click <strong>"Scan Case Documents"</strong> to extract medical data from your uploaded files.';
+      } else {
+        message = 'You need to generate a medical summary before creating a demand letter.<br><br>Go to the <strong>Medical Summary</strong> tab and click <strong>"Generate Summary"</strong> to create a consolidated medical narrative.';
+      }
+      Swal.fire({
+        icon: 'warning',
+        title: missingRecords ? 'Medical Records Required' : 'Medical Summary Required',
+        html: message,
+        confirmButtonText: missingRecords
+          ? '<i class="ri-hospital-line me-1"></i> Go to Medical Records'
+          : '<i class="ri-file-list-3-line me-1"></i> Go to Medical Summary',
+        showCancelButton: true,
+        cancelButtonText: 'Cancel',
+        customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.activeTab = 'medical';
+          this.medicalSubTab = missingRecords ? 'records' : 'summary';
+          this.cdr.detectChanges();
+        }
+      });
+      return;
+    }
+
     this.isGeneratingDemand = true;
     const formData = this.demandForm.value;
     const totalDemand = this.calculateDemandTotal();
@@ -1637,15 +1707,39 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
         },
         error: (error) => {
           console.error('Error generating demand letter:', error);
-          this.generatedDemand = 'Error connecting to AI service. Please try again later.';
           this.isGeneratingDemand = false;
           this.cdr.detectChanges();
-          Swal.fire({
-            icon: 'error',
-            title: 'Connection Error',
-            text: 'Could not connect to AI service. Please try again later.',
-            customClass: { confirmButton: 'btn btn-primary' }
-          });
+
+          // Handle specific backend validation errors
+          const errorCode = error.error?.error;
+          if (errorCode === 'MEDICAL_RECORDS_REQUIRED' || errorCode === 'MEDICAL_SUMMARY_REQUIRED') {
+            const isRecords = errorCode === 'MEDICAL_RECORDS_REQUIRED';
+            Swal.fire({
+              icon: 'warning',
+              title: isRecords ? 'Medical Records Required' : 'Medical Summary Required',
+              html: error.error?.message,
+              confirmButtonText: isRecords
+                ? '<i class="ri-hospital-line me-1"></i> Go to Medical Records'
+                : '<i class="ri-file-list-3-line me-1"></i> Go to Medical Summary',
+              showCancelButton: true,
+              cancelButtonText: 'Cancel',
+              customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' }
+            }).then((result) => {
+              if (result.isConfirmed) {
+                this.activeTab = 'medical';
+                this.medicalSubTab = isRecords ? 'records' : 'summary';
+                this.cdr.detectChanges();
+              }
+            });
+          } else {
+            this.generatedDemand = 'Error connecting to AI service. Please try again later.';
+            Swal.fire({
+              icon: 'error',
+              title: 'Connection Error',
+              text: 'Could not connect to AI service. Please try again later.',
+              customClass: { confirmButton: 'btn btn-primary' }
+            });
+          }
         }
       });
   }

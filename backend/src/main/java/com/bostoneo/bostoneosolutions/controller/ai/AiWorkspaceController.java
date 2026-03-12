@@ -47,6 +47,9 @@ public class AiWorkspaceController {
     private final AiWorkspaceExhibitService exhibitService;
     private final GenerationCancellationService cancellationService;
     private final DraftStreamingPublisher draftStreamingPublisher;
+    private final com.bostoneo.bostoneosolutions.service.PIMedicalRecordService medicalRecordService;
+    private final com.bostoneo.bostoneosolutions.service.PIMedicalSummaryService medicalSummaryService;
+    private final com.bostoneo.bostoneosolutions.service.ai.DocumentTypeTemplateRegistry templateRegistry;
 
     /**
      * Transform document (full document or selection)
@@ -282,6 +285,31 @@ public class AiWorkspaceController {
 
             log.info("Triggering streaming draft generation: userId={}, conversationId={}, type={}",
                     userId, conversationId, request.getDocumentType());
+
+            // Validate medical records and summary exist before generating demand letter
+            if (templateRegistry.isDemandLetterType(request.getDocumentType()) && request.getCaseId() != null) {
+                var records = medicalRecordService.getRecordsByCaseId(request.getCaseId());
+                if (records == null || records.isEmpty()) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "MEDICAL_RECORDS_REQUIRED");
+                    error.put("message", "Medical records must be scanned before generating a demand letter. Go to the Medical Records tab and scan your case documents first.");
+                    return ResponseEntity.badRequest().body(error);
+                }
+                try {
+                    var summary = medicalSummaryService.getMedicalSummary(request.getCaseId());
+                    if (summary == null) {
+                        Map<String, Object> error = new HashMap<>();
+                        error.put("error", "MEDICAL_SUMMARY_REQUIRED");
+                        error.put("message", "A medical summary must be generated before creating a demand letter. Go to the Medical Summary tab and click Generate Summary.");
+                        return ResponseEntity.badRequest().body(error);
+                    }
+                } catch (Exception e) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "MEDICAL_SUMMARY_REQUIRED");
+                    error.put("message", "A medical summary must be generated before creating a demand letter. Go to the Medical Summary tab and click Generate Summary.");
+                    return ResponseEntity.badRequest().body(error);
+                }
+            }
 
             // Launch in background — the SSE emitter is already connected
             final Long finalUserId = userId;

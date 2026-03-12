@@ -888,6 +888,31 @@ public class AiWorkspaceDocumentService {
 
         // 1. Fetch case context if caseId provided - SECURITY: Use tenant-filtered query
         Long orgId = getRequiredOrganizationId();
+
+        // Validate medical records exist before generating demand letter
+        if (isDemandLetterType(documentType) && caseId != null) {
+            List<PIMedicalRecordDTO> records = medicalRecordService.getRecordsByCaseId(caseId);
+            if (records == null || records.isEmpty()) {
+                throw new IllegalArgumentException(
+                    "MEDICAL_RECORDS_REQUIRED: Medical records must be scanned before generating a demand letter. " +
+                    "Go to the Medical Records tab and scan your case documents first.");
+            }
+            try {
+                PIMedicalSummaryDTO summary = medicalSummaryService.getMedicalSummary(caseId);
+                if (summary == null) {
+                    throw new IllegalArgumentException(
+                        "MEDICAL_SUMMARY_REQUIRED: A medical summary must be generated before creating a demand letter. " +
+                        "Go to the Medical Summary tab and click Generate Summary.");
+                }
+            } catch (IllegalArgumentException e) {
+                throw e; // Re-throw our own validation errors
+            } catch (Exception e) {
+                throw new IllegalArgumentException(
+                    "MEDICAL_SUMMARY_REQUIRED: A medical summary must be generated before creating a demand letter. " +
+                    "Go to the Medical Summary tab and click Generate Summary.");
+            }
+        }
+
         String caseContext = "";
         LegalCase legalCase = null;
         if (caseId != null) {
@@ -1134,6 +1159,31 @@ public class AiWorkspaceDocumentService {
         // Set tenant context for this async thread — orgId was captured from the request thread
         TenantContext.setCurrentTenant(orgId);
 
+        // Validate medical records and summary exist before generating demand letter
+        if (isDemandLetterType(documentType) && caseId != null) {
+            List<PIMedicalRecordDTO> records = medicalRecordService.getRecordsByCaseId(caseId);
+            if (records == null || records.isEmpty()) {
+                draftStreamingPublisher.sendError(conversationId,
+                    "Medical records must be scanned before generating a demand letter. " +
+                    "Go to the Medical Records tab and scan your case documents first.");
+                return;
+            }
+            try {
+                PIMedicalSummaryDTO summary = medicalSummaryService.getMedicalSummary(caseId);
+                if (summary == null) {
+                    draftStreamingPublisher.sendError(conversationId,
+                        "A medical summary must be generated before creating a demand letter. " +
+                        "Go to the Medical Summary tab and click Generate Summary.");
+                    return;
+                }
+            } catch (Exception e) {
+                draftStreamingPublisher.sendError(conversationId,
+                    "A medical summary must be generated before creating a demand letter. " +
+                    "Go to the Medical Summary tab and click Generate Summary.");
+                return;
+            }
+        }
+
         // Note: ALB heartbeats are handled automatically by DraftStreamingPublisher
         // (every 20s via ScheduledExecutorService) — no manual pings needed here.
 
@@ -1306,7 +1356,7 @@ public class AiWorkspaceDocumentService {
             int attached = 0;
             int skippedPrivileged = 0;
             for (FileItem file : caseFiles) {
-                if (isPrivilegedDocument(file)) {
+                if (isPrivilegedDocument(file) || isNonExhibitDocument(file)) {
                     skippedPrivileged++;
                     continue;
                 }
@@ -1350,7 +1400,9 @@ public class AiWorkspaceDocumentService {
 
         String[] privilegedPatterns = {
             "fee-agreement", "fee agreement", "fee_agreement",
-            "retainer", "billing", "invoice",
+            "retainer",
+            "firm-billing", "firm_billing", "legal-billing", "legal_billing", "client-billing", "client_billing",
+            "firm-invoice", "firm_invoice", "legal-invoice", "legal_invoice",
             "attorney-client", "attorney_client", "attorney client",
             "work-product", "work product", "work_product",
             "settlement-authority", "settlement_authority",
@@ -1359,6 +1411,50 @@ public class AiWorkspaceDocumentService {
         };
 
         for (String pattern : privilegedPatterns) {
+            if (name.contains(pattern)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if a file is an administrative/procedural document that should NOT appear as an exhibit
+     * in a demand letter. These aren't privileged — they're just not evidence supporting the claim.
+     */
+    private boolean isNonExhibitDocument(FileItem file) {
+        String name = "";
+        if (file.getOriginalName() != null) name = file.getOriginalName().toLowerCase();
+        else if (file.getName() != null) name = file.getName().toLowerCase();
+
+        String[] nonExhibitPatterns = {
+            // Letters of representation
+            "letter of representation", "letter-of-representation", "letter_of_representation",
+            "representation letter", "representation-letter", "representation_letter",
+            // Mailing receipts
+            "certified mail", "certified-mail", "certified_mail",
+            "mail receipt", "mail-receipt", "mail_receipt",
+            "return receipt", "return-receipt", "return_receipt",
+            "proof of mailing", "proof-of-mailing", "proof_of_mailing",
+            // Insurance administrative docs
+            "claim form", "claim-form", "claim_form",
+            "claim acknowledgment", "claim-acknowledgment", "claim_acknowledgment",
+            "insurance card", "insurance-card", "insurance_card",
+            "policy declaration", "policy-declaration", "policy_declaration",
+            "declarations page", "declarations-page", "declarations_page",
+            // Authorization forms
+            "hipaa release", "hipaa-release", "hipaa_release",
+            "hipaa authorization", "hipaa-authorization", "hipaa_authorization",
+            "medical release", "medical-release", "medical_release",
+            "medical authorization", "medical-authorization", "medical_authorization",
+            "authorization form", "authorization-form", "authorization_form",
+            "records request", "records-request", "records_request",
+            // Intake/client forms
+            "intake form", "intake-form", "intake_form",
+            "client questionnaire", "client-questionnaire", "client_questionnaire"
+        };
+
+        for (String pattern : nonExhibitPatterns) {
             if (name.contains(pattern)) {
                 return true;
             }
@@ -1923,10 +2019,11 @@ public class AiWorkspaceDocumentService {
                 if (caseFiles != null && !caseFiles.isEmpty()) {
                     sb.append("\n\n=== CASE DOCUMENT INVENTORY ===\n");
                     sb.append("The following case documents will be attached as exhibits. ");
-                    sb.append("You MUST reference them using their exact exhibit labels (Exhibit A, Exhibit B, etc.) — NOT numeric labels.\n");
+                    sb.append("You MUST include ALL of them in the Section 6 Exhibit List table — do not omit any exhibit. ");
+                    sb.append("Reference them using their exact exhibit labels (Exhibit A, Exhibit B, etc.) throughout the letter body.\n");
                     char label = 'A';
                     for (FileItem file : caseFiles) {
-                        if (isPrivilegedDocument(file)) continue;
+                        if (isPrivilegedDocument(file) || isNonExhibitDocument(file)) continue;
                         sb.append(String.format("- Exhibit %c: %s\n",
                             label++,
                             file.getOriginalName() != null ? file.getOriginalName() : file.getName()));

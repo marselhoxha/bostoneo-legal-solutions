@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, TemplateRef, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Subject, lastValueFrom, merge, forkJoin, Observable } from 'rxjs';
 import { takeUntil, switchMap, finalize } from 'rxjs/operators';
@@ -1188,6 +1188,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private conversationOrchestration: ConversationOrchestrationService,
     private transformationService: DocumentTransformationService,
     private route: ActivatedRoute,
+    private router: Router,
     public caseWorkflowService: CaseWorkflowService,
     private backgroundTaskService: BackgroundTaskService,
     private sanitizer: DomSanitizer,
@@ -6694,11 +6695,48 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                 this.stateService.updateWorkflowStep(steps[steps.length - 1].id, { status: 'error' as any });
               }
 
-              this.stateService.addConversationMessage({
-                role: 'assistant',
-                content: `Sorry, I encountered an error generating the document: ${errorMsg}`,
-                timestamp: new Date()
-              });
+              // Medical data prerequisite — show modal, clean up conversation completely
+              const isRecordsErr = errorMsg.includes('Medical records must be scanned');
+              const isSummaryErr = errorMsg.includes('medical summary must be generated');
+              if (isRecordsErr || isSummaryErr) {
+                // Delete the backend conversation since nothing was generated
+                this.legalResearchService.deleteConversationById(backendConversationId)
+                  .pipe(takeUntil(this.destroy$))
+                  .subscribe({ error: (e: any) => console.warn('Could not delete aborted conversation:', e) });
+
+                // Clear chat state so the user prompt doesn't linger
+                this.stateService.clearConversationMessages();
+                this.stateService.resetWorkflowSteps();
+                this.stateService.setShowChat(false);
+
+                import('sweetalert2').then(Swal => {
+                  Swal.default.fire({
+                    icon: 'warning',
+                    title: isRecordsErr ? 'Medical Records Required' : 'Medical Summary Required',
+                    html: isRecordsErr
+                      ? 'You need to scan your medical documents before generating a demand letter.<br><br>Go to the <strong>Medical Records</strong> tab and click <strong>"Scan Case Documents"</strong> to extract medical data from your uploaded files.'
+                      : 'You need to generate a medical summary before creating a demand letter.<br><br>Go to the <strong>Medical Summary</strong> tab and click <strong>"Generate Summary"</strong> to create a consolidated medical narrative.',
+                    confirmButtonText: isRecordsErr
+                      ? '<i class="ri-hospital-line me-1"></i> Go to Medical Records'
+                      : '<i class="ri-file-list-3-line me-1"></i> Go to Medical Summary',
+                    showCancelButton: true,
+                    cancelButtonText: 'Cancel',
+                    customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' }
+                  }).then((result) => {
+                    if (result.isConfirmed) {
+                      this.router.navigate(['/legal/ai-assistant/practice-areas/personal-injury'], {
+                        queryParams: { caseId: this.selectedCaseId, tab: 'medical', subtab: isRecordsErr ? 'records' : 'summary' }
+                      });
+                    }
+                  });
+                });
+              } else {
+                this.stateService.addConversationMessage({
+                  role: 'assistant',
+                  content: `Sorry, I encountered an error generating the document: ${errorMsg}`,
+                  timestamp: new Date()
+                });
+              }
 
               this.stateService.setIsGenerating(false);
               this.stateService.setShowBottomSearchBar(true);
@@ -6742,11 +6780,55 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                 this.closeDraftStream();
                 this.backgroundTaskService.failTask(taskId, error.message || 'Failed to start generation');
 
-                this.stateService.addConversationMessage({
-                  role: 'assistant',
-                  content: 'Sorry, I encountered an error starting the draft generation. Please try again.',
-                  timestamp: new Date()
-                });
+                // Medical data prerequisite — show modal, clean up completely
+                const errorCode = error.error?.error;
+                if (errorCode === 'MEDICAL_RECORDS_REQUIRED' || errorCode === 'MEDICAL_SUMMARY_REQUIRED') {
+                  const isRecords = errorCode === 'MEDICAL_RECORDS_REQUIRED';
+
+                  // Delete the backend conversation since nothing was generated
+                  this.legalResearchService.deleteConversationById(backendConversationId)
+                    .pipe(takeUntil(this.destroy$))
+                    .subscribe({ error: (e: any) => console.warn('Could not delete aborted conversation:', e) });
+
+                  // Remove temp conversation from sidebar
+                  const conversations = this.stateService.getConversations();
+                  const idx = conversations.findIndex(c => c.id === tempConvId);
+                  if (idx !== -1) conversations.splice(idx, 1);
+
+                  // Clear chat state
+                  this.stateService.clearConversationMessages();
+                  this.stateService.resetWorkflowSteps();
+                  this.stateService.setShowChat(false);
+                  this.stateService.setActiveConversationId(null);
+
+                  import('sweetalert2').then(Swal => {
+                    Swal.default.fire({
+                      icon: 'warning',
+                      title: isRecords ? 'Medical Records Required' : 'Medical Summary Required',
+                      html: isRecords
+                        ? 'You need to scan your medical documents before generating a demand letter.<br><br>Go to the <strong>Medical Records</strong> tab and click <strong>"Scan Case Documents"</strong> to extract medical data from your uploaded files.'
+                        : 'You need to generate a medical summary before creating a demand letter.<br><br>Go to the <strong>Medical Summary</strong> tab and click <strong>"Generate Summary"</strong> to create a consolidated medical narrative.',
+                      confirmButtonText: isRecords
+                        ? '<i class="ri-hospital-line me-1"></i> Go to Medical Records'
+                        : '<i class="ri-file-list-3-line me-1"></i> Go to Medical Summary',
+                      showCancelButton: true,
+                      cancelButtonText: 'Cancel',
+                      customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' }
+                    }).then((result) => {
+                      if (result.isConfirmed) {
+                        this.router.navigate(['/legal/ai-assistant/practice-areas/personal-injury'], {
+                          queryParams: { caseId: this.selectedCaseId, tab: 'medical', subtab: isRecords ? 'records' : 'summary' }
+                        });
+                      }
+                    });
+                  });
+                } else {
+                  this.stateService.addConversationMessage({
+                    role: 'assistant',
+                    content: 'Sorry, I encountered an error starting the draft generation. Please try again.',
+                    timestamp: new Date()
+                  });
+                }
 
                 this.stateService.setIsGenerating(false);
                 this.stateService.setShowBottomSearchBar(true);
