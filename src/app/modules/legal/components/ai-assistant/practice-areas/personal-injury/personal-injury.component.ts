@@ -70,6 +70,7 @@ import {
 import { DocumentEditorComponent } from '../../ai-workspace/document-editor/document-editor.component';
 import { DocumentGenerationService, DocumentTransformRequest } from '../../../../services/document-generation.service';
 import { UserService } from '../../../../../../service/user.service';
+import { WebSocketService } from '../../../../../../core/services/websocket.service';
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -483,7 +484,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     private documentGenerationService: DocumentGenerationService,
     private userService: UserService,
     private portfolioService: PIPortfolioService,
-    private settlementService: PISettlementService
+    private settlementService: PISettlementService,
+    private webSocketService: WebSocketService
   ) {
     super();
 
@@ -631,6 +633,40 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
         this.searchResults = [];
       }
       this.cdr.detectChanges();
+    });
+
+    // Listen for async medical scan completion via WebSocket
+    this.webSocketService.getMessages().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(msg => {
+      // WebSocket sends { type: 'notification', data: { type: 'MEDICAL_SCAN_COMPLETE', ... } }
+      const payload = msg?.data;
+      if (payload?.type === 'MEDICAL_SCAN_COMPLETE' && this.isScanningDocuments) {
+        this.isScanningDocuments = false;
+
+        if (payload.success === false) {
+          Swal.fire({ icon: 'error', title: 'Scan Failed', text: payload.error || 'Failed to scan documents.', confirmButtonText: 'OK' });
+          this.cdr.detectChanges();
+          return;
+        }
+
+        this.scanResult = payload;
+        this.loadMedicalRecords();
+        this.cdr.detectChanges();
+
+        Swal.fire({
+          icon: payload.recordsCreated > 0 ? 'success' : 'info',
+          title: 'Scan Complete',
+          html: `
+            <div class="text-start">
+              <p><strong>Documents Scanned:</strong> ${payload.documentsScanned}</p>
+              <p><strong>Records Created:</strong> ${payload.recordsCreated}</p>
+            </div>
+            ${payload.recordsCreated > 0 ? '<p class="text-success mt-2">Medical records have been auto-populated from your documents.</p>' : '<p class="text-muted mt-2">No new medical documents found to process.</p>'}
+          `,
+          confirmButtonText: 'View Records'
+        });
+      }
     });
   }
 
@@ -3324,53 +3360,27 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
     Swal.fire({
       title: 'Scanning Documents',
-      html: 'Analyzing case documents with AI...<br><small>This may take a minute.</small>',
+      html: 'Analyzing case documents with AI...<br><small>This may take several minutes for scanned documents.</small>',
       allowOutsideClick: false,
       didOpen: () => {
         Swal.showLoading();
       }
     });
 
+    // Backend returns 202 immediately and processes async — result arrives via WebSocket
     this.medicalRecordService.scanCaseDocuments(Number(this.linkedCase.id)).subscribe({
-      next: (result) => {
-        this.scanResult = result;
-        this.isScanningDocuments = false;
-        this.loadMedicalRecords(); // Refresh the records list
-        this.cdr.detectChanges();
-
-        Swal.fire({
-          icon: result.recordsCreated > 0 ? 'success' : 'info',
-          title: 'Scan Complete',
-          html: `
-            <div class="text-start">
-              <p><strong>Documents Scanned:</strong> ${result.documentsScanned}</p>
-              <p><strong>Records Created:</strong> ${result.recordsCreated}</p>
-              ${result.errors?.length > 0 ? `
-              <div class="mt-2 text-start">
-                <strong class="text-danger">Errors (${result.errors.length}):</strong>
-                <ul class="mb-0 mt-1" style="font-size:0.85rem;">
-                  ${result.errors.map((e: string) => `<li>${e}</li>`).join('')}
-                </ul>
-              </div>` : ''}
-            </div>
-            ${result.recordsCreated > 0 ? '<p class="text-success mt-2">Medical records have been auto-populated from your documents.</p>' : '<p class="text-muted mt-2">No new medical documents found to process.</p>'}
-          `,
-          confirmButtonText: 'View Records'
-        }).then(() => {
-          // Navigate to Medical Records tab to show the auto-populated records
-          this.activeTab = 'medical';
-          this.cdr.detectChanges();
-        });
+      next: () => {
+        // 202 accepted — scan is running in background, WebSocket listener handles the result
       },
       error: (err) => {
-        console.error('Error scanning documents:', err);
+        console.error('Error starting document scan:', err);
         this.isScanningDocuments = false;
         this.cdr.detectChanges();
 
         Swal.fire({
           icon: 'error',
           title: 'Scan Failed',
-          text: err.error?.message || 'Failed to scan documents. Please try again.',
+          text: err.error?.message || 'Failed to start document scan. Please try again.',
           confirmButtonText: 'OK'
         });
       }

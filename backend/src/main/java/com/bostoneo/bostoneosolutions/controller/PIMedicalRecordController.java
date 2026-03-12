@@ -1,7 +1,9 @@
 package com.bostoneo.bostoneosolutions.controller;
 
 import com.bostoneo.bostoneosolutions.dto.PIMedicalRecordDTO;
+import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.PIMedicalRecordService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,11 +13,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static java.time.LocalDateTime.now;
 import static java.util.Map.of;
@@ -31,6 +37,7 @@ import static org.springframework.http.HttpStatus.*;
 public class PIMedicalRecordController {
 
     private final PIMedicalRecordService medicalRecordService;
+    private final AuthenticatedWebSocketHandler webSocketHandler;
 
     /**
      * Get all medical records for a case
@@ -307,8 +314,10 @@ public class PIMedicalRecordController {
     }
 
     /**
-     * Scan all case documents and auto-populate medical records
-     * This analyzes PDFs attached to the case and creates medical records from them
+     * Scan all case documents and auto-populate medical records.
+     * Returns immediately (HTTP 202) and processes in background via async thread.
+     * Sends WebSocket notification when scan completes.
+     * OCR on scanned PDFs takes ~25s/file — synchronous would timeout on the ALB.
      */
     @PostMapping("/scan-documents")
     @PreAuthorize("isAuthenticated()")
@@ -316,18 +325,62 @@ public class PIMedicalRecordController {
 
         log.info("Scanning documents for case: {}", caseId);
 
-        Map<String, Object> scanResult = medicalRecordService.scanCaseDocuments(caseId);
+        // Capture context for the async thread
+        Long orgId = TenantContext.getCurrentTenant();
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        String userId = extractUserId(securityContext);
 
-        return ResponseEntity.ok(
+        CompletableFuture.runAsync(() -> {
+            try {
+                // Restore tenant + security context in async thread
+                TenantContext.setCurrentTenant(orgId);
+                SecurityContextHolder.setContext(securityContext);
+
+                Map<String, Object> scanResult = medicalRecordService.scanCaseDocuments(caseId);
+
+                // Send result via WebSocket
+                Map<String, Object> wsPayload = new HashMap<>();
+                wsPayload.put("type", "MEDICAL_SCAN_COMPLETE");
+                wsPayload.put("caseId", caseId);
+                wsPayload.putAll(scanResult);
+                webSocketHandler.sendNotificationToUser(userId, wsPayload);
+
+                log.info("Async scan complete for case {}: {} records created",
+                        caseId, scanResult.get("recordsCreated"));
+            } catch (Exception e) {
+                log.error("Async scan failed for case {}: {}", caseId, e.getMessage(), e);
+                Map<String, Object> errorPayload = new HashMap<>();
+                errorPayload.put("type", "MEDICAL_SCAN_COMPLETE");
+                errorPayload.put("caseId", caseId);
+                errorPayload.put("success", false);
+                errorPayload.put("error", e.getMessage());
+                webSocketHandler.sendNotificationToUser(userId, errorPayload);
+            } finally {
+                TenantContext.clear();
+                SecurityContextHolder.clearContext();
+            }
+        });
+
+        return ResponseEntity.accepted().body(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .data(scanResult)
-                        .message(String.format("Scanned %d documents, created %d records",
-                                scanResult.get("documentsScanned"),
-                                scanResult.get("recordsCreated")))
-                        .status(OK)
-                        .statusCode(OK.value())
+                        .data(of("status", "scanning"))
+                        .message("Document scan started. You will be notified when it completes.")
+                        .status(ACCEPTED)
+                        .statusCode(ACCEPTED.value())
                         .build());
+    }
+
+    private String extractUserId(SecurityContext securityContext) {
+        try {
+            var auth = securityContext.getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof com.bostoneo.bostoneosolutions.dto.UserDTO userDTO) {
+                return String.valueOf(userDTO.getId());
+            }
+        } catch (Exception e) {
+            log.warn("Could not extract user ID from security context: {}", e.getMessage());
+        }
+        return null;
     }
 
     /**
