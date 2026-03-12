@@ -21,8 +21,8 @@ RUN apk add --no-cache maven && \
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# Install curl for health checks, tesseract for PDF OCR (scanned medical documents)
+RUN apk add --no-cache curl tesseract-ocr tesseract-ocr-data-eng
 
 # Create non-root user for security
 RUN addgroup -g 1000 -S legience && \
