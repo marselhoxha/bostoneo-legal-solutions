@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Service interface for PI Medical Record operations
@@ -102,6 +103,15 @@ public interface PIMedicalRecordService {
      * @return Map containing scan results (recordsCreated, documentsScanned, errors)
      */
     Map<String, Object> scanCaseDocuments(Long caseId);
+
+    /**
+     * Scan all documents with real-time progress updates via callback.
+     *
+     * @param caseId The case ID to scan documents for
+     * @param onProgress Callback invoked after each file with progress data
+     * @return Map containing scan results (recordsCreated, documentsScanned, errors)
+     */
+    Map<String, Object> scanCaseDocuments(Long caseId, Consumer<Map<String, Object>> onProgress);
 
     /**
      * Analyze a specific file and extract medical record data using AI

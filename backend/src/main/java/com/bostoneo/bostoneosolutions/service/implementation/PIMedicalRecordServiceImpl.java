@@ -32,6 +32,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -413,6 +414,11 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
 
     @Override
     public Map<String, Object> scanCaseDocuments(Long caseId) {
+        return scanCaseDocuments(caseId, null);
+    }
+
+    @Override
+    public Map<String, Object> scanCaseDocuments(Long caseId, Consumer<Map<String, Object>> onProgress) {
         Long orgId = getRequiredOrganizationId();
         log.info("Scanning documents for case: {} in org: {}", caseId, orgId);
 
@@ -428,9 +434,17 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 .filter(f -> "application/pdf".equals(f.getMimeType()))
                 .collect(Collectors.toList());
 
-        log.info("Found {} PDF files to scan for case {}", pdfFiles.size(), caseId);
+        int totalFiles = pdfFiles.size();
+        log.info("Found {} PDF files to scan for case {}", totalFiles, caseId);
 
-        for (FileItem file : pdfFiles) {
+        // Send initial progress (0/total)
+        sendProgress(onProgress, caseId, 0, totalFiles, "Starting scan...");
+
+        // Process files sequentially with progress updates after each file.
+        // Sequential avoids race conditions in the merge-dedup logic (same provider+date+type).
+        // The Sonnet model switch (vs Opus) provides the major speedup (~3-5x faster AI calls).
+        for (int i = 0; i < pdfFiles.size(); i++) {
+            FileItem file = pdfFiles.get(i);
             try {
                 Map<String, Object> fileResult = new HashMap<>();
                 fileResult.put("fileId", file.getId());
@@ -442,6 +456,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                     fileResult.put("status", "skipped");
                     fileResult.put("reason", "Already processed");
                     scannedFiles.add(fileResult);
+                    sendProgress(onProgress, caseId, i + 1, totalFiles, file.getOriginalName());
                     continue;
                 }
 
@@ -483,6 +498,9 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 fileResult.put("error", e.getMessage());
                 scannedFiles.add(fileResult);
             }
+
+            // Send progress after each file
+            sendProgress(onProgress, caseId, i + 1, totalFiles, file.getOriginalName());
         }
 
         // Mark summary as stale if records were created
@@ -500,16 +518,33 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         }
 
         result.put("success", true);
-        result.put("documentsScanned", pdfFiles.size());
+        result.put("documentsScanned", totalFiles);
         result.put("recordsCreated", createdRecords.size());
         result.put("records", createdRecords);
         result.put("files", scannedFiles);
         result.put("errors", errors);
 
         log.info("Document scan complete for case {}: {} records created from {} documents",
-                caseId, createdRecords.size(), pdfFiles.size());
+                caseId, createdRecords.size(), totalFiles);
 
         return result;
+    }
+
+    private void sendProgress(Consumer<Map<String, Object>> onProgress, Long caseId,
+                               int current, int total, String currentFile) {
+        if (onProgress == null) return;
+        try {
+            Map<String, Object> progress = new HashMap<>();
+            progress.put("type", "MEDICAL_SCAN_PROGRESS");
+            progress.put("caseId", caseId);
+            progress.put("current", current);
+            progress.put("total", total);
+            progress.put("currentFile", currentFile);
+            progress.put("percentComplete", total > 0 ? (int) Math.round((current * 100.0) / total) : 0);
+            onProgress.accept(progress);
+        } catch (Exception e) {
+            log.warn("Failed to send scan progress: {}", e.getMessage());
+        }
     }
 
     @Override
@@ -692,7 +727,8 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             """, fileName, documentText);
 
         try {
-            String response = claudeService.generateCompletion(prompt, false).get();
+            // Use Sonnet for structured data extraction — 3-5x faster than Opus, equally capable for JSON extraction
+            String response = claudeService.generateCompletionWithModel(prompt, null, false, null, null, "claude-sonnet-4-6").get();
 
             // Parse JSON response
             String jsonContent = extractJsonFromResponse(response);
@@ -1046,7 +1082,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             """, fileName, documentText);
 
         try {
-            String response = claudeService.generateCompletion(prompt, false).get();
+            String response = claudeService.generateCompletionWithModel(prompt, null, false, null, null, "claude-sonnet-4-6").get();
             String jsonContent = extractJsonFromResponse(response);
             return objectMapper.readValue(jsonContent, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
@@ -1185,7 +1221,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 documentText);
 
         try {
-            String response = claudeService.generateCompletion(prompt, false).get();
+            String response = claudeService.generateCompletionWithModel(prompt, null, false, null, null, "claude-sonnet-4-6").get();
 
             // Parse JSON response
             String jsonContent = extractJsonFromResponse(response);

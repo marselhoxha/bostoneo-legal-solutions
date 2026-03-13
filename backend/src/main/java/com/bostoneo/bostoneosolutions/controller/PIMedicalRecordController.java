@@ -21,7 +21,9 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static java.time.LocalDateTime.now;
 import static java.util.Map.of;
@@ -38,6 +40,9 @@ public class PIMedicalRecordController {
 
     private final PIMedicalRecordService medicalRecordService;
     private final AuthenticatedWebSocketHandler webSocketHandler;
+
+    // Prevent concurrent scans of the same case (double-click, multiple users)
+    private static final Set<Long> activeScanCases = ConcurrentHashMap.newKeySet();
 
     /**
      * Get all medical records for a case
@@ -325,10 +330,26 @@ public class PIMedicalRecordController {
 
         log.info("Scanning documents for case: {}", caseId);
 
+        // Prevent concurrent scans of the same case
+        if (!activeScanCases.add(caseId)) {
+            return ResponseEntity.status(CONFLICT).body(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .message("A scan is already in progress for this case. Please wait for it to complete.")
+                            .status(CONFLICT)
+                            .statusCode(CONFLICT.value())
+                            .build());
+        }
+
         // Capture context for the async thread
         Long orgId = TenantContext.getCurrentTenant();
         SecurityContext securityContext = SecurityContextHolder.getContext();
         String userId = extractUserId(securityContext);
+
+        if (userId == null) {
+            activeScanCases.remove(caseId);
+            log.warn("Could not extract user ID — WebSocket notifications will not be sent");
+        }
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -336,26 +357,52 @@ public class PIMedicalRecordController {
                 TenantContext.setCurrentTenant(orgId);
                 SecurityContextHolder.setContext(securityContext);
 
-                Map<String, Object> scanResult = medicalRecordService.scanCaseDocuments(caseId);
+                // Progress callback: send via "data" channel (bypasses notification bell)
+                java.util.function.Consumer<Map<String, Object>> onProgress = progress -> {
+                    if (userId != null) {
+                        webSocketHandler.sendDataToUser(userId, progress);
+                    }
+                };
 
-                // Send result via WebSocket
-                Map<String, Object> wsPayload = new HashMap<>();
-                wsPayload.put("type", "MEDICAL_SCAN_COMPLETE");
-                wsPayload.put("caseId", caseId);
-                wsPayload.putAll(scanResult);
-                webSocketHandler.sendNotificationToUser(userId, wsPayload);
+                Map<String, Object> scanResult = medicalRecordService.scanCaseDocuments(caseId, onProgress);
+
+                // Send lightweight completion via notification channel (triggers notification bell).
+                // Only include summary fields — NOT the full records/files lists which can be huge.
+                if (userId != null) {
+                    int recordsCreated = scanResult.get("recordsCreated") != null
+                            ? (int) scanResult.get("recordsCreated") : 0;
+                    int documentsScanned = scanResult.get("documentsScanned") != null
+                            ? (int) scanResult.get("documentsScanned") : 0;
+                    Map<String, Object> wsPayload = new HashMap<>();
+                    wsPayload.put("type", "MEDICAL_SCAN_COMPLETE");
+                    wsPayload.put("caseId", caseId);
+                    wsPayload.put("success", true);
+                    wsPayload.put("recordsCreated", recordsCreated);
+                    wsPayload.put("documentsScanned", documentsScanned);
+                    wsPayload.put("title", "Document Scan Complete");
+                    wsPayload.put("message", recordsCreated > 0
+                            ? recordsCreated + " medical records created from your documents."
+                            : "No new medical documents found to process.");
+                    wsPayload.put("url", "/legal/ai-assistant/practice-areas/personal-injury?caseId=" + caseId + "&tab=medical&subtab=records");
+                    webSocketHandler.sendNotificationToUser(userId, wsPayload);
+                }
 
                 log.info("Async scan complete for case {}: {} records created",
                         caseId, scanResult.get("recordsCreated"));
             } catch (Exception e) {
                 log.error("Async scan failed for case {}: {}", caseId, e.getMessage(), e);
-                Map<String, Object> errorPayload = new HashMap<>();
-                errorPayload.put("type", "MEDICAL_SCAN_COMPLETE");
-                errorPayload.put("caseId", caseId);
-                errorPayload.put("success", false);
-                errorPayload.put("error", e.getMessage());
-                webSocketHandler.sendNotificationToUser(userId, errorPayload);
+                if (userId != null) {
+                    Map<String, Object> errorPayload = new HashMap<>();
+                    errorPayload.put("type", "MEDICAL_SCAN_COMPLETE");
+                    errorPayload.put("caseId", caseId);
+                    errorPayload.put("success", false);
+                    errorPayload.put("error", e.getMessage());
+                    errorPayload.put("title", "Document Scan Failed");
+                    errorPayload.put("message", "Failed to scan documents: " + e.getMessage());
+                    webSocketHandler.sendNotificationToUser(userId, errorPayload);
+                }
             } finally {
+                activeScanCases.remove(caseId);
                 TenantContext.clear();
                 SecurityContextHolder.clearContext();
             }

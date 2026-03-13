@@ -138,6 +138,24 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
+     * Send data to a specific user without triggering the notification bell.
+     * Uses message type "data" instead of "notification" so the topbar ignores it.
+     * Use this for progress updates, real-time state changes, etc.
+     */
+    public void sendDataToUser(String userId, Object data) {
+        if (userId == null) return;
+        WebSocketSession session = userSessions.get(userId);
+        if (session != null && session.isOpen()) {
+            try {
+                String message = createMessage("data", data);
+                sendMessage(session, message);
+            } catch (Exception e) {
+                log.warn("Failed to send data to user {}: {}", userId, e.getMessage());
+            }
+        }
+    }
+
+    /**
      * Check if a user has an active WebSocket connection
      */
     public boolean isUserConnected(Long userId) {

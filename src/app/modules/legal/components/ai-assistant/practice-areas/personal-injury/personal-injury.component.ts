@@ -274,6 +274,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   isLoadingMedicalRecords: boolean = false;
   isScanningDocuments: boolean = false;
   scanResult: any = null;
+  scanProgress: { current: number; total: number; percentComplete: number; currentFile: string } | null = null;
+  private scanTimeoutId: any = null;
   medicalRecordForm: FormGroup;
   editingMedicalRecord: PIMedicalRecord | null = null;
   recordTypes = RECORD_TYPES;
@@ -635,17 +637,31 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       this.cdr.detectChanges();
     });
 
-    // Listen for async medical scan completion via WebSocket
+    // Listen for async medical scan progress + completion via WebSocket
     this.webSocketService.getMessages().pipe(
       takeUntil(this.destroy$)
     ).subscribe(msg => {
-      // WebSocket sends { type: 'notification', data: { type: 'MEDICAL_SCAN_COMPLETE', ... } }
       const payload = msg?.data;
-      if (payload?.type === 'MEDICAL_SCAN_COMPLETE' && this.isScanningDocuments) {
+      if (!payload || !this.isScanningDocuments) return;
+
+      // Real-time progress updates (sent via "data" channel — no notification bell)
+      if (payload.type === 'MEDICAL_SCAN_PROGRESS') {
+        this.scanProgress = {
+          current: payload.current,
+          total: payload.total,
+          percentComplete: payload.percentComplete,
+          currentFile: payload.currentFile
+        };
+        this.cdr.detectChanges();
+      }
+
+      // Scan complete (sent via "notification" channel — triggers bell)
+      if (payload.type === 'MEDICAL_SCAN_COMPLETE') {
         this.isScanningDocuments = false;
+        this.scanProgress = null;
+        this.clearScanTimeout();
 
         if (payload.success === false) {
-          Swal.fire({ icon: 'error', title: 'Scan Failed', text: payload.error || 'Failed to scan documents.', confirmButtonText: 'OK' });
           this.cdr.detectChanges();
           return;
         }
@@ -653,19 +669,6 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
         this.scanResult = payload;
         this.loadMedicalRecords();
         this.cdr.detectChanges();
-
-        Swal.fire({
-          icon: payload.recordsCreated > 0 ? 'success' : 'info',
-          title: 'Scan Complete',
-          html: `
-            <div class="text-start">
-              <p><strong>Documents Scanned:</strong> ${payload.documentsScanned}</p>
-              <p><strong>Records Created:</strong> ${payload.recordsCreated}</p>
-            </div>
-            ${payload.recordsCreated > 0 ? '<p class="text-success mt-2">Medical records have been auto-populated from your documents.</p>' : '<p class="text-muted mt-2">No new medical documents found to process.</p>'}
-          `,
-          confirmButtonText: 'View Records'
-        });
       }
     });
   }
@@ -674,7 +677,15 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     // Chart will be created when results are available
   }
 
+  private clearScanTimeout(): void {
+    if (this.scanTimeoutId) {
+      clearTimeout(this.scanTimeoutId);
+      this.scanTimeoutId = null;
+    }
+  }
+
   ngOnDestroy(): void {
+    this.clearScanTimeout();
     this.destroy$.next();
     this.destroy$.complete();
     this.caseSwitch$.next();
@@ -3357,29 +3368,46 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
     this.isScanningDocuments = true;
     this.scanResult = null;
+    this.scanProgress = null;
 
-    Swal.fire({
-      title: 'Scanning Documents',
-      html: 'Analyzing case documents with AI...<br><small>This may take several minutes for scanned documents.</small>',
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
+    // Safety timeout — reset state if no WebSocket message arrives within 10 minutes
+    this.clearScanTimeout();
+    this.scanTimeoutId = setTimeout(() => {
+      if (this.isScanningDocuments) {
+        this.isScanningDocuments = false;
+        this.scanProgress = null;
+        this.cdr.detectChanges();
       }
-    });
+    }, 10 * 60 * 1000);
 
     // Backend returns 202 immediately and processes async — result arrives via WebSocket
     this.medicalRecordService.scanCaseDocuments(Number(this.linkedCase.id)).subscribe({
       next: () => {
-        // 202 accepted — scan is running in background, WebSocket listener handles the result
+        // Show brief toast — non-blocking, user continues working
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'info',
+          title: 'Document scan started',
+          text: 'You\'ll be notified when it\'s done.',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+          showClass: { popup: 'animate__animated animate__fadeInRight animate__faster' },
+          hideClass: { popup: 'animate__animated animate__fadeOutRight animate__faster' }
+        });
       },
       error: (err) => {
         console.error('Error starting document scan:', err);
         this.isScanningDocuments = false;
+        this.scanProgress = null;
+        this.clearScanTimeout();
         this.cdr.detectChanges();
 
+        const isAlreadyScanning = err.status === 409;
         Swal.fire({
-          icon: 'error',
-          title: 'Scan Failed',
+          icon: isAlreadyScanning ? 'info' : 'error',
+          title: isAlreadyScanning ? 'Scan In Progress' : 'Scan Failed',
           text: err.error?.message || 'Failed to start document scan. Please try again.',
           confirmButtonText: 'OK'
         });
