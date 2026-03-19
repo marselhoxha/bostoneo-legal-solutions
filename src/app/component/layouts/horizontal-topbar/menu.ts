@@ -222,12 +222,12 @@ export const ATTORNEY_MENU: MenuItem[] = [
   },
   {
     id: 'att-ai-tools',
-    label: 'AI Tools',
+    label: 'LegiTools',
     icon: 'ri-robot-line',
-    link: '/legal/ai-assistant/ai-workspace',
+    link: '/legal/ai-assistant/legispace',
     subItems: [
-      { id: 'att-ai-workspace', label: 'AI Workspace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/ai-workspace', parentId: 'att-ai-tools' },
-      { id: 'att-ai-personal-injury', label: 'Personal Injury', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/practice-areas/personal-injury', parentId: 'att-ai-tools' }
+      { id: 'att-ai-workspace', label: 'LegiSpace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/legispace', parentId: 'att-ai-tools' },
+      { id: 'att-ai-personal-injury', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'att-ai-tools' }
     ]
   },
   {
@@ -333,12 +333,12 @@ export const ADMIN_MENU: MenuItem[] = [
   },
   {
     id: 'admin-ai-tools',
-    label: 'AI Tools',
+    label: 'LegiTools',
     icon: 'ri-robot-line',
-    link: '/legal/ai-assistant/ai-workspace',
+    link: '/legal/ai-assistant/legispace',
     subItems: [
-      { id: 'admin-ai-workspace', label: 'AI Workspace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/ai-workspace', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-personal-injury', label: 'Personal Injury', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/practice-areas/personal-injury', parentId: 'admin-ai-tools' }
+      { id: 'admin-ai-workspace', label: 'LegiSpace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/legispace', parentId: 'admin-ai-tools' },
+      { id: 'admin-ai-personal-injury', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'admin-ai-tools' }
     ]
   },
   {

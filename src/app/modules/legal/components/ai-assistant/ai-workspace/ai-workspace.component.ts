@@ -6724,7 +6724,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' }
                   }).then((result) => {
                     if (result.isConfirmed) {
-                      this.router.navigate(['/legal/ai-assistant/practice-areas/personal-injury'], {
+                      this.router.navigate(['/legal/ai-assistant/legipi'], {
                         queryParams: { caseId: this.selectedCaseId, tab: 'medical', subtab: isRecordsErr ? 'records' : 'summary' }
                       });
                     }
@@ -6816,7 +6816,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                       customClass: { confirmButton: 'btn btn-primary', cancelButton: 'btn btn-light' }
                     }).then((result) => {
                       if (result.isConfirmed) {
-                        this.router.navigate(['/legal/ai-assistant/practice-areas/personal-injury'], {
+                        this.router.navigate(['/legal/ai-assistant/legipi'], {
                           queryParams: { caseId: this.selectedCaseId, tab: 'medical', subtab: isRecords ? 'records' : 'summary' }
                         });
                       }

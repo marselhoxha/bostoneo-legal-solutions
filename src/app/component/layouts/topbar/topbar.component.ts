@@ -1417,8 +1417,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
         break;
     }
 
-    // Navigate to AI Workspace (correct route: /legal/ai-assistant/ai-workspace)
-    this.router.navigate(['/legal/ai-assistant/ai-workspace'], { queryParams });
+    // Navigate to LegiSpace
+    this.router.navigate(['/legal/ai-assistant/legispace'], { queryParams });
   }
 
   /**

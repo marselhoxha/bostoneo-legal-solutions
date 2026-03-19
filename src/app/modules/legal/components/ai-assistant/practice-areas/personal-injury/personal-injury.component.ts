@@ -1805,7 +1805,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     }
     // Navigate to AI Workspace with the conversation ID
     // Use the query params that AI Workspace expects
-    this.router.navigate(['/legal/ai-assistant/ai-workspace'], {
+    this.router.navigate(['/legal/ai-assistant/legispace'], {
       queryParams: {
         openConversation: this.demandConversationId,
         taskType: 'draft',

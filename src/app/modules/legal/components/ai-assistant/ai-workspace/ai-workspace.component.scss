@@ -2956,6 +2956,19 @@ button.filter-chip,
           line-height: 1.4;
           display: block;
         }
+
+        .card-title {
+          font-size: 0.875rem;
+          font-weight: 700;
+          letter-spacing: 0.01em;
+        }
+
+        .card-subtitle {
+          font-size: 0.6875rem;
+          font-weight: 500;
+          color: var(--vz-secondary-color);
+          margin-top: 2px;
+        }
       }
 
       // Color schemes for each card
@@ -2967,7 +2980,7 @@ button.filter-chip,
         &::before { background: #6366f1; }
         &:hover {
           border-color: rgba(99, 102, 241, 0.4);
-          .card-content span { color: #6366f1; }
+          .card-content .card-title { color: #6366f1; }
         }
         &.active {
           border-color: rgba(99, 102, 241, 0.3);
@@ -2983,7 +2996,7 @@ button.filter-chip,
         &::before { background: #22c55e; }
         &:hover {
           border-color: rgba(34, 197, 94, 0.4);
-          .card-content span { color: #22c55e; }
+          .card-content .card-title { color: #22c55e; }
         }
         &.active {
           border-color: rgba(34, 197, 94, 0.3);
@@ -2999,7 +3012,7 @@ button.filter-chip,
         &::before { background: #0ea5e9; }
         &:hover {
           border-color: rgba(14, 165, 233, 0.4);
-          .card-content span { color: #0ea5e9; }
+          .card-content .card-title { color: #0ea5e9; }
         }
         &.active {
           border-color: rgba(14, 165, 233, 0.3);
@@ -3015,7 +3028,7 @@ button.filter-chip,
         &::before { background: #f59e0b; }
         &:hover {
           border-color: rgba(245, 158, 11, 0.4);
-          .card-content span { color: #f59e0b; }
+          .card-content .card-title { color: #f59e0b; }
         }
         &.active {
           border-color: rgba(245, 158, 11, 0.3);
@@ -3038,7 +3051,7 @@ button.filter-chip,
           width: 60%;
         }
 
-        .card-content span {
+        .card-content .card-title {
           font-weight: 700;
         }
       }
@@ -9142,20 +9155,20 @@ button.filter-chip,
 
     // ============================================
     // MOBILE ACTION CARDS
-    // Show only "Ask a legal question" and "Analyze Document"
-    // Hide "Generate a draft" and "Case Workflow"
+    // Show only LegiSearch and LegiLyze
+    // Hide LegiDraft and LegiFlow
     // ============================================
     .action-cards-main {
       grid-template-columns: 1fr !important;
       gap: 0.75rem;
       max-width: 400px;
 
-      // Hide 2nd card (Generate a draft)
+      // Hide 2nd card (LegiDraft)
       .action-card:nth-child(2) {
         display: none !important;
       }
 
-      // Hide 4th card (Case Workflow)
+      // Hide 4th card (LegiFlow)
       .action-card:nth-child(4) {
         display: none !important;
       }
@@ -9181,8 +9194,13 @@ button.filter-chip,
         .card-content {
           flex: 1;
 
-          span {
+          .card-title {
             font-size: 0.9375rem;
+            text-align: left;
+          }
+
+          .card-subtitle {
+            font-size: 0.6875rem;
             text-align: left;
           }
         }
@@ -9367,8 +9385,12 @@ button.filter-chip,
           }
         }
 
-        .card-content span {
+        .card-content .card-title {
           font-size: 0.875rem;
+        }
+
+        .card-content .card-subtitle {
+          font-size: 0.625rem;
         }
       }
     }

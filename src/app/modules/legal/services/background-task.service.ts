@@ -390,7 +390,7 @@ export class BackgroundTaskService {
       queryParams.workflowId = task.workflowId;
     }
 
-    this.router.navigate(['/legal/ai-assistant/ai-workspace'], { queryParams });
+    this.router.navigate(['/legal/ai-assistant/legispace'], { queryParams });
   }
 
   // ===== PRIVATE METHODS =====
@@ -549,8 +549,8 @@ export class BackgroundTaskService {
     // Remove the task to prevent duplicate notifications when checkForCompletedBackgroundTasks runs
     this.removeTask(task.id);
 
-    // Navigate to AI workspace
-    this.router.navigate(['/legal/ai-assistant/ai-workspace']);
+    // Navigate to LegiSpace
+    this.router.navigate(['/legal/ai-assistant/legispace']);
   }
 
   private getTaskIcon(task: BackgroundTask): string {

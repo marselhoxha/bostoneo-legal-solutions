@@ -807,7 +807,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   }
 
   openAIWorkspace(): void {
-    this.router.navigate(['/legal/ai-assistant/ai-workspace']);
+    this.router.navigate(['/legal/ai-assistant/legispace']);
   }
 
   openFileManager(): void {

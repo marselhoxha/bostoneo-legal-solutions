@@ -57,10 +57,15 @@ const routes: Routes = [
     data: { title: 'Intellectual Property Tools' }
   },
   {
-    path: 'practice-areas/personal-injury',
+    path: 'legipi',
     loadComponent: () => import('./practice-areas/personal-injury/personal-injury.component').then(m => m.PersonalInjuryComponent),
     canActivate: [AuthenticationGuard],
-    data: { title: 'Personal Injury Tools' }
+    data: { title: 'LegiPI' }
+  },
+  {
+    path: 'practice-areas/personal-injury',
+    redirectTo: 'legipi',
+    pathMatch: 'full'
   },
   {
     path: 'templates',
@@ -81,10 +86,15 @@ const routes: Routes = [
     data: { title: 'Legal Research' }
   },
   {
-    path: 'ai-workspace',
+    path: 'legispace',
     loadComponent: () => import('./ai-workspace/ai-workspace.component').then(m => m.AiWorkspaceComponent),
     canActivate: [AuthenticationGuard],
-    data: { title: 'AI Workspace' }
+    data: { title: 'LegiSpace' }
+  },
+  {
+    path: 'ai-workspace',
+    redirectTo: 'legispace',
+    pathMatch: 'full'
   },
   {
     path: 'collaboration',

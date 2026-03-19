@@ -37,7 +37,7 @@ export class PracticeAreasDashboardComponent implements OnInit {
         'Settlement negotiation tracker',
         'Damages calculation'
       ],
-      route: '/legal/ai-assistant/practice-areas/personal-injury',
+      route: '/legal/ai-assistant/legipi',
       isAvailable: true,
       usageCount: 0
     },
