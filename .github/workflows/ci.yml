@@ -344,7 +344,6 @@ jobs:
           tags: |
             type=sha,prefix={{branch}}-
             type=ref,event=branch
-            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and Push
         uses: docker/build-push-action@v5
@@ -475,6 +474,10 @@ jobs:
           fi
           # Get current task definition and update container health check
           CURRENT_TD=$(aws ecs describe-task-definition --task-definition $FAMILY --query 'taskDefinition' --output json)
+          # Use branch name as image tag (main or staging — matches docker/metadata-action)
+          REGISTRY=$(aws ecr describe-repositories --repository-names legience-api --query 'repositories[0].repositoryUri' --output text)
+          IMAGE="$REGISTRY:${{ github.ref_name }}"
+          echo "Deploying image: $IMAGE"
           NEW_TD=$(echo "$CURRENT_TD" | python3 -c "
           import json, sys
           td = json.load(sys.stdin)
@@ -485,6 +488,7 @@ jobs:
                   'command': ['CMD-SHELL', 'curl -f http://localhost:8085/health || exit 1'],
                   'interval': 30, 'timeout': 5, 'retries': 3, 'startPeriod': 300
               }
+              c['image'] = '$IMAGE'
           print(json.dumps(td, default=str))
           ")
           aws ecs register-task-definition --cli-input-json "$NEW_TD" > /dev/null
