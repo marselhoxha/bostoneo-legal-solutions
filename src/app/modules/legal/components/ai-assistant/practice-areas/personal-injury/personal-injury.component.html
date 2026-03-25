@@ -1777,12 +1777,40 @@
                     <button class="subtab-btn" [class.active]="medicalSubTab === 'summary'"
                             (click)="medicalSubTab = 'summary'">
                       <i class="ri-article-line me-1"></i> Medical Summary
-                      <span class="subtab-indicator exists" *ngIf="medicalSummary"></span>
+                      <span class="subtab-indicator exists" *ngIf="medicalSummary && !medicalSummary.isStale"></span>
+                      <span class="subtab-indicator editing" *ngIf="medicalSummary?.isStale" title="Summary is outdated — new records added"></span>
+                    </button>
+                    <button class="subtab-btn" [class.active]="medicalSubTab === 'timeline'"
+                            (click)="medicalSubTab = 'timeline'; loadTreatmentGaps()">
+                      <i class="ri-timeline-view me-1"></i> Timeline
+                      <span class="subtab-badge warning" *ngIf="treatmentGaps.length > 0">{{ treatmentGaps.length }}</span>
                     </button>
                   </div>
 
                   <!-- Medical Records Sub-tab -->
                   <div *ngIf="medicalSubTab === 'records'">
+                    <!-- Unscanned Documents Banner -->
+                    <div *ngIf="hasUnscannedDocuments" class="d-inline-flex align-items-center gap-3 mb-3" style="border-radius: 12px; border: 1px solid rgba(247,184,75,0.25); background: var(--vz-card-bg, #fff); padding: 16px 22px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+                      <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, rgba(247,184,75,0.15), rgba(247,184,75,0.08)); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="ri-file-warning-line" style="font-size: 20px; color: #d4940a;"></i>
+                      </div>
+                      <div style="margin-right: 8px;">
+                        <div style="font-weight: 700; font-size: 14.5px; color: var(--vz-heading-color, #212529); line-height: 1.3;">
+                          {{ unscannedCount }} new document{{ unscannedCount > 1 ? 's' : '' }} awaiting scan
+                        </div>
+                        <div style="font-size: 13px; color: var(--vz-secondary-color, #878a99); line-height: 1.5; margin-top: 2px;">
+                          Scan to extract medical records, then regenerate your summary.
+                        </div>
+                      </div>
+                      <button class="btn btn-soft-info" (click)="scanCaseDocuments()" [disabled]="isScanningDocuments" style="white-space: nowrap;">
+                        <span *ngIf="!isScanningDocuments">
+                          <i class="ri-search-eye-line me-1"></i> Scan Now
+                        </span>
+                        <span *ngIf="isScanningDocuments">
+                          <span class="spinner-border spinner-border-sm me-1"></span> Scanning...
+                        </span>
+                      </button>
+                    </div>
                     <div class="medical-records-container">
                       <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
                         <div>
@@ -1795,11 +1823,17 @@
                           </button>
                           <button class="btn btn-soft-info" (click)="scanCaseDocuments()" [disabled]="!linkedCase || isScanningDocuments">
                             <span *ngIf="!isScanningDocuments">
-                              <i class="ri-robot-line me-1"></i> Scan
+                              <i class="ri-search-eye-line me-1"></i> Scan
                             </span>
                             <span *ngIf="isScanningDocuments">
                               <span class="spinner-border spinner-border-sm me-1"></span>
                             </span>
+                          </button>
+                          <button class="btn btn-sm" [class.btn-soft-secondary]="recordsViewMode === 'flat'" [class.btn-soft-primary]="recordsViewMode === 'grouped'"
+                                  (click)="recordsViewMode = recordsViewMode === 'flat' ? 'grouped' : 'flat'"
+                                  [disabled]="!linkedCase || !medicalRecords?.length"
+                                  [title]="recordsViewMode === 'flat' ? 'Group by provider' : 'Show flat view'">
+                            <i [class]="recordsViewMode === 'flat' ? 'ri-list-check-2' : 'ri-layout-grid-line'"></i>
                           </button>
                           <button class="btn btn-soft-danger" (click)="clearAllMedicalRecords()" [disabled]="!linkedCase || !medicalRecords?.length" title="Delete all records and re-scan">
                             <i class="ri-delete-bin-line me-1"></i> Clear All
@@ -1807,12 +1841,28 @@
                         </div>
                       </div>
 
-                  <!-- Scan Result Alert -->
+                  <!-- Scan Result Alerts -->
                   <div class="alert alert-success d-flex align-items-center mb-3" *ngIf="scanResult && scanResult.recordsCreated > 0">
                     <i class="ri-checkbox-circle-line fs-4 me-3"></i>
                     <div>
                       <strong>Documents Scanned!</strong>
                       <p class="mb-0">Created {{ scanResult.recordsCreated }} medical records from {{ scanResult.documentsScanned }} documents.</p>
+                    </div>
+                    <button class="btn-close ms-auto" (click)="scanResult = null"></button>
+                  </div>
+                  <div class="alert alert-info d-flex align-items-center mb-3" *ngIf="scanResult && scanResult.recordsCreated === 0 && scanResult.documentsScanned > 0">
+                    <i class="ri-information-line fs-4 me-3"></i>
+                    <div>
+                      <strong>All Documents Processed</strong>
+                      <p class="mb-0">All {{ scanResult.documentsScanned }} documents have already been scanned. Use <strong>Clear All</strong> to re-scan from scratch.</p>
+                    </div>
+                    <button class="btn-close ms-auto" (click)="scanResult = null"></button>
+                  </div>
+                  <div class="alert alert-warning d-flex align-items-center mb-3" *ngIf="scanResult && scanResult.documentsScanned === 0">
+                    <i class="ri-alert-line fs-4 me-3"></i>
+                    <div>
+                      <strong>No Documents Found</strong>
+                      <p class="mb-0">No PDF documents found for this case. Upload medical records in the Documents tab first.</p>
                     </div>
                     <button class="btn-close ms-auto" (click)="scanResult = null"></button>
                   </div>
@@ -1829,8 +1879,9 @@
                   <!-- Medical Records Content -->
                   <div class="row" *ngIf="linkedCase">
                     <div class="col-lg-8">
-                      <!-- Providers Grid -->
-                      <div class="providers-grid">
+
+                      <!-- FLAT VIEW (default) -->
+                      <div class="providers-grid" *ngIf="recordsViewMode === 'flat'">
                         <div class="provider-card" *ngFor="let record of medicalRecords" (click)="openRecordDetailModal(record)">
                           <button class="provider-delete" (click)="deleteMedicalRecord(record); $event.stopPropagation()">
                             <i class="ri-close-line"></i>
@@ -1852,8 +1903,11 @@
                             </span>
                             <span class="total-bills">{{ formatCurrency(record.billedAmount || 0) }}</span>
                           </div>
-                          <div class="provider-card-footer" *ngIf="record.keyFindings || record.recordType">
+                          <div class="provider-card-footer" *ngIf="record.keyFindings || record.recordType || record.citationMetadata">
                             <span class="badge bg-primary-subtle text-primary me-2" *ngIf="record.recordType">{{ getRecordTypeLabel(record.recordType) }}</span>
+                            <span class="badge bg-success-subtle text-success me-2" *ngIf="record.citationMetadata">
+                              <i class="ri-link me-1"></i>{{ getCitationCount(record) }} sources
+                            </span>
                             <span class="text-muted small text-truncate" *ngIf="record.keyFindings">{{ record.keyFindings }}</span>
                           </div>
                           <div class="provider-card-actions">
@@ -1862,29 +1916,66 @@
                             </button>
                           </div>
                         </div>
+                      </div>
 
-                        <!-- Empty State -->
-                        <div class="providers-empty" *ngIf="medicalRecords.length === 0 && !isLoadingMedicalRecords">
-                          <div class="empty-state-illustration">
-                            <div class="empty-state-icon-lg">
-                              <i class="ri-hospital-line"></i>
+                      <!-- GROUPED VIEW (by provider) -->
+                      <div *ngIf="recordsViewMode === 'grouped'">
+                        <div class="provider-group" *ngFor="let group of getGroupedRecords()">
+                          <div class="provider-group-header" (click)="group.collapsed = !group.collapsed">
+                            <i [class]="group.collapsed ? 'ri-arrow-right-s-line' : 'ri-arrow-down-s-line'" style="color: var(--vz-secondary-color);"></i>
+                            <div class="specialty-icon" [ngClass]="getProviderTypeClass(group.providerType)">
+                              <i [class]="getProviderTypeIcon(group.providerType)"></i>
                             </div>
-                            <div class="empty-state-circles">
-                              <span></span><span></span><span></span>
+                            <div class="flex-grow-1">
+                              <div class="fw-semibold">{{ group.providerName }}</div>
+                              <div class="text-muted" style="font-size: 12px;">
+                                {{ getProviderTypeLabel(group.providerType) || 'Medical Provider' }} &bull; {{ group.dateRange }}
+                              </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                              <span class="badge bg-primary-subtle text-primary">{{ group.records.length }} {{ group.records.length === 1 ? 'record' : 'records' }}</span>
+                              <span class="fw-semibold" [class.text-danger]="group.totalBilled > 0" [class.text-muted]="!group.totalBilled">
+                                {{ formatCurrency(group.totalBilled) }}
+                              </span>
                             </div>
                           </div>
-                          <h6 class="fw-semibold mb-2">No Medical Records</h6>
-                          <p class="text-muted mb-3">Add medical records to track treatment and expenses.</p>
-                          <button class="btn btn-primary" (click)="openQuickAddModal()">
-                            <i class="ri-add-line me-1"></i> Add First Record
-                          </button>
+                          <div class="provider-group-body" *ngIf="!group.collapsed">
+                            <div class="provider-visit-row" *ngFor="let record of group.records" (click)="openRecordDetailModal(record)">
+                              <span class="visit-date">{{ record.treatmentDate | date:'MMM d' }}</span>
+                              <span class="badge bg-primary-subtle text-primary" style="font-size: 11px;">{{ getRecordTypeLabel(record.recordType) }}</span>
+                              <span class="flex-grow-1 text-muted text-truncate" style="font-size: 12px; max-width: 250px;">{{ record.keyFindings || '—' }}</span>
+                              <span [class.text-danger]="record.billedAmount" [class.text-muted]="!record.billedAmount" class="fw-semibold" style="font-size: 13px;">
+                                {{ formatCurrency(record.billedAmount || 0) }}
+                              </span>
+                              <span class="badge bg-success-subtle text-success" style="font-size: 10px;" *ngIf="record.citationMetadata">
+                                <i class="ri-link"></i> {{ getCitationCount(record) }}
+                              </span>
+                            </div>
+                          </div>
                         </div>
+                      </div>
 
-                        <!-- Loading State -->
-                        <div class="providers-empty" *ngIf="isLoadingMedicalRecords">
-                          <div class="spinner-border text-primary" role="status"></div>
-                          <p class="text-muted mt-2 mb-0">Loading records...</p>
+                      <!-- Empty State -->
+                      <div class="providers-empty" *ngIf="medicalRecords.length === 0 && !isLoadingMedicalRecords">
+                        <div class="empty-state-illustration">
+                          <div class="empty-state-icon-lg">
+                            <i class="ri-hospital-line"></i>
+                          </div>
+                          <div class="empty-state-circles">
+                            <span></span><span></span><span></span>
+                          </div>
                         </div>
+                        <h6 class="fw-semibold mb-2">No Medical Records</h6>
+                        <p class="text-muted mb-3">Add medical records to track treatment and expenses.</p>
+                        <button class="btn btn-primary" (click)="openQuickAddModal()">
+                          <i class="ri-add-line me-1"></i> Add First Record
+                        </button>
+                      </div>
+
+                      <!-- Loading State -->
+                      <div class="providers-empty" *ngIf="isLoadingMedicalRecords">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted mt-2 mb-0">Loading records...</p>
                       </div>
                     </div>
 
@@ -1919,6 +2010,35 @@
                             <span class="stat-label">Treatment Period</span>
                             <span class="stat-value small">{{ getMedicalDateRange().start | date:'MMM yyyy' }} - {{ getMedicalDateRange().end | date:'MMM yyyy' }}</span>
                           </div>
+
+                          <!-- Lien Tracking -->
+                          <div class="lien-section" *ngIf="getTotalLiens() > 0">
+                            <div class="stat-row">
+                              <span class="stat-label"><i class="ri-shield-check-line me-1"></i> Total Liens</span>
+                              <span class="stat-value amount text-danger">{{ formatCurrency(getTotalLiens()) }}</span>
+                            </div>
+                            <div class="stat-row">
+                              <span class="stat-label">Lien Holders</span>
+                              <span class="stat-value count">{{ getUniqueLienHolders() }}</span>
+                            </div>
+                            <div class="lien-breakdown">
+                              <div class="lien-item" *ngFor="let lien of getLienBreakdown()">
+                                <span class="lien-holder">{{ lien.holder }}</span>
+                                <span class="lien-amount">{{ formatCurrency(lien.amount) }}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Record Type Breakdown -->
+                          <div class="record-type-section" *ngIf="medicalRecords.length > 0">
+                            <div class="stat-label mb-2"><i class="ri-bar-chart-horizontal-line me-1"></i> Record Types</div>
+                            <div class="type-bar-row" *ngFor="let rt of getRecordTypeBreakdown()">
+                              <span class="type-bar-label">{{ rt.label }}</span>
+                              <div class="type-bar" [style.width.%]="(rt.count / getMaxRecordTypeCount()) * 100"></div>
+                              <span class="type-bar-count">{{ rt.count }}</span>
+                            </div>
+                          </div>
+
                           <div class="sync-notice">
                             <i class="ri-refresh-line"></i>
                             <span>Medical expenses are automatically synced with the Case Value Calculator and Demand Letter Generator.</span>
@@ -1926,8 +2046,8 @@
 
                           <!-- Quick Actions -->
                           <div class="mt-3 d-grid gap-2">
-                            <button class="btn btn-soft-primary btn-sm" (click)="activeTab = 'medical-summary'">
-                              <i class="ri-article-line me-1"></i> Generate Summary
+                            <button class="btn btn-soft-primary btn-sm" (click)="medicalSubTab = 'timeline'">
+                              <i class="ri-timeline-view me-1"></i> View Timeline
                             </button>
                             <button class="btn btn-soft-success btn-sm" (click)="syncMedicalToCalculator()">
                               <i class="ri-calculator-line me-1"></i> Sync to Calculator
@@ -1950,6 +2070,18 @@
                           <strong>Link a Case</strong>
                           <p class="mb-0">Use the case selector above to link a PI case and generate a medical summary.</p>
                         </div>
+                      </div>
+
+                      <!-- Stale Summary Warning — new records were added since last generation -->
+                      <div class="alert alert-warning d-flex align-items-center mb-3" *ngIf="medicalSummary?.isStale && !isGeneratingSummary">
+                        <i class="ri-error-warning-line fs-4 me-3"></i>
+                        <div class="flex-grow-1">
+                          <strong>Summary Outdated</strong>
+                          <p class="mb-0">New medical records have been added since this summary was generated. Regenerate to include the latest data.</p>
+                        </div>
+                        <button class="btn btn-warning btn-sm ms-3" (click)="generateMedicalSummary()">
+                          <i class="ri-refresh-line me-1"></i> Regenerate
+                        </button>
                       </div>
 
                       <!-- Loading State -->
@@ -2235,7 +2367,229 @@
                         </div>
                       </div>
                     </div>
+
+                    <!-- Adjuster Defense Analysis -->
+                    <div class="adjuster-defense-section mt-4" *ngIf="linkedCase && medicalRecords.length > 0">
+                      <div class="adjuster-defense-card">
+                        <div class="adjuster-defense-header">
+                          <div class="d-flex align-items-center gap-2">
+                            <i class="ri-shield-check-line" style="font-size: 20px;"></i>
+                            <span class="fw-semibold">Adjuster Defense Analysis</span>
+                          </div>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="text-white-50" style="font-size: 11px;" *ngIf="adjusterAnalysis?.generatedAt">
+                              Generated {{ adjusterAnalysis.generatedAt | date:'MMM d, yyyy' }}
+                            </span>
+                            <button class="btn btn-sm btn-light"
+                                    (click)="generateAdjusterAnalysis()"
+                                    [disabled]="isGeneratingAdjusterAnalysis">
+                              <span *ngIf="!isGeneratingAdjusterAnalysis">
+                                <i class="ri-ai-generate me-1"></i> {{ adjusterAnalysis ? 'Regenerate' : 'Generate Analysis' }}
+                              </span>
+                              <span *ngIf="isGeneratingAdjusterAnalysis">
+                                <span class="spinner-border spinner-border-sm me-1"></span> Analyzing...
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <!-- No analysis yet -->
+                        <div class="p-4 text-center" *ngIf="!adjusterAnalysis && !isGeneratingAdjusterAnalysis">
+                          <div class="mb-3"><i class="ri-shield-check-line" style="font-size: 40px; color: #c3cbe4;"></i></div>
+                          <h6 class="fw-semibold mb-2">Predict Adjuster Attacks</h6>
+                          <p class="text-muted mb-3" style="font-size: 13px;">AI will analyze your medical records to predict how insurance adjusters will attack this case and provide specific counter-arguments.</p>
+                          <button class="btn btn-primary btn-sm" (click)="generateAdjusterAnalysis()">
+                            <i class="ri-ai-generate me-1"></i> Generate Analysis
+                          </button>
+                        </div>
+
+                        <!-- Attack vectors -->
+                        <div *ngIf="adjusterAnalysis?.attackVectors?.length > 0">
+                          <div class="adjuster-attack-item" *ngFor="let attack of adjusterAnalysis.attackVectors; let i = index">
+                            <div class="adjuster-attack-header" (click)="toggleAdjusterItem(i)">
+                              <i [class]="adjusterExpandedItems.has(i) ? 'ri-arrow-down-s-line' : 'ri-arrow-right-s-line'"
+                                 style="color: var(--vz-secondary-color);"></i>
+                              <i [class]="getAdjusterTypeIcon(attack.type)"
+                                 [style.color]="attack.severity === 'HIGH' ? 'var(--vz-danger)' : attack.severity === 'MEDIUM' ? 'var(--vz-warning)' : 'var(--vz-info)'"
+                                 style="font-size: 18px;"></i>
+                              <span class="fw-semibold" style="font-size: 13px;">{{ attack.type?.replaceAll('_', ' ') }}</span>
+                              <span class="badge ms-auto" [ngClass]="getAdjusterSeverityClass(attack.severity)">
+                                {{ attack.severity }}
+                              </span>
+                            </div>
+                            <div class="adjuster-attack-body" *ngIf="adjusterExpandedItems.has(i)">
+                              <div class="adjuster-issue-text">
+                                <strong>Issue:</strong> {{ attack.issue }}
+                              </div>
+                              <div class="adjuster-evidence text-muted" style="font-size: 12px; margin-bottom: 12px;" *ngIf="attack.evidence">
+                                <strong>Evidence:</strong> {{ attack.evidence }}
+                              </div>
+                              <div class="adjuster-counter-box">
+                                <div class="adjuster-counter-label">
+                                  <i class="ri-lightbulb-line me-1"></i> Counter-Argument
+                                </div>
+                                <div class="adjuster-counter-text">{{ attack.counterArgument }}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- No vulnerabilities found -->
+                        <div class="p-4 text-center" *ngIf="adjusterAnalysis && (!adjusterAnalysis.attackVectors || adjusterAnalysis.attackVectors.length === 0)">
+                          <i class="ri-shield-check-line text-success" style="font-size: 40px;"></i>
+                          <h6 class="fw-semibold mt-2 mb-1">Strong Case Position</h6>
+                          <p class="text-muted mb-0" style="font-size: 13px;">No significant adjuster attack vectors identified in the current records.</p>
+                        </div>
+                      </div>
+                    </div>
+
                   </div><!-- End Medical Summary Sub-tab -->
+
+                  <!-- Timeline Sub-tab -->
+                  <div *ngIf="medicalSubTab === 'timeline'">
+                    <div class="timeline-container">
+
+                      <!-- No Case Warning -->
+                      <div class="alert alert-warning d-flex align-items-center" *ngIf="!linkedCase">
+                        <i class="ri-information-line fs-4 me-3"></i>
+                        <div>
+                          <strong>Link a Case</strong>
+                          <p class="mb-0">Use the case selector above to link a PI case and view the treatment timeline.</p>
+                        </div>
+                      </div>
+
+                      <div *ngIf="linkedCase">
+                        <!-- Header -->
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                          <div>
+                            <h5 class="mb-1 fw-semibold">Treatment Timeline</h5>
+                            <p class="text-muted mb-0 fs-13" *ngIf="getTimelineDateRange().start">
+                              {{ getTimelineDateRange().start | date:'MMM d, yyyy' }} — {{ getTimelineDateRange().end | date:'MMM d, yyyy' }}
+                              <span class="ms-2 text-muted">({{ getTimelineDateRange().days }} days)</span>
+                            </p>
+                          </div>
+                          <button class="btn btn-soft-info btn-sm" (click)="loadTreatmentGaps()" [disabled]="isLoadingTimeline">
+                            <i class="ri-refresh-line me-1"></i> Refresh
+                          </button>
+                        </div>
+
+                        <!-- Horizontal Timeline Bar -->
+                        <div class="timeline-bar-container mb-4" *ngIf="medicalRecords.length > 0 && getTimelineBarSegments().length > 0">
+                          <div class="tbar">
+                            <ng-container *ngFor="let seg of getTimelineBarSegments()">
+                              <div class="tbar-active" *ngIf="seg.type === 'active'" [style.flex-grow]="seg.widthPct">{{ seg.label }}</div>
+                              <div class="tbar-gap" *ngIf="seg.type === 'gap'" [style.flex-grow]="seg.widthPct">
+                                <span class="tbar-gap-chip">{{ seg.label }}</span>
+                              </div>
+                            </ng-container>
+                            <!-- No-gap full bar -->
+                            <div class="tbar-full" *ngIf="getTimelineBarSegments().length === 1 && getTimelineBarSegments()[0].type === 'active'">
+                              Continuous treatment
+                            </div>
+                          </div>
+                          <div class="tbar-dates">
+                            <span>{{ getTimelineDateRange().start | date:'MMM d, yyyy' }}</span>
+                            <span>{{ getTimelineDateRange().end | date:'MMM d, yyyy' }}</span>
+                          </div>
+                        </div>
+
+                        <!-- Loading -->
+                        <div class="text-center py-4" *ngIf="isLoadingTimeline && medicalRecords.length === 0">
+                          <div class="spinner-border text-primary" role="status"></div>
+                          <p class="text-muted mt-2 mb-0">Loading timeline...</p>
+                        </div>
+
+                        <!-- Empty -->
+                        <div class="text-center py-5" *ngIf="!isLoadingTimeline && medicalRecords.length === 0">
+                          <div class="empty-state-icon-lg mb-3"><i class="ri-timeline-view" style="font-size: 48px; color: #c3cbe4;"></i></div>
+                          <h6 class="fw-semibold mb-2">No Medical Records</h6>
+                          <p class="text-muted mb-3">Scan or add medical records to see the treatment timeline.</p>
+                          <button class="btn btn-primary btn-sm" (click)="medicalSubTab = 'records'">
+                            <i class="ri-arrow-left-line me-1"></i> Go to Records
+                          </button>
+                        </div>
+
+                        <!-- Vertical Timeline -->
+                        <div class="vertical-timeline" *ngIf="medicalRecords.length > 0">
+                          <ng-container *ngFor="let group of getTimelineDateGroups(); let isLast = last">
+
+                            <!-- Treatment Gap Item -->
+                            <div class="timeline-gap-item" *ngIf="group.date === '__gap__'">
+                              <div class="timeline-gap-dot"></div>
+                              <div class="timeline-gap-card">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                  <i class="ri-timer-flash-line" style="font-size: 20px; color: #f06548;"></i>
+                                  <span class="timeline-gap-days">{{ group.items[0].data.gapDays }}</span>
+                                  <span class="timeline-gap-label">DAY TREATMENT GAP</span>
+                                  <span class="badge ms-auto"
+                                        [class.bg-danger-subtle]="group.items[0].data.severity === 'HIGH'"
+                                        [class.text-danger]="group.items[0].data.severity === 'HIGH'"
+                                        [class.bg-warning-subtle]="group.items[0].data.severity === 'MEDIUM'"
+                                        [class.text-warning]="group.items[0].data.severity === 'MEDIUM'">
+                                    {{ group.items[0].data.severity }}
+                                  </span>
+                                </div>
+                                <div class="timeline-gap-detail">
+                                  Between <strong>{{ group.items[0].data.previousProvider }}</strong> and <strong>{{ group.items[0].data.nextProvider }}</strong>
+                                </div>
+                                <div class="timeline-gap-detail text-muted">
+                                  {{ group.items[0].data.gapStart | date:'MMM d, yyyy' }} — {{ group.items[0].data.gapEnd | date:'MMM d, yyyy' }}
+                                </div>
+                                <div class="timeline-gap-warning mt-2">
+                                  <i class="ri-error-warning-line"></i>
+                                  <span>Adjusters may argue treatment was unnecessary after this gap in care.</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Record Date Group -->
+                            <div class="timeline-date-group" *ngIf="group.date !== '__gap__'">
+                              <div class="timeline-date-dot"></div>
+                              <div class="timeline-date-label">{{ group.date | date:'MMM d, yyyy' }}</div>
+
+                              <div class="timeline-record-card" *ngFor="let item of group.items"
+                                   (click)="openRecordDetailModal(item.data)">
+                                <div class="d-flex align-items-start gap-3">
+                                  <div class="timeline-type-icon"
+                                       [ngClass]="getProviderTypeClass(item.data.providerType)">
+                                    <i [class]="getProviderTypeIcon(item.data.providerType)"></i>
+                                  </div>
+                                  <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                      <span class="fw-semibold">{{ item.data.providerName }}</span>
+                                      <span class="fw-semibold" [class.text-danger]="item.data.billedAmount > 0"
+                                            [class.text-muted]="!item.data.billedAmount">
+                                        {{ formatCurrency(item.data.billedAmount || 0) }}
+                                      </span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                      <span class="badge bg-primary-subtle text-primary" style="font-size: 11px;">
+                                        {{ getRecordTypeLabel(item.data.recordType) }}
+                                      </span>
+                                      <span class="badge bg-info-subtle text-info" style="font-size: 11px;"
+                                            *ngIf="item.data.providerType">
+                                        {{ getProviderTypeLabel(item.data.providerType) }}
+                                      </span>
+                                      <span class="badge bg-success-subtle text-success" style="font-size: 11px;"
+                                            *ngIf="item.data.citationMetadata">
+                                        <i class="ri-link me-1"></i>sources
+                                      </span>
+                                    </div>
+                                    <div class="text-muted small mt-1 text-truncate" style="max-width: 500px;"
+                                         *ngIf="item.data.keyFindings">
+                                      {{ item.data.keyFindings }}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                          </ng-container>
+                        </div><!-- End vertical-timeline -->
+
+                      </div>
+                    </div>
+                  </div><!-- End Timeline Sub-tab -->
 
                 </div><!-- End Medical Tab py-3 -->
               </ng-template>

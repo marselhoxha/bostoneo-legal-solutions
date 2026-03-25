@@ -16,6 +16,8 @@ export interface Organization {
   logoUrl?: string;
   planType?: string;
   planExpiresAt?: string;
+  firmType?: string;
+  state?: string;
   twilioEnabled?: boolean;
   twilioPhoneNumber?: string;
   twilioWhatsappNumber?: string;

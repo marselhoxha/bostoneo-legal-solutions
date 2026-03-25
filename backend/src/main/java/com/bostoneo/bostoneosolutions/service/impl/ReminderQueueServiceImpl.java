@@ -1,24 +1,29 @@
 package com.bostoneo.bostoneosolutions.service.impl;
 
+import com.bostoneo.bostoneosolutions.dto.email.EmailBranding;
+import com.bostoneo.bostoneosolutions.dto.email.EmailContent;
 import com.bostoneo.bostoneosolutions.model.CalendarEvent;
-import com.bostoneo.bostoneosolutions.model.EmailTemplate;
+import com.bostoneo.bostoneosolutions.model.Organization;
 import com.bostoneo.bostoneosolutions.model.ReminderQueueItem;
 import com.bostoneo.bostoneosolutions.model.User;
-import com.bostoneo.bostoneosolutions.repository.EmailTemplateRepository;
+import com.bostoneo.bostoneosolutions.repository.CalendarEventRepository;
+import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
 import com.bostoneo.bostoneosolutions.repository.ReminderQueueRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
-import com.bostoneo.bostoneosolutions.repository.CalendarEventRepository;
 import com.bostoneo.bostoneosolutions.service.EmailService;
+import com.bostoneo.bostoneosolutions.service.EmailTemplateEngine;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.ReminderQueueService;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,24 +34,33 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
 
     @Autowired
     private ReminderQueueRepository reminderQueueRepository;
-    
-    @Autowired
-    private EmailTemplateRepository emailTemplateRepository;
-    
+
     @Autowired
     private UserRepository<?> userRepository;
-    
+
     @Autowired
     private CalendarEventRepository calendarEventRepository;
-    
+
     @Autowired
     private EmailService emailService;
-    
+
     @Autowired
     private NotificationService notificationService;
 
     @Autowired
     private TenantService tenantService;
+
+    @Autowired
+    private EmailTemplateEngine templateEngine;
+
+    @Autowired
+    private OrganizationRepository organizationRepository;
+
+    @Value("${UI_APP_URL:http://localhost:4200}")
+    private String frontendUrl;
+
+    @Value("${LEGIENCE_LOGO_URL:https://legience.com/assets/legience-logo.png}")
+    private String legienceLogoUrl;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -127,6 +141,9 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
         
         for (ReminderQueueItem reminder : pendingReminders) {
             try {
+                // Set tenant context so user/org lookups work correctly in the scheduler thread
+                TenantContext.setCurrentTenant(reminder.getOrganizationId());
+
                 // SECURITY: Use org-filtered query to ensure event belongs to same org as reminder
                 Optional<CalendarEvent> eventOpt = calendarEventRepository.findByIdAndOrganizationId(
                         reminder.getEventId(), reminder.getOrganizationId());
@@ -153,35 +170,72 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
                     continue;
                 }
                 
-                // Get the appropriate email template
-                Optional<EmailTemplate> templateOpt = emailTemplateRepository
-                        .findDefaultTemplateForEventType(event.getEventType());
-                
-                if (templateOpt.isEmpty()) {
-                    log.error("No template found for event type: {}", event.getEventType());
-                    markReminderAsFailed(reminder.getId(), "Email template not found");
-                    continue;
+                // Get organization for branding
+                Organization org = organizationRepository.findById(reminder.getOrganizationId()).orElse(null);
+
+                // Build branding - determine if client-facing or internal
+                boolean isClientFacing = "CLIENT_MEETING".equals(event.getEventType());
+                EmailBranding branding;
+                if (org != null) {
+                    if (isClientFacing) {
+                        branding = EmailBranding.firmClient(org.getName(), org.getLogoUrl(), org.getPrimaryColor(),
+                                org.getEmail(), org.getPhone(), org.getAddress(), frontendUrl);
+                    } else {
+                        branding = EmailBranding.firmInternal(org.getName(), org.getLogoUrl(), org.getPrimaryColor(),
+                                org.getEmail(), frontendUrl);
+                    }
+                } else {
+                    branding = EmailBranding.platform(frontendUrl, legienceLogoUrl);
                 }
-                
-                EmailTemplate template = templateOpt.get();
-                
-                // Prepare template data
-                Map<String, String> templateData = new HashMap<>();
-                templateData.put("userName", user.getFirstName() + " " + user.getLastName());
-                templateData.put("eventTitle", event.getTitle());
-                templateData.put("eventDate", event.getStartTime().format(DATE_FORMATTER));
-                templateData.put("eventTime", event.getStartTime().format(TIME_FORMATTER));
-                templateData.put("minutesBefore", reminder.getMinutesBefore().toString());
-                templateData.put("eventType", event.getEventType());
-                templateData.put("eventLocation", event.getLocation() != null ? event.getLocation() : "N/A");
-                
-                // Send the email
-                boolean emailSent = emailService.sendTemplatedEmail(
-                        user.getEmail(),
-                        template.getSubject(),
-                        template.getBodyTemplate(),
-                        templateData
-                );
+
+                // Determine urgency banner
+                EmailContent.UrgencyBanner urgency = getUrgencyBanner(event.getEventType());
+
+                // Determine detail card accent color
+                String accentColor = getAccentColor(event.getEventType());
+
+                // Build detail card rows
+                List<Map.Entry<String, String>> rows = new ArrayList<>();
+                rows.add(Map.entry("Date", event.getStartTime().format(DATE_FORMATTER)));
+                rows.add(Map.entry("Time", event.getStartTime().format(TIME_FORMATTER)));
+                if (event.getLocation() != null && !event.getLocation().isEmpty()) {
+                    rows.add(Map.entry("Location", event.getLocation()));
+                }
+                if (event.getCaseId() != null && event.getLegalCase() != null) {
+                    if (event.getLegalCase().getTitle() != null) {
+                        rows.add(Map.entry("Case", event.getLegalCase().getTitle()));
+                    }
+                    if (event.getLegalCase().getCaseNumber() != null) {
+                        rows.add(Map.entry("Case #", event.getLegalCase().getCaseNumber()));
+                    }
+                }
+
+                // Build CTA
+                String ctaText = getCtaText(event.getEventType());
+                String ctaUrl = getCtaUrl(event, frontendUrl);
+
+                // Time remaining text
+                String timeText = formatTimeBefore(reminder.getMinutesBefore());
+
+                // Build content
+                String signOff = org != null ? org.getName() : "Legience Team";
+                EmailContent content = EmailContent.builder()
+                        .recipientName(user.getFirstName() + " " + user.getLastName())
+                        .bodyParagraphs(List.of(getReminderIntroText(event.getEventType()), timeText))
+                        .detailCard(EmailContent.DetailCard.builder()
+                                .title(event.getTitle())
+                                .rows(rows)
+                                .accentColor(accentColor)
+                                .build())
+                        .ctaButton(EmailContent.CtaButton.builder().text(ctaText).url(ctaUrl).build())
+                        .signOffName(signOff)
+                        .urgency(urgency)
+                        .build();
+
+                String htmlBody = templateEngine.render(branding, content);
+                String subject = "Reminder: " + event.getTitle();
+
+                boolean emailSent = emailService.sendEmail(user.getEmail(), subject, htmlBody);
                 
                 // Send push notification if enabled for this event
                 boolean pushSent = false;
@@ -210,6 +264,8 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
             } catch (Exception e) {
                 log.error("Error processing reminder: {}", reminder.getId(), e);
                 markReminderAsFailed(reminder.getId(), e.getMessage());
+            } finally {
+                TenantContext.clear();
             }
         }
     }
@@ -291,5 +347,70 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
         List<ReminderQueueItem> reminders = reminderQueueRepository.findByOrganizationIdAndEventId(orgId, eventId);
         reminderQueueRepository.deleteAll(reminders);
         log.info("Deleted {} reminders for event {} in org {}", reminders.size(), eventId, orgId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  Email template helper methods
+    // ─────────────────────────────────────────────────────────────────────
+
+    private EmailContent.UrgencyBanner getUrgencyBanner(String eventType) {
+        return switch (eventType) {
+            case "HEARING", "COURT_DATE" -> EmailContent.UrgencyBanner.builder()
+                    .text("COURT APPEARANCE TODAY").level("red").build();
+            case "DEADLINE" -> EmailContent.UrgencyBanner.builder()
+                    .text("DEADLINE APPROACHING").level("amber").build();
+            default -> null;
+        };
+    }
+
+    private String getAccentColor(String eventType) {
+        return switch (eventType) {
+            case "HEARING", "COURT_DATE" -> "#dc2626";
+            case "DEADLINE" -> "#d97706";
+            case "DEPOSITION" -> "#7c3aed";
+            default -> null; // will use primaryColor from branding
+        };
+    }
+
+    private String getCtaText(String eventType) {
+        return switch (eventType) {
+            case "HEARING", "COURT_DATE" -> "View Case Details";
+            case "DEADLINE" -> "View Deadline";
+            default -> "View Calendar";
+        };
+    }
+
+    private String getCtaUrl(CalendarEvent event, String baseUrl) {
+        if (event.getCaseId() != null && ("HEARING".equals(event.getEventType()) || "COURT_DATE".equals(event.getEventType()))) {
+            return baseUrl + "/legal/cases/" + event.getCaseId();
+        }
+        return baseUrl + "/legal/calendar";
+    }
+
+    private String getReminderIntroText(String eventType) {
+        return switch (eventType) {
+            case "HEARING" -> "This is a reminder for your upcoming hearing.";
+            case "COURT_DATE" -> "This is a reminder for your upcoming court date.";
+            case "DEADLINE" -> "This is a reminder about an approaching deadline.";
+            case "DEPOSITION" -> "This is a reminder for your upcoming deposition.";
+            case "MEDIATION" -> "This is a reminder for your upcoming mediation session.";
+            case "CONSULTATION" -> "This is a reminder for your upcoming consultation.";
+            case "CLIENT_MEETING" -> "This is a reminder for your upcoming meeting with our team.";
+            case "TEAM_MEETING" -> "This is a reminder for your upcoming team meeting.";
+            default -> "This is a reminder for your upcoming event.";
+        };
+    }
+
+    private String formatTimeBefore(Integer minutesBefore) {
+        if (minutesBefore == null) return "";
+        if (minutesBefore < 60) {
+            return "This event is scheduled to begin in " + minutesBefore + " minutes.";
+        } else if (minutesBefore < 1440) {
+            int hours = minutesBefore / 60;
+            return "This event is scheduled to begin in " + hours + (hours == 1 ? " hour." : " hours.");
+        } else {
+            int days = minutesBefore / 1440;
+            return "This event is scheduled to begin in " + days + (days == 1 ? " day." : " days.");
+        }
     }
 } 

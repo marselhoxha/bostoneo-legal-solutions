@@ -756,13 +756,14 @@ export class LegalResearchService {
    */
   sendMessageToConversation(
     conversationId: number,
-    query: string
+    query: string,
+    jurisdiction?: string
   ): Observable<AiConversationMessage> {
     const userId = this.getUserId();
     // Backend auto-selects mode via AIComplexityScorer
     return this.http.post<any>(
       `${this.conversationApiUrl}/${conversationId}/query`,
-      { userId, query },
+      { userId, query, jurisdiction },
       { withCredentials: true }
     ).pipe(
       map(response => response.data.message),

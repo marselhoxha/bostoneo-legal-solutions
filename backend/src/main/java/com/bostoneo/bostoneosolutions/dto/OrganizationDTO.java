@@ -33,6 +33,15 @@ public class OrganizationDTO {
     private Organization.PlanType planType;
     private LocalDateTime planExpiresAt;
 
+    // Firm Type
+    private Organization.FirmType firmType;
+
+    // Jurisdiction — 2-letter US state code (e.g., "TX", "MA")
+    private String state;
+
+    // Email Branding
+    private String primaryColor;
+
     // Twilio Status (not exposing credentials)
     private Boolean twilioEnabled;
     private String twilioPhoneNumber;
@@ -83,6 +92,9 @@ public class OrganizationDTO {
                 .address(org.getAddress())
                 .planType(org.getPlanType())
                 .planExpiresAt(org.getPlanExpiresAt())
+                .firmType(org.getFirmType())
+                .state(org.getState())
+                .primaryColor(org.getPrimaryColor())
                 .twilioEnabled(org.getTwilioEnabled())
                 .twilioPhoneNumber(org.getTwilioPhoneNumber())
                 .twilioWhatsappNumber(org.getTwilioWhatsappNumber())
@@ -118,6 +130,9 @@ public class OrganizationDTO {
         if (email != null) org.setEmail(email);
         if (phone != null) org.setPhone(phone);
         if (address != null) org.setAddress(address);
+        if (firmType != null) org.setFirmType(firmType);
+        if (state != null) org.setState(state);
+        if (primaryColor != null) org.setPrimaryColor(primaryColor);
         if (smsEnabled != null) org.setSmsEnabled(smsEnabled);
         if (whatsappEnabled != null) org.setWhatsappEnabled(whatsappEnabled);
         if (emailEnabled != null) org.setEmailEnabled(emailEnabled);

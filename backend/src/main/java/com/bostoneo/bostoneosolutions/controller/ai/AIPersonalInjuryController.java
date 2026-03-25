@@ -13,6 +13,7 @@ import com.bostoneo.bostoneosolutions.service.OrganizationService;
 import com.bostoneo.bostoneosolutions.service.PIDamageCalculationService;
 import com.bostoneo.bostoneosolutions.service.PIMedicalRecordService;
 import com.bostoneo.bostoneosolutions.service.PIMedicalSummaryService;
+import com.bostoneo.bostoneosolutions.service.JurisdictionResolver;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,8 +50,14 @@ public class AIPersonalInjuryController {
     private final PIMedicalSummaryService medicalSummaryService;
     private final TenantService tenantService;
     private final OrganizationService organizationService;
+    private final JurisdictionResolver jurisdictionResolver;
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(Locale.US);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+
+    /** Resolve the current org's state name for use in AI prompts */
+    private String resolveState() {
+        return jurisdictionResolver.resolveStateName(tenantService.requireCurrentOrganizationId());
+    }
 
     /**
      * AI-powered case value calculation
@@ -61,9 +68,10 @@ public class AIPersonalInjuryController {
         log.info("AI calculating PI case value");
 
         DeferredResult<ResponseEntity<Map<String, Object>>> deferredResult = new DeferredResult<>(90000L);
+        String stateName = resolveState();
 
         String prompt = String.format("""
-            You are an experienced Massachusetts personal injury attorney. Calculate the realistic case value.
+            You are an experienced %s personal injury attorney. Calculate the realistic case value.
 
             CASE INFORMATION:
             Injury Type: %s
@@ -79,9 +87,9 @@ public class AIPersonalInjuryController {
             INSURANCE:
             Policy Limit: %s
 
-            Based on your expertise in Massachusetts personal injury law, provide a REALISTIC case valuation.
+            Based on your expertise in %s personal injury law, provide a REALISTIC case valuation.
             Consider:
-            - Typical jury verdicts in Massachusetts for this injury type
+            - Typical jury verdicts in %s for this injury type
             - The policy limit as a practical cap on recovery
             - The strength of liability
             - Comparative negligence reduction
@@ -108,6 +116,7 @@ public class AIPersonalInjuryController {
 
             Return ONLY the JSON, no explanatory text before or after.
             """,
+            stateName,
             request.getOrDefault("injuryType", "soft_tissue"),
             request.getOrDefault("injuryDescription", ""),
             request.getOrDefault("liabilityAssessment", "CLEAR"),
@@ -115,7 +124,9 @@ public class AIPersonalInjuryController {
             formatCurrency(getDoubleValue(request, "medicalExpenses")),
             formatCurrency(getDoubleValue(request, "lostWages")),
             formatCurrency(getDoubleValue(request, "futureMedical")),
-            formatCurrency(getDoubleValue(request, "policyLimit"))
+            formatCurrency(getDoubleValue(request, "policyLimit")),
+            stateName,
+            stateName
         );
 
         claudeService.generateCompletion(prompt, false)
@@ -202,8 +213,9 @@ public class AIPersonalInjuryController {
             );
         }
 
+        String stateName = resolveState();
         String prompt = String.format("""
-            You are an experienced Massachusetts personal injury attorney analyzing case value.
+            You are an experienced %s personal injury attorney analyzing case value.
             %s
             INJURY INFORMATION:
             Injury Type: %s
@@ -232,12 +244,12 @@ public class AIPersonalInjuryController {
 
             2. DAMAGES ANALYSIS
                - Evaluate if the multiplier used is appropriate for this injury type
-               - Compare to typical Massachusetts jury verdicts for similar injuries
+               - Compare to typical jury verdicts in this state for similar injuries
                - Suggest if economic damages calculations are reasonable
 
             3. SETTLEMENT STRATEGY
                - Recommended initial demand range
-               - Expected settlement range based on similar Massachusetts cases
+               - Expected settlement range based on similar cases in this state
                - Key factors that could increase or decrease value
 
             4. LITIGATION CONSIDERATIONS
@@ -250,8 +262,9 @@ public class AIPersonalInjuryController {
                - Counter-arguments to anticipate from insurance
                - Documentary evidence to strengthen the case
 
-            Provide specific, actionable advice based on Massachusetts personal injury law.
+            Provide specific, actionable advice based on %s personal injury law.
             """,
+            stateName,
             caseContextSection,
             request.get("injuryType"),
             request.get("injuryDescription"),
@@ -264,7 +277,8 @@ public class AIPersonalInjuryController {
             calculatedValue.getOrDefault("multiplier", 2.0),
             formatCurrency(getDoubleValue(calculatedValue, "nonEconomicDamages")),
             formatCurrency(getDoubleValue(calculatedValue, "totalCaseValue")),
-            formatCurrency(getDoubleValue(calculatedValue, "adjustedCaseValue"))
+            formatCurrency(getDoubleValue(calculatedValue, "adjustedCaseValue")),
+            stateName
         );
 
         claudeService.generateCompletion(prompt, false)
@@ -362,7 +376,7 @@ public class AIPersonalInjuryController {
                 caseId,
                 userPrompt,
                 "demand_letter",
-                "Massachusetts",
+                resolveState(),
                 title,
                 null, // conversationId - create new
                 isDetailed ? "THOROUGH" : "FAST", // research mode
@@ -529,9 +543,10 @@ public class AIPersonalInjuryController {
         log.info("Analyzing settlement with Claude AI");
 
         DeferredResult<ResponseEntity<Map<String, Object>>> deferredResult = new DeferredResult<>(60000L);
+        String stateName = resolveState();
 
         String prompt = String.format("""
-            You are an experienced Massachusetts personal injury settlement negotiator.
+            You are an experienced %s personal injury settlement negotiator.
 
             CASE DETAILS:
             Injury Type: %s
@@ -575,6 +590,7 @@ public class AIPersonalInjuryController {
 
             Provide specific, actionable negotiation strategy.
             """,
+            stateName,
             request.get("injuryType"),
             formatCurrency(getDoubleValue(request, "medicalExpenses")),
             formatCurrency(getDoubleValue(request, "policyLimit")),
@@ -997,9 +1013,11 @@ public class AIPersonalInjuryController {
             boolean isDetailed
     ) {
         String letterDate = LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy"));
+        String stateName = resolveState();
 
         return String.format("""
-            Generate a professional demand package for a Massachusetts personal injury case.
+            JURISDICTION: %s
+            Generate a professional demand package for a personal injury case in the above jurisdiction.
             This must read as a polished, attorney-ready demand letter — NOT a template or outline.
 
             ============================================================
@@ -1078,9 +1096,9 @@ public class AIPersonalInjuryController {
             - Accident narrative: Describe what happened in vivid, chronological detail. Use the actual accident location and date from CASE DATA.
             - Defendant's negligence: Explain clearly how the defendant was at fault.
             - Legal standard for liability:
-              * For rear-end collisions: "Under Massachusetts law, a rear-end collision creates a rebuttable presumption of negligence on the following driver." Reference M.G.L. c. 90, § 14.
+              * For rear-end collisions: Reference the applicable state statute creating a presumption of negligence on the following driver. Use the correct citation for the jurisdiction.
               * IMPORTANT: Use "presumption of negligence" — NEVER "negligence per se" for rear-end cases.
-              * For other collisions: State the applicable duty of care and how it was breached.
+              * For other collisions: State the applicable duty of care and how it was breached using correct state law citations.
             - Conclude with a strong statement that liability is clear and undisputed.
 
             ============================================================
@@ -1115,7 +1133,7 @@ public class AIPersonalInjuryController {
 
             After the table, include: "If you claim any of the medical treatment above was unnecessary, or that any of the bills associated with such treatment were unreasonable, then please identify in writing which bills you dispute and the factual basis for such dispute."
 
-            PIP COORDINATION: "Client's PIP benefits under M.G.L. c. 90, § 34A have been exhausted/coordinated, entitling recovery of the full medical special damages from the bodily injury coverage."
+            PIP/NO-FAULT COORDINATION: If the jurisdiction has PIP or no-fault insurance requirements, include a coordination statement referencing the applicable state PIP statute. State that PIP benefits have been exhausted/coordinated, entitling recovery of the full medical special damages from the bodily injury coverage. Use the correct statutory citation for this jurisdiction.
 
             ### 4.3 Future Medical Expenses (if applicable)
             If future medical expense data exists in the DAMAGES CALCULATION, create a table with columns: Procedure, Years, Frequency/Year, Cost Each, Total. Use actual projected treatment data. Include a bold Total Future Medical row.
@@ -1147,8 +1165,8 @@ public class AIPersonalInjuryController {
             SECTION 5: BAD FAITH NOTICE & DEMAND TO SETTLE
             ============================================================
 
-            Statutory Bad Faith Notice (Massachusetts-Specific):
-            "Please be advised that failure to tender policy limits under circumstances where liability is clear and damages substantially exceed the policy limits may constitute an unfair claim settlement practice under M.G.L. c. 176D, § 3(9) and an unfair or deceptive act under M.G.L. c. 93A, §§ 2 and 9. We reserve all rights to pursue such claims if this matter is not resolved promptly and fairly."
+            Statutory Bad Faith Notice:
+            Include a bad faith / unfair claim settlement practices notice citing the applicable state statutes for this jurisdiction. Reference the state's unfair insurance practices act and consumer protection statute with correct citations. Warn that failure to tender policy limits may constitute a violation of these statutes and that all rights are reserved.
 
             Demand:
             - State the total demand amount using the actual Total Damages calculated in Section 4.1
@@ -1156,7 +1174,7 @@ public class AIPersonalInjuryController {
               Use assertive language: "Tender of the policy limits is the only reasonable course of action to protect your insured from personal exposure."
               Do NOT use weak language like "we will consider" or "we may accept."
             - 30-day response deadline from date of letter
-            - Consequences of non-response: "Failure to respond within this timeframe will result in the immediate filing of a civil action, at which time we will seek all available damages including those provided under M.G.L. c. 93A."
+            - Consequences of non-response: State that failure to respond will result in filing a civil action seeking all available damages including those under the applicable state consumer protection or bad faith statute. Use the correct citation for this jurisdiction.
 
             Closing:
             - "Please do not hesitate to contact me if you have any additional questions or concerns."
@@ -1170,10 +1188,11 @@ public class AIPersonalInjuryController {
             ============================================================
             FINAL SELF-CHECK BEFORE RESPONDING
             ============================================================
-            Before you submit, scan your entire response for the characters [ and ]. If you find ANY square brackets (except in statute citations like M.G.L. c. 90), you have FAILED. Replace them with actual data from the CASE DATA sections above.
+            Before you submit, scan your entire response for the characters [ and ]. If you find ANY square brackets (except in statute citations), you have FAILED. Replace them with actual data from the CASE DATA sections above.
 
             %s
             """,
+            stateName,
             clientName,
             request.getOrDefault("defendantName", "Unknown Defendant"),
             request.getOrDefault("insuranceCompany", "Unknown Insurance Company"),
@@ -1194,7 +1213,7 @@ public class AIPersonalInjuryController {
             letterDate, // also used for pain & suffering days calculation reference
             isDetailed
                 ? "Make the letter thorough and compelling, suitable for policy limits demands. This is a serious injury case warranting detailed documentation."
-                : "Keep the letter focused and professional while including all required Massachusetts-specific elements."
+                : "Keep the letter focused and professional while including all required jurisdiction-specific elements."
         );
     }
 }

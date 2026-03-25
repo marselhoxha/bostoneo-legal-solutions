@@ -138,4 +138,9 @@ public interface PIMedicalRecordService {
      * @return List of record IDs that need citation metadata
      */
     List<Long> getRecordsWithoutCitations();
+
+    /**
+     * Get scan status — how many case documents are unscanned
+     */
+    Map<String, Object> getScanStatus(Long caseId);
 }

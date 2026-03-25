@@ -60,6 +60,23 @@ public class QuerySimilarityService {
             return Optional.empty();
         }
 
+        // CRITICAL: Filter by jurisdiction to prevent cross-jurisdiction cache pollution
+        // "What are the elements of negligence?" for Texas vs Oregon must not match
+        validCaches = validCaches.stream()
+            .filter(cache -> {
+                String cacheJurisdiction = cache.getJurisdiction();
+                if (jurisdiction == null || jurisdiction.isEmpty()) {
+                    return cacheJurisdiction == null || cacheJurisdiction.isEmpty();
+                }
+                return jurisdiction.equalsIgnoreCase(cacheJurisdiction);
+            })
+            .collect(Collectors.toList());
+
+        if (validCaches.isEmpty()) {
+            log.debug("No valid caches found for mode: {} and jurisdiction: {}", researchMode, jurisdiction);
+            return Optional.empty();
+        }
+
         // CRITICAL: Filter by caseId to prevent cross-case cache pollution
         // If caseId is null/empty, only match other null/empty caseIds (general queries)
         // If caseId is provided, only match that specific case

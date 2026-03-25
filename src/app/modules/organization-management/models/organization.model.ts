@@ -133,7 +133,9 @@ export interface OrganizationInvitation {
 export type InvitationStatus = 'PENDING' | 'EXPIRED' | 'ACCEPTED';
 
 export const ROLE_OPTIONS = [
-  { value: 'USER', label: 'User', description: 'Standard access to organization features' },
-  { value: 'MANAGER', label: 'Manager', description: 'Can manage team members and settings' },
-  { value: 'ADMIN', label: 'Admin', description: 'Full access to all organization features' }
+  { value: 'ROLE_ATTORNEY', label: 'Attorney', description: 'Full case management, AI tools, billing, and document access' },
+  { value: 'ROLE_PARALEGAL', label: 'Paralegal', description: 'Case support, document management, and research tools' },
+  { value: 'ROLE_SECRETARY', label: 'Secretary', description: 'Calendar, task management, and basic document access' },
+  { value: 'ROLE_ADMIN', label: 'Admin', description: 'Full administrative access including team and billing management' },
+  { value: 'ROLE_USER', label: 'User', description: 'Standard access to organization features' }
 ];

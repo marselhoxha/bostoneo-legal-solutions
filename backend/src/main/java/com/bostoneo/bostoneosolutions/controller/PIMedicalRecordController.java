@@ -319,6 +319,24 @@ public class PIMedicalRecordController {
     }
 
     /**
+     * Check how many case documents have not been scanned yet.
+     * Frontend uses this to show "X new documents found" banner.
+     */
+    @GetMapping("/scan-status")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> getScanStatus(@PathVariable("caseId") Long caseId) {
+        Map<String, Object> status = medicalRecordService.getScanStatus(caseId);
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("scanStatus", status))
+                        .message("Scan status retrieved")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
      * Scan all case documents and auto-populate medical records.
      * Returns immediately (HTTP 202) and processes in background via async thread.
      * Sends WebSocket notification when scan completes.
@@ -366,8 +384,8 @@ public class PIMedicalRecordController {
 
                 Map<String, Object> scanResult = medicalRecordService.scanCaseDocuments(caseId, onProgress);
 
-                // Send lightweight completion via notification channel (triggers notification bell).
-                // Only include summary fields — NOT the full records/files lists which can be huge.
+                // Send completion via data channel (NOT notification bell).
+                // The frontend BackgroundTaskService handles the toast notification.
                 if (userId != null) {
                     int recordsCreated = scanResult.get("recordsCreated") != null
                             ? (int) scanResult.get("recordsCreated") : 0;
@@ -379,12 +397,7 @@ public class PIMedicalRecordController {
                     wsPayload.put("success", true);
                     wsPayload.put("recordsCreated", recordsCreated);
                     wsPayload.put("documentsScanned", documentsScanned);
-                    wsPayload.put("title", "Document Scan Complete");
-                    wsPayload.put("message", recordsCreated > 0
-                            ? recordsCreated + " medical records created from your documents."
-                            : "No new medical documents found to process.");
-                    wsPayload.put("url", "/legal/ai-assistant/practice-areas/personal-injury?caseId=" + caseId + "&tab=medical&subtab=records");
-                    webSocketHandler.sendNotificationToUser(userId, wsPayload);
+                    webSocketHandler.sendDataToUser(userId, wsPayload);
                 }
 
                 log.info("Async scan complete for case {}: {} records created",
@@ -396,10 +409,8 @@ public class PIMedicalRecordController {
                     errorPayload.put("type", "MEDICAL_SCAN_COMPLETE");
                     errorPayload.put("caseId", caseId);
                     errorPayload.put("success", false);
-                    errorPayload.put("error", e.getMessage());
-                    errorPayload.put("title", "Document Scan Failed");
                     errorPayload.put("message", "Failed to scan documents: " + e.getMessage());
-                    webSocketHandler.sendNotificationToUser(userId, errorPayload);
+                    webSocketHandler.sendDataToUser(userId, errorPayload);
                 }
             } finally {
                 activeScanCases.remove(caseId);

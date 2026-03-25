@@ -132,7 +132,10 @@ public class UserResource {
         UserDTO user = userService.getUserByEmail(getAuthenticatedUser(authentication).getEmail());
         if (user.getOrganizationId() != null) {
             organizationRepository.findById(user.getOrganizationId())
-                .ifPresent(org -> user.setOrganizationName(org.getName()));
+                .ifPresent(org -> {
+                    user.setOrganizationName(org.getName());
+                    user.setOrganizationFirmType(org.getFirmType() != null ? org.getFirmType().name() : null);
+                });
         }
         return ResponseEntity.ok().body(
                 HttpResponse.builder()
@@ -558,10 +561,13 @@ public class UserResource {
     }
 
     private ResponseEntity<HttpResponse> sendResponse(UserDTO user) {
-        // Populate organization name for frontend display
+        // Populate organization name and firm type for frontend display
         if (user.getOrganizationId() != null) {
             organizationRepository.findById(user.getOrganizationId())
-                .ifPresent(org -> user.setOrganizationName(org.getName()));
+                .ifPresent(org -> {
+                    user.setOrganizationName(org.getName());
+                    user.setOrganizationFirmType(org.getFirmType() != null ? org.getFirmType().name() : null);
+                });
         }
         // Reuse principal from authentication — avoids 5+ redundant DB queries
         UserPrincipal principal = authenticatedPrincipal.get();

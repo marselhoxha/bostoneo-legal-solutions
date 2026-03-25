@@ -84,10 +84,10 @@ public class DocumentTypeTemplateRegistry {
         }
     }
 
-    /** Normalize document type: lowercase, replace hyphens with underscores */
+    /** Normalize document type: lowercase, replace hyphens and spaces with underscores */
     private String normalize(String type) {
         if (type == null) return "";
-        return type.toLowerCase().replace("-", "_");
+        return type.toLowerCase().replace("-", "_").replace(" ", "_");
     }
 
     public String getSystemPrompt() {
@@ -104,11 +104,29 @@ public class DocumentTypeTemplateRegistry {
         return t != null && t.getTemplate() != null ? t.getTemplate() : "";
     }
 
+    /** Try jurisdiction-specific template first (e.g., "motion_texas"), fall back to generic */
+    public String getTemplateText(String documentType, String jurisdiction) {
+        if (jurisdiction != null && !jurisdiction.isBlank()) {
+            String jurisTemplate = getTemplateText(documentType + "_" + jurisdiction);
+            if (!jurisTemplate.isEmpty()) return jurisTemplate;
+        }
+        return getTemplateText(documentType);
+    }
+
     public String getHints(String documentType) {
         DocumentTypeTemplate t = getTemplate(documentType);
         if (t != null && t.getHints() != null) return t.getHints();
         // Default fallback for unknown types
         return "Include all standard legal elements appropriate for this document type. Address parties, key terms, obligations, and any jurisdiction-specific requirements.";
+    }
+
+    /** Try jurisdiction-specific hints first, fall back to generic */
+    public String getHints(String documentType, String jurisdiction) {
+        if (jurisdiction != null && !jurisdiction.isBlank()) {
+            DocumentTypeTemplate t = getTemplate(documentType + "_" + jurisdiction);
+            if (t != null && t.getHints() != null) return t.getHints();
+        }
+        return getHints(documentType);
     }
 
     public CitationLevel getCitationLevel(String documentType) {
@@ -152,6 +170,22 @@ public class DocumentTypeTemplateRegistry {
         }
 
         return CitationLevel.COMPREHENSIVE;
+    }
+
+    /** Try jurisdiction-specific citation level first, fall back to generic */
+    public CitationLevel getCitationLevel(String documentType, String jurisdiction) {
+        if (jurisdiction != null && !jurisdiction.isBlank()) {
+            DocumentTypeTemplate t = getTemplate(documentType + "_" + jurisdiction);
+            if (t != null && t.getCitationLevel() != null) {
+                try {
+                    return CitationLevel.valueOf(t.getCitationLevel());
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid citation level '{}' for type '{}_{}', falling back",
+                            t.getCitationLevel(), documentType, jurisdiction);
+                }
+            }
+        }
+        return getCitationLevel(documentType);
     }
 
     public boolean isLetterType(String documentType) {

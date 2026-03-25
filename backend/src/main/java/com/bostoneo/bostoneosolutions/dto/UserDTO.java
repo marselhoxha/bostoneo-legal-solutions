@@ -37,6 +37,9 @@ public class UserDTO {
     // Organization name for display
     private String organizationName;
 
+    // Organization firm type for navigation
+    private String organizationFirmType;
+
     // Permissions as a comma-separated string
     private String permissions;
     

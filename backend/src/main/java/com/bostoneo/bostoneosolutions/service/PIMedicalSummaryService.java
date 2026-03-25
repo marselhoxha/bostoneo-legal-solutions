@@ -66,6 +66,17 @@ public interface PIMedicalSummaryService {
     List<Map<String, Object>> analyzeTreatmentGaps(Long caseId);
 
     /**
+     * Generate an AI-powered adjuster defense analysis that predicts how an insurance
+     * adjuster will attack the case and provides specific counter-arguments.
+     */
+    Map<String, Object> generateAdjusterDefenseAnalysis(Long caseId);
+
+    /**
+     * Retrieve saved adjuster defense analysis from database
+     */
+    Map<String, Object> getSavedAdjusterAnalysis(Long caseId);
+
+    /**
      * Delete medical summary for a case
      */
     void deleteMedicalSummary(Long caseId);

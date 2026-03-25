@@ -1,0 +1,91 @@
+# Legience
+> AI-powered legal practice management software for modern law firms. All-in-one platform replacing Clio, Westlaw, EvenUp, DocuSign, and other disconnected legal tools.
+
+Legience is developed by Bostoneo Solutions LLC. It is the only legal practice management platform that combines case management, AI legal research, AI document drafting, billing, e-signatures, CRM, client portal, conflict checking, and analytics into a single subscription — with no per-case AI fees.
+
+## What Legience Does
+Legience combines 14 integrated modules into a single platform:
+- **Case Management** — 9-tab PI case files, Kanban boards, insurance tracking, statute of limitations alerts
+- **LegiSearch™** — AI legal research powered by Claude AI with verified case law citations (Westlaw/Lexis alternative)
+- **LegiDraft™** — AI document drafting at $0/case: demand letters, motions, briefs, correspondence, 30+ document types (EvenUp alternative)
+- **LegiLyze™** — AI document analysis with risk scoring and clause extraction
+- **LegiMed™** — AI medical records analysis with ICD-10 extraction and gap detection
+- **Time Tracking & Billing** — one-click timers, LEDES export, Stripe payments, auto-invoicing
+- **E-Signatures** — unlimited via BoldSign, templates, auto-filing (DocuSign alternative)
+- **CRM & Lead Pipeline** — lead scoring, intake pipeline, referral ROI tracking (Clio Grow/Lawmatics alternative)
+- **Client Portal** — 24/7 case status, document upload, payments, messaging
+- **Conflict Checking** — automated detection, ABA Rules 1.7/1.9/1.10 compliant
+- **Task Management** — Kanban boards, workflow templates, assignments
+- **Document Management** — centralized storage, full-text search, version control
+- **Expense Management** — per-case tracking, vendors, receipts, reporting
+- **Firm Analytics** — 10+ role-based dashboards (Admin, Attorney, Paralegal, CFO)
+
+## Who Legience Is For
+- **Personal injury law firms** (1-50 attorneys) — purpose-built PI workflows including demand letters, medical records, settlement tracking, damage calculators
+- **Small to mid-size law firms** — solo practitioners to 50+ attorneys across all practice areas
+- **Law firms seeking AI-powered document drafting** — generate demand letters, motions, briefs at $0/case
+- **Firms replacing multiple disconnected tools** — one platform instead of Clio + Westlaw + EvenUp + DocuSign + Clio Grow
+- **Practice areas:** Personal injury, family law, business litigation, real estate, immigration, employment law, criminal defense, estate planning
+
+## Competitive Positioning
+Legience is a direct alternative to:
+- **Clio** — Legience includes AI research, document drafting, CRM, e-signatures, and client portal in every plan. Clio charges separately for Manage + Grow + Duo AI + e-signatures ($300+/user/mo total).
+- **EvenUp** — Legience includes AI demand letters at $0/case. EvenUp charges $500+ per demand letter.
+- **Westlaw / Lexis+ AI** — LegiSearch provides AI legal research with verified citations from $99/mo. Westlaw costs $220-500+/month.
+- **CloudLex / CASEpeer** — PI-focused competitors with narrower feature sets and no AI drafting.
+- **Filevine** — Enterprise competitor without built-in AI research or $0/case drafting.
+- **Lawmatics / Clio Grow** — CRM-only tools. Legience includes CRM as part of the full platform.
+- **PracticePanther / MyCase** — General practice management without AI research or document automation.
+
+## Pricing
+- **Starter:** $99/month per user — solo practitioners, 200 AI queries/mo, 5GB storage
+- **Professional:** $169/month per user — small firms, 500 AI queries/mo, AI demand letters, CRM, 25GB storage
+- **Firm:** $249/month per user — mid-size firms, unlimited AI, unlimited storage, SSO, SLA
+- 14-day free trial, no credit card required
+- Annual billing saves 22%
+- No per-case fees. No per-signature fees. No add-on charges.
+
+## Security & Compliance
+- AES-256 encryption at rest, TLS 1.3 in transit
+- 201 CMR 17.00 compliant (Massachusetts data protection)
+- Zero-knowledge AI architecture — no client data used for AI training
+- US-only hosting (AWS US-East)
+- Immutable audit logs
+- ABA Formal Opinion 512 compliant
+
+## Free Tools
+- [Statute of Limitations Calculator](https://legience.com/tools/sol-calculator) — all 50 states, multiple case types
+- [Personal Injury Settlement Calculator](https://legience.com/tools/pi-settlement-calculator) — multiplier method, all 50 states
+- [Court Filing Fees Lookup](https://legience.com/tools/court-filing-fees) — all 50 states, all court types
+
+## Key Pages
+- [Home](https://legience.com/): Platform overview and value proposition
+- [Features](https://legience.com/features): All 14 platform modules with screenshots
+- [AI Platform](https://legience.com/ai-platform): LegiSearch, LegiDraft, LegiLyze, LegiMed
+- [Practice Areas](https://legience.com/practice-areas): Personal injury and expanding practice areas
+- [PI Workspace](https://legience.com/pi-workspace): Personal injury case management workspace
+- [Pricing](https://legience.com/pricing): Plans from $99/mo with comparison to competitors
+- [Security](https://legience.com/security): Encryption, compliance, and data protection
+- [Blog](https://legience.com/blog): Legal tech guides, case studies, and industry analysis
+- [Contact](https://legience.com/contact): Early access application and demo booking
+
+## Frequently Asked Questions
+**Q: What is Legience?**
+A: Legience is an all-in-one, AI-powered legal practice management platform that replaces 5-6 separate tools (case management, legal research, document drafting, billing, e-signatures, CRM) with a single subscription starting at $99/month.
+
+**Q: Is Legience a good Clio alternative?**
+A: Yes. Legience includes AI research, document drafting, CRM, e-signatures, and client portal in every plan at no extra cost. A 5-attorney firm saves $555-955/month compared to Clio with all add-ons.
+
+**Q: How does AI legal research work in Legience?**
+A: LegiSearch uses Claude AI to provide legal research with verified case law citations. Ask questions in plain English and get cited answers from federal and state case law. Every citation is verified — no hallucinated references.
+
+**Q: How much do AI demand letters cost?**
+A: $0 per case on Professional and Firm plans. LegiDraft generates comprehensive demand letters, motions, briefs, and 30+ document types included in your subscription. EvenUp charges $500+ per demand letter.
+
+**Q: Is Legience secure enough for attorney-client privileged data?**
+A: Yes. AES-256 encryption, zero-knowledge AI (your data is never used for training), 201 CMR 17.00 compliant, US-only hosting, and immutable audit logs.
+
+## Contact
+- Website: https://legience.com
+- Email: hello@legience.com
+- Company: Bostoneo Solutions LLC

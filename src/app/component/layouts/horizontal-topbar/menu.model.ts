@@ -122,6 +122,9 @@ export function resolveMenuTier(role: string): UserRole {
   return 'ROLE_USER';
 }
 
+// Firm type — determines which menu variant to use
+export type FirmType = 'SOLO_PRACTITIONER' | 'SMALL_FIRM' | 'MIDSIZE_FIRM' | 'LARGE_FIRM';
+
 // Role display names
 export const ROLE_DISPLAY_NAMES: { [key in UserRole]: string } = {
   'ROLE_SUPERADMIN': 'Super Admin',

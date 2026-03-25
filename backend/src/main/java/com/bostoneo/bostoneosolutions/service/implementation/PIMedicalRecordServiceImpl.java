@@ -8,8 +8,11 @@ import com.bostoneo.bostoneosolutions.model.PIMedicalRecord;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.FileItemRepository;
 import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
+import com.bostoneo.bostoneosolutions.model.PIScannedDocument;
+import com.bostoneo.bostoneosolutions.repository.PIScannedDocumentRepository;
 import com.bostoneo.bostoneosolutions.repository.PIMedicalRecordRepository;
 import com.bostoneo.bostoneosolutions.repository.PIMedicalSummaryRepository;
+import com.bostoneo.bostoneosolutions.service.CaseDocumentService;
 import com.bostoneo.bostoneosolutions.service.PIMedicalRecordService;
 import com.bostoneo.bostoneosolutions.service.PIDocumentChecklistService;
 import com.bostoneo.bostoneosolutions.service.FileStorageService;
@@ -46,6 +49,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
 
     private final PIMedicalRecordRepository repository;
     private final PIMedicalSummaryRepository summaryRepository;
+    private final PIScannedDocumentRepository scannedDocumentRepository;
     private final FileItemRepository fileItemRepository;
     private final LegalCaseRepository legalCaseRepository;
     private final PIDocumentChecklistService documentChecklistService;
@@ -53,6 +57,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
     private final FileStorageService fileStorageService;
+    private final CaseDocumentService caseDocumentService;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -132,6 +137,10 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 .orElseThrow(() -> new ResourceNotFoundException("Medical record not found with ID: " + id));
 
         Long caseId = record.getCaseId();
+
+        // Clear tracking records BEFORE deleting the medical record to avoid orphans.
+        // This ensures source files will be re-processed on the next scan.
+        scannedDocumentRepository.deleteByMedicalRecordId(id);
         repository.delete(record);
 
         // Mark summary as stale
@@ -146,9 +155,11 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         log.info("Deleting all medical records for case: {} in org: {}", caseId, orgId);
         repository.deleteByCaseIdAndOrganizationId(caseId, orgId);
         summaryRepository.deleteByCaseIdAndOrganizationId(caseId, orgId);
+        // Clear tracking table so all files are re-processed on next scan
+        scannedDocumentRepository.deleteByCaseIdAndOrganizationId(caseId, orgId);
         // Zero out the case-level medical total so the dashboard reflects the cleared state immediately
         legalCaseRepository.resetMedicalExpensesTotal(caseId, orgId);
-        log.info("All medical records, summary, and medical total cleared for case {}", caseId);
+        log.info("All medical records, summary, scan tracking, and medical total cleared for case {}", caseId);
         // Return count is best-effort; JPA deleteBy returns void so we return 0 to signal success
         return 0;
     }
@@ -412,6 +423,28 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
     // Document Scanning & Auto-Population Methods
     // ==========================================
 
+    private boolean isScannable(FileItem f) {
+        return f.getMimeType() != null;
+    }
+
+    public Map<String, Object> getScanStatus(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        List<FileItem> files = fileItemRepository.findByCaseIdAndDeletedFalseAndOrganizationId(caseId, orgId);
+        long totalScannable = files.stream().filter(this::isScannable).count();
+        long scanned = files.stream()
+                .filter(this::isScannable)
+                .filter(f -> scannedDocumentRepository.existsByDocumentIdAndOrganizationId(f.getId(), orgId))
+                .count();
+        long unscanned = totalScannable - scanned;
+
+        Map<String, Object> status = new HashMap<>();
+        status.put("totalCaseDocuments", totalScannable);
+        status.put("scannedDocuments", scanned);
+        status.put("unscannedDocuments", unscanned);
+        status.put("hasUnscannedDocuments", unscanned > 0);
+        return status;
+    }
+
     @Override
     public Map<String, Object> scanCaseDocuments(Long caseId) {
         return scanCaseDocuments(caseId, null);
@@ -428,14 +461,14 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         List<Map<String, Object>> scannedFiles = new ArrayList<>();
         List<String> errors = new ArrayList<>();
 
-        // Get all PDF files for this case
+        // Get all scannable files (PDFs + images) for this case
         List<FileItem> files = fileItemRepository.findByCaseIdAndDeletedFalseAndOrganizationId(caseId, orgId);
         List<FileItem> pdfFiles = files.stream()
-                .filter(f -> "application/pdf".equals(f.getMimeType()))
+                .filter(this::isScannable)
                 .collect(Collectors.toList());
 
         int totalFiles = pdfFiles.size();
-        log.info("Found {} PDF files to scan for case {}", totalFiles, caseId);
+        log.info("Found {} scannable files (PDFs + images) to scan for case {}", totalFiles, caseId);
 
         // Send initial progress (0/total)
         sendProgress(onProgress, caseId, 0, totalFiles, "Starting scan...");
@@ -450,8 +483,8 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 fileResult.put("fileId", file.getId());
                 fileResult.put("fileName", file.getOriginalName());
 
-                // Check if this document was already processed
-                boolean alreadyProcessed = repository.existsByDocumentIdAndOrganizationId(file.getId(), orgId);
+                // Check if this document was already processed (using tracking table, not medical records)
+                boolean alreadyProcessed = scannedDocumentRepository.existsByDocumentIdAndOrganizationId(file.getId(), orgId);
                 if (alreadyProcessed) {
                     fileResult.put("status", "skipped");
                     fileResult.put("reason", "Already processed");
@@ -468,21 +501,27 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                     fileResult.put("recordId", record.getId());
                     fileResult.put("provider", record.getProviderName());
                     fileResult.put("recordType", record.getRecordType());
+                    // Track: new record created from this file
+                    trackScannedDocument(caseId, orgId, file.getId(), "created", record.getId(), null);
                 } else if (record != null) {
                     // Merged into an existing record — mark as success but don't double-count
                     fileResult.put("status", "merged");
                     fileResult.put("recordId", record.getId());
                     fileResult.put("provider", record.getProviderName());
                     fileResult.put("recordType", record.getRecordType());
+                    // Track: merged into existing record
+                    trackScannedDocument(caseId, orgId, file.getId(), "merged", record.getId(), null);
                 } else {
                     // Not a medical document — check if it's an insurance document
                     boolean extractedInsurance = tryExtractInsuranceInfo(caseId, orgId, file);
                     if (extractedInsurance) {
                         fileResult.put("status", "insurance_extracted");
                         fileResult.put("reason", "Insurance policy information extracted");
+                        trackScannedDocument(caseId, orgId, file.getId(), "insurance", null, null);
                     } else {
                         fileResult.put("status", "skipped");
                         fileResult.put("reason", "Not identified as medical or insurance document");
+                        trackScannedDocument(caseId, orgId, file.getId(), "non_medical", null, null);
                     }
                 }
                 scannedFiles.add(fileResult);
@@ -497,6 +536,8 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 fileResult.put("status", "error");
                 fileResult.put("error", e.getMessage());
                 scannedFiles.add(fileResult);
+                // Track: file processing failed
+                trackScannedDocument(caseId, orgId, file.getId(), "failed", null, e.getMessage());
             }
 
             // Send progress after each file
@@ -544,6 +585,28 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             onProgress.accept(progress);
         } catch (Exception e) {
             log.warn("Failed to send scan progress: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Track the processing outcome of a file in the pi_scanned_documents table.
+     * Prevents re-processing on subsequent scans. Uses upsert semantics via unique constraint.
+     */
+    private void trackScannedDocument(Long caseId, Long orgId, Long documentId,
+                                       String status, Long medicalRecordId, String errorMessage) {
+        try {
+            PIScannedDocument tracked = PIScannedDocument.builder()
+                    .caseId(caseId)
+                    .organizationId(orgId)
+                    .documentId(documentId)
+                    .status(status)
+                    .medicalRecordId(medicalRecordId)
+                    .errorMessage(errorMessage)
+                    .build();
+            scannedDocumentRepository.save(tracked);
+        } catch (Exception e) {
+            // Log but don't fail the scan — tracking is best-effort, not blocking
+            log.warn("Failed to track scanned document {} (status={}): {}", documentId, status, e.getMessage());
         }
     }
 
@@ -631,14 +694,12 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
     }
 
     private String extractTextFromFile(FileItem file) {
+        // Primary: Tika text extraction (fast, works for text-based PDFs)
         try {
-            // Load file via FileStorageService — works for both local and S3 storage
             org.springframework.core.io.Resource resource = fileStorageService.loadFileAsResource(file.getFilePath());
             try (InputStream stream = resource.getInputStream()) {
                 BodyContentHandler handler = new BodyContentHandler(-1);
                 Metadata metadata = new Metadata();
-                // Set filename so Tika picks the correct parser (critical for S3 ByteArrayResource
-                // which lacks file extension context unlike local FileUrlResource)
                 metadata.set(org.apache.tika.metadata.TikaCoreProperties.RESOURCE_NAME_KEY, file.getOriginalName());
                 if (file.getMimeType() != null) {
                     metadata.set(Metadata.CONTENT_TYPE, file.getMimeType());
@@ -647,13 +708,35 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 ParseContext context = new ParseContext();
                 parser.parse(stream, handler, metadata, context);
                 String text = handler.toString();
-                log.info("Tika extracted {} chars from file {}", text != null ? text.length() : 0, file.getOriginalName());
-                return text;
+                if (text != null && !text.trim().isEmpty()) {
+                    log.info("Tika extracted {} chars from file {}", text.length(), file.getOriginalName());
+                    return text;
+                }
             }
         } catch (Exception e) {
-            log.error("Error extracting text from file {} (id={}): {}", file.getOriginalName(), file.getId(), e.getMessage(), e);
-            return null;
+            log.warn("Tika extraction failed for file {} (id={}): {}", file.getOriginalName(), file.getId(), e.getMessage());
         }
+
+        // Fallback: CaseDocumentService has Vision OCR (PDF→JPEG + Claude Haiku) for scanned PDFs
+        if ("application/pdf".equals(file.getMimeType())) {
+            log.info("Tika returned empty for file {} — attempting OCR fallback via CaseDocumentService", file.getId());
+            try {
+                Long orgId = getRequiredOrganizationId();
+                String ocrText = caseDocumentService.getDocumentText(file.getId(), orgId, 15000);
+                if (ocrText != null && !ocrText.trim().isEmpty()
+                        && !ocrText.startsWith("Error:")
+                        && !ocrText.startsWith("No text content")
+                        && !ocrText.startsWith("This file type")) {
+                    log.info("OCR fallback extracted {} chars from file {}", ocrText.length(), file.getId());
+                    return ocrText;
+                }
+            } catch (Exception e) {
+                log.warn("OCR fallback also failed for file {}: {}", file.getId(), e.getMessage());
+            }
+        }
+
+        log.warn("Could not extract any text from file: {} (id={})", file.getOriginalName(), file.getId());
+        return null;
     }
 
     private Map<String, Object> analyzeDocumentWithAI(String fileName, String documentText) {

@@ -16,6 +16,7 @@ import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { UserService } from '../../../../../service/user.service';
+import { OrganizationService } from '../../../../../core/services/organization.service';
 import { environment } from '@environments/environment';
 import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
 import {
@@ -127,6 +128,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Timeout/Interval tracking for cleanup
   private activeTimeouts: number[] = [];
   private activeIntervals: number[] = [];
+  // SSE connection for real-time workflow progress
+  private workflowEventSource?: EventSource;
   private contentChangeDebounce: any;
 
   // Timing constants
@@ -418,9 +421,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Follow-up questions (migrated to observable from StateService)
   followUpQuestions$ = this.stateService.followUpQuestions$;
 
-  // Jurisdiction
-  selectedJurisdiction = 'Massachusetts';
-  jurisdictions = ['Massachusetts', 'Federal'];
+  // Jurisdiction — only states with working direct citation links + Federal
+  selectedJurisdiction = 'Massachusetts'; // will be overridden from org state on init
+  jurisdictions = [
+    'Federal', 'Florida', 'Massachusetts', 'New York', 'Texas'
+  ];
 
   // Research Mode — unified mode, always THOROUGH
   selectedResearchMode: ResearchMode = ResearchMode.Thorough;
@@ -450,6 +455,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Pending document content - stores markdown content before editor is ready
   // This eliminates placeholder delay by loading content immediately in onEditorCreated()
   private pendingDocumentContent: string | null = null;
+
+  // Original template HTML — stored when document is template-generated.
+  // Used for PDF export to bypass CKEditor's formatting destruction.
+  // Persists across version restores and transformations for the SAME document.
+  private originalTemplateHtml: string | null = null;
+  private originalTemplateDocId: number | string | null = null;
 
   // Track setTimeout ID for content loading to prevent race conditions
   private contentLoadTimeoutId: number | null = null;
@@ -716,6 +727,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   floatingToolbarState: 'idle' | 'quick_actions' | 'prompt_editing' | 'loading' | 'preview' = 'idle';
   floatingToolbarPosition: { top: number; left: number } | null = null;
   floatingPromptText = '';
+  showMoreTools = false;
   aiPreviewResponse = '';
   aiPreviewToolType = '';   // 'polish' | 'condense' | 'advocate' | 'elaborate' | 'custom'
 
@@ -1194,7 +1206,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private sanitizer: DomSanitizer,
     public exhibitPanelService: ExhibitPanelService,
     private caseDocumentsService: CaseDocumentsService,
-    private stationeryService: StationeryService
+    private stationeryService: StationeryService,
+    private organizationService: OrganizationService
   ) {}
 
   /**
@@ -1222,7 +1235,35 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
 
+  // State code → full name mapping for org state resolution
+  private stateCodeToName: Record<string, string> = {
+    'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+    'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'DC': 'District of Columbia',
+    'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois',
+    'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana',
+    'ME': 'Maine', 'MD': 'Maryland', 'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota',
+    'MS': 'Mississippi', 'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+    'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+    'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma', 'OR': 'Oregon',
+    'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina', 'SD': 'South Dakota',
+    'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont', 'VA': 'Virginia',
+    'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming'
+  };
+
   ngOnInit(): void {
+    // Set default jurisdiction from organization state
+    const orgId = this.organizationService.getCurrentOrganizationId();
+    if (orgId) {
+      this.organizationService.getOrganizationById(orgId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(org => {
+          if (org?.state && this.stateCodeToName[org.state]) {
+            this.selectedJurisdiction = this.stateCodeToName[org.state];
+            this.cdr.markForCheck();
+          }
+        });
+    }
+
     // ===== REACTIVE CONVERSATIONS SUBSCRIPTION =====
     // Subscribe to conversations changes to update filtered arrays reactively
     this.conversations$
@@ -1258,6 +1299,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // ===== BACKGROUND TASK SERVICE SETUP =====
     // Mark that user is on AI Workspace (suppresses notifications while on this page)
     this.backgroundTaskService.setIsOnAiWorkspace(true);
+    this.backgroundTaskService.cleanupStaleTasks();
 
     // Subscribe to completed background tasks
     this.backgroundTaskService.completedTask$
@@ -1309,9 +1351,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               this.loadAnalysisHistoryOnce();
             }
           },
-          error: (error) => {
-            console.error('Error loading user profile:', error);
-          }
+          error: () => { /* Error handled silently */ }
         });
     }
 
@@ -1385,7 +1425,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     this.showWorkflowDetailsPage = true;
                     this.cdr.detectChanges();
                   },
-                  error: (err) => console.error('Failed to load workflow:', err)
+                  error: () => { /* Error handled silently */ }
                 });
             }
           }, 500);
@@ -1444,7 +1484,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         this.openConversationWithRetry(conversationId, taskType, retryCount + 1, backendConversationId);
       }, RETRY_DELAY);
     } else {
-      console.warn('❌ Conversation not found after max retries:', conversationId);
       // Show the Question tab so user can see their conversations
       this.selectedTask = taskType === 'draft' ? ConversationType.Draft : ConversationType.Question;
       this.notificationService.warning('Conversation Not Found', 'The conversation may have been deleted or is still loading.');
@@ -1493,7 +1532,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   this.showWorkflowDetailsPage = true;
                   this.cdr.detectChanges();
                 },
-                error: (err) => console.error('Failed to load workflow:', err)
+                error: () => { /* Error handled silently */ }
               });
           }
         }, 1000);
@@ -1652,8 +1691,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         next: (response: any) => {
           this.userCases = response.data?.cases || response.cases || response.content || [];
         },
-        error: (error) => {
-          console.error('Error loading user cases:', error);
+        error: () => {
+          // Error handled silently
           this.userCases = [];
         }
       });
@@ -1709,8 +1748,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.loadingAnalyses = false;
           this.cdr.detectChanges();
         },
-        error: (error) => {
-          console.error('Failed to load analysis history:', error);
+        error: () => {
+          // Error handled silently
           this.loadingAnalyses = false;
           this.cdr.detectChanges();
         }
@@ -1738,7 +1777,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.notificationService.success('Deleted', `Analysis for "${doc.fileName}" deleted successfully`);
         },
         error: (error) => {
-          console.error('Failed to delete analysis:', error);
           this.notificationService.error('Error', 'Failed to delete analysis. Please try again.');
         }
       });
@@ -1749,7 +1787,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   openAnalysisHistoryModal(): void {
     // TODO: Implement analysis history modal
-    this.notificationService.info('Coming Soon', 'Full analysis history view will be available soon');
+    this.notificationService.info('Feature Being Finalized', 'Full analysis history view is being finalized');
   }
 
   /**
@@ -1764,8 +1802,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.loadingCollections = false;
           this.cdr.detectChanges();
         },
-        error: (error) => {
-          console.error('Failed to load collections:', error);
+        error: () => {
+          // Error handled silently
           this.loadingCollections = false;
           this.cdr.detectChanges();
         }
@@ -1785,8 +1823,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.loadingWorkflowTemplates = false;
           this.cdr.detectChanges();
         },
-        error: (error) => {
-          console.error('Failed to load workflow templates:', error);
+        error: () => {
+          // Error handled silently
           this.loadingWorkflowTemplates = false;
           this.cdr.detectChanges();
         }
@@ -1807,8 +1845,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.loadingRecommendations = false;
           this.cdr.detectChanges();
         },
-        error: (error) => {
-          console.error('Failed to load workflow recommendations:', error);
+        error: () => {
+          // Error handled silently
           this.workflowRecommendations = [];
           this.recommendationsSummary = null;
           this.loadingRecommendations = false;
@@ -1868,8 +1906,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.loadingCaseDocuments = false;
           this.cdr.detectChanges();
         },
-        error: (err) => {
-          console.error('Failed to load case documents:', err);
+        error: () => {
+          // Error handled silently
           this.loadingCaseDocuments = false;
           this.cdr.detectChanges();
         }
@@ -1884,9 +1922,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             this.selectedWorkflowTemplate = tmpl;
             this.cdr.detectChanges();
           },
-          error: (err) => {
-            console.error('Failed to load template:', err);
-          }
+          error: () => { /* Error handled silently */ }
         });
     }
   }
@@ -2024,8 +2060,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
           this.cdr.detectChanges();
         },
-        error: (error) => {
-          console.error('Failed to load user workflows:', error);
+        error: () => {
+          // Error handled silently
           this.loadingWorkflows = false;
           this.cdr.detectChanges();
         }
@@ -2153,9 +2189,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
           this.cdr.detectChanges();
         },
-        error: (error) => {
-          console.error('Failed to poll workflows:', error);
-        }
+        error: () => { /* Error handled silently */ }
       });
   }
 
@@ -2190,7 +2224,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         },
         error: (error) => {
-          console.error('Failed to load workflow details:', error);
           this.notificationService.error('Error', 'Failed to load workflow details');
         }
       });
@@ -2382,11 +2415,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         break;
       case 'download':
         // TODO: Implement download report
-        this.notificationService.info('Coming Soon', 'Report download will be available soon');
+        this.notificationService.info('Feature Being Finalized', 'Report download is being finalized');
         break;
       case 'rerun':
         // TODO: Implement rerun workflow
-        this.notificationService.info('Coming Soon', 'Rerun workflow will be available soon');
+        this.notificationService.info('Feature Being Finalized', 'Rerun workflow is being finalized');
         break;
     }
   }
@@ -2429,9 +2462,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
             this.cdr.detectChanges();
           },
-          error: (error) => {
-            console.error('Failed to poll workflow details:', error);
-          }
+          error: () => { /* Error handled silently */ }
         });
     }
   }
@@ -2450,7 +2481,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.startWorkflowPolling();
         },
         error: (error) => {
-          console.error('Failed to resume workflow:', error);
           this.notificationService.error('Error', 'Failed to resume workflow');
         }
       });
@@ -2650,7 +2680,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Failed to start workflow:', error);
         this.startingWorkflow = false;
         this.notificationService.error(
           'Workflow Failed',
@@ -2789,7 +2818,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('Failed to fetch document:', err);
           this.notificationService.error('Error', 'Failed to load document');
         }
       });
@@ -2834,6 +2862,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Close draft streaming SSE if open
     this.closeDraftStream();
+
+    // Close workflow progress SSE if open
+    this.closeWorkflowSSE();
 
     // Clean up scroll spy listener
     this.destroyScrollSpy();
@@ -2996,8 +3027,89 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     });
   }
 
+  // Connect to SSE progress stream for real-time workflow step updates.
+  // Uses hybrid approach: starts timer animation immediately as fallback,
+  // then cancels timers if SSE events arrive (so real progress takes over).
+  private connectWorkflowSSE(sessionId: number): void {
+    this.closeWorkflowSSE();
+    const steps = this.stateService.getWorkflowSteps();
+    const totalSteps = steps.length;
+    if (totalSteps === 0) return;
+
+    // Start timer animation immediately as fallback (in case SSE doesn't connect in time)
+    this.animateWorkflowSteps();
+
+    const sseUrl = `${environment.apiUrl}/api/ai/legal-research/progress-stream?sessionId=${sessionId}`;
+    this.workflowEventSource = new EventSource(sseUrl);
+    let sseActive = false;
+
+    const cancelTimerFallback = () => {
+      if (!sseActive) {
+        sseActive = true;
+        // Cancel timer animation — SSE will drive from here
+        this.activeTimeouts.forEach(id => clearTimeout(id));
+        this.activeTimeouts = [];
+      }
+    };
+
+    this.workflowEventSource.addEventListener('progress', (event: MessageEvent) => {
+      try {
+        const progressEvent = JSON.parse(event.data);
+        const stepType = progressEvent.stepType;
+        cancelTimerFallback();
+
+        if (stepType === 'query_analysis') {
+          this.updateWorkflowStep(steps[0].id, 'active' as any);
+          this.cdr.detectChanges();
+        } else if (stepType === 'tool_execution') {
+          // Mark first step completed, activate middle (search) steps
+          this.updateWorkflowStep(steps[0].id, 'completed' as any);
+          for (let i = 1; i < totalSteps - 1; i++) {
+            this.updateWorkflowStep(steps[i].id, 'active' as any);
+          }
+          this.cdr.detectChanges();
+        }
+      } catch (error) {
+        // Ignore parse errors
+      }
+    });
+
+    this.workflowEventSource.addEventListener('complete', () => {
+      cancelTimerFallback();
+      this.completeAllWorkflowSteps();
+      this.closeWorkflowSSE();
+    });
+
+    this.workflowEventSource.addEventListener('error', (event: MessageEvent) => {
+      if (event.data) {
+        cancelTimerFallback();
+        // Mark last step as error before closing
+        if (totalSteps > 0) {
+          this.updateWorkflowStep(steps[totalSteps - 1].id, 'error' as any);
+          this.cdr.detectChanges();
+        }
+        this.closeWorkflowSSE();
+      }
+    });
+
+    this.workflowEventSource.onerror = () => {
+      if (this.workflowEventSource?.readyState === EventSource.CLOSED) {
+        this.closeWorkflowSSE();
+      }
+    };
+  }
+
+  // Close SSE connection for workflow progress
+  private closeWorkflowSSE(): void {
+    if (this.workflowEventSource) {
+      this.workflowEventSource.close();
+      this.workflowEventSource = undefined;
+    }
+  }
+
   // Complete all workflow steps (called when AI response is received) - now uses StateService
   private completeAllWorkflowSteps(): void {
+    this.closeWorkflowSSE();
     this.stateService.completeAllWorkflowSteps();
     this.cdr.detectChanges();
   }
@@ -3019,9 +3131,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           next: () => {
             // Cancelled successfully
           },
-          error: (err) => {
-            console.error('Failed to cancel backend generation:', err);
-          }
+          error: () => { /* Error handled silently */ }
         });
     }
 
@@ -3169,8 +3279,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               this.cdr.detectChanges();
             }
           },
-          error: (error) => {
-            console.error(`Error loading ${backendTaskType} conversations:`, error);
+          error: () => {
+            // Error handled silently
             completedRequests++;
             // Still update state when all requests are complete (even on error) to avoid stale data
             if (completedRequests === taskTypes.length) {
@@ -3199,7 +3309,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   loadConversation(conversationId: string): void {
     const conv = this.stateService.getConversations().find(c => c.id === conversationId);
     if (!conv || !conv.backendConversationId) {
-      console.error('Conversation not found or missing backend ID');
+      // Error handled silently
       return;
     }
 
@@ -3401,8 +3511,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                     }
                   }, 0);
                 },
-                error: (error) => {
-                  console.error('Error loading draft document:', error);
+                error: () => {
                   // Fall back to regular chat mode if document load fails
                   this.stateService.setShowChat(true);
                   this.stateService.setShowBottomSearchBar(true);
@@ -3431,7 +3540,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
-          console.error('Error loading conversation:', error);
           this.notificationService.error('Error', 'Failed to load conversation. Please try again.');
         }
       });
@@ -3441,7 +3549,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   deleteConversation(conversationId: string): void {
     const conv = this.stateService.getConversations().find(c => c.id === conversationId);
     if (!conv || !conv.backendConversationId) {
-      console.error('Conversation not found or missing backend ID');
+      // Error handled silently
       return;
     }
 
@@ -3471,7 +3579,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               }
             },
             error: (error) => {
-              console.error('Error deleting conversation:', error);
               this.notificationService.error('Error', 'Failed to delete conversation.');
             }
           });
@@ -3511,7 +3618,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   this.cdr.detectChanges();
                 },
                 error: (err) => {
-                  console.error('Failed to delete document:', err);
                   this.notificationService.error('Error', 'Failed to delete document');
                 }
               });
@@ -3572,6 +3678,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.activeDocumentContent = '';
     this.activeDocumentTitle = 'Generated Document';
     this.currentDocumentId = null;
+    this.originalTemplateHtml = null;
+    this.originalTemplateDocId = null;
     this.documentMetadata = {};
 
     // Clean up scroll spy and reset exhibit panel
@@ -3692,23 +3800,28 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   exportToPDF(): void {
     this.notificationService.loading('Preparing PDF', 'Please wait...');
 
-    const htmlContent = this.getEditorContent();
-    if (!htmlContent) {
-      this.notificationService.error('Error', 'No content to export');
-      return;
-    }
+    let exportHtml: string;
 
-    // Clean body content first (strips CKEditor artifacts), then wrap with stationery
-    // (stationery HTML retains its inline styles so the PDF matches the CKEditor view)
-    const cleanBody = this.documentGenerationService.cleanHtmlForExport(htmlContent);
-    const exportHtml = this.wrapContentWithStationery(cleanBody);
+    if (this.originalTemplateHtml) {
+      // Template-generated document: use pristine template HTML for PDF.
+      // CKEditor destroys inline styles/align attributes, so we bypass it entirely.
+      exportHtml = this.wrapContentWithStationery(this.originalTemplateHtml);
+    } else {
+      // Regular document: use CKEditor content + cleanHtmlForExport
+      const htmlContent = this.getEditorContent();
+      if (!htmlContent) {
+        this.notificationService.error('Error', 'No content to export');
+        return;
+      }
+      const cleanBody = this.documentGenerationService.cleanHtmlForExport(htmlContent);
+      exportHtml = this.wrapContentWithStationery(cleanBody);
+    }
 
     // Use content export — backend converts HTML to PDF
     this.documentGenerationService.exportContentToPDF(exportHtml, this.activeDocumentTitle)
       .subscribe({
         next: (response) => this.handleExportResponse(response, 'pdf'),
         error: (error) => {
-          console.error('Error exporting PDF:', error);
           this.notificationService.error('Error', 'Failed to export PDF.');
         }
       });
@@ -3721,22 +3834,25 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   exportToWord(): void {
     this.notificationService.loading('Preparing Word document', 'Please wait...');
 
-    const htmlContent = this.getEditorContent();
-    if (!htmlContent) {
-      this.notificationService.error('Error', 'No content to export');
-      return;
-    }
+    let exportHtml: string;
 
-    // Clean body content first, then wrap with stationery — same as PDF export
-    const cleanBody = this.documentGenerationService.cleanHtmlForExport(htmlContent);
-    const exportHtml = this.wrapContentWithStationery(cleanBody);
+    if (this.originalTemplateHtml) {
+      exportHtml = this.wrapContentWithStationery(this.originalTemplateHtml);
+    } else {
+      const htmlContent = this.getEditorContent();
+      if (!htmlContent) {
+        this.notificationService.error('Error', 'No content to export');
+        return;
+      }
+      const cleanBody = this.documentGenerationService.cleanHtmlForExport(htmlContent);
+      exportHtml = this.wrapContentWithStationery(cleanBody);
+    }
 
     // Use content export — backend converts HTML to Word
     this.documentGenerationService.exportContentToWord(exportHtml, this.activeDocumentTitle)
       .subscribe({
         next: (response) => this.handleExportResponse(response, 'docx'),
         error: (error) => {
-          console.error('Error exporting Word:', error);
           this.notificationService.error('Error', 'Failed to export Word document.');
         }
       });
@@ -3748,7 +3864,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   private handleExportResponse(response: any, format: 'pdf' | 'docx'): void {
     const blob = response.body;
     if (!blob) {
-      console.error('No blob in response body');
       this.notificationService.error('Error', `Failed to export ${format.toUpperCase()}.`);
       return;
     }
@@ -3844,7 +3959,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             this.cdr.detectChanges();
           })
           .catch((error) => {
-            console.error('Error deleting conversations:', error);
             this.notificationService.error('Error', 'Failed to delete some conversations.');
             this.loadConversations(); // Reload to get current state
           });
@@ -4384,7 +4498,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         },
         error: (error) => {
-          console.error('URL fetch error:', error);
           this.isFetchingUrl = false;
           this.cdr.detectChanges();
 
@@ -4441,8 +4554,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           if (analysis.extractedMetadata) {
             try {
               metadata = JSON.parse(analysis.extractedMetadata);
-            } catch (e) {
-              console.warn('Failed to parse metadata:', e);
+            } catch {
+              // Error handled silently
             }
           }
 
@@ -4537,7 +4650,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.notificationService.success('Analysis Loaded', 'Viewing analysis results');
         },
         error: (error) => {
-          console.error('Failed to load analysis:', error);
           this.notificationService.error('Error', 'Failed to load analysis');
         }
       });
@@ -4662,7 +4774,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           }
 
           if (!analysisId && !databaseId) {
-            console.warn('No analysis ID found in conversation messages, showing chat view instead');
+            // No analysis ID found in conversation messages, showing chat view instead
             // Fall back to regular chat view
             this.loadConversationAsChat(conv, response);
             return;
@@ -4702,7 +4814,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                 this.cdr.detectChanges();
               },
               error: (error) => {
-                console.error('Failed to load analysis:', error);
                 this.notificationService.error('Error', 'Failed to load document analysis');
                 // Fall back to chat view
                 this.loadConversationAsChat(conv, response);
@@ -4710,7 +4821,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             });
         },
         error: (error) => {
-          console.error('Failed to load conversation:', error);
           this.notificationService.error('Error', 'Failed to load conversation');
         }
       });
@@ -4799,8 +4909,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             this.stateService.openDocumentViewer(document.id);
             this.cdr.detectChanges();
           },
-          error: (error) => {
-            console.error('Failed to load full analysis:', error);
+          error: () => {
             // Still open viewer with partial data
             this.stateService.openDocumentViewer(document.id);
             this.cdr.detectChanges();
@@ -5099,7 +5208,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   downloadWorkflowReport(workflow: any): void {
     // TODO: Implement report download via service
-    this.notificationService.info('Report', 'Report download will be available soon');
+    this.notificationService.info('Report', 'Report download is being finalized');
   }
 
   /**
@@ -5230,7 +5339,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
-          console.error('Failed to pause workflow:', error);
           this.notificationService.error('Error', 'Failed to pause workflow');
         }
       });
@@ -5249,7 +5357,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.loadUserWorkflows();
         },
         error: (error) => {
-          console.error('Failed to cancel workflow:', error);
           this.notificationService.error('Error', 'Failed to cancel workflow');
         }
       });
@@ -5260,7 +5367,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   onExportPdf(document: AnalyzedDocumentData): void {
     // TODO: Implement PDF export
-    this.notificationService.info('Coming Soon', 'PDF export will be available soon');
+    this.notificationService.info('Feature Being Finalized', 'PDF export is being finalized');
   }
 
   /**
@@ -5268,7 +5375,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   onExportWord(document: AnalyzedDocumentData): void {
     // TODO: Implement Word export
-    this.notificationService.info('Coming Soon', 'Word export will be available soon');
+    this.notificationService.info('Feature Being Finalized', 'Word export is being finalized');
   }
 
   /**
@@ -5276,7 +5383,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   onSaveToFileManager(document: AnalyzedDocumentData): void {
     // TODO: Implement File Manager integration
-    this.notificationService.info('Coming Soon', 'File Manager integration will be available soon');
+    this.notificationService.info('Feature Being Finalized', 'File Manager integration is being finalized');
   }
 
   /**
@@ -5307,8 +5414,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     if (result.extractedMetadata) {
       try {
         metadata = JSON.parse(result.extractedMetadata);
-      } catch (e) {
-        console.warn('Failed to parse metadata:', e);
+      } catch {
+        // Error handled silently
       }
     }
 
@@ -5428,8 +5535,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
              // Force change detection to update badge
              this.cdr.detectChanges();
            },
-           error: (err) => {
-             console.error('Failed to persist assistant message:', err);
+           error: () => {
              // Still update local state even if DB save fails
              conv.messages.push(assistantMessage);
              conv.messageCount = (conv.messageCount || 0) + 1;
@@ -5680,7 +5786,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // TODO: Implement PDF export with strategic analysis formatting
     // For now, show placeholder
     setTimeout(() => {
-      this.notificationService.warning('Coming Soon', 'PDF export with strategic formatting will be available soon');
+      this.notificationService.warning('Feature Being Finalized', 'PDF export with strategic formatting is being finalized');
     }, 500);
   }
 
@@ -5691,7 +5797,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.notificationService.info('Draft', 'Creating draft from analysis...');
     // TODO: Extract key points and create a draft response
     setTimeout(() => {
-      this.notificationService.warning('Coming Soon', 'Automatic draft creation will be available soon');
+      this.notificationService.warning('Feature Being Finalized', 'Automatic draft creation is being finalized');
     }, 500);
   }
 
@@ -5702,7 +5808,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.notificationService.info('Research', 'Analyzing citations...');
     // TODO: Extract case citations and launch research
     setTimeout(() => {
-      this.notificationService.warning('Coming Soon', 'Citation research integration will be available soon');
+      this.notificationService.warning('Feature Being Finalized', 'Citation research integration is being finalized');
     }, 500);
   }
 
@@ -5713,7 +5819,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.notificationService.info('Reminders', 'Setting up timeline reminders...');
     // TODO: Extract dates from timeline and create calendar events
     setTimeout(() => {
-      this.notificationService.warning('Coming Soon', 'Automatic reminder scheduling will be available soon');
+      this.notificationService.warning('Feature Being Finalized', 'Automatic reminder scheduling is being finalized');
     }, 500);
   }
 
@@ -6298,7 +6404,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             this.proceedWithUploadAnalysis(title, userMessage);
           },
           error: (error) => {
-            console.error('Failed to create collection:', error);
             this.notificationService.error('Collection Error', 'Failed to create collection, uploading without collection');
             this.bulkUploadCollectionId = null;
             this.proceedWithUploadAnalysis(title, userMessage);
@@ -6355,15 +6460,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                // Now proceed with document analysis AFTER user message is saved
                this.uploadFiles(session.id);
              },
-             error: (err) => {
-               console.error('Failed to persist user message:', err);
+             error: () => {
                // Still proceed with uploads even if message save failed
                this.uploadFiles(session.id);
              }
            });
         },
         error: (error) => {
-          console.error('Error creating conversation:', error);
           this.stateService.setIsGenerating(false);
           this.notificationService.error('Error', 'Failed to create conversation for document analysis');
         }
@@ -6454,8 +6557,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.stateService.updateWorkflowStep(1, { status: 'active' as any });
       this.generateDocumentFlow(userPrompt);
     } else {
-      // Q&A: use timer-based workflow animation
-      this.animateWorkflowSteps();
+      // Q&A: SSE progress will be connected once session ID is available in generateConversationFlow
       this.generateConversationFlow(userPrompt);
     }
   }
@@ -6624,6 +6726,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
               // Store document metadata
               this.currentDocumentId = data.documentId;
+              this.currentVersionNumber = data.version || 1;
               this.activeDocumentTitle = title || this.extractTitleFromMarkdown(data.content) || 'Untitled Document';
               this.currentDocumentWordCount = data.wordCount || 0;
               this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(data.wordCount || 0);
@@ -6651,6 +6754,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
               this.stateService.setIsGenerating(false);
 
+              // Clear completed background tasks so the spinner stops
+              this.backgroundTaskService.clearCompletedTasks();
+
               // Store pending content — will be loaded into CKEditor in onEditorCreated()
               this.pendingDraftContent = data.content;
 
@@ -6661,8 +6767,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               this.showEditor = true;
               this.setModeForDrafting();
               this.cdr.detectChanges();
-            } catch (e) {
-              console.error('Error handling draft complete event:', e);
+            } catch {
+              // Error handled silently
             }
           });
 
@@ -6702,7 +6808,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                 // Delete the backend conversation since nothing was generated
                 this.legalResearchService.deleteConversationById(backendConversationId)
                   .pipe(takeUntil(this.destroy$))
-                  .subscribe({ error: (e: any) => console.warn('Could not delete aborted conversation:', e) });
+                  .subscribe({ error: () => { /* Error handled silently */ } });
 
                 // Clear chat state so the user prompt doesn't linger
                 this.stateService.clearConversationMessages();
@@ -6742,8 +6848,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               this.stateService.setShowBottomSearchBar(true);
               this.stateService.setActiveConversationId(null);
               this.cdr.detectChanges();
-            } catch (e) {
-              console.error('Error parsing SSE error event:', e);
+            } catch {
+              // Error handled silently
             }
           });
 
@@ -6776,7 +6882,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.cancelGeneration$))
             .subscribe({
               error: (error: any) => {
-                console.error('Error triggering streaming generation:', error);
                 this.closeDraftStream();
                 this.backgroundTaskService.failTask(taskId, error.message || 'Failed to start generation');
 
@@ -6788,7 +6893,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   // Delete the backend conversation since nothing was generated
                   this.legalResearchService.deleteConversationById(backendConversationId)
                     .pipe(takeUntil(this.destroy$))
-                    .subscribe({ error: (e: any) => console.warn('Could not delete aborted conversation:', e) });
+                    .subscribe({ error: () => { /* Error handled silently */ } });
 
                   // Remove temp conversation from sidebar
                   const conversations = this.stateService.getConversations();
@@ -6837,8 +6942,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             });
         },
         error: (error) => {
-          console.error('Error initializing draft conversation:', error);
-
           // Remove temp conversation
           const conversations = this.stateService.getConversations();
           const tempIndex = conversations.findIndex(c => c.id === tempConvId);
@@ -6992,8 +7095,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     const title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
     const researchMode = this.selectedResearchMode; // Use selected mode from UI
 
-    // Create conversation
-    this.legalResearchService.createGeneralConversation(title, taskType)
+    // Create conversation with jurisdiction for state-specific research
+    this.legalResearchService.createGeneralConversation(title, taskType, undefined, this.selectedJurisdiction)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (session) => {
@@ -7034,9 +7137,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             );
             this.backgroundTaskService.startTask(taskId);
 
+            // Connect SSE for real-time workflow progress using the session ID
+            this.connectWorkflowSSE(requestBackendId);
+
             // Subscribe WITHOUT takeUntil(destroy$) so it continues in background
             // Only cancel on explicit user cancellation
-            const subscription = this.legalResearchService.sendMessageToConversation(requestBackendId, userPrompt)
+            const subscription = this.legalResearchService.sendMessageToConversation(requestBackendId, userPrompt, this.selectedJurisdiction)
               .pipe(takeUntil(this.cancelGeneration$))
               .subscribe({
                 next: (message) => {
@@ -7047,6 +7153,22 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   if (this.stateService.getActiveConversationId() === requestConversationId) {
                     // Complete all workflow steps
                     this.completeAllWorkflowSteps();
+
+                    // Detect error responses from backend (modelUsed === "error")
+                    const isErrorResponse = message.modelUsed === 'error';
+
+                    if (isErrorResponse) {
+                      this.stateService.addConversationMessage({
+                        role: 'assistant',
+                        content: message.content,
+                        isError: true,
+                        retryMessage: userPrompt
+                      } as any);
+                      this.stateService.setIsGenerating(false);
+                      this.stateService.setShowBottomSearchBar(true);
+                      this.cdr.detectChanges();
+                      return;
+                    }
 
                     // Extract follow-up questions and remove section from content
                     const cleanedContent = this.extractAndRemoveFollowUpQuestions(message.content);
@@ -7078,8 +7200,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   }
                 },
                 error: (error) => {
-                  console.error('Error getting AI response:', error);
-
                   // Extract the actual error message from backend response
                   const backendMessage = error?.error?.message || error?.message || '';
                   const displayMessage = backendMessage
@@ -7096,8 +7216,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
                   this.stateService.addConversationMessage({
                     role: 'assistant',
-                    content: displayMessage
-                  });
+                    content: displayMessage,
+                    isError: true,
+                    retryMessage: userPrompt
+                  } as any);
                   this.stateService.setIsGenerating(false);
                   this.stateService.setShowBottomSearchBar(true);
                   this.cdr.detectChanges();
@@ -7109,7 +7231,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
-          console.error('Error creating conversation:', error);
           this.stateService.addConversationMessage({
             role: 'assistant',
             content: 'Sorry, I encountered an error creating the conversation. Please try again.'
@@ -7147,10 +7268,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
   // Tool button labels map to backend transformation types
   private readonly toolPromptMap: Record<string, { type: string; prompt?: string }> = {
-    polish:    { type: 'SIMPLIFY' },
-    condense:  { type: 'CONDENSE' },
-    advocate:  { type: 'CUSTOM', prompt: 'Rewrite this text to more strongly advocate for the client\'s legal position. Make the arguments more persuasive, assertive, and favorable while maintaining accuracy and professionalism.' },
-    elaborate: { type: 'EXPAND' },
+    polish:     { type: 'SIMPLIFY' },
+    condense:   { type: 'CONDENSE' },
+    advocate:   { type: 'CUSTOM', prompt: 'Rewrite this text to more strongly advocate for the client\'s legal position. Make the arguments more persuasive, assertive, and favorable while maintaining accuracy and professionalism.' },
+    elaborate:  { type: 'EXPAND' },
+    strengthen: { type: 'CUSTOM', prompt: 'Strengthen the legal arguments by adding more authoritative case citations from the relevant jurisdiction, tightening the legal reasoning, and making each argument more persuasive. Replace weak or general citations with controlling authority (state supreme court, courts of appeals). Do not change the document structure or remove existing content.' },
+    counter:    { type: 'CUSTOM', prompt: 'Identify the 2-3 strongest arguments the opposing party would make against each major point in this document. Add a brief, targeted rebuttal or preemptive response to each anticipated counter-argument, integrated naturally into the existing text after the relevant argument. Do not restructure the document or remove existing content.' },
+    redraft:    { type: 'REDRAFT' },
   };
 
   // ── Floating toolbar: state transition methods ──
@@ -7285,7 +7409,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           }
         },
         error: (err) => {
-          console.error('Floating prompt error:', err);
           this.notificationService.error('Error', 'Could not generate revision. Please try again.');
           this.floatingToolbarState = 'quick_actions';
           this.cleanupTransformMarker();
@@ -7310,14 +7433,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.bookmarkSelectionForTransform();
 
     const editor = this.editorInstance;
-    const fullPlainText = this.ckEditorService.getPlainText(editor);
+    // For template docs, use original template HTML as context (preserves structure).
+    // For regular docs, use CKEditor's plain text.
+    const fullDocContent = this.originalTemplateHtml
+      ? this.originalTemplateHtml
+      : this.ckEditorService.getPlainText(editor);
     const toolConfig = this.toolPromptMap[tool] || { type: tool.toUpperCase() };
 
     const request: any = {
       documentId: this.currentDocumentId as number,
       transformationType: toolConfig.type,
       transformationScope: 'SELECTION' as const,
-      fullDocumentContent: fullPlainText,
+      fullDocumentContent: fullDocContent,
       selectedText: this.selectedText,
       selectionStartIndex: this.selectionRange.index,
       selectionEndIndex: this.selectionRange.index + this.selectionRange.length,
@@ -7361,7 +7488,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           }
         },
         error: (err) => {
-          console.error('Tool transform error:', err);
           this.notificationService.error('Error', 'Transform failed. Please try again.');
           this.floatingToolbarState = 'quick_actions';
           this.cleanupTransformMarker();
@@ -7396,8 +7522,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         }
         const blockType = this.originalSelectionBlocks[i]?.type || 'paragraph';
         const tag = this.blockTypeToHtmlTag(blockType);
-        const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const withBreaks = escaped.replace(/\n/g, '<br>');
+        let processed = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        // Convert markdown bold+italic, bold, and italic to HTML
+        processed = processed.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        processed = processed.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+        const withBreaks = processed.replace(/\n/g, '<br>');
         return `<${tag}>${withBreaks}</${tag}>`;
       });
       const html = this.convertExhibitReferences(htmlParts.join(''));
@@ -7472,8 +7602,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
       // Clear any stale DOM selection that might overlap with greenMarker
       window.getSelection()?.removeAllRanges();
-    } catch (err) {
-      console.error('commitReplace error:', err);
+    } catch {
+      // Error handled silently
     }
 
     this.activeDocumentContent = editor.getData();
@@ -7664,11 +7794,20 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
             insertAfterBlock = child;
           }
         } else {
-          const newParagraph = writer.createElement('paragraph');
-          writer.insert(newParagraph, writer.createPositionAfter(insertAfterBlock));
-          writer.insertText(blockText, newParagraph);
-          writer.setAttribute('highlight', 'greenMarker', writer.createRangeIn(newParagraph));
-          insertAfterBlock = newParagraph;
+          // Convert markdown italic/bold to HTML, then use HTML→model pipeline
+          let blockHtml = blockText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          blockHtml = blockHtml.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+          blockHtml = blockHtml.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+          blockHtml = blockHtml.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+          blockHtml = `<p>${blockHtml}</p>`;
+          const viewFrag = editor.data.processor.toView(blockHtml);
+          const modelFrag = editor.data.toModel(viewFrag);
+          const children: any[] = Array.from(modelFrag.getChildren() as any);
+          for (const child of children) {
+            writer.insert(child, writer.createPositionAfter(insertAfterBlock));
+            writer.setAttribute('highlight', 'greenMarker', writer.createRangeIn(child));
+            insertAfterBlock = child;
+          }
         }
       }
     });
@@ -8021,12 +8160,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
             this.cdr.detectChanges();
           } catch (innerError) {
-            console.error('Error processing transform response:', innerError);
             this.notificationService.error('Error', 'Transformation completed but failed to apply changes.');
           }
         },
         error: (error) => {
-          console.error('Error applying drafting tool:', error);
           this.notificationService.error('Revision Failed', 'Failed to apply document revision. Please try again.', 3000);
         }
       });
@@ -8043,12 +8180,31 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   private setCKEditorContentFromMarkdown(markdownContent: string): void {
     if (!this.editorInstance) {
-      console.warn('⚠️ Cannot set content - CKEditor instance not available');
+      // Cannot set content - CKEditor instance not available
       return;
     }
 
-    // Convert markdown to HTML (tables become real <table> elements)
-    let htmlContent = this.markdownConverter.convert(markdownContent);
+    let htmlContent: string;
+
+    // Template-rendered HTML (initial generation): set originalTemplateHtml for PDF export
+    if (markdownContent.trimStart().startsWith('<!-- HTML_TEMPLATE -->')) {
+      htmlContent = markdownContent.replace('<!-- HTML_TEMPLATE -->', '').trim();
+      this.originalTemplateHtml = htmlContent;
+      this.originalTemplateDocId = this.currentDocumentId;
+    }
+    // Saved CKEditor HTML (after user edits): load directly, keep originalTemplateHtml for PDF
+    else if (markdownContent.trimStart().startsWith('<!-- CKEDITOR_HTML -->')) {
+      htmlContent = markdownContent.replace('<!-- CKEDITOR_HTML -->', '').trim();
+      // Don't touch originalTemplateHtml — it stays set from initial generation for PDF export
+    }
+    // Regular markdown content
+    else {
+      if (this.currentDocumentId !== this.originalTemplateDocId) {
+        this.originalTemplateHtml = null;
+        this.originalTemplateDocId = null;
+      }
+      htmlContent = this.markdownConverter.convert(markdownContent);
+    }
 
     // Migrate any legacy Quill-stored HTML (ql-syntax pre blocks → tables, ql-* classes)
     if (QuillHtmlMigrator.needsMigration(htmlContent)) {
@@ -8074,7 +8230,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   private applyDiffChangesToEditor(changes: Array<{find: string; replace: string}>, autoRemoveHighlights = true): void {
     if (!this.editorInstance) {
-      console.error('❌ Cannot apply diff changes - CKEditor not available');
+      // Cannot apply diff changes - CKEditor not available
       return;
     }
 
@@ -8161,12 +8317,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   private loadDocumentContent(markdownContent: string): void {
     if (!this.editorInstance) {
-      console.warn('⚠️ Cannot load content - CKEditor instance not available');
+      // Cannot load content - CKEditor instance not available
       return;
     }
 
     if (!markdownContent) {
-      console.warn('⚠️ Cannot load content - no markdown content provided');
+      // Cannot load content - no markdown content provided
       return;
     }
 
@@ -8826,7 +8982,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   applyCustomRevision(userPrompt: string): void {
     if (!this.currentDocumentId || !this.activeDocumentContent) {
-      console.error('No document to revise');
+      // No document to revise
       return;
     }
 
@@ -8886,7 +9042,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
             this.scrollToBottom();
           } catch (innerError) {
-            console.error('Error processing custom revision response:', innerError);
             this.stateService.addConversationMessage({
               role: 'assistant',
               content: 'Revision complete, but there was an issue displaying the result.',
@@ -8895,7 +9050,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
-          console.error('Error applying custom revision:', error);
           this.stateService.addConversationMessage({
             role: 'assistant',
             content: 'Sorry, I encountered an error applying the revision. Please try again.',
@@ -8936,7 +9090,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Error saving document:', error);
         this.notificationService.error('Save Failed', 'Failed to save document. Please try again.', 3000);
       }
     });
@@ -8957,7 +9110,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           // Extract blob from HTTP response
           const blob = response.body;
           if (!blob) {
-            console.error('No blob in response body');
             this.notificationService.error('Export Failed', 'Failed to export document. Please try again.', 3000);
             return;
           }
@@ -8985,7 +9137,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.notificationService.success('Downloaded!', `${filename} downloaded successfully`);
         },
         error: (error) => {
-          console.error('Error exporting document:', error);
           this.notificationService.error('Export Failed', 'Failed to export document. Please try again.', 3000);
         }
       });
@@ -9040,8 +9191,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       }
 
       return fallbackName;
-    } catch (error) {
-      console.error('Error extracting filename from header:', error);
+    } catch {
+      // Error handled silently
       return fallbackName;
     }
   }
@@ -9218,11 +9369,12 @@ You can:
     } else {
       this.initializeWorkflowSteps(this.activeTask);
     }
-    this.animateWorkflowSteps();
-
     // Capture conversation ID at request time to prevent race condition
     const requestConversationId = this.stateService.getActiveConversationId();
     const requestBackendId = activeConv.backendConversationId;
+
+    // Use SSE for real-time progress instead of timer animation
+    this.connectWorkflowSSE(requestBackendId);
 
     // Register background task for follow-up message
     const taskId = this.backgroundTaskService.registerTask(
@@ -9236,7 +9388,8 @@ You can:
     // Subscribe WITHOUT takeUntil(destroy$) so it continues in background
     const subscription = this.legalResearchService.sendMessageToConversation(
       requestBackendId,
-      userMessage
+      userMessage,
+      this.selectedJurisdiction
     )
       .pipe(takeUntil(this.cancelGeneration$))
       .subscribe({
@@ -9248,6 +9401,23 @@ You can:
           if (this.stateService.getActiveConversationId() === requestConversationId) {
             // Complete all workflow steps
             this.completeAllWorkflowSteps();
+
+            // Detect error responses from backend (modelUsed === "error")
+            const isErrorResponse = message.modelUsed === 'error';
+
+            if (isErrorResponse) {
+              // Show error message with retry button
+              this.stateService.addConversationMessage({
+                role: 'assistant',
+                content: message.content,
+                isError: true,
+                retryMessage: userMessage
+              } as any);
+              this.stateService.setIsGenerating(false);
+              this.stateService.setShowBottomSearchBar(true);
+              this.cdr.detectChanges();
+              return;
+            }
 
             // Extract follow-up questions and remove section from content
             const cleanedContent = this.extractAndRemoveFollowUpQuestions(message.content);
@@ -9279,8 +9449,6 @@ You can:
           }
         },
         error: (error) => {
-          console.error('Error sending message:', error);
-
           // Extract the actual error message from backend response
           const backendMessage = error?.error?.message || error?.message || '';
           const displayMessage = backendMessage && !backendMessage.includes('Failed to process query')
@@ -9297,8 +9465,10 @@ You can:
 
           this.stateService.addConversationMessage({
             role: 'assistant',
-            content: displayMessage
-          });
+            content: displayMessage,
+            isError: true,
+            retryMessage: userMessage
+          } as any);
           this.stateService.setIsGenerating(false);
           this.stateService.setShowBottomSearchBar(true);
           this.cdr.detectChanges();
@@ -9307,6 +9477,13 @@ You can:
 
     // Store subscription for cleanup
     this.backgroundTaskService.storeSubscription(taskId, subscription);
+  }
+
+  // Retry a failed message by re-sending the original query
+  retryErrorMessage(retryMessage: string): void {
+    if (!retryMessage?.trim()) return;
+    this.followUpMessage = retryMessage;
+    this.sendFollowUpMessage();
   }
 
   // Handle Enter key press in textarea
@@ -9424,7 +9601,7 @@ You can:
         break;
 
       default:
-        console.warn(`Unknown action: ${action}`);
+        // Unknown action - handled silently
     }
   }
 
@@ -9599,7 +9776,8 @@ You can:
   previewVersion(version: any): void {
     this.previewingVersion = version;
     if (this.editorInstance) {
-      this.editorInstance.setData(version.contentHtml || version.content || '');
+      const content = version.contentHtml || version.content || '';
+      this.setCKEditorContentFromMarkdown(content);
       this.editorInstance.enableReadOnlyMode('version-preview');
     }
     this.cdr.detectChanges();
@@ -9646,7 +9824,6 @@ You can:
           this.cdr.detectChanges();
         },
         error: (error) => {
-          console.error('Error loading version history:', error);
           this.notificationService.error('Error', 'Failed to load version history');
           this.loadingVersions = false;
           this.cdr.detectChanges();
@@ -9684,6 +9861,7 @@ You can:
               // Update document state with restored version
               this.activeDocumentContent = restoredVersion.content;
               this.documentMetadata.version = restoredVersion.versionNumber;
+              this.currentVersionNumber = restoredVersion.versionNumber;
               this.currentDocumentWordCount = restoredVersion.wordCount;
               this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(restoredVersion.wordCount);
 
@@ -9711,7 +9889,6 @@ You can:
               this.cdr.detectChanges();
             },
             error: (error) => {
-              console.error('Error restoring version:', error);
               this.notificationService.error('Restore Failed', 'Failed to restore version');
             }
           });
@@ -9764,8 +9941,7 @@ You can:
 
             this.cdr.detectChanges();
           },
-          error: (error) => {
-            console.error('Error saving version:', error);
+          error: () => {
             this.notificationService.error('Save Failed', 'Failed to save version');
           }
         });
@@ -9785,13 +9961,22 @@ You can:
 
     this.isSaving = true;
 
-    const htmlContent = this.editorInstance.getData();
-    const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
+    // For template docs, save CKEditor's HTML directly (preserves user edits).
+    // Use <!-- CKEDITOR_HTML --> marker so it reloads as HTML, not markdown.
+    // The originalTemplateHtml stays separate for PDF export (pristine formatting).
+    let contentToSave: string;
+    if (this.originalTemplateHtml) {
+      const htmlContent = this.editorInstance.getData();
+      contentToSave = '<!-- CKEDITOR_HTML -->\n' + htmlContent;
+    } else {
+      const htmlContent = this.editorInstance.getData();
+      contentToSave = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
+    }
 
     this.documentGenerationService.saveManualVersion(
       this.currentDocumentId as number,
       this.currentUser.id,
-      markdownContent,
+      contentToSave,
       'Manual save'
     )
     .pipe(
@@ -9804,6 +9989,7 @@ You can:
     .subscribe({
       next: (response) => {
         this.documentMetadata.version = response.versionNumber;
+        this.currentVersionNumber = response.versionNumber;
         this.documentMetadata.lastSaved = new Date();
         this.notificationService.success('Saved', `Version ${response.versionNumber} saved`, 1500);
         if (this.stateService.getShowVersionHistory()) {
@@ -9811,7 +9997,6 @@ You can:
         }
       },
       error: (error) => {
-        console.error('Error saving document:', error);
         this.notificationService.error('Save Failed', 'Failed to save document');
       }
     });
@@ -9956,8 +10141,7 @@ You can:
           }
           this.documentMetadata.lastSaved = new Date();
         },
-        error: (error) => {
-          console.error('Error saving transformation:', error);
+        error: () => {
           if (showToast) {
             this.notificationService.error('Save Failed', 'Changes applied but failed to save');
           }
@@ -10100,7 +10284,7 @@ You can:
         const hasNoStructure = responseHeadings === 0 && responseParagraphs === 0 && responseNewlines < 3;
 
         if (hasNoStructure) {
-          console.warn('AI response appears to have lost document structure — treating as commentary');
+          // AI response appears to have lost document structure — treating as commentary
           return {
             aiNote: 'The AI returned a response that would destroy the document\'s formatting and structure. The original document has been preserved.',
             documentContent: null
@@ -10312,7 +10496,7 @@ You can:
     // Find the message with the transformation
     const messageIndex = this.stateService.getConversationMessages().findIndex(msg => msg.id === messageId);
     if (messageIndex === -1) {
-      console.error('Message not found:', messageId);
+      // Error handled silently
       return;
     }
 
@@ -10320,7 +10504,7 @@ You can:
     const transformation = message.transformationComparison;
 
     if (!transformation) {
-      console.error('No transformation data in message');
+      // Error handled silently
       return;
     }
 
@@ -10357,7 +10541,7 @@ You can:
     } else {
       // Selection-based transformation - use CKEditor model operations for precise replacement
       if (!this.documentEditor || !this.editorInstance) {
-        console.error('CKEditor not available');
+        // Error handled silently
         return;
       }
 
@@ -10366,7 +10550,7 @@ You can:
       const selectionRange = transformation.selectionRange;
 
       if (!selectionRange || !transformedSnippet) {
-        console.error('Missing selection range or transformed snippet');
+        // Error handled silently
         return;
       }
 
@@ -10393,7 +10577,6 @@ You can:
 
           this.cdr.detectChanges();
         } catch (error) {
-          console.error('❌ Error applying selection transformation:', error);
           this.notificationService.error('Transformation Error', 'Failed to apply transformation to selected text');
         }
       }, 50);
@@ -10412,7 +10595,7 @@ You can:
     // Wait for all async operations (setTimeout callbacks) to complete before saving
     setTimeout(() => {
       if (!this.currentDocumentId || !this.currentUser || !this.editorInstance) {
-        console.warn('⚠️ Cannot save transformation - missing required data');
+        // Cannot save transformation - missing required data
         return;
       }
 
@@ -10441,7 +10624,6 @@ You can:
             }
           },
           error: (error) => {
-            console.error('❌ Error saving transformation:', error);
             this.notificationService.error('Save Failed', 'Transformation applied but failed to save to database');
           }
         });
@@ -10458,7 +10640,7 @@ You can:
     // Find the message with the transformation
     const messageIndex = this.stateService.getConversationMessages().findIndex(msg => msg.id === messageId);
     if (messageIndex === -1) {
-      console.error('Message not found:', messageId);
+      // Error handled silently
       return;
     }
 
@@ -10513,11 +10695,18 @@ You can:
       return;
     }
 
-    // Get content from CKEditor and convert to markdown
-    const htmlContent = this.editorInstance ? this.editorInstance.getData() : '';
-    const markdownContent = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
+    // For template docs, save CKEditor's HTML directly (preserves user edits).
+    // For regular docs, save as markdown.
+    let contentToSave: string;
+    if (this.originalTemplateHtml) {
+      const htmlContent = this.editorInstance ? this.editorInstance.getData() : '';
+      contentToSave = '<!-- CKEDITOR_HTML -->\n' + htmlContent;
+    } else {
+      const htmlContent = this.editorInstance ? this.editorInstance.getData() : '';
+      contentToSave = this.documentGenerationService.convertHtmlToMarkdown(htmlContent);
+    }
 
-    this.documentGenerationService.saveDocument(this.currentDocumentId, markdownContent, this.activeDocumentTitle)
+    this.documentGenerationService.saveDocument(this.currentDocumentId, contentToSave, this.activeDocumentTitle)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -10525,7 +10714,6 @@ You can:
           this.notificationService.success('Success', `Version ${response.versionNumber} saved successfully`);
         },
         error: (error) => {
-          console.error('Error saving version:', error);
           this.notificationService.error('Error', 'Failed to save version');
         }
       });
@@ -10624,7 +10812,6 @@ You can:
         next: (response) => {
           const blob = response.body;
           if (!blob) {
-            console.error('No blob in response body');
             this.isLoadingPreview = false;
             this.showDocumentPreviewModal = false;
             document.body.classList.remove('modal-open');
@@ -10645,7 +10832,6 @@ You can:
           this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('PDF preview error:', err);
           this.isLoadingPreview = false;
           this.showDocumentPreviewModal = false;
           document.body.classList.remove('modal-open');
@@ -10738,7 +10924,6 @@ You can:
           this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('Failed to load exhibit file:', err);
           this.notificationService.error('Error', 'Failed to load exhibit file');
         }
       });
@@ -10837,8 +11022,8 @@ You can:
           this.loadingCaseDocs = false;
           this.cdr.detectChanges();
         },
-        error: (err) => {
-          console.error('Failed to load case documents:', err);
+        error: () => {
+          // Error handled silently
           this.caseDocuments = [];
           this.loadingCaseDocs = false;
           this.cdr.detectChanges();
@@ -10945,7 +11130,6 @@ You can:
         this.promptIncorporateExhibits(results);
       },
       error: (err) => {
-        console.error('Failed to add exhibits:', err);
         this.addingExhibits = false;
         this.notificationService.error('Error', 'Failed to add one or more exhibits');
         this.cdr.detectChanges();
@@ -10970,8 +11154,8 @@ You can:
         this.exhibitPanelService.setExhibitsLoading(false);
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('Failed to load exhibits:', err);
+      error: () => {
+        // Error handled silently
         this.exhibitPanelService.setExhibitsLoading(false);
         this.cdr.detectChanges();
       }
@@ -11082,7 +11266,7 @@ You can:
                   this.notificationService.success('Exhibit Removed', `Exhibit ${exhibit.label} has been removed`, 2500);
                 }
               },
-              error: (err) => console.error('Failed to remove exhibit:', err)
+              error: () => { /* Error handled silently */ }
             });
         }
       });
@@ -11165,7 +11349,6 @@ You can:
           this.cdr.detectChanges();
         },
         error: (error) => {
-          console.error('Error cleaning exhibit references:', error);
           this.notificationService.error('Exhibit Removed', `Exhibit ${label} removed, but failed to clean up references automatically. You may need to edit them manually.`);
         }
       });
@@ -11317,7 +11500,6 @@ You can:
           this.cdr.detectChanges();
         },
         error: (error) => {
-          console.error('Error incorporating exhibits:', error);
           this.notificationService.error('Error', 'Failed to incorporate exhibit references. Please try again.');
         }
       });
@@ -11382,7 +11564,6 @@ You can:
 
       this.notificationService.success('Saved!', `Document saved to File Manager${caseId ? ' and linked to case' : ''}`);
     } catch (error) {
-      console.error('Error saving to file manager:', error);
       this.notificationService.error('Error', 'Failed to save to File Manager');
     }
   }
@@ -11548,8 +11729,7 @@ You can:
                 this.displayAnalysisResults(fullResult, false);
                 this.cdr.detectChanges();
               },
-              error: (err) => {
-                console.error('Failed to load analysis:', err);
+              error: () => {
                 this.notificationService.error('Error', 'Failed to load analysis results');
               }
             });
@@ -11573,7 +11753,7 @@ You can:
                   this.showWorkflowDetailsPage = true;
                   this.cdr.detectChanges();
                 },
-                error: (err) => console.error('Failed to load workflow:', err)
+                error: () => { /* Error handled silently */ }
               });
           }
         }
@@ -11646,8 +11826,7 @@ You can:
 
           this.cdr.detectChanges();
         },
-        error: (err) => {
-          console.error('Failed to auto-load stationery:', err);
+        error: () => {
           // Non-fatal — document still opens without stationery frame
         }
       });
@@ -11680,8 +11859,8 @@ You can:
         this.loadingStationery = false;
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('Failed to load stationery data:', err);
+      error: () => {
+        // Error handled silently
         this.loadingStationery = false;
         this.cdr.detectChanges();
       }
@@ -11744,7 +11923,7 @@ You can:
             this.documentGenerationService.updateDocumentStationery(
               this.currentDocumentId as number, templateId, attorneyId
             ).pipe(takeUntil(this.destroy$)).subscribe({
-              error: (err) => console.error('Failed to persist stationery association:', err)
+              error: () => { /* Error handled silently */ }
             });
           }
 
@@ -11762,7 +11941,6 @@ You can:
           this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('Failed to render stationery:', err);
           this.notificationService.error('Error', 'Failed to apply stationery. Please try again.');
         }
       });
@@ -11787,7 +11965,7 @@ You can:
       this.documentGenerationService.updateDocumentStationery(
         this.currentDocumentId as number, null, null
       ).pipe(takeUntil(this.destroy$)).subscribe({
-        error: (err) => console.error('Failed to clear stationery association:', err)
+        error: () => { /* Error handled silently */ }
       });
     }
 

@@ -79,14 +79,21 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   followUpQuestions: string[] = [];
   selectedAction?: ResearchActionItem;
 
-  // Workflow wizard states
+  // Workflow wizard states (Perplexity-inspired progress card)
   workflowSteps = [
-    { id: 'analyze', title: 'Query Analysis', description: 'Understanding your legal question', icon: 'ri-file-search-line', status: 'pending' },
-    { id: 'search', title: 'Legal Database Search', description: 'Searching Massachusetts statutes and regulations', icon: 'ri-search-line', status: 'pending' },
-    { id: 'ai', title: 'AI Analysis', description: 'Analyzing legal sources with Claude AI', icon: 'ri-brain-line', status: 'pending' },
-    { id: 'generate', title: 'Generating Response', description: 'Preparing comprehensive answer', icon: 'ri-quill-pen-line', status: 'pending' }
+    { id: 'analyze', label: 'Understanding your question', detail: '', icon: 'ri-file-search-line', status: 'pending', elapsed: '' },
+    { id: 'search', label: 'Searching legal databases', detail: '', icon: 'ri-search-line', status: 'pending', elapsed: '' },
+    { id: 'ai', label: 'Analyzing sources', detail: '', icon: 'ri-sparkling-line', status: 'pending', elapsed: '' },
+    { id: 'generate', label: 'Preparing answer', detail: '', icon: 'ri-quill-pen-line', status: 'pending', elapsed: '' }
   ];
   currentWorkflowStep = 0;
+  sourceCount = 0;
+  progressPercent = 0;
+  researchElapsed = 0;
+  stepsCollapsed = false;
+  private researchTimerInterval: any = null;
+  private stepStartTime = 0;
+  private autoAdvanceTimers: any[] = [];
 
   // Research Actions
   actionSuggestions: ResearchActionItem[] = [];
@@ -298,6 +305,8 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    this.stopResearchTimer();
+    this.clearAutoAdvanceTimers();
     this.closeSSEConnection();
     this.destroy$.next();
     this.destroy$.complete();
@@ -808,6 +817,19 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     this.searchError = '';
     this.searchResults = [];
     this.aiThinking = true;
+    // Reset workflow steps and progress card
+    this.workflowSteps.forEach(step => { step.status = 'pending'; step.detail = ''; step.elapsed = ''; });
+    this.workflowSteps[0].icon = 'ri-file-search-line';
+    this.workflowSteps[1].icon = 'ri-search-line';
+    this.workflowSteps[2].icon = 'ri-sparkling-line';
+    this.workflowSteps[3].icon = 'ri-quill-pen-line';
+    this.sourceCount = 0;
+    this.progressPercent = 0;
+    this.stepsCollapsed = false;
+    this.clearAutoAdvanceTimers();
+    this.startResearchTimer();
+    this.updateWorkflowStep(0);
+    this.startAutoAdvanceChain();
     // Clear action suggestions for new search to prevent duplicates
     this.actionSuggestions = [];
     this.followUpQuestions = [];
@@ -821,10 +843,8 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
       this.setupScrollObservers();
     }, 100);
 
-    // Reset workflow steps and tool tracking
-    this.currentWorkflowStep = 0;
-    this.workflowSteps.forEach(step => step.status = 'pending');
-    this.toolsUsed = []; // Clear tools list for new search
+    // Clear tools list for new search (workflow steps already reset above)
+    this.toolsUsed = [];
 
     // Generate unique session ID for SSE tracking
     this.searchSessionId = this.generateSessionId();
@@ -851,7 +871,7 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     const searchRequest: LegalSearchRequest = {
       query: this.searchQuery,
       searchType: this.searchType,
-      jurisdiction: 'MASSACHUSETTS',
+      jurisdiction: 'General',  // Backend resolves from case context
       caseId: this.caseId,
       sessionId: this.searchSessionId,
       researchMode: this.researchMode.toUpperCase() as 'FAST' | 'THOROUGH',
@@ -1025,36 +1045,75 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
     this.performSearch();
   }
 
+  startResearchTimer(): void {
+    this.stopResearchTimer();
+    this.researchElapsed = 0;
+    this.stepStartTime = Date.now();
+    this.researchTimerInterval = setInterval(() => {
+      this.researchElapsed = Math.round((Date.now() - this.stepStartTime) / 1000);
+      this.cdr.detectChanges();
+    }, 1000);
+  }
+
+  stopResearchTimer(): void {
+    if (this.researchTimerInterval) {
+      clearInterval(this.researchTimerInterval);
+      this.researchTimerInterval = null;
+    }
+  }
+
+  /**
+   * Time-based step progression fallback.
+   * Steps advance on a timer regardless of SSE events.
+   * SSE events can accelerate transitions (via tool_execution or named steps).
+   * This ensures the UI never appears frozen.
+   */
+  startAutoAdvanceChain(): void {
+    // Step 0→1 at 3s, Step 1→2 at 8s, Step 2→3 at 18s
+    const schedule = [
+      { delay: 3000,  step: 1, progress: 20 },
+      { delay: 8000,  step: 2, progress: 45 },
+      { delay: 18000, step: 3, progress: 70 },
+    ];
+    for (const { delay, step, progress } of schedule) {
+      const timer = setTimeout(() => {
+        if (this.aiThinking && this.currentWorkflowStep < step) {
+          this.updateWorkflowStep(step);
+          this.progressPercent = Math.max(this.progressPercent, progress);
+          this.cdr.detectChanges();
+        }
+      }, delay);
+      this.autoAdvanceTimers.push(timer);
+    }
+  }
+
+  clearAutoAdvanceTimers(): void {
+    for (const t of this.autoAdvanceTimers) { clearTimeout(t); }
+    this.autoAdvanceTimers = [];
+  }
+
   updateWorkflowStep(stepIndex: number): void {
     if (stepIndex < this.workflowSteps.length) {
+      // Record elapsed time on previous active step
+      const prevActive = this.workflowSteps.findIndex(s => s.status === 'active');
+      if (prevActive >= 0 && prevActive !== stepIndex) {
+        this.workflowSteps[prevActive].elapsed = this.researchElapsed + 's';
+      }
+
       // Mark current step as active
       this.workflowSteps[stepIndex].status = 'active';
 
-      // Mark previous steps as completed
+      // Mark previous steps as completed with checkmark icon
       for (let i = 0; i < stepIndex; i++) {
         this.workflowSteps[i].status = 'completed';
+        this.workflowSteps[i].icon = 'ri-check-line';
       }
 
       this.currentWorkflowStep = stepIndex;
       this.cdr.detectChanges();
-
-      // Simulate progression through steps
-      if (stepIndex === 0) {
-        // Query Analysis - quick
-        setTimeout(() => this.updateWorkflowStep(1), 1000);
-      } else if (stepIndex === 1) {
-        // Database Search - takes time
-        setTimeout(() => this.updateWorkflowStep(2), 2000);
-      } else if (stepIndex === 2) {
-        // AI Analysis - longer
-        setTimeout(() => this.updateWorkflowStep(3), 2500);
-      } else if (stepIndex === 3) {
-        // Last step - wait a bit then show chat
-        setTimeout(() => this.updateWorkflowStep(4), 1500);
-      }
     } else {
-      // All steps completed - now show chat
-      this.workflowSteps.forEach(step => step.status = 'completed');
+      // All steps completed
+      this.workflowSteps.forEach(step => { step.status = 'completed'; step.icon = 'ri-check-line'; });
       this.showChat = true;
       this.cdr.detectChanges();
     }
@@ -2076,46 +2135,100 @@ export class CaseResearchComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private handleProgressEvent(event: any): void {
-    // Update workflow step based on stepType
     const stepMap: { [key: string]: number } = {
       'query_analysis': 0,
       'database_search': 1,
       'ai_analysis': 2,
-      'response_generation': 3
+      'response_generation': 3  // Backend sends this after Claude returns, during post-processing
     };
 
     const stepIndex = stepMap[event.stepType];
     if (stepIndex !== undefined) {
+      // Record elapsed on previous active step
+      const prevActive = this.workflowSteps.findIndex(s => s.status === 'active');
+      if (prevActive >= 0 && prevActive !== stepIndex) {
+        this.workflowSteps[prevActive].elapsed = this.researchElapsed + 's';
+      }
+
       // Mark previous steps as completed
       for (let i = 0; i < stepIndex; i++) {
         this.workflowSteps[i].status = 'completed';
+        this.workflowSteps[i].icon = 'ri-check-line';
       }
       // Mark current step as active
       this.workflowSteps[stepIndex].status = 'active';
-      // Update description with detail if provided
-      if (event.detail) {
-        this.workflowSteps[stepIndex].description = event.message + ': ' + event.detail;
-      } else {
-        this.workflowSteps[stepIndex].description = event.message;
+      // Update label and detail from SSE event
+      if (event.message) {
+        this.workflowSteps[stepIndex].label = event.message;
+      }
+      this.workflowSteps[stepIndex].detail = event.detail || '';
+      // Update progress bar
+      if (event.progress) {
+        this.progressPercent = event.progress;
       }
       this.currentWorkflowStep = stepIndex;
       this.cdr.detectChanges();
     } else if (event.stepType === 'tool_execution') {
-      // Capture tool execution details for THOROUGH mode
+      // Tool execution events drive real-time progress (like Perplexity)
       this.toolsUsed.push({
         name: event.message || 'Tool',
         message: event.detail || event.message || 'Executing tool',
         icon: event.icon || 'ri-tools-line'
       });
+      this.sourceCount++;
+      const toolCount = this.toolsUsed.length;
+
+      // Gradually advance through steps based on tool count:
+      // 0 tools → step 0 (Understanding), 1st tool → step 1 (Searching),
+      // 3+ tools → step 2 (Analyzing), backend events handle step 3 (Preparing)
+      let targetStep = this.currentWorkflowStep;
+      if (toolCount >= 3 && this.currentWorkflowStep < 2) {
+        targetStep = 2;
+      } else if (toolCount >= 1 && this.currentWorkflowStep < 1) {
+        targetStep = 1;
+      }
+
+      if (targetStep > this.currentWorkflowStep) {
+        // Record elapsed on previous step
+        const prev = this.currentWorkflowStep;
+        this.workflowSteps[prev].elapsed = this.researchElapsed + 's';
+        // Complete all steps up to target
+        for (let i = 0; i <= prev; i++) {
+          this.workflowSteps[i].status = 'completed';
+          this.workflowSteps[i].icon = 'ri-check-line';
+        }
+        // Activate target step
+        this.workflowSteps[targetStep].status = 'active';
+        this.currentWorkflowStep = targetStep;
+      }
+
+      // Show what the AI is doing right now on the active step
+      const activeIdx = this.currentWorkflowStep;
+      if (activeIdx < this.workflowSteps.length) {
+        this.workflowSteps[activeIdx].detail = event.message || '';
+      }
+
+      // Smoothly advance progress: 20% → 75% based on tool count
+      this.progressPercent = Math.min(75, 20 + toolCount * 7);
       this.cdr.detectChanges();
     }
   }
 
   private handleCompleteEvent(event: any): void {
+    this.stopResearchTimer();
+    this.clearAutoAdvanceTimers();
+    // Record elapsed on last active step
+    const lastActive = this.workflowSteps.findIndex(s => s.status === 'active');
+    if (lastActive >= 0) {
+      this.workflowSteps[lastActive].elapsed = this.researchElapsed + 's';
+    }
     // Mark all steps as completed
-    this.workflowSteps.forEach(step => step.status = 'completed');
+    this.workflowSteps.forEach(step => { step.status = 'completed'; step.icon = 'ri-check-line'; });
+    this.progressPercent = 100;
     this.closeSSEConnection();
     this.cdr.detectChanges();
+    // Auto-collapse steps after a moment
+    setTimeout(() => { this.stepsCollapsed = true; this.cdr.detectChanges(); }, 1500);
   }
 
   private handleErrorEvent(event: any): void {

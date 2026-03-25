@@ -337,6 +337,15 @@
                       <div class="row g-3">
                         <div class="col-md-4">
                           <div class="mb-3">
+                            <label for="jurisdiction" class="form-label">Jurisdiction</label>
+                            <select class="form-select" id="jurisdiction" formControlName="jurisdiction">
+                              <option value="">Select jurisdiction...</option>
+                              <option *ngFor="let j of usJurisdictions" [value]="j">{{ j }}</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="mb-3">
                             <label for="countyName" class="form-label">County Name</label>
                             <input type="text" class="form-control" id="countyName" formControlName="countyName"
                               placeholder="Enter county name">

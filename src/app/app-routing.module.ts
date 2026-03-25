@@ -111,13 +111,6 @@ const routes: Routes = [
         canActivate: [AuthenticationGuard]
       },
       
-      // Debug Permissions
-      {
-        path: 'debug-permissions',
-        loadComponent: () => import('./component/auth/debug-permissions/debug-permissions.component').then(m => m.DebugPermissionsComponent),
-        canActivate: [AuthenticationGuard]
-      },
-
       // FAQs / Help
       {
         path: 'faqs',

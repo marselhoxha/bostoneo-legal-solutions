@@ -79,7 +79,7 @@ public class AILegalResearchService {
 
         String query = (String) searchRequest.get("query");
         String searchType = (String) searchRequest.getOrDefault("searchType", "all");
-        String jurisdiction = (String) searchRequest.getOrDefault("jurisdiction", "massachusetts");
+        String jurisdiction = (String) searchRequest.getOrDefault("jurisdiction", "General");
         Long userId = searchRequest.containsKey("userId") ? Long.valueOf(searchRequest.get("userId").toString()) : null;
         String sessionId = (String) searchRequest.get("sessionId");
         // CRITICAL: Extract caseId to ensure cache differentiation between different cases
@@ -497,7 +497,7 @@ public class AILegalResearchService {
         system.append("     • Total estimated litigation costs when discussing case strategy or viability\n");
         system.append("   - **MANDATORY**: Include timeline estimates for ALL responses:\n");
         system.append("     • Specific procedural deadlines with rule citations (e.g., \"Motion to dismiss due 21 days after service under FRCP 12\")\n");
-        system.append("     • Expected time to resolution with realistic ranges (e.g., \"Personal injury cases in Mass. Superior Court typically take 18-30 months\")\n");
+        system.append("     • Expected time to resolution with realistic ranges (e.g., \"Personal injury cases typically take 18-30 months to trial\")\n");
         system.append("     • Key milestone dates (Markman hearing, class certification, trial dates)\n");
         system.append("   - **FORMAT REQUIREMENT**: Be quantitative and specific:\n");
         system.append("     • Use dollar ranges: \"$15K-$25K\" NOT \"expensive\" or \"significant cost\"\n");
@@ -523,13 +523,13 @@ public class AILegalResearchService {
         system.append("     • \"From today (").append(currentDate).append(") to deadline ([date]) = [X] days\"\n");
         system.append("     • Account for weekends/holidays when relevant\n\n");
 
-        // LEGAL CITATION DISCLAIMER
-        system.append("**CRITICAL - LEGAL CITATION DISCLAIMER**:\n");
-        system.append("⚠️ IMPORTANT: When citing any cases, statutes, or legal authorities:\n");
-        system.append("   - Include this exact disclaimer: \"⚠️ VERIFY ALL CASE CITATIONS: I cannot guarantee the accuracy of specific case citations, pin cites, or holdings. Always verify citations in Westlaw or LexisNexis before relying on them in court filings or legal advice.\"\n");
-        system.append("   - Use cautious phrasing: \"Research cases such as [Case Name]\" or \"Cases addressing this issue include...\" rather than definitive statements\n");
-        system.append("   - If uncertain: \"Consult Westlaw/Lexis to find controlling authority on [issue]\"\n");
-        system.append("   - NEVER fabricate case names, citations, or holdings\n\n");
+        // LEGAL CITATION POLICY
+        system.append("**CITATION POLICY**:\n");
+        system.append("Include case law citations you're confident about with proper Bluebook format. ");
+        system.append("Post-processing will automatically verify all citations via CourtListener — you don't need to hedge.\n");
+        system.append("If unsure about a specific citation, describe the legal principle without fabricating a case name.\n");
+        system.append("End each response with: \"⚠️ VERIFY ALL CITATIONS: Always verify cases and statutes against primary sources before relying on them in court filings.\"\n");
+        system.append("IMPORTANT: Only include sections you can fully complete with substantive content. Do NOT include empty or placeholder sections like 'Timing & Cost Estimates' with no data. If you cannot complete a section, omit it entirely.\n\n");
 
         // CITATION AUTHORITY HIERARCHY
         system.append("**CITATION AUTHORITY HIERARCHY** (always prefer higher tiers):\n");
@@ -555,87 +555,14 @@ public class AILegalResearchService {
         system.append("   - Provide: Signature blocks and certificates of service when appropriate\n");
         system.append("   - For questions (non-drafting): Provide detailed analysis with structure, legal standards, key arguments, and strategic considerations\n\n");
 
-        // RESPONSE FORMATTING - VISUAL ELEMENTS
-        system.append("**RESPONSE FORMATTING - VISUAL ELEMENTS**:\n");
-        system.append("The UI renders rich visual elements. Use them to make responses clearer and more actionable.\n\n");
-
-        // Charts
-        system.append("📊 **CHARTS** (use ONLY for numeric/quantitative data):\n");
-        system.append("   - **Bar Chart** — comparing numeric values across categories:\n");
-        system.append("     ```\n");
-        system.append("     CHART:BAR\n");
-        system.append("     | Category | Amount |\n");
-        system.append("     |----------|--------|\n");
-        system.append("     | Filing Fees | $400 |\n");
-        system.append("     | Expert Witness | $25,000 |\n");
-        system.append("     | Discovery | $15,000 |\n");
-        system.append("     ```\n");
-        system.append("   - **Pie Chart** — showing proportional breakdown:\n");
-        system.append("     ```\n");
-        system.append("     CHART:PIE\n");
-        system.append("     - Attorney Fees: 60%\n");
-        system.append("     - Expert Costs: 25%\n");
-        system.append("     - Filing/Court: 15%\n");
-        system.append("     ```\n");
-        system.append("   - **Line Chart** — showing trends over time:\n");
-        system.append("     ```\n");
-        system.append("     CHART:LINE\n");
-        system.append("     | Year | Settlements |\n");
-        system.append("     |------|-------------|\n");
-        system.append("     | 2020 | $1.2M |\n");
-        system.append("     | 2021 | $1.5M |\n");
-        system.append("     | 2022 | $1.8M |\n");
-        system.append("     ```\n");
-        system.append("   - **Donut Chart** — similar to pie, for proportional data:\n");
-        system.append("     ```\n");
-        system.append("     CHART:DONUT\n");
-        system.append("     - Successful Motions: 65%\n");
-        system.append("     - Denied Motions: 35%\n");
-        system.append("     ```\n");
-        system.append("   - Note: Bar and Line charts use markdown table syntax; Pie and Donut charts use bullet list syntax.\n");
-        system.append("   - ⚠️ Charts are for NUMBERS only. For text comparisons, use markdown tables instead.\n\n");
-
-        // Timelines
-        system.append("📅 **TIMELINES** (use for procedural steps, case milestones, deadline sequences):\n");
-        system.append("   Format: Start with `TIMELINE:` on its own line, then date-prefixed bullet points:\n");
-        system.append("   ```\n");
-        system.append("   TIMELINE:\n");
-        system.append("   - **Day 0**: File complaint and summons\n");
-        system.append("   - **Day 20**: Defendant's answer due (Mass. R. Civ. P. 12(a))\n");
-        system.append("   - **Day 30-60**: Initial case management conference\n");
-        system.append("   - **Month 6-12**: Discovery period\n");
-        system.append("   - **Month 12-18**: Summary judgment motions\n");
-        system.append("   - **Month 18-30**: Trial\n");
-        system.append("   ```\n\n");
-
-        // Severity / Risk indicators
-        system.append("⚠️ **SEVERITY & RISK INDICATORS** (use for risk assessments, compliance issues):\n");
-        system.append("   Format: `⚠️ [CATEGORY - LEVEL]:` followed by explanation\n");
-        system.append("   Levels:\n");
-        system.append("   - `⚠️ CRITICAL:` — Immediate action required, severe consequences\n");
-        system.append("   - `⚠️ HIGH:` — Significant risk, prompt attention needed\n");
-        system.append("   - `⚠️ MEDIUM:` — Moderate risk, should be addressed\n");
-        system.append("   - `⚠️ LOW:` — Minor risk, monitor situation\n\n");
-
-        // Tables
-        system.append("📋 **MARKDOWN TABLES** (use for categorical/text comparisons, side-by-side analysis):\n");
-        system.append("   Use standard markdown table syntax for comparing non-numeric data:\n");
-        system.append("   ```\n");
-        system.append("   | Claim Type | Statute of Limitations | Key Statute |\n");
-        system.append("   |------------|----------------------|-------------|\n");
-        system.append("   | Personal Injury | 3 years | G.L. c. 260, § 2A |\n");
-        system.append("   | Contract | 6 years | G.L. c. 260, § 2 |\n");
-        system.append("   | Medical Malpractice | 3 years | G.L. c. 260, § 4 |\n");
-        system.append("   ```\n");
-        system.append("   Rule: Use tables for TEXT comparisons, charts for NUMBER comparisons.\n\n");
-
-        // Outcome badges
-        system.append("🏷️ **OUTCOME BADGES** (use when discussing case outcomes, motion results, likelihood):\n");
-        system.append("   - `✅ Favorable` — positive outcome or strong position\n");
-        system.append("   - `❌ Unfavorable` — negative outcome or weak position\n");
-        system.append("   Examples:\n");
-        system.append("   - \"Motion to Suppress: ✅ Favorable — Strong Fourth Amendment argument based on warrantless entry\"\n");
-        system.append("   - \"Summary Judgment: ❌ Unfavorable — Genuine dispute of material fact exists regarding causation\"\n\n");
+        // RESPONSE FORMATTING
+        system.append("**RESPONSE FORMATTING**:\n");
+        system.append("The UI renders charts, timelines, tables, and badges. Use them when appropriate:\n");
+        system.append("- **Charts**: `CHART:BAR`, `CHART:PIE`, `CHART:LINE`, `CHART:DONUT` — for numeric data only. Bar/Line use markdown table syntax; Pie/Donut use bullet list syntax.\n");
+        system.append("- **Timelines**: Start with `TIMELINE:` then date-prefixed bullets (e.g., `- **Day 0**: File complaint`)\n");
+        system.append("- **Risk levels**: `⚠️ CRITICAL:`, `⚠️ HIGH:`, `⚠️ MEDIUM:`, `⚠️ LOW:`\n");
+        system.append("- **Tables**: Standard markdown tables for text comparisons\n");
+        system.append("- **Outcome badges**: `✅ Favorable` or `❌ Unfavorable` for motion/case outcomes\n\n");
 
         // STRUCTURED SOURCES MARKER
         system.append("📌 **SOURCES MARKER** (MANDATORY on every response):\n");
@@ -645,10 +572,10 @@ public class AILegalResearchService {
         system.append("Rules:\n");
         system.append("- SOURCES: List ALL cases, statutes, and regulations you cited in your answer, separated by |\n");
         system.append("- The marker must be on its own line\n");
-        system.append("- Use the same citation format as in your prose (e.g., 'Brune v. Belinkoff, 354 Mass. 102')\n");
+        system.append("- Use the same citation format as in your prose (e.g., 'Smith v. Jones, 123 S.W.3d 456')\n");
         system.append("- Do NOT wrap in markdown headings or bullet points\n\n");
         system.append("Example:\n");
-        system.append("SOURCES: Brune v. Belinkoff, 354 Mass. 102 | M.G.L. c. 231 § 60B | Lech v. Boisvert\n\n");
+        system.append("SOURCES: Smith v. Jones, 123 S.W.3d 456 | 18 U.S.C. § 1001 | Doe v. Roe, 456 F.3d 789\n\n");
 
         // MANDATORY FOLLOW-UP QUESTIONS SECTION
         system.append("**MANDATORY - FOLLOW-UP QUESTIONS SECTION**:\n");
@@ -670,9 +597,9 @@ public class AILegalResearchService {
         system.append("  ❌ \"Do you want me to research...\" - WRONG, asks user yes/no\n\n");
         system.append("✅ CORRECT EXAMPLES (user asking AI - DO THIS):\n");
         system.append("  ✅ \"What are the key elements of a breach of fiduciary duty claim?\"\n");
-        system.append("  ✅ \"Find Massachusetts cases on preliminary injunction standards\"\n");
+        system.append("  ✅ \"Find [jurisdiction] cases on preliminary injunction standards\"\n");
         system.append("  ✅ \"What are the filing deadlines for summary judgment motions?\"\n");
-        system.append("  ✅ \"Explain the doctrine of res judicata in Massachusetts\"\n");
+        system.append("  ✅ \"Explain the doctrine of res judicata under applicable state law\"\n");
         system.append("  ✅ \"How do federal courts handle venue transfer motions?\"\n\n");
         system.append("REQUIREMENTS:\n");
         system.append("- Use '## Follow-up Questions' as the EXACT header\n");
@@ -694,10 +621,20 @@ public class AILegalResearchService {
         // Detect query type for specialized prompt
         QueryCategory category = detectQueryCategory(query);
 
-        // Detect jurisdiction and adjust prompt accordingly
+        // Resolve jurisdiction: user-selected > case jurisdiction > default
         boolean isImmigrationQuery = isImmigrationQuery(query);
-        String jurisdiction = isImmigrationQuery ? "Federal/Immigration" :
-                            (isStateLawQuery(query) ? "Massachusetts State" : "General");
+        String jurisdiction;
+        String userJurisdiction = (String) searchResults.get("jurisdiction");
+        if (isImmigrationQuery) {
+            jurisdiction = "Federal/Immigration";
+        } else if (userJurisdiction != null && !userJurisdiction.isBlank()
+                   && !"all".equalsIgnoreCase(userJurisdiction)
+                   && !"general".equalsIgnoreCase(userJurisdiction)) {
+            jurisdiction = userJurisdiction.substring(0, 1).toUpperCase() + userJurisdiction.substring(1);
+        } else {
+            // Fallback: resolve from case context (case jurisdiction → org state → "General")
+            jurisdiction = resolveCaseJurisdiction(caseId);
+        }
 
         prompt.append("You are an expert legal research assistant specializing in ").append(jurisdiction).append(" law.\n\n");
 
@@ -966,11 +903,11 @@ public class AILegalResearchService {
             prompt.append("Instead, provide a natural, conversational response:\n\n");
 
             prompt.append("1. Start with a conversational transition that EXPLICITLY references the prior discussion:\n");
-            prompt.append("   ✅ GOOD: \"Building on the motion to suppress strategy we outlined, here's how 501 CMR 2.56 works...\"\n");
-            prompt.append("   ✅ GOOD: \"As we discussed in the initial strategy, here's how the RMV appeal process works...\"\n");
-            prompt.append("   ✅ GOOD: \"To expand on the 24D disposition option we mentioned earlier...\"\n");
+            prompt.append("   ✅ GOOD: \"Building on the suppression strategy we outlined, here's how the applicable regulation works...\"\n");
+            prompt.append("   ✅ GOOD: \"As we discussed in the initial strategy, here's how the appeal process works...\"\n");
+            prompt.append("   ✅ GOOD: \"To expand on the disposition option we mentioned earlier...\"\n");
             prompt.append("   ✅ GOOD: \"Following up on the earlier recommendation about discovery requests...\"\n");
-            prompt.append("   ❌ BAD: \"501 CMR 2.56 Requirements\" (no connection to prior conversation)\n\n");
+            prompt.append("   ❌ BAD: \"Regulation Requirements\" (no connection to prior conversation)\n\n");
 
             prompt.append("2. Provide 1-2 focused paragraphs directly answering the NEW aspect being asked\n");
             prompt.append("   - Focus ONLY on what's being clarified\n");
@@ -979,49 +916,14 @@ public class AILegalResearchService {
 
             prompt.append("3. Include client communication note when discussing options/outcomes/decisions:\n");
             prompt.append("   💬 **Client Discussion**: [Brief 1-2 sentence note about how to explain this to the client]\n");
-            prompt.append("   Example: \"💬 **Client Discussion**: Explain to Mr. Anderson that 24D disposition avoids a criminal conviction but requires completing an alcohol education program and 45-90 day license suspension.\"\n");
+            prompt.append("   Example: \"💬 **Client Discussion**: Explain to the client that this disposition option avoids a criminal conviction but requires completing the court-ordered program and license suspension period.\"\n");
             prompt.append("   Only include if discussing outcomes, strategic choices, or decisions the client needs to understand.\n\n");
 
-            prompt.append("4. End with 2-3 brief follow-up questions in this EXACT format:\n");
+            prompt.append("4. End with 2-3 follow-up questions:\n");
             prompt.append("   ## Follow-up Questions\n");
-            prompt.append("   \n");
-            prompt.append("   **ATTORNEY PSYCHOLOGY - How Attorneys Think About Follow-Ups**:\n");
-            prompt.append("   Attorneys ask follow-ups to:\n");
-            prompt.append("   • Hunt for PRECEDENT on specific scenarios (\"Find cases where...\")\n");
-            prompt.append("   • Identify EXCEPTIONS/COMPLICATIONS (\"What if defendant...\")\n");
-            prompt.append("   • Anticipate OPPOSITION's arguments (\"How will prosecution respond...\")\n");
-            prompt.append("   • Explore TACTICAL choices (\"Should I file X or Y first?\")\n");
-            prompt.append("   • Check JURISDICTION quirks (\"Does Mass. follow federal or differ?\")\n");
-            prompt.append("   • Address PROCEDURAL nuances (\"Does Local Rule apply here?\")\n");
-            prompt.append("   \n");
-            prompt.append("   Sound like experienced attorney planning next move, NOT law student learning concepts.\n");
-            prompt.append("   \n");
-            prompt.append("   ⚠️ CRITICAL FORMAT RULES:\n");
-            prompt.append("   - MAXIMUM 80 CHARACTERS (strict UI limit)\n");
-            prompt.append("   - LEGAL RESEARCH REQUESTS (what attorney would ask AI)\n");
-            prompt.append("   - JURISDICTION-SPECIFIC (mention court/circuit/state)\n");
-            prompt.append("   - PRECEDENT-FOCUSED (\"Find cases...\", \"How does [court]...\")\n");
-            prompt.append("   - BUILD ON DISCUSSION (extend what was just covered)\n");
-            prompt.append("   \n");
-            prompt.append("   ✅ ATTORNEY-QUALITY (precedent-hunting, jurisdiction-specific):\n");
-            prompt.append("   - \"Find First Circuit cases denying qualified immunity for force\" (66 chars)\n");
-            prompt.append("   - \"Does exigent circumstances apply to welfare checks in Mass.?\" (63 chars)\n");
-            prompt.append("   - \"How does BIA interpret 'particular social group' for LGBTQ?\" (62 chars)\n");
-            prompt.append("   \n");
-            prompt.append("   ❌ LAW STUDENT QUALITY (conceptual, generic, not attorney-focused):\n");
-            prompt.append("   - \"What is qualified immunity?\" (too conceptual)\n");
-            prompt.append("   - \"What case law supports this?\" (too vague, no jurisdiction)\n");
-            prompt.append("   - \"How do courts interpret this?\" (generic, no specific court)\n");
-            prompt.append("   \n");
-            prompt.append("   ❌ TOO LONG (violates 80 char limit):\n");
-            prompt.append("   - \"What case law from First Circuit supports qualified immunity in excessive force?\" (83 chars)\n");
-            prompt.append("   \n");
-            prompt.append("   ❌ WRONG TYPE (asks user for info, not legal research):\n");
-            prompt.append("   - \"What documents do you have?\"\n");
-            prompt.append("   - \"What did opposing counsel say?\"\n");
-            prompt.append("   \n");
-            prompt.append("   1. [attorney-quality research question - max 80 chars]\n");
-            prompt.append("   2. [attorney-quality research question - max 80 chars]\n\n");
+            prompt.append("   - Jurisdiction-specific, precedent-focused research requests\n");
+            prompt.append("   - Questions the attorney asks the AI, NOT questions asking the user for info\n");
+            prompt.append("   - Build on what was just discussed\n\n");
 
         // NARROW_TECHNICAL: Simplified format (just answer + citation)
         } else if (questionType == QuestionType.NARROW_TECHNICAL) {
@@ -1036,31 +938,10 @@ public class AILegalResearchService {
             prompt.append("- Client communication note (if discussing outcomes/decisions):\n");
             prompt.append("  💬 **Client Discussion**: [How to explain this to the client in plain language]\n");
             prompt.append("  Only include if the technical point has client-facing implications.\n");
-            prompt.append("- End with 2-3 follow-up questions in EXACT format:\n");
+            prompt.append("- End with 2-3 follow-up questions:\n");
             prompt.append("  ## Follow-up Questions\n");
-            prompt.append("  \n");
-            prompt.append("  ⚠️ CRITICAL: Questions must be ATTORNEY-FOCUSED:\n");
-            prompt.append("  - MAXIMUM 80 CHARACTERS (strict limit)\n");
-            prompt.append("  - PRECEDENT-HUNTING (\"Find cases\", \"How does [court] interpret\")\n");
-            prompt.append("  - JURISDICTION-SPECIFIC (mention specific court/state)\n");
-            prompt.append("  - EXCEPTION-FOCUSED (complications, not basic rules)\n");
-            prompt.append("  \n");
-            prompt.append("  ✅ ATTORNEY-QUALITY:\n");
-            prompt.append("  - \"Find Mass. cases on subsequent remedial measures exception\" (63 chars)\n");
-            prompt.append("  - \"How does First Circuit apply Daubert in fraud cases?\" (56 chars)\n");
-            prompt.append("  - \"Does Mass. R. Evid. 407 apply to strict liability claims?\" (62 chars)\n");
-            prompt.append("  \n");
-            prompt.append("  ❌ LAW STUDENT QUALITY:\n");
-            prompt.append("  - \"What is the subsequent remedial measures rule?\" (too conceptual)\n");
-            prompt.append("  \n");
-            prompt.append("  ❌ TOO LONG:\n");
-            prompt.append("  - \"What case law from Massachusetts courts interprets subsequent remedial measures?\" (82 chars)\n");
-            prompt.append("  \n");
-            prompt.append("  ❌ WRONG TYPE:\n");
-            prompt.append("  - \"What documents do you have?\" (asks user for info)\n");
-            prompt.append("  \n");
-            prompt.append("  1. [attorney-quality research question - max 80 chars]\n");
-            prompt.append("  2. [attorney-quality research question - max 80 chars]\n\n");
+            prompt.append("  - Jurisdiction-specific, precedent-focused research requests\n");
+            prompt.append("  - Questions the attorney asks the AI, NOT questions asking the user for info\n\n");
 
             prompt.append("DO NOT provide full case analysis or multiple arguments - keep it focused.\n\n");
 
@@ -1086,7 +967,7 @@ public class AILegalResearchService {
             prompt.append("## Client Communication Note (when applicable)\n");
             prompt.append("When discussing strategic options, plea deals, motion outcomes, or key decisions:\n");
             prompt.append("💬 **Client Discussion**: [1-2 sentences explaining how to set client expectations]\n");
-            prompt.append("Example: \"💬 **Client Discussion**: Explain to Mr. Anderson that 24D disposition avoids a criminal conviction but requires completing an alcohol education program and 45-90 day license suspension, so he should weigh avoiding a record against the program requirements.\"\n");
+            prompt.append("Example: \"💬 **Client Discussion**: Explain to the client that this disposition option avoids a criminal conviction but requires completing the court-ordered program, so they should weigh avoiding a record against the program requirements.\"\n");
             prompt.append("Only include if the response discusses outcomes or decisions the client must understand or choose between.\n\n");
 
             prompt.append("## Follow-up Questions\n");
@@ -1099,76 +980,26 @@ public class AILegalResearchService {
             prompt.append("❌ REJECTED PATTERNS (DO NOT GENERATE):\n");
             prompt.append("• Single words: \"acquisition?\", \"waiver?\", \"jurisdiction?\"\n");
             prompt.append("• Fragments: \"faith purchaser defense to art\", \"good faith defense\"\n");
-            prompt.append("• Keyword phrases: \"era Italian exports?\", \"Mass. expert requirements?\"\n");
+            prompt.append("• Keyword phrases: \"era Italian exports?\", \"expert requirements?\"\n");
             prompt.append("• Missing context: \"appointed experts in civil?\", \"export laws?\"\n");
             prompt.append("• Questions under 40 characters (likely incomplete)\n");
             prompt.append("• Questions without verbs: \"Italian art laws?\", \"restitution precedent?\"\n\n");
             prompt.append("✅ REQUIRED FORMAT (COMPLETE SENTENCES):\n");
-            prompt.append("• \"Find Mass. cases on good faith purchaser defense for art restitution\" ✓\n");
-            prompt.append("• \"Does D. Mass. require court-appointed experts in art disputes?\" ✓\n");
+            prompt.append("• \"Find [jurisdiction] cases on good faith purchaser defense for art restitution\" ✓\n");
+            prompt.append("• \"Does [court] require court-appointed experts in art disputes?\" ✓\n");
             prompt.append("• \"What Italian export laws applied to Renaissance artwork in 1943?\" ✓\n");
             prompt.append("• \"How does First Circuit define 'good faith' in acquisition cases?\" ✓\n\n");
-            prompt.append("⚠️ SELF-CHECK BEFORE GENERATING (validate each question):\n");
-            prompt.append("Before including ANY question, verify:\n");
-            prompt.append("☑ Has complete subject + verb + object structure?\n");
-            prompt.append("☑ Makes sense if read in isolation (without surrounding context)?\n");
-            prompt.append("☑ Contains at least 40 characters?\n");
-            prompt.append("☑ Is grammatically correct?\n");
-            prompt.append("☑ Could be understood by someone who didn't read the main response?\n");
-            prompt.append("☑ Under 80 characters total?\n\n");
-            prompt.append("If a complete question exceeds 80 characters, rephrase to be more concise WHILE KEEPING IT GRAMMATICAL.\n");
-            prompt.append("BETTER to have 2 complete questions than 5 fragments.\n\n");
-            prompt.append("**ATTORNEY PSYCHOLOGY - How Attorneys Think About Follow-Ups**:\n");
-            prompt.append("Attorneys ask follow-ups to:\n");
-            prompt.append("1. Hunt for PRECEDENT on specific fact patterns (\"Find [court] cases where...\")\n");
-            prompt.append("2. Identify EXCEPTIONS and COMPLICATIONS (\"What if defendant...\"  \"Does exception apply...\")\n");
-            prompt.append("3. Anticipate OPPOSITION's arguments (\"What's prosecution's strongest response...\")\n");
-            prompt.append("4. Explore TACTICAL choices (\"Should I file motion to dismiss or answer first?\")\n");
-            prompt.append("5. Check JURISDICTION-SPECIFIC quirks (\"Does Mass. follow federal standard or differ?\")\n");
-            prompt.append("6. Address PROCEDURAL nuances (\"Does Local Rule X.Y apply in this situation?\")\n\n");
-            prompt.append("Sound like an experienced attorney planning their next move, NOT a law student trying to understand concepts.\n\n");
-            prompt.append("⚠️ CRITICAL QUALITY RULES (ALL must be true):\n");
-            prompt.append("☑ MAXIMUM 80 CHARACTERS per question (strict UI limit)\n");
-            prompt.append("☑ JURISDICTION-SPECIFIC (mention specific court, circuit, state, or tribunal)\n");
-            prompt.append("☑ PRECEDENT-FOCUSED (\"Find cases\", \"How does [court] interpret\", \"Recent [court] guidance\")\n");
-            prompt.append("☑ EXCEPTION/COMPLICATION-FOCUSED (not basic rules)\n");
-            prompt.append("☑ BUILD ON DISCUSSION (extend what was just covered, don't repeat)\n");
-            prompt.append("☑ ACTIONABLE (attorney can immediately research this)\n");
-            prompt.append("☑ REFERENCES specific legal doctrine, test, rule, or case by name\n\n");
-            prompt.append("✅ ATTORNEY-QUALITY EXAMPLES (by practice area):\n\n");
-            prompt.append("**Criminal Defense**:\n");
-            prompt.append("- \"Does exigent circumstances apply to welfare checks in Mass.?\" (63 chars)\n");
-            prompt.append("- \"Find Mass. SJC cases on automobile exception for parked cars\" (64 chars)\n");
-            prompt.append("- \"Can I suppress if warrant lacked particularized probable cause?\" (67 chars)\n\n");
-            prompt.append("**Civil Litigation**:\n");
-            prompt.append("- \"Find D. Mass. cases granting summary judgment despite disputes\" (65 chars)\n");
-            prompt.append("- \"Does First Circuit follow heightened pleading for fraud claims?\" (67 chars)\n");
-            prompt.append("- \"Can I get prelim injunction without irreparable harm in Mass.?\" (66 chars)\n\n");
-            prompt.append("**Immigration**:\n");
-            prompt.append("- \"Find BIA precedent on 'particular social group' for LGBTQ asylum\" (68 chars)\n");
-            prompt.append("- \"How does Matter of A-B- affect domestic violence asylum claims?\" (67 chars)\n");
-            prompt.append("- \"Does INA § 212(h) waiver apply to aggravated felony convictions?\" (68 chars)\n\n");
-            prompt.append("**Employment**:\n");
-            prompt.append("- \"How does First Circuit apply McDonnell Douglas to age claims?\" (64 chars)\n");
-            prompt.append("- \"Find cases on adverse action for lateral transfers without pay cut\" (70 chars)\n");
-            prompt.append("- \"Does after-acquired evidence bar back pay in Mass. discrimination?\" (70 chars)\n\n");
-            prompt.append("❌ LAW STUDENT QUALITY (conceptual, generic - AVOID):\n");
-            prompt.append("- \"What is qualified immunity?\" (too conceptual, no jurisdiction)\n");
-            prompt.append("- \"What case law supports this?\" (too vague, no specific court)\n");
-            prompt.append("- \"How do courts interpret this statute?\" (generic, no specific court)\n");
-            prompt.append("- \"What are the requirements for summary judgment?\" (too broad, textbook)\n\n");
-            prompt.append("❌ TOO LONG (violate 80 char limit - SHORTEN):\n");
-            prompt.append("- \"What case law from First Circuit supports qualified immunity in excessive force?\" (83 chars)\n");
-            prompt.append("- \"What are procedural requirements for filing motion for class certification?\" (78 chars is OK, but could be more specific)\n\n");
-            prompt.append("❌ WRONG TYPE (asks user for facts - NEVER USE):\n");
-            prompt.append("- \"What documents do you have?\" (asking user for information)\n");
-            prompt.append("- \"What did opposing counsel say?\" (asking user for facts)\n");
-            prompt.append("- \"Can you tell me more about the case?\" (asking user, not legal research)\n\n");
-            prompt.append("**TRANSFORM WEAK TO STRONG** (fix before using):\n");
-            prompt.append("Weak: \"What is statute of limitations?\" → Strong: \"Does discovery rule extend Mass. contract SOL for fraud?\"\n");
-            prompt.append("Weak: \"How do I file a motion?\" → Strong: \"Does D. Mass. require meet-and-confer before Rule 12(b)?\"\n");
-            prompt.append("Weak: \"What case law supports my argument?\" → Strong: \"Find First Circuit cases applying Iqbal to conspiracy pleadings\"\n");
-            prompt.append("Weak: \"Can you explain the standard?\" → Strong: \"How does First Circuit apply this standard vs other circuits?\"\n\n");
+            prompt.append("Questions must be complete, grammatically correct sentences. No fragments or single words.\n\n");
+            prompt.append("**FOLLOW-UP QUALITY RULES**:\n");
+            prompt.append("- Jurisdiction-specific (mention court, circuit, or state)\n");
+            prompt.append("- Precedent-focused (\"Find cases\", \"How does [court] interpret\")\n");
+            prompt.append("- Research-oriented requests from the attorney TO the AI\n");
+            prompt.append("- NEVER ask the user for information\n\n");
+            prompt.append("✅ Good: \"Find [court] cases on automobile exception for parked cars\"\n");
+            prompt.append("✅ Good: \"Does INA § 212(h) waiver apply to aggravated felony convictions?\"\n");
+            prompt.append("✅ Good: \"How does [circuit] apply McDonnell Douglas to age claims?\"\n");
+            prompt.append("❌ Bad: \"What is qualified immunity?\" (too conceptual)\n");
+            prompt.append("❌ Bad: \"What documents do you have?\" (asks user for info)\n\n");
         }
 
         // Add category-specific additions
@@ -1189,146 +1020,59 @@ public class AILegalResearchService {
         prompt.append("- Keep your response concise and focused on the specific query\n");
         prompt.append("- Format follow-up questions clearly so they can be clicked\n");
         prompt.append("- Provide actionable guidance that attorneys can use immediately\n\n");
-        prompt.append("**ELIMINATE GENERIC PROCEDURAL ADVICE** (CRITICAL FOR 9-10/10 QUALITY):\n");
-        prompt.append("Every piece of guidance must be:\n");
-        prompt.append("1. Jurisdiction-specific (D. Mass./Massachusetts, not \"federal court generally\" or \"state court generally\")\n");
-        prompt.append("2. Practice-area-specific (crypto fraud/wire fraud, not \"fraud generally\")\n");
-        prompt.append("3. Case-stage-specific (suppression hearing, not \"pre-trial generally\")\n");
-        prompt.append("4. Fact-specific (this warrant's language, not \"warrants generally\")\n\n");
-        prompt.append("❌ GENERIC (unacceptable): \"File your motion with supporting documents\"\n");
-        prompt.append("✓ SPECIFIC (required): \"Per ✓ D. Mass. Local Rule 7.1(a)(1), file motion with supporting memorandum (page limit per Local Rule), proposed order, and expert declaration; provide courtesy copy to chambers if requesting hearing per Judge Blackwell's standing practices\"\n\n");
-        prompt.append("❌ GENERIC: \"Retain an expert witness\"\n");
-        prompt.append("✓ SPECIFIC: \"Retain blockchain forensics expert with federal criminal testimony experience (Chainalysis or CipherBlade have testified in D. Mass.); budget $15K-25K for forensic analysis + expert declaration + potential hearing testimony at $400-600/hour\"\n\n");
-        prompt.append("❌ GENERIC: \"Research relevant case law\"\n");
-        prompt.append("✓ SPECIFIC: \"Start with ⚖️ [specific case with citation], ⚖️ [specific case with citation]; Shepardize these for subsequent First Circuit applications; search PACER for Judge Blackwell's prior suppression motion rulings in criminal cases\"\n\n");
-        prompt.append("**ORAL ARGUMENT & CROSS-EXAMINATION GUIDANCE** (CRITICAL FOR 9-10/10 QUALITY):\n");
-        prompt.append("When providing oral argument OR cross-examination preparation, use THEMES and KEY POINTS (not word-for-word scripts):\n\n");
-        prompt.append("❌ WRONG (scripted dialogue):\n");
-        prompt.append("\"Say: 'Your Honor, this case presents the question of whether...'\"\n");
-        prompt.append("\"Ask the witness: 'Isn't it true that you never examined the blockchain records?'\"\n\n");
-        prompt.append("✓ CORRECT (themes and strategic points):\n");
-        prompt.append("ORAL ARGUMENT: \"Lead with conceptual theme: Fourth Amendment prohibits general digital searches even with warrant. Key points to emphasize: (1) crypto wallets = evidence + asset access requiring heightened particularity, (2) warrant lacks wallet-specific or transaction-specific boundaries, (3) blockchain analysis could have narrowed scope ex ante. Anticipate judge's likely question about 'how specific is specific enough' - respond with example warrant language.\"\n\n");
-        prompt.append("CROSS-EXAMINATION: \"Theme: Investigator failed to use standard blockchain forensic tools before seeking overbroad warrant. Key points to establish: (1) Blockchain data is publicly available via explorers, (2) Investigator never attempted pre-warrant transaction tracing, (3) Standard practice (per Chainalysis) is to identify specific wallets/transactions BEFORE seeking device access. Documents to use: Warrant application (no mention of blockchain analysis), Chainalysis user guide (standard methodology). Avoid scripted questions - provide strategic objectives.\"\n\n");
-        prompt.append("For oral argument guidance:\n");
-        prompt.append("- Provide argument THEMES (conceptual hooks)\n");
-        prompt.append("- List KEY POINTS to cover (not verbatim quotes)\n");
-        prompt.append("- Flag which arguments depend on ASSUMED FACTS (must verify first)\n");
-        prompt.append("- Suggest responses to LIKELY JUDGE QUESTIONS (not scripted dialogue)\n");
-        prompt.append("- Recommend demonstrative exhibits or visual aids\n");
-        prompt.append("- Note courtroom technology capabilities if known\n\n");
-        prompt.append("For cross-examination guidance:\n");
-        prompt.append("- Provide THEMES for cross (overarching narrative or credibility attack)\n");
-        prompt.append("- List KEY POINTS to establish (not word-for-word questions)\n");
-        prompt.append("- Identify DOCUMENTS to use (reports, emails, prior testimony)\n");
-        prompt.append("- Suggest STRATEGIC OBJECTIVES (impeach, establish foundation, elicit concession)\n");
-        prompt.append("- Flag ASSUMED FACTS that must be verified before cross (e.g., \"assumes investigator has no blockchain training - verify via CV/deposition\")\n");
-        prompt.append("- NEVER provide scripted question-by-question sequences\n");
-        prompt.append("- Instead provide: \"Establish [point] using [document] to show [strategic objective]\"\n\n");
+        prompt.append("**SPECIFICITY REQUIREMENT**:\n");
+        prompt.append("Every piece of guidance must be jurisdiction-specific, practice-area-specific, and fact-specific.\n");
+        prompt.append("❌ \"File your motion with supporting documents\" → ✓ \"Per [applicable local rule], file motion with supporting memorandum and proposed order\"\n");
+        prompt.append("❌ \"Retain an expert witness\" → ✓ \"Retain [specialty] expert; budget $[range] for analysis + testimony\"\n\n");
+        prompt.append("**ORAL ARGUMENT / CROSS-EXAMINATION**: Use THEMES and KEY POINTS, not word-for-word scripts. Provide strategic objectives, not scripted dialogue.\n\n");
 
         // Authority confidence tagging
-        prompt.append("**CITATION CONFIDENCE TAGGING**:\n");
-        prompt.append("Tag all legal authorities with appropriate confidence indicators:\n");
-        prompt.append("- Statutes (M.G.L., U.S.C., CFR): Use ✓ before statute name (e.g., \"✓ M.G.L. c. 90, § 24\")\n");
-        prompt.append("- Regulations (CMR, CFR): Use ✓ before regulation cite (e.g., \"✓ 501 CMR 2.56\")\n");
-        prompt.append("- Case law confidence levels:\n");
-        prompt.append("  • Supreme Court/landmark cases: ⚖️ Controlling authority (e.g., \"⚖️ Michigan Dept. of State Police v. Sitz\")\n");
-        prompt.append("  • Circuit/State Supreme: ⚖️ Binding precedent - verify pin cite (e.g., \"⚖️ Commonwealth v. Colturi, 448 Mass. 809\")\n");
-        prompt.append("  • Lower courts: 📋 Persuasive authority - verify independently\n");
-        prompt.append("- End response with verification reminder:\n");
-        prompt.append("  ⚠️ **VERIFY ALL CASE CITATIONS**: I cannot guarantee the accuracy of specific case citations, pin cites, or holdings. Always independently verify any cases, statutes, or legal authorities cited before relying on them in court filings or legal advice.\n\n");
+        prompt.append("**CITATION TAGGING**:\n");
+        prompt.append("- Statutes/regulations: Use ✓ prefix (e.g., \"✓ 18 U.S.C. § 1001\")\n");
+        prompt.append("- Case law: Use ⚖️ prefix (e.g., \"⚖️ Ashcroft v. Iqbal, 556 U.S. 662, 678 (2009)\")\n");
+        prompt.append("- Persuasive/lower court: Use 📋 prefix\n\n");
 
         // Enhanced case law citation format
         prompt.append("**CASE LAW CITATION FORMAT** (CRITICAL FOR 9-10/10 QUALITY):\n");
         prompt.append("Every case citation MUST include ALL four components:\n");
-        prompt.append("1. Full citation with emoji tag + PIN CITES REQUIRED IN FIRST RESPONSE: ⚖️ Chase Precast Corp. v. John J. Paonessa Co., 409 Mass. 371, 373-74 (1991)\n");
-        prompt.append("2. Complete holding in parentheses explaining what the court DECIDED (not just what issue it \"addressed\"): \"(held that UCC §2-615 commercial impracticability requires: (1) unforeseen contingency, (2) making performance commercially impracticable, (3) with contingency as basic assumption of contract)\"\n");
+        prompt.append("1. Full Bluebook citation with pin cites: ⚖️ Ashcroft v. Iqbal, 556 U.S. 662, 678 (2009)\n");
+        prompt.append("2. Holding in parentheses: \"(held that to survive a motion to dismiss, a complaint must contain sufficient factual matter to state a claim that is plausible on its face)\"\n");
         prompt.append("3. Relevance to current case showing how precedent applies to these specific facts\n");
-        prompt.append("4. Provide MINIMUM 2-3 fully-cited cases for EACH major legal argument (not just one case per response, but 2-3 per ARGUMENT)\n\n");
-        prompt.append("**CRITICAL ENFORCEMENT**:\n");
-        prompt.append("- PIN CITES are MANDATORY in the FIRST response, not just follow-ups\n");
+        prompt.append("4. Include relevant case citations where they strengthen the analysis. Prioritize controlling authority from the jurisdiction.\n\n");
+        prompt.append("**PIN CITE ENFORCEMENT**:\n");
         prompt.append("- EVERY case must have pin cites on first mention:\n");
-        prompt.append("  ✓ CORRECT: ⚖️ Commonwealth v. Anderson, 406 Mass. 343, 348-51 (1989)\n");
-        prompt.append("  ❌ WRONG: ⚖️ Commonwealth v. Anderson, 406 Mass. 343 (1989) — Missing pin cites!\n");
-        prompt.append("- For EACH major legal argument (not each response, but each ARGUMENT WITHIN response):\n");
-        prompt.append("  • Provide MINIMUM 2-3 cases with full citations, pin cites, and holdings\n");
-        prompt.append("  • One case is NEVER sufficient for counsel-ready quality\n");
-        prompt.append("  • If you cannot find 2-3 cases, explain why and suggest specific research methodology\n\n");
-        prompt.append("✓ SUFFICIENT CITATION:\n");
-        prompt.append("\"⚖️ Chase Precast Corp. v. John J. Paonessa Co., 409 Mass. 371, 373-74 (1991) (held that government action eliminating need for contracted goods satisfied UCC §2-615 impracticability defense where contingency was unforeseeable and made performance commercially senseless, not merely unprofitable) supports your defense if you can prove the pandemic fundamentally altered the contract's purpose, making performance commercially senseless rather than merely more expensive. ⚖️ [Second case with full citation and holding]. ⚖️ [Third case with full citation and holding].\"\n\n");
-        prompt.append("❌ INSUFFICIENT CITATIONS:\n");
-        prompt.append("- \"See United States v. Smith (addressing warrant particularity)\" — NO holding provided\n");
-        prompt.append("- \"⚖️ Riley v. California, 573 U.S. 373 (2014)\" — NO holding in parentheses\n");
-        prompt.append("- \"⚖️ Commonwealth v. Anderson, 406 Mass. 343 (1989)\" — NO pin cites\n");
-        prompt.append("- \"Courts have held that particularity is required\" — NO specific case cited\n");
-        prompt.append("- Citing only ONE case for major argument — Need 2-3 minimum per argument\n\n");
+        prompt.append("  ✓ CORRECT: ⚖️ Bell Atlantic Corp. v. Twombly, 550 U.S. 544, 570 (2007)\n");
+        prompt.append("  ❌ WRONG: ⚖️ Twombly, 550 U.S. 544 (2007) — Missing pin cites!\n\n");
 
-        // Explicit assumption flagging
-        prompt.append("**ASSUMPTION FLAGGING** (CRITICAL FOR 9-10/10 QUALITY):\n");
-        prompt.append("You MUST flag with ⚠️ **Assumption** format when making assumptions about ANY of these 7 categories:\n\n");
-        prompt.append("1. **Document Language/Content**: Warrant terms, contract language, pleading language, discovery requests\n");
-        prompt.append("   Example: ⚠️ **Assumption**: I'm assuming the warrant uses categorical language like \"all cryptocurrency-related data\" based on typical wire fraud warrants. Review actual warrant language because if it specifies particular wallet addresses or transaction dates, the particularity argument weakens substantially.\n\n");
-        prompt.append("2. **Document Existence**: Forensic reports, expert declarations, discovery items, filed motions\n");
-        prompt.append("   Example: ⚠️ **Assumption**: I'm assuming you have not yet obtained a forensic extraction report. If investigators already provided one in discovery, analyze that specific report to identify scope violations.\n\n");
-        prompt.append("3. **Multiple Entities/Accounts**: Wallets, bank accounts, parties, transactions, communications\n");
-        prompt.append("   Example: ⚠️ **Assumption**: I'm assuming Mr. Thompson maintained multiple cryptocurrency wallets on his phone (personal, business, trading). If only one wallet existed, the segregation argument doesn't apply.\n\n");
-        prompt.append("4. **Timelines/Chronology**: Performance dates, filing deadlines, discovery completion, plea negotiations\n");
-        prompt.append("   Example: ⚠️ **Assumption**: I'm assuming performance was due in 2021-2022 based on typical pandemic-era supply agreements. If your performance period was later (2023-2024), the foreseeability argument weakens significantly.\n\n");
-        prompt.append("5. **Client's Factual Position**: Evidence client possesses, client's version of events, defenses available\n");
-        prompt.append("   Example: ⚠️ **Assumption**: I'm assuming Mr. Thompson can prove he delivered tokens as promised via blockchain records. If tokens were never distributed, the actual-loss-vs-intended-loss argument collapses.\n\n");
-        prompt.append("6. **Opposing Party Evidence**: Government's discovery, prosecution theories, plaintiff's damages claims\n");
-        prompt.append("   Example: ⚠️ **Assumption**: I'm assuming the government hasn't yet disclosed its loss calculation methodology. If the AUSA already provided a § 2B1.1 analysis, review that to identify vulnerabilities.\n\n");
-        prompt.append("7. **Procedural Posture**: Case stage, motions filed, discovery status, settlement discussions\n");
-        prompt.append("   Example: ⚠️ **Assumption**: I'm assuming discovery is still ongoing. If discovery closed and you lack forensic expert analysis, you may need a motion to reopen under Fed. R. Crim. P. 16(d)(2).\n\n");
-        prompt.append("Format for ALL assumptions: ⚠️ **Assumption**: [What you're assuming] based on [reasoning]. If [different scenario], then [specific impact on analysis/strategy].\n\n");
+        // Assumption flagging (concise)
+        prompt.append("**ASSUMPTIONS**: When your analysis depends on facts not in the case context, flag with ⚠️ **Assumption**: [what] — [impact if wrong].\n\n");
 
         // Jurisdiction-specific procedural citations
-        prompt.append("**JURISDICTION-SPECIFIC PROCEDURAL CITATIONS** (CRITICAL FOR 9-10/10 QUALITY):\n\n");
-        prompt.append("For FEDERAL cases in District of Massachusetts:\n");
-        prompt.append("- ALWAYS cite ✓ D. Mass. Local Rules (not just Fed. R. Civ. P./Crim. P.)\n");
-        prompt.append("- Motion practice: ✓ D. Mass. Local Rule 7.1 (memoranda requirements, page limits, opposition timing)\n");
-        prompt.append("- Criminal pretrial motions: ✓ D. Mass. Local Rule 116.2 (timing requirements - typically 21 days before hearing)\n");
-        prompt.append("- Opposition timing: ✓ D. Mass. Local Rule 7.1(b)(1) (opposition due 14 days after service)\n");
-        prompt.append("- Include standing orders for specific judges when judge name is provided in case details\n");
-        prompt.append("- Reference ECF requirements: ✓ D. Mass. Local Rule 5.4 (electronic filing)\n");
+        prompt.append("**JURISDICTION-SPECIFIC PROCEDURAL CITATIONS**:\n\n");
+        prompt.append("For FEDERAL cases:\n");
+        prompt.append("- ALWAYS cite the applicable U.S. District Court's Local Rules alongside Fed. R. Civ. P./Crim. P.\n");
+        prompt.append("- Include standing orders for specific judges when judge name is provided\n");
         prompt.append("- Calculate specific deadlines with rule citations, not generic timing\n\n");
-        prompt.append("Example (Federal): \"Per ✓ D. Mass. Local Rule 116.2, file suppression motion 21 days before the December 10 hearing (by November 19). Under ✓ Local Rule 7.1(b)(1), government opposition is due 14 days after service (by December 3), leaving 7 days for optional reply brief before the hearing.\"\n\n");
-        prompt.append("For MASSACHUSETTS state court cases:\n");
-        prompt.append("- ALWAYS cite ✓ Mass. R. Civ. P./Crim. P. with specific rule numbers\n");
-        prompt.append("- Summary judgment: Reference ✓ Mass. R. Civ. P. 56 AND ✓ Mass. R. Civ. P. 9A (service/assembly requirements)\n");
-        prompt.append("- Superior Court Business Litigation Session (BLS): Cite specific BLS standing orders by number\n");
-        prompt.append("  • BLS Standing Order 1-15: Summary judgment practice and timing\n");
-        prompt.append("  • Page limits: \"20-page memorandum limit under BLS Standing Order 1-15 (verify current version)\"\n");
-        prompt.append("- Session-specific rules: Superior Court vs. District Court vs. Housing Court have different procedures\n");
-        prompt.append("- Criminal cases: Cite ✓ Mass. R. Crim. P. with specific rule numbers (e.g., Rule 13 for discovery)\n\n");
-        prompt.append("Example (State): \"Per ✓ Mass. R. Civ. P. 9A and BLS Standing Order 1-15, file summary judgment motion 30+ days before trial with 20-page memorandum limit. Include certification of service per ✓ Mass. R. Civ. P. 5.\"\n\n");
+        prompt.append("For STATE court cases:\n");
+        prompt.append("- Cite the applicable state's Rules of Civil/Criminal Procedure with specific rule numbers\n");
+        prompt.append("- Reference any court-specific standing orders or local rules\n");
+        prompt.append("- Note session/division-specific procedural requirements when applicable\n\n");
         prompt.append("❌ INSUFFICIENT: \"File motion 30 days before trial\"\n");
-        prompt.append("✓ SUFFICIENT: \"Per ✓ D. Mass. Local Rule 7.1 and ✓ Fed. R. Civ. P. 56(c), file summary judgment motion at least 30 days before trial with supporting memorandum (page limit per Local Rule 7.1)\"\n\n");
+        prompt.append("✓ SUFFICIENT: \"Per [applicable local rule] and [applicable procedural rule], file motion at least 30 days before trial with supporting memorandum\"\n\n");
 
         // UCC subsection specificity
         prompt.append("**UCC CITATION SPECIFICITY** (for commercial cases):\n");
         prompt.append("When citing UCC provisions, include ALL relevant subsections:\n");
         prompt.append("Example for commercial impracticability:\n");
-        prompt.append("- ✓ M.G.L. c. 106, § 2-615(a): Basic commercial impracticability defense elements\n");
-        prompt.append("- ✓ M.G.L. c. 106, § 2-615(b): Allocation among customers when partial performance possible\n");
-        prompt.append("- ✓ M.G.L. c. 106, § 2-615(c): Seasonable notice requirement to buyer\n");
+        prompt.append("- ✓ UCC § 2-615(a): Basic commercial impracticability defense elements\n");
+        prompt.append("- ✓ UCC § 2-615(b): Allocation among customers when partial performance possible\n");
+        prompt.append("- ✓ UCC § 2-615(c): Seasonable notice requirement to buyer\n");
         prompt.append("Do NOT cite only the main section - include procedural subsections (notice, allocation) that often determine outcomes.\n\n");
 
-        // Eliminate "Research X..." placeholders
-        prompt.append("**AVOID \"RESEARCH X...\" PLACEHOLDERS** (CRITICAL FOR 9-10/10 QUALITY):\n");
-        prompt.append("When recommending additional research, ALWAYS provide at least 2-3 actual cases/authorities FIRST, then suggest further research.\n\n");
-        prompt.append("❌ INSUFFICIENT (placeholder only):\n");
-        prompt.append("\"Research First Circuit cases on warrant particularity\"\n");
-        prompt.append("\"Look for cases applying Carpenter to cryptocurrency searches\"\n");
-        prompt.append("\"Find precedents on loss calculations\"\n\n");
-        prompt.append("✓ SUFFICIENT (concrete examples first, then research suggestion):\n");
-        prompt.append("\"Key First Circuit precedents include:\n");
-        prompt.append("• ⚖️ United States v. Caraballo, 963 F.3d 1, 12-15 (1st Cir. 2020) (held that warrant authorizing search of 'all digital media' lacked Fourth Amendment particularity; suppression granted where investigators extracted categories beyond fraud investigation scope)\n");
-        prompt.append("• ⚖️ United States v. Wurie, 728 F.3d 1, 5-8 (1st Cir. 2013) (held that warrantless cell phone search incident to arrest violates Fourth Amendment even for contacts list)\n");
-        prompt.append("• ⚖️ [Third case with full citation and holding]\n");
-        prompt.append("Research additional First Circuit digital search cases post-2020 for supplemental authority.\"\n\n");
-        prompt.append("Only use 'Research...' phrasing AFTER providing concrete case examples.\n");
-        prompt.append("If you cannot provide specific cases, explain WHY and suggest specific research methodology:\n");
-        prompt.append("Example: \"First Circuit has limited published decisions on cryptocurrency wallet searches specifically. Research strategy: (1) Shepardize Riley v. California for 1st Cir. citations, (2) Search PACER for D. Mass. suppression orders mentioning 'cryptocurrency' or 'digital wallet', (3) Check 2nd and 9th Circuit decisions for persuasive authority.\"\n\n");
+        // Citation approach
+        prompt.append("**CITATION APPROACH**:\n");
+        prompt.append("Provide actual cases when you know them. For narrow topics where specific precedent is uncertain, ");
+        prompt.append("clearly state the legal principle and suggest a targeted research strategy.\n\n");
 
         // Practice-area specific deep expertise
         prompt.append("**PRACTICE-AREA DEEP EXPERTISE** (for achieving 9-10/10 quality):\n\n");
@@ -1343,7 +1087,7 @@ public class AILegalResearchService {
         prompt.append("FEDERAL CRIMINAL DEFENSE:\n");
         prompt.append("- Cite ✓ U.S.S.G. commentary and Application Notes (not just main guidelines)\n");
         prompt.append("- Reference circuit-specific departure precedents with statistics when available\n");
-        prompt.append("- Include typical plea bargaining ranges: \"Wire fraud cases in D. Mass. typically plead to 40-60% of Guidelines range\"\n");
+        prompt.append("- Include typical plea bargaining ranges with jurisdiction context when applicable\n");
         prompt.append("- Note BOP facility designation factors: offense level, criminal history, geography\n");
         prompt.append("- For suppression motions: Include circuit success rates when discussing strategy\n");
         prompt.append("- Expert appointment: Reference ✓ 18 U.S.C. § 3006A(e) for indigent defendants needing experts\n\n");
@@ -1354,12 +1098,12 @@ public class AILegalResearchService {
         prompt.append("- Note USCIS Policy Manual volume and chapter for benefit applications\n");
         prompt.append("- Include processing times from USCIS website when discussing timelines\n");
         prompt.append("- Specify which USCIS service center or asylum office has jurisdiction\n\n");
-        prompt.append("MASSACHUSETTS CIVIL LITIGATION:\n");
-        prompt.append("- Cite BLS standing orders by specific number (e.g., Standing Order 1-15)\n");
-        prompt.append("- Reference Mass. Superior Court Rule-specific requirements\n");
-        prompt.append("- Include typical discovery timelines: \"Discovery typically takes 6-12 months in Superior Court\"\n");
-        prompt.append("- Note fee-shifting provisions when applicable: ✓ M.G.L. c. 93A (consumer protection), ✓ M.G.L. c. 231, § 6F (frivolous claims)\n");
-        prompt.append("- For commercial cases: Reference whether BLS assignment is appropriate\n\n");
+        prompt.append("STATE CIVIL LITIGATION:\n");
+        prompt.append("- Cite court-specific standing orders and local rules by number\n");
+        prompt.append("- Reference the jurisdiction's court rule-specific requirements\n");
+        prompt.append("- Include typical discovery timelines for the relevant court\n");
+        prompt.append("- Note fee-shifting provisions when applicable under the jurisdiction's consumer protection and frivolous claims statutes\n");
+        prompt.append("- For commercial cases: Reference whether business/commercial court assignment is appropriate\n\n");
         prompt.append("GENERAL PRINCIPLE: Every piece of guidance must be jurisdiction-specific, practice-area-specific, case-stage-specific, and fact-specific (not generic).\n\n");
 
         // FAST MODE CITATION POLICY - CRITICAL
@@ -1391,8 +1135,10 @@ public class AILegalResearchService {
     private void appendCaseContext(StringBuilder prompt, LegalCase legalCase, QuestionType questionType) {
         boolean isFollowUp = questionType == QuestionType.FOLLOW_UP_CLARIFICATION;
         String countyName = legalCase.getCountyName();
-        String jurisdictionType = "UNKNOWN";
-        String applicableRules = "applicable procedural rules";
+        // Use case jurisdiction if set, otherwise fall back to org state
+        String caseJurisdiction = legalCase.getJurisdiction() != null ? legalCase.getJurisdiction() : "the applicable state";
+        String jurisdictionType = "STATE";
+        String applicableRules = caseJurisdiction + " Rules of Civil/Criminal Procedure";
 
         if (!isFollowUp) {
             // Full case context for initial questions — compact JSON format
@@ -1413,11 +1159,8 @@ public class AILegalResearchService {
                     countyLower.contains("usdc") || countyLower.contains("united states district")) {
                     jurisdictionType = "FEDERAL";
                     applicableRules = "Federal Rules of Civil Procedure (FRCP)";
-                } else if (countyLower.contains("superior") || countyLower.contains("massachusetts") ||
-                           countyLower.contains("district court") || countyLower.contains("ma ")) {
-                    jurisdictionType = "STATE";
-                    applicableRules = "Massachusetts Rules of Civil Procedure (Mass. R. Civ. P.)";
                 }
+                // For state courts, applicableRules already set from user-selected jurisdiction
             }
             if (legalCase.getCourtroom() != null && !legalCase.getCourtroom().isEmpty()) {
                 caseData.put("courtroom", legalCase.getCourtroom());
@@ -1546,8 +1289,8 @@ public class AILegalResearchService {
             prompt.append("   - TIMELINE: Class cert 9-15 months; settlement 12-24 months\n\n");
         } else if (caseType.contains("malpractice") || caseType.contains("medical negligence")) {
             prompt.append("3. CASE-SPECIFIC FOCUS: MEDICAL MALPRACTICE case.\n");
-            prompt.append("   - Expert testimony REQUIRED (Mass. G.L. c. 231, §60B). Tribunal requirement (state court); Erie doctrine (federal)\n");
-            prompt.append("   - SOL: 3 years from discovery, max 7 years (Mass. G.L. c. 260, §2A). No damages cap in MA\n");
+            prompt.append("   - Expert testimony REQUIRED per applicable state law. Screening/tribunal requirements vary by state; Erie doctrine (federal)\n");
+            prompt.append("   - SOL: Varies by state (typically 2-3 years from discovery). Check applicable statute of limitations and damages caps\n");
             prompt.append("   - COSTS: Medical expert $15K-$30K, causation $10K-$25K, economics $15K-$25K, life care $25K-$50K\n");
             prompt.append("   - TIMELINE: Tribunal 3-9 months; trial 18-30 months from filing\n\n");
         } else if (caseType.contains("class action")) {
@@ -1559,12 +1302,12 @@ public class AILegalResearchService {
             prompt.append("   - Key statutes: Title VII, ADEA, ADA, FMLA, FLSA. COSTS: Experts $15K-$30K; 12-18 months to trial\n\n");
         } else if (caseType.contains("family") || caseType.contains("divorce") || caseType.contains("custody")) {
             prompt.append("3. CASE-SPECIFIC FOCUS: FAMILY LAW case.\n");
-            prompt.append("   - Best interests standard (no parental presumption in MA). Modification: material change required\n");
-            prompt.append("   - GAL ($3K-$10K), parenting plan required, MA Child Support Guidelines. Evidence: stability, caregiving, mental health\n");
+            prompt.append("   - Best interests of the child standard. Modification: material change required\n");
+            prompt.append("   - GAL ($3K-$10K), parenting plan required, applicable state child support guidelines. Evidence: stability, caregiving, mental health\n");
             prompt.append("   - TIMELINE: Temporary orders 2-4 weeks; trial 6-12 months\n\n");
         } else if (caseType.contains("estate") || caseType.contains("probate") || caseType.contains("will")) {
             prompt.append("3. CASE-SPECIFIC FOCUS: ESTATE/PROBATE case.\n");
-            prompt.append("   - Contest grounds: capacity, undue influence, fraud, improper execution (Mass. G.L. c. 190B, §2-502), revocation\n");
+            prompt.append("   - Contest grounds: capacity, undue influence, fraud, improper execution per applicable probate code, revocation\n");
             prompt.append("   - Standing: interested persons only. Fiduciary duties: loyalty, prudence, impartiality\n");
             prompt.append("   - COSTS: $50K-$200K+; experts $10K-$25K each. TIMELINE: 3-6 months to hearing\n\n");
         } else if (caseType.contains("real estate") || caseType.contains("property")) {
@@ -1666,10 +1409,10 @@ public class AILegalResearchService {
         // Medical Malpractice
         if (queryLower.matches(".*(malpractice|medical negligence|standard of care|expert testimony|informed consent).*")) {
             templates.append("Medical Malpractice:\n");
-            templates.append("- \"Find Mass. cases on [medical procedure] standard of care\"\n");
-            templates.append("- \"Does tribunal requirement apply in federal court for Mass. malpractice?\"\n");
-            templates.append("- \"What expert qualifications required for [specialty] in Massachusetts?\"\n");
-            templates.append("- \"How does res ipsa loquitur apply to [scenario] in Mass.?\"\n\n");
+            templates.append("- \"Find [jurisdiction] cases on [medical procedure] standard of care\"\n");
+            templates.append("- \"Does screening/tribunal requirement apply in federal court for [state] malpractice?\"\n");
+            templates.append("- \"What expert qualifications required for [specialty] in [state]?\"\n");
+            templates.append("- \"How does res ipsa loquitur apply to [scenario] in [jurisdiction]?\"\n\n");
         }
 
         templates.append("**Use these templates to generate jurisdiction-specific, precedent-focused follow-ups.**\n");
@@ -1748,7 +1491,7 @@ public class AILegalResearchService {
                        "• Required fees and payment methods\n" +
                        "• Court procedures and what to expect\n" +
                        "• Common mistakes to avoid\n\n" +
-                       "Be specific about Massachusetts requirements.";
+                       "Be specific about the applicable jurisdiction's requirements.";
 
             case APPEAL_PROCESS:
                 return "Explain the appeal process including:\n" +
@@ -1757,7 +1500,7 @@ public class AILegalResearchService {
                        "• Filing procedures and fees\n" +
                        "• Standards of review and chances of success\n" +
                        "• Timeline for the appeal process\n\n" +
-                       "Cite specific Massachusetts Rules of Appellate Procedure.";
+                       "Cite the applicable Rules of Appellate Procedure for the jurisdiction.";
 
             case CRIMINAL_DEFENSE:
                 return "Provide criminal defense guidance including:\n" +
@@ -1766,7 +1509,7 @@ public class AILegalResearchService {
                        "• Rights of the defendant\n" +
                        "• Potential penalties and consequences\n" +
                        "• Next steps in the legal process\n\n" +
-                       "Reference specific Massachusetts criminal statutes and court rules.";
+                       "Reference the applicable criminal statutes and court rules for the jurisdiction.";
 
             case CIVIL_LITIGATION:
                 return "Explain civil litigation procedures including:\n" +
@@ -1775,7 +1518,7 @@ public class AILegalResearchService {
                        "• Required elements to prove the case\n" +
                        "• Procedural requirements for filing\n" +
                        "• Potential damages and remedies\n\n" +
-                       "Cite relevant Massachusetts General Laws and court rules.";
+                       "Cite the applicable statutes and court rules for the jurisdiction.";
 
             case FAMILY_LAW:
                 return "Address family law matters including:\n" +
@@ -1784,7 +1527,7 @@ public class AILegalResearchService {
                        "• Timeline and court process\n" +
                        "• Rights and obligations of parties\n" +
                        "• Potential outcomes and enforcement\n\n" +
-                       "Reference Massachusetts family law statutes and guidelines.";
+                       "Reference the applicable family law statutes and guidelines for the jurisdiction.";
 
             case BUSINESS_LAW:
                 return "Explain business law requirements including:\n" +
@@ -1793,7 +1536,7 @@ public class AILegalResearchService {
                        "• Required documentation\n" +
                        "• Regulatory obligations\n" +
                        "• Potential legal consequences\n\n" +
-                       "Cite specific Massachusetts business statutes and regulations.";
+                       "Cite the applicable business statutes and regulations for the jurisdiction.";
 
             case COURT_RULES:
                 return "Interpret court rules including:\n" +
@@ -1811,7 +1554,7 @@ public class AILegalResearchService {
                        "• Deadlines and time limits\n" +
                        "• Rights and obligations\n" +
                        "• Practical next steps\n\n" +
-                       "Be specific about Massachusetts law and procedures.";
+                       "Be specific about the applicable jurisdiction's law and procedures.";
         }
     }
 
@@ -2016,6 +1759,28 @@ public class AILegalResearchService {
      * Detect question type based on patterns in the query and conversation context.
      * This helps determine the appropriate response format and level of detail.
      */
+    /**
+     * Resolve jurisdiction from case context: case.jurisdiction → org.state → "General".
+     * Used by both FAST and THOROUGH research paths as fallback when no explicit jurisdiction is provided.
+     */
+    private String resolveCaseJurisdiction(String caseId) {
+        if (caseId != null && !caseId.isEmpty()) {
+            try {
+                Long caseIdLong = Long.parseLong(caseId);
+                Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
+                if (orgId != null) {
+                    Optional<LegalCase> caseOpt = legalCaseRepository.findByIdAndOrganizationId(caseIdLong, orgId);
+                    if (caseOpt.isPresent() && caseOpt.get().getJurisdiction() != null) {
+                        String resolved = caseOpt.get().getJurisdiction();
+                        log.info("📍 Resolved jurisdiction from case {}: {}", caseId, resolved);
+                        return resolved;
+                    }
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+        return "General";
+    }
+
     private QuestionType detectQuestionType(String query, List<ConversationMessage> conversationHistory) {
         String queryLower = query.toLowerCase().trim();
 
@@ -2761,16 +2526,33 @@ public class AILegalResearchService {
      * This prompt tells Claude to use tools for research instead of relying on pre-fetched documents
      */
     private String buildAgenticPrompt(String query, String caseId, List<ConversationMessage> conversationHistory, QuestionType questionType) {
+        return buildAgenticPrompt(query, caseId, conversationHistory, questionType, null);
+    }
+
+    private String buildAgenticPrompt(String query, String caseId, List<ConversationMessage> conversationHistory, QuestionType questionType, String userJurisdiction) {
         StringBuilder prompt = new StringBuilder();
 
         log.info("🎯 THOROUGH mode - Question type: {} for query: {}", questionType, query.substring(0, Math.min(50, query.length())));
 
-        // Detect jurisdiction
+        // Resolve jurisdiction: user-selected > query detection > default
+        String jurisdiction;
         boolean isImmigrationQuery = isImmigrationQuery(query);
-        String jurisdiction = isImmigrationQuery ? "Federal/Immigration" :
-                            (isStateLawQuery(query) ? "Massachusetts State" : "General");
+        if (isImmigrationQuery) {
+            jurisdiction = "Federal/Immigration";
+        } else if (userJurisdiction != null && !userJurisdiction.isBlank()
+                   && !"all".equalsIgnoreCase(userJurisdiction)
+                   && !"general".equalsIgnoreCase(userJurisdiction)) {
+            // Capitalize first letter if it's a state code like "texas" → "Texas"
+            jurisdiction = userJurisdiction.substring(0, 1).toUpperCase() + userJurisdiction.substring(1);
+        } else {
+            // Fallback: resolve from case context (case jurisdiction → org state → "General")
+            jurisdiction = resolveCaseJurisdiction(caseId);
+        }
 
-        prompt.append("Expert legal research assistant. **TODAY: ").append(java.time.LocalDate.now().toString()).append("**\n\n");
+        prompt.append("Expert legal research assistant specializing in **").append(jurisdiction).append("** law. **TODAY: ").append(java.time.LocalDate.now().toString()).append("**\n\n");
+        prompt.append("**JURISDICTION: ").append(jurisdiction).append("**\n");
+        prompt.append("All legal analysis, case citations, statutes, and procedural rules MUST be specific to ").append(jurisdiction).append(". ");
+        prompt.append("Do NOT cite Massachusetts law, M.G.L. statutes, or Mass. rules unless the jurisdiction IS Massachusetts.\n\n");
 
         // Add conversation history if available
         if (conversationHistory != null && !conversationHistory.isEmpty()) {
@@ -2855,8 +2637,8 @@ public class AILegalResearchService {
                     boolean isFollowUp = questionType == QuestionType.FOLLOW_UP_CLARIFICATION;
 
                     String countyName = legalCase.getCountyName();
-                    String jurisdictionType = "UNKNOWN";
-                    String applicableRules = "applicable procedural rules";
+                    String jurisdictionType = "STATE";
+                    String applicableRules = jurisdiction + " Rules of Civil/Criminal Procedure";
 
                     if (!isFollowUp) {
                         prompt.append("**CRITICAL - CASE-SPECIFIC CONTEXT**:\n");
@@ -2881,10 +2663,10 @@ public class AILegalResearchService {
                                 countyLower.contains("usdc") || countyLower.contains("united states district")) {
                                 jurisdictionType = "FEDERAL";
                                 applicableRules = "Federal Rules of Civil Procedure (FRCP)";
-                            } else if (countyLower.contains("superior") || countyLower.contains("massachusetts") ||
-                                       countyLower.contains("district court") || countyLower.contains("ma ")) {
+                            } else {
                                 jurisdictionType = "STATE";
-                                applicableRules = "Massachusetts Rules of Civil Procedure (Mass. R. Civ. P.)";
+                                // Use the user-selected jurisdiction for applicable rules, not hardcoded MA
+                                applicableRules = jurisdiction + " Rules of Civil/Criminal Procedure";
                             }
                             if (legalCase.getCourtroom() != null && !legalCase.getCourtroom().isEmpty()) {
                                 prompt.append("- Courtroom: ").append(legalCase.getCourtroom()).append("\n");
@@ -2972,7 +2754,7 @@ public class AILegalResearchService {
                         if (caseType.contains("data breach") || caseType.contains("privacy")) {
                             prompt.append("3. CASE-SPECIFIC: DATA BREACH/PRIVACY - Address Article III standing, notification obligations, consumer protection statutes.\n\n");
                         } else if (caseType.contains("malpractice") || caseType.contains("medical negligence")) {
-                            prompt.append("3. CASE-SPECIFIC: MEDICAL MALPRACTICE - Expert testimony required (M.G.L. c. 231, §60B), tribunal requirement, 3-year SOL.\n\n");
+                            prompt.append("3. CASE-SPECIFIC: MEDICAL MALPRACTICE - Expert testimony requirements per ").append(jurisdiction).append(" law, applicable tribunal/screening requirements, statute of limitations.\n\n");
                         } else if (caseType.contains("class action")) {
                             prompt.append("3. CASE-SPECIFIC: CLASS ACTION - Address Rule 23 requirements (numerosity, commonality, typicality, adequacy).\n\n");
                         } else if (caseType.contains("employment")) {
@@ -3073,6 +2855,8 @@ public class AILegalResearchService {
         prompt.append("Use ### subheadings when they help readability. Use numbered lists for sequential steps or ranked items only.]\n\n");
         prompt.append("## Follow-Up Questions\n");
         prompt.append("3-5 specific questions to explore further.\n\n");
+        prompt.append("SOURCES: [Case1 v. Case2, Reporter Citation] | [Statute § X] | [Case3 v. Case4, Reporter Citation]\n");
+        prompt.append("(List ALL cases, statutes, and rules you relied on, separated by | pipes. This line is MANDATORY.)\n\n");
         prompt.append("**RULES**: Bold for emphasis, *italics* for case names. No emoji prefixes. ");
         prompt.append("No meta-commentary about tools or search process. Present findings confidently.\n\n");
 
@@ -3093,7 +2877,7 @@ public class AILegalResearchService {
         String sessionId = (String) searchRequest.get("sessionId");
         String caseId = (String) searchRequest.get("caseId");
         String searchType = (String) searchRequest.getOrDefault("searchType", "all");
-        String jurisdiction = (String) searchRequest.getOrDefault("jurisdiction", "massachusetts");
+        String jurisdiction = (String) searchRequest.getOrDefault("jurisdiction", "General");
         Long userId = searchRequest.containsKey("userId") ?
             Long.valueOf(searchRequest.get("userId").toString()) : null;
 
@@ -3196,7 +2980,7 @@ public class AILegalResearchService {
             QuestionType questionType = detectQuestionType(query, conversationHistory);
 
             // Build agentic prompt with case context, conversation history, and question-type-aware tool instructions
-            String prompt = buildAgenticPrompt(query, caseId, conversationHistory, questionType);
+            String prompt = buildAgenticPrompt(query, caseId, conversationHistory, questionType, jurisdiction);
 
             // Set document context for read_case_document tool
             Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
@@ -3204,6 +2988,15 @@ public class AILegalResearchService {
                 try {
                     legalResearchTools.setResearchContext(Long.parseLong(caseId), orgId);
                 } catch (NumberFormatException ignored) {}
+            }
+
+            // Step 2: Searching legal databases (30% progress)
+            if (sessionId != null) {
+                progressPublisher.publishStep(sessionId, "database_search",
+                    "Searching " + jurisdiction + " statutes and case law",
+                    query.length() > 60 ? query.substring(0, 57) + "..." : query,
+                    "ri-search-line",
+                    30);
             }
 
             String aiResponse;
@@ -3216,6 +3009,15 @@ public class AILegalResearchService {
             }
 
             log.info("✅ Agentic research complete in {}ms", System.currentTimeMillis() - startTime);
+
+            // Step 3: AI analysis done — move to synthesizing (75% progress)
+            if (sessionId != null) {
+                progressPublisher.publishStep(sessionId, "response_generation",
+                    "Synthesizing findings",
+                    "Formatting and verifying citations",
+                    "ri-quill-pen-line",
+                    75);
+            }
 
             // POST-PROCESSING Step 1: Convert bullets BEFORE citation processing
             aiResponse = convertBulletsToNumberedLists(aiResponse);
@@ -3249,7 +3051,7 @@ public class AILegalResearchService {
             result.put("totalResults", 0);
             result.put("searchQuery", query);
             result.put("searchType", searchRequest.getOrDefault("searchType", "all"));
-            result.put("jurisdiction", searchRequest.getOrDefault("jurisdiction", "MASSACHUSETTS"));
+            result.put("jurisdiction", jurisdiction);
             result.put("aiAnalysis", processedResponse);
             result.put("hasAIAnalysis", true);
             result.put("executionTimeMs", System.currentTimeMillis() - startTime);
@@ -3408,10 +3210,10 @@ public class AILegalResearchService {
 
         // Fix 1: Circuit Court Detection
         guide.append("**APPELLATE PATHWAY:**\n");
-        guide.append("IJ → BIA → U.S. Court of Appeals (First Circuit for MA cases) → SCOTUS\n");
-        guide.append("- First Circuit: Boston-based; jurisdiction over MA, ME, NH, RI, PR\n");
+        guide.append("IJ → BIA → U.S. Court of Appeals (circuit where case arises) → SCOTUS\n");
         guide.append("- Petition for review: 30 days after BIA decision (STRICT - no equitable tolling)\n");
-        guide.append("- Standard of review: Substantial evidence (INS v. Elias-Zacarias, 502 U.S. 478 (1992))\n\n");
+        guide.append("- Standard of review: Substantial evidence (INS v. Elias-Zacarias, 502 U.S. 478 (1992))\n");
+        guide.append("- Identify the correct circuit based on the immigration court location\n\n");
 
         // Fix 2: BIA Procedures Clarified
         guide.append("**BIA APPELLATE PROCESS (No Live Hearings):**\n");
@@ -3822,14 +3624,26 @@ public class AILegalResearchService {
                         matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
                         verifiedCount++;
                     } else {
-                        // Not a verifiable citation - REMOVE IT instead of showing warning
-                        // This prevents malpractice issues from unverified citations appearing in final documents
-                        log.warn("⚠️ REMOVING unverified citation: {} | Citation: {}", caseName, citation);
-                        log.warn("   Original: '{}'", fullMatch);
-                        log.warn("   This citation will be REMOVED from the output (prevents malpractice)");
+                        // Not verified via CourtListener or known state patterns.
+                        // Instead of DELETING (which removes legitimate citations for TX, FL, CA, etc.),
+                        // construct a CourtListener search URL so the user can verify manually.
+                        // The citation is preserved with a search link rather than silently removed.
+                        // NOTE: No ✓ prefix — this is a search fallback, NOT a verified citation.
+                        // Frontend will render this as a normal link without the green "verified" badge.
+                        String searchUrl = String.format("https://www.courtlistener.com/?q=%s&type=o",
+                            java.net.URLEncoder.encode(caseName + " " + citation, java.nio.charset.StandardCharsets.UTF_8));
 
-                        // Replace with empty string to remove the citation
-                        matcher.appendReplacement(sb, "");
+                        String fullCitation = court != null ?
+                            String.format("%s (%s %s)", citation, court.trim(), year) :
+                            String.format("%s (%s)", citation, year);
+
+                        String replacement = String.format("[%s](%s), %s",
+                            caseName, searchUrl, fullCitation);
+
+                        log.info("🔗 FALLBACK: CourtListener search URL for unverified citation: {} | {}", caseName, citation);
+                        log.info("   Search URL: {}", searchUrl);
+
+                        matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
                         unverifiedCount++;
                     }
                 }

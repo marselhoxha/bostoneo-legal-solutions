@@ -1,4 +1,4 @@
-import { MenuItem, UserRole, RoleMenuConfig, resolveMenuTier } from './menu.model';
+import { MenuItem, UserRole, FirmType, RoleMenuConfig, resolveMenuTier } from './menu.model';
 
 // ============================================================================
 // CLIENT MENU (ROLE_USER) - Simple portal access
@@ -50,6 +50,7 @@ export const CLIENT_MENU: MenuItem[] = [
 
 // ============================================================================
 // SECRETARY MENU (ROLE_SECRETARY) - Administrative support
+// No Documents/File Manager link
 // ============================================================================
 export const SECRETARY_MENU: MenuItem[] = [
   {
@@ -82,12 +83,6 @@ export const SECRETARY_MENU: MenuItem[] = [
     ]
   },
   {
-    id: 'sec-documents',
-    label: 'Documents',
-    icon: 'ri-folder-2-line',
-    link: '/file-manager'
-  },
-  {
     id: 'sec-tasks',
     label: 'Tasks',
     icon: 'ri-task-line',
@@ -96,7 +91,7 @@ export const SECRETARY_MENU: MenuItem[] = [
 ];
 
 // ============================================================================
-// PARALEGAL MENU - Legal support staff
+// PARALEGAL MENU - Calendar & Tasks top-level, no File Manager
 // ============================================================================
 export const PARALEGAL_MENU: MenuItem[] = [
   {
@@ -112,10 +107,20 @@ export const PARALEGAL_MENU: MenuItem[] = [
     link: '/legal/cases',
     subItems: [
       { id: 'para-case-cases', label: 'Cases', link: '/legal/cases', parentId: 'para-case-mgmt' },
-      { id: 'para-case-calendar', label: 'Calendar', link: '/legal/calendar', parentId: 'para-case-mgmt' },
-      { id: 'para-case-tasks', label: 'Tasks', link: '/case-management/tasks', parentId: 'para-case-mgmt' },
       { id: 'para-case-assignments', label: 'Assignments', link: '/case-management/assignments', parentId: 'para-case-mgmt' }
     ]
+  },
+  {
+    id: 'para-calendar',
+    label: 'Calendar',
+    icon: 'ri-calendar-line',
+    link: '/legal/calendar'
+  },
+  {
+    id: 'para-tasks',
+    label: 'Tasks',
+    icon: 'ri-task-line',
+    link: '/case-management/tasks'
   },
   {
     id: 'para-time',
@@ -126,17 +131,11 @@ export const PARALEGAL_MENU: MenuItem[] = [
       { id: 'para-time-dashboard', label: 'Dashboard', link: '/time-tracking/dashboard', parentId: 'para-time' },
       { id: 'para-time-entry', label: 'Log Time', link: '/time-tracking/entry', parentId: 'para-time' }
     ]
-  },
-  {
-    id: 'para-files',
-    label: 'File Manager',
-    icon: 'ri-folder-2-line',
-    link: '/file-manager'
   }
 ];
 
 // ============================================================================
-// FINANCE MENU (ROLE_FINANCE) - Financial management focus
+// FINANCE MENU (ROLE_FINANCE) - Financial management focus (unchanged)
 // ============================================================================
 export const FINANCE_MENU: MenuItem[] = [
   {
@@ -199,7 +198,188 @@ export const FINANCE_MENU: MenuItem[] = [
 ];
 
 // ============================================================================
+// SOLO ATTORNEY MENU - Solo practitioner (no team features, no CRM)
+// 7 top-level items + E-Signatures
+// ============================================================================
+export const SOLO_ATTORNEY_MENU: MenuItem[] = [
+  {
+    id: 'solo-att-dashboard',
+    label: 'Dashboard',
+    icon: 'ri-dashboard-2-line',
+    link: '/home'
+  },
+  {
+    id: 'solo-att-cases',
+    label: 'Cases',
+    icon: 'ri-briefcase-4-line',
+    link: '/legal/cases'
+  },
+  {
+    id: 'solo-att-calendar',
+    label: 'Calendar',
+    icon: 'ri-calendar-line',
+    link: '/legal/calendar'
+  },
+  {
+    id: 'solo-att-tasks',
+    label: 'Tasks',
+    icon: 'ri-task-line',
+    link: '/case-management/tasks'
+  },
+  {
+    id: 'solo-att-ai-tools',
+    label: 'LegiTools',
+    icon: 'ri-robot-line',
+    link: '/legal/ai-assistant/legispace',
+    subItems: [
+      { id: 'solo-att-ai-workspace', label: 'LegiSpace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/legispace', parentId: 'solo-att-ai-tools' },
+      { id: 'solo-att-ai-pi', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'solo-att-ai-tools' }
+    ]
+  },
+  {
+    id: 'solo-att-clients',
+    label: 'Clients',
+    icon: 'ri-user-3-line',
+    link: '/clients'
+  },
+  {
+    id: 'solo-att-billing',
+    label: 'Billing',
+    icon: 'ri-money-dollar-circle-line',
+    link: '/time-tracking/dashboard',
+    subItems: [
+      { id: 'solo-att-time-dashboard', label: 'Time Dashboard', link: '/time-tracking/dashboard', parentId: 'solo-att-billing' },
+      { id: 'solo-att-time-entry', label: 'Log Time', link: '/time-tracking/entry', parentId: 'solo-att-billing' },
+      { id: 'solo-att-time-rates', label: 'Billing Rates', link: '/time-tracking/rates', parentId: 'solo-att-billing' },
+      {
+        id: 'solo-att-invoices',
+        label: 'Invoices',
+        link: '/invoices',
+        parentId: 'solo-att-billing',
+        subItems: [
+          { id: 'solo-att-inv-list', label: 'All Invoices', link: '/invoices', parentId: 'solo-att-invoices' },
+          { id: 'solo-att-inv-workflows', label: 'Workflows', link: '/invoices/workflows', parentId: 'solo-att-invoices' }
+        ]
+      },
+      {
+        id: 'solo-att-expenses',
+        label: 'Expenses',
+        link: '/expenses',
+        parentId: 'solo-att-billing',
+        subItems: [
+          { id: 'solo-att-exp-list', label: 'All Expenses', link: '/expenses', parentId: 'solo-att-expenses' },
+          { id: 'solo-att-exp-categories', label: 'Categories', link: '/expenses/categories', parentId: 'solo-att-expenses' },
+          { id: 'solo-att-exp-vendors', label: 'Vendors', link: '/expenses/vendors', parentId: 'solo-att-expenses' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'solo-att-signatures',
+    label: 'E-Signatures',
+    icon: 'ri-quill-pen-line',
+    link: '/signatures'
+  }
+];
+
+// ============================================================================
+// SOLO ADMIN MENU - Solo practitioner with admin (+ Org Settings & Audit Logs)
+// 8 top-level items
+// ============================================================================
+export const SOLO_ADMIN_MENU: MenuItem[] = [
+  {
+    id: 'solo-adm-dashboard',
+    label: 'Dashboard',
+    icon: 'ri-dashboard-2-line',
+    link: '/home'
+  },
+  {
+    id: 'solo-adm-cases',
+    label: 'Cases',
+    icon: 'ri-briefcase-4-line',
+    link: '/legal/cases'
+  },
+  {
+    id: 'solo-adm-calendar',
+    label: 'Calendar',
+    icon: 'ri-calendar-line',
+    link: '/legal/calendar'
+  },
+  {
+    id: 'solo-adm-tasks',
+    label: 'Tasks',
+    icon: 'ri-task-line',
+    link: '/case-management/tasks'
+  },
+  {
+    id: 'solo-adm-ai-tools',
+    label: 'LegiTools',
+    icon: 'ri-robot-line',
+    link: '/legal/ai-assistant/legispace',
+    subItems: [
+      { id: 'solo-adm-ai-workspace', label: 'LegiSpace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/legispace', parentId: 'solo-adm-ai-tools' },
+      { id: 'solo-adm-ai-pi', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'solo-adm-ai-tools' }
+    ]
+  },
+  {
+    id: 'solo-adm-clients',
+    label: 'Clients',
+    icon: 'ri-user-3-line',
+    link: '/clients'
+  },
+  {
+    id: 'solo-adm-billing',
+    label: 'Billing',
+    icon: 'ri-money-dollar-circle-line',
+    link: '/time-tracking/dashboard',
+    subItems: [
+      { id: 'solo-adm-time-dashboard', label: 'Time Dashboard', link: '/time-tracking/dashboard', parentId: 'solo-adm-billing' },
+      { id: 'solo-adm-time-entry', label: 'Log Time', link: '/time-tracking/entry', parentId: 'solo-adm-billing' },
+      { id: 'solo-adm-time-rates', label: 'Billing Rates', link: '/time-tracking/rates', parentId: 'solo-adm-billing' },
+      {
+        id: 'solo-adm-invoices',
+        label: 'Invoices',
+        link: '/invoices',
+        parentId: 'solo-adm-billing',
+        subItems: [
+          { id: 'solo-adm-inv-list', label: 'All Invoices', link: '/invoices', parentId: 'solo-adm-invoices' },
+          { id: 'solo-adm-inv-workflows', label: 'Workflows', link: '/invoices/workflows', parentId: 'solo-adm-invoices' }
+        ]
+      },
+      {
+        id: 'solo-adm-expenses',
+        label: 'Expenses',
+        link: '/expenses',
+        parentId: 'solo-adm-billing',
+        subItems: [
+          { id: 'solo-adm-exp-list', label: 'All Expenses', link: '/expenses', parentId: 'solo-adm-expenses' },
+          { id: 'solo-adm-exp-categories', label: 'Categories', link: '/expenses/categories', parentId: 'solo-adm-expenses' },
+          { id: 'solo-adm-exp-vendors', label: 'Vendors', link: '/expenses/vendors', parentId: 'solo-adm-expenses' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'solo-adm-signatures',
+    label: 'E-Signatures',
+    icon: 'ri-quill-pen-line',
+    link: '/signatures'
+  },
+  {
+    id: 'solo-adm-admin',
+    label: 'Admin',
+    icon: 'ri-admin-line',
+    link: '/admin/audit-logs',
+    subItems: [
+      { id: 'solo-adm-admin-org', label: 'Organization Settings', link: '/organizations/details/__ORG_ID__', parentId: 'solo-adm-admin' },
+      { id: 'solo-adm-admin-audit', label: 'Audit Logs', link: '/admin/audit-logs', parentId: 'solo-adm-admin' }
+    ]
+  }
+];
+
+// ============================================================================
 // ATTORNEY MENU (ROLE_ATTORNEY) - Full legal practice management
+// Calendar & Tasks top-level, Billing merged, no File Manager
 // ============================================================================
 export const ATTORNEY_MENU: MenuItem[] = [
   {
@@ -215,10 +395,20 @@ export const ATTORNEY_MENU: MenuItem[] = [
     link: '/legal/cases',
     subItems: [
       { id: 'att-case-cases', label: 'Cases', icon: 'ri-folder-open-line', link: '/legal/cases', parentId: 'att-case-mgmt' },
-      { id: 'att-case-calendar', label: 'Calendar', icon: 'ri-calendar-line', link: '/legal/calendar', parentId: 'att-case-mgmt' },
-      { id: 'att-case-tasks', label: 'Tasks', icon: 'ri-task-line', link: '/case-management/tasks', parentId: 'att-case-mgmt' },
       { id: 'att-case-assignments', label: 'Assignments', icon: 'ri-user-add-line', link: '/case-management/assignments', parentId: 'att-case-mgmt' }
     ]
+  },
+  {
+    id: 'att-calendar',
+    label: 'Calendar',
+    icon: 'ri-calendar-line',
+    link: '/legal/calendar'
+  },
+  {
+    id: 'att-tasks',
+    label: 'Tasks',
+    icon: 'ri-task-line',
+    link: '/case-management/tasks'
   },
   {
     id: 'att-ai-tools',
@@ -237,32 +427,22 @@ export const ATTORNEY_MENU: MenuItem[] = [
     link: '/clients'
   },
   {
-    id: 'att-time-billing',
-    label: 'Time & Billing',
-    icon: 'ri-time-line',
+    id: 'att-billing',
+    label: 'Billing',
+    icon: 'ri-money-dollar-circle-line',
     link: '/time-tracking/dashboard',
     subItems: [
-      { id: 'att-time-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/time-tracking/dashboard', parentId: 'att-time-billing' },
-      { id: 'att-time-entry', label: 'Log Time', icon: 'ri-timer-line', link: '/time-tracking/entry', parentId: 'att-time-billing' },
-      { id: 'att-time-approval', label: 'Approval', icon: 'ri-checkbox-circle-line', link: '/time-tracking/approval', parentId: 'att-time-billing' },
-      { id: 'att-time-rates', label: 'Billing Rates', icon: 'ri-price-tag-3-line', link: '/time-tracking/rates', parentId: 'att-time-billing' }
-    ]
-  },
-  {
-    id: 'att-financial',
-    label: 'Financial',
-    icon: 'ri-money-dollar-circle-line',
-    link: '/invoices',
-    subItems: [
+      { id: 'att-time-dashboard', label: 'Time Dashboard', icon: 'ri-dashboard-line', link: '/time-tracking/dashboard', parentId: 'att-billing' },
+      { id: 'att-time-entry', label: 'Log Time', icon: 'ri-timer-line', link: '/time-tracking/entry', parentId: 'att-billing' },
+      { id: 'att-time-approval', label: 'Approval', icon: 'ri-checkbox-circle-line', link: '/time-tracking/approval', parentId: 'att-billing' },
+      { id: 'att-time-rates', label: 'Billing Rates', icon: 'ri-price-tag-3-line', link: '/time-tracking/rates', parentId: 'att-billing' },
       {
         id: 'att-invoices',
         label: 'Invoices',
         link: '/invoices',
-        parentId: 'att-financial',
+        parentId: 'att-billing',
         subItems: [
           { id: 'att-inv-list', label: 'All Invoices', link: '/invoices', parentId: 'att-invoices' },
-          { id: 'att-inv-payments', label: 'Payments', link: '/invoices/payments', parentId: 'att-invoices' },
-          { id: 'att-inv-templates', label: 'Templates', link: '/invoices/templates', parentId: 'att-invoices' },
           { id: 'att-inv-workflows', label: 'Workflows', link: '/invoices/workflows', parentId: 'att-invoices' }
         ]
       },
@@ -270,7 +450,7 @@ export const ATTORNEY_MENU: MenuItem[] = [
         id: 'att-expenses',
         label: 'Expenses',
         link: '/expenses',
-        parentId: 'att-financial',
+        parentId: 'att-billing',
         subItems: [
           { id: 'att-exp-list', label: 'All Expenses', link: '/expenses', parentId: 'att-expenses' },
           { id: 'att-exp-categories', label: 'Categories', link: '/expenses/categories', parentId: 'att-expenses' },
@@ -296,21 +476,12 @@ export const ATTORNEY_MENU: MenuItem[] = [
     label: 'E-Signatures',
     icon: 'ri-quill-pen-line',
     link: '/signatures'
-  },
-  {
-    id: 'att-files',
-    label: 'File Manager',
-    icon: 'ri-folder-2-line',
-    link: '/file-manager',
-    subItems: [
-      { id: 'att-files-main', label: 'My Documents', link: '/file-manager', parentId: 'att-files' },
-      { id: 'att-files-templates', label: 'Templates', link: '/file-manager/templates', parentId: 'att-files' }
-    ]
   }
 ];
 
 // ============================================================================
 // ADMIN MENU (ROLE_ADMIN) - Full system access
+// Calendar & Tasks top-level, Billing merged, Admin dropdown, no File Manager
 // ============================================================================
 export const ADMIN_MENU: MenuItem[] = [
   {
@@ -326,10 +497,20 @@ export const ADMIN_MENU: MenuItem[] = [
     link: '/legal/cases',
     subItems: [
       { id: 'admin-case-cases', label: 'Cases', icon: 'ri-folder-open-line', link: '/legal/cases', parentId: 'admin-case-mgmt' },
-      { id: 'admin-case-calendar', label: 'Calendar', icon: 'ri-calendar-line', link: '/legal/calendar', parentId: 'admin-case-mgmt' },
-      { id: 'admin-case-tasks', label: 'Tasks', icon: 'ri-task-line', link: '/case-management/tasks', parentId: 'admin-case-mgmt' },
       { id: 'admin-case-assignments', label: 'Assignments', icon: 'ri-user-add-line', link: '/case-management/assignments', parentId: 'admin-case-mgmt' }
     ]
+  },
+  {
+    id: 'admin-calendar',
+    label: 'Calendar',
+    icon: 'ri-calendar-line',
+    link: '/legal/calendar'
+  },
+  {
+    id: 'admin-tasks',
+    label: 'Tasks',
+    icon: 'ri-task-line',
+    link: '/case-management/tasks'
   },
   {
     id: 'admin-ai-tools',
@@ -348,34 +529,24 @@ export const ADMIN_MENU: MenuItem[] = [
     link: '/clients'
   },
   {
-    id: 'admin-time-billing',
-    label: 'Time & Billing',
-    icon: 'ri-time-line',
-    link: '/time-tracking/dashboard',
-    subItems: [
-      { id: 'admin-time-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/time-tracking/dashboard', parentId: 'admin-time-billing' },
-      { id: 'admin-time-entry', label: 'Log Time', icon: 'ri-timer-line', link: '/time-tracking/entry', parentId: 'admin-time-billing' },
-      { id: 'admin-time-approval', label: 'Approval', icon: 'ri-checkbox-circle-line', link: '/time-tracking/approval', parentId: 'admin-time-billing' },
-      { id: 'admin-time-rates', label: 'Billing Rates', icon: 'ri-price-tag-3-line', link: '/time-tracking/rates', parentId: 'admin-time-billing' },
-      { id: 'admin-time-invoice-gen', label: 'Invoice Generation', icon: 'ri-bill-line', link: '/time-tracking/billing/invoice-generation', parentId: 'admin-time-billing' }
-    ]
-  },
-  {
-    id: 'admin-financial',
-    label: 'Financial',
+    id: 'admin-billing',
+    label: 'Billing',
     icon: 'ri-money-dollar-circle-line',
     link: '/billing-dashboard',
     subItems: [
-      { id: 'admin-billing-dash', label: 'Billing Dashboard', link: '/billing-dashboard', parentId: 'admin-financial' },
+      { id: 'admin-billing-dash', label: 'Billing Dashboard', link: '/billing-dashboard', parentId: 'admin-billing' },
+      { id: 'admin-time-dashboard', label: 'Time Dashboard', icon: 'ri-dashboard-line', link: '/time-tracking/dashboard', parentId: 'admin-billing' },
+      { id: 'admin-time-entry', label: 'Log Time', icon: 'ri-timer-line', link: '/time-tracking/entry', parentId: 'admin-billing' },
+      { id: 'admin-time-approval', label: 'Approval', icon: 'ri-checkbox-circle-line', link: '/time-tracking/approval', parentId: 'admin-billing' },
+      { id: 'admin-time-rates', label: 'Billing Rates', icon: 'ri-price-tag-3-line', link: '/time-tracking/rates', parentId: 'admin-billing' },
+      { id: 'admin-time-invoice-gen', label: 'Invoice Generation', icon: 'ri-bill-line', link: '/time-tracking/billing/invoice-generation', parentId: 'admin-billing' },
       {
         id: 'admin-invoices',
         label: 'Invoices',
         link: '/invoices',
-        parentId: 'admin-financial',
+        parentId: 'admin-billing',
         subItems: [
           { id: 'admin-inv-list', label: 'All Invoices', link: '/invoices', parentId: 'admin-invoices' },
-          { id: 'admin-inv-payments', label: 'Payments', link: '/invoices/payments', parentId: 'admin-invoices' },
-          { id: 'admin-inv-templates', label: 'Templates', link: '/invoices/templates', parentId: 'admin-invoices' },
           { id: 'admin-inv-workflows', label: 'Workflows', link: '/invoices/workflows', parentId: 'admin-invoices' }
         ]
       },
@@ -383,7 +554,7 @@ export const ADMIN_MENU: MenuItem[] = [
         id: 'admin-expenses',
         label: 'Expenses',
         link: '/expenses',
-        parentId: 'admin-financial',
+        parentId: 'admin-billing',
         subItems: [
           { id: 'admin-exp-list', label: 'All Expenses', link: '/expenses', parentId: 'admin-expenses' },
           { id: 'admin-exp-categories', label: 'Categories', link: '/expenses/categories', parentId: 'admin-expenses' },
@@ -411,23 +582,12 @@ export const ADMIN_MENU: MenuItem[] = [
     link: '/signatures'
   },
   {
-    id: 'admin-files',
-    label: 'File Manager',
-    icon: 'ri-folder-2-line',
-    link: '/file-manager',
-    subItems: [
-      { id: 'admin-files-main', label: 'My Documents', link: '/file-manager', parentId: 'admin-files' },
-      { id: 'admin-files-firm', label: 'Firm Templates', link: '/file-manager/firm-templates', parentId: 'admin-files' },
-      { id: 'admin-files-permissions', label: 'Permissions', link: '/file-manager/permissions', parentId: 'admin-files' }
-    ]
-  },
-  {
     id: 'admin-admin',
     label: 'Admin',
     icon: 'ri-admin-line',
-    link: '/admin/roles',
+    link: '/admin/audit-logs',
     subItems: [
-      { id: 'admin-admin-roles', label: 'Role Management', link: '/admin/roles', parentId: 'admin-admin' },
+      { id: 'admin-admin-org', label: 'Organization Settings', link: '/organizations/details/__ORG_ID__', parentId: 'admin-admin' },
       { id: 'admin-admin-user-roles', label: 'User Roles', link: '/admin/user-roles', parentId: 'admin-admin' },
       { id: 'admin-admin-audit', label: 'Audit Logs', link: '/admin/audit-logs', parentId: 'admin-admin' }
     ]
@@ -438,7 +598,6 @@ export const ADMIN_MENU: MenuItem[] = [
 // SUPERADMIN MENU (ROLE_SUPERADMIN) - Platform administration ONLY
 // SUPERADMINs are platform-level administrators, NOT organization users.
 // They should NOT access tenant-specific routes (cases, clients, etc.)
-// Grouped into dropdowns: Organizations, Analytics, System
 // ============================================================================
 export const SUPERADMIN_MENU: MenuItem[] = [
   {
@@ -532,9 +691,17 @@ export const ROLE_MENU_CONFIGS: { [key in UserRole]: RoleMenuConfig } = {
 };
 
 // ============================================================================
-// HELPER FUNCTION: Get menu for user role
+// HELPER FUNCTION: Get menu for user role (firm-type-aware)
 // ============================================================================
-export function getMenuForRole(role: string): MenuItem[] {
+export function getMenuForRole(role: string, firmType?: string): MenuItem[] {
+  // Solo practitioner gets a simplified menu
+  if (firmType === 'SOLO_PRACTITIONER') {
+    const menuTier = resolveMenuTier(role);
+    if (menuTier === 'ROLE_ADMIN') return SOLO_ADMIN_MENU;
+    if (menuTier === 'ROLE_ATTORNEY') return SOLO_ATTORNEY_MENU;
+    // Other roles in solo firms fall through to standard menus
+  }
+
   // First try exact match
   const normalizedRole = role?.toUpperCase() as UserRole;
   const config = ROLE_MENU_CONFIGS[normalizedRole];

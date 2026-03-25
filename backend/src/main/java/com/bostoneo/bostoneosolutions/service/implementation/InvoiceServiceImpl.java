@@ -608,15 +608,15 @@ public class InvoiceServiceImpl implements IInvoiceService {
             // Left side - Company Info
             Cell companyCell = new Cell();
             companyCell.setBorder(Border.NO_BORDER);
-            companyCell.add(new Paragraph("BOSTONEO SOLUTIONS")
+            companyCell.add(new Paragraph("LEGIENCE")
                     .setFont(titleFont)
                     .setFontSize(24)
                     .setFontColor(primaryColor)
                     .setMarginBottom(10));
-            companyCell.add(new Paragraph("Bostoneo Solutions LLC").setFont(regularFont).setFontSize(10));
+            companyCell.add(new Paragraph("Legience LLC").setFont(regularFont).setFontSize(10));
             companyCell.add(new Paragraph("68 Harrison Ave, Boston MA").setFont(regularFont).setFontSize(10));
             companyCell.add(new Paragraph("Phone: (123) 456-7890").setFont(regularFont).setFontSize(10));
-            companyCell.add(new Paragraph("Email: info@bostoneo.com").setFont(regularFont).setFontSize(10));
+            companyCell.add(new Paragraph("Email: hello@legience.com").setFont(regularFont).setFontSize(10));
             headerTable.addCell(companyCell);
             
             // Right side - Invoice Info
@@ -776,7 +776,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
                     .setFont(regularFont).setFontSize(10));
             document.add(new Paragraph("Bank: First National Bank")
                     .setFont(regularFont).setFontSize(10));
-            document.add(new Paragraph("Account Name: Bostoneo Solutions LLC")
+            document.add(new Paragraph("Account Name: Legience LLC")
                     .setFont(regularFont).setFontSize(10));
             document.add(new Paragraph("Account Number: XXXX-XXXX-1234")
                     .setFont(regularFont).setFontSize(10));
@@ -827,7 +827,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
         
         // Prepare professional email content
         String emailSubject = subject != null && !subject.isEmpty() ? 
-            subject : "Invoice " + invoice.getInvoiceNumber() + " from Bostoneo Solutions";
+            subject : "Invoice " + invoice.getInvoiceNumber() + " from Legience";
         
         String emailBody = createProfessionalEmailTemplate(invoice, message);
         
@@ -900,7 +900,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
         
         // Header
         emailContent.append("<div class='header'>")
-                   .append("<h1>BOSTONEO SOLUTIONS</h1>")
+                   .append("<h1>LEGIENCE</h1>")
                    .append("<p>Professional Legal Services</p>")
                    .append("</div>");
         
@@ -965,7 +965,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
                    .append("<p>Please remit payment by the due date using one of the following methods:</p>")
                    .append("<ul>")
                    .append("<li><strong>Wire Transfer:</strong> First National Bank</li>")
-                   .append("<li><strong>Account Name:</strong> Bostoneo Solutions LLC</li>")
+                   .append("<li><strong>Account Name:</strong> Legience LLC</li>")
                    .append("<li><strong>Account Number:</strong> XXXX-XXXX-1234</li>")
                    .append("<li><strong>Routing Number:</strong> 123456789</li>")
                    .append("</ul>")
@@ -983,22 +983,22 @@ public class InvoiceServiceImpl implements IInvoiceService {
         // Call to Action
         emailContent.append("<div class='cta-button'>")
                    .append("<p>Need to discuss this invoice or have questions about your account?</p>")
-                   .append("<a href='mailto:info@bostoneo.com'>Contact Us</a>")
+                   .append("<a href='mailto:hello@legience.com'>Contact Us</a>")
                    .append("</div>");
         
         // Closing
-        emailContent.append("<p>Thank you for choosing Bostoneo Solutions for your legal needs. We appreciate your business and look forward to continuing our professional relationship.</p>");
+        emailContent.append("<p>Thank you for choosing Legience for your legal needs. We appreciate your business and look forward to continuing our professional relationship.</p>");
         
         emailContent.append("<p>Best regards,<br>")
-                   .append("<strong>The Bostoneo Solutions Team</strong></p>");
+                   .append("<strong>The Legience Team</strong></p>");
         
         emailContent.append("</div>"); // Close content
         
         // Footer
         emailContent.append("<div class='footer'>")
-                   .append("<p><strong>Bostoneo Solutions LLC</strong></p>")
+                   .append("<p><strong>Legience LLC</strong></p>")
                    .append("<p>68 Harrison Ave, Boston MA | Phone: (123) 456-7890</p>")
-                   .append("<p>Email: info@bostoneo.com | Website: www.bostoneo.com</p>")
+                   .append("<p>Email: hello@legience.com | Website: www.legience.com</p>")
                    .append("<p style='font-size: 12px; margin-top: 15px;'>")
                    .append("This is an automated message. Please do not reply directly to this email.")
                    .append("</p>")

@@ -36,6 +36,7 @@ public class LegalResearchConversationService {
     private final com.bostoneo.bostoneosolutions.service.ai.AIComplexityScorer aiComplexityScorer;
     private final GenerationCancellationService cancellationService;
     private final AILegalResearchService aiLegalResearchService;
+    private final CitationUrlInjector citationUrlInjector;
     private final TenantService tenantService;
 
     /**
@@ -353,7 +354,8 @@ public class LegalResearchConversationService {
             Long sessionId,
             Long userId,
             String query,
-            String researchMode
+            String researchMode,
+            String jurisdiction
     ) {
         Long orgId = getRequiredOrganizationId();
         // SECURITY: Get the session with tenant filter
@@ -379,6 +381,11 @@ public class LegalResearchConversationService {
         if (researchMode != null && !researchMode.equals(session.getResearchMode())) {
             session.setResearchMode(researchMode);
         }
+        // Update jurisdiction if the user changed it mid-conversation
+        if (jurisdiction != null && !jurisdiction.isBlank() && !jurisdiction.equals(session.getJurisdiction())) {
+            log.info("📍 Jurisdiction changed for session {}: {} → {}", sessionId, session.getJurisdiction(), jurisdiction);
+            session.setJurisdiction(jurisdiction);
+        }
         sessionRepository.save(session);
 
         // SECURITY: Build conversation history with tenant filter
@@ -398,131 +405,11 @@ public class LegalResearchConversationService {
             return CompletableFuture.failedFuture(new IllegalStateException("Query cancelled by user"));
         }
 
-        // Auto-select research mode if not provided (backend decides based on query complexity)
-        if (researchMode == null || researchMode.isBlank()) {
-            var decision = aiComplexityScorer.decide(
-                com.bostoneo.bostoneosolutions.enumeration.AIOperationType.CONVERSATION, query);
-            researchMode = decision.mode();
-            log.info("Auto-selected research mode: {} (complexity: {})", researchMode, String.format("%.2f", decision.complexityScore()));
-        }
-
-        // THOROUGH mode: Use full agentic research system with citation verification
-        if ("THOROUGH".equalsIgnoreCase(researchMode)) {
-            return handleThoroughModeQuery(session, sessionId, userId, query, messages);
-        }
-
-        // FAST mode: Use standard conversation flow
-        boolean useDeepThinking = false; // FAST mode doesn't use deep thinking
-
-        // Get AI response
-        String prompt = "You are a legal research assistant. Based on the following conversation history, "
-                + "provide a helpful response to the user's latest question.\n\n"
-                + "IMPORTANT FORMATTING GUIDELINES:\n"
-                + "When presenting timelines with dates, use this format:\n"
-                + "- **Date** (optional context): Description\n"
-                + "Example:\n"
-                + "- **November 9, 2025** (10 days): Defendant must be served\n"
-                + "- **December 30, 2025**: Discovery deadline\n\n"
-                + "🚨 WHEN TO USE CHARTS VS TABLES:\n\n"
-                + "Use CHARTS only for NUMERIC data:\n"
-                + "✅ BAR charts: Numeric comparisons (case counts: 450 vs 300, dollar amounts: $15000 vs $8000, scores: 8.5 vs 6.2)\n"
-                + "✅ PIE charts: Percentage breakdowns that sum to 100% (45% vs 30% vs 25%)\n"
-                + "✅ LINE charts: Numeric trends over time (1250 in 2020, 1420 in 2021)\n\n"
-                + "Use TABLES for CATEGORICAL/TEXT data:\n"
-                + "❌ DO NOT use charts for: Low/Medium/High, Yes/No, text descriptions, qualitative comparisons\n"
-                + "✅ Instead use markdown tables: | Circuit | Approach | for categorical comparisons\n\n"
-                + "Example WRONG (categorical data in chart):\n"
-                + "CHART:BAR\n"
-                + "| Circuit | Level |\n"
-                + "| 4th Cir | Low (narrow data sufficient) | ❌ TEXT, not a number!\n\n"
-                + "Example CORRECT (categorical data in table):\n"
-                + "| Circuit | Minimization Requirement |\n"
-                + "|---------|-------------------------|\n"
-                + "| 4th Cir | Low (narrow data sufficient) | ✅ Table for text data\n\n"
-                + "When presenting comparative NUMERIC data or statistics, use these chart formats:\n\n"
-                + "For bar charts (comparing NUMERIC values):\n"
-                + "CHART:BAR\n"
-                + "| Category | Value |\n"
-                + "|----------|-------|\n"
-                + "| Item 1   | 450   |\n"
-                + "| Item 2   | 300   |\n\n"
-                + "For percentage breakdowns:\n"
-                + "CHART:PIE\n"
-                + "- Category A: 45%\n"
-                + "- Category B: 30%\n"
-                + "- Category C: 25%\n\n"
-                + "For trends over time:\n"
-                + "CHART:LINE\n"
-                + "Title of Chart\n"
-                + "2020: 1250\n"
-                + "2021: 1420\n"
-                + "2022: 1580\n\n"
-                + "Use these formats whenever you're presenting timelines, comparisons, statistics, or trends. "
-                + "The system will automatically convert them into beautiful visual charts.\n\n"
-                + "## Sources Citation\n"
-                + "At the VERY END of your response (after all content, before follow-up questions), "
-                + "include a SOURCES line listing ALL cases, statutes, and regulations you cited, separated by |.\n"
-                + "Format: SOURCES: Case Name, Citation | Statute Reference | Another Case\n"
-                + "Example: SOURCES: Brune v. Belinkoff, 354 Mass. 102 | M.G.L. c. 231 § 60B | Lech v. Boisvert\n"
-                + "This MUST be on its own line. Do NOT skip this.\n\n"
-                + "## Follow-up Questions\n"
-                + "After the SOURCES line, include a \"## Follow-up Questions\" section.\n\n"
-                + "⚠️⚠️⚠️ CRITICAL - QUESTION DIRECTION ⚠️⚠️⚠️\n"
-                + "These are clickable suggestions for the USER to ask YOU (the AI) for more research.\n"
-                + "The USER clicks them → they get sent to YOU → YOU answer them.\n"
-                + "They are NOT questions you are asking the user. NEVER ask the user for information.\n\n"
-                + "❌ WRONG (AI asking user - NEVER DO THIS):\n"
-                + "  ❌ \"Can you provide a case citation you need summarized?\" - WRONG\n"
-                + "  ❌ \"Is there a specific jurisdiction you need analysis for?\" - WRONG\n"
-                + "  ❌ \"What legal research task are you working on?\" - WRONG\n"
-                + "  ❌ \"Would you like me to calculate deadlines?\" - WRONG\n"
-                + "  ❌ \"Do you want me to...\" - WRONG\n\n"
-                + "✅ CORRECT (user asking AI - DO THIS):\n"
-                + "  ✅ \"What are the elements of a breach of contract claim in Massachusetts?\"\n"
-                + "  ✅ \"Find cases on preliminary injunction standards in First Circuit\"\n"
-                + "  ✅ \"Explain the statute of limitations for personal injury in MA\"\n"
-                + "  ✅ \"What are the filing deadlines for summary judgment motions?\"\n\n"
-                + "REQUIREMENTS:\n"
-                + "- Each question is a request FROM the user TO the AI\n"
-                + "- NEVER start with: \"Can you provide\", \"Do you need\", \"Would you like\", \"Is there a\"\n"
-                + "- START with: \"What are\", \"Find\", \"Explain\", \"How does\", \"Does [law] apply\"\n\n"
-                + "Conversation History:\n" + conversationHistory.toString();
-
-        // Route through AIRequestRouter for smart model selection
-        CompletableFuture<String> claudeFuture = aiRequestRouter.routeSimple(
-                com.bostoneo.bostoneosolutions.enumeration.AIOperationType.CONVERSATION,
-                prompt, null, useDeepThinking, sessionId);
-
-        // Transform the String response to AiConversationMessage
-        return claudeFuture
-                .thenApply(aiResponse -> {
-                    // Save AI response message with research mode
-                    AiConversationMessage assistantMessage = AiConversationMessage.builder()
-                            .session(session)
-                            .organizationId(session.getOrganizationId())
-                            .role("assistant")
-                            .content(aiResponse)
-                            .ragContextUsed(false)
-                            .modelUsed("claude-sonnet-4-6")
-                            .researchMode("FAST") // Store research mode per message for badge display
-                            .build();
-
-                    AiConversationMessage savedMessage = messageRepository.save(assistantMessage);
-
-                    // Update session message count again
-                    session.setMessageCount(session.getMessageCount() + 1);
-                    sessionRepository.save(session);
-
-                    return savedMessage;
-                })
-                .exceptionally(ex -> {
-                    // Check if it was cancelled
-                    if (cancellationService.isCancelled(sessionId) || ex.getCause() instanceof IllegalStateException) {
-                        log.info("🛑 AI query was cancelled for session {}", sessionId);
-                    }
-
-                    throw new RuntimeException("Failed to generate AI response", ex);
-                });
+        // Always use THOROUGH mode — the full agentic research path with
+        // jurisdiction-aware prompts, tool calling, citation verification, and URL injection.
+        // FAST mode selector was removed from the UI; all queries route through THOROUGH.
+        researchMode = "THOROUGH";
+        return handleThoroughModeQuery(session, sessionId, userId, query, messages);
     }
 
     /**
@@ -548,10 +435,15 @@ public class LegalResearchConversationService {
         }
 
         // Build search request for AILegalResearchService
+        // Use session's jurisdiction (set from org's state) — falls back to "General" if not set
+        String jurisdiction = session.getJurisdiction() != null && !session.getJurisdiction().isBlank()
+                ? session.getJurisdiction() : "General";
+        log.info("📍 Research jurisdiction for session {}: {}", sessionId, jurisdiction);
+
         Map<String, Object> searchRequest = new java.util.HashMap<>();
         searchRequest.put("query", query);
         searchRequest.put("searchType", "ALL");
-        searchRequest.put("jurisdiction", "GENERAL");
+        searchRequest.put("jurisdiction", jurisdiction);
         searchRequest.put("userId", userId);
         searchRequest.put("sessionId", String.valueOf(sessionId));
         searchRequest.put("researchMode", "THOROUGH");
@@ -574,6 +466,26 @@ public class LegalResearchConversationService {
 
             if (aiResponse == null || aiResponse.isEmpty()) {
                 throw new RuntimeException("No AI response received from research service");
+            }
+
+            // Detect sanitized error responses from the AI service (prefixed with [ERROR])
+            if (aiResponse.startsWith("[ERROR]")) {
+                String errorContent = aiResponse.substring(7).trim();
+                log.warn("⚠️ AI service returned error for session {}: {}", sessionId, errorContent);
+                // Save as error message so user sees it, but mark it distinctly
+                AiConversationMessage errorMessage = AiConversationMessage.builder()
+                        .session(session)
+                        .organizationId(session.getOrganizationId())
+                        .role("assistant")
+                        .content(errorContent)
+                        .ragContextUsed(false)
+                        .modelUsed("error")
+                        .researchMode("THOROUGH")
+                        .build();
+                AiConversationMessage saved = messageRepository.save(errorMessage);
+                session.setMessageCount(session.getMessageCount() + 1);
+                sessionRepository.save(session);
+                return CompletableFuture.completedFuture(saved);
             }
 
             // Build metadata with quality score for frontend display

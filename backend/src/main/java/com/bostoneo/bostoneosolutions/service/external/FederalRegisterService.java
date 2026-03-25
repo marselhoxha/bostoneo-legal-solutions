@@ -223,7 +223,7 @@ public class FederalRegisterService {
     private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Accept", "application/json");
-        headers.set("User-Agent", "BostoneoSolutions/1.0");
+        headers.set("User-Agent", "Legience/1.0");
         return headers;
     }
 

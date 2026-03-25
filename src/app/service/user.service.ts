@@ -165,7 +165,7 @@ export class UserService {
 
   requestPasswordReset$ = (email: string) => <Observable<CustomHttpResponse<Profile>>>
     this.http.get<CustomHttpResponse<Profile>>
-      (`${this.server}/user/resetpassword/${email}`)
+      (`${this.server}/user/resetpassword/${encodeURIComponent(email)}`)
       .pipe(
         catchError(this.handleError)
       );
@@ -460,7 +460,9 @@ export class UserService {
 
   private handleError(error: HttpErrorResponse): Observable<never> {
     let errorMessage: string;
-    if (error.error instanceof ErrorEvent) {
+    if (error.status === 0) {
+      errorMessage = 'Unable to connect to the server. Please check your connection and try again.';
+    } else if (error.error instanceof ErrorEvent) {
       errorMessage = `A client error occurred - ${error.error.message}`;
     } else {
       if (error.error && error.error.reason) {

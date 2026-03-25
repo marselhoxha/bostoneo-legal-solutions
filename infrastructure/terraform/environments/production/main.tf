@@ -1,9 +1,9 @@
 # =============================================================================
-# Legience - Production Environment
+# Legience - Production Environment (Demo Phase — Option B)
 # =============================================================================
-# Main Terraform configuration for production deployment
-# Owner: Bostoneo Solutions LLC
-# Product: Legience (Legal Practice SaaS)
+# Cost-optimized production config for demo launch.
+# Mirrors staging sizing (1 ECS instance, standard RDS, single NAT).
+# Can be scaled up to full production by changing cpu/memory/count values.
 # =============================================================================
 
 terraform {
@@ -82,7 +82,7 @@ module "kms" {
 }
 
 # -----------------------------------------------------------------------------
-# VPC
+# VPC (Demo phase: single NAT gateway for cost savings)
 # -----------------------------------------------------------------------------
 module "vpc" {
   source = "../../modules/vpc"
@@ -92,10 +92,10 @@ module "vpc" {
   vpc_cidr           = var.vpc_cidr
   availability_zones = var.availability_zones
 
-  enable_nat_gateway  = true
-  single_nat_gateway  = false  # HA: one NAT per AZ in production
-  enable_flow_logs    = true
-  enable_vpc_endpoints = true
+  enable_nat_gateway      = true
+  single_nat_gateway      = true  # Demo phase: single NAT saves ~$32/month
+  enable_flow_logs        = true
+  enable_vpc_endpoints    = true
   flow_log_retention_days = 90
 }
 
@@ -107,28 +107,128 @@ module "s3" {
 
   environment        = local.environment
   kms_key_arn        = module.kms.s3_key_arn
-  enable_object_lock = true  # Enable for compliance in production
+  enable_object_lock = false  # Demo phase: not needed yet
 }
 
 # -----------------------------------------------------------------------------
-# RDS Aurora PostgreSQL
+# RDS PostgreSQL (Standard instance — same as staging, not Aurora)
+# To upgrade to Aurora Serverless v2 later, replace this section with module "rds"
 # -----------------------------------------------------------------------------
-module "rds" {
-  source = "../../modules/rds"
+resource "random_password" "db_master" {
+  length           = 32
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
 
-  environment             = local.environment
-  vpc_id                  = module.vpc.vpc_id
-  data_subnet_ids         = module.vpc.data_subnet_ids
-  allowed_security_groups = [module.ecs.api_security_group_id]
-  kms_key_arn             = module.kms.rds_key_arn
-  secrets_kms_key_arn     = module.kms.secrets_key_arn
+resource "aws_db_subnet_group" "main" {
+  name        = "legience-${local.environment}-db-subnet-group"
+  description = "Database subnet group for Legience ${local.environment}"
+  subnet_ids  = module.vpc.data_subnet_ids
 
-  database_name           = "legience"
-  master_username         = "legience_admin"
-  min_capacity            = 0.5
-  max_capacity            = 16
-  backup_retention_period = 35  # HIPAA requirement
-  deletion_protection     = true
+  tags = {
+    Name = "legience-${local.environment}-db-subnet-group"
+  }
+}
+
+resource "aws_security_group" "rds" {
+  name        = "legience-${local.environment}-rds-sg"
+  description = "Security group for Legience RDS"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [module.ecs.api_security_group_id]
+    description     = "PostgreSQL from ECS"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "legience-${local.environment}-rds-sg"
+  }
+}
+
+resource "aws_db_parameter_group" "main" {
+  family = "postgres15"
+  name   = "legience-${local.environment}-pg-params"
+
+  parameter {
+    name  = "log_statement"
+    value = "ddl"
+  }
+
+  parameter {
+    name  = "log_min_duration_statement"
+    value = "2000"
+  }
+
+  tags = {
+    Name = "legience-${local.environment}-pg-params"
+  }
+}
+
+resource "aws_db_instance" "main" {
+  identifier     = "legience-${local.environment}"
+  engine         = "postgres"
+  engine_version = "15.10"
+  instance_class = "db.t3.micro"
+
+  allocated_storage     = 20
+  max_allocated_storage = 100
+  storage_type          = "gp3"
+  storage_encrypted     = true
+  kms_key_id            = module.kms.rds_key_arn
+
+  db_name  = "legience"
+  username = "legience_admin"
+  password = random_password.db_master.result
+  port     = 5432
+
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  parameter_group_name   = aws_db_parameter_group.main.name
+  publicly_accessible    = false
+
+  backup_retention_period = 7   # Demo phase: 7 days (upgrade to 35 for HIPAA later)
+  backup_window           = "03:00-04:00"
+  maintenance_window      = "sun:04:00-sun:05:00"
+  copy_tags_to_snapshot   = true
+  skip_final_snapshot     = false
+  final_snapshot_identifier = "legience-${local.environment}-final-snapshot"
+  deletion_protection     = false  # Demo phase: easier teardown if needed
+
+  tags = {
+    Name = "legience-${local.environment}-db"
+  }
+}
+
+resource "aws_secretsmanager_secret" "db_credentials" {
+  name        = "legience/${local.environment}/database-v2"
+  description = "Database credentials for Legience ${local.environment}"
+  kms_key_id  = module.kms.secrets_key_arn
+
+  tags = {
+    Name = "legience-${local.environment}-db-credentials"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "db_credentials" {
+  secret_id = aws_secretsmanager_secret.db_credentials.id
+  secret_string = jsonencode({
+    username = "legience_admin"
+    password = random_password.db_master.result
+    host     = aws_db_instance.main.address
+    port     = aws_db_instance.main.port
+    dbname   = "legience"
+    url      = "jdbc:postgresql://${aws_db_instance.main.address}:${aws_db_instance.main.port}/legience"
+  })
 }
 
 # -----------------------------------------------------------------------------
@@ -175,13 +275,7 @@ resource "aws_lb" "api" {
   security_groups    = [aws_security_group.alb.id]
   subnets            = module.vpc.public_subnet_ids
 
-  enable_deletion_protection = true
-
-  access_logs {
-    bucket  = module.s3.logs_bucket_id
-    prefix  = "alb-logs"
-    enabled = true
-  }
+  enable_deletion_protection = false  # Demo phase
 
   tags = {
     Name = "legience-${local.environment}-alb"
@@ -258,7 +352,8 @@ resource "aws_secretsmanager_secret" "app_secrets" {
 # aws secretsmanager put-secret-value --secret-id legience/production/app-secrets --secret-string '{...}'
 
 # -----------------------------------------------------------------------------
-# ECS Cluster and Services
+# ECS Cluster and Services (Demo phase: same sizing as staging)
+# To scale up: change api_cpu to 1024, api_memory to 2048, desired to 3, min to 2
 # -----------------------------------------------------------------------------
 module "ecs" {
   source = "../../modules/ecs"
@@ -271,18 +366,18 @@ module "ecs" {
   target_group_arn      = aws_lb_target_group.api.arn
   kms_key_id            = module.kms.logs_key_id
   kms_key_arn           = module.kms.logs_key_arn
-  secrets_arns          = [module.rds.db_credentials_secret_arn, aws_secretsmanager_secret.app_secrets.arn]
+  secrets_arns          = [aws_secretsmanager_secret.db_credentials.arn, aws_secretsmanager_secret.app_secrets.arn]
   s3_bucket_arns        = [
     module.s3.documents_bucket_arn,
     "${module.s3.documents_bucket_arn}/*"
   ]
 
   api_image         = var.api_image
-  api_cpu           = 1024
-  api_memory        = 2048
-  api_desired_count = 3
-  api_min_count     = 2
-  api_max_count     = 10
+  api_cpu           = 512    # Demo phase (upgrade to 1024 for full production)
+  api_memory        = 1024   # Demo phase (upgrade to 2048 for full production)
+  api_desired_count = 1      # Demo phase (upgrade to 3 for full production)
+  api_min_count     = 1      # Demo phase (upgrade to 2 for full production)
+  api_max_count     = 2      # Demo phase (upgrade to 10 for full production)
 
   container_environment = [
     {
@@ -318,15 +413,15 @@ module "ecs" {
   container_secrets = [
     {
       name       = "DB_URL"
-      value_from = "${module.rds.db_credentials_secret_arn}:url::"
+      value_from = "${aws_secretsmanager_secret.db_credentials.arn}:url::"
     },
     {
       name       = "DB_USERNAME"
-      value_from = "${module.rds.db_credentials_secret_arn}:username::"
+      value_from = "${aws_secretsmanager_secret.db_credentials.arn}:username::"
     },
     {
       name       = "DB_PASSWORD"
-      value_from = "${module.rds.db_credentials_secret_arn}:password::"
+      value_from = "${aws_secretsmanager_secret.db_credentials.arn}:password::"
     },
     {
       name       = "JWT_SECRET"
@@ -406,8 +501,8 @@ output "ecs_cluster_name" {
 }
 
 output "rds_endpoint" {
-  description = "RDS cluster endpoint"
-  value       = module.rds.cluster_endpoint
+  description = "RDS endpoint"
+  value       = aws_db_instance.main.address
 }
 
 output "documents_bucket" {

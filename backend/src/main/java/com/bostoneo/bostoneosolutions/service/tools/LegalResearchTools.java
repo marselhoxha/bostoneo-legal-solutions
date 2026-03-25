@@ -91,31 +91,46 @@ public class LegalResearchTools {
      * - Kept only 3 essential legal research tools that FAST mode can't replicate
      */
     public List<ToolDefinition> getToolDefinitions() {
-        return List.of(
-            // ===== ESSENTIAL LEGAL RESEARCH TOOLS (4) =====
-            searchCaseLawTool(),       // Real case law search via CourtListener
-            getCFRTextTool(),          // Exact regulation text
-            verifyCitationTool(),      // Citation validation
-            readCaseDocumentTool()     // Read case file content for document-informed research
-        );
+        boolean hasCase = currentCaseId.get() != null;
+        List<ToolDefinition> tools = new java.util.ArrayList<>();
+        tools.add(searchCaseLawTool());
+        tools.add(getCFRTextTool());
+        tools.add(verifyCitationTool());
+        // Only include read_case_document when a case is linked (e.g., from case Research tab)
+        // General LegiSpace questions have no case context — including this tool wastes tokens
+        if (hasCase) {
+            tools.add(readCaseDocumentTool());
+        }
+        return tools;
     }
 
     /**
      * Get filtered tool definitions based on question type.
      * Reduces API cost by only providing tools relevant to each question type.
+     * read_case_document is only included when a case is actually linked to the session.
      *
-     * INITIAL_STRATEGY: Full tools (search, verify, CFR, documents)
-     * PROCEDURAL_GUIDANCE / NARROW_TECHNICAL: CFR + documents only (no case law search)
-     * FOLLOW_UP_CLARIFICATION: Documents only (answer from conversation context)
+     * INITIAL_STRATEGY: Full tools (search, verify, CFR, + documents if case linked)
+     * PROCEDURAL_GUIDANCE / NARROW_TECHNICAL: CFR (+ documents if case linked)
+     * FOLLOW_UP_CLARIFICATION: No tools (answer from context), or documents if case linked
      */
     public List<ToolDefinition> getToolDefinitions(QuestionType questionType) {
+        boolean hasCase = currentCaseId.get() != null;
         return switch (questionType) {
-            case INITIAL_STRATEGY -> List.of(
-                searchCaseLawTool(), getCFRTextTool(), verifyCitationTool(), readCaseDocumentTool());
-            case PROCEDURAL_GUIDANCE, NARROW_TECHNICAL -> List.of(
-                getCFRTextTool(), readCaseDocumentTool());
-            case FOLLOW_UP_CLARIFICATION -> List.of(
-                readCaseDocumentTool());
+            case INITIAL_STRATEGY -> {
+                List<ToolDefinition> tools = new java.util.ArrayList<>(List.of(
+                    searchCaseLawTool(), getCFRTextTool(), verifyCitationTool()));
+                if (hasCase) tools.add(readCaseDocumentTool());
+                yield tools;
+            }
+            case PROCEDURAL_GUIDANCE, NARROW_TECHNICAL -> {
+                List<ToolDefinition> tools = new java.util.ArrayList<>(List.of(getCFRTextTool()));
+                if (hasCase) tools.add(readCaseDocumentTool());
+                yield tools;
+            }
+            case FOLLOW_UP_CLARIFICATION -> {
+                if (hasCase) yield List.of(readCaseDocumentTool());
+                yield List.of();
+            }
         };
     }
 

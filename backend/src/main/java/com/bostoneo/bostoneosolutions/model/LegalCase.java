@@ -77,6 +77,9 @@ public class LegalCase {
     private String description;
 
     // Court Information
+    @Column(name = "jurisdiction", length = 50)
+    private String jurisdiction;
+
     @Column(name = "county_name")
     private String countyName;
     

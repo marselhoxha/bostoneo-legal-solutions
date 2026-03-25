@@ -717,11 +717,11 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         StringBuilder iCalBuilder = new StringBuilder();
         iCalBuilder.append("BEGIN:VCALENDAR\n");
         iCalBuilder.append("VERSION:2.0\n");
-        iCalBuilder.append("PRODID:-//BostonEO Solutions//Calendar//EN\n");
+        iCalBuilder.append("PRODID:-//Legience//Calendar//EN\n");
         
         for (CalendarEventDTO event : events) {
             iCalBuilder.append("BEGIN:VEVENT\n");
-            iCalBuilder.append("UID:").append(event.getId()).append("@bostoneosolutions.com\n");
+            iCalBuilder.append("UID:").append(event.getId()).append("@legience.com\n");
             iCalBuilder.append("SUMMARY:").append(event.getTitle()).append("\n");
             if (event.getDescription() != null) {
                 iCalBuilder.append("DESCRIPTION:").append(event.getDescription()).append("\n");

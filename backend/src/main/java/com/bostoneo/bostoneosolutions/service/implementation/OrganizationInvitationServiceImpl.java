@@ -212,7 +212,7 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
             // Get organization name
             String organizationName = organizationService.getOrganizationById(organizationId)
                     .map(org -> org.getName())
-                    .orElse("Bostoneo Legal Solutions");
+                    .orElse("Legience");
 
             // Build invitation URL
             String inviteUrl = frontendUrl + "/accept-invite/" + invitation.getToken();
@@ -221,10 +221,18 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
             // This ensures tenant context is properly propagated via TenantAwareTaskDecorator
             CompletableFuture.runAsync(() -> {
                 try {
+                    // Format role for display: "ROLE_ATTORNEY" → "Attorney"
+                    String displayRole = invitation.getRole();
+                    if (displayRole != null && displayRole.startsWith("ROLE_")) {
+                        displayRole = displayRole.substring(5); // Strip "ROLE_" prefix
+                    }
+                    if (displayRole != null) {
+                        displayRole = displayRole.substring(0, 1).toUpperCase() + displayRole.substring(1).toLowerCase();
+                    }
                     emailService.sendInvitationEmail(
                             invitation.getEmail(),
                             organizationName,
-                            invitation.getRole(),
+                            displayRole,
                             inviteUrl,
                             7 // 7 days expiration
                     );

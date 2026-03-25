@@ -328,7 +328,7 @@ public class ClientServiceImpl implements ClientService {
         html.append("</style></head><body>");
 
         html.append("<div class=\"container\">");
-        html.append("<div class=\"header\"><h2>Bostoneo Legal Solutions</h2></div>");
+        html.append("<div class=\"header\"><h2>Legience</h2></div>");
         html.append("<div class=\"content\">");
         html.append("<h3>Hello ").append(clientName != null ? clientName : "").append(",</h3>");
 
@@ -360,7 +360,7 @@ public class ClientServiceImpl implements ClientService {
 
         html.append("</div>"); // end content
         html.append("<div class=\"footer\">");
-        html.append("<p>Best regards,<br><strong>Bostoneo Legal Solutions Team</strong></p>");
+        html.append("<p>Best regards,<br><strong>Legience Team</strong></p>");
         html.append("<small>This is an automated disclosure email. If you did not expect this email, you can safely ignore it.</small>");
         html.append("</div>");
         html.append("</div>"); // end container

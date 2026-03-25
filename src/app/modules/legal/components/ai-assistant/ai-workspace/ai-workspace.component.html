@@ -1580,7 +1580,7 @@
             <div class="toolbar-quick-actions" *ngIf="floatingToolbarState === 'quick_actions'">
               <div class="prompt-trigger" (click)="enterPromptEditing()">
                 <i class="ri-sparkling-2-line"></i>
-                <span>Write a prompt...</span>
+                <span>Prompt...</span>
               </div>
               <div class="toolbar-divider"></div>
               <button class="sel-tool-btn" (click)="triggerToolTransform('polish')">
@@ -1595,6 +1595,22 @@
               <button class="sel-tool-btn" (click)="triggerToolTransform('elaborate')">
                 <i class="ri-text-wrap"></i> Elaborate
               </button>
+              <div class="sel-tool-more" style="position:relative;">
+                <button class="sel-tool-btn" (click)="showMoreTools = !showMoreTools">
+                  <i class="ri-more-2-fill"></i> More
+                </button>
+                <div class="more-tools-dropdown" *ngIf="showMoreTools" style="position:absolute; bottom:100%; left:0; background:white; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12); padding:4px; z-index:10; min-width:150px; margin-bottom:4px;">
+                  <button class="sel-tool-btn" style="width:100%;" (click)="triggerToolTransform('strengthen'); showMoreTools=false">
+                    <i class="ri-shield-star-line"></i> Strengthen
+                  </button>
+                  <button class="sel-tool-btn" style="width:100%;" (click)="triggerToolTransform('counter'); showMoreTools=false">
+                    <i class="ri-sword-line"></i> Counter
+                  </button>
+                  <button class="sel-tool-btn" style="width:100%;" (click)="triggerToolTransform('redraft'); showMoreTools=false">
+                    <i class="ri-refresh-line"></i> Redraft
+                  </button>
+                </div>
+              </div>
             </div>
 
             <!-- State 2: Prompt Editing -->
@@ -1811,8 +1827,29 @@
                   </div>
                 </div>
 
+                <!-- AI Error Message with Retry -->
+                <div class="ai-message-container" *ngIf="message.role === 'assistant' && message.isError">
+                  <div class="d-flex align-items-start gap-3">
+                    <div class="chat-avatar flex-shrink-0">
+                      <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
+                    </div>
+                    <div class="message-bubble ai-message flex-grow-1" style="border-left: 3px solid #f17171;">
+                      <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="ri-error-warning-line text-danger" style="font-size: 18px;"></i>
+                        <span class="fw-semibold text-danger">Request Failed</span>
+                      </div>
+                      <p class="mb-3 text-muted">{{ message.content }}</p>
+                      <button class="btn btn-sm btn-soft-primary d-inline-flex align-items-center gap-1"
+                              (click)="retryErrorMessage(message.retryMessage)"
+                              [disabled]="(isGenerating$ | async)">
+                        <i class="ri-refresh-line"></i> Try Again
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- AI Message -->
-                <div class="ai-message-container" *ngIf="message.role === 'assistant'">
+                <div class="ai-message-container" *ngIf="message.role === 'assistant' && !message.isError">
                   <div class="d-flex align-items-start gap-3">
                     <div class="chat-avatar flex-shrink-0">
                       <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">

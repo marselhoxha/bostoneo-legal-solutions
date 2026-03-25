@@ -5,6 +5,7 @@ import com.bostoneo.bostoneosolutions.model.AITemplateVariable;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AILegalTemplateRepository;
 import com.bostoneo.bostoneosolutions.repository.AITemplateVariableRepository;
+import com.bostoneo.bostoneosolutions.service.JurisdictionResolver;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class AIDocumentController {
     private final AILegalTemplateRepository templateRepository;
     private final AITemplateVariableRepository variableRepository;
     private final TenantService tenantService;
+    private final JurisdictionResolver jurisdictionResolver;
 
     /**
      * Helper method to get the current organization ID
@@ -166,13 +168,14 @@ public class AIDocumentController {
             promptBuilder.append("\n").append(template.getAiPromptStructure()).append("\n");
         }
 
-        // Massachusetts-specific instructions
+        // Jurisdiction-specific instructions
         if (Boolean.TRUE.equals(template.getMaJurisdictionSpecific())) {
-            promptBuilder.append("\nMASSACHUSETTS-SPECIFIC REQUIREMENTS:\n");
-            promptBuilder.append("1. Follow Massachusetts Rules of Civil Procedure\n");
-            promptBuilder.append("2. Use proper Massachusetts statutory citations (M.G.L. format)\n");
-            promptBuilder.append("3. Include appropriate Massachusetts court formatting\n");
-            promptBuilder.append("4. Reference relevant Massachusetts case law where applicable\n");
+            String stateName = jurisdictionResolver.resolveStateName(getOrganizationId());
+            promptBuilder.append("\nJURISDICTION-SPECIFIC REQUIREMENTS (").append(stateName).append("):\n");
+            promptBuilder.append("1. Follow ").append(stateName).append(" Rules of Civil Procedure\n");
+            promptBuilder.append("2. Use proper ").append(stateName).append(" statutory citations\n");
+            promptBuilder.append("3. Include appropriate ").append(stateName).append(" court formatting\n");
+            promptBuilder.append("4. Reference relevant ").append(stateName).append(" case law where applicable\n");
         }
 
         // General instructions
@@ -204,8 +207,9 @@ public class AIDocumentController {
         String attorneyName = (String) variables.getOrDefault("attorney_name", "Attorney Name");
         String attorneyTitle = (String) variables.getOrDefault("attorney_title", "Attorney for Client");
 
+        String stateName = jurisdictionResolver.resolveStateName(getOrganizationId());
         return String.format("""
-            Generate a professional Massachusetts legal document using PLAIN TEXT formatting only:
+            Generate a professional %s legal document using PLAIN TEXT formatting only:
 
             DOCUMENT TYPE: Legal Document
 
@@ -232,8 +236,8 @@ public class AIDocumentController {
             1. Use the EXACT client name "%s" throughout the document
             2. Use the EXACT case number "%s" in all case references
             3. Replace placeholder fields like [CLIENT_NAME], [CASE_NUMBER], [COURT_NAME] with actual values
-            4. Ensure professional legal formatting appropriate for Massachusetts courts
-            5. Include proper citations and references for Massachusetts law
+            4. Ensure professional legal formatting appropriate for %s courts
+            5. Include proper citations and references for %s law
             6. Make the document court-ready and professionally formatted
             7. Use case-specific information provided above instead of generic placeholders
             8. Adapt the content to the specific case type: %s
@@ -242,12 +246,15 @@ public class AIDocumentController {
 
             Generate a complete, properly formatted legal document with all placeholder fields filled with the actual case information provided.
             """,
+            stateName,
             clientName, caseNumber, caseType, courtName, judgeName, filingDate,
             caseBackground,
             legalStandard,
             legalAnalysis,
             attorneyName, attorneyTitle,
-            clientName, caseNumber, caseType
+            clientName, caseNumber,
+            stateName, stateName,
+            caseType
         );
     }
 }

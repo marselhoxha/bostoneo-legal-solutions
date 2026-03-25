@@ -392,7 +392,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     public void resetPassword(String email) {
         if(getEmailCount(email.trim().toLowerCase()) <= 0) throw new ApiException("There is no account for this email address.");
         try {
-            String expirationDate = format(addDays(new Date(), 1), "yyyy-MM-dd HH:mm:ss"); // Corrected format
+            java.sql.Timestamp expirationDate = new java.sql.Timestamp(addDays(new Date(), 1).getTime());
             User user = getUserByEmail(email);
             String verificationUrl = getVerificationUrl(UUID.randomUUID().toString(), PASSWORD.getType());
             jdbc.update(DELETE_PASSWORD_VERIFICATION_BY_USER_ID_QUERY, of("userId",  user.getId()));
@@ -400,6 +400,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             sendEmail(user.getFirstName(), email, verificationUrl, PASSWORD);
             log.info("Verification URL: {}", verificationUrl);
         } catch (Exception exception) {
+            log.error("Password reset failed for {}: {}", email, exception.getMessage(), exception);
             throw new ApiException("An error occurred. Please try again.");
         }
     }

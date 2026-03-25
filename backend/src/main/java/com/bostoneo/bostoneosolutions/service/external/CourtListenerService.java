@@ -177,7 +177,7 @@ public class CourtListenerService {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Token " + apiProperties.getCourtlistener().getApiKey());
         headers.set("Accept", "application/json");
-        headers.set("User-Agent", "BostoneoSolutions/1.0");
+        headers.set("User-Agent", "Legience/1.0");
         return headers;
     }
 

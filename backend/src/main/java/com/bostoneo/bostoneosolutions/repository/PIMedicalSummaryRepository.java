@@ -34,7 +34,7 @@ public interface PIMedicalSummaryRepository extends JpaRepository<PIMedicalSumma
      * Mark summary as stale (when new records are added)
      */
     @Modifying
-    @Query("UPDATE PIMedicalSummary s SET s.isStale = true WHERE s.caseId = :caseId AND s.organizationId = :orgId")
+    @Query("UPDATE PIMedicalSummary s SET s.isStale = true, s.adjusterDefenseAnalysis = null, s.adjusterAnalysisGeneratedAt = null WHERE s.caseId = :caseId AND s.organizationId = :orgId")
     void markAsStale(@Param("caseId") Long caseId, @Param("orgId") Long organizationId);
 
     /**

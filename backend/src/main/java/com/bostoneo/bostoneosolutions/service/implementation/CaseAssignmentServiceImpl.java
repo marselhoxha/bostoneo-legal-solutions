@@ -1236,7 +1236,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         // Return system user (usually ID 1 or a specific system user)
         User systemUser = userRepository.get(1L);
         if (systemUser == null) {
-            systemUser = userRepository.findByEmail("system@bostoneo.com");
+            systemUser = userRepository.findByEmail("system@legience.com");
             if (systemUser == null) {
                 throw new ApiException("System user not found");
             }

@@ -7,6 +7,7 @@ import { MENU, getMenuForRole, getDefaultRedirectForRole, ROLE_MENU_CONFIGS } fr
 import { MenuItem, UserRole, EXTENDED_ROLE_HIERARCHY, resolveMenuTier } from './menu.model';
 import { User } from 'src/app/interface/user';
 import { RbacService } from 'src/app/core/services/rbac.service';
+import { OrganizationService } from 'src/app/core/services/organization.service';
 
 @Component({
   selector: 'app-horizontal-topbar',
@@ -28,7 +29,8 @@ export class HorizontalTopbarComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
-    private rbacService: RbacService
+    private rbacService: RbacService,
+    private organizationService: OrganizationService
   ) {
     // Subscribe to route changes to update active menu
     this.router.events.pipe(
@@ -79,10 +81,66 @@ export class HorizontalTopbarComponent implements OnInit, OnDestroy {
       this.menuItems = getMenuForRole('ROLE_SUPERADMIN');
       this.currentUserRole = 'ROLE_SUPERADMIN';
     } else {
+      // Get firm type from user object or localStorage
+      const firmType = this.getUserFirmType();
       // getMenuForRole uses resolveMenuTier() to map any role to its correct menu
-      this.menuItems = getMenuForRole(userRole);
+      this.menuItems = getMenuForRole(userRole, firmType);
+      // Resolve dynamic Organization Settings link
+      this.resolveOrgSettingsLink();
     }
     this.menu = this.menuItems;
+  }
+
+  /**
+   * Get firm type from user object or localStorage
+   */
+  private getUserFirmType(): string | undefined {
+    // Try from user input
+    if (this.user) {
+      const userObj = this.user as any;
+      if (userObj.organizationFirmType) {
+        return userObj.organizationFirmType;
+      }
+    }
+
+    // Try from localStorage
+    try {
+      const currentUserStr = localStorage.getItem('currentUser');
+      if (currentUserStr) {
+        const currentUser = JSON.parse(currentUserStr);
+        if (currentUser.organizationFirmType) {
+          return currentUser.organizationFirmType;
+        }
+      }
+    } catch (error) {
+      // Silently handle localStorage errors
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Resolve the __ORG_ID__ placeholder in Organization Settings link
+   */
+  private resolveOrgSettingsLink(): void {
+    try {
+      const orgId = this.organizationService.getCurrentOrganizationId();
+      if (!orgId) return;
+
+      const resolveInItems = (items: MenuItem[]) => {
+        for (const item of items) {
+          if (item.link && item.link.includes('__ORG_ID__')) {
+            item.link = item.link.replace('__ORG_ID__', orgId.toString());
+          }
+          if (item.subItems) {
+            resolveInItems(item.subItems);
+          }
+        }
+      };
+      resolveInItems(this.menuItems);
+    } catch (error) {
+      // Org ID not available yet — link stays as placeholder
+    }
   }
 
   /**

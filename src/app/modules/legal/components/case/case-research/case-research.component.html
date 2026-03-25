@@ -194,24 +194,37 @@
 
                       <!-- AI Message Bubble (Full Width) -->
                       <div class="message-bubble ai-message flex-grow-1">
-                        <!-- AI Activity Loading (Perplexity Style) -->
-                        <div *ngIf="message.isTyping" class="ai-activity-loader">
-                          <!-- Header -->
-                          <div class="activity-header">
-                            <span>Generating Response</span>
-                            <i class="ri-arrow-up-s-line"></i>
+                        <!-- Research Progress Card (Perplexity-inspired) -->
+                        <div *ngIf="message.isTyping" class="research-progress" [class.active]="aiThinking">
+                          <div class="rp-header" (click)="stepsCollapsed = !stepsCollapsed">
+                            <div class="rp-icon" [class.spinning]="aiThinking" [class.done]="!aiThinking && sourceCount > 0">
+                              <i [class]="aiThinking ? 'ri-loader-4-line' : 'ri-check-line'"></i>
+                            </div>
+                            <div class="rp-title">
+                              {{ aiThinking ? 'Researching' : 'Researched' }}
+                              <span class="rp-timer">{{ researchElapsed }}s</span>
+                            </div>
+                            <div class="rp-sources" *ngIf="sourceCount > 0">
+                              <i class="ri-book-open-line"></i>
+                              <span class="count">{{ sourceCount }}</span> sources
+                            </div>
+                            <i class="rp-chevron ri-arrow-down-s-line" [class.open]="!stepsCollapsed"></i>
                           </div>
-
-                          <!-- Activity Steps -->
-                          <div class="activity-steps">
-                            <div *ngFor="let step of workflowSteps; let i = index"
-                                 class="activity-step"
+                          <div class="rp-progress-bar"><div class="fill" [style.width.%]="progressPercent"></div></div>
+                          <div class="rp-steps" [class.collapsed]="stepsCollapsed">
+                            <div *ngFor="let step of workflowSteps" class="rp-step"
+                                 [class.pending]="step.status === 'pending'"
                                  [class.active]="step.status === 'active'"
                                  [class.completed]="step.status === 'completed'"
-                                 [class.pending]="step.status === 'pending'"
                                  [class.error]="step.status === 'error'">
-                              <i [class]="step.icon" class="step-icon"></i>
-                              <span class="step-text">{{ step.description }}</span>
+                              <div class="step-node">
+                                <i [class]="step.status === 'active' ? 'ri-loader-4-line' : step.status === 'completed' ? 'ri-check-line' : step.icon"></i>
+                              </div>
+                              <div class="step-info">
+                                <div class="step-label">{{ step.label }}</div>
+                                <div class="step-detail" *ngIf="step.detail">{{ step.detail }}</div>
+                              </div>
+                              <div class="step-elapsed" *ngIf="step.elapsed">{{ step.elapsed }}</div>
                             </div>
                           </div>
                         </div>
@@ -322,24 +335,36 @@
                         <img src="/assets/images/new-legal-ai.gif" alt="AI Assistant" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
                       </div>
                       <div class="message-bubble ai-message flex-grow-1">
-                        <!-- AI Activity Loading (Perplexity Style) -->
-                        <div class="ai-activity-loader">
-                          <!-- Header -->
-                          <div class="activity-header">
-                            <span>Generating Response</span>
-                            <i class="ri-arrow-up-s-line"></i>
+                        <div class="research-progress" [class.active]="aiThinking">
+                          <div class="rp-header" (click)="stepsCollapsed = !stepsCollapsed">
+                            <div class="rp-icon" [class.spinning]="aiThinking" [class.done]="!aiThinking && sourceCount > 0">
+                              <i [class]="aiThinking ? 'ri-loader-4-line' : 'ri-check-line'"></i>
+                            </div>
+                            <div class="rp-title">
+                              {{ aiThinking ? 'Researching' : 'Researched' }}
+                              <span class="rp-timer">{{ researchElapsed }}s</span>
+                            </div>
+                            <div class="rp-sources" *ngIf="sourceCount > 0">
+                              <i class="ri-book-open-line"></i>
+                              <span class="count">{{ sourceCount }}</span> sources
+                            </div>
+                            <i class="rp-chevron ri-arrow-down-s-line" [class.open]="!stepsCollapsed"></i>
                           </div>
-
-                          <!-- Activity Steps -->
-                          <div class="activity-steps">
-                            <div *ngFor="let step of workflowSteps; let i = index"
-                                 class="activity-step"
+                          <div class="rp-progress-bar"><div class="fill" [style.width.%]="progressPercent"></div></div>
+                          <div class="rp-steps" [class.collapsed]="stepsCollapsed">
+                            <div *ngFor="let step of workflowSteps" class="rp-step"
+                                 [class.pending]="step.status === 'pending'"
                                  [class.active]="step.status === 'active'"
                                  [class.completed]="step.status === 'completed'"
-                                 [class.pending]="step.status === 'pending'"
                                  [class.error]="step.status === 'error'">
-                              <i [class]="step.icon" class="step-icon"></i>
-                              <span class="step-text">{{ step.description }}</span>
+                              <div class="step-node">
+                                <i [class]="step.status === 'active' ? 'ri-loader-4-line' : step.status === 'completed' ? 'ri-check-line' : step.icon"></i>
+                              </div>
+                              <div class="step-info">
+                                <div class="step-label">{{ step.label }}</div>
+                                <div class="step-detail" *ngIf="step.detail">{{ step.detail }}</div>
+                              </div>
+                              <div class="step-elapsed" *ngIf="step.elapsed">{{ step.elapsed }}</div>
                             </div>
                           </div>
                         </div>

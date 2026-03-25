@@ -1146,12 +1146,22 @@ public class ClaudeSonnet4Service implements AIService {
      * Recursive tool-calling loop with question-type-aware tool filtering
      */
     private Mono<String> executeAgenticLoop(List<AIRequest.Message> messageHistory, String systemMessage, int iteration, String sessionId, Long caseId, Long orgId, QuestionType questionType) {
-        final int MAX_ITERATIONS = 5;  // Typical: search + verify + response = 3 rounds
+        final int MAX_ITERATIONS = 10;  // Complex queries may need 7-8 rounds (search + verify + follow-up + synthesize)
 
         if (iteration >= MAX_ITERATIONS) {
-            log.error("❌ MAX ITERATIONS REACHED ({}). Stopping to prevent cost waste.", MAX_ITERATIONS);
-            log.error("❌ This means Claude kept calling tools without finishing. Forcing response now.");
-            return Mono.just("Research incomplete - reached maximum tool call limit. Please try a more specific query.");
+            log.warn("⚠️ MAX ITERATIONS REACHED ({}). Forcing final response with accumulated data.", MAX_ITERATIONS);
+            // Extract whatever text Claude has generated so far from message history
+            StringBuilder accumulated = new StringBuilder();
+            for (AIRequest.Message msg : messageHistory) {
+                if ("assistant".equals(msg.getRole()) && msg.getContent() != null) {
+                    accumulated.append(msg.getContent()).append("\n\n");
+                }
+            }
+            String result = accumulated.toString().trim();
+            if (result.isEmpty()) {
+                return Mono.just("Research reached the maximum analysis depth. Please try a more specific query for better results.");
+            }
+            return Mono.just(result);
         }
 
         log.info("🔄 Agentic iteration {}/{}", iteration + 1, MAX_ITERATIONS);
@@ -1348,7 +1358,7 @@ public class ClaudeSonnet4Service implements AIService {
                 })
                 .onErrorResume(e -> {
                     log.error("💥 Agentic loop error: {}", e.getMessage(), e);
-                    return Mono.just("Error in agentic research: " + e.getMessage());
+                    return Mono.just(sanitizeApiError(e.getMessage()));
                 });
     }
 
@@ -1479,8 +1489,17 @@ public class ClaudeSonnet4Service implements AIService {
                        lowerPrompt.contains("complete") || lowerPrompt.contains("thorough") ? 20000 : 16000;
             log.info("⚙️ Workflow generation/synthesis detected - allocating {} tokens for complete output", maxTokens);
         } else if (isDocumentTransformation) {
-            maxTokens = 16000;
-            log.info("✏️ Document transformation detected - allocating {} tokens for complete revised document", maxTokens);
+            // Allocate based on transformation type — REDRAFT and EXPAND need more tokens
+            if (lowerPrompt.contains("completely redraft") || lowerPrompt.contains("fresh approach")) {
+                maxTokens = 24000;
+            } else if (lowerPrompt.contains("expand") || lowerPrompt.contains("elaborate") || lowerPrompt.contains("add detail")) {
+                maxTokens = 20000;
+            } else if (lowerPrompt.contains("strengthen") || lowerPrompt.contains("counter-argument") || lowerPrompt.contains("rebuttal")) {
+                maxTokens = 20000;
+            } else {
+                maxTokens = 16000;
+            }
+            log.info("✏️ Document transformation detected - allocating {} tokens for revised document", maxTokens);
         } else if (useDeepThinking) {
             // Detect if query needs extra-long response
             boolean isComplexQuery = lowerPrompt.contains("comprehensive analysis") ||
@@ -1531,6 +1550,31 @@ public class ClaudeSonnet4Service implements AIService {
             return response.getContent()[0].getText();
         }
         return "No response generated";
+    }
+
+    /**
+     * Sanitize raw API error messages into user-friendly text.
+     * Prefixed with "[ERROR]" so downstream code can detect it's an error, not a real response.
+     */
+    private String sanitizeApiError(String rawMessage) {
+        if (rawMessage == null) {
+            return "[ERROR] An unexpected error occurred while processing your request. Please try again.";
+        }
+        String lower = rawMessage.toLowerCase();
+        if (lower.contains("overloaded") || lower.contains("529")) {
+            return "[ERROR] Our AI research service is temporarily at capacity due to high demand. Please try again in a moment.";
+        }
+        if (lower.contains("rate_limit") || lower.contains("429")) {
+            return "[ERROR] Too many requests — please wait a moment before trying again.";
+        }
+        if (lower.contains("invalid_api_key") || lower.contains("authentication")) {
+            return "[ERROR] A configuration issue occurred. Please contact support.";
+        }
+        if (lower.contains("timeout") || lower.contains("timed out")) {
+            return "[ERROR] The research request took too long to complete. Please try a simpler question or try again.";
+        }
+        // Generic fallback — don't leak raw API error JSON
+        return "[ERROR] An error occurred during legal research. Please try again.";
     }
 
     /**

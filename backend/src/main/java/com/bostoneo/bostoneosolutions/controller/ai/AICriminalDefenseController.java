@@ -1,6 +1,8 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.service.AICriminalDefenseService;
+import com.bostoneo.bostoneosolutions.service.JurisdictionResolver;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,8 @@ public class AICriminalDefenseController {
 
     private final AICriminalDefenseService criminalDefenseService;
     private final ClaudeSonnet4Service claudeService;
+    private final JurisdictionResolver jurisdictionResolver;
+    private final TenantService tenantService;
 
     @PostMapping("/generate-motion")
     public DeferredResult<ResponseEntity<Map<String, Object>>> generateMotion(@RequestBody Map<String, Object> request) {
@@ -28,34 +32,42 @@ public class AICriminalDefenseController {
         
         DeferredResult<ResponseEntity<Map<String, Object>>> deferredResult = new DeferredResult<>(60000L);
         
+        // Resolve jurisdiction from org state
+        String stateName = jurisdictionResolver.resolveStateName(tenantService.requireCurrentOrganizationId());
+
         // Build prompt for Claude AI
         String prompt = String.format("""
             Generate a professional legal motion for criminal defense:
-            
+
+            JURISDICTION: %s
             Motion Type: %s
             Court: %s
             Case Number: %s
             Defendant Name: %s
-            
+
             FACTUAL BASIS:
             %s
-            
+
             LEGAL ARGUMENTS:
             %s
-            
+
             REQUESTED RELIEF:
             %s
-            
-            Please generate a complete, professionally formatted criminal defense motion in Massachusetts court format.
+
+            Please generate a complete, professionally formatted criminal defense motion in %s court format.
+            Use correct %s rules of criminal procedure and statutory citations.
             Include proper legal citations and formatting.
             """,
+            stateName,
             request.get("motionType"),
             request.get("courtName"),
             request.get("caseNumber"),
             request.get("defendantName"),
             request.get("factualBasis"),
             request.get("legalArguments"),
-            request.get("requestedRelief")
+            request.get("requestedRelief"),
+            stateName,
+            stateName
         );
         
         // Call Claude AI

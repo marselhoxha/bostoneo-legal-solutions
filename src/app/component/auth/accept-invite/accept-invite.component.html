@@ -17,7 +17,7 @@
           <div class="text-center mt-sm-5 mb-4 text-white-50">
             <div>
               <a routerLink="/" class="d-inline-block auth-logo">
-                <h2 class="text-white">Bostoneo Legal Solutions</h2>
+                <img src="assets/images/legience-logo-white.svg" alt="Legience" height="36">
               </a>
             </div>
           </div>
@@ -81,7 +81,7 @@
                 <p class="text-muted mb-1">
                   Join <strong>{{ state.invitation.organizationName || 'the organization' }}</strong>
                 </p>
-                <span class="badge bg-info-subtle text-info">{{ state.invitation.role }}</span>
+                <span class="badge bg-info-subtle text-info">{{ state.invitation.role?.replace('ROLE_', '') | titlecase }}</span>
               </div>
 
               <!-- Error Alert -->
@@ -228,7 +228,7 @@
       <div class="row">
         <div class="col-lg-12">
           <div class="text-center">
-            <p class="mb-0 text-muted">&copy; {{ currentYear }} Bostoneo Legal Solutions. All rights reserved.</p>
+            <p class="mb-0 text-muted">&copy; {{ currentYear }} Legience. All rights reserved.</p>
           </div>
         </div>
       </div>

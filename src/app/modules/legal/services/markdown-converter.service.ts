@@ -142,6 +142,9 @@ export class MarkdownConverterService {
    * CKEditor 5 preserves custom classes via GeneralHtmlSupport plugin.
    */
   private convertMarkdownToHtml(text: string): string {
+    // Convert court caption blocks FIRST (§ column alignment) — before any markdown conversion
+    text = this.convertCaptionBlocksToHtml(text);
+
     // REMOVE STRAY BACKTICKS (formatting artifacts from AI responses)
     text = text.replace(/^`\s*/gm, ''); // Backticks at start of lines
     text = text.replace(/`{3,}/g, ''); // Triple+ backticks not in code blocks
@@ -339,5 +342,156 @@ export class MarkdownConverterService {
   private parseTableRow(row: string): string[] {
     const trimmed = row.trim().replace(/^\|/, '').replace(/\|$/, '');
     return trimmed.split('|').map(cell => cell.trim());
+  }
+
+  // ========================================
+  // Court Caption Block Processing (§ alignment)
+  // ========================================
+
+  /**
+   * Convert court caption blocks (lines with § column separators) to aligned HTML tables.
+   * Detects clusters of 3+ lines containing § and converts them to a borderless table.
+   * Also cleans up duplicate preamble (court name, county, cause no.) above the caption.
+   */
+  private convertCaptionBlocksToHtml(text: string): string {
+    const lines = text.split('\n');
+    const result: string[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      if (lines[i].includes('§') && this.isCaptionSectionLine(lines[i])) {
+        const blockStart = i;
+        const sectionLines: string[] = [];
+        let consecutiveGap = 0;
+
+        while (i < lines.length && consecutiveGap <= 2) {
+          if (lines[i].includes('§') && this.isCaptionSectionLine(lines[i])) {
+            sectionLines.push(lines[i]);
+            consecutiveGap = 0;
+          } else if (lines[i].trim() === '') {
+            consecutiveGap++;
+          } else {
+            break;
+          }
+          i++;
+        }
+
+        if (sectionLines.length >= 3) {
+          // Valid caption block — clean preamble above
+          let causeNoText = '';
+          let relocatedTitle = '';
+
+          const preamblePatterns = [
+            /CAUSE\s+NO/i,
+            /\bDISTRICT\s+COURT\b/i,
+            /\bCOURT\s+AT\s+LAW\b/i,
+            /\bCOUNTY\s+COURT\b/i,
+            /\bCIRCUIT\s+COURT\b/i,
+            /\bSUPERIOR\s+COURT\b/i,
+            /^STATE\s+OF\s+/i,
+            /^COMMONWEALTH\s+OF\s+/i,
+            /COUNTY,?\s+\w+/i,
+          ];
+
+          const titleKeywords = /MOTION|PETITION|BRIEF|COMPLAINT|APPLICATION|RESPONSE|REPLY|MEMORANDUM|OBJECTION/i;
+
+          const scanStart = Math.max(0, result.length - 12);
+          for (let k = result.length - 1; k >= scanStart; k--) {
+            const raw = result[k].trim();
+            if (raw === '') continue;
+            const stripped = raw.replace(/[#*_]/g, '').trim();
+
+            if (/CAUSE\s+NO/i.test(stripped) && !causeNoText) {
+              causeNoText = stripped;
+              result.splice(k, 1);
+              continue;
+            }
+
+            if (preamblePatterns.some(p => p.test(stripped))) {
+              result.splice(k, 1);
+              continue;
+            }
+
+            const isHeading = /^#{1,3}\s+/.test(raw);
+            const isAllCapsBold = /^\*\*[A-Z0-9\s,.'():;!&\-]+\*\*$/.test(raw);
+            if ((isHeading || isAllCapsBold) && titleKeywords.test(stripped) && !relocatedTitle) {
+              relocatedTitle = raw;
+              result.splice(k, 1);
+              continue;
+            }
+          }
+
+          // Remove trailing blanks and stray horizontal rules before caption
+          while (result.length > 0 && (result[result.length - 1].trim() === '' || result[result.length - 1].trim() === '---')) {
+            result.pop();
+          }
+
+          result.push(this.buildCaptionHtml(sectionLines, causeNoText));
+
+          if (relocatedTitle) {
+            result.push('');
+            result.push(relocatedTitle);
+          }
+        } else {
+          for (let j = blockStart; j < i; j++) {
+            result.push(lines[j]);
+          }
+        }
+      } else {
+        result.push(lines[i]);
+        i++;
+      }
+    }
+
+    return result.join('\n');
+  }
+
+  /**
+   * Check if a line uses § as a caption column separator (not an inline legal citation).
+   */
+  private isCaptionSectionLine(line: string): boolean {
+    const trimmed = line.trim();
+    if (!trimmed.includes('§')) return false;
+    if (trimmed === '§') return true;
+    if (/^§\s*\d/.test(trimmed)) return false;
+    if (/[,.\s]§\s*\d/.test(trimmed)) return false;
+    if (trimmed.length > 120) return false;
+    return true;
+  }
+
+  /**
+   * Build an aligned HTML caption table from § lines.
+   * Uses BOTH inline styles AND HTML attributes for maximum compatibility:
+   * - Inline styles: work in CKEditor and in-app display
+   * - HTML attributes: survive cleanHtmlForExport() and work in iText PDF converter
+   * Output is a SINGLE LINE to prevent <br> injection from \n→<br> conversion.
+   */
+  private buildCaptionHtml(sectionLines: string[], causeNoText: string): string {
+    let html = '';
+
+    if (causeNoText) {
+      const cleanCause = causeNoText.replace(/\|/g, '').replace(/\*\*/g, '').trim();
+      html += `<div style="text-align:center;margin-bottom:10px;" align="center"><strong>${cleanCause}</strong></div>`;
+    }
+
+    html += `<table style="width:85%;margin:0 auto 20px;border-collapse:collapse;border:none;" border="0" width="85%" align="center" cellpadding="2" cellspacing="0">`;
+
+    for (const line of sectionLines) {
+      const sectionIdx = line.indexOf('§');
+      let left = line.substring(0, sectionIdx).replace(/\|/g, '').trim();
+      let right = line.substring(sectionIdx + 1).replace(/\|/g, '').trim();
+      // Convert markdown bold/italic to HTML
+      left = left.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
+      right = right.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+      html += `<tr>`;
+      html += `<td style="width:40%;border:none;padding:2px 0;vertical-align:top;" width="40%" valign="top">${left}</td>`;
+      html += `<td style="width:8%;border:none;padding:2px 0;text-align:center;vertical-align:top;" width="8%" align="center" valign="top">§</td>`;
+      html += `<td style="width:52%;border:none;padding:2px 0;vertical-align:top;" width="52%" valign="top">${right}</td>`;
+      html += `</tr>`;
+    }
+
+    html += `</table>`;
+    return html;
   }
 }

@@ -5,6 +5,7 @@ import { OrganizationFormComponent } from './components/organization-form/organi
 import { OrganizationDetailsComponent } from './components/organization-details/organization-details.component';
 import { OrganizationSettingsComponent } from './components/organization-settings/organization-settings.component';
 import { OrganizationPlanComponent } from './components/organization-plan/organization-plan.component';
+import { SuperAdminGuard } from '../superadmin/guards/superadmin.guard';
 
 const routes: Routes = [
   {
@@ -14,11 +15,13 @@ const routes: Routes = [
   },
   {
     path: 'list',
-    component: OrganizationListComponent
+    component: OrganizationListComponent,
+    canActivate: [SuperAdminGuard]
   },
   {
     path: 'create',
-    component: OrganizationFormComponent
+    component: OrganizationFormComponent,
+    canActivate: [SuperAdminGuard]
   },
   {
     path: 'edit/:id',
@@ -30,11 +33,13 @@ const routes: Routes = [
   },
   {
     path: 'details/:id/settings',
-    component: OrganizationSettingsComponent
+    redirectTo: 'details/:id',
+    pathMatch: 'full'
   },
   {
     path: 'details/:id/plan',
-    component: OrganizationPlanComponent
+    component: OrganizationPlanComponent,
+    canActivate: [SuperAdminGuard]
   }
 ];
 

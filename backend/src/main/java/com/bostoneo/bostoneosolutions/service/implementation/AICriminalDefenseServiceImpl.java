@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
 import com.bostoneo.bostoneosolutions.service.AICriminalDefenseService;
+import com.bostoneo.bostoneosolutions.service.JurisdictionResolver;
 import com.bostoneo.bostoneosolutions.model.AICriminalCase;
 import com.bostoneo.bostoneosolutions.model.AICriminalMotion;
 import com.bostoneo.bostoneosolutions.enumeration.CriminalCaseType;
@@ -31,6 +32,7 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
     private final AICriminalCaseRepository caseRepository;
     private final AICriminalMotionRepository motionRepository;
     private final TenantService tenantService;
+    private final JurisdictionResolver jurisdictionResolver;
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMMM d, yyyy");
 
@@ -102,37 +104,43 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
     @Async
     public CompletableFuture<String> generateMotion(Long caseId, MotionType motionType, Map<String, Object> facts) {
         AICriminalCase criminalCase = getCriminalCaseById(caseId);
-        
+        String courtLabel = jurisdictionResolver.getCourtLabelForOrg(tenantService.requireCurrentOrganizationId());
+        String prosecutionLabel = courtLabel.startsWith("COMMONWEALTH") ? "COMMONWEALTH" : "STATE";
+        String courtName = criminalCase.getCourtName() != null ? criminalCase.getCourtName() : "Superior Court";
+        String docketNumber = criminalCase.getDocketNumber() != null ? criminalCase.getDocketNumber() : "Unknown";
+
         String motion = String.format("""
-            COMMONWEALTH OF MASSACHUSETTS
             %s
-            
-            COMMONWEALTH
+            %s
+
+            %s
             v.                                   Docket No. %s
             DEFENDANT
-            
+
             MOTION TO %s
-            
+
             NOW COMES the Defendant, by and through counsel, and respectfully moves this Honorable Court to %s
-            
+
             FACTUAL BACKGROUND:
             %s
-            
+
             ARGUMENT:
             I. Legal Standard
             %s
-            
+
             II. Application to This Case
             Based on the facts presented, %s
-            
+
             WHEREFORE, the Defendant respectfully requests that this Court grant this Motion.
-            
+
             Respectfully submitted,
             Attorney for Defendant
             Date: %s
             """,
-            criminalCase.getCourtName() != null ? criminalCase.getCourtName() : "Superior Court",
-            criminalCase.getDocketNumber() != null ? criminalCase.getDocketNumber() : "Unknown",
+            courtLabel,
+            courtName,
+            prosecutionLabel,
+            docketNumber,
             motionType.toString().replace("_", " "),
             getMotionRelief(motionType),
             facts.getOrDefault("background", "Facts to be provided"),
@@ -192,11 +200,13 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
     @Async
     public CompletableFuture<String> generateSentencingMemo(Long caseId, Map<String, Object> mitigatingFactors) {
         AICriminalCase criminalCase = getCriminalCaseById(caseId);
-        
+        String courtLabel = jurisdictionResolver.getCourtLabelForOrg(tenantService.requireCurrentOrganizationId());
+        String prosecutionLabel = courtLabel.startsWith("COMMONWEALTH") ? "Commonwealth" : "State";
+
         String memo = String.format("""
             SENTENCING MEMORANDUM
-            
-            Re: Commonwealth v. Defendant
+
+            Re: %s v. Defendant
             Docket No: %s
             
             INTRODUCTION
@@ -212,7 +222,7 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
             %s
             
             SENTENCING RECOMMENDATION
-            Based on the Massachusetts Sentencing Guidelines and the factors presented above, defense counsel
+            Based on the applicable sentencing guidelines and the factors presented above, defense counsel
             respectfully requests a sentence of %s.
             
             CONCLUSION
@@ -222,6 +232,7 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
             Attorney for Defendant
             Date: %s
             """,
+            prosecutionLabel,
             criminalCase.getDocketNumber(),
             criminalCase.getPrimaryOffense(),
             formatMitigatingFactors(mitigatingFactors),
@@ -257,36 +268,39 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
     @Async
     public CompletableFuture<String> generateDiscoveryRequest(Long caseId, List<String> requestedItems) {
         AICriminalCase criminalCase = getCriminalCaseById(caseId);
-        
+        String courtLabel = jurisdictionResolver.getCourtLabelForOrg(tenantService.requireCurrentOrganizationId());
+        String prosecutionLabel = courtLabel.startsWith("COMMONWEALTH") ? "Commonwealth" : "State";
+
         String discoveryRequest = String.format("""
             DEFENDANT'S DISCOVERY REQUEST
-            
-            Commonwealth v. Defendant
+
+            %s v. Defendant
             Docket No: %s
-            
-            Pursuant to Mass. R. Crim. P. 14 and applicable constitutional provisions, the Defendant requests:
-            
-            AUTOMATIC DISCOVERY (Rule 14(a)(1)(A)):
+
+            Pursuant to the applicable rules of criminal procedure and constitutional provisions, the Defendant requests:
+
+            AUTOMATIC DISCOVERY:
             1. Defendant's statements
             2. Defendant's criminal record
             3. Physical evidence and scientific tests
             4. Exculpatory evidence (Brady material)
             5. Witness statements
             6. Expert witness information
-            
+
             ADDITIONAL REQUESTED ITEMS:
             %s
-            
+
             RECIPROCAL DISCOVERY:
-            The Defendant acknowledges the Commonwealth's right to reciprocal discovery under Rule 14(b).
-            
+            The Defendant acknowledges the prosecution's right to reciprocal discovery under the applicable rules.
+
             CONTINUING DUTY:
-            The Defendant reminds the Commonwealth of its continuing duty to disclose under Rule 14(c).
+            The Defendant reminds the prosecution of its continuing duty to disclose.
             
             Respectfully submitted,
             Attorney for Defendant
             Date: %s
             """,
+            prosecutionLabel,
             criminalCase.getDocketNumber(),
             formatRequestedItems(requestedItems),
             LocalDateTime.now().format(DATE_FORMATTER)
@@ -316,7 +330,7 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
     @Async
     public CompletableFuture<String> generateBradyMotion(Long caseId, Map<String, Object> exculpatoryEvidence) {
         Map<String, Object> facts = new HashMap<>(exculpatoryEvidence);
-        facts.put("background", "The Commonwealth has failed to disclose exculpatory evidence");
+        facts.put("background", "The prosecution has failed to disclose exculpatory evidence");
         facts.put("argument", "The withheld evidence is material to guilt or punishment");
         
         return generateMotion(caseId, MotionType.BRADY_MOTION, facts);
@@ -452,7 +466,7 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
             The prosecution's case relies on %s, but the evidence will demonstrate %s.
             
             At the conclusion of this case, after you've heard all the evidence, we will ask you to find 
-            the defendant not guilty because the Commonwealth will not have proven its case beyond a reasonable doubt.
+            the defendant not guilty because the prosecution will not have proven its case beyond a reasonable doubt.
             
             Thank you.
             """,
@@ -473,7 +487,7 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
             
             Members of the jury,
             
-            The Commonwealth has failed to prove its case beyond a reasonable doubt.
+            The prosecution has failed to prove its case beyond a reasonable doubt.
             
             REASONABLE DOUBT:
             - The highest standard in our legal system
@@ -498,22 +512,23 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
         return CompletableFuture.completedFuture(closing);
     }
 
-    // Massachusetts Criminal Law
+    // State Criminal Law References
     @Override
     @Async
     public CompletableFuture<List<String>> getMAStatuteReferences(String chargeType) {
+        String stateName = jurisdictionResolver.resolveStateName(tenantService.requireCurrentOrganizationId());
         List<String> statutes = new ArrayList<>();
-        
-        // Common MA criminal statutes
-        statutes.add("M.G.L. c. 265, § 13A - Assault and Battery");
-        statutes.add("M.G.L. c. 266, § 30 - Larceny");
-        statutes.add("M.G.L. c. 90, § 24 - OUI");
-        statutes.add("M.G.L. c. 94C - Controlled Substances");
-        statutes.add("M.G.L. c. 269, § 10 - Carrying Dangerous Weapons");
-        statutes.add("M.G.L. c. 265, § 1 - Murder");
-        statutes.add("M.G.L. c. 272, § 53 - Disorderly Conduct");
-        statutes.add("M.G.L. c. 268, § 13B - Intimidation of Witnesses");
-        
+
+        // Provide common criminal statute categories — AI will use correct state citations
+        statutes.add(stateName + " Assault and Battery statute");
+        statutes.add(stateName + " Larceny/Theft statute");
+        statutes.add(stateName + " OUI/DUI/DWI statute");
+        statutes.add(stateName + " Controlled Substances statute");
+        statutes.add(stateName + " Carrying Dangerous Weapons statute");
+        statutes.add(stateName + " Murder/Homicide statute");
+        statutes.add(stateName + " Disorderly Conduct statute");
+        statutes.add(stateName + " Intimidation of Witnesses statute");
+
         return CompletableFuture.completedFuture(statutes);
     }
 
@@ -521,20 +536,22 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
     @Async
     public CompletableFuture<String> generateMAMotionFormat(MotionType motionType, Long caseId) {
         AICriminalCase criminalCase = getCriminalCaseById(caseId);
-        
+        String courtLabel = jurisdictionResolver.getCourtLabelForOrg(tenantService.requireCurrentOrganizationId());
+        String prosecutionLabel = courtLabel.startsWith("COMMONWEALTH") ? "COMMONWEALTH OF " + jurisdictionResolver.resolveStateName(tenantService.requireCurrentOrganizationId()).toUpperCase() : courtLabel;
+
         String motion = String.format("""
-            COMMONWEALTH OF MASSACHUSETTS
-            
+            %s
+
             %s
             %s DEPARTMENT
-            
-            COMMONWEALTH OF MASSACHUSETTS
+
+            %s
             v.                                   No. %s
             Defendant
-            
+
             DEFENDANT'S %s
-            
-            NOW COMES the Defendant and moves this Honorable Court pursuant to Mass. R. Crim. P. %s
+
+            NOW COMES the Defendant and moves this Honorable Court pursuant to the applicable rules of criminal procedure, Rule %s
             
             In support thereof, the Defendant states:
             
@@ -551,7 +568,7 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
             
             _________________________
             Attorney Name
-            BBO# 
+            Bar No.
             Address
             Phone
             
@@ -560,8 +577,10 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
             CERTIFICATE OF SERVICE
             I hereby certify that a true copy of this motion was served upon the District Attorney's Office.
             """,
+            courtLabel,
             criminalCase.getCourtName() != null ? criminalCase.getCourtName() : "District Court",
             "CRIMINAL",
+            prosecutionLabel,
             criminalCase.getDocketNumber() != null ? criminalCase.getDocketNumber() : "XXXX-XXXX",
             motionType.toString().replace("_", " "),
             getRelevantRule(motionType),
@@ -575,10 +594,10 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
     @Async
     public CompletableFuture<Map<String, Object>> analyzeMADefenses(String chargeType) {
         Map<String, Object> defenses = new HashMap<>();
-        
+
         defenses.put("chargeType", chargeType);
         defenses.put("statutoryDefenses", Arrays.asList(
-            "Self-defense (M.G.L. c. 278, § 8A)",
+            "Self-defense (applicable state statute)",
             "Defense of others",
             "Defense of property",
             "Necessity",
@@ -621,7 +640,7 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
             case MOTION_TO_SUPPRESS:
                 return "Evidence obtained in violation of the Fourth Amendment must be suppressed. Mapp v. Ohio, 367 U.S. 643 (1961).";
             case MOTION_TO_DISMISS:
-                return "The complaint must establish probable cause. Commonwealth v. McCarthy, 385 Mass. 160 (1982).";
+                return "The complaint must establish probable cause under the applicable state standard.";
             case BRADY_MOTION:
                 return "The prosecution must disclose material exculpatory evidence. Brady v. Maryland, 373 U.S. 83 (1963).";
             default:
@@ -716,13 +735,13 @@ public class AICriminalDefenseServiceImpl implements AICriminalDefenseService {
     private String getRelevantRule(MotionType motionType) {
         switch (motionType) {
             case MOTION_TO_SUPPRESS:
-                return "13";
+                return "[applicable suppression rule]";
             case MOTION_TO_DISMISS:
-                return "13";
+                return "[applicable dismissal rule]";
             case BRADY_MOTION:
-                return "14";
+                return "[applicable discovery rule]";
             default:
-                return "7";
+                return "[applicable rule]";
         }
     }
 

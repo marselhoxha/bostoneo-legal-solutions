@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Core pages -->
+  <url><loc>https://legience.com/</loc><lastmod>2026-03-16</lastmod><priority>1.0</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://legience.com/features</loc><lastmod>2026-03-16</lastmod><priority>0.9</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/ai-platform</loc><lastmod>2026-03-16</lastmod><priority>0.9</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/pi-workspace</loc><lastmod>2026-03-16</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/practice-areas</loc><lastmod>2026-03-16</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/pricing</loc><lastmod>2026-03-16</lastmod><priority>0.9</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/integrations</loc><lastmod>2026-03-16</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/about</loc><lastmod>2026-03-16</lastmod><priority>0.6</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/security</loc><lastmod>2026-03-16</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/contact</loc><lastmod>2026-03-16</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+
+  <!-- Feature landing pages -->
+  <url><loc>https://legience.com/legal-drafting-software</loc><lastmod>2026-03-17</lastmod><priority>0.9</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/legal-research-software</loc><lastmod>2026-03-17</lastmod><priority>0.9</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/law-firm-crm</loc><lastmod>2026-03-17</lastmod><priority>0.9</priority><changefreq>monthly</changefreq></url>
+
+  <!-- Blog index -->
+  <url><loc>https://legience.com/blog</loc><lastmod>2026-03-16</lastmod><priority>0.8</priority><changefreq>weekly</changefreq></url>
+
+  <!-- Blog posts -->
+  <url><loc>https://legience.com/blog/why-pi-firms-switching-clio-to-legience-2026</loc><lastmod>2026-03-10</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/ai-ethics-attorney-client-privilege</loc><lastmod>2026-03-10</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/true-cost-of-clio-2026</loc><lastmod>2026-03-10</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/boston-pi-firm-replaced-5-tools</loc><lastmod>2026-03-10</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/ai-demand-letters-legidraft</loc><lastmod>2026-03-10</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/201-cmr-17-compliance-checklist</loc><lastmod>2026-03-10</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/evenup-2b-valuation-legal-ai</loc><lastmod>2026-03-10</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/best-legal-practice-management-software-2026</loc><lastmod>2026-03-15</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/clio-alternatives-2026</loc><lastmod>2026-03-12</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/what-is-legal-practice-management-software</loc><lastmod>2026-03-10</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/ai-legal-research-2026</loc><lastmod>2026-03-08</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/solo-attorney-software-guide</loc><lastmod>2026-03-05</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/best-ai-legal-research-tools-2026</loc><lastmod>2026-03-17</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/blog/best-legal-document-automation-software-2026</loc><lastmod>2026-03-17</lastmod><priority>0.7</priority><changefreq>monthly</changefreq></url>
+
+  <!-- Comparison pages -->
+  <url><loc>https://legience.com/compare/legience-vs-clio</loc><lastmod>2026-03-16</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/compare/legience-vs-mycase</loc><lastmod>2026-03-16</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/compare/legience-vs-practicepanther</loc><lastmod>2026-03-16</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/compare/legience-vs-filevine</loc><lastmod>2026-03-17</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/compare/legience-vs-cloudlex</loc><lastmod>2026-03-17</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/compare/legience-vs-evenup</loc><lastmod>2026-03-17</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+
+  <!-- Tools -->
+  <url><loc>https://legience.com/tools/sol-calculator</loc><lastmod>2026-03-16</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/tools/pi-settlement-calculator</loc><lastmod>2026-03-17</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://legience.com/tools/court-filing-fees</loc><lastmod>2026-03-17</lastmod><priority>0.8</priority><changefreq>monthly</changefreq></url>
+
+  <!-- Legal pages -->
+  <url><loc>https://legience.com/privacy</loc><lastmod>2026-03-01</lastmod><priority>0.3</priority><changefreq>yearly</changefreq></url>
+  <url><loc>https://legience.com/terms</loc><lastmod>2026-03-01</lastmod><priority>0.3</priority><changefreq>yearly</changefreq></url>
+  <url><loc>https://legience.com/cookie-policy</loc><lastmod>2026-03-01</lastmod><priority>0.3</priority><changefreq>yearly</changefreq></url>
+  <url><loc>https://legience.com/aba-ethics</loc><lastmod>2026-03-01</lastmod><priority>0.5</priority><changefreq>monthly</changefreq></url>
+</urlset>

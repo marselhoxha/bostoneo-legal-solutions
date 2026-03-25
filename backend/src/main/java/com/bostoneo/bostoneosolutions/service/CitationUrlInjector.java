@@ -8,6 +8,7 @@ import com.bostoneo.bostoneosolutions.dto.CaseDocumentSummary;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Post-processor that injects URLs for known legal citations.
@@ -391,6 +392,130 @@ public class CitationUrlInjector {
             "[N.Y. Gen. Bus. Law § $1$2](https://www.nysenate.gov/legislation/laws/GBS/$1)"
         );
 
+        // ===== TEXAS STATUTES (Tier 1 — direct links to statutes.capitol.texas.gov) =====
+
+        // Tex. Penal Code § X — capture chapter separately from section for correct URL
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Penal\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Penal Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/PE/htm/PE.$1.htm)"
+        );
+
+        // Tex. Code Crim. Proc. art. X — capture chapter separately from section
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Code\\s*Crim\\.?\\s*Proc\\.?\\s*(?:art\\.?|Art\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Code Crim. Proc. art. $1$2$3](https://statutes.capitol.texas.gov/Docs/CR/htm/CR.$1.htm)"
+        );
+
+        // Tex. Civ. Prac. & Rem. Code § X — capture chapter separately from section
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Civ\\.?\\s*Prac\\.?\\s*(?:&|and)\\s*Rem\\.?\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Civ. Prac. & Rem. Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/CP/htm/CP.$1.htm)"
+        );
+
+        // Tex. Ins. Code § X — capture chapter separately from section
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Ins\\.?\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Ins. Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/IN/htm/IN.$1.htm)"
+        );
+
+        // Tex. Fam. Code § X — capture chapter separately from section
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Fam\\.?\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Fam. Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/FA/htm/FA.$1.htm)"
+        );
+
+        // Tex. Bus. & Com. Code § X — capture chapter separately from section
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Bus\\.?\\s*(?:&|and)\\s*Com\\.?\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Bus. & Com. Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/BC/htm/BC.$1.htm)"
+        );
+
+        // Tex. Lab. Code § X (Labor Code — LA)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Lab\\.?\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Lab. Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/LA/htm/LA.$1.htm)"
+        );
+
+        // Tex. Gov't Code § X (Government Code — GV)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Gov(?:'t|\\.?)\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Gov't Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/GV/htm/GV.$1.htm)"
+        );
+
+        // Tex. Prop. Code § X (Property Code — PR)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Prop\\.?\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Prop. Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/PR/htm/PR.$1.htm)"
+        );
+
+        // Tex. Health & Safety Code § X (HS)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Health\\s*(?:&|and)\\s*Safety\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Health & Safety Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/HS/htm/HS.$1.htm)"
+        );
+
+        // Tex. Transp. Code § X (Transportation Code — TN)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Transp\\.?\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Transp. Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/TN/htm/TN.$1.htm)"
+        );
+
+        // Tex. Occ. Code § X (Occupations Code — OC)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Occ\\.?\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Occ. Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/OC/htm/OC.$1.htm)"
+        );
+
+        // Tex. Est. Code § X (Estates Code — ES)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Est\\.?\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Est. Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/ES/htm/ES.$1.htm)"
+        );
+
+        // Tex. Educ. Code § X (Education Code — ED)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Educ\\.?\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Educ. Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/ED/htm/ED.$1.htm)"
+        );
+
+        // Tex. Tax Code § X (Tax Code — TX)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Tax\\s*Code\\s*(?:§|(?:Ch|Sec|Section|Chapter)\\.?)\\s*(\\d+[a-z]?)(\\.\\d+[a-z]?)?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Tax Code § $1$2$3](https://statutes.capitol.texas.gov/Docs/TX/htm/TX.$1.htm)"
+        );
+
+        // Tex. R. Civ. P. X (Texas Rules of Civil Procedure)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*R\\.?\\s*Civ\\.?\\s*P\\.?\\s*(\\d+[a-z]?)((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. R. Civ. P. $1$2](https://www.txcourts.gov/rules-forms/rules-standards/)"
+        );
+
+        // Tex. R. Evid. X (Texas Rules of Evidence)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*R\\.?\\s*Evid\\.?\\s*(\\d+[a-z]?)((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. R. Evid. $1$2](https://www.txcourts.gov/rules-forms/rules-standards/)"
+        );
+
+        // ===== FLORIDA STATUTES (Tier 1 — direct links to leg.state.fl.us) =====
+
+        // Fla. Stat. § X.Y — links to Florida Senate statute viewer
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bFla\\.?\\s*Stat\\.?\\s*§\\s*(\\d+)(\\.(\\d+))?((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Fla. Stat. § $1$2$4](http://www.flsenate.gov/Laws/Statutes/$1/$1$2)"
+        );
+
+        // Fla. R. Civ. P. X (Florida Rules of Civil Procedure)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bFla\\.?\\s*R\\.?\\s*Civ\\.?\\s*P\\.?\\s*(\\d+[a-z]?\\.?\\d*)((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Fla. R. Civ. P. $1$2](https://www.floridabar.org/rules/)"
+        );
+
+        // Fla. R. Crim. P. X (Florida Rules of Criminal Procedure)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bFla\\.?\\s*R\\.?\\s*Crim\\.?\\s*P\\.?\\s*(\\d+[a-z]?\\.?\\d*)((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Fla. R. Crim. P. $1$2](https://www.floridabar.org/rules/)"
+        );
+
         // ===== UNIFORM COMMERCIAL CODE =====
 
         // U.C.C. § X-YYY — routes to Cornell LII
@@ -548,6 +673,77 @@ public class CitationUrlInjector {
         );
     }
 
+    // ===== TIER 2: GENERIC 50-STATE JUSTIA FALLBACK =====
+    // Maps state abbreviations (as used in legal citations) to Justia URL slugs.
+    // This provides clickable links for ALL states, even without per-state URL templates.
+    private static final Map<String, String> STATE_ABBREV_TO_JUSTIA_SLUG = new LinkedHashMap<>();
+    static {
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Ala.", "alabama");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Alaska", "alaska");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Ariz.", "arizona");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Ark.", "arkansas");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Colo.", "colorado");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Conn.", "connecticut");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Del.", "delaware");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Ga.", "georgia");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Haw.", "hawaii");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Idaho", "idaho");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Ill.", "illinois");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Ind.", "indiana");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Iowa", "iowa");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Kan.", "kansas");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Ky.", "kentucky");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("La.", "louisiana");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Me.", "maine");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Md.", "maryland");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Mich.", "michigan");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Minn.", "minnesota");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Miss.", "mississippi");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Mo.", "missouri");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Mont.", "montana");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Neb.", "nebraska");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Nev.", "nevada");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("N.H.", "new-hampshire");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("N.J.", "new-jersey");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("N.M.", "new-mexico");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("N.C.", "north-carolina");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("N.D.", "north-dakota");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Ohio", "ohio");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Okla.", "oklahoma");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Or.", "oregon");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Pa.", "pennsylvania");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("R.I.", "rhode-island");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("S.C.", "south-carolina");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("S.D.", "south-dakota");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Tenn.", "tennessee");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Utah", "utah");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Vt.", "vermont");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Va.", "virginia");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Wash.", "washington");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("W.Va.", "west-virginia");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Wis.", "wisconsin");
+        STATE_ABBREV_TO_JUSTIA_SLUG.put("Wyo.", "wyoming");
+        // Note: MA, CA, NY, TX, FL are handled by Tier 1 direct patterns above
+    }
+
+    // Compiled pattern for Tier 2 generic state statute matching.
+    // Matches patterns like: "Ga. Code § 16-5-1", "Ohio Rev. Code § 2903.02", "Ill. Comp. Stat. 720/5"
+    // Uses the state abbreviation alternation built from the map keys.
+    private static final Pattern GENERIC_STATE_STATUTE_PATTERN;
+    static {
+        // Build alternation from state abbreviations, escaping dots for regex
+        String stateAlternation = STATE_ABBREV_TO_JUSTIA_SLUG.keySet().stream()
+            .map(abbrev -> abbrev.replace(".", "\\."))
+            .collect(Collectors.joining("|"));
+        GENERIC_STATE_STATUTE_PATTERN = Pattern.compile(
+            "(?<!\\[)\\b(" + stateAlternation + ")\\s*"
+            + "(?:Rev\\.?\\s*)?(?:Code|Stat|Gen\\.?\\s*Laws|Comp\\.?\\s*Stat|Ann|Consol\\.?\\s*Laws)"
+            + "[^§]{0,30}§\\s*(\\d+[\\w.-]*)"
+            + "(?!\\]\\(http)",
+            Pattern.CASE_INSENSITIVE
+        );
+    }
+
     // Massachusetts Rules of Civil Procedure — per-rule URL lookup
     // Each rule has a unique slug on mass.gov, so we map rule numbers to full URLs.
     private static final Map<String, String> MASS_CIV_P_URLS = new HashMap<>();
@@ -659,6 +855,43 @@ public class CitationUrlInjector {
         return sb.toString();
     }
 
+    /**
+     * Tier 2: Inject Justia links for state statute citations not covered by Tier 1 patterns.
+     * Matches citations like "Ga. Code § 16-5-1", "Ohio Rev. Code § 2903.02", "Ill. Comp. Stat. 720/5"
+     * and links to the state's Justia code page.
+     */
+    private String injectGenericStateStatuteUrls(String text) {
+        Matcher matcher = GENERIC_STATE_STATUTE_PATTERN.matcher(text);
+        StringBuffer sb = new StringBuffer();
+        int count = 0;
+        while (matcher.find()) {
+            String stateAbbrev = matcher.group(1);
+            String fullMatch = matcher.group(0);
+
+            // Look up the Justia slug — try exact match first, then case-insensitive
+            String justiaSlug = null;
+            for (Map.Entry<String, String> entry : STATE_ABBREV_TO_JUSTIA_SLUG.entrySet()) {
+                if (entry.getKey().equalsIgnoreCase(stateAbbrev) ||
+                    entry.getKey().replace(".", "").equalsIgnoreCase(stateAbbrev.replace(".", ""))) {
+                    justiaSlug = entry.getValue();
+                    break;
+                }
+            }
+
+            if (justiaSlug != null) {
+                String url = "https://law.justia.com/codes/" + justiaSlug + "/";
+                String replacement = "[" + fullMatch + "](" + url + ")";
+                matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+                count++;
+            }
+        }
+        matcher.appendTail(sb);
+        if (count > 0) {
+            log.info("🔗 Tier 2: Injected {} Justia state statute links", count);
+        }
+        return sb.toString();
+    }
+
     // Thread-local document context for matching sources against case documents
     private final ThreadLocal<List<CaseDocumentSummary>> documentContext = new ThreadLocal<>();
     private final ThreadLocal<String> caseIdContext = new ThreadLocal<>();
@@ -701,8 +934,10 @@ public class CitationUrlInjector {
             mainContent = response.substring(0, followUpMatcher.start()) + response.substring(followUpMatcher.end());
         }
 
-        // Replace Justia URLs with CourtListener — AI sometimes generates justia links from training data
-        mainContent = mainContent.replaceAll("https?://law\\.justia\\.com/[^)\\s\"]+", "https://www.courtlistener.com/");
+        // Remove Justia URLs — AI sometimes generates justia links from training data.
+        // Don't replace with CourtListener homepage; the SOURCES section handles proper linking.
+        mainContent = mainContent.replaceAll("\\[([^\\]]+)\\]\\(https?://law\\.justia\\.com/[^)]+\\)", "$1");
+        mainContent = mainContent.replaceAll("https?://law\\.justia\\.com/[^)\\s\"]+", "");
 
         // Extract SOURCES line BEFORE pattern matching to prevent
         // the main regex loop from mangling the structured marker with partial replacements.
@@ -736,6 +971,9 @@ public class CitationUrlInjector {
             }
         }
 
+        // Tier 2: Generic state statute fallback (Justia links for all 50 states)
+        processed = injectGenericStateStatuteUrls(processed);
+
         if (injectCount > 0) {
             log.info("✅ Injected {} URLs into response", injectCount);
         } else {
@@ -745,10 +983,28 @@ public class CitationUrlInjector {
         // Convert prose markdown links to HTML <a> tags
         processed = convertMarkdownLinksToHtml(processed);
 
+        // Build a lookup map of case name → URL from verified inline citations in the response body.
+        // These have the format: ✓ [Case Name](https://www.courtlistener.com/opinion/123/slug/)
+        Map<String, String> verifiedUrlMap = new java.util.HashMap<>();
+        Matcher verifiedMatcher = Pattern.compile("✓\\s*\\[([^\\]]+)\\]\\((https://www\\.courtlistener\\.com/[^)]+)\\)").matcher(processed);
+        while (verifiedMatcher.find()) {
+            String caseName = verifiedMatcher.group(1).replaceAll("\\*+", "").trim().toLowerCase();
+            verifiedUrlMap.put(caseName, verifiedMatcher.group(2));
+        }
+        // Also extract from non-checkmarked links: [Case Name](url)
+        Matcher linkMatcher = Pattern.compile("\\[([^\\]]+)\\]\\((https://www\\.courtlistener\\.com/opinion/[^)]+)\\)").matcher(processed);
+        while (linkMatcher.find()) {
+            String caseName = linkMatcher.group(1).replaceAll("\\*+", "").trim().toLowerCase();
+            verifiedUrlMap.putIfAbsent(caseName, linkMatcher.group(2));
+        }
+        if (!verifiedUrlMap.isEmpty()) {
+            log.info("📎 Built verified URL map with {} entries for SOURCES enrichment", verifiedUrlMap.size());
+        }
+
         // Now enrich the SOURCES line separately (clean, unmangled by the main loop)
         if (!sourcesLine.isEmpty()) {
             sourcesLine = injectMassCivPUrls(sourcesLine);
-            sourcesLine = enrichSourcesLine(sourcesLine);
+            sourcesLine = enrichSourcesLine(sourcesLine, verifiedUrlMap);
             sourcesLine = convertMarkdownLinksToHtml(sourcesLine);
         }
 
@@ -772,7 +1028,7 @@ public class CitationUrlInjector {
      * Input:  "SOURCES: Brune v. Belinkoff, 354 Mass. 102 | M.G.L. c. 231 § 60B"
      * Output: "SOURCES: [Brune v. Belinkoff, 354 Mass. 102](url) | [M.G.L. c. 231 § 60B](url)"
      */
-    private String enrichSourcesLine(String text) {
+    private String enrichSourcesLine(String text, Map<String, String> verifiedUrlMap) {
         Pattern sourcesPattern = Pattern.compile("^(SOURCES:\\s*)(.+)$", Pattern.MULTILINE);
         Matcher sourcesMatcher = sourcesPattern.matcher(text);
         if (!sourcesMatcher.find()) {
@@ -783,44 +1039,118 @@ public class CitationUrlInjector {
         String sourcesContent = sourcesMatcher.group(2);
         String[] sources = sourcesContent.split("\\s*\\|\\s*");
         StringBuilder enriched = new StringBuilder(prefix);
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        int appendedCount = 0;
 
         for (int i = 0; i < sources.length; i++) {
             String source = sources[i].trim();
             if (source.isEmpty()) continue;
 
+            // Add separator before appending (except for first)
+            if (appendedCount > 0) {
+                enriched.append(" | ");
+            }
+
             // Skip if already a complete markdown link [text](url)
             if (source.startsWith("[") && source.contains("](")) {
                 enriched.append(source);
+                appendedCount++;
             } else {
+                // Strip AI-generated emoji/symbol prefixes before matching (⚖️, ✓, ✅, 📜, etc.)
+                // Uses Unicode-aware approach: strip any non-letter, non-digit, non-bracket prefix
+                source = source.replaceAll("^[^\\p{L}\\p{N}\\[]+", "").trim();
+                // Strip all markdown asterisks from source text — asterisks are never part of legal citations
+                // Handles: *Stine v. Stewart*, O'Bryant*, **bold case names**, etc.
+                source = source.replaceAll("\\*+", "").trim();
+
                 // Strip bare brackets — AI sometimes outputs [Citation] without URL
                 if (source.startsWith("[") && source.endsWith("]")) {
                     source = source.substring(1, source.length() - 1);
                 } else if (source.startsWith("[")) {
                     source = source.substring(1);
                 }
-                // Try to match against CITATION_URL_MAP
-                String matched = matchCitationUrl(source);
-                if (matched != null) {
-                    enriched.append(matched);
+                // Deduplicate — skip if we've already seen this source (case-insensitive)
+                if (!seen.add(source.toLowerCase())) continue;
+
+                // 1. Check verified URL map first (from inline citation verification)
+                String verifiedUrl = lookupVerifiedUrl(source, verifiedUrlMap);
+                if (verifiedUrl != null) {
+                    enriched.append("[" + source + "](" + verifiedUrl + ")");
                 } else {
-                    // Try to match against uploaded case documents
-                    String docMatch = matchCaseDocument(source);
-                    if (docMatch != null) {
-                        enriched.append(docMatch);
+                    // 2. Try to match against CITATION_URL_MAP
+                    String matched = matchCitationUrl(source);
+                    if (matched != null) {
+                        enriched.append(matched);
                     } else {
-                        // Fallback: CourtListener search (better than Google Scholar for legal documents)
-                        String encoded = source.trim().replaceAll("\\s+", "+");
-                        enriched.append("[" + source + "](https://www.courtlistener.com/?q=" + encoded + "&type=o)");
+                        // 3. Try to match against uploaded case documents
+                        String docMatch = matchCaseDocument(source);
+                        if (docMatch != null) {
+                            enriched.append(docMatch);
+                        } else if (isSecondaryAuthority(source)) {
+                            // 4. Secondary sources (Restatements, treatises, UCC, Model Penal Code)
+                            // — these don't exist on CourtListener. Show as plain text, no link.
+                            enriched.append(source);
+                        } else {
+                            // 5. Fallback: CourtListener search URL for case law only
+                            String encoded = source.trim()
+                                .replaceAll("\\s+", "+")
+                                .replace("(", "%28")
+                                .replace(")", "%29");
+                            enriched.append("[" + source + "](https://www.courtlistener.com/?q=" + encoded + "&type=o)");
+                        }
                     }
                 }
-            }
-
-            if (i < sources.length - 1) {
-                enriched.append(" | ");
+                appendedCount++;
             }
         }
 
         return text.substring(0, sourcesMatcher.start()) + enriched.toString() + text.substring(sourcesMatcher.end());
+    }
+
+    /**
+     * Look up a source name in the verified URL map (from inline citation verification).
+     * Uses fuzzy matching: checks if the source contains a verified case name or vice versa.
+     */
+    private String lookupVerifiedUrl(String source, Map<String, String> verifiedUrlMap) {
+        if (verifiedUrlMap == null || verifiedUrlMap.isEmpty()) return null;
+        String sourceLower = source.toLowerCase().replaceAll("[,.]", "").trim();
+        // Exact match
+        if (verifiedUrlMap.containsKey(sourceLower)) return verifiedUrlMap.get(sourceLower);
+        // Fuzzy: check if source contains a verified case name or vice versa
+        for (Map.Entry<String, String> entry : verifiedUrlMap.entrySet()) {
+            String key = entry.getKey().replaceAll("[,.]", "");
+            if (sourceLower.contains(key) || key.contains(sourceLower)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Detect secondary legal authorities that don't exist on CourtListener.
+     * These are treatises, restatements, model codes, law review articles, etc.
+     * They should be shown as plain text without a broken CourtListener link.
+     */
+    private boolean isSecondaryAuthority(String source) {
+        String lower = source.toLowerCase();
+        return lower.contains("restatement") ||
+               lower.contains("model penal code") ||
+               lower.contains("uniform commercial code") ||
+               lower.contains("u.c.c.") ||
+               lower.contains("law review") ||
+               lower.contains("treatise") ||
+               lower.contains("prosser") ||
+               lower.contains("williston") ||
+               lower.contains("corbin") ||
+               lower.contains("wigmore") ||
+               lower.contains("moore's federal practice") ||
+               lower.contains("wright & miller") ||
+               lower.contains("am. jur.") ||
+               lower.contains("c.j.s.") ||
+               lower.contains("a.l.r.") ||
+               lower.contains("legal encyclopedia") ||
+               lower.contains("black's law") ||
+               lower.contains("nutshell");
     }
 
     /**

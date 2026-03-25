@@ -24,7 +24,7 @@ export class OrganizationInvitationsComponent implements OnInit, OnDestroy {
 
   // Invite form
   inviteEmail = '';
-  inviteRole = 'USER';
+  inviteRole = 'ROLE_ATTORNEY';
   isSubmitting = false;
 
   constructor(

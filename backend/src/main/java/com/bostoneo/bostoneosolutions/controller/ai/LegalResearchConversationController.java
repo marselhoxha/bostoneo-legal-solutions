@@ -468,7 +468,8 @@ public class LegalResearchConversationController {
                     sessionId,
                     request.userId(),
                     request.query(),
-                    request.researchMode()
+                    request.researchMode(),
+                    request.jurisdiction()
             );
 
             // Wait for the AI response synchronously to avoid async timeout
@@ -585,6 +586,6 @@ public class LegalResearchConversationController {
     record MessageRequest(Long userId, String role, String content, String metadata, String researchMode) {}
     record UpdateTitleRequest(Long userId, String title) {}
     record CreateConversationRequest(Long userId, String title, String researchMode, String taskType, String documentType, String jurisdiction) {}
-    record QueryRequest(Long userId, String query, String researchMode) {}
+    record QueryRequest(Long userId, String query, String researchMode, String jurisdiction) {}
     record BookmarkRequest(Long userId) {}
 }

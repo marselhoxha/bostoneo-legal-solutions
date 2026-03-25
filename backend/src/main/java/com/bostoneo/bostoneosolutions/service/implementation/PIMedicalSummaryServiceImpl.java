@@ -215,6 +215,149 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
     }
 
     @Override
+    public Map<String, Object> generateAdjusterDefenseAnalysis(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        log.info("Generating adjuster defense analysis for case: {} in org: {}", caseId, orgId);
+
+        List<PIMedicalRecord> records = recordRepository
+                .findByCaseIdAndOrganizationIdOrderByTreatmentDateAsc(caseId, orgId);
+
+        if (records.isEmpty()) {
+            throw new IllegalStateException("No medical records found to analyze");
+        }
+
+        // Build context from records
+        StringBuilder recordsSummary = new StringBuilder();
+        for (PIMedicalRecord r : records) {
+            recordsSummary.append(String.format(
+                    "- %s | %s | %s | Billed: $%s | Findings: %s\n",
+                    r.getTreatmentDate() != null ? r.getTreatmentDate().toString() : "No date",
+                    r.getProviderName(),
+                    r.getRecordType(),
+                    r.getBilledAmount() != null ? r.getBilledAmount().toString() : "0",
+                    r.getKeyFindings() != null ? r.getKeyFindings() : "None"
+            ));
+        }
+
+        // Collect diagnoses
+        List<String> allDiagnoses = new ArrayList<>();
+        for (PIMedicalRecord r : records) {
+            if (r.getDiagnoses() != null) {
+                for (Map<String, Object> d : r.getDiagnoses()) {
+                    String code = String.valueOf(d.getOrDefault("icd_code", ""));
+                    String desc = String.valueOf(d.getOrDefault("description", ""));
+                    if (!code.isEmpty()) allDiagnoses.add(code + " - " + desc);
+                }
+            }
+        }
+
+        // Get treatment gaps
+        List<Map<String, Object>> gaps = analyzeTreatmentGapsInternal(records);
+
+        String prompt = String.format("""
+            You are an expert personal injury defense analyst. Analyze this case's medical records
+            and predict how an insurance adjuster will attack the case value. For each attack vector,
+            provide the issue, supporting evidence, and a specific counter-argument the plaintiff's
+            attorney can use.
+
+            MEDICAL RECORDS:
+            %s
+
+            DIAGNOSES:
+            %s
+
+            TREATMENT GAPS:
+            %s
+
+            ---
+
+            Analyze for these attack vectors (include ALL that apply):
+            1. TREATMENT_GAP - Gaps in treatment that suggest injuries resolved
+            2. PRE_EXISTING - Pre-existing conditions or degenerative findings
+            3. EXCESSIVE_TREATMENT - Arguably excessive number of visits or costs
+            4. CAUSATION - Challenges linking injuries to the accident
+            5. MISSING_DOCUMENTATION - Gaps in documentation that weaken the case
+            6. BILLING_CONCERNS - Unusually high charges or duplicate billing
+
+            Return a JSON array with this structure:
+            {
+              "attackVectors": [
+                {
+                  "type": "TREATMENT_GAP",
+                  "severity": "HIGH",
+                  "issue": "Description of what the adjuster will argue",
+                  "evidence": "Specific facts from the records supporting this attack",
+                  "counterArgument": "Specific counter-argument with legal doctrine and recommended action"
+                }
+              ]
+            }
+
+            Severity levels: HIGH (strong attack that could significantly reduce value),
+            MEDIUM (moderate concern), LOW (minor issue).
+
+            IMPORTANT:
+            - Only include attack vectors that have actual evidence in the records
+            - Counter-arguments must reference specific records, dates, or legal doctrines
+            - Include actionable recommendations (e.g., "Request prior PCP records")
+            - Be specific, not generic — reference actual provider names and dates
+
+            Return ONLY the JSON, no additional text.
+            """,
+                recordsSummary.toString(),
+                String.join("\n", allDiagnoses),
+                gaps.toString()
+        );
+
+        try {
+            String response = claudeService.generateCompletionWithModel(
+                    prompt, null, false, null, null, "claude-sonnet-4-6").get();
+
+            // Extract JSON
+            int start = response.indexOf('{');
+            int end = response.lastIndexOf('}');
+            if (start >= 0 && end > start) {
+                String json = response.substring(start, end + 1);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> result = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readValue(json, Map.class);
+                result.put("generatedAt", LocalDateTime.now().toString());
+                result.put("caseId", caseId);
+
+                // Persist to database so it survives page navigation
+                try {
+                    Optional<PIMedicalSummary> summaryOpt = summaryRepository.findByCaseIdAndOrganizationId(caseId, orgId);
+                    if (summaryOpt.isPresent()) {
+                        PIMedicalSummary summary = summaryOpt.get();
+                        summary.setAdjusterDefenseAnalysis(result);
+                        summary.setAdjusterAnalysisGeneratedAt(LocalDateTime.now());
+                        summaryRepository.save(summary);
+                        log.info("Adjuster defense analysis persisted to DB for case: {}", caseId);
+                    }
+                } catch (Exception saveErr) {
+                    log.warn("Failed to persist adjuster analysis (non-fatal): {}", saveErr.getMessage());
+                }
+
+                return result;
+            }
+
+            throw new RuntimeException("Failed to parse AI response for adjuster analysis");
+
+        } catch (Exception e) {
+            log.error("Error generating adjuster defense analysis: {}", e.getMessage());
+            throw new RuntimeException("Failed to generate adjuster defense analysis: " + e.getMessage());
+        }
+    }
+
+    public Map<String, Object> getSavedAdjusterAnalysis(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        Optional<PIMedicalSummary> summaryOpt = summaryRepository.findByCaseIdAndOrganizationId(caseId, orgId);
+        if (summaryOpt.isPresent() && summaryOpt.get().getAdjusterDefenseAnalysis() != null) {
+            return summaryOpt.get().getAdjusterDefenseAnalysis();
+        }
+        return null;
+    }
+
+    @Override
     public void deleteMedicalSummary(Long caseId) {
         Long orgId = getRequiredOrganizationId();
         log.info("Deleting medical summary for case: {}", caseId);

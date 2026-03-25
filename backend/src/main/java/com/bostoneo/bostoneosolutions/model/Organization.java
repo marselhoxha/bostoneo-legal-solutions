@@ -60,6 +60,21 @@ public class Organization {
     @Column(name = "plan_expires_at")
     private LocalDateTime planExpiresAt;
 
+    // Firm Type
+    @Enumerated(EnumType.STRING)
+    @Column(name = "firm_type", length = 30)
+    @Builder.Default
+    private FirmType firmType = FirmType.SMALL_FIRM;
+
+    // Jurisdiction — 2-letter US state code (e.g., "TX", "MA")
+    @Column(name = "state", length = 2)
+    private String state;
+
+    // Email Branding
+    @Column(name = "primary_color", length = 7)
+    @Builder.Default
+    private String primaryColor = "#405189";
+
     // Organization Status
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
@@ -227,5 +242,13 @@ public class Organization {
         SUSPENDED,
         PENDING,
         DELETED
+    }
+
+    // Firm type enum — determines navigation and feature set
+    public enum FirmType {
+        SOLO_PRACTITIONER,
+        SMALL_FIRM,
+        MIDSIZE_FIRM,
+        LARGE_FIRM
     }
 }

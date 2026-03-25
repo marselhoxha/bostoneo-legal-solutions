@@ -15,7 +15,8 @@ import Swal from 'sweetalert2';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SharedModule } from 'src/app/shared/shared.module';
 import { DOCUMENT } from '@angular/common';
-import { finalize } from 'rxjs/operators';
+import { finalize, tap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 import { Pipe, PipeTransform } from '@angular/core';
 import { RbacService } from '../../../../../core/services/rbac.service';
 import { TemplateService } from '../../../../file-manager/services/template.service';
@@ -54,158 +55,42 @@ export class SafePipe implements PipeTransform {
           <div class="flex-shrink-0">
             <button
               class="btn btn-primary rounded-pill"
-              (click)="toggleUploadForm()"
+              (click)="topFileInput.click()"
             >
               <i class="ri-upload-cloud-2-line align-bottom me-1"></i>
-              Upload Document
+              Upload Documents
             </button>
+            <input type="file" class="d-none" #topFileInput multiple
+                   accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.rtf,.csv"
+                   (change)="onBatchFileSelected($event)">
           </div>
         </div>
       </div>
       <div class="card-body p-4">
-        <!-- Document Statistics -->
-        <div class="row mb-4">
-          <div class="col-xl-3 col-md-6">
-            <div class="card card-animate border-0 overflow-hidden">
-              <div class="position-absolute start-0 end-0 top-0 border-top rounded-top" style="height: 3px; background: linear-gradient(45deg, #405189, #299cdb);"></div>
-              <div class="card-body">
-                <div class="d-flex align-items-center">
-                  <div class="flex-grow-1 overflow-hidden">
-                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Total Documents</p>
-                  </div>
-                  <div class="flex-shrink-0">
-                    <h5 class="text-primary fs-14 mb-0">
-                      <i class="ri-file-text-line align-middle"></i>
-                    </h5>
-                  </div>
-                </div>
-                <div class="d-flex align-items-end justify-content-between mt-2">
-                  <div>
-                    <h4 class="fs-22 fw-semibold ff-secondary mb-2">
-                      <span class="counter-value" [attr.data-target]="getDocumentStats().totalCount">{{getDocumentStats().totalCount}}</span>
-                    </h4>
-                    <span class="badge bg-success-subtle text-success fs-12">
-                      <i class="ri-arrow-up-s-line fs-13 align-middle"></i>
-                      {{getDocumentStats().fileManagerCount}} from File Manager
-                    </span>
-                  </div>
-                  <div class="avatar-sm flex-shrink-0">
-                    <span class="avatar-title bg-primary-subtle rounded fs-3">
-                      <i class="bx bx-file text-primary"></i>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <!-- Document Summary Stats -->
+        <div class="doc-stats-row">
+          <div class="doc-stat-chip">
+            <div class="stat-chip-icon bg-primary-subtle"><i class="ri-file-text-line text-primary"></i></div>
+            <div><div class="stat-chip-val">{{getDocumentStats().totalCount}}</div><div class="stat-chip-label">Documents</div></div>
           </div>
-          
-          <div class="col-xl-3 col-md-6">
-            <div class="card card-animate border-0 overflow-hidden">
-              <div class="position-absolute start-0 end-0 top-0 border-top rounded-top" style="height: 3px; background: linear-gradient(45deg, #0ab39c, #20c997);"></div>
-              <div class="card-body">
-                <div class="d-flex align-items-center">
-                  <div class="flex-grow-1 overflow-hidden">
-                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Storage Used</p>
-                  </div>
-                  <div class="flex-shrink-0">
-                    <h5 class="text-success fs-14 mb-0">
-                      <i class="ri-hard-drive-2-line align-middle"></i>
-                    </h5>
-                  </div>
-                </div>
-                <div class="d-flex align-items-end justify-content-between mt-2">
-                  <div>
-                    <h4 class="fs-22 fw-semibold ff-secondary mb-2">
-                      <span class="counter-value">{{formatFileSize(getDocumentStats().totalSize)}}</span>
-                    </h4>
-                    <span class="badge bg-info-subtle text-info fs-12">
-                      <i class="ri-database-2-line fs-13 align-middle"></i>
-                      {{getDocumentStats().averageSize}} avg
-                    </span>
-                  </div>
-                  <div class="avatar-sm flex-shrink-0">
-                    <span class="avatar-title bg-success-subtle rounded fs-3">
-                      <i class="bx bx-data text-success"></i>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div class="doc-stat-chip">
+            <div class="stat-chip-icon bg-success-subtle"><i class="ri-hard-drive-2-line text-success"></i></div>
+            <div><div class="stat-chip-val">{{formatFileSize(getDocumentStats().totalSize)}}</div><div class="stat-chip-label">Storage</div></div>
           </div>
-          
-          <div class="col-xl-3 col-md-6">
-            <div class="card card-animate border-0 overflow-hidden">
-              <div class="position-absolute start-0 end-0 top-0 border-top rounded-top" style="height: 3px; background: linear-gradient(45deg, #f7b84b, #fd7e14);"></div>
-              <div class="card-body">
-                <div class="d-flex align-items-center">
-                  <div class="flex-grow-1 overflow-hidden">
-                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Recent Activity</p>
-                  </div>
-                  <div class="flex-shrink-0">
-                    <h5 class="text-warning fs-14 mb-0">
-                      <i class="ri-time-line align-middle"></i>
-                    </h5>
-                  </div>
-                </div>
-                <div class="d-flex align-items-end justify-content-between mt-2">
-                  <div>
-                    <h4 class="fs-22 fw-semibold ff-secondary mb-2">
-                      <span class="counter-value">{{getDocumentStats().recentCount}}</span>
-                    </h4>
-                    <span class="badge bg-warning-subtle text-warning fs-12">
-                      <i class="ri-calendar-line fs-13 align-middle"></i>
-                      Last 7 days
-                    </span>
-                  </div>
-                  <div class="avatar-sm flex-shrink-0">
-                    <span class="avatar-title bg-warning-subtle rounded fs-3">
-                      <i class="bx bx-time text-warning"></i>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div class="doc-stat-chip">
+            <div class="stat-chip-icon bg-warning-subtle"><i class="ri-time-line text-warning"></i></div>
+            <div><div class="stat-chip-val">{{getDocumentStats().recentCount}}</div><div class="stat-chip-label">Recent (7d)</div></div>
           </div>
-          
-          <div class="col-xl-3 col-md-6">
-            <div class="card card-animate border-0 overflow-hidden">
-              <div class="position-absolute start-0 end-0 top-0 border-top rounded-top" style="height: 3px; background: linear-gradient(45deg, #f06548, #ef476f);"></div>
-              <div class="card-body">
-                <div class="d-flex align-items-center">
-                  <div class="flex-grow-1 overflow-hidden">
-                    <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Document Types</p>
-                  </div>
-                  <div class="flex-shrink-0">
-                    <h5 class="text-danger fs-14 mb-0">
-                      <i class="ri-bar-chart-2-line align-middle"></i>
-                    </h5>
-                  </div>
-                </div>
-                <div class="d-flex align-items-end justify-content-between mt-2">
-                  <div>
-                    <h4 class="fs-22 fw-semibold ff-secondary mb-2">
-                      <span class="counter-value">{{getDocumentStats().typeCount}}</span>
-                    </h4>
-                    <span class="badge bg-danger-subtle text-danger fs-12">
-                      <i class="ri-price-tag-3-line fs-13 align-middle"></i>
-                      Different types
-                    </span>
-                  </div>
-                  <div class="avatar-sm flex-shrink-0">
-                    <span class="avatar-title bg-danger-subtle rounded fs-3">
-                      <i class="bx bx-category text-danger"></i>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div class="doc-stat-chip">
+            <div class="stat-chip-icon bg-info-subtle"><i class="ri-price-tag-3-line text-info"></i></div>
+            <div><div class="stat-chip-val">{{getDocumentStats().typeCount}}</div><div class="stat-chip-label">Types</div></div>
           </div>
         </div>
 
-        <!-- Split-Panel Layout (always show) -->
-          <div class="row g-0">
+        <!-- Split-Panel Layout -->
+          <div class="row g-0 split-panel">
             <!-- Left: Folder Tree Sidebar -->
-            <div class="col-md-3 col-12 mb-3 mb-md-0">
+            <div class="col-md-3 col-12 mb-3 mb-md-0 d-flex">
               <div class="folder-tree-sidebar">
                 <div class="folder-tree-header d-flex align-items-center justify-content-between">
                   <span class="fs-13 fw-semibold text-uppercase text-muted">Folders</span>
@@ -223,7 +108,7 @@ export class SafePipe implements PipeTransform {
                   </div>
                 </div>
 
-                <!-- All Documents -->
+                <!-- All Documents (unfiled) -->
                 <div class="tree-item"
                      [class.active]="selectedFolderId === null"
                      (click)="selectFolder(null)">
@@ -379,8 +264,8 @@ export class SafePipe implements PipeTransform {
             <!-- Right: Content Area -->
             <div class="col-md-9 col-12">
               <div class="content-panel ps-md-3">
-                <!-- Breadcrumb bar -->
-                <div class="d-flex align-items-center mb-3 flex-wrap gap-2">
+                <!-- Breadcrumb — same class + transparent top border to match sidebar's 1px border offset -->
+                <div class="folder-tree-header" style="border-top: 1px solid transparent; padding-left: 0;">
                   <nav aria-label="folder breadcrumb">
                     <ol class="breadcrumb mb-0 fs-13">
                       <li class="breadcrumb-item">
@@ -420,13 +305,70 @@ export class SafePipe implements PipeTransform {
                     </select>
                   </div>
                   <div class="col-md-6">
-                    <div class="input-group input-group-sm">
-                      <span class="input-group-text"><i class="ri-search-line"></i></span>
-                      <input type="text" class="form-control" placeholder="Search documents..."
+                    <div class="position-relative">
+                      <i class="ri-search-line position-absolute" style="left: 10px; top: 50%; transform: translateY(-50%); color: var(--vz-secondary-color);"></i>
+                      <input type="text" class="form-control form-control-sm" style="padding-left: 30px;"
+                             placeholder="Search documents..."
                              [(ngModel)]="searchTerm" (input)="filterDocuments()">
                     </div>
                   </div>
                 </div>
+
+                <!-- Upload queue (always visible when files queued, above everything) -->
+                @if(uploadQueue.length > 0) {
+                  <div class="upload-queue-inline mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                      <small class="fw-medium">{{ uploadQueue.length }} file{{ uploadQueue.length > 1 ? 's' : '' }} queued</small>
+                      <div class="d-flex gap-2">
+                        @if(!isBatchUploading) {
+                          <button class="btn btn-sm btn-ghost-danger" (click)="clearUploadQueue()"><i class="ri-delete-bin-line me-1"></i>Clear</button>
+                        }
+                        <button class="btn btn-sm btn-primary" (click)="uploadAll()" [disabled]="isBatchUploading || getQueuePendingCount() === 0">
+                          @if(isBatchUploading) {
+                            <span class="spinner-border spinner-border-sm me-1"></span>{{ uploadingIndex + 1 }}/{{ uploadQueue.length }}
+                          } @else {
+                            <i class="ri-upload-cloud-line me-1"></i>Upload {{ getQueuePendingCount() }}
+                          }
+                        </button>
+                      </div>
+                    </div>
+                    @for(item of uploadQueue; track item.file.name; let i = $index) {
+                      <div class="queue-item" [class.queue-done]="item.status === 'done'" [class.queue-error]="item.status === 'error'" [class.queue-active]="item.status === 'uploading'">
+                        <div class="d-flex align-items-center gap-2">
+                          @if(item.status === 'uploading') {
+                            <span class="spinner-border spinner-border-sm text-primary flex-shrink-0"></span>
+                          } @else if(item.status === 'done') {
+                            <i class="ri-checkbox-circle-fill text-success fs-16 flex-shrink-0"></i>
+                          } @else if(item.status === 'error') {
+                            <i class="ri-error-warning-fill text-danger fs-16 flex-shrink-0"></i>
+                          } @else {
+                            <i class="ri-file-text-line text-muted fs-16 flex-shrink-0"></i>
+                          }
+                          <div class="flex-grow-1 min-width-0">
+                            <div class="text-truncate fw-medium" style="font-size: 13px;">{{ item.file.name }}</div>
+                            <div class="d-flex align-items-center gap-2 mt-1">
+                              <small class="text-muted">{{ formatFileSize(item.file.size) }}</small>
+                              <span class="badge bg-primary-subtle text-primary" style="font-size: 10px;">{{ item.docType | titlecase }}</span>
+                            </div>
+                          </div>
+                          <select class="form-select form-select-sm" style="width: 120px; font-size: 12px;" [(ngModel)]="item.category" [disabled]="item.status !== 'pending'">
+                            @for(cat of categories; track cat) {
+                              <option [value]="cat">{{ cat | titlecase }}</option>
+                            }
+                          </select>
+                          @if(item.status === 'pending' && !isBatchUploading) {
+                            <button class="btn btn-sm btn-ghost-danger p-0 flex-shrink-0" (click)="removeFromQueue(i)"><i class="ri-close-line"></i></button>
+                          }
+                        </div>
+                        @if(item.status === 'uploading') {
+                          <div class="progress mt-2" style="height: 3px;">
+                            <div class="progress-bar progress-bar-animated bg-primary" [style.width.%]="item.progress"></div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
 
                 <!-- Loading folder files -->
                 @if(isLoadingFolderFiles) {
@@ -435,14 +377,17 @@ export class SafePipe implements PipeTransform {
                       <span class="visually-hidden">Loading...</span>
                     </div>
                   </div>
-                } @else if(getDisplayedDocuments().length === 0) {
+                } @else if(getDisplayedDocuments().length === 0 && uploadQueue.length === 0) {
                   <!-- Empty state -->
                   <div class="dropzone-wrapper"
                        [class.dropzone-dragging]="isDragging"
                        (dragover)="onContentAreaDragOver($event)"
                        (dragleave)="onContentAreaDragLeave($event)"
                        (drop)="onContentAreaDrop($event)"
-                       (click)="toggleUploadForm()">
+                       (click)="emptyStateInput.click()">
+                    <input type="file" class="d-none" #emptyStateInput multiple
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.rtf,.csv"
+                           (change)="onBatchFileSelected($event)">
                     <div class="dropzone-content">
                       <div class="dropzone-icon">
                         <i class="ri-upload-cloud-2-line"></i>
@@ -457,12 +402,20 @@ export class SafePipe implements PipeTransform {
                       <p class="dropzone-subtitle">PDF, DOC, DOCX, XLS, XLSX, JPG, PNG up to 50MB</p>
                     </div>
                   </div>
-                } @else {
+                } @else if(getDisplayedDocuments().length > 0) {
                   <!-- Document table -->
-                  <div class="table-responsive"
+                  <div class="table-responsive content-drop-area"
+                       [class.drop-active]="isDragging"
                        (dragover)="onContentAreaDragOver($event)"
                        (dragleave)="onContentAreaDragLeave($event)"
                        (drop)="onContentAreaDrop($event)">
+                    <!-- Drop overlay -->
+                    @if(isDragging) {
+                      <div class="drop-overlay">
+                        <i class="ri-upload-cloud-2-line fs-24"></i>
+                        <span>Drop files to upload</span>
+                      </div>
+                    }
                     <table class="table table-nowrap table-hover mb-0">
                       <thead class="table-light">
                         <tr>
@@ -519,6 +472,12 @@ export class SafePipe implements PipeTransform {
                                         title="Preview">
                                   <i class="ri-eye-line"></i>
                                 </button>
+                                <button class="btn btn-icon btn-sm btn-soft-info"
+                                        type="button"
+                                        (click)="downloadDocument(document.id)"
+                                        title="Download">
+                                  <i class="ri-download-line"></i>
+                                </button>
                                 <button class="btn btn-icon btn-sm btn-soft-danger"
                                         type="button"
                                         (click)="deleteDocument(document)"
@@ -533,18 +492,7 @@ export class SafePipe implements PipeTransform {
                     </table>
                   </div>
 
-                  <!-- Drop zone hint at bottom -->
-                  <div class="upload-drop-hint mt-3"
-                       [class.dropzone-dragging]="isDragging"
-                       (dragover)="onContentAreaDragOver($event)"
-                       (dragleave)="onContentAreaDragLeave($event)"
-                       (drop)="onContentAreaDrop($event)">
-                    <i class="ri-upload-cloud-line me-2 text-muted"></i>
-                    <span class="text-muted fs-12">Drag files here to upload</span>
-                    @if(selectedFolderId !== null) {
-                      <span class="text-muted fs-12"> to this folder</span>
-                    }
-                  </div>
+                  <!-- Bottom area removed — queue is now above the table -->
                 }
               </div>
             </div>
@@ -682,116 +630,7 @@ export class SafePipe implements PipeTransform {
       <div class="modal-backdrop fade show"></div>
     }
 
-    <!-- Upload Document Modal -->
-    @if(isUploading) {
-      <div class="modal fade show" style="display: block;" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">
-                <i class="ri-upload-cloud-line me-2"></i>Upload Document
-              </h5>
-              <button type="button" class="btn-close" (click)="toggleUploadForm()"></button>
-            </div>
-            <div class="modal-body">
-              <div class="mb-3">
-                <label class="form-label">Document Title <span class="text-danger">*</span></label>
-                <input
-                  type="text"
-                  class="form-control"
-                  placeholder="Enter document title"
-                  [(ngModel)]="newDocument.title"
-                >
-              </div>
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="mb-3">
-                    <label class="form-label">Document Type <span class="text-danger">*</span></label>
-                    <select class="form-select" [(ngModel)]="newDocument.type">
-                      <option [ngValue]="null" disabled>-- Select Type --</option>
-                      @for(type of documentTypes; track type) {
-                        <option [ngValue]="type">{{type | titlecase}}</option>
-                      }
-                    </select>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="mb-3">
-                    <label class="form-label">Category <span class="text-danger">*</span></label>
-                    <select class="form-select" [(ngModel)]="newDocument.category">
-                      <option [ngValue]="null" disabled>-- Select Category --</option>
-                      @for(category of categories; track category) {
-                        <option [ngValue]="category">{{category | titlecase}}</option>
-                      }
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Description</label>
-                <textarea
-                  class="form-control"
-                  rows="3"
-                  placeholder="Enter document description (optional)"
-                  [(ngModel)]="newDocument.description"
-                ></textarea>
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Tags</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  placeholder="Enter tags (comma separated)"
-                  [(ngModel)]="tagsInput"
-                >
-              </div>
-              <div class="mb-3">
-                <label class="form-label">File <span class="text-danger">*</span></label>
-                @if(selectedFile) {
-                  <div class="selected-file-display">
-                    <div class="d-flex align-items-center">
-                      <i class="ri-file-text-line fs-20 text-primary me-2"></i>
-                      <div class="flex-grow-1">
-                        <div class="fw-medium">{{selectedFile.name}}</div>
-                        <small class="text-muted">{{formatFileSize(selectedFile.size)}}</small>
-                      </div>
-                      <button type="button" class="btn btn-sm btn-ghost-danger" (click)="clearSelectedFile($event)">
-                        <i class="ri-close-line"></i>
-                      </button>
-                    </div>
-                  </div>
-                } @else {
-                  <div class="file-upload-box" (click)="fileInput.click()">
-                    <input
-                      type="file"
-                      class="d-none"
-                      #fileInput
-                      (change)="onFileSelected($event)"
-                    >
-                    <i class="ri-upload-2-line fs-24 text-muted"></i>
-                    <span class="text-muted">Click to select a file</span>
-                  </div>
-                }
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary" (click)="toggleUploadForm()">
-                Cancel
-              </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                (click)="uploadDocument()"
-                [disabled]="!isFormValid()"
-              >
-                <i class="ri-upload-cloud-line me-1"></i>Upload Document
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-backdrop fade show"></div>
-    }
+    <!-- Upload panel removed — queue is shown inline in the document list area -->
   `,
   styles: [`
     .avatar-sm {
@@ -1134,20 +973,29 @@ export class SafePipe implements PipeTransform {
       border-color: var(--vz-primary, #405189) !important;
     }
 
-    /* === Split-Panel Folder Tree === */
+    /* === Split-Panel Layout === */
+    .split-panel {
+      align-items: stretch;
+    }
+
+    /* === Folder Tree === */
     .folder-tree-sidebar {
       background: var(--vz-card-bg, #fff);
       border: 1px solid var(--vz-border-color, #e9ebec);
       border-radius: 0.375rem;
-      padding: 0.5rem 0;
-      max-height: 60vh;
+      padding: 0;
       overflow-y: auto;
       overflow-x: hidden;
+      width: 100%;
     }
 
     .folder-tree-header {
-      padding: 0.5rem 0.75rem;
+      padding: 0.625rem 0.75rem;
       letter-spacing: 0.5px;
+    }
+
+    .breadcrumb-bar {
+      padding: 0.625rem 0;
     }
 
     .tree-item {
@@ -1276,6 +1124,134 @@ export class SafePipe implements PipeTransform {
       background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.06));
     }
 
+    /* Document summary stat chips */
+    .doc-stats-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .doc-stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      background: var(--vz-card-bg, #fff);
+      border: 1px solid var(--vz-border-color, #e9ebec);
+      border-radius: 8px;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .stat-chip-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .stat-chip-icon i {
+      font-size: 16px;
+    }
+
+    .stat-chip-val {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--vz-heading-color, #495057);
+      line-height: 1.2;
+    }
+
+    .stat-chip-label {
+      font-size: 11px;
+      color: var(--vz-secondary-color, #878a99);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* Drop overlay on content area — scroll after ~6 rows */
+    .content-drop-area {
+      position: relative;
+      min-height: 200px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+
+    @media (min-width: 1400px) {
+      .content-drop-area {
+        max-height: 500px;
+      }
+    }
+
+    @media (min-width: 1800px) {
+      .content-drop-area {
+        max-height: 620px;
+      }
+    }
+
+    .drop-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(var(--vz-primary-rgb, 64,81,137), 0.05);
+      border: 2px dashed var(--vz-primary, #405189);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      z-index: 10;
+      color: var(--vz-primary, #405189);
+      font-weight: 600;
+      font-size: 14px;
+      pointer-events: none;
+      backdrop-filter: blur(2px);
+    }
+
+    .drop-overlay i {
+      opacity: 0.5;
+    }
+
+    /* Inline upload queue */
+    .upload-queue-inline {
+      border: 1px solid var(--vz-border-color, #e9ebec);
+      border-left: 3px solid var(--vz-primary, #405189);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 16px;
+      background: var(--vz-card-bg, #fff);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .queue-item {
+      padding: 10px 12px;
+      border: 1px solid var(--vz-border-color, #e9ebec);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      background: var(--vz-light, #f3f6f9);
+      transition: all 0.15s;
+    }
+
+    .queue-item.queue-active {
+      border-color: var(--vz-primary, #405189);
+      background: rgba(var(--vz-primary-rgb, 64,81,137), 0.04);
+      box-shadow: 0 0 0 1px rgba(var(--vz-primary-rgb, 64,81,137), 0.1);
+    }
+
+    .queue-item.queue-done {
+      border-color: rgba(var(--vz-success-rgb, 10,179,156), 0.3);
+      background: rgba(var(--vz-success-rgb, 10,179,156), 0.04);
+    }
+
+    .queue-item.queue-error {
+      border-color: rgba(var(--vz-danger-rgb, 240,101,72), 0.3);
+      background: rgba(var(--vz-danger-rgb, 240,101,72), 0.04);
+    }
+
+    .min-width-0 { min-width: 0; }
+
     /* Dark mode support for folder tree */
     [data-layout-mode="dark"] .folder-tree-sidebar {
       background: var(--vz-card-bg, #212529);
@@ -1315,6 +1291,9 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   isUploading: boolean = false;
   isLoading: boolean = false;
   selectedFile: File | null = null;
+  uploadQueue: Array<{ file: File; category: string; docType: string; status: 'pending' | 'uploading' | 'done' | 'error'; progress: number }> = [];
+  uploadingIndex: number = -1;
+  isBatchUploading: boolean = false;
   selectedDocument: CaseDocument | null = null;
   documentForVersionHistory: CaseDocument | null = null;
   documentForNewVersion: string | null = null;
@@ -1333,6 +1312,7 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
   isPreviewLoading: boolean = false;
   showAllActivity: boolean = false;
   isDragging: boolean = false;
+  uploadProgress: number = 0;
   currentView: 'activity' | 'timeline' | 'categories' | 'team' | 'deadlines' = 'activity';
   deadlineFilter: 'upcoming' | 'overdue' | 'all' = 'upcoming';
 
@@ -1905,7 +1885,11 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // External file → upload to selected folder
+    // Add all dropped files to the inline queue
+    this.addFilesToQueue(Array.from(files));
+    return;
+
+    // Legacy single-file upload (kept but unreachable — will be removed later)
     const file = files[0];
     const folderId = this.selectedFolderId || undefined;
 
@@ -1964,7 +1948,8 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
           size: file.size,
           mimeType: file.mimeType,
           icon: file.icon,
-          iconColor: file.iconColor
+          iconColor: file.iconColor,
+          folderId: file.folderId || null
         };
       })
     ];
@@ -2003,8 +1988,14 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
           console.warn('Skipping null or undefined document during filtering');
           return false;
         }
-        
+
         try {
+          // When viewing "All Documents" (no folder selected), hide files that are in folders
+          // so they don't appear in both places after being moved
+          if (this.selectedFolderId === null && doc.folderId) {
+            return false;
+          }
+
           // Convert values to string for comparison when needed
           const docCategory = typeof doc.category === 'string' ? doc.category : String(doc.category || '');
           const docType = typeof doc.type === 'string' ? doc.type : String(doc.type || '');
@@ -2227,6 +2218,158 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ==========================================
+  // Batch Upload (Multi-File)
+  // ==========================================
+
+  onBatchFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files?.length) {
+      this.addFilesToQueue(Array.from(input.files));
+      input.value = ''; // Reset so same file can be selected again
+    }
+  }
+
+  private addFilesToQueue(files: File[]): void {
+    for (const file of files) {
+      // Skip duplicates (same name + size)
+      const exists = this.uploadQueue.some(q => q.file.name === file.name && q.file.size === file.size);
+      if (exists) continue;
+
+      this.uploadQueue.push({
+        file,
+        category: this.guessCategory(file.name),
+        docType: this.guessDocumentType(file.name),
+        status: 'pending',
+        progress: 0
+      });
+    }
+  }
+
+  removeFromQueue(index: number): void {
+    this.uploadQueue.splice(index, 1);
+  }
+
+  clearUploadQueue(): void {
+    this.uploadQueue = this.uploadQueue.filter(q => q.status === 'done');
+  }
+
+  getQueuePendingCount(): number {
+    return this.uploadQueue.filter(q => q.status === 'pending').length;
+  }
+
+  getQueueDoneCount(): number {
+    return this.uploadQueue.filter(q => q.status === 'done').length;
+  }
+
+  /**
+   * Auto-guess document category (access level) — defaults to INTERNAL for most legal docs.
+   */
+  guessCategory(filename: string): string {
+    const lower = filename.toLowerCase();
+    // Contracts and retainers are typically shared with clients
+    if (lower.includes('contract') || lower.includes('agreement') || lower.includes('retainer') || lower.includes('engagement')) return 'PUBLIC';
+    // Most case documents are internal by default
+    return 'INTERNAL';
+  }
+
+  /**
+   * Auto-guess document type from filename for better organization.
+   */
+  guessDocumentType(filename: string): string {
+    const lower = filename.toLowerCase();
+    if (lower.includes('mri') || lower.includes('xray') || lower.includes('x-ray') || lower.includes('imaging') || lower.includes('radiology') || lower.includes('scan') || lower.includes('medical') || lower.includes('hospital') || lower.includes('doctor') || lower.includes('discharge') || lower.includes('clinic') || lower.includes('diagnosis') || lower.includes('er ') || lower.includes('cha-') || lower.includes('northeast')) return 'MEDICAL';
+    if (lower.includes('bill') || lower.includes('invoice') || lower.includes('statement') || lower.includes('charge') || lower.includes('fee')) return 'FINANCIAL';
+    if (lower.includes('insurance') || lower.includes('policy') || lower.includes('declaration') || lower.includes('coverage')) return 'CLIENT_DOCUMENT';
+    if (lower.includes('police') || lower.includes('incident') || lower.includes('crash') || lower.includes('report')) return 'REPORT';
+    if (lower.includes('contract') || lower.includes('agreement') || lower.includes('retainer')) return 'CONTRACT';
+    if (lower.includes('motion') || lower.includes('complaint') || lower.includes('filing') || lower.includes('court')) return 'COURT_FILING';
+    if (lower.includes('letter') || lower.includes('demand') || lower.includes('correspondence')) return 'CORRESPONDENCE';
+    if (lower.includes('photo') || lower.includes('img') || lower.includes('picture') || lower.includes('damage')) return 'EVIDENCE';
+    return 'OTHER';
+  }
+
+  /**
+   * Upload all pending files in the queue sequentially.
+   */
+  async uploadAll(): Promise<void> {
+    const pending = this.uploadQueue.filter(q => q.status === 'pending');
+    if (pending.length === 0) return;
+
+    this.isBatchUploading = true;
+
+    for (let i = 0; i < this.uploadQueue.length; i++) {
+      const item = this.uploadQueue[i];
+      if (item.status !== 'pending') continue;
+
+      this.uploadingIndex = i;
+      item.status = 'uploading';
+      item.progress = 0;
+      this.cdr.detectChanges();
+
+      try {
+        await this.uploadSingleFile(item).toPromise();
+        item.status = 'done';
+        item.progress = 100;
+      } catch (err) {
+        item.status = 'error';
+        console.error(`Failed to upload ${item.file.name}:`, err);
+      }
+      this.cdr.detectChanges();
+    }
+
+    this.isBatchUploading = false;
+    this.uploadingIndex = -1;
+
+    // Refresh file list
+    this.loadFileManagerFiles();
+    this.loadCaseFolders();
+    if (this.selectedFolderId !== null) {
+      this.selectFolder(this.allFoldersMap.get(this.selectedFolderId) || null);
+    }
+
+    const doneCount = this.getQueueDoneCount();
+    const errorCount = this.uploadQueue.filter(q => q.status === 'error').length;
+
+    Swal.fire({
+      icon: errorCount > 0 ? 'warning' : 'success',
+      title: 'Upload Complete',
+      html: errorCount > 0
+        ? `${doneCount} file${doneCount > 1 ? 's' : ''} uploaded, ${errorCount} failed.`
+        : `${doneCount} file${doneCount > 1 ? 's' : ''} uploaded successfully.`,
+      timer: 3000,
+      showConfirmButton: false
+    });
+
+    // Auto-clear queue after a brief delay
+    setTimeout(() => {
+      if (!this.isBatchUploading) {
+        this.uploadQueue = [];
+        this.cdr.detectChanges();
+      }
+    }, 2000);
+  }
+
+  private uploadSingleFile(item: { file: File; category: string; docType: string; progress: number }): Observable<any> {
+    const folderId = this.selectedFolderId || undefined;
+    return this.fileManagerService.uploadFile(
+      item.file,
+      folderId,
+      Number(this.caseId),
+      '', // description
+      '', // tags
+      item.category,
+      item.docType
+    ).pipe(
+      tap((response: any) => {
+        if (response.progress !== undefined && !response.success) {
+          item.progress = response.progress;
+          this.cdr.detectChanges();
+        }
+      })
+    );
+  }
+
   clearSelectedFile(event: Event): void {
     event.stopPropagation();
     this.selectedFile = null;
@@ -2285,6 +2428,7 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
     }
 
     this.isUploading = true;
+    this.uploadProgress = 0;
 
     // Get document type and category
     const documentType = this.newDocument.type ? String(this.newDocument.type) : undefined;
@@ -2304,6 +2448,17 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
       documentType
     ).subscribe({
       next: (response) => {
+        // Track upload progress from intermediate emissions
+        if (response.progress !== undefined && !response.success) {
+          this.uploadProgress = response.progress;
+          this.cdr.detectChanges();
+          return;
+        }
+
+        // Upload complete
+        this.uploadProgress = 100;
+        this.cdr.detectChanges();
+
         this.loadFileManagerFiles();
         this.loadCaseFolders();
         // Refresh current folder view if a folder is selected
@@ -2311,21 +2466,23 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
           this.selectFolder(this.allFoldersMap.get(this.selectedFolderId) || null);
         }
 
-        // Show sweet alert success message
+        // Show sweet alert success animation
         Swal.fire({
-          title: 'Success!',
+          title: 'Uploaded!',
           text: 'Document uploaded successfully',
           icon: 'success',
-          confirmButtonText: 'OK'
+          timer: 2000,
+          showConfirmButton: false
         }).then(() => {
           // Reset the form and explicitly hide it after the alert is closed
           this.resetForm();
           this.isUploading = false;
+          this.uploadProgress = 0;
         });
       },
       error: (error) => {
         this.isUploading = false;
-        console.error('Error uploading document:', error);
+        this.uploadProgress = 0;
 
         // Show sweet alert error message
         Swal.fire({
@@ -2534,10 +2691,20 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
             // Delete file manager file
             this.fileManagerService.deleteFile(document.id).subscribe({
               next: () => {
-                // Update UI - remove from both arrays
+                // Update UI - remove from ALL arrays including folder view
                 this.fileManagerFiles = this.fileManagerFiles.filter(f => f.id !== document.id);
                 this.combinedDocuments = this.combinedDocuments.filter(d => d.id !== document.id);
                 this.filteredDocuments = this.filteredDocuments.filter(d => d.id !== document.id);
+                this.selectedFolderFiles = this.selectedFolderFiles.filter(d => d.id !== document.id);
+
+                // Update folder file count badge
+                if (this.selectedFolderId) {
+                  const folder = this.allFoldersMap.get(this.selectedFolderId);
+                  if (folder && folder.fileCount) {
+                    folder.fileCount = Math.max(0, folder.fileCount - 1);
+                  }
+                }
+
                 this.cdr.detectChanges();
 
                 Swal.fire({

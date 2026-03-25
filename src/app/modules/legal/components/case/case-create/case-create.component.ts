@@ -12,6 +12,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import flatpickr from 'flatpickr';
 import { CaseService } from '../../../services/case.service';
 import { UserService } from '../../../../../service/user.service';
+import { OrganizationService } from '../../../../../core/services/organization.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField } from '../../../shared/practice-area-fields.config';
@@ -75,6 +76,32 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     { value: 'HYBRID', label: 'Hybrid' }
   ];
 
+  // US states for jurisdiction dropdown
+  usJurisdictions = [
+    'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut',
+    'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois',
+    'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts',
+    'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada',
+    'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota',
+    'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
+    'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia',
+    'Wisconsin', 'Wyoming', 'Federal'
+  ];
+
+  private stateCodeToName: Record<string, string> = {
+    'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+    'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'DC': 'District of Columbia',
+    'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois',
+    'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana',
+    'ME': 'Maine', 'MD': 'Maryland', 'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota',
+    'MS': 'Mississippi', 'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+    'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+    'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma', 'OR': 'Oregon',
+    'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina', 'SD': 'South Dakota',
+    'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont', 'VA': 'Virginia',
+    'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming'
+  };
+
   @ViewChildren('filingDate, nextHearingDate, estimatedCompletionDate, statuteOfLimitationsDate') dateInputs: QueryList<ElementRef>;
 
   constructor(
@@ -82,7 +109,8 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     private router: Router,
     private snackBar: MatSnackBar,
     private caseService: CaseService,
-    private userService: UserService
+    private userService: UserService,
+    private organizationService: OrganizationService
   ) {
     this.caseForm = this.fb.group({
       caseNumber: ['', [Validators.required]],
@@ -102,6 +130,7 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       leadAttorneyId: [''],
 
       // Court Information (optional at creation)
+      jurisdiction: [''],
       countyName: [''],
       judgeName: [''],
       courtroom: [''],
@@ -129,6 +158,18 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     this.caseForm.patchValue({
       caseNumber: uniqueCaseNumber
     });
+
+    // Pre-fill jurisdiction from org state
+    const orgId = this.organizationService.getCurrentOrganizationId();
+    if (orgId) {
+      this.organizationService.getOrganizationById(orgId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(org => {
+          if (org?.state && this.stateCodeToName[org.state] && !this.caseForm.value.jurisdiction) {
+            this.caseForm.patchValue({ jurisdiction: this.stateCodeToName[org.state] });
+          }
+        });
+    }
 
     // Subscribe to practice area changes
     this.caseForm.get('practiceArea')?.valueChanges
@@ -309,6 +350,7 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       leadAttorneyId: this.caseForm.value.leadAttorneyId || null,
 
       // Court Information (only include if provided)
+      jurisdiction: this.caseForm.value.jurisdiction || '',
       courtInfo: this.caseForm.value.countyName ? {
         countyName: this.caseForm.value.countyName,
         judgeName: this.caseForm.value.judgeName || '',

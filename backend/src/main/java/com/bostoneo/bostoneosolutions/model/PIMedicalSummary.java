@@ -102,6 +102,14 @@ public class PIMedicalSummary {
     @Column(name = "is_stale")
     private Boolean isStale; // True if new records added since generation
 
+    // Adjuster Defense Analysis (persisted to avoid expensive re-generation)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "adjuster_defense_analysis", columnDefinition = "jsonb")
+    private Map<String, Object> adjusterDefenseAnalysis;
+
+    @Column(name = "adjuster_analysis_generated_at")
+    private LocalDateTime adjusterAnalysisGeneratedAt;
+
     // Metadata
     @CreationTimestamp
     @Column(name = "created_at")

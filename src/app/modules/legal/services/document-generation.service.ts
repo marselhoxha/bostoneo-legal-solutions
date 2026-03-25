@@ -491,22 +491,22 @@ export class DocumentGenerationService {
 
     // Recursively clean all elements
     const cleanElement = (element: Element) => {
-      // Remove style attribute
       element.removeAttribute('style');
-      // Remove class attribute (Quill-specific classes)
       element.removeAttribute('class');
-      // Remove data attributes
       Array.from(element.attributes).forEach(attr => {
         if (attr.name.startsWith('data-')) {
           element.removeAttribute(attr.name);
         }
       });
-
-      // Clean children recursively
       Array.from(element.children).forEach(child => cleanElement(child));
     };
 
     cleanElement(doc.body);
+
+    // Post-clean: detect and style caption tables for PDF export.
+    // This runs AFTER cleanElement so styles added here survive to the backend.
+    // Detection is based on cell TEXT content (§ symbols) which CKEditor cannot strip.
+    this.fixCaptionTablesForExport(doc.body, doc.body.ownerDocument);
 
     // Get clean HTML
     let cleanHtml = doc.body.innerHTML;
@@ -517,6 +517,141 @@ export class DocumentGenerationService {
     cleanHtml = cleanHtml.replace(/<p>\s*<\/p>/gi, '');
 
     return cleanHtml;
+  }
+
+  /**
+   * Post-processing: detect caption tables by § cell content, then apply
+   * proper inline styles + HTML attributes for iText PDF rendering.
+   * Also extracts CAUSE NO. from cells, removes <figure> wrapper,
+   * and cleans duplicate preamble headings.
+   */
+  private fixCaptionTablesForExport(body: HTMLElement, ownerDoc: globalThis.Document): void {
+    const tables: HTMLTableElement[] = Array.from(body.querySelectorAll('table'));
+
+    for (const table of tables) {
+      // Detect caption table: 2+ cells whose sole text content is §
+      const allCells: HTMLTableCellElement[] = Array.from(table.querySelectorAll('td'));
+      const sectionCells = allCells.filter(td => td.textContent?.trim() === '§');
+      if (sectionCells.length < 2) continue;
+
+      // --- CAPTION TABLE FOUND ---
+
+      // 1. Extract CAUSE NO. from any cell → will become centered header above
+      let causeNoText = '';
+      const rows: HTMLTableRowElement[] = Array.from(table.querySelectorAll('tr'));
+      for (let ri = 0; ri < rows.length; ri++) {
+        const cells: HTMLTableCellElement[] = Array.from(rows[ri].querySelectorAll('td'));
+        for (const cell of cells) {
+          const text = cell.textContent?.trim() || '';
+          if (/cause\s+no/i.test(text) && text !== '§') {
+            causeNoText = text;
+            cell.textContent = '';
+          }
+        }
+        // If row is now empty (only § and blanks), remove it
+        if (causeNoText) {
+          const hasContent = Array.from(rows[ri].querySelectorAll('td'))
+            .some(td => td.textContent?.trim() && td.textContent?.trim() !== '§');
+          if (!hasContent) rows[ri].remove();
+          break;
+        }
+      }
+
+      // 2. Remove <figure> wrapper (CKEditor wraps tables in <figure class="table">)
+      const parent = table.parentElement;
+      if (parent && parent.tagName === 'FIGURE') {
+        parent.parentElement!.insertBefore(table, parent);
+        parent.remove();
+      }
+
+      // 3. Style table — inline styles override backend CSS `table { width: 100% }`
+      table.setAttribute('style',
+        'width:85%; margin-left:auto; margin-right:auto; border:none; border-collapse:collapse;');
+      table.setAttribute('border', '0');
+      table.setAttribute('width', '85%');
+      table.setAttribute('align', 'center');
+      table.setAttribute('cellpadding', '4');
+      table.setAttribute('cellspacing', '0');
+
+      // 4. Style cells with column widths
+      const updatedRows: HTMLTableRowElement[] = Array.from(table.querySelectorAll('tr'));
+      for (const row of updatedRows) {
+        const cells: Element[] = Array.from(row.querySelectorAll('td, th'));
+        // Convert any <th> to <td> (caption tables have no headers)
+        for (const cell of cells) {
+          if (cell.tagName === 'TH') {
+            const td = ownerDoc.createElement('td');
+            td.innerHTML = cell.innerHTML;
+            cell.parentElement!.replaceChild(td, cell);
+          }
+        }
+        // Re-query after possible th→td conversion
+        const tds: HTMLTableCellElement[] = Array.from(row.querySelectorAll('td'));
+        for (let ci = 0; ci < tds.length; ci++) {
+          const td = tds[ci];
+          const text = td.textContent?.trim() || '';
+
+          if (text === '§') {
+            td.setAttribute('style',
+              'width:6%; border:none; padding:2px 4px; text-align:center; vertical-align:top;');
+            td.setAttribute('width', '6%');
+            td.setAttribute('align', 'center');
+            td.setAttribute('valign', 'top');
+          } else if (ci === 0) {
+            td.setAttribute('style',
+              'width:42%; border:none; padding:2px 4px; vertical-align:top;');
+            td.setAttribute('width', '42%');
+            td.setAttribute('valign', 'top');
+          } else {
+            td.setAttribute('style',
+              'width:52%; border:none; padding:2px 4px; vertical-align:top;');
+            td.setAttribute('width', '52%');
+            td.setAttribute('valign', 'top');
+          }
+        }
+      }
+
+      // 5. Insert CAUSE NO. centered above the table
+      if (causeNoText) {
+        const causeDiv = ownerDoc.createElement('div');
+        causeDiv.setAttribute('style', 'text-align:center; margin-bottom:12px;');
+        causeDiv.setAttribute('align', 'center');
+        causeDiv.innerHTML = `<strong>${causeNoText}</strong>`;
+        table.parentElement!.insertBefore(causeDiv, table);
+      }
+
+      // 6. Remove duplicate preamble headings above the caption
+      const preamblePatterns = [
+        /CAUSE\s+NO/i, /\bDISTRICT\s+COURT\b/i, /\bCOURT\s+AT\s+LAW\b/i,
+        /\bCOUNTY\s+COURT\b/i, /\bCIRCUIT\s+COURT\b/i, /\bSUPERIOR\s+COURT\b/i,
+        /COUNTY,?\s+\w+/i, /^STATE\s+OF\s+/i, /^COMMONWEALTH\s+OF\s+/i,
+      ];
+      // Start scanning from element before table (skip the causeDiv we may have inserted)
+      let sibling: Element | null = table.previousElementSibling;
+      if (sibling && causeNoText && /cause\s+no/i.test(sibling.textContent || '')) {
+        sibling = sibling.previousElementSibling;
+      }
+      let checked = 0;
+      while (sibling && checked < 10) {
+        const text = sibling.textContent?.trim() || '';
+        const prev: Element | null = sibling.previousElementSibling;
+        if (!text || sibling.tagName === 'HR') {
+          sibling.remove();
+          sibling = prev;
+          checked++;
+          continue;
+        }
+        if (preamblePatterns.some(p => p.test(text))) {
+          sibling.remove();
+          sibling = prev;
+          checked++;
+          continue;
+        }
+        break;
+      }
+
+      return; // Only process the first caption table found
+    }
   }
 
   /**

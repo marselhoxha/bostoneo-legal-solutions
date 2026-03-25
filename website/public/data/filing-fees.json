@@ -1,0 +1,767 @@
+{
+  "Alabama": {
+    "civil": { "fee": 310, "notes": "Circuit court civil filing fee" },
+    "smallClaims": { "fee": 55, "notes": "Small claims up to $6,000; varies by county" },
+    "family": { "fee": 275, "notes": "Divorce/custody filing in circuit court" },
+    "probate": { "fee": 150, "notes": "Probate court filing; varies by county" },
+    "appeals": { "fee": 325, "notes": "Court of Civil Appeals" },
+    "additionalFees": {
+      "serviceOfProcess": 50,
+      "motionFiling": 50,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.alacourt.gov",
+    "lastVerified": "2026-03"
+  },
+  "Alaska": {
+    "civil": { "fee": 250, "notes": "Superior court civil filing fee" },
+    "smallClaims": { "fee": 75, "notes": "Small claims up to $10,000" },
+    "family": { "fee": 250, "notes": "Divorce/custody filing in superior court" },
+    "probate": { "fee": 175, "notes": "Probate matter filing" },
+    "appeals": { "fee": 250, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 30,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://courts.alaska.gov",
+    "lastVerified": "2026-03"
+  },
+  "Arizona": {
+    "civil": { "fee": 349, "notes": "Superior court civil filing fee; varies by county" },
+    "smallClaims": { "fee": 55, "notes": "Justice court small claims up to $3,500" },
+    "family": { "fee": 349, "notes": "Family court filing in superior court" },
+    "probate": { "fee": 280, "notes": "Probate filing; varies by county" },
+    "appeals": { "fee": 350, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 45,
+      "motionFiling": 45,
+      "juryDemand": 200
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.azcourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Arkansas": {
+    "civil": { "fee": 165, "notes": "Circuit court civil filing fee" },
+    "smallClaims": { "fee": 65, "notes": "Small claims division up to $5,000" },
+    "family": { "fee": 165, "notes": "Circuit court domestic relations filing" },
+    "probate": { "fee": 120, "notes": "Probate division filing" },
+    "appeals": { "fee": 250, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 35,
+      "motionFiling": 35,
+      "juryDemand": 125
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.arcourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "California": {
+    "civil": { "fee": 435, "notes": "Superior court unlimited civil filing fee (over $25,000)" },
+    "smallClaims": { "fee": 75, "notes": "Small claims up to $10,000; $100 for businesses" },
+    "family": { "fee": 435, "notes": "Family law petition filing" },
+    "probate": { "fee": 435, "notes": "Probate petition filing" },
+    "appeals": { "fee": 775, "notes": "Court of Appeal filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 60,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courts.ca.gov",
+    "lastVerified": "2026-03"
+  },
+  "Colorado": {
+    "civil": { "fee": 224, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 55, "notes": "County court small claims up to $7,500" },
+    "family": { "fee": 230, "notes": "Domestic relations filing in district court" },
+    "probate": { "fee": 199, "notes": "Probate filing in district court" },
+    "appeals": { "fee": 250, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 42,
+      "juryDemand": 112
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courts.state.co.us",
+    "lastVerified": "2026-03"
+  },
+  "Connecticut": {
+    "civil": { "fee": 360, "notes": "Superior court civil filing fee" },
+    "smallClaims": { "fee": 95, "notes": "Small claims up to $5,000" },
+    "family": { "fee": 360, "notes": "Family matters filing in superior court" },
+    "probate": { "fee": 225, "notes": "Probate court filing; varies by estate value" },
+    "appeals": { "fee": 400, "notes": "Appellate court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 50,
+      "motionFiling": 60,
+      "juryDemand": 425
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.jud.ct.gov",
+    "lastVerified": "2026-03"
+  },
+  "Delaware": {
+    "civil": { "fee": 250, "notes": "Superior court civil filing fee" },
+    "smallClaims": { "fee": 45, "notes": "Justice of the Peace court up to $25,000" },
+    "family": { "fee": 175, "notes": "Family court filing" },
+    "probate": { "fee": 200, "notes": "Register of Wills filing; varies by estate value" },
+    "appeals": { "fee": 400, "notes": "Supreme Court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 40,
+      "juryDemand": 200
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://courts.delaware.gov",
+    "lastVerified": "2026-03"
+  },
+  "District of Columbia": {
+    "civil": { "fee": 120, "notes": "Superior court civil filing fee" },
+    "smallClaims": { "fee": 30, "notes": "Small claims up to $10,000" },
+    "family": { "fee": 120, "notes": "Family court filing" },
+    "probate": { "fee": 75, "notes": "Probate division filing" },
+    "appeals": { "fee": 300, "notes": "DC Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 25,
+      "motionFiling": 20,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.dccourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Florida": {
+    "civil": { "fee": 400, "notes": "Circuit court civil filing fee (over $30,000)" },
+    "smallClaims": { "fee": 55, "notes": "County court small claims up to $8,000" },
+    "family": { "fee": 400, "notes": "Family law filing in circuit court" },
+    "probate": { "fee": 400, "notes": "Probate filing in circuit court" },
+    "appeals": { "fee": 300, "notes": "District Court of Appeal filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 50,
+      "juryDemand": 195
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.flcourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Georgia": {
+    "civil": { "fee": 225, "notes": "Superior court civil filing fee; varies by county" },
+    "smallClaims": { "fee": 65, "notes": "Magistrate court small claims up to $15,000" },
+    "family": { "fee": 225, "notes": "Superior court domestic relations filing" },
+    "probate": { "fee": 130, "notes": "Probate court filing; varies by county" },
+    "appeals": { "fee": 300, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 50,
+      "motionFiling": 40,
+      "juryDemand": 180
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://georgiacourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Hawaii": {
+    "civil": { "fee": 265, "notes": "Circuit court civil filing fee" },
+    "smallClaims": { "fee": 35, "notes": "District court small claims up to $5,000" },
+    "family": { "fee": 265, "notes": "Family court filing" },
+    "probate": { "fee": 200, "notes": "Probate filing in circuit court" },
+    "appeals": { "fee": 325, "notes": "Intermediate Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 40,
+      "juryDemand": 125
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courts.state.hi.us",
+    "lastVerified": "2026-03"
+  },
+  "Idaho": {
+    "civil": { "fee": 221, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 75, "notes": "Small claims up to $5,000" },
+    "family": { "fee": 221, "notes": "Family law filing in district court" },
+    "probate": { "fee": 196, "notes": "Probate filing in magistrate division" },
+    "appeals": { "fee": 304, "notes": "Supreme Court or Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 35,
+      "motionFiling": 32,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://isc.idaho.gov",
+    "lastVerified": "2026-03"
+  },
+  "Illinois": {
+    "civil": { "fee": 336, "notes": "Circuit court civil filing fee; varies by county" },
+    "smallClaims": { "fee": 75, "notes": "Small claims up to $10,000; varies by county" },
+    "family": { "fee": 336, "notes": "Domestic relations filing in circuit court" },
+    "probate": { "fee": 291, "notes": "Probate division filing; varies by county" },
+    "appeals": { "fee": 450, "notes": "Appellate court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 60,
+      "motionFiling": 60,
+      "juryDemand": 212
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.illinoiscourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Indiana": {
+    "civil": { "fee": 157, "notes": "Circuit/superior court civil filing fee" },
+    "smallClaims": { "fee": 45, "notes": "Small claims up to $8,000" },
+    "family": { "fee": 157, "notes": "Family law filing" },
+    "probate": { "fee": 130, "notes": "Probate filing" },
+    "appeals": { "fee": 250, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 35,
+      "motionFiling": 25,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.in.gov/courts",
+    "lastVerified": "2026-03"
+  },
+  "Iowa": {
+    "civil": { "fee": 185, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 95, "notes": "Small claims up to $6,500" },
+    "family": { "fee": 185, "notes": "Family law filing in district court" },
+    "probate": { "fee": 135, "notes": "Probate filing in district court" },
+    "appeals": { "fee": 250, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 30,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.iowacourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Kansas": {
+    "civil": { "fee": 173, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 52, "notes": "Small claims up to $4,000" },
+    "family": { "fee": 173, "notes": "Domestic relations filing in district court" },
+    "probate": { "fee": 173, "notes": "Probate filing in district court" },
+    "appeals": { "fee": 260, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 35,
+      "motionFiling": 35,
+      "juryDemand": 125
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.kscourts.org",
+    "lastVerified": "2026-03"
+  },
+  "Kentucky": {
+    "civil": { "fee": 175, "notes": "Circuit court civil filing fee" },
+    "smallClaims": { "fee": 50, "notes": "Small claims division up to $2,500" },
+    "family": { "fee": 175, "notes": "Family court filing" },
+    "probate": { "fee": 145, "notes": "District court probate filing" },
+    "appeals": { "fee": 250, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 30,
+      "motionFiling": 30,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://courts.ky.gov",
+    "lastVerified": "2026-03"
+  },
+  "Louisiana": {
+    "civil": { "fee": 250, "notes": "District court civil filing fee; varies by parish" },
+    "smallClaims": { "fee": 75, "notes": "City/justice of peace court small claims" },
+    "family": { "fee": 250, "notes": "Family court filing; varies by parish" },
+    "probate": { "fee": 200, "notes": "Succession filing; varies by parish" },
+    "appeals": { "fee": 400, "notes": "Court of Appeal filing" },
+    "additionalFees": {
+      "serviceOfProcess": 50,
+      "motionFiling": 50,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.lasc.org",
+    "lastVerified": "2026-03"
+  },
+  "Maine": {
+    "civil": { "fee": 200, "notes": "Superior court civil filing fee" },
+    "smallClaims": { "fee": 50, "notes": "District court small claims up to $6,000" },
+    "family": { "fee": 120, "notes": "Family matters filing in district court" },
+    "probate": { "fee": 110, "notes": "Probate court filing" },
+    "appeals": { "fee": 275, "notes": "Supreme Judicial Court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 30,
+      "motionFiling": 25,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courts.maine.gov",
+    "lastVerified": "2026-03"
+  },
+  "Maryland": {
+    "civil": { "fee": 185, "notes": "Circuit court civil filing fee" },
+    "smallClaims": { "fee": 34, "notes": "District court small claims up to $5,000" },
+    "family": { "fee": 165, "notes": "Family law filing in circuit court" },
+    "probate": { "fee": 150, "notes": "Register of Wills filing; varies by estate value" },
+    "appeals": { "fee": 310, "notes": "Appellate Court of Maryland filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 30,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.mdcourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Massachusetts": {
+    "civil": { "fee": 315, "notes": "Superior court civil filing fee" },
+    "smallClaims": { "fee": 40, "notes": "District/BMC small claims up to $7,000" },
+    "family": { "fee": 215, "notes": "Probate and Family Court filing" },
+    "probate": { "fee": 215, "notes": "Probate and Family Court filing" },
+    "appeals": { "fee": 315, "notes": "Appeals Court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 35,
+      "motionFiling": 30,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.mass.gov/courts",
+    "lastVerified": "2026-03"
+  },
+  "Michigan": {
+    "civil": { "fee": 175, "notes": "Circuit court civil filing fee" },
+    "smallClaims": { "fee": 45, "notes": "District court small claims up to $6,500" },
+    "family": { "fee": 175, "notes": "Family division filing in circuit court" },
+    "probate": { "fee": 150, "notes": "Probate court filing" },
+    "appeals": { "fee": 375, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 45,
+      "motionFiling": 20,
+      "juryDemand": 85
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courts.michigan.gov",
+    "lastVerified": "2026-03"
+  },
+  "Minnesota": {
+    "civil": { "fee": 360, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 75, "notes": "Conciliation court up to $15,000" },
+    "family": { "fee": 390, "notes": "Family court filing in district court" },
+    "probate": { "fee": 310, "notes": "Probate filing in district court" },
+    "appeals": { "fee": 550, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 55,
+      "motionFiling": 55,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.mncourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Mississippi": {
+    "civil": { "fee": 200, "notes": "Circuit court civil filing fee; varies by county" },
+    "smallClaims": { "fee": 65, "notes": "Justice court small claims up to $3,500" },
+    "family": { "fee": 150, "notes": "Chancery court family filing" },
+    "probate": { "fee": 125, "notes": "Chancery court probate filing" },
+    "appeals": { "fee": 300, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 35,
+      "motionFiling": 25,
+      "juryDemand": 125
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://courts.ms.gov",
+    "lastVerified": "2026-03"
+  },
+  "Missouri": {
+    "civil": { "fee": 226, "notes": "Circuit court civil filing fee; varies by county" },
+    "smallClaims": { "fee": 50, "notes": "Associate circuit small claims up to $5,000" },
+    "family": { "fee": 226, "notes": "Family court filing in circuit court" },
+    "probate": { "fee": 200, "notes": "Probate division filing" },
+    "appeals": { "fee": 350, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 30,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courts.mo.gov",
+    "lastVerified": "2026-03"
+  },
+  "Montana": {
+    "civil": { "fee": 180, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 30, "notes": "Justice court small claims up to $7,000" },
+    "family": { "fee": 180, "notes": "District court family law filing" },
+    "probate": { "fee": 120, "notes": "District court probate filing" },
+    "appeals": { "fee": 250, "notes": "Supreme Court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 30,
+      "motionFiling": 20,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://courts.mt.gov",
+    "lastVerified": "2026-03"
+  },
+  "Nebraska": {
+    "civil": { "fee": 152, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 38, "notes": "County court small claims up to $3,900" },
+    "family": { "fee": 152, "notes": "District court domestic relations filing" },
+    "probate": { "fee": 90, "notes": "County court probate filing" },
+    "appeals": { "fee": 250, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 30,
+      "motionFiling": 25,
+      "juryDemand": 75
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://supremecourt.nebraska.gov",
+    "lastVerified": "2026-03"
+  },
+  "Nevada": {
+    "civil": { "fee": 270, "notes": "District court civil filing fee; varies by county" },
+    "smallClaims": { "fee": 95, "notes": "Justice court small claims up to $10,000" },
+    "family": { "fee": 299, "notes": "Family court filing; varies by county" },
+    "probate": { "fee": 250, "notes": "Probate filing in district court" },
+    "appeals": { "fee": 400, "notes": "Supreme Court or Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 50,
+      "motionFiling": 45,
+      "juryDemand": 175
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://nvcourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "New Hampshire": {
+    "civil": { "fee": 280, "notes": "Superior court civil filing fee" },
+    "smallClaims": { "fee": 70, "notes": "District court small claims up to $10,000" },
+    "family": { "fee": 252, "notes": "Family division filing" },
+    "probate": { "fee": 125, "notes": "Circuit court probate division filing" },
+    "appeals": { "fee": 350, "notes": "Supreme Court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 30,
+      "motionFiling": 25,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courts.nh.gov",
+    "lastVerified": "2026-03"
+  },
+  "New Jersey": {
+    "civil": { "fee": 300, "notes": "Superior court civil filing fee" },
+    "smallClaims": { "fee": 54, "notes": "Special civil part small claims up to $5,000" },
+    "family": { "fee": 300, "notes": "Family division filing in superior court" },
+    "probate": { "fee": 200, "notes": "Surrogate court filing; varies by county" },
+    "appeals": { "fee": 450, "notes": "Appellate Division filing" },
+    "additionalFees": {
+      "serviceOfProcess": 45,
+      "motionFiling": 25,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.njcourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "New Mexico": {
+    "civil": { "fee": 132, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 45, "notes": "Metropolitan/magistrate court small claims up to $10,000" },
+    "family": { "fee": 132, "notes": "District court domestic relations filing" },
+    "probate": { "fee": 100, "notes": "Probate court filing" },
+    "appeals": { "fee": 200, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 30,
+      "motionFiling": 25,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.nmcourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "New York": {
+    "civil": { "fee": 210, "notes": "Supreme court index number filing fee" },
+    "smallClaims": { "fee": 20, "notes": "Small claims up to $5,000 in NYC; $10,000 in city courts" },
+    "family": { "fee": 210, "notes": "Supreme court matrimonial filing" },
+    "probate": { "fee": 45, "notes": "Surrogate court filing; varies by estate value" },
+    "appeals": { "fee": 315, "notes": "Appellate Division filing" },
+    "additionalFees": {
+      "serviceOfProcess": 35,
+      "motionFiling": 45,
+      "juryDemand": 65
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.nycourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "North Carolina": {
+    "civil": { "fee": 150, "notes": "Superior court civil filing fee" },
+    "smallClaims": { "fee": 96, "notes": "District court small claims up to $10,000" },
+    "family": { "fee": 225, "notes": "District court domestic filing" },
+    "probate": { "fee": 120, "notes": "Clerk of Superior Court estate filing" },
+    "appeals": { "fee": 325, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 30,
+      "motionFiling": 20,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.nccourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "North Dakota": {
+    "civil": { "fee": 80, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 30, "notes": "Small claims up to $15,000" },
+    "family": { "fee": 80, "notes": "District court family filing" },
+    "probate": { "fee": 60, "notes": "District court probate filing" },
+    "appeals": { "fee": 200, "notes": "Supreme Court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 25,
+      "motionFiling": 15,
+      "juryDemand": 75
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.ndcourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Ohio": {
+    "civil": { "fee": 350, "notes": "Court of Common Pleas civil filing fee; varies by county" },
+    "smallClaims": { "fee": 50, "notes": "Municipal/county court small claims up to $6,000" },
+    "family": { "fee": 350, "notes": "Domestic relations division filing" },
+    "probate": { "fee": 200, "notes": "Probate court filing; varies by county" },
+    "appeals": { "fee": 350, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 50,
+      "motionFiling": 40,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.supremecourt.ohio.gov",
+    "lastVerified": "2026-03"
+  },
+  "Oklahoma": {
+    "civil": { "fee": 225, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 58, "notes": "Small claims up to $10,000" },
+    "family": { "fee": 225, "notes": "District court family law filing" },
+    "probate": { "fee": 150, "notes": "District court probate filing" },
+    "appeals": { "fee": 300, "notes": "Court of Civil Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 35,
+      "motionFiling": 25,
+      "juryDemand": 125
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.oscn.net",
+    "lastVerified": "2026-03"
+  },
+  "Oregon": {
+    "civil": { "fee": 281, "notes": "Circuit court civil filing fee" },
+    "smallClaims": { "fee": 55, "notes": "Small claims up to $10,000" },
+    "family": { "fee": 281, "notes": "Family law filing in circuit court" },
+    "probate": { "fee": 222, "notes": "Probate filing in circuit court" },
+    "appeals": { "fee": 367, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 55,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courts.oregon.gov",
+    "lastVerified": "2026-03"
+  },
+  "Pennsylvania": {
+    "civil": { "fee": 350, "notes": "Court of Common Pleas civil filing fee; varies by county" },
+    "smallClaims": { "fee": 85, "notes": "Magisterial district court up to $12,000" },
+    "family": { "fee": 350, "notes": "Family division filing in Court of Common Pleas" },
+    "probate": { "fee": 175, "notes": "Register of Wills filing; varies by county" },
+    "appeals": { "fee": 400, "notes": "Superior Court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 45,
+      "motionFiling": 40,
+      "juryDemand": 200
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.pacourts.us",
+    "lastVerified": "2026-03"
+  },
+  "Rhode Island": {
+    "civil": { "fee": 160, "notes": "Superior court civil filing fee" },
+    "smallClaims": { "fee": 35, "notes": "District court small claims up to $5,000" },
+    "family": { "fee": 160, "notes": "Family court filing" },
+    "probate": { "fee": 100, "notes": "Probate court filing" },
+    "appeals": { "fee": 250, "notes": "Supreme Court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 30,
+      "motionFiling": 20,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courts.ri.gov",
+    "lastVerified": "2026-03"
+  },
+  "South Carolina": {
+    "civil": { "fee": 150, "notes": "Court of Common Pleas civil filing fee" },
+    "smallClaims": { "fee": 80, "notes": "Magistrate court small claims up to $7,500" },
+    "family": { "fee": 150, "notes": "Family court filing" },
+    "probate": { "fee": 100, "notes": "Probate court filing" },
+    "appeals": { "fee": 250, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 30,
+      "motionFiling": 25,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.sccourts.org",
+    "lastVerified": "2026-03"
+  },
+  "South Dakota": {
+    "civil": { "fee": 85, "notes": "Circuit court civil filing fee" },
+    "smallClaims": { "fee": 40, "notes": "Small claims up to $12,000" },
+    "family": { "fee": 85, "notes": "Circuit court domestic relations filing" },
+    "probate": { "fee": 85, "notes": "Circuit court probate filing" },
+    "appeals": { "fee": 250, "notes": "Supreme Court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 25,
+      "motionFiling": 15,
+      "juryDemand": 75
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://ujs.sd.gov",
+    "lastVerified": "2026-03"
+  },
+  "Tennessee": {
+    "civil": { "fee": 275, "notes": "Circuit court civil filing fee; varies by county" },
+    "smallClaims": { "fee": 70, "notes": "General sessions court small claims up to $25,000" },
+    "family": { "fee": 275, "notes": "Circuit/chancery court family filing" },
+    "probate": { "fee": 200, "notes": "Probate court filing; varies by county" },
+    "appeals": { "fee": 350, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 35,
+      "juryDemand": 150
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.tncourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Texas": {
+    "civil": { "fee": 315, "notes": "District court civil filing fee; varies by county" },
+    "smallClaims": { "fee": 54, "notes": "Justice court small claims up to $20,000" },
+    "family": { "fee": 315, "notes": "District court family law filing" },
+    "probate": { "fee": 250, "notes": "Statutory probate or county court filing" },
+    "appeals": { "fee": 325, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 75,
+      "motionFiling": 30,
+      "juryDemand": 30
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.txcourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Utah": {
+    "civil": { "fee": 360, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 60, "notes": "Small claims up to $11,000" },
+    "family": { "fee": 325, "notes": "District court family law filing" },
+    "probate": { "fee": 225, "notes": "District court probate filing" },
+    "appeals": { "fee": 375, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 35,
+      "juryDemand": 175
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.utcourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Vermont": {
+    "civil": { "fee": 295, "notes": "Superior court civil division filing fee" },
+    "smallClaims": { "fee": 75, "notes": "Small claims up to $5,000" },
+    "family": { "fee": 295, "notes": "Family division filing in superior court" },
+    "probate": { "fee": 150, "notes": "Probate division filing" },
+    "appeals": { "fee": 295, "notes": "Supreme Court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 30,
+      "motionFiling": 25,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.vermontjudiciary.org",
+    "lastVerified": "2026-03"
+  },
+  "Virginia": {
+    "civil": { "fee": 152, "notes": "Circuit court civil filing fee" },
+    "smallClaims": { "fee": 62, "notes": "General district court small claims up to $5,000" },
+    "family": { "fee": 152, "notes": "Circuit court domestic relations filing" },
+    "probate": { "fee": 110, "notes": "Circuit court probate filing" },
+    "appeals": { "fee": 300, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 25,
+      "motionFiling": 30,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.vacourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Washington": {
+    "civil": { "fee": 240, "notes": "Superior court civil filing fee; varies by county" },
+    "smallClaims": { "fee": 55, "notes": "District court small claims up to $10,000" },
+    "family": { "fee": 240, "notes": "Superior court family law filing" },
+    "probate": { "fee": 240, "notes": "Superior court probate filing" },
+    "appeals": { "fee": 325, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 45,
+      "motionFiling": 30,
+      "juryDemand": 125
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courts.wa.gov",
+    "lastVerified": "2026-03"
+  },
+  "West Virginia": {
+    "civil": { "fee": 175, "notes": "Circuit court civil filing fee" },
+    "smallClaims": { "fee": 45, "notes": "Magistrate court small claims up to $10,000" },
+    "family": { "fee": 175, "notes": "Family court filing" },
+    "probate": { "fee": 120, "notes": "County commission probate filing" },
+    "appeals": { "fee": 300, "notes": "Supreme Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 30,
+      "motionFiling": 20,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courtswv.gov",
+    "lastVerified": "2026-03"
+  },
+  "Wisconsin": {
+    "civil": { "fee": 265, "notes": "Circuit court civil filing fee" },
+    "smallClaims": { "fee": 94, "notes": "Small claims up to $10,000" },
+    "family": { "fee": 265, "notes": "Circuit court family filing" },
+    "probate": { "fee": 200, "notes": "Circuit court probate filing" },
+    "appeals": { "fee": 350, "notes": "Court of Appeals filing" },
+    "additionalFees": {
+      "serviceOfProcess": 40,
+      "motionFiling": 25,
+      "juryDemand": 100
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.wicourts.gov",
+    "lastVerified": "2026-03"
+  },
+  "Wyoming": {
+    "civil": { "fee": 130, "notes": "District court civil filing fee" },
+    "smallClaims": { "fee": 30, "notes": "Circuit court small claims up to $6,000" },
+    "family": { "fee": 130, "notes": "District court domestic relations filing" },
+    "probate": { "fee": 100, "notes": "District court probate filing" },
+    "appeals": { "fee": 250, "notes": "Supreme Court filing" },
+    "additionalFees": {
+      "serviceOfProcess": 25,
+      "motionFiling": 20,
+      "juryDemand": 75
+    },
+    "feeWaiver": true,
+    "courtUrl": "https://www.courts.state.wy.us",
+    "lastVerified": "2026-03"
+  }
+}

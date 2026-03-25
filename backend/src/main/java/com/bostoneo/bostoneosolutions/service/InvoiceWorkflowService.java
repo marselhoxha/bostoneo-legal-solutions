@@ -1,5 +1,7 @@
 package com.bostoneo.bostoneosolutions.service;
 
+import com.bostoneo.bostoneosolutions.dto.email.EmailBranding;
+import com.bostoneo.bostoneosolutions.dto.email.EmailContent;
 import com.bostoneo.bostoneosolutions.enumeration.InvoiceStatus;
 import com.bostoneo.bostoneosolutions.model.*;
 import com.bostoneo.bostoneosolutions.repository.InvoiceReminderRepository;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -36,10 +39,14 @@ public class InvoiceWorkflowService {
     private final EmailService emailService;
     private final ClientRepository clientRepository;
     private final OrganizationRepository organizationRepository;
+    private final EmailTemplateEngine templateEngine;
     private final com.bostoneo.bostoneosolutions.multitenancy.TenantService tenantService;
 
     @Value("${app.invoice-workflows.enabled:true}")
     private boolean workflowsEnabled;
+
+    @Value("${UI_APP_URL:http://localhost:4200}")
+    private String frontendUrl;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -212,7 +219,7 @@ public class InvoiceWorkflowService {
         String clientEmail = clientEmailHolder[0];
         if (clientEmail == null || clientEmail.isEmpty()) {
             log.warn("No client email found for invoice {}, using fallback email", invoice.getInvoiceNumber());
-            clientEmail = "admin@bostoneo.com"; // Fallback for testing
+            clientEmail = "admin@legience.com"; // Fallback for testing
         }
         
         // Generate email content
@@ -370,100 +377,90 @@ public class InvoiceWorkflowService {
     }
     
     private String generateEmailMessage(String templateName, Invoice invoice) {
-        StringBuilder html = new StringBuilder();
-        html.append("<!DOCTYPE html><html><head><style>");
-        html.append("body{font-family:Arial,sans-serif;line-height:1.6;color:#333;}");
-        html.append(".container{max-width:600px;margin:0 auto;padding:20px;}");
-        html.append(".header{background:#0d6efd;color:white;padding:20px;text-align:center;border-radius:5px 5px 0 0;}");
-        html.append(".content{background:#f8f9fa;padding:20px;border:1px solid #dee2e6;}");
-        html.append(".invoice-details{background:white;padding:15px;margin:15px 0;border-radius:5px;}");
-        html.append(".amount{font-size:24px;color:#0d6efd;font-weight:bold;}");
-        html.append(".footer{text-align:center;padding:20px;color:#6c757d;font-size:14px;}");
-        html.append("</style></head><body>");
-        html.append("<div class='container'>");
-        
-        // Header
-        html.append("<div class='header'>");
-        html.append("<h1>Bostoneo Solutions</h1>");
-        html.append("</div>");
-        
-        // Content
-        html.append("<div class='content'>");
-        
+        // Get organization for branding
+        Organization org = null;
+        if (invoice.getOrganizationId() != null) {
+            org = organizationRepository.findById(invoice.getOrganizationId()).orElse(null);
+        }
+
+        EmailBranding branding;
+        if (org != null) {
+            branding = EmailBranding.firmClient(org.getName(), org.getLogoUrl(), org.getPrimaryColor(),
+                    org.getEmail(), org.getPhone(), org.getAddress(), frontendUrl);
+        } else {
+            branding = EmailBranding.firmClient("Legience", null, "#1e56b6", null, null, null, frontendUrl);
+        }
+
         String clientName = invoice.getClientName() != null ? invoice.getClientName() : "Valued Client";
-        
+        String signOff = org != null ? org.getName() : "Legience Team";
+
+        // Body text and urgency based on template type
+        String bodyText;
+        EmailContent.UrgencyBanner urgency = null;
+        String amountColor = branding.getPrimaryColor();
+
         switch (templateName) {
             case "invoice_created":
-                html.append(String.format("<h2>New Invoice Created</h2>"));
-                html.append(String.format("<p>Dear %s,</p>", clientName));
-                html.append("<p>We have created a new invoice for the services provided. Please find the details below:</p>");
+                bodyText = "We have created a new invoice for services provided. Please find the details below.";
                 break;
-                
             case "payment_reminder":
-                html.append(String.format("<h2>Payment Reminder</h2>"));
-                html.append(String.format("<p>Dear %s,</p>", clientName));
-                html.append("<p>This is a friendly reminder that the following invoice will be due soon:</p>");
+                bodyText = "This is a friendly reminder that the following invoice will be due soon.";
                 break;
-                
             case "payment_reminder_urgent":
-                html.append(String.format("<h2 style='color:#dc3545;'>Urgent Payment Reminder</h2>"));
-                html.append(String.format("<p>Dear %s,</p>", clientName));
-                html.append("<p><strong>This invoice is due tomorrow!</strong> Please ensure payment is made to avoid any late fees.</p>");
+                bodyText = "This invoice is due tomorrow. Please ensure payment is made to avoid any late fees.";
+                urgency = EmailContent.UrgencyBanner.builder().text("PAYMENT DUE TOMORROW").level("red").build();
+                amountColor = "#dc2626";
                 break;
-                
             case "overdue_notice":
-                html.append(String.format("<h2 style='color:#dc3545;'>Overdue Notice</h2>"));
-                html.append(String.format("<p>Dear %s,</p>", clientName));
-                html.append("<p>The following invoice is now <strong>overdue</strong>. Please make payment as soon as possible to avoid additional charges.</p>");
+                bodyText = "The following invoice is now overdue. Please make payment as soon as possible.";
+                urgency = EmailContent.UrgencyBanner.builder().text("OVERDUE").level("red").build();
+                amountColor = "#dc2626";
                 break;
-                
             case "payment_received":
-                html.append(String.format("<h2 style='color:#28a745;'>Payment Received - Thank You!</h2>"));
-                html.append(String.format("<p>Dear %s,</p>", clientName));
-                html.append("<p>We have received your payment. Thank you for your prompt payment!</p>");
+                bodyText = "We have received your payment. Thank you for your prompt payment.";
+                amountColor = "#16a34a";
                 break;
-                
             default:
-                html.append(String.format("<h2>Invoice Notification</h2>"));
-                html.append(String.format("<p>Dear %s,</p>", clientName));
-                html.append("<p>This is regarding the following invoice:</p>");
+                bodyText = "This is regarding the following invoice.";
         }
-        
-        // Invoice details
-        html.append("<div class='invoice-details'>");
-        html.append(String.format("<p><strong>Invoice Number:</strong> %s</p>", invoice.getInvoiceNumber()));
-        html.append(String.format("<p><strong>Issue Date:</strong> %s</p>", invoice.getIssueDate()));
-        html.append(String.format("<p><strong>Due Date:</strong> %s</p>", invoice.getDueDate()));
+
+        // Build detail card
+        List<Map.Entry<String, String>> rows = new ArrayList<>();
         if (invoice.getCaseName() != null) {
-            html.append(String.format("<p><strong>Legal Case:</strong> %s</p>", invoice.getCaseName()));
+            rows.add(Map.entry("Case", invoice.getCaseName()));
         }
-        html.append(String.format("<p class='amount'>Total Amount: $%.2f</p>", invoice.getTotalAmount()));
-        html.append("</div>");
-        
-        // Payment instructions
-        if (!templateName.equals("payment_received")) {
-            html.append("<p><strong>Payment Instructions:</strong></p>");
-            html.append("<p>Please remit payment via wire transfer or check to:</p>");
-            html.append("<ul>");
-            html.append("<li>Bank: First National Bank</li>");
-            html.append("<li>Account: Bostoneo Solutions LLC</li>");
-            html.append("<li>Reference: " + invoice.getInvoiceNumber() + "</li>");
-            html.append("</ul>");
+        rows.add(Map.entry("Issue Date", String.valueOf(invoice.getIssueDate())));
+        rows.add(Map.entry("Due Date", String.valueOf(invoice.getDueDate())));
+
+        String cardTitle = "payment_received".equals(templateName) ? "Payment Confirmed" : "Invoice " + invoice.getInvoiceNumber();
+
+        EmailContent.DetailCard detailCard = EmailContent.DetailCard.builder()
+                .title(cardTitle)
+                .rows(rows)
+                .accentColor("payment_received".equals(templateName) ? "#16a34a" :
+                        ("payment_reminder_urgent".equals(templateName) || "overdue_notice".equals(templateName)) ? "#dc2626" : null)
+                .highlightAmount(String.format("$%,.2f", invoice.getTotalAmount()))
+                .highlightColor(amountColor)
+                .build();
+
+        // CTA button (not for payment_received)
+        EmailContent.CtaButton ctaButton = null;
+        if (!"payment_received".equals(templateName)) {
+            ctaButton = EmailContent.CtaButton.builder()
+                    .text("View Invoice")
+                    .url(frontendUrl + "/invoices/" + invoice.getId())
+                    .build();
         }
-        
-        html.append("<p>If you have any questions, please don't hesitate to contact us.</p>");
-        html.append("<p>Best regards,<br>Bostoneo Solutions Team</p>");
-        html.append("</div>");
-        
-        // Footer
-        html.append("<div class='footer'>");
-        html.append("<p>Bostoneo Solutions LLC<br>");
-        html.append("68 Harrison Ave, Boston MA<br>");
-        html.append("Phone: (123) 456-7890 | Email: info@bostoneo.com</p>");
-        html.append("</div>");
-        
-        html.append("</div></body></html>");
-        
-        return html.toString();
+
+        EmailContent content = EmailContent.builder()
+                .recipientName(clientName)
+                .bodyParagraphs(List.of(bodyText))
+                .detailCard(detailCard)
+                .ctaButton(ctaButton)
+                .signOffName(signOff)
+                .urgency(urgency)
+                .build();
+
+        return templateEngine.render(branding, content);
     }
 }

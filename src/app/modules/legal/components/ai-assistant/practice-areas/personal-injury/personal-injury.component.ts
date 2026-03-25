@@ -22,6 +22,7 @@ import { PIMedicalRecordService } from '../../shared/services/pi-medical-record.
 import { PIDocumentChecklistService } from '../../shared/services/pi-document-checklist.service';
 import { PIDamageCalculationService } from '../../shared/services/pi-damage-calculation.service';
 import { PIMedicalSummaryService } from '../../shared/services/pi-medical-summary.service';
+import { BackgroundTaskService } from '../../../../services/background-task.service';
 import {
   PIDocumentRequestService,
   DocumentRecipient,
@@ -154,7 +155,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
   // Sub-tab states for consolidated tabs
   documentsSubTab: 'demand-letter' | 'checklist' = 'checklist';
-  medicalSubTab: 'records' | 'summary' = 'records';
+  medicalSubTab: 'records' | 'summary' | 'timeline' = 'records';
 
   // FAB and Search
   fabExpanded: boolean = false;
@@ -276,16 +277,36 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   scanResult: any = null;
   scanProgress: { current: number; total: number; percentComplete: number; currentFile: string } | null = null;
   private scanTimeoutId: any = null;
+  private scanTaskId: string | null = null;
+  private scanPollId: any = null;
   medicalRecordForm: FormGroup;
   editingMedicalRecord: PIMedicalRecord | null = null;
   recordTypes = RECORD_TYPES;
   providerTypes = PROVIDER_TYPES;
+
+  // View Mode
+  recordsViewMode: 'flat' | 'grouped' = 'flat';
+  cachedGroupedRecords: Array<{ providerName: string; providerType: string; records: PIMedicalRecord[]; totalBilled: number; dateRange: string; collapsed: boolean }> | null = null;
+
+  // Treatment Timeline
+  treatmentGaps: TreatmentGap[] = [];
+  isLoadingTimeline: boolean = false;
 
   // Medical Summary
   medicalSummary: PIMedicalSummary | null = null;
   isGeneratingSummary: boolean = false;
   isLoadingMedicalSummary: boolean = false;
   summaryExists: boolean = false;
+
+  // Adjuster Defense Analysis
+  adjusterAnalysis: any = null;
+  isGeneratingAdjusterAnalysis: boolean = false;
+  adjusterExpandedItems: Set<number> = new Set([0, 1]); // First two expanded by default
+
+  // Document scan status
+  scanStatus: any = null;
+  hasUnscannedDocuments = false;
+  unscannedCount = 0;
 
   // Document Checklist
   documentChecklist: PIDocumentChecklist[] = [];
@@ -487,7 +508,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     private userService: UserService,
     private portfolioService: PIPortfolioService,
     private settlementService: PISettlementService,
-    private webSocketService: WebSocketService
+    private webSocketService: WebSocketService,
+    private backgroundTaskService: BackgroundTaskService
   ) {
     super();
 
@@ -637,38 +659,62 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       this.cdr.detectChanges();
     });
 
-    // Listen for async medical scan progress + completion via WebSocket
+    // Listen for medical scan progress + completion via WebSocket.
+    // Messages arrive as {type: "data", data: {type: "MEDICAL_SCAN_*", ...}}
+    // OR as {type: "notification", data: {type: "MEDICAL_SCAN_*", ...}} (legacy)
     this.webSocketService.getMessages().pipe(
       takeUntil(this.destroy$)
     ).subscribe(msg => {
+      // Extract the inner payload — the actual scan data is nested under msg.data
       const payload = msg?.data;
-      if (!payload || !this.isScanningDocuments) return;
+      if (!payload) return;
 
-      // Real-time progress updates (sent via "data" channel — no notification bell)
-      if (payload.type === 'MEDICAL_SCAN_PROGRESS') {
+      // Check if this message is a medical scan message (check both nested type and top-level)
+      const scanType = payload.type || msg?.type;
+      if (scanType !== 'MEDICAL_SCAN_PROGRESS' && scanType !== 'MEDICAL_SCAN_COMPLETE') return;
+
+      // Ignore messages for a different case
+      const msgCaseId = payload.caseId || msg?.caseId;
+      if (msgCaseId && this.linkedCase?.id && msgCaseId !== Number(this.linkedCase.id)) return;
+
+      if (scanType === 'MEDICAL_SCAN_PROGRESS' && this.isScanningDocuments) {
         this.scanProgress = {
           current: payload.current,
           total: payload.total,
           percentComplete: payload.percentComplete,
           currentFile: payload.currentFile
         };
+        if (this.scanTaskId) {
+          this.backgroundTaskService.updateTaskProgress(
+            this.scanTaskId, payload.percentComplete, `Scanning: ${payload.currentFile}`
+          );
+        }
         this.cdr.detectChanges();
       }
 
-      // Scan complete (sent via "notification" channel — triggers bell)
-      if (payload.type === 'MEDICAL_SCAN_COMPLETE') {
-        this.isScanningDocuments = false;
-        this.scanProgress = null;
-        this.clearScanTimeout();
-
+      if (scanType === 'MEDICAL_SCAN_COMPLETE' && this.isScanningDocuments) {
         if (payload.success === false) {
+          if (this.scanTaskId) {
+            this.backgroundTaskService.failTask(this.scanTaskId, payload.message || 'Scan failed');
+          }
+          this.completeScanCleanup();
+          Swal.fire({
+            icon: 'error',
+            title: 'Scan Failed',
+            text: payload.message || 'Document scan failed. Please try again.',
+            confirmButtonText: 'OK'
+          });
           this.cdr.detectChanges();
           return;
         }
 
-        this.scanResult = payload;
-        this.loadMedicalRecords();
-        this.cdr.detectChanges();
+        if (this.scanTaskId) {
+          this.handleScanComplete(this.scanTaskId, payload);
+        } else {
+          this.completeScanCleanup();
+          this.loadMedicalRecords();
+          this.cdr.detectChanges();
+        }
       }
     });
   }
@@ -682,6 +728,136 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       clearTimeout(this.scanTimeoutId);
       this.scanTimeoutId = null;
     }
+    this.stopScanPolling();
+  }
+
+  /**
+   * Poll the scan endpoint every 5s as a fallback for when WebSocket delivery fails.
+   * If the backend returns 202 (new scan started) instead of 409 (already scanning),
+   * it means the previous scan finished — the WebSocket message was lost.
+   */
+  private startScanPolling(caseId: number, taskId: string): void {
+    this.stopScanPolling();
+    let pollCount = 0;
+    this.scanPollId = setInterval(() => {
+      pollCount++;
+      if (!this.isScanningDocuments || pollCount > 60) {
+        this.stopScanPolling();
+        return;
+      }
+      // Try to start another scan — 409 means still scanning, 202 means done
+      this.medicalRecordService.scanCaseDocuments(caseId).subscribe({
+        next: () => {
+          // Got 202 = backend accepted a NEW scan = previous scan is done.
+          // The backend is now running a fresh (redundant) scan that will complete instantly.
+          // Complete the original task and reload data.
+          if (this.isScanningDocuments) {
+            this.handleScanComplete(taskId);
+          }
+        },
+        error: (err) => {
+          if (err.status === 409) {
+            // Still scanning — keep polling
+          } else {
+            // Some other error — stop polling, let timeout handle it
+            this.stopScanPolling();
+          }
+        }
+      });
+    }, 5000);
+  }
+
+  private stopScanPolling(): void {
+    if (this.scanPollId) {
+      clearInterval(this.scanPollId);
+      this.scanPollId = null;
+    }
+  }
+
+  /**
+   * Handle scan completion — called from both WebSocket handler and polling fallback.
+   * Reloads records, syncs case data, refreshes stat cards, and shows user feedback.
+   */
+  private handleScanComplete(taskId: string, payload?: any): void {
+    this.completeScanCleanup();
+
+    const recordsCreated = payload?.recordsCreated ?? 0;
+    const documentsScanned = payload?.documentsScanned ?? 0;
+    const caseId = Number(this.linkedCase?.id);
+
+    // Complete the background task with descriptive result for the notification body
+    this.backgroundTaskService.completeTask(taskId, {
+      caseId,
+      recordsCreated,
+      documentsScanned,
+      title: recordsCreated > 0
+        ? `${recordsCreated} medical records created`
+        : 'All documents already processed'
+    });
+
+    // Reload medical records
+    this.loadMedicalRecords();
+
+    // Reload the case object from backend so stat cards get fresh medicalExpensesTotal
+    if (caseId) {
+      this.caseService.getCaseById(String(caseId)).subscribe({
+        next: (response) => {
+          if (response?.data?.case) {
+            this.linkedCase = response.data.case as any;
+          }
+          // Also sync damage elements so valuation tab is up to date
+          this.syncMedicalToCase();
+          this.loadDamageElements();
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.syncMedicalToCase();
+          this.cdr.detectChanges();
+        }
+      });
+
+      // Mark summary as stale
+      this.medicalSummary = null;
+      this.summaryExists = false;
+      this.adjusterAnalysis = null;
+      this.hasUnscannedDocuments = false;
+      this.unscannedCount = 0;
+      this.loadMedicalSummary();
+      this.loadSavedAdjusterAnalysis();
+      this.loadScanStatus();
+    }
+
+    // Show Swal result dialog to the user (they're on the page)
+    this.scanResult = payload;
+    if (recordsCreated > 0) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Scan Complete',
+        html: `Created <strong>${recordsCreated}</strong> medical records from ${documentsScanned} documents.`,
+        confirmButtonText: 'OK',
+        customClass: { confirmButton: 'btn btn-primary' },
+        buttonsStyling: false
+      });
+    } else {
+      Swal.fire({
+        icon: 'info',
+        title: 'Scan Complete',
+        html: `All <strong>${documentsScanned}</strong> documents have already been processed.<br>No new medical records found.`,
+        text: 'Use "Clear All" to re-scan from scratch.',
+        confirmButtonText: 'OK',
+        customClass: { confirmButton: 'btn btn-primary' },
+        buttonsStyling: false
+      });
+    }
+
+    this.cdr.detectChanges();
+  }
+
+  private completeScanCleanup(taskId?: string): void {
+    this.isScanningDocuments = false;
+    this.scanProgress = null;
+    this.scanTaskId = null;
+    this.clearScanTimeout();
   }
 
   ngOnDestroy(): void {
@@ -726,6 +902,19 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.comparableAnalysisExpanded = false;
     this.collapsedDamageGroups = {};
     this.summaryExists = false;
+
+    // Clear scan state
+    if (this.scanTaskId) {
+      this.backgroundTaskService.failTask(this.scanTaskId, 'Case changed — scan cancelled.');
+    }
+    this.completeScanCleanup();
+
+    // Clear Phase 1-3 state
+    this.treatmentGaps = [];
+    this.adjusterAnalysis = null;
+    this.adjusterExpandedItems = new Set([0, 1]);
+    this.recordsViewMode = 'flat';
+    this.cachedGroupedRecords = null;
 
     // Clear bulk selection
     this.bulkSelectMode = false;
@@ -2174,6 +2363,98 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     return this.getTotalMedicalBills() - this.getTotalMedicalPaid();
   }
 
+  // --- Lien Tracking Helpers ---
+
+  getTotalLiens(): number {
+    return this.medicalRecords
+      .filter(r => r.lienAmount && r.lienAmount > 0)
+      .reduce((sum, r) => sum + (r.lienAmount || 0), 0);
+  }
+
+  getUniqueLienHolders(): number {
+    const holders = new Set(
+      this.medicalRecords
+        .filter(r => r.lienHolder && r.lienHolder.trim())
+        .map(r => r.lienHolder!.trim().toLowerCase())
+    );
+    return holders.size;
+  }
+
+  getLienBreakdown(): Array<{ holder: string; amount: number }> {
+    const map = new Map<string, number>();
+    for (const r of this.medicalRecords) {
+      if (r.lienHolder && r.lienHolder.trim() && r.lienAmount && r.lienAmount > 0) {
+        const key = r.lienHolder.trim();
+        map.set(key, (map.get(key) || 0) + r.lienAmount);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([holder, amount]) => ({ holder, amount }))
+      .sort((a, b) => b.amount - a.amount);
+  }
+
+  // --- Record Type Breakdown ---
+
+  getRecordTypeBreakdown(): Array<{ type: string; label: string; count: number }> {
+    const map = new Map<string, number>();
+    for (const r of this.medicalRecords) {
+      const type = r.recordType || 'OTHER';
+      map.set(type, (map.get(type) || 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([type, count]) => ({
+        type,
+        label: this.getRecordTypeLabel(type),
+        count
+      }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  /**
+   * Group medical records by provider name for the grouped view.
+   * Cached to preserve collapse state across change detection cycles.
+   */
+  getGroupedRecords(): Array<{ providerName: string; providerType: string; records: PIMedicalRecord[]; totalBilled: number; dateRange: string; collapsed: boolean }> {
+    if (this.cachedGroupedRecords) return this.cachedGroupedRecords;
+    this.cachedGroupedRecords = this.buildGroupedRecords();
+    return this.cachedGroupedRecords;
+  }
+
+  private buildGroupedRecords(): Array<{ providerName: string; providerType: string; records: PIMedicalRecord[]; totalBilled: number; dateRange: string; collapsed: boolean }> {
+    const map = new Map<string, PIMedicalRecord[]>();
+    for (const r of this.medicalRecords) {
+      const key = r.providerName || 'Unknown Provider';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(r);
+    }
+
+    return Array.from(map.entries()).map(([name, records]) => {
+      const totalBilled = records.reduce((sum, r) => sum + (r.billedAmount || 0), 0);
+      const dates = records.filter(r => r.treatmentDate).map(r => r.treatmentDate).sort();
+      const dateRange = dates.length > 0
+        ? (dates.length === 1 ? dates[0] : `${dates[0]} — ${dates[dates.length - 1]}`)
+        : 'No dates';
+      return {
+        providerName: name,
+        providerType: records[0]?.providerType || '',
+        records,
+        totalBilled,
+        dateRange,
+        collapsed: false
+      };
+    });
+  }
+
+  getMaxRecordTypeCount(): number {
+    const breakdown = this.getRecordTypeBreakdown();
+    return breakdown.length > 0 ? Math.max(...breakdown.map(b => b.count)) : 1;
+  }
+
+  getCitationCount(record: PIMedicalRecord): number {
+    if (!record.citationMetadata) return 0;
+    return Object.keys(record.citationMetadata).length;
+  }
+
   getTotalLostWages(): number {
     // Only use damage elements with type LOST_WAGES
     // Do NOT fallback to case record - values should only come from explicit damage elements
@@ -2365,6 +2646,19 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
                 </select>
               </div>
             </div>
+            <div class="row mb-3">
+              <div class="col-6">
+                <label class="form-label">Lien Holder</label>
+                <input type="text" id="swal-lien-holder" class="form-control" placeholder="e.g., Medicare, BCBS">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Lien Amount</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" id="swal-lien-amount" class="form-control" placeholder="0">
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       `,
@@ -2406,7 +2700,9 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           billedAmount,
           paidAmount: parseFloat((document.getElementById('swal-paid-amount') as HTMLInputElement)?.value) || 0,
           keyFindings: (document.getElementById('swal-key-findings') as HTMLTextAreaElement)?.value || '',
-          recordType: (document.getElementById('swal-record-type') as HTMLSelectElement)?.value || 'FOLLOW_UP'
+          recordType: (document.getElementById('swal-record-type') as HTMLSelectElement)?.value || 'FOLLOW_UP',
+          lienHolder: (document.getElementById('swal-lien-holder') as HTMLInputElement)?.value || '',
+          lienAmount: parseFloat((document.getElementById('swal-lien-amount') as HTMLInputElement)?.value) || 0
         };
       }
     }).then((result) => {
@@ -2427,7 +2723,9 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       billedAmount: data.billedAmount,
       paidAmount: data.paidAmount,
       keyFindings: data.keyFindings,
-      recordType: data.recordType
+      recordType: data.recordType,
+      lienHolder: data.lienHolder || undefined,
+      lienAmount: data.lienAmount || undefined
     };
 
     this.medicalRecordService.createRecord(Number(this.linkedCase.id), recordData).subscribe({
@@ -2455,6 +2753,14 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
   openRecordDetailModal(record: PIMedicalRecord): void {
     const hasCitations = record.citationMetadata && Object.keys(record.citationMetadata).length > 0;
+    const cm = record.citationMetadata || {};
+
+    // Helper to generate a citation link for a field
+    const citLink = (field: string): string => {
+      const cite = cm[field] as any;
+      if (!cite || !cite.page) return '';
+      return `<a class="citation-link-inline" data-field="${field}" title="View source document at page ${cite.page}"><i class="ri-file-text-line"></i> p.${cite.page}</a>`;
+    };
 
     Swal.fire({
       title: record.providerName,
@@ -2463,12 +2769,12 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           <div class="d-flex align-items-center gap-2 mb-3">
             <span class="badge bg-primary-subtle text-primary">${this.getRecordTypeLabel(record.recordType)}</span>
             <span class="badge bg-info-subtle text-info">${this.getProviderTypeLabel(record.providerType)}</span>
-            ${hasCitations ? '<span class="badge bg-success-subtle text-success"><i class="ri-link me-1"></i>Has Citations</span>' : ''}
+            ${hasCitations ? `<span class="badge bg-success-subtle text-success"><i class="ri-link me-1"></i>${this.getCitationCount(record)} sources</span>` : ''}
           </div>
 
           <div class="row g-3 mb-3">
             <div class="col-6">
-              <div class="text-muted small">Treatment Date</div>
+              <div class="text-muted small d-flex align-items-center gap-1">Treatment Date ${citLink('treatmentDate')}</div>
               <div class="fw-medium">${record.treatmentDate ? new Date(record.treatmentDate).toLocaleDateString() : 'Not specified'}</div>
             </div>
             ${record.treatmentEndDate ? `
@@ -2481,7 +2787,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
           <div class="row g-3 mb-3">
             <div class="col-4">
-              <div class="text-muted small">Billed</div>
+              <div class="text-muted small d-flex align-items-center gap-1">Billed ${citLink('billedAmount')}</div>
               <div class="fw-semibold">${this.formatCurrency(record.billedAmount || 0)}</div>
             </div>
             <div class="col-4">
@@ -2494,16 +2800,38 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
             </div>
           </div>
 
+          ${record.lienHolder ? `
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <div class="text-muted small">Lien Holder</div>
+              <div class="fw-medium">${record.lienHolder}</div>
+            </div>
+            <div class="col-6">
+              <div class="text-muted small">Lien Amount</div>
+              <div class="fw-medium text-danger">${this.formatCurrency(record.lienAmount || 0)}</div>
+            </div>
+          </div>
+          ` : ''}
+
           ${record.keyFindings ? `
           <div class="mb-3">
-            <div class="text-muted small mb-1">Key Findings</div>
+            <div class="text-muted small mb-1 d-flex align-items-center gap-1">Key Findings ${citLink('keyFindings')}</div>
             <div class="p-2 bg-light rounded small">${record.keyFindings}</div>
+          </div>
+          ` : ''}
+
+          ${record.diagnoses && record.diagnoses.length > 0 ? `
+          <div class="mb-3">
+            <div class="text-muted small mb-1 d-flex align-items-center gap-1">Diagnoses ${cm['diagnoses'] ? '<a class="citation-link-inline" data-field="diagnoses"><i class="ri-file-text-line"></i></a>' : ''}</div>
+            <div class="p-2 bg-light rounded small">
+              ${record.diagnoses.map(d => `<div class="d-flex align-items-center gap-2 py-1"><span class="badge bg-primary-subtle text-primary" style="font-family:monospace;font-size:11px;">${d.icd_code || '—'}</span> <span>${d.description || ''}${d.primary ? ' <span class="badge bg-info-subtle text-info" style="font-size:10px;">primary</span>' : ''}</span></div>`).join('')}
+            </div>
           </div>
           ` : ''}
 
           ${record.treatmentProvided ? `
           <div class="mb-3">
-            <div class="text-muted small mb-1">Treatment Provided</div>
+            <div class="text-muted small mb-1 d-flex align-items-center gap-1">Treatment Provided ${citLink('treatmentProvided')}</div>
             <div class="p-2 bg-light rounded small">${record.treatmentProvided}</div>
           </div>
           ` : ''}
@@ -2514,30 +2842,37 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
             <div class="p-2 bg-light rounded small">${record.prognosisNotes}</div>
           </div>
           ` : ''}
+
+          ${hasCitations ? '<div class="text-muted" style="font-size:11px;border-top:1px solid #f3f6f9;padding-top:8px;"><i class="ri-information-line me-1"></i>Click any <span style="background:rgba(10,179,156,.1);color:#0ab39c;padding:1px 4px;border-radius:3px;font-size:10px;">p.X</span> link to view the source document at that page.</div>' : ''}
         </div>
       `,
       showCancelButton: true,
       confirmButtonText: '<i class="ri-edit-line me-1"></i> Edit',
       cancelButtonText: 'Close',
-      showDenyButton: hasCitations,
-      denyButtonText: '<i class="ri-link me-1"></i> View Sources',
       customClass: {
         confirmButton: 'btn btn-primary me-2',
-        denyButton: 'btn btn-soft-info me-2',
         cancelButton: 'btn btn-secondary'
       },
       buttonsStyling: false,
-      width: 550
+      width: 580,
+      didRender: () => {
+        // Attach click handlers to inline citation links
+        document.querySelectorAll('.citation-link-inline').forEach((el) => {
+          (el as HTMLElement).style.cssText = 'display:inline-flex;align-items:center;gap:3px;font-size:10px;background:rgba(10,179,156,.1);color:#0ab39c;padding:1px 6px;border-radius:3px;cursor:pointer;text-decoration:none;';
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const field = (el as HTMLElement).dataset['field'];
+            if (field) {
+              Swal.close();
+              setTimeout(() => this.openCitation(record, field), 200);
+            }
+          });
+        });
+      }
     }).then((result) => {
       if (result.isConfirmed) {
         this.editMedicalRecord(record);
         this.openEditRecordModal();
-      } else if (result.isDenied && hasCitations) {
-        // Open citation viewer for first available citation
-        const firstField = Object.keys(record.citationMetadata || {})[0];
-        if (firstField) {
-          this.openCitation(record, firstField);
-        }
       }
     });
   }
@@ -2613,6 +2948,19 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
             <label class="form-label">Prognosis Notes</label>
             <textarea id="swal-edit-prognosis" class="form-control" rows="2">${this.editingMedicalRecord.prognosisNotes || ''}</textarea>
           </div>
+          <div class="row mb-3">
+            <div class="col-6">
+              <label class="form-label">Lien Holder</label>
+              <input type="text" id="swal-edit-lien-holder" class="form-control" value="${this.editingMedicalRecord.lienHolder || ''}" placeholder="e.g., Medicare, BCBS">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Lien Amount</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" id="swal-edit-lien-amount" class="form-control" value="${this.editingMedicalRecord.lienAmount || 0}">
+              </div>
+            </div>
+          </div>
         </div>
       `,
       showCancelButton: true,
@@ -2644,7 +2992,9 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           paidAmount: parseFloat((document.getElementById('swal-edit-paid') as HTMLInputElement).value) || 0,
           keyFindings: (document.getElementById('swal-edit-findings') as HTMLTextAreaElement).value,
           treatmentProvided: (document.getElementById('swal-edit-treatment') as HTMLTextAreaElement).value,
-          prognosisNotes: (document.getElementById('swal-edit-prognosis') as HTMLTextAreaElement).value
+          prognosisNotes: (document.getElementById('swal-edit-prognosis') as HTMLTextAreaElement).value,
+          lienHolder: (document.getElementById('swal-edit-lien-holder') as HTMLInputElement)?.value || null,
+          lienAmount: parseFloat((document.getElementById('swal-edit-lien-amount') as HTMLInputElement)?.value) || null
         };
       }
     }).then((result) => {
@@ -2699,6 +3049,26 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       html: `Medical expenses of <strong>${this.formatCurrency(total)}</strong> synced to Case Value Calculator.`,
       timer: 2500,
       showConfirmButton: false
+    });
+  }
+
+  /**
+   * Patch the case record with the current medical total so stat cards
+   * and the portfolio dashboard reflect the latest billing amounts.
+   */
+  private syncMedicalToCase(): void {
+    if (!this.linkedCase?.id) return;
+    const medicalTotal = this.getTotalMedicalBills();
+    this.caseService.patchCase(String(this.linkedCase.id), {
+      medicalExpensesTotal: medicalTotal
+    } as any).subscribe({
+      next: () => {
+        if (this.linkedCase) {
+          this.linkedCase.medicalExpensesTotal = medicalTotal;
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Failed to sync medical total to case:', err)
     });
   }
 
@@ -2991,9 +3361,12 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
           // Load all professional platform data for the linked case
           this.loadMedicalRecords();
+          // Treatment gaps are lazy-loaded when user clicks the Timeline tab
           this.loadDocumentChecklist();
           this.loadDamageElements(true);  // Load calculation when first linking case
           this.loadMedicalSummary();
+          this.loadSavedAdjusterAnalysis();
+          this.loadScanStatus();
           this.loadExistingDemandLetter(); // Load any previously generated demand letter
           this.loadSettlementHistory(); // Load settlement negotiation history
 
@@ -3351,6 +3724,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
         next: (records) => {
           this.medicalRecords = records;
           this.isLoadingMedicalRecords = false;
+          this.cachedGroupedRecords = null; // Invalidate grouped view cache
           // Auto-sync medical expenses to form from actual records
           this.autoSyncDamageValues();
           this.cdr.detectChanges();
@@ -3363,45 +3737,215 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       });
   }
 
+  // --- Treatment Timeline ---
+
+  loadTreatmentGaps(): void {
+    if (!this.linkedCase?.id) return;
+    this.isLoadingTimeline = true;
+    this.medicalSummaryService.analyzeTreatmentGaps(Number(this.linkedCase.id))
+      .pipe(takeUntil(this.caseSwitch$))
+      .subscribe({
+        next: (gaps) => {
+          this.treatmentGaps = gaps || [];
+          this.isLoadingTimeline = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.treatmentGaps = [];
+          this.isLoadingTimeline = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Merge medical records and treatment gaps into a single chronological list.
+   * Each item has a type ('record' | 'gap') for template rendering.
+   */
+  getTimelineItems(): Array<{ type: 'record' | 'gap'; data: any }> {
+    const items: Array<{ type: 'record' | 'gap'; data: any; sortDate: string }> = [];
+
+    for (const record of this.medicalRecords) {
+      items.push({ type: 'record', data: record, sortDate: record.treatmentDate || '9999-12-31' });
+    }
+    for (const gap of this.treatmentGaps) {
+      // Place gap after the last event before the gap (use gapStart + 0.5 day trick)
+      items.push({ type: 'gap', data: gap, sortDate: gap.gapStart + 'T12:00:00' });
+    }
+
+    items.sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+    return items.map(({ type, data }) => ({ type, data }));
+  }
+
+  /**
+   * Group timeline items by date for rendering date headers.
+   */
+  getTimelineDateGroups(): Array<{ date: string; items: Array<{ type: 'record' | 'gap'; data: any }> }> {
+    const timelineItems = this.getTimelineItems();
+    const groups: Array<{ date: string; items: Array<{ type: 'record' | 'gap'; data: any }> }> = [];
+    let currentDate = '';
+
+    for (const item of timelineItems) {
+      const itemDate = item.type === 'record' ? item.data.treatmentDate : item.data.gapStart;
+      if (!itemDate) continue;
+      const dateKey = itemDate.substring(0, 10); // YYYY-MM-DD
+
+      if (item.type === 'gap') {
+        // Gaps always get their own entry (not grouped with records)
+        groups.push({ date: '__gap__', items: [item] });
+        currentDate = '';
+      } else if (dateKey !== currentDate) {
+        currentDate = dateKey;
+        groups.push({ date: dateKey, items: [item] });
+      } else {
+        groups[groups.length - 1].items.push(item);
+      }
+    }
+    return groups;
+  }
+
+  /**
+   * Get the timeline bar segments for the horizontal overview.
+   * Returns active treatment clusters and gap segments.
+   */
+  /**
+   * Build segments for the horizontal timeline bar using flex-grow proportions.
+   * Active treatment clusters and gap periods alternate to fill the full width.
+   * widthPct is used as flex-grow (proportional to days in each segment).
+   */
+  getTimelineBarSegments(): Array<{ type: 'active' | 'gap'; startPct: number; widthPct: number; label: string }> {
+    if (this.medicalRecords.length === 0) return [];
+
+    const dates = this.medicalRecords
+      .filter(r => r.treatmentDate)
+      .map(r => new Date(r.treatmentDate).getTime())
+      .sort((a, b) => a - b);
+
+    if (dates.length === 0) return [];
+
+    // Group dates into clusters (within 7 days = same treatment period)
+    const clusters: Array<{ start: number; end: number }> = [];
+    let clusterStart = dates[0];
+    let clusterEnd = dates[0];
+
+    for (let i = 1; i < dates.length; i++) {
+      if (dates[i] - clusterEnd <= 7 * 86400000) {
+        clusterEnd = dates[i];
+      } else {
+        clusters.push({ start: clusterStart, end: clusterEnd });
+        clusterStart = dates[i];
+        clusterEnd = dates[i];
+      }
+    }
+    clusters.push({ start: clusterStart, end: clusterEnd });
+
+    const segments: Array<{ type: 'active' | 'gap'; startPct: number; widthPct: number; label: string }> = [];
+    const DAY_MS = 86400000;
+
+    for (let i = 0; i < clusters.length; i++) {
+      const cluster = clusters[i];
+      // Active segment — minimum 5 days of visual weight so it's visible
+      const clusterDays = Math.max(Math.round((cluster.end - cluster.start) / DAY_MS) + 1, 5);
+      const dateLabel = new Date(cluster.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      segments.push({
+        type: 'active',
+        startPct: 0, // not used with flexbox, kept for interface compat
+        widthPct: clusterDays, // flex-grow value
+        label: dateLabel
+      });
+
+      // Gap between this cluster and next
+      if (i < clusters.length - 1) {
+        const nextCluster = clusters[i + 1];
+        const gapDays = Math.round((nextCluster.start - cluster.end) / DAY_MS);
+        if (gapDays > 0) {
+          segments.push({
+            type: 'gap',
+            startPct: 0,
+            widthPct: gapDays, // flex-grow value — proportional to actual gap size
+            label: `${gapDays}-day gap`
+          });
+        }
+      }
+    }
+
+    return segments;
+  }
+
+  getTimelineDateRange(): { start: string; end: string; days: number } {
+    const dates = this.medicalRecords
+      .filter(r => r.treatmentDate)
+      .map(r => r.treatmentDate)
+      .sort();
+    if (dates.length === 0) return { start: '', end: '', days: 0 };
+    const start = dates[0];
+    const end = dates[dates.length - 1];
+    const days = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 86400000);
+    return { start, end, days };
+  }
+
   scanCaseDocuments(): void {
     if (!this.linkedCase?.id) return;
+
+    // Reset stuck state from previous failed scan (safety guard)
+    if (this.isScanningDocuments && this.scanTaskId) {
+      this.backgroundTaskService.failTask(this.scanTaskId, 'Previous scan did not complete. Starting new scan.');
+      this.scanTaskId = null;
+    }
 
     this.isScanningDocuments = true;
     this.scanResult = null;
     this.scanProgress = null;
 
-    // Safety timeout — reset state if no WebSocket message arrives within 10 minutes
+    // Register as a background task (like document drafting)
+    const taskId = this.backgroundTaskService.registerTask(
+      'medical_scan',
+      'Scanning Medical Documents',
+      'Starting document scan...',
+      { documentId: Number(this.linkedCase.id) }
+    );
+    this.scanTaskId = taskId;
+    this.backgroundTaskService.startTask(taskId);
+
+    // Safety timeout — reset state if no completion message arrives within 5 minutes
     this.clearScanTimeout();
     this.scanTimeoutId = setTimeout(() => {
       if (this.isScanningDocuments) {
-        this.isScanningDocuments = false;
-        this.scanProgress = null;
-        this.cdr.detectChanges();
+        this.completeScanCleanup(taskId);
+        this.backgroundTaskService.failTask(taskId, 'Scan timed out — no response from server.');
       }
-    }, 10 * 60 * 1000);
+    }, 5 * 60 * 1000);
+
+    const caseId = Number(this.linkedCase.id);
 
     // Backend returns 202 immediately and processes async — result arrives via WebSocket
-    this.medicalRecordService.scanCaseDocuments(Number(this.linkedCase.id)).subscribe({
+    this.medicalRecordService.scanCaseDocuments(caseId).subscribe({
       next: () => {
-        // Show brief toast — non-blocking, user continues working
         Swal.fire({
           toast: true,
           position: 'top-end',
           icon: 'info',
           title: 'Document scan started',
-          text: 'You\'ll be notified when it\'s done.',
+          text: 'Scanning your medical documents in the background.',
           showConfirmButton: false,
           timer: 3000,
           timerProgressBar: true,
           showClass: { popup: 'animate__animated animate__fadeInRight animate__faster' },
           hideClass: { popup: 'animate__animated animate__fadeOutRight animate__faster' }
         });
+
+        // Polling fallback: WebSocket delivery can fail silently.
+        // Poll every 5s — if backend no longer has an active scan for this case,
+        // it means the scan completed and the WebSocket message was lost.
+        this.startScanPolling(caseId, taskId);
       },
       error: (err) => {
         console.error('Error starting document scan:', err);
         this.isScanningDocuments = false;
         this.scanProgress = null;
         this.clearScanTimeout();
+        this.backgroundTaskService.failTask(taskId, err.error?.message || 'Failed to start scan.');
+        this.scanTaskId = null;
         this.cdr.detectChanges();
 
         const isAlreadyScanning = err.status === 409;
@@ -3642,6 +4186,16 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   generateMedicalSummary(): void {
     if (!this.linkedCase?.id) return;
 
+    if (this.isScanningDocuments) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Scan In Progress',
+        text: 'Please wait for the document scan to finish before generating a summary. The summary needs all records to be accurate.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
     this.isGeneratingSummary = true;
     this.cdr.detectChanges();
 
@@ -3685,6 +4239,110 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
         });
       }
     });
+  }
+
+  // --- Adjuster Defense Analysis ---
+
+  loadSavedAdjusterAnalysis(): void {
+    if (!this.linkedCase?.id) return;
+    this.medicalSummaryService.getSavedAdjusterAnalysis(Number(this.linkedCase.id)).subscribe({
+      next: (result: any) => {
+        if (result?.data?.exists && result.data.analysis) {
+          this.adjusterAnalysis = result.data.analysis;
+          this.adjusterExpandedItems = new Set([0, 1]);
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {} // Silently fail — user can regenerate
+    });
+  }
+
+  loadScanStatus(): void {
+    if (!this.linkedCase?.id) return;
+    this.medicalSummaryService.getScanStatus(Number(this.linkedCase.id)).subscribe({
+      next: (result: any) => {
+        console.log('Scan status response:', result);
+        this.scanStatus = result?.data?.scanStatus;
+        this.hasUnscannedDocuments = this.scanStatus?.hasUnscannedDocuments || false;
+        this.unscannedCount = this.scanStatus?.unscannedDocuments || 0;
+        console.log('hasUnscannedDocuments:', this.hasUnscannedDocuments, 'unscanned:', this.unscannedCount);
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => { console.error('Scan status error:', err); }
+    });
+  }
+
+  generateAdjusterAnalysis(): void {
+    if (!this.linkedCase?.id) return;
+
+    if (this.isScanningDocuments) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Scan In Progress',
+        text: 'Please wait for the document scan to finish before generating an analysis. The analysis needs all records to be accurate.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    this.isGeneratingAdjusterAnalysis = true;
+    this.cdr.detectChanges();
+
+    Swal.fire({
+      title: 'Analyzing Case Vulnerabilities',
+      html: 'AI is predicting adjuster attack strategies...<br><small>This may take a minute.</small>',
+      allowOutsideClick: false,
+      didOpen: () => { Swal.showLoading(); }
+    });
+
+    this.medicalSummaryService.generateAdjusterAnalysis(Number(this.linkedCase.id)).subscribe({
+      next: (analysis) => {
+        this.adjusterAnalysis = analysis;
+        this.isGeneratingAdjusterAnalysis = false;
+        this.adjusterExpandedItems = new Set([0, 1]); // Expand first two by default
+        this.cdr.detectChanges();
+        Swal.close();
+      },
+      error: (err) => {
+        console.error('Error generating adjuster analysis:', err);
+        this.isGeneratingAdjusterAnalysis = false;
+        this.cdr.detectChanges();
+        Swal.fire({
+          icon: 'error',
+          title: 'Analysis Failed',
+          text: err.error?.message || 'Failed to generate adjuster defense analysis.'
+        });
+      }
+    });
+  }
+
+  toggleAdjusterItem(index: number): void {
+    if (this.adjusterExpandedItems.has(index)) {
+      this.adjusterExpandedItems.delete(index);
+    } else {
+      this.adjusterExpandedItems.add(index);
+    }
+  }
+
+  getAdjusterSeverityClass(severity: string): string {
+    switch (severity?.toUpperCase()) {
+      case 'HIGH': return 'bg-danger-subtle text-danger';
+      case 'MEDIUM': return 'bg-warning-subtle text-warning';
+      case 'LOW': return 'bg-info-subtle text-info';
+      default: return 'bg-secondary-subtle text-secondary';
+    }
+  }
+
+  getAdjusterTypeIcon(type: string): string {
+    switch (type) {
+      case 'TREATMENT_GAP': return 'ri-timer-flash-line';
+      case 'PRE_EXISTING': return 'ri-heart-pulse-line';
+      case 'EXCESSIVE_TREATMENT': return 'ri-scales-3-line';
+      case 'CAUSATION': return 'ri-link-unlink-m';
+      case 'MISSING_DOCUMENTATION': return 'ri-file-unknow-line';
+      case 'BILLING_CONCERNS': return 'ri-money-dollar-circle-line';
+      default: return 'ri-error-warning-line';
+    }
   }
 
   // --- Document Checklist ---

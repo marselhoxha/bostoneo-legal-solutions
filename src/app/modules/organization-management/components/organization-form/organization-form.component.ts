@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { OrganizationService, Organization } from '../../../../core/services/organization.service';
+import { RbacService } from '../../../../core/services/rbac.service';
 import Swal from 'sweetalert2';
 
 declare var flatpickr: any;
@@ -33,6 +34,19 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
   slugAvailable = true;
   checkingSlug = false;
   originalSlug = ''; // Store original slug for edit mode
+  isSuperAdmin = false;
+
+  firmTypeOptions = [
+    { value: 'SOLO_PRACTITIONER', label: 'Solo Practitioner' },
+    { value: 'SMALL_FIRM', label: 'Small Firm' },
+    { value: 'MIDSIZE_FIRM', label: 'Mid-size Firm' },
+    { value: 'LARGE_FIRM', label: 'Large Firm' }
+  ];
+
+  // For read-only plan display
+  currentPlanLabel = '';
+  currentPlanExpiresAt = '';
+  currentFirmTypeLabel = '';
 
   planTypes = [
     { value: 'FREE', label: 'Free' },
@@ -79,26 +93,41 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private organizationService: OrganizationService,
+    private rbacService: RbacService,
     private route: ActivatedRoute,
     private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.isSuperAdmin = this.rbacService.hasRole('ROLE_SUPERADMIN');
     this.initForm();
 
     // Check if editing
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       if (params['id']) {
+        const requestedOrgId = +params['id'];
+
+        // Non-SUPERADMIN can only edit their own org
+        if (!this.isSuperAdmin) {
+          const userOrgId = this.organizationService.getCurrentOrganizationId();
+          if (!userOrgId || userOrgId !== requestedOrgId) {
+            this.router.navigate(['/home']);
+            return;
+          }
+        }
+
         this.isEditMode = true;
-        this.organizationId = +params['id'];
+        this.organizationId = requestedOrgId;
         this.loadOrganization();
       }
     });
 
-    // Initialize flatpickr after view init
-    setTimeout(() => {
-      this.initFlatpickr();
-    }, 100);
+    // Initialize flatpickr after view init (only for SUPERADMIN)
+    if (this.isSuperAdmin) {
+      setTimeout(() => {
+        this.initFlatpickr();
+      }, 100);
+    }
   }
 
   ngOnDestroy(): void {
@@ -120,6 +149,9 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
       // Plan
       planType: ['FREE', Validators.required],
       planExpiresAt: [''],
+
+      // Firm Type
+      firmType: ['SMALL_FIRM'],
 
       // Notification Preferences
       smsEnabled: [true],
@@ -193,6 +225,7 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
               logoUrl: org.logoUrl,
               planType: org.planType || 'FREE',
               planExpiresAt: org.planExpiresAt,
+              firmType: org.firmType || 'SMALL_FIRM',
               smsEnabled: org.smsEnabled,
               whatsappEnabled: org.whatsappEnabled,
               emailEnabled: org.emailEnabled,
@@ -201,6 +234,17 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
               signatureReminderWhatsapp: org.signatureReminderWhatsapp,
               signatureReminderDays: org.signatureReminderDays
             });
+
+            // Set read-only display values for non-SUPERADMIN
+            const firmTypeOption = this.firmTypeOptions.find(ft => ft.value === (org.firmType || 'SMALL_FIRM'));
+            this.currentFirmTypeLabel = firmTypeOption?.label || 'Small Firm';
+            const planOption = this.planTypeOptions.find(p => p.value === (org.planType || 'FREE'));
+            this.currentPlanLabel = planOption?.label || 'Free';
+            if (org.planExpiresAt) {
+              this.currentPlanExpiresAt = new Date(org.planExpiresAt).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric'
+              });
+            }
           }
           this.isLoading = false;
         },
@@ -292,7 +336,11 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
           text: `Organization ${this.isEditMode ? 'updated' : 'created'} successfully!`,
           timer: 2000
         }).then(() => {
-          this.router.navigate(['/organizations/details', org.id]);
+          if (this.isSuperAdmin) {
+            this.router.navigate(['/organizations/details', org.id]);
+          } else {
+            this.router.navigate(['/organizations/details', org.id]);
+          }
         });
       },
       error: (err) => {
@@ -309,7 +357,13 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/organizations/list']);
+    if (this.isSuperAdmin) {
+      this.router.navigate(['/organizations/list']);
+    } else if (this.organizationId) {
+      this.router.navigate(['/organizations/details', this.organizationId]);
+    } else {
+      this.router.navigate(['/home']);
+    }
   }
 
   // Form helpers

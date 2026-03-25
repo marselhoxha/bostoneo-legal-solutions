@@ -8382,6 +8382,406 @@ ol.ai-ordered-list {
   }
 }
 
+// ==================== ADJUSTER DEFENSE ANALYSIS ====================
+
+.adjuster-defense-card {
+  background: var(--vz-card-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.adjuster-defense-header {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #1a1d2e, #2d325a);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.adjuster-attack-item {
+  border-bottom: 1px solid var(--vz-light);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.adjuster-attack-header {
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--vz-light);
+  }
+}
+
+.adjuster-attack-body {
+  padding: 0 20px 16px 52px;
+}
+
+.adjuster-issue-text {
+  font-size: 13px;
+  color: var(--vz-body-color);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.adjuster-counter-box {
+  background: rgba(var(--vz-success-rgb), 0.06);
+  border-left: 3px solid var(--vz-success);
+  border-radius: 0 6px 6px 0;
+  padding: 12px 14px;
+}
+
+.adjuster-counter-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--vz-success);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.adjuster-counter-text {
+  font-size: 13px;
+  color: var(--vz-body-color);
+  line-height: 1.6;
+}
+
+// ==================== PROVIDER-GROUPED VIEW ====================
+
+.provider-group {
+  background: var(--vz-card-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.provider-group-header {
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--vz-light);
+  }
+}
+
+.provider-group-body {
+  border-top: 1px solid var(--vz-light);
+}
+
+.provider-visit-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px 10px 64px;
+  border-bottom: 1px solid var(--vz-light);
+  font-size: 13px;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+
+  &:hover {
+    background: rgba(var(--vz-primary-rgb), 0.03);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .visit-date {
+    width: 60px;
+    color: var(--vz-secondary-color);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+}
+
+// ==================== LIEN & RECORD TYPE SIDEBAR ====================
+
+.lien-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--vz-border-color);
+}
+
+.lien-breakdown {
+  margin-top: 4px;
+}
+
+.lien-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(var(--vz-danger-rgb), 0.05);
+  border-radius: 4px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.lien-holder {
+  font-weight: 500;
+  color: var(--vz-body-color);
+}
+
+.lien-amount {
+  font-weight: 600;
+  color: var(--vz-danger);
+}
+
+.record-type-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--vz-border-color);
+}
+
+.type-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.type-bar-label {
+  width: 90px;
+  color: var(--vz-secondary-color);
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.type-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--vz-primary);
+  min-width: 8px;
+  transition: width 0.3s ease;
+}
+
+.type-bar-count {
+  font-weight: 600;
+  width: 20px;
+  text-align: right;
+  font-size: 12px;
+}
+
+// ==================== TREATMENT TIMELINE ====================
+
+// Warning badge on sub-tab
+.subtab-badge.warning {
+  background: rgba(var(--vz-warning-rgb), 0.15);
+  color: var(--vz-warning);
+}
+
+// Horizontal timeline bar — Green Active + Floating Chips
+// Uses var(--vz-*) variables throughout so dark mode auto-adapts
+.timeline-bar-container {
+  position: relative;
+}
+
+.tbar {
+  display: flex;
+  height: 44px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--vz-border-color);
+  background: var(--vz-card-bg);
+}
+
+.tbar-active {
+  background: rgba(var(--vz-success-rgb), 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vz-success);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 0 8px;
+  min-width: 0;
+}
+
+.tbar-gap {
+  background: rgba(var(--vz-danger-rgb), 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.tbar-gap-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--vz-card-bg);
+  border: 1px solid rgba(var(--vz-danger-rgb), 0.15);
+  color: var(--vz-danger);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.tbar-full {
+  background: rgba(var(--vz-success-rgb), 0.15);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vz-success);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.tbar-dates {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  font-size: 10px;
+  color: var(--vz-secondary-color);
+  padding: 0 2px;
+}
+
+// Vertical timeline
+.vertical-timeline {
+  position: relative;
+  padding-left: 4px;
+}
+
+.timeline-date-group {
+  position: relative;
+  padding-left: 32px;
+  padding-bottom: 24px;
+  border-left: 2px solid var(--vz-border-color);
+  margin-left: 5px;
+
+  &:last-child {
+    border-left-color: transparent;
+  }
+}
+
+.timeline-date-dot {
+  position: absolute;
+  left: -6px;
+  top: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--vz-primary);
+  border: 2px solid var(--vz-card-bg);
+  box-shadow: 0 0 0 2px var(--vz-primary);
+}
+
+.timeline-date-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vz-primary);
+  margin-bottom: 10px;
+}
+
+.timeline-record-card {
+  background: var(--vz-card-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: var(--vz-primary);
+    box-shadow: 0 2px 8px rgba(var(--vz-primary-rgb), 0.12);
+    transform: translateX(2px);
+  }
+}
+
+.timeline-type-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+// Gap items
+.timeline-gap-item {
+  position: relative;
+  padding-left: 32px;
+  padding-bottom: 24px;
+  border-left: 2px dashed var(--vz-warning);
+  margin-left: 5px;
+}
+
+.timeline-gap-dot {
+  position: absolute;
+  left: -6px;
+  top: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--vz-warning);
+  border: 2px solid var(--vz-card-bg);
+  box-shadow: 0 0 0 2px var(--vz-warning);
+}
+
+.timeline-gap-card {
+  background: rgba(var(--vz-warning-rgb), 0.06);
+  border: 1px dashed rgba(var(--vz-warning-rgb), 0.3);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+
+.timeline-gap-days {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--vz-danger);
+  line-height: 1;
+}
+
+.timeline-gap-label {
+  font-weight: 600;
+  color: var(--vz-warning);
+  font-size: 13px;
+}
+
+.timeline-gap-detail {
+  font-size: 12px;
+  color: var(--vz-secondary-color);
+  line-height: 1.5;
+}
+
+.timeline-gap-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(var(--vz-danger-rgb), 0.06);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--vz-danger);
+
+  i {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+}
+
 // ==================== CASE OVERVIEW (Summary Tab) ====================
 
 .case-overview-section {

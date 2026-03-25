@@ -49,6 +49,10 @@ export class BackgroundTasksIndicatorComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // Clean up old tasks on init — stale running tasks AND accumulated completed tasks
+    this.backgroundTaskService.cleanupStaleTasks();
+    this.backgroundTaskService.clearCompletedTasks();
+
     // Subscribe to task changes
     this.backgroundTaskService.tasks$
       .pipe(takeUntil(this.destroy$))

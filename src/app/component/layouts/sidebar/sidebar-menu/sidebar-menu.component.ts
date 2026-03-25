@@ -189,53 +189,6 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
         ]
       },
 
-      // File Manager
-      {
-        id: 3,
-        label: 'File Manager',
-        icon: 'ri-folder-2-line',
-        isParent: true,
-        permission: { resource: 'DOCUMENT', action: 'VIEW' },
-        subItems: [
-          {
-            id: 31,
-            label: 'My Documents',
-            link: '/file-manager',
-            parentId: 3,
-            permission: { resource: 'DOCUMENT', action: 'VIEW' }
-          },
-          {
-            id: 32,
-            label: 'Templates',
-            link: '/file-manager/templates',
-            parentId: 3,
-            permission: { resource: 'DOCUMENT', action: 'VIEW' }
-          },
-          {
-            id: 33,
-            label: 'Firm Templates',
-            link: '/file-manager/firm-templates',
-            parentId: 3,
-            permission: { resource: 'SYSTEM', action: 'VIEW', hierarchyLevel: 30 }
-          },
-          {
-            id: 34,
-            label: 'Permissions',
-            link: '/file-manager/permissions',
-            parentId: 3,
-            permission: { resource: 'SYSTEM', action: 'VIEW', hierarchyLevel: 30 }
-          },
-          {
-            id: 35,
-            label: 'Deleted Files',
-            link: '/file-manager/deleted',
-            parentId: 3,
-            icon: 'ri-delete-bin-line',
-            permission: { resource: 'DOCUMENT', action: 'VIEW' }
-          }
-        ]
-      },
-
       // Time & Billing
       {
         id: 4,
@@ -425,10 +378,9 @@ export class SidebarMenuComponent implements OnInit, OnDestroy {
             link: '/organizations/list',
             parentId: 8,
             permission: {
-              resource: 'ORGANIZATION',
+              resource: 'SUPERADMIN',
               action: 'VIEW',
-              hierarchyLevel: 100,
-              roles: ['ROLE_ADMIN']
+              roles: ['ROLE_SUPERADMIN']
             }
           },
           {

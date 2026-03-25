@@ -3,6 +3,8 @@ package com.bostoneo.bostoneosolutions.controller;
 import com.bostoneo.bostoneosolutions.dto.PIDamageCalculationDTO;
 import com.bostoneo.bostoneosolutions.dto.PIDamageElementDTO;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import com.bostoneo.bostoneosolutions.service.JurisdictionResolver;
 import com.bostoneo.bostoneosolutions.service.PIDamageCalculationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,8 @@ import static org.springframework.http.HttpStatus.*;
 public class PIDamageCalculationController {
 
     private final PIDamageCalculationService damageService;
+    private final JurisdictionResolver jurisdictionResolver;
+    private final TenantService tenantService;
 
     // ===== Damage Elements =====
 
@@ -344,7 +348,8 @@ public class PIDamageCalculationController {
         log.info("Getting comparable analysis for case: {}", caseId);
 
         String injuryType = request.getOrDefault("injuryType", "general");
-        String jurisdiction = request.getOrDefault("jurisdiction", "Massachusetts");
+        String jurisdiction = request.getOrDefault("jurisdiction",
+                jurisdictionResolver.resolveStateName(tenantService.requireCurrentOrganizationId()));
 
         Map<String, Object> analysis = damageService.getComparableAnalysis(caseId, injuryType, jurisdiction);
 

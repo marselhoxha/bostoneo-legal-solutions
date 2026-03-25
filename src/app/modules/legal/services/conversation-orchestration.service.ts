@@ -9,6 +9,7 @@ import { Conversation, Message } from '../models/conversation.model';
 import { ConversationType, TaskType, ResearchMode } from '../models/enums/conversation-type.enum';
 import { WorkflowStep } from '../models/workflow.model';
 import { WorkflowStepStatus } from '../models/enums/workflow-step-status.enum';
+import { environment } from '../../../../environments/environment';
 
 export interface GenerateDocumentRequest {
   userId: number;
@@ -26,6 +27,7 @@ export interface GenerateConversationRequest {
   taskType: ConversationType;
   title: string;
   researchMode: ResearchMode;
+  jurisdiction?: string;
 }
 
 @Injectable({
@@ -34,6 +36,7 @@ export interface GenerateConversationRequest {
 export class ConversationOrchestrationService {
 
   private destroy$ = new Subject<void>();
+  private workflowEventSource?: EventSource;
 
   // Workflow step templates
   private workflowStepTemplates: Record<string, { id: number; icon: string; description: string; status: WorkflowStepStatus }[]> = {
@@ -177,28 +180,32 @@ export class ConversationOrchestrationService {
       const taskType = this.mapConversationTypeToWorkflowType(request.taskType);
       const steps = this.initializeWorkflowSteps(taskType);
       this.stateService.setWorkflowSteps(steps);
-      this.animateWorkflowSteps(steps);
 
       // Map to backend task type
       const backendTaskType = this.mapToBackendTaskType(request.taskType);
 
-      // Create conversation
-      this.legalResearchService.createGeneralConversation(request.title, backendTaskType)
+      // Create conversation with jurisdiction for state-specific research
+      this.legalResearchService.createGeneralConversation(request.title, backendTaskType, undefined, request.jurisdiction)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (session) => {
             const conversationId = session.id;
 
+            // Connect SSE for real-time workflow progress (uses session ID)
+            this.connectWorkflowSSE(conversationId, steps);
+
             // Send initial message — backend auto-selects mode
-            this.legalResearchService.sendMessageToConversation(conversationId, request.prompt)
+            this.legalResearchService.sendMessageToConversation(conversationId, request.prompt, request.jurisdiction)
               .pipe(takeUntil(this.destroy$))
               .subscribe({
                 next: (message) => {
+                  this.closeWorkflowSSE();
                   this.stateService.completeAllWorkflowSteps();
                   observer.next({ session, message });
                   observer.complete();
                 },
                 error: (error) => {
+                  this.closeWorkflowSSE();
                   const steps = this.stateService.getWorkflowSteps();
                   if (steps.length > 0) {
                     this.stateService.updateWorkflowStep(
@@ -224,24 +231,27 @@ export class ConversationOrchestrationService {
     conversationId: number,
     message: string,
     researchMode: ResearchMode,
-    taskType: ConversationType
+    taskType: ConversationType,
+    jurisdiction?: string
   ): Observable<any> {
     return new Observable(observer => {
       // Initialize workflow
       const workflowType = this.mapConversationTypeToWorkflowType(taskType);
       const steps = this.initializeWorkflowSteps(workflowType);
       this.stateService.setWorkflowSteps(steps);
-      this.animateWorkflowSteps(steps);
+      this.connectWorkflowSSE(conversationId, steps);
 
-      this.legalResearchService.sendMessageToConversation(conversationId, message)
+      this.legalResearchService.sendMessageToConversation(conversationId, message, jurisdiction)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
+            this.closeWorkflowSSE();
             this.stateService.completeAllWorkflowSteps();
             observer.next(response);
             observer.complete();
           },
           error: (error) => {
+            this.closeWorkflowSSE();
             const steps = this.stateService.getWorkflowSteps();
             if (steps.length > 0) {
               this.stateService.updateWorkflowStep(
@@ -337,9 +347,90 @@ export class ConversationOrchestrationService {
   }
 
   /**
+   * Connect to SSE progress stream to drive workflow steps in real-time.
+   * Uses hybrid approach: starts timer animation as fallback, cancels it when SSE events arrive.
+   */
+  private connectWorkflowSSE(sessionId: number, steps: WorkflowStep[]): void {
+    this.closeWorkflowSSE();
+
+    const totalSteps = steps.length;
+    if (totalSteps === 0) return;
+
+    // Start timer animation immediately as fallback
+    this.animateWorkflowSteps(steps);
+
+    const sseUrl = `${environment.apiUrl}/api/ai/legal-research/progress-stream?sessionId=${sessionId}`;
+    this.workflowEventSource = new EventSource(sseUrl);
+    let sseActive = false;
+
+    const cancelTimerFallback = () => {
+      if (!sseActive) {
+        sseActive = true;
+        // Timer timeouts are managed by animateWorkflowSteps — they auto-clear on next call
+      }
+    };
+
+    this.workflowEventSource.addEventListener('progress', (event: MessageEvent) => {
+      try {
+        const progressEvent = JSON.parse(event.data);
+        const stepType = progressEvent.stepType;
+        cancelTimerFallback();
+
+        if (stepType === 'query_analysis') {
+          if (totalSteps > 0) {
+            this.stateService.updateWorkflowStep(steps[0].id, { status: WorkflowStepStatus.Active });
+          }
+        } else if (stepType === 'tool_execution') {
+          if (totalSteps > 0) {
+            this.stateService.updateWorkflowStep(steps[0].id, { status: WorkflowStepStatus.Completed });
+          }
+          for (let i = 1; i < totalSteps - 1; i++) {
+            this.stateService.updateWorkflowStep(steps[i].id, { status: WorkflowStepStatus.Active });
+          }
+        }
+      } catch (error) {
+        // Ignore parse errors from SSE
+      }
+    });
+
+    this.workflowEventSource.addEventListener('complete', () => {
+      cancelTimerFallback();
+      this.stateService.completeAllWorkflowSteps();
+      this.closeWorkflowSSE();
+    });
+
+    this.workflowEventSource.addEventListener('error', (event: MessageEvent) => {
+      if (event.data) {
+        cancelTimerFallback();
+        if (totalSteps > 0) {
+          this.stateService.updateWorkflowStep(steps[totalSteps - 1].id, { status: WorkflowStepStatus.Error });
+        }
+        this.closeWorkflowSSE();
+      }
+    });
+
+    this.workflowEventSource.onerror = () => {
+      if (this.workflowEventSource?.readyState === EventSource.CLOSED) {
+        this.closeWorkflowSSE();
+      }
+    };
+  }
+
+  /**
+   * Close the SSE connection for workflow progress
+   */
+  private closeWorkflowSSE(): void {
+    if (this.workflowEventSource) {
+      this.workflowEventSource.close();
+      this.workflowEventSource = undefined;
+    }
+  }
+
+  /**
    * Cleanup
    */
   destroy(): void {
+    this.closeWorkflowSSE();
     this.destroy$.next();
     this.destroy$.complete();
   }

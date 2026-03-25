@@ -27,6 +27,7 @@ variable "api_image" {
 }
 
 variable "certificate_arn" {
-  description = "ACM certificate ARN for HTTPS"
+  description = "ACM certificate ARN for HTTPS (wildcard *.legience.com)"
   type        = string
+  default     = "arn:aws:acm:us-east-1:724629565287:certificate/fceaa5d3-fbf1-4d97-9a6d-51855625db70"
 }

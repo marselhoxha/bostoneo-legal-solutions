@@ -85,6 +85,11 @@ Velzon
 backend/uploads/
 
 # Terraform
+# Local-only directories (mockups, marketing assets, design exports)
+marketing/
+mockups/
+
+# Terraform
 **/.terraform/
 *.tfplan
 *.tfstate

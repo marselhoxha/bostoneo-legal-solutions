@@ -111,6 +111,8 @@ public class AiWorkspaceDocumentService {
     private final LegalDocumentRepository legalDocumentRepository;
     private final FileItemRepository fileItemRepository;
     private final DocumentTypeTemplateRegistry templateRegistry;
+    private final JurisdictionResolver jurisdictionResolver;
+    private final DocumentTemplateEngine documentTemplateEngine;
 
     /** Holds system + user message for draft generation */
     record DraftPrompt(String systemMessage, String userMessage) {}
@@ -996,6 +998,22 @@ public class AiWorkspaceDocumentService {
             throw e;
         }
 
+        // TEMPLATE RENDERING: For supported document types, parse AI JSON and inject into HTML template
+        if (documentTemplateEngine.supportsTemplateGeneration(documentType) && legalCase != null) {
+            try {
+                content = renderWithTemplate(content, legalCase, jurisdiction, documentType, userId, orgId);
+                log.info("✅ Template rendering complete — caption and structure from HTML template");
+            } catch (Exception e) {
+                log.warn("⚠️ Template rendering failed, using raw AI content as fallback: {}", e.getMessage());
+                // Fall through to existing markdown flow — document still gets delivered
+            }
+        }
+
+        // POST-PROCESSING: Skip citation regex for template-rendered HTML (would corrupt HTML structure).
+        // Template docs have citations as plain text inside <p> tags — they render correctly as-is.
+        if (content.startsWith("<!-- HTML_TEMPLATE -->")) {
+            log.info("📋 Skipping citation post-processing for template-rendered document");
+        } else {
         // POST-PROCESSING: Verify citations and inject URLs (conditional based on document type)
         CitationLevel postProcessingLevel = getCitationLevel(documentType);
         log.info("📋 POST-PROCESSING: Citation level for '{}' is {}", documentType, postProcessingLevel);
@@ -1010,7 +1028,7 @@ public class AiWorkspaceDocumentService {
                     content = legalResearchService.verifyAllCitationsInResponse(content);
                     log.info("✅ Citation verification complete");
 
-                    // Step 2: Inject URLs for statutory/rule citations (FRCP, M.G.L., CFR, etc.)
+                    // Step 2: Inject URLs for statutory/rule citations (FRCP, state statutes, CFR, etc.)
                     content = citationUrlInjector.inject(content);
                     log.info("✅ URL injection complete");
                 } catch (Exception e) {
@@ -1039,6 +1057,7 @@ public class AiWorkspaceDocumentService {
                 // Don't run any citation verification or URL injection
                 break;
         }
+        } // end if (!content.startsWith("<!-- HTML_TEMPLATE -->"))
 
         // 6. Validate content completeness (monitoring only - non-blocking)
         String validationWarning = validateDocumentCompleteness(content);
@@ -1255,8 +1274,20 @@ public class AiWorkspaceDocumentService {
                     try {
                         String content = accumulated.toString();
 
-                        // Post-processing: citation verification + URL injection
-                        content = postProcessDraftContent(content, documentType, conversationId);
+                        // Template rendering: for supported types, parse JSON and inject into HTML template
+                        if (documentTemplateEngine.supportsTemplateGeneration(documentType) && finalCase != null) {
+                            try {
+                                content = renderWithTemplate(content, finalCase, jurisdiction, documentType, userId, orgId);
+                                log.info("✅ Template rendering complete (streaming path)");
+                            } catch (Exception e) {
+                                log.warn("⚠️ Template rendering failed (streaming), using raw content: {}", e.getMessage());
+                            }
+                        }
+
+                        // Post-processing: skip for template HTML (regex would corrupt it)
+                        if (!content.startsWith("<!-- HTML_TEMPLATE -->")) {
+                            content = postProcessDraftContent(content, documentType, conversationId);
+                        }
 
                         // Validate completeness (monitoring only)
                         String validationWarning = validateDocumentCompleteness(content);
@@ -2096,10 +2127,11 @@ public class AiWorkspaceDocumentService {
     /**
      * Build EvenUp-style demand letter prompt using LegalCaseDTO fields.
      * Produces a 6-section demand package: Salutation, Facts & Liability, Injuries & Treatments,
-     * Damages (per diem analysis), Bad Faith Notice (M.G.L. c. 176D, c. 93A), Exhibit List.
+     * Damages (per diem analysis), Bad Faith Notice, Exhibit List.
      */
     private String buildDemandLetterPrompt(LegalCaseDTO caseDto, PIDamageCalculationDTO damages, String caseDataSection, boolean isDetailed) {
         String letterDate = LocalDate.now().format(DL_LETTER_DATE_FORMATTER);
+        String stateName = jurisdictionResolver.resolveStateName(getRequiredOrganizationId());
 
         // Safely extract values from DTO
         String clientName = caseDto.getClientName() != null ? caseDto.getClientName() : "Unknown Client";
@@ -2128,7 +2160,8 @@ public class AiWorkspaceDocumentService {
             ? dlFormatCurrency(damages.getPainSufferingTotal().doubleValue()) : "$0";
 
         return String.format("""
-            Generate a professional demand package for a Massachusetts personal injury case.
+            JURISDICTION: %s
+            Generate a professional demand package for a personal injury case in the above jurisdiction.
             This must read as a polished, attorney-ready demand letter — NOT a template or outline.
 
             ============================================================
@@ -2207,9 +2240,9 @@ public class AiWorkspaceDocumentService {
             - Accident narrative: Describe what happened in vivid, chronological detail. Use the actual accident location and date from CASE DATA.
             - Defendant's negligence: Explain clearly how the defendant was at fault.
             - Legal standard for liability:
-              * For rear-end collisions: "Under Massachusetts law, a rear-end collision creates a rebuttable presumption of negligence on the following driver." Reference M.G.L. c. 90, § 14.
+              * For rear-end collisions: Reference the applicable state statute creating a presumption of negligence on the following driver. Use the correct citation for the jurisdiction.
               * IMPORTANT: Use "presumption of negligence" — NEVER "negligence per se" for rear-end cases.
-              * For other collisions: State the applicable duty of care and how it was breached.
+              * For other collisions: State the applicable duty of care and how it was breached using correct state law citations.
             - Conclude with a strong statement that liability is clear and undisputed.
 
             ============================================================
@@ -2244,7 +2277,7 @@ public class AiWorkspaceDocumentService {
 
             After the table, include: "If you claim any of the medical treatment above was unnecessary, or that any of the bills associated with such treatment were unreasonable, then please identify in writing which bills you dispute and the factual basis for such dispute."
 
-            PIP COORDINATION: "Client's PIP benefits under M.G.L. c. 90, § 34A have been exhausted/coordinated, entitling recovery of the full medical special damages from the bodily injury coverage."
+            PIP/NO-FAULT COORDINATION: If the jurisdiction has PIP or no-fault insurance requirements, include a coordination statement referencing the applicable state PIP statute. State that PIP benefits have been exhausted/coordinated, entitling recovery of the full medical special damages from the bodily injury coverage. Use the correct statutory citation for this jurisdiction.
 
             ### 4.3 Future Medical Expenses (if applicable)
             If future medical expense data exists in the DAMAGES CALCULATION, create a table with columns: Procedure, Years, Frequency/Year, Cost Each, Total. Use actual projected treatment data. Include a bold Total Future Medical row.
@@ -2276,8 +2309,8 @@ public class AiWorkspaceDocumentService {
             SECTION 5: BAD FAITH NOTICE & DEMAND TO SETTLE
             ============================================================
 
-            Statutory Bad Faith Notice (Massachusetts-Specific):
-            "Please be advised that failure to tender policy limits under circumstances where liability is clear and damages substantially exceed the policy limits may constitute an unfair claim settlement practice under M.G.L. c. 176D, § 3(9) and an unfair or deceptive act under M.G.L. c. 93A, §§ 2 and 9. We reserve all rights to pursue such claims if this matter is not resolved promptly and fairly."
+            Statutory Bad Faith Notice:
+            Include a bad faith / unfair claim settlement practices notice citing the applicable state statutes for this jurisdiction. Reference the state's unfair insurance practices act and consumer protection statute with correct citations. Warn that failure to tender policy limits may constitute a violation of these statutes and that all rights are reserved.
 
             Demand:
             - State the total demand amount using the actual Total Damages calculated in Section 4.1
@@ -2285,7 +2318,7 @@ public class AiWorkspaceDocumentService {
               Use assertive language: "Tender of the policy limits is the only reasonable course of action to protect your insured from personal exposure."
               Do NOT use weak language like "we will consider" or "we may accept."
             - 30-day response deadline from date of letter
-            - Consequences of non-response: "Failure to respond within this timeframe will result in the immediate filing of a civil action, at which time we will seek all available damages including those provided under M.G.L. c. 93A."
+            - Consequences of non-response: State that failure to respond will result in filing a civil action seeking all available damages including those under the applicable state consumer protection or bad faith statute. Use the correct citation for this jurisdiction.
 
             Closing:
             - "Please do not hesitate to contact me if you have any additional questions or concerns."
@@ -2307,10 +2340,11 @@ public class AiWorkspaceDocumentService {
             ============================================================
             FINAL SELF-CHECK BEFORE RESPONDING
             ============================================================
-            Before you submit, scan your entire response for the characters [ and ]. If you find ANY square brackets (except in statute citations like M.G.L. c. 90), you have FAILED. Replace them with actual data from the CASE DATA sections above.
+            Before you submit, scan your entire response for the characters [ and ]. If you find ANY square brackets (except in statute citations), you have FAILED. Replace them with actual data from the CASE DATA sections above.
 
             %s
             """,
+            stateName,
             clientName,
             defendantName,
             insuranceCompany,
@@ -2331,7 +2365,7 @@ public class AiWorkspaceDocumentService {
             daysSinceAccidentStr, // pre-computed days since accident for pain & suffering narrative
             isDetailed
                 ? "Make the letter thorough and compelling, suitable for policy limits demands. This is a serious injury case warranting detailed documentation."
-                : "Keep the letter focused and professional while including all required Massachusetts-specific elements."
+                : "Keep the letter focused and professional while including all required jurisdiction-specific elements."
         );
     }
 
@@ -2440,13 +2474,34 @@ public class AiWorkspaceDocumentService {
             } catch (Exception e) {
                 log.warn("Failed to build demand letter prompt, falling back to generic template: {}", e.getMessage());
                 // Fall through to generic path below
-                appendGenericDocumentPrompt(prompt, documentType);
+                appendGenericDocumentPrompt(prompt, documentType, jurisdiction);
             }
+        } else if (documentTemplateEngine.supportsTemplateGeneration(documentType) && legalCase != null) {
+            // Template-generated docs: provide content/legal guidance WITHOUT formatting/caption instructions
+            // (those conflict with the JSON schema that follows). Focus on Texas legal substance.
+            prompt.append("Generate SUBSTANTIVE LEGAL CONTENT for a ").append(jurisdiction).append(" court filing.\n");
+            prompt.append("The court caption, title, and signature block are handled by the template — do NOT generate them.\n\n");
+
+            prompt.append("**LEGAL WRITING CONVENTIONS (").append(jurisdiction).append(")**:\n");
+            prompt.append("- Opening: 'COMES NOW the Defendant, [NAME], by and through undersigned counsel, and respectfully moves this Honorable Court to [relief]...'\n");
+            prompt.append("- Prayer: 'WHEREFORE, PREMISES CONSIDERED, the Defendant respectfully moves that this Honorable Court: 1. [specific relief] 2. [specific relief] 3. Grant such other and further relief as the Court deems just.'\n");
+            prompt.append("- Preamble: 'TO THE HONORABLE JUDGE OF SAID COURT:'\n");
+            prompt.append("- Use formal third-person court filing tone throughout\n");
+            prompt.append("- Cite Texas cases from S.W.2d/S.W.3d reporters (Tex. Crim. App., Tex. App.)\n");
+            prompt.append("- Cite Texas statutes: Tex. Code Crim. Proc., Tex. Transp. Code, Tex. Penal Code\n");
+            prompt.append("- Reference constitutions: Tex. Const. art. I, § 9 and U.S. Const. amend. IV\n");
+            prompt.append("- Cite 1-2 controlling cases per legal point — quality over quantity\n\n");
+
+            prompt.append("**REQUIRED SECTIONS** (use these exact section names):\n");
+            prompt.append("- I. STATEMENT OF FACTS — Narrative of what happened, using case data provided\n");
+            prompt.append("- II. APPLICABLE LEGAL STANDARDS — governing statutes and constitutional provisions (1-2 paragraphs)\n");
+            prompt.append("- III. ARGUMENT — subsections A, B, C for each ground. Apply law to facts.\n");
+            prompt.append("- The 'prayer' JSON field handles the WHEREFORE — always include specific relief\n\n");
         } else {
             if (isDemandLetterType(documentType)) {
                 log.warn("Demand letter type '{}' requested but no case linked — using generic prompt", documentType);
             }
-            appendGenericDocumentPrompt(prompt, documentType);
+            appendGenericDocumentPrompt(prompt, documentType, jurisdiction);
         }
 
         // Indicate research mode for token allocation and citation behavior
@@ -2455,7 +2510,8 @@ public class AiWorkspaceDocumentService {
             prompt.append("**TOOL USAGE**: Use citation verification tools to validate all legal citations\n\n");
         }
 
-        prompt.append("JURISDICTION: ").append(jurisdiction).append("\n\n");
+        prompt.append("JURISDICTION: ").append(jurisdiction).append("\n");
+        prompt.append("Use ").append(jurisdiction).append(" rules of procedure, ").append(jurisdiction).append(" case law, and the applicable federal circuit's precedent. Format the court caption and signature block according to ").append(jurisdiction).append(" court conventions.\n\n");
 
         if (caseContext != null && !caseContext.isEmpty()) {
             prompt.append(caseContext).append("\n");
@@ -2502,9 +2558,9 @@ public class AiWorkspaceDocumentService {
             prompt.append("7. Address the specific issues in this case\n");
         }
 
-        // DETERMINE CITATION POLICY based on document type
-        CitationLevel citationLevel = getCitationLevel(documentType);
-        log.info("Document type '{}' has citation level: {}", documentType, citationLevel);
+        // DETERMINE CITATION POLICY based on document type (and jurisdiction-specific override if available)
+        CitationLevel citationLevel = templateRegistry.getCitationLevel(documentType, jurisdiction);
+        log.info("Document type '{}' (jurisdiction: {}) has citation level: {}", documentType, jurisdiction, citationLevel);
 
         // CONDITIONAL CITATION POLICY based on research mode AND document type
         if ("THOROUGH".equalsIgnoreCase(researchMode)) {
@@ -2535,22 +2591,24 @@ public class AiWorkspaceDocumentService {
                     prompt.append("- Settlement value and business pressure\n");
                     prompt.append("- Clear liability narrative (defendant's fault)\n\n");
                     prompt.append("**CITATION RULES - STRICT**:\n");
-                    prompt.append("DO NOT cite case law precedents (no 'See Smith v. Jones, 123 Mass. 456').\n");
+                    prompt.append("DO NOT cite case law precedents (no 'See Smith v. Jones, 123 [Reporter] 456').\n");
                     prompt.append("DO NOT cite court decisions or judicial opinions.\n");
                     prompt.append("You MAY cite 1-2 directly applicable STATUTES if essential (e.g., 'G.L. c. 231, § 6').\n");
                     prompt.append("You MAY reference general legal standards WITHOUT case names.\n\n");
-                    prompt.append("**EXAMPLE - CORRECT**: 'Under Massachusetts law, a rear-end collision creates a presumption of negligence on the part of the following driver. ");
+                    prompt.append("**EXAMPLE - CORRECT**: 'Under state law, a rear-end collision creates a presumption of negligence on the part of the following driver. ");
                     prompt.append("Your insured failed to maintain a safe distance and proper control, directly causing this collision and our client's injuries.'\n\n");
-                    prompt.append("**EXAMPLE - INCORRECT**: 'See Haddad v. Burns, 59 Mass. App. Ct. 582 (2003); Meuse v. Fox, 39 Mass. App. Ct. (1995)...'\n\n");
+                    prompt.append("**EXAMPLE - INCORRECT**: 'See Haddad v. Burns, 59 [Reporter] 582 (2003); Meuse v. Fox, 39 [Reporter] (1995)...'\n\n");
                     prompt.append("Remember: This is about BUSINESS and SETTLEMENT, not legal scholarship.\n\n");
                     break;
 
                 case COMPREHENSIVE:
-                    prompt.append("\nCITATION VERIFICATION ENABLED (THOROUGH MODE - Legal Brief/Motion):\n");
-                    prompt.append("You may include verified case citations and legal precedents to support your arguments.\n");
-                    prompt.append("All citations will be automatically verified via CourtListener and legal databases.\n");
-                    prompt.append("Generate complete lists and detailed legal analysis with proper citations.\n");
-                    prompt.append("You have permission to cite controlling case law, statutes, and regulations.\n\n");
+                    prompt.append("\nCITATION POLICY (THOROUGH MODE - Legal Brief/Motion):\n");
+                    prompt.append("You MUST include real case law citations with proper Bluebook format and pin cites.\n");
+                    prompt.append("Do NOT use [CITATION NEEDED] placeholders — include the actual cases you know.\n");
+                    prompt.append("All citations will be automatically verified via CourtListener after generation.\n");
+                    prompt.append("Cite controlling cases from the applicable jurisdiction (state supreme court, appellate courts, and the governing federal circuit).\n");
+                    prompt.append("Include specific procedural rule citations (e.g., Tex. R. Civ. P. 91a, Fed. R. Civ. P. 12(b)(6)).\n");
+                    prompt.append("If you are uncertain about a specific citation detail, include your best knowledge — verification will catch errors.\n\n");
                     break;
             }
         } else {
@@ -2560,8 +2618,8 @@ public class AiWorkspaceDocumentService {
             prompt.append("Fabricated citations can result in court sanctions and attorney malpractice.\n\n");
             prompt.append("CITATION RULES:\n");
             prompt.append("ALLOWED:\n");
-            prompt.append("  - General legal principles: 'Under Massachusetts law...' or 'Federal courts have held...'\n");
-            prompt.append("  - Descriptive placeholders: [CITE: Massachusetts personal jurisdiction standard]\n");
+            prompt.append("  - General legal principles: 'Under state law...' or 'Federal courts have held...'\n");
+            prompt.append("  - Descriptive placeholders: [CITE: state personal jurisdiction standard]\n");
             prompt.append("  - Generic references: 'Courts apply a three-part test [CITATION NEEDED: specific standard]'\n");
             prompt.append("  - Legal concepts: 'The purposeful availment doctrine requires...'\n\n");
             prompt.append("PROHIBITED:\n");
@@ -2572,9 +2630,44 @@ public class AiWorkspaceDocumentService {
             prompt.append("REMINDER: All citations must be added manually by attorney after verification with legal research tools.\n");
         }
 
-        // FORMATTING: Letter-specific vs structured document
+        // FORMATTING: Template-based JSON vs letter vs markdown
         prompt.append("\nFORMATTING REQUIREMENTS:\n");
-        if (isLetterType(documentType) && !isDemandLetterType(documentType)) {
+        if (documentTemplateEngine.supportsTemplateGeneration(documentType) && legalCase != null) {
+            // Template-based: AI returns ONLY variable content as JSON.
+            // The template handles: caption, preamble, COMES NOW intro, WHEREFORE prayer, signature, certificate.
+            prompt.append("**CRITICAL: Return your response as a JSON object** (no markdown, no code fences).\n");
+            prompt.append("The template handles caption, preamble, introduction, prayer, signature, and certificate of service.\n");
+            prompt.append("You ONLY generate: title, relief description, facts, legal standard, and argument subsections.\n");
+            prompt.append("DO NOT wrap in ```json``` fences. Return ONLY the raw JSON object.\n\n");
+            prompt.append("JSON SCHEMA:\n");
+            prompt.append("{\n");
+            prompt.append("  \"title\": \"MOTION TO SUPPRESS BLOOD ALCOHOL EVIDENCE\",\n");
+            prompt.append("  \"reliefSought\": \"suppress all blood alcohol evidence obtained on December 14, 2025, including the blood sample, BAC results of 0.11%, and all derivative evidence\",\n");
+            prompt.append("  \"facts\": \"On December 14, 2025... (full factual narrative, use \\n\\n between paragraphs)\",\n");
+            prompt.append("  \"legalStandard\": \"The Fourth Amendment... Article 38.23(a)... (governing law, 1-2 paragraphs)\",\n");
+            prompt.append("  \"arguments\": [\n");
+            prompt.append("    { \"letter\": \"A\", \"heading\": \"The Traffic Stop Lacked Reasonable Suspicion\", \"body\": \"A traffic stop constitutes a seizure...\" },\n");
+            prompt.append("    { \"letter\": \"B\", \"heading\": \"The Blood Draw Violated Section 724.017\", \"body\": \"...\" }\n");
+            prompt.append("  ],\n");
+            prompt.append("  \"prayerItems\": [\n");
+            prompt.append("    \"Suppress the blood sample and all BAC evidence\",\n");
+            prompt.append("    \"Suppress all evidence derived from the unlawful traffic stop\",\n");
+            prompt.append("    \"Set this Motion for an evidentiary hearing\"\n");
+            prompt.append("  ]\n");
+            prompt.append("}\n\n");
+            prompt.append("RULES:\n");
+            prompt.append("- 'title': ALL CAPS, short (e.g., 'MOTION TO SUPPRESS BLOOD ALCOHOL EVIDENCE')\n");
+            prompt.append("- 'reliefSought': completes the sentence 'moves this Honorable Court to [reliefSought]' — lowercase, specific\n");
+            prompt.append("- 'facts': factual narrative only. Use case data provided. Use \\n\\n between paragraphs.\n");
+            prompt.append("- 'legalStandard': governing statutes and constitutional provisions. 1-2 paragraphs MAX.\n");
+            prompt.append("- 'arguments': each is a separate GROUND for the motion. 2-4 arguments. Each has letter, heading, body.\n");
+            prompt.append("- 'prayerItems': specific relief items (the template adds 'grant other relief' automatically)\n");
+            prompt.append("- Use plain text in all fields. Do NOT use markdown ** or # formatting.\n");
+            prompt.append("- Do NOT use [ATTORNEY TO INSERT: ...] placeholders. Write substantive content or omit.\n");
+            prompt.append("- Cite 1-2 controlling cases per argument. Do NOT string-cite 5+ cases.\n");
+            prompt.append("- MAXIMUM 1000-1500 words total across all fields. Be CONCISE.\n");
+            prompt.append("- Write like a practicing attorney, not a law professor.\n");
+        } else if (isLetterType(documentType) && !isDemandLetterType(documentType)) {
             prompt.append("- This is a LETTER — do NOT use markdown headers (#, ##, ###) in the body\n");
             prompt.append("- Write as flowing prose paragraphs, not sections with headers\n");
         } else {
@@ -2634,14 +2727,43 @@ public class AiWorkspaceDocumentService {
         return new DraftPrompt(systemMessage, prompt.toString());
     }
 
+    /**
+     * Parse AI response as structured JSON and render through HTML template.
+     * Falls back by throwing an exception if JSON parsing fails (caller catches and uses raw content).
+     */
+    private String renderWithTemplate(String aiContent, LegalCase legalCase, String jurisdiction, String documentType, Long userId, Long orgId) {
+        // Strip markdown code fences if the AI wrapped JSON in ```json ... ```
+        String jsonStr = aiContent.trim();
+        if (jsonStr.startsWith("```")) {
+            jsonStr = jsonStr.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "").trim();
+        }
+
+        // Parse JSON into AiDocumentResponse
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        com.bostoneo.bostoneosolutions.dto.ai.AiDocumentResponse aiResponse;
+        try {
+            aiResponse = mapper.readValue(jsonStr, com.bostoneo.bostoneosolutions.dto.ai.AiDocumentResponse.class);
+        } catch (Exception e) {
+            throw new RuntimeException("AI did not return valid JSON: " + e.getMessage());
+        }
+
+        // Validate minimum fields
+        if (aiResponse.getTitle() == null || aiResponse.getFacts() == null || aiResponse.getFacts().isBlank()) {
+            throw new RuntimeException("AI JSON missing required fields (title, facts)");
+        }
+
+        // Render through template engine
+        return documentTemplateEngine.renderDocument(aiResponse, legalCase, jurisdiction, documentType, userId, orgId);
+    }
+
     /** Generic document prompt (non-demand-letter types) */
-    private void appendGenericDocumentPrompt(StringBuilder prompt, String documentType) {
+    private void appendGenericDocumentPrompt(StringBuilder prompt, String documentType, String jurisdiction) {
         prompt.append("Generate a professional legal ").append(documentType).append(" document.\n\n");
-        String documentTemplate = templateRegistry.getTemplateText(documentType);
+        String documentTemplate = templateRegistry.getTemplateText(documentType, jurisdiction);
         if (!documentTemplate.isEmpty()) {
             prompt.append(documentTemplate).append("\n");
         } else {
-            String hints = templateRegistry.getHints(documentType);
+            String hints = templateRegistry.getHints(documentType, jurisdiction);
             if (hints != null && !hints.isEmpty()) {
                 prompt.append("**DOCUMENT STRUCTURE GUIDANCE**:\n");
                 prompt.append(hints).append("\n\n");
@@ -3967,16 +4089,19 @@ public class AiWorkspaceDocumentService {
         String bottomPadding = hasFooter ? "96px" : "64px";
         return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/>"
              + "<style>"
-             // Body: professional legal document styling — serif font, 12pt
+             // Body: court filing format — serif font, 12pt, double-spaced, 1-inch margins
              + "body { font-family: 'Times New Roman', Georgia, serif; "
-             + "font-size: 12pt; line-height: 1.6; color: #212529; margin: 0; padding: 36px 64px " + bottomPadding + " 64px; }"
-             // Headings: subtle, legal-appropriate sizes
-             + "h1 { font-size: 16pt; font-weight: 700; margin: 20px 0 10px; color: #212529; line-height: 1.3; }"
-             + "h2 { font-size: 14pt; font-weight: 600; margin: 18px 0 8px; color: #212529; line-height: 1.3; }"
-             + "h3 { font-size: 13pt; font-weight: 600; margin: 16px 0 8px; color: #212529; line-height: 1.3; }"
-             + "h4 { font-size: 12pt; font-weight: 600; margin: 14px 0 6px; color: #212529; line-height: 1.3; }"
-             // Paragraphs
-             + "p { margin: 0 0 12px; }"
+             + "font-size: 12pt; line-height: 2.0; color: #212529; margin: 0; padding: 72px 72px " + bottomPadding + " 72px; }"
+             // Headings: uniform 12pt, no indent — formatting matches real court filings
+             // h1 = document title (centered + underlined)
+             // h2 = section headings (centered)
+             // h3 = subsection headings (left-aligned)
+             + "h1 { font-size: 12pt; font-weight: 700; margin: 20px 0 10px; color: #212529; text-align: center; text-indent: 0; text-decoration: underline; }"
+             + "h2 { font-size: 12pt; font-weight: 700; margin: 18px 0 8px; color: #212529; text-align: center; text-indent: 0; }"
+             + "h3 { font-size: 12pt; font-weight: 700; margin: 16px 0 8px; color: #212529; text-indent: 0; }"
+             + "h4 { font-size: 12pt; font-weight: 600; margin: 14px 0 6px; color: #212529; text-indent: 0; }"
+             // Paragraphs: no global indent — body paragraph indent applied via inline style in template
+             + "p { margin: 0 0 0; }"
              // Tables: dark header matching CKEditor preview, clean body rows
              + "table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 11pt; }"
              + "th, td { border: 1px solid #dee2e6; padding: 10px 12px; text-align: left; vertical-align: top; }"
@@ -4026,6 +4151,9 @@ public class AiWorkspaceDocumentService {
              // Page-break rules: keep headings with their following content
              + "h1, h2, h3, h4, h5, h6 { page-break-after: avoid; }"
              + "p { orphans: 3; widows: 3; }"
+             // Caption tables: borderless, single-spaced, 12pt (override body double-spacing)
+             + "table[border=\"0\"] { border: none !important; width: 100% !important; margin: 0 !important; font-size: 12pt !important; line-height: 1.3 !important; }"
+             + "table[border=\"0\"] td, table[border=\"0\"] th { border: none !important; padding: 2px 4px; font-size: 12pt !important; text-indent: 0 !important; }"
              + "table { page-break-inside: avoid; }" // iText treats as hint — oversized tables will still break
              + "ul, ol { page-break-inside: avoid; }"
              + "li { page-break-inside: avoid; }"
@@ -5136,15 +5264,15 @@ public class AiWorkspaceDocumentService {
 
         if (documentType != null && !documentType.isEmpty()) {
             sb.append("DOCUMENT TYPE: ").append(documentType).append("\n");
-            sb.append(getDocumentTypeHints(documentType));
+            sb.append(getDocumentTypeHints(documentType, jurisdiction));
             sb.append("\n");
         }
 
         return sb.toString();
     }
 
-    private String getDocumentTypeHints(String documentType) {
-        return templateRegistry.getHints(documentType);
+    private String getDocumentTypeHints(String documentType, String jurisdiction) {
+        return templateRegistry.getHints(documentType, jurisdiction);
     }
 
     /**

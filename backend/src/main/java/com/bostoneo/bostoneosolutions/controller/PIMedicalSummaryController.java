@@ -265,6 +265,55 @@ public class PIMedicalSummaryController {
     }
 
     /**
+     * Retrieve saved adjuster defense analysis (if previously generated).
+     */
+    @GetMapping("/adjuster-analysis")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> getSavedAdjusterAnalysis(@PathVariable("caseId") Long caseId) {
+        Map<String, Object> analysis = summaryService.getSavedAdjusterAnalysis(caseId);
+        if (analysis == null) {
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(of("analysis", (Object) null, "exists", false))
+                            .message("No adjuster analysis found")
+                            .status(OK)
+                            .statusCode(OK.value())
+                            .build());
+        }
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("analysis", analysis, "exists", true))
+                        .message("Adjuster analysis retrieved")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
+     * Generate AI-powered adjuster defense analysis.
+     * Predicts how adjusters will attack the case and provides counter-arguments.
+     */
+    @PostMapping("/adjuster-analysis")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> generateAdjusterAnalysis(@PathVariable("caseId") Long caseId) {
+
+        log.info("Generating adjuster defense analysis for case: {}", caseId);
+
+        Map<String, Object> analysis = summaryService.generateAdjusterDefenseAnalysis(caseId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("analysis", analysis))
+                        .message("Adjuster defense analysis generated successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
      * Delete medical summary
      */
     @DeleteMapping

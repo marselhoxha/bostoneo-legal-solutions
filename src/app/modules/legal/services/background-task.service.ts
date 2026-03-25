@@ -7,7 +7,7 @@ import Swal from 'sweetalert2';
 /**
  * Task types supported by the background task service
  */
-export type BackgroundTaskType = 'question' | 'draft' | 'analysis' | 'workflow';
+export type BackgroundTaskType = 'question' | 'draft' | 'analysis' | 'workflow' | 'medical_scan';
 
 /**
  * Task status
@@ -341,6 +341,21 @@ export class BackgroundTaskService {
   }
 
   /**
+   * Clean up stale tasks — any task running for more than 10 minutes is likely orphaned
+   * (backend restarted, SSE connection dropped, etc.)
+   */
+  cleanupStaleTasks(): void {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const staleTasks = this.getUserTasks().filter(
+      t => (t.status === 'running' || t.status === 'pending') && new Date(t.startedAt) < tenMinutesAgo
+    );
+    staleTasks.forEach(t => {
+      this.updateTask(t.id, { status: 'failed', completedAt: new Date() });
+      this.removeTask(t.id);
+    });
+  }
+
+  /**
    * Check if there are any running tasks
    */
   hasRunningTasks(): boolean {
@@ -532,6 +547,14 @@ export class BackgroundTaskService {
    * Navigate to the task result - opens AI workspace with the correct conversation/workflow
    */
   private navigateToTaskResult(task: BackgroundTask): void {
+    // Medical scan tasks navigate to LegiPI, not LegiSpace
+    if (task.type === 'medical_scan') {
+      this.removeTask(task.id);
+      const caseId = task.result?.caseId;
+      this.router.navigate(['/legal/ai-assistant/legipi'], caseId ? { queryParams: { caseId } } : {});
+      return;
+    }
+
     // Extract analysis IDs if this is an analysis task
     const analysisIds = task.type === 'analysis' && task.result?.results
       ? task.result.results
@@ -563,6 +586,8 @@ export class BackgroundTaskService {
         return 'ri-file-search-line';
       case 'workflow':
         return 'ri-flow-chart';
+      case 'medical_scan':
+        return 'ri-scan-line';
       default:
         return 'ri-robot-line';
     }
@@ -578,6 +603,8 @@ export class BackgroundTaskService {
         return 'linear-gradient(135deg, #f7b84b 0%, #ffca28 100%)';
       case 'workflow':
         return 'linear-gradient(135deg, #299cdb 0%, #42a5f5 100%)';
+      case 'medical_scan':
+        return 'linear-gradient(135deg, #0ab39c 0%, #26c6da 100%)';
       default:
         return 'linear-gradient(135deg, #405189 0%, #5c6bc0 100%)';
     }
@@ -593,6 +620,8 @@ export class BackgroundTaskService {
         return 'Document Analysis Complete';
       case 'workflow':
         return 'Workflow Completed';
+      case 'medical_scan':
+        return 'Medical Documents Scanned';
       default:
         return 'AI Task Completed';
     }
@@ -608,6 +637,13 @@ export class BackgroundTaskService {
         return `Document analysis is complete. Click to view results.`;
       case 'workflow':
         return `"${task.title}" workflow has finished. Click to view results.`;
+      case 'medical_scan': {
+        const result = task.result;
+        if (result?.recordsCreated > 0) {
+          return `${result.recordsCreated} medical records created from ${result.documentsScanned} documents. Click to review.`;
+        }
+        return result?.title || 'Medical documents scanned. Click to review.';
+      }
       default:
         return `${task.title} is ready. Click to view.`;
     }

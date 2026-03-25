@@ -1,13 +1,15 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
+import com.bostoneo.bostoneosolutions.dto.email.EmailBranding;
+import com.bostoneo.bostoneosolutions.dto.email.EmailContent;
 import com.bostoneo.bostoneosolutions.enumeration.VerificationType;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.model.CalendarEvent;
 import com.bostoneo.bostoneosolutions.service.EmailService;
-import lombok.AllArgsConstructor;
+import com.bostoneo.bostoneosolutions.service.EmailTemplateEngine;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.mail.SimpleMailMessage;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -16,15 +18,25 @@ import jakarta.mail.internet.MimeMessage;
 import org.springframework.core.io.Resource;
 
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 public class EmailServiceImpl implements EmailService {
     private final JavaMailSender mailSender;
+    private final EmailTemplateEngine templateEngine;
+
+    @Value("${UI_APP_URL:http://localhost:4200}")
+    private String frontendUrl;
+
+    @Value("${LEGIENCE_LOGO_URL:https://legience.com/legience-logo-blue.svg}")
+    private String legienceLogoUrl;
+
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a");
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\{\\{(\\w+)\\}\\}");
@@ -35,7 +47,7 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             
-            helper.setFrom("info@bostoneo.com", "Bostoneo Legal Solutions");
+            helper.setFrom("hello@legience.com", "Legience");
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(body, true); // true indicates HTML content
@@ -55,7 +67,7 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             
-            helper.setFrom("info@bostoneo.com", "Bostoneo Legal Solutions");
+            helper.setFrom("hello@legience.com", "Legience");
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(body, true); // true indicates HTML content
@@ -103,555 +115,176 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendVerificationEmail(String firstName, String email, String verificationUrl, VerificationType verificationType) {
-        try{
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("info@bostoneo.com");
-            message.setTo(email);
-            message.setText(getEmailMessage(firstName, verificationUrl, verificationType));
-            message.setSubject(String.format("Bostoneo Solutions - %s Verification Email", StringUtils.capitalize(verificationType.getType())));
-            mailSender.send(message);
-            log.info("Email sent to {}", firstName);
+        try {
+            EmailBranding branding = EmailBranding.platform(frontendUrl, legienceLogoUrl);
+
+            String subject;
+            EmailContent content;
+
+            switch (verificationType) {
+                case ACCOUNT:
+                    subject = "Verify your Legience account";
+                    content = EmailContent.builder()
+                            .recipientName(firstName)
+                            .bodyParagraphs(List.of(
+                                    "Welcome to Legience! Your account has been created.",
+                                    "Please verify your email address to get started."))
+                            .ctaButton(EmailContent.CtaButton.builder()
+                                    .text("Verify My Account")
+                                    .url(verificationUrl)
+                                    .build())
+                            .signOffName("Legience Team")
+                            .footerNote("If you didn't create an account, you can safely ignore this email.")
+                            .build();
+                    break;
+                case PASSWORD:
+                    subject = "Reset your password";
+                    content = EmailContent.builder()
+                            .recipientName(firstName)
+                            .bodyParagraphs(List.of("We received a request to reset your password. Click the button below to choose a new one."))
+                            .ctaButton(EmailContent.CtaButton.builder()
+                                    .text("Reset Password")
+                                    .url(verificationUrl)
+                                    .build())
+                            .infoBox(EmailContent.InfoBox.builder()
+                                    .html("This link expires in <strong>24 hours</strong>. If you didn't request this, your password will remain unchanged.")
+                                    .level("amber")
+                                    .build())
+                            .signOffName("Legience Team")
+                            .build();
+                    break;
+                default:
+                    throw new ApiException("Unable to send email. Email type unknown");
+            }
+
+            String htmlContent = templateEngine.render(branding, content);
+
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            helper.setFrom("hello@legience.com", "Legience");
+            helper.setTo(email);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(mimeMessage);
+            log.info("Verification email sent to {}", firstName);
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception exception) {
-            log.error(exception.getMessage());
+            log.error("Failed to send verification email to {}: {}", email, exception.getMessage(), exception);
         }
     }
 
     @Override
     public void sendDeadlineReminderEmail(String email, String firstName, CalendarEvent event, int minutesBefore) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("info@bostoneo.com");
-            message.setTo(email);
-            message.setText(getDeadlineReminderMessage(firstName, event, minutesBefore));
-            
-            // Check if the deadline is high priority - use property name directly
-            // Since highPriority might not exist in the model yet, use a safer approach
-            boolean isHighPriority = false;
-            try {
-                // Try to check if the event type is DEADLINE and has a high priority status
-                isHighPriority = "DEADLINE".equals(event.getEventType()) && 
-                                 event.getStatus() != null && 
-                                 event.getStatus().contains("HIGH");
-            } catch (Exception e) {
-                log.debug("Could not determine priority status", e);
+            EmailBranding branding = EmailBranding.firmInternal("Legience", legienceLogoUrl, "#1e56b6", null, frontendUrl);
+
+            // Determine urgency
+            boolean isHighPriority = "DEADLINE".equals(event.getEventType()) &&
+                    event.getStatus() != null && event.getStatus().contains("HIGH");
+
+            EmailContent.UrgencyBanner urgency = null;
+            if ("DEADLINE".equals(event.getEventType())) {
+                urgency = EmailContent.UrgencyBanner.builder()
+                    .text(isHighPriority ? "URGENT DEADLINE" : "DEADLINE APPROACHING")
+                    .level(isHighPriority ? "red" : "amber")
+                    .build();
+            } else if ("HEARING".equals(event.getEventType()) || "COURT_DATE".equals(event.getEventType())) {
+                urgency = EmailContent.UrgencyBanner.builder().text("COURT APPEARANCE TODAY").level("red").build();
             }
-            
-            // Set the subject based on priority
+
+            // Build detail card rows
+            List<Map.Entry<String, String>> rows = new ArrayList<>();
+            if (event.getStartTime() != null) {
+                rows.add(Map.entry("Date", event.getStartTime().format(DATE_FORMATTER)));
+                boolean isAllDay = event.getAllDay() != null && event.getAllDay();
+                if (!isAllDay) {
+                    rows.add(Map.entry("Time", event.getStartTime().format(TIME_FORMATTER)));
+                }
+            }
+            if (event.getLocation() != null && !event.getLocation().isEmpty()) {
+                rows.add(Map.entry("Location", event.getLocation()));
+            }
+            if (event.getLegalCase() != null && event.getLegalCase().getTitle() != null) {
+                rows.add(Map.entry("Case", event.getLegalCase().getTitle()));
+            }
+
+            // Time remaining text
+            String timeText;
+            if (minutesBefore < 60) {
+                timeText = "This event is due in " + minutesBefore + " minutes.";
+            } else if (minutesBefore < 1440) {
+                int hours = minutesBefore / 60;
+                timeText = "This event is due in " + hours + (hours == 1 ? " hour." : " hours.");
+            } else {
+                int days = minutesBefore / 1440;
+                timeText = "This event is due in " + days + (days == 1 ? " day." : " days.");
+            }
+
+            String accentColor = "DEADLINE".equals(event.getEventType()) ? "#d97706" :
+                    ("HEARING".equals(event.getEventType()) || "COURT_DATE".equals(event.getEventType())) ? "#dc2626" : null;
+
+            EmailContent content = EmailContent.builder()
+                    .recipientName(firstName)
+                    .bodyParagraphs(List.of("This is a reminder about an upcoming event.", timeText))
+                    .detailCard(EmailContent.DetailCard.builder()
+                        .title(event.getTitle())
+                        .rows(rows)
+                        .accentColor(accentColor)
+                        .build())
+                    .ctaButton(EmailContent.CtaButton.builder().text("View Calendar").url(frontendUrl + "/legal/calendar").build())
+                    .signOffName("Legience Team")
+                    .urgency(urgency)
+                    .build();
+
             String subject = isHighPriority
-                ? "🚨 URGENT: Deadline Reminder - " + event.getTitle()
-                : "⏰ Deadline Reminder - " + event.getTitle();
-                
-            message.setSubject(subject);
-            mailSender.send(message);
-            
+                    ? "URGENT: Deadline Reminder - " + event.getTitle()
+                    : "Reminder: " + event.getTitle();
+
+            String htmlContent = templateEngine.render(branding, content);
+
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            helper.setFrom("hello@legience.com", "Legience");
+            helper.setTo(email);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+            mailSender.send(mimeMessage);
+
             log.info("Deadline reminder email sent to {} for event ID: {}", email, event.getId());
         } catch (Exception exception) {
             log.error("Failed to send deadline reminder email: {}", exception.getMessage());
         }
     }
-    
-    private String getDeadlineReminderMessage(String firstName, CalendarEvent event, int minutesBefore) {
-        StringBuilder message = new StringBuilder();
-        message.append("Hello ").append(firstName).append(",\n\n");
-        
-        // Format the reminder based on priority status from event type and status
-        boolean isHighPriority = false;
-        try {
-            isHighPriority = "DEADLINE".equals(event.getEventType()) && 
-                             event.getStatus() != null && 
-                             event.getStatus().contains("HIGH");
-        } catch (Exception e) {
-            log.debug("Could not determine priority status", e);
-        }
-        
-        if (isHighPriority) {
-            message.append("This is an URGENT reminder about an approaching high-priority deadline.\n\n");
-        } else {
-            message.append("This is a reminder about an approaching deadline.\n\n");
-        }
-        
-        // Event details section
-        message.append("DEADLINE DETAILS:\n");
-        message.append("------------------------------------------\n");
-        message.append("Title: ").append(event.getTitle()).append("\n");
-        
-        if (StringUtils.isNotBlank(event.getDescription())) {
-            message.append("Description: ").append(event.getDescription()).append("\n");
-        }
-        
-        // Format the date time nicely
-        String formattedDate = event.getStartTime().format(DATE_FORMATTER);
-        String formattedTime = event.getStartTime().format(TIME_FORMATTER);
-        
-        message.append("Due Date: ").append(formattedDate).append("\n");
-        
-        // Check if all-day event - safely
-        boolean isAllDay = event.getAllDay() != null && event.getAllDay();
-        if (!isAllDay) {
-            message.append("Due Time: ").append(formattedTime).append("\n");
-        }
-        
-        // Add related case information if available
-        if (event.getCaseId() != null) {
-            message.append("\nRELATED CASE:\n");
-            message.append("------------------------------------------\n");
-            
-            String caseTitle = "N/A";
-            // Try to safely get case title
-            if (event.getLegalCase() != null && event.getLegalCase().getTitle() != null) {
-                caseTitle = event.getLegalCase().getTitle();
-            }
-            message.append("Case: ").append(caseTitle).append("\n");
-            
-            // Try to safely get case number
-            String caseNumber = null;
-            if (event.getLegalCase() != null) {
-                caseNumber = event.getLegalCase().getCaseNumber();
-            }
-            
-            if (StringUtils.isNotBlank(caseNumber)) {
-                message.append("Case Number: ").append(caseNumber).append("\n");
-            }
-        }
-        
-        // Format time remaining message
-        message.append("\n");
-        if (minutesBefore < 60) {
-            message.append("This deadline is due in ").append(minutesBefore).append(" minutes.\n");
-        } else if (minutesBefore < 1440) { // less than 1 day
-            int hours = minutesBefore / 60;
-            message.append("This deadline is due in ").append(hours).append(hours == 1 ? " hour.\n" : " hours.\n");
-        } else {
-            int days = minutesBefore / 1440;
-            message.append("This deadline is due in ").append(days).append(days == 1 ? " day.\n" : " days.\n");
-        }
-        
-        // Add call to action
-        message.append("\nPlease login to the Bostoneo Legal Solutions platform to view more details and manage this deadline.\n\n");
-        message.append("Thank you,\n");
-        message.append("Bostoneo Legal Solutions Team");
-        
-        return message.toString();
-    }
 
     @Override
     public void sendNotificationEmail(String to, String firstName, String title, String message, String notificationType) {
         try {
-            log.info("📧 EMAIL SERVICE: Preparing to send notification email to: {} ({}), Title: '{}', Type: {}", to, firstName, title, notificationType);
-            
+            log.info("Preparing notification email to: {} ({}), Title: '{}', Type: {}", to, firstName, title, notificationType);
+
+            EmailBranding branding = EmailBranding.firmInternal("Legience", legienceLogoUrl, "#1e56b6", null, frontendUrl);
+
+            EmailContent content = EmailContent.builder()
+                    .recipientName(firstName)
+                    .bodyParagraphs(List.of(message))
+                    .ctaButton(EmailContent.CtaButton.builder().text("View in Dashboard").url(frontendUrl).build())
+                    .signOffName("Legience Team")
+                    .build();
+
+            String htmlContent = templateEngine.render(branding, content);
+
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            
-            helper.setFrom("info@bostoneo.com", "Bostoneo Legal Solutions");
+            helper.setFrom("hello@legience.com", "Legience");
             helper.setTo(to);
-            helper.setSubject("Bostoneo Solutions - " + title);
-            
-            String htmlContent = buildHtmlNotificationEmail(firstName, title, message, notificationType);
-            log.info("📧 HTML content generated, length: {} characters", htmlContent.length());
-            
-            helper.setText(htmlContent, true); // true indicates HTML content
-            
-            log.info("📧 Sending email via JavaMailSender...");
+            helper.setSubject("Legience - " + title);
+            helper.setText(htmlContent, true);
             mailSender.send(mimeMessage);
-            log.info("✅ HTML notification email sent successfully to {} for type: {}", to, notificationType);
-        } catch (MessagingException | java.io.UnsupportedEncodingException exception) {
-            log.error("❌ Failed to send notification email to {}: {}", to, exception.getMessage(), exception);
-        }
-    }
 
-    private String getNotificationEmailMessage(String firstName, String title, String message, String notificationType) {
-        return buildHtmlNotificationEmail(firstName, title, message, notificationType);
-    }
-    
-    private String buildHtmlNotificationEmail(String firstName, String title, String message, String notificationType) {
-        // Get notification type specific details
-        NotificationTypeInfo typeInfo = getNotificationTypeInfo(notificationType);
-        
-        StringBuilder html = new StringBuilder();
-        
-        // HTML Email Template
-        html.append("<!DOCTYPE html>");
-        html.append("<html lang=\"en\">");
-        html.append("<head>");
-        html.append("<meta charset=\"UTF-8\">");
-        html.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
-        html.append("<title>").append(title).append("</title>");
-        html.append("<style>");
-        html.append(getEmailCSS());
-        html.append("</style>");
-        html.append("</head>");
-        html.append("<body>");
-        
-        // Main Container
-        html.append("<div class=\"email-container\">");
-        
-        // Header
-        html.append("<div class=\"header\">");
-        html.append("<div class=\"logo\">");
-        html.append("<h2>Bostoneo Legal Solutions</h2>");
-        html.append("</div>");
-        html.append("</div>");
-        
-        // Main Content
-        html.append("<div class=\"content\">");
-        
-        // Greeting
-        html.append("<div class=\"greeting\">");
-        html.append("<h3>Hello ").append(firstName).append(",</h3>");
-        html.append("</div>");
-        
-        // Notification Badge
-        html.append("<div class=\"notification-badge ").append(typeInfo.badgeClass).append("\">");
-        html.append("<div class=\"badge-icon\">").append(typeInfo.icon).append("</div>");
-        html.append("<div class=\"badge-content\">");
-        html.append("<h4>").append(title).append("</h4>");
-        html.append("<p class=\"notification-type\">").append(typeInfo.displayName).append("</p>");
-        html.append("</div>");
-        html.append("</div>");
-        
-        // Message Content
-        html.append("<div class=\"message-content\">");
-        html.append("<p>").append(message).append("</p>");
-        html.append("</div>");
-        
-        // Type-specific additional information
-        if (typeInfo.additionalInfo != null && !typeInfo.additionalInfo.isEmpty()) {
-            html.append("<div class=\"additional-info\">");
-            html.append("<p>").append(typeInfo.additionalInfo).append("</p>");
-            html.append("</div>");
-        }
-        
-        // Call to Action
-        html.append("<div class=\"cta-section\">");
-        html.append("<a href=\"#\" class=\"cta-button\">View in Dashboard</a>");
-        html.append("<p class=\"cta-text\">Login to Bostoneo Legal Solutions to view full details and take action.</p>");
-        html.append("</div>");
-        
-        html.append("</div>"); // End content
-        
-        // Footer
-        html.append("<div class=\"footer\">");
-        html.append("<p>Best regards,<br>");
-        html.append("<strong>Bostoneo Legal Solutions Team</strong></p>");
-        html.append("<div class=\"footer-links\">");
-        html.append("<p><small>");
-        html.append("This is an automated notification from your legal case management system. ");
-        html.append("You can manage your notification preferences in your account settings.");
-        html.append("</small></p>");
-        html.append("</div>");
-        html.append("</div>");
-        
-        html.append("</div>"); // End container
-        html.append("</body>");
-        html.append("</html>");
-        
-        return html.toString();
-    }
-    
-    private String getEmailCSS() {
-        return """
-            body {
-                margin: 0;
-                padding: 0;
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background-color: #f5f7fa;
-                color: #333333;
-                line-height: 1.6;
-            }
-            
-            .email-container {
-                max-width: 600px;
-                margin: 0 auto;
-                background-color: #ffffff;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                border-radius: 8px;
-                overflow: hidden;
-            }
-            
-            .header {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 20px;
-                text-align: center;
-            }
-            
-            .header h2 {
-                margin: 0;
-                font-size: 24px;
-                font-weight: 300;
-                letter-spacing: 1px;
-            }
-            
-            .content {
-                padding: 30px;
-            }
-            
-            .greeting h3 {
-                margin: 0 0 20px 0;
-                color: #333333;
-                font-size: 20px;
-                font-weight: 500;
-            }
-            
-            .notification-badge {
-                display: flex;
-                align-items: center;
-                padding: 20px;
-                border-radius: 8px;
-                margin: 20px 0;
-                border-left: 4px solid;
-            }
-            
-            .notification-badge.case { 
-                background-color: #e3f2fd; 
-                border-left-color: #1976d2; 
-            }
-            
-            .notification-badge.task { 
-                background-color: #fff3e0; 
-                border-left-color: #f57c00; 
-            }
-            
-            .notification-badge.document { 
-                background-color: #e8f5e8; 
-                border-left-color: #388e3c; 
-            }
-            
-            .notification-badge.invoice { 
-                background-color: #fce4ec; 
-                border-left-color: #c2185b; 
-            }
-            
-            .notification-badge.lead { 
-                background-color: #f3e5f5; 
-                border-left-color: #7b1fa2; 
-            }
-            
-            .notification-badge.intake { 
-                background-color: #e0f2f1; 
-                border-left-color: #00695c; 
-            }
-            
-            .notification-badge.expense { 
-                background-color: #fff8e1; 
-                border-left-color: #ff8f00; 
-            }
-            
-            .notification-badge.calendar { 
-                background-color: #e1f5fe; 
-                border-left-color: #0277bd; 
-            }
-            
-            .notification-badge.system { 
-                background-color: #fafafa; 
-                border-left-color: #616161; 
-            }
-            
-            .notification-badge.default { 
-                background-color: #f5f5f5; 
-                border-left-color: #757575; 
-            }
-            
-            .badge-icon {
-                font-size: 24px;
-                margin-right: 15px;
-                width: 40px;
-                text-align: center;
-            }
-            
-            .badge-content h4 {
-                margin: 0 0 5px 0;
-                color: #333333;
-                font-size: 18px;
-                font-weight: 600;
-            }
-            
-            .notification-type {
-                margin: 0;
-                font-size: 12px;
-                color: #666666;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                font-weight: 500;
-            }
-            
-            .message-content {
-                margin: 25px 0;
-            }
-            
-            .message-content p {
-                margin: 0;
-                font-size: 16px;
-                color: #555555;
-                line-height: 1.6;
-            }
-            
-            .additional-info {
-                background-color: #f8f9fa;
-                padding: 15px;
-                border-radius: 6px;
-                margin: 20px 0;
-                border-left: 3px solid #007bff;
-            }
-            
-            .additional-info p {
-                margin: 0;
-                font-size: 14px;
-                color: #666666;
-                font-style: italic;
-            }
-            
-            .cta-section {
-                text-align: center;
-                margin: 30px 0;
-                padding: 20px;
-                background-color: #f8f9fa;
-                border-radius: 8px;
-            }
-            
-            .cta-button {
-                display: inline-block;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 12px 30px;
-                text-decoration: none;
-                border-radius: 25px;
-                font-weight: 600;
-                font-size: 16px;
-                margin-bottom: 10px;
-                transition: transform 0.2s ease;
-            }
-            
-            .cta-button:hover {
-                transform: translateY(-2px);
-            }
-            
-            .cta-text {
-                margin: 15px 0 0 0;
-                font-size: 14px;
-                color: #666666;
-            }
-            
-            .footer {
-                background-color: #f8f9fa;
-                padding: 20px;
-                text-align: center;
-                border-top: 1px solid #e9ecef;
-            }
-            
-            .footer p {
-                margin: 0 0 10px 0;
-                color: #555555;
-            }
-            
-            .footer-links small {
-                color: #999999;
-                font-size: 12px;
-                line-height: 1.4;
-            }
-            
-            @media only screen and (max-width: 600px) {
-                .email-container {
-                    margin: 10px;
-                    border-radius: 0;
-                }
-                
-                .content {
-                    padding: 20px;
-                }
-                
-                .notification-badge {
-                    flex-direction: column;
-                    text-align: center;
-                }
-                
-                .badge-icon {
-                    margin: 0 0 10px 0;
-                }
-            }
-            """;
-    }
-    
-    private NotificationTypeInfo getNotificationTypeInfo(String notificationType) {
-        return switch (notificationType.toUpperCase()) {
-            case "CASE_STATUS_CHANGED" -> new NotificationTypeInfo(
-                "⚖️", "case", "Case Update", 
-                "A case status has been updated. Please review the case details and take any necessary action."
-            );
-            case "CASE_PRIORITY_CHANGED" -> new NotificationTypeInfo(
-                "🔥", "case", "Case Priority Update", 
-                "A case priority has been modified. Please review the updated priority level."
-            );
-            case "CASE_ASSIGNMENT_ADDED" -> new NotificationTypeInfo(
-                "👥", "case", "Case Assignment", 
-                "You have been assigned to a new case. Please review the case details."
-            );
-            case "TASK_CREATED" -> new NotificationTypeInfo(
-                "📋", "task", "New Task", 
-                "A new task has been created and assigned to you. Please review the task details and deadline."
-            );
-            case "TASK_STATUS_CHANGED" -> new NotificationTypeInfo(
-                "✅", "task", "Task Update", 
-                "A task status has been updated. Please check the task progress."
-            );
-            case "TASK_DEADLINE_APPROACHING" -> new NotificationTypeInfo(
-                "⏰", "task", "Deadline Alert", 
-                "A task deadline is approaching. Please ensure you complete the task on time."
-            );
-            case "DOCUMENT_UPLOADED" -> new NotificationTypeInfo(
-                "📄", "document", "Document Upload", 
-                "A new document has been uploaded to the system. Please review the document library."
-            );
-            case "DOCUMENT_VERSION_UPDATED" -> new NotificationTypeInfo(
-                "🔄", "document", "Document Update", 
-                "A document has been updated with a new version. Please review the latest changes."
-            );
-            case "INVOICE_CREATED" -> new NotificationTypeInfo(
-                "💰", "invoice", "New Invoice", 
-                "A new invoice has been generated. Please review the billing details."
-            );
-            case "PAYMENT_RECEIVED" -> new NotificationTypeInfo(
-                "💳", "invoice", "Payment Received", 
-                "A payment has been received and processed. Please check your billing dashboard."
-            );
-            case "EXPENSE_SUBMITTED" -> new NotificationTypeInfo(
-                "🧾", "expense", "Expense Submission", 
-                "A new expense has been submitted for approval. Please review and approve if necessary."
-            );
-            case "LEAD_STATUS_CHANGED" -> new NotificationTypeInfo(
-                "🎯", "lead", "Lead Update", 
-                "A lead status has been updated. Please follow up as needed."
-            );
-            case "INTAKE_FORM_SUBMITTED" -> new NotificationTypeInfo(
-                "📝", "intake", "New Intake Form", 
-                "A new client intake form has been submitted. Please review and follow up promptly."
-            );
-            case "CALENDAR_EVENT_CREATED" -> new NotificationTypeInfo(
-                "📅", "calendar", "Calendar Event", 
-                "A new calendar event has been created. Please check your schedule."
-            );
-            case "SYSTEM_ISSUE" -> new NotificationTypeInfo(
-                "⚠️", "system", "System Alert", 
-                "A system issue has been detected. Please contact support if you experience any problems."
-            );
-            default -> new NotificationTypeInfo(
-                "🔔", "default", "Notification", 
-                "Please login to the platform for more details."
-            );
-        };
-    }
-    
-    private static class NotificationTypeInfo {
-        final String icon;
-        final String badgeClass;
-        final String displayName;
-        final String additionalInfo;
-        
-        NotificationTypeInfo(String icon, String badgeClass, String displayName, String additionalInfo) {
-            this.icon = icon;
-            this.badgeClass = badgeClass;
-            this.displayName = displayName;
-            this.additionalInfo = additionalInfo;
+            log.info("Notification email sent successfully to {} for type: {}", to, notificationType);
+        } catch (MessagingException | java.io.UnsupportedEncodingException exception) {
+            log.error("Failed to send notification email to {}: {}", to, exception.getMessage(), exception);
         }
     }
 
@@ -660,14 +293,21 @@ public class EmailServiceImpl implements EmailService {
         try {
             log.info("Sending MFA verification email to: {}", email);
 
+            EmailBranding branding = EmailBranding.platform(frontendUrl, legienceLogoUrl);
+            EmailContent content = EmailContent.builder()
+                    .recipientName(firstName)
+                    .bodyParagraphs(List.of("Your multi-factor authentication verification code is:"))
+                    .mfaCode(EmailContent.MfaCode.builder().code(code).build())
+                    .signOffName("Legience Team")
+                    .footerNote("This is an automated security email. Do not share this code with anyone.")
+                    .build();
+            String htmlContent = templateEngine.render(branding, content);
+
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-
-            helper.setFrom("info@bostoneo.com", "Bostoneo Legal Solutions");
+            helper.setFrom("hello@legience.com", "Legience");
             helper.setTo(email);
-            helper.setSubject("Bostoneo Solutions - Your Verification Code");
-
-            String htmlContent = buildMfaVerificationEmailHtml(firstName, code);
+            helper.setSubject("Legience - Your Verification Code");
             helper.setText(htmlContent, true);
 
             mailSender.send(mimeMessage);
@@ -678,188 +318,41 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    private String buildMfaVerificationEmailHtml(String firstName, String code) {
-        String safeName = org.springframework.web.util.HtmlUtils.htmlEscape(firstName);
-        StringBuilder html = new StringBuilder();
-
-        html.append("<!DOCTYPE html>");
-        html.append("<html lang=\"en\">");
-        html.append("<head>");
-        html.append("<meta charset=\"UTF-8\">");
-        html.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
-        html.append("<title>Verification Code</title>");
-        html.append("<style>");
-        html.append(getEmailCSS());
-        html.append("</style>");
-        html.append("</head>");
-        html.append("<body>");
-
-        html.append("<div class=\"email-container\">");
-
-        // Header
-        html.append("<div class=\"header\">");
-        html.append("<div class=\"logo\">");
-        html.append("<h2>Bostoneo Legal Solutions</h2>");
-        html.append("</div>");
-        html.append("</div>");
-
-        // Main Content
-        html.append("<div class=\"content\">");
-
-        html.append("<div class=\"greeting\">");
-        html.append("<h3>Hello ").append(safeName).append(",</h3>");
-        html.append("</div>");
-
-        html.append("<div class=\"message-content\">");
-        html.append("<p>Your multi-factor authentication verification code is:</p>");
-        html.append("</div>");
-
-        // Code display
-        html.append("<div style=\"text-align: center; margin: 30px 0;\">");
-        html.append("<div style=\"display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); ");
-        html.append("color: white; font-size: 32px; font-weight: 700; letter-spacing: 8px; padding: 20px 40px; ");
-        html.append("border-radius: 12px;\">");
-        html.append(code);
-        html.append("</div>");
-        html.append("</div>");
-
-        // Expiration notice
-        html.append("<div class=\"additional-info\">");
-        html.append("<p>This code expires in <strong>10 minutes</strong>. If you did not request this code, please ignore this email.</p>");
-        html.append("</div>");
-
-        html.append("</div>"); // End content
-
-        // Footer
-        html.append("<div class=\"footer\">");
-        html.append("<p>Best regards,<br>");
-        html.append("<strong>Bostoneo Legal Solutions Team</strong></p>");
-        html.append("<div class=\"footer-links\">");
-        html.append("<p><small>");
-        html.append("This is an automated security email. Do not share this code with anyone.");
-        html.append("</small></p>");
-        html.append("</div>");
-        html.append("</div>");
-
-        html.append("</div>"); // End container
-        html.append("</body>");
-        html.append("</html>");
-
-        return html.toString();
-    }
-
-    private String getEmailMessage(String firstName, String verificationUrl, VerificationType verificationType) {
-        switch (verificationType) {
-            case PASSWORD:
-                return "Hello " + firstName + "," + "\n\nReset password request. Please click the link below to reset your password. \n\n" + verificationUrl + "\n\nThe Support Team";
-            case ACCOUNT:
-                return "Hello " + firstName + "," + "\n\nYour new account has been created. Please click the link below to verify your account. \n\n" + verificationUrl + "\n\nThe Support Team";
-            default:
-                throw new ApiException("Unable to send email. Email type unknown");
-        }
-    }
 
     @Override
     public void sendInvitationEmail(String email, String organizationName, String role, String inviteUrl, int expirationDays) {
         try {
             log.info("Sending invitation email to: {} for organization: {}", email, organizationName);
 
+            EmailBranding branding = EmailBranding.firmClient(organizationName, null, "#405189", null, null, null, frontendUrl);
+
+            List<Map.Entry<String, String>> rows = new ArrayList<>();
+            rows.add(Map.entry("Role", role));
+            rows.add(Map.entry("Expires", expirationDays + " days from now"));
+
+            EmailContent content = EmailContent.builder()
+                    .recipientName(null)
+                    .greeting("You've been invited!")
+                    .bodyParagraphs(List.of("You have been invited to join <strong>" + organizationName + "</strong> as a <strong>" + role + "</strong>."))
+                    .detailCard(EmailContent.DetailCard.builder().title("Invitation Details").rows(rows).build())
+                    .ctaButton(EmailContent.CtaButton.builder().text("Accept Invitation").url(inviteUrl).build())
+                    .signOffName(organizationName)
+                    .footerNote("If you didn't expect this invitation, you can safely ignore this email.")
+                    .build();
+
+            String htmlContent = templateEngine.render(branding, content);
+
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-
-            helper.setFrom("info@bostoneo.com", "Bostoneo Legal Solutions");
+            helper.setFrom("hello@legience.com", "Legience");
             helper.setTo(email);
             helper.setSubject("You've been invited to join " + organizationName);
-
-            String htmlContent = buildInvitationEmailHtml(email, organizationName, role, inviteUrl, expirationDays);
             helper.setText(htmlContent, true);
-
             mailSender.send(mimeMessage);
+
             log.info("Invitation email sent successfully to: {}", email);
         } catch (MessagingException | java.io.UnsupportedEncodingException exception) {
             log.error("Failed to send invitation email to {}: {}", email, exception.getMessage(), exception);
         }
-    }
-
-    private String buildInvitationEmailHtml(String email, String organizationName, String role, String inviteUrl, int expirationDays) {
-        StringBuilder html = new StringBuilder();
-
-        html.append("<!DOCTYPE html>");
-        html.append("<html lang=\"en\">");
-        html.append("<head>");
-        html.append("<meta charset=\"UTF-8\">");
-        html.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
-        html.append("<title>Team Invitation</title>");
-        html.append("<style>");
-        html.append(getEmailCSS());
-        html.append("</style>");
-        html.append("</head>");
-        html.append("<body>");
-
-        // Main Container
-        html.append("<div class=\"email-container\">");
-
-        // Header
-        html.append("<div class=\"header\">");
-        html.append("<div class=\"logo\">");
-        html.append("<h2>Bostoneo Legal Solutions</h2>");
-        html.append("</div>");
-        html.append("</div>");
-
-        // Main Content
-        html.append("<div class=\"content\">");
-
-        // Greeting
-        html.append("<div class=\"greeting\">");
-        html.append("<h3>You've been invited!</h3>");
-        html.append("</div>");
-
-        // Invitation Badge
-        html.append("<div class=\"notification-badge case\">");
-        html.append("<div class=\"badge-icon\">🎉</div>");
-        html.append("<div class=\"badge-content\">");
-        html.append("<h4>Join ").append(organizationName).append("</h4>");
-        html.append("<p class=\"notification-type\">Team Invitation</p>");
-        html.append("</div>");
-        html.append("</div>");
-
-        // Message Content
-        html.append("<div class=\"message-content\">");
-        html.append("<p>You have been invited to join <strong>").append(organizationName).append("</strong> ");
-        html.append("as a <strong>").append(role).append("</strong>.</p>");
-        html.append("<p style=\"margin-top: 15px;\">Click the button below to accept this invitation and set up your account.</p>");
-        html.append("</div>");
-
-        // Additional Info
-        html.append("<div class=\"additional-info\">");
-        html.append("<p>⏱️ This invitation will expire in ").append(expirationDays).append(" days.</p>");
-        html.append("</div>");
-
-        // Call to Action
-        html.append("<div class=\"cta-section\">");
-        html.append("<a href=\"").append(inviteUrl).append("\" class=\"cta-button\">Accept Invitation</a>");
-        html.append("<p class=\"cta-text\">Or copy and paste this link in your browser:</p>");
-        html.append("<p style=\"font-size: 12px; color: #666; word-break: break-all;\">").append(inviteUrl).append("</p>");
-        html.append("</div>");
-
-        html.append("</div>"); // End content
-
-        // Footer
-        html.append("<div class=\"footer\">");
-        html.append("<p>Best regards,<br>");
-        html.append("<strong>").append(organizationName).append(" Team</strong></p>");
-        html.append("<div class=\"footer-links\">");
-        html.append("<p><small>");
-        html.append("If you didn't expect this invitation, you can safely ignore this email. ");
-        html.append("This invitation was sent to ").append(email).append(".");
-        html.append("</small></p>");
-        html.append("</div>");
-        html.append("</div>");
-
-        html.append("</div>"); // End container
-        html.append("</body>");
-        html.append("</html>");
-
-        return html.toString();
     }
 }

@@ -1,9 +1,14 @@
 package com.bostoneo.bostoneosolutions.resource;
 
 import com.bostoneo.bostoneosolutions.dto.IntakeFormDTO;
+import com.bostoneo.bostoneosolutions.dto.email.EmailBranding;
+import com.bostoneo.bostoneosolutions.dto.email.EmailContent;
 import com.bostoneo.bostoneosolutions.dtomapper.IntakeFormDTOMapper;
 import com.bostoneo.bostoneosolutions.model.IntakeForm;
 import com.bostoneo.bostoneosolutions.model.IntakeSubmission;
+import com.bostoneo.bostoneosolutions.model.Organization;
+import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
+import com.bostoneo.bostoneosolutions.service.EmailTemplateEngine;
 import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import com.bostoneo.bostoneosolutions.service.IntakeFormService;
 import com.bostoneo.bostoneosolutions.service.IntakeSubmissionService;
@@ -11,15 +16,15 @@ import com.bostoneo.bostoneosolutions.service.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/public/intake-forms")
@@ -32,6 +37,11 @@ public class IntakeFormResource {
     private final IntakeFormDTOMapper intakeFormDTOMapper;
     private final FileStorageService fileStorageService;
     private final EmailService emailService;
+    private final EmailTemplateEngine templateEngine;
+    private final OrganizationRepository organizationRepository;
+
+    @Value("${UI_APP_URL:http://localhost:4200}")
+    private String frontendUrl;
 
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("pdf", "jpg", "jpeg", "png", "docx");
@@ -294,32 +304,59 @@ public class IntakeFormResource {
             String firstName = firstNameObj != null ? firstNameObj.toString() : "Client";
             String practiceArea = form.getPracticeArea() != null ? form.getPracticeArea() : "Legal";
 
-            // Get org name from DTO mapper for branding
-            IntakeFormDTO formDto = intakeFormDTOMapper.toDTO(form);
-            String orgName = formDto.getOrganizationName() != null ? formDto.getOrganizationName() : "Our Firm";
+            // Load organization data for branding
+            String orgName = "Our Firm";
+            String orgLogoUrl = null;
+            String orgPrimaryColor = null;
+            String orgEmail = null;
+            String orgPhone = null;
+            String orgAddress = null;
+
+            if (form.getOrganizationId() != null) {
+                Optional<Organization> orgOpt = organizationRepository.findById(form.getOrganizationId());
+                if (orgOpt.isPresent()) {
+                    Organization org = orgOpt.get();
+                    orgName = org.getName() != null ? org.getName() : orgName;
+                    orgLogoUrl = org.getLogoUrl();
+                    orgPrimaryColor = org.getPrimaryColor();
+                    orgEmail = org.getEmail();
+                    orgPhone = org.getPhone();
+                    orgAddress = org.getAddress();
+                }
+            }
 
             String subject = orgName + " - Consultation Request Received (#" + submissionId + ")";
 
-            String body = "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>"
-                + "<div style='background: #f9fafb; border-bottom: 2px solid #e5e7eb; padding: 24px; text-align: center;'>"
-                + "<h2 style='margin: 0; color: #1f2937;'>" + orgName + "</h2>"
-                + "</div>"
-                + "<div style='padding: 24px;'>"
-                + "<p>Hello " + firstName + ",</p>"
-                + "<p>Thank you for submitting your <strong>" + practiceArea + "</strong> consultation request. "
-                + "We have received your information and a member of our legal team will review your case promptly.</p>"
-                + "<div style='background: #f9fafb; border-left: 3px solid #d1d5db; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;'>"
-                + "<p style='margin: 0 0 8px 0; font-size: 14px;'><strong>Submission ID:</strong> #" + submissionId + "</p>"
-                + "<p style='margin: 0 0 8px 0; font-size: 14px;'><strong>Practice Area:</strong> " + practiceArea + "</p>"
-                + "<p style='margin: 0; font-size: 14px;'><strong>Expected Response:</strong> Within 24 hours</p>"
-                + "</div>"
-                + "<p style='font-size: 14px; color: #6b7280;'>If you have any urgent questions, please don't hesitate to contact us directly.</p>"
-                + "<p>Best regards,<br><strong>" + orgName + " Legal Team</strong></p>"
-                + "</div>"
-                + "<div style='background: #f9fafb; padding: 16px; text-align: center; font-size: 12px; color: #9ca3af;'>"
-                + "This is an automated confirmation. Your information is protected by attorney-client privilege."
-                + "</div>"
-                + "</div>";
+            // Build branding
+            EmailBranding branding = EmailBranding.firmClient(
+                    orgName, orgLogoUrl, orgPrimaryColor,
+                    orgEmail, orgPhone, orgAddress, frontendUrl
+            );
+
+            // Build detail card rows
+            String submissionDate = LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy"));
+            List<Map.Entry<String, String>> detailRows = List.of(
+                    Map.entry("Practice Area", practiceArea),
+                    Map.entry("Submitted", submissionDate),
+                    Map.entry("Reference", "#" + submissionId)
+            );
+
+            // Build email content
+            EmailContent content = EmailContent.builder()
+                    .recipientName(firstName)
+                    .greeting("Hello " + firstName + ",")
+                    .bodyParagraphs(List.of(
+                            "Thank you for reaching out. We have received your consultation request and our team will review it shortly."
+                    ))
+                    .detailCard(EmailContent.DetailCard.builder()
+                            .title("Submission Details")
+                            .rows(detailRows)
+                            .build())
+                    .signOffName(orgName)
+                    .footerNote("This is an automated confirmation. Your information is protected by attorney-client privilege.")
+                    .build();
+
+            String body = templateEngine.render(branding, content);
 
             emailService.sendEmail(toEmail, subject, body);
             log.info("Confirmation email sent to {} for submission {}", toEmail, submissionId);

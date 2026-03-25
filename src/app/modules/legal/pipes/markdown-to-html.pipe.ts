@@ -996,9 +996,9 @@ export class MarkdownToHtmlPipe implements PipeTransform {
         const url = htmlLinkMatch[1];
         // Only allow http/https URLs to prevent XSS via javascript: URLs
         if (/^https?:\/\//i.test(url)) {
-          return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="source-chip">${htmlLinkMatch[2]}</a>`;
+          return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="source-chip source-verified"><i class="ri-verified-badge-fill source-status-icon verified"></i>${htmlLinkMatch[2]}</a>`;
         }
-        return `<span class="source-chip no-link"><i class="ri-book-open-line"></i>${htmlLinkMatch[2]}</span>`;
+        return `<span class="source-chip no-link"><i class="ri-error-warning-line source-status-icon unverified"></i>${htmlLinkMatch[2]}</span>`;
       }
 
       // Check for markdown link [text](url) — but NOT document links (handled above)
@@ -1012,22 +1012,35 @@ export class MarkdownToHtmlPipe implements PipeTransform {
         }
         // Only allow http/https URLs to prevent XSS via javascript: URLs
         if (/^https?:\/\//i.test(url)) {
-          return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="source-chip">${mdLinkMatch[1]}</a>`;
+          return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="source-chip source-verified"><i class="ri-verified-badge-fill source-status-icon verified"></i>${mdLinkMatch[1]}</a>`;
         }
-        return `<span class="source-chip no-link"><i class="ri-book-open-line"></i>${mdLinkMatch[1]}</span>`;
+        return `<span class="source-chip no-link"><i class="ri-error-warning-line source-status-icon unverified"></i>${mdLinkMatch[1]}</span>`;
       }
 
-      // Plain text source (no URL available) — show as badge
-      return `<span class="source-chip no-link"><i class="ri-book-open-line"></i>${source}</span>`;
+      // Plain text source (no URL available) — show as reference badge (no warning icon for secondary sources)
+      return `<span class="source-chip no-link"><i class="ri-book-2-line source-status-icon reference"></i>${source}</span>`;
     }).join(' ');
 
-    const html = `<div class="sources-bar"><span class="sources-label"><i class="ri-links-line"></i> Sources:</span> ${chipsHtml}</div>`;
+    // Count verified vs unverified for summary
+    const verifiedCount = rawSources.filter(s => {
+      // A source is "verified" if it has a URL (HTML link or markdown link)
+      return /<a\s+href="https?:\/\//i.test(s) || /\]\(https?:\/\//i.test(s) || /\]\(casedoc:/i.test(s);
+    }).length;
+    const unverifiedCount = rawSources.length - verifiedCount;
+    const summaryHtml = verifiedCount > 0 || unverifiedCount > 0
+      ? `<span class="sources-summary">${verifiedCount} linked${unverifiedCount > 0 ? `, ${unverifiedCount} unlinked` : ''}</span>`
+      : '';
+
+    const html = `<div class="sources-bar"><span class="sources-label"><i class="ri-links-line"></i> Sources:</span> ${chipsHtml}${summaryHtml}</div>`;
     const remaining = text.replace(regex, '').replace(/\n{3,}/g, '\n\n');
 
     return { html, remaining };
   }
 
   private convertMarkdownToHtml(text: string): string {
+    // Convert court caption blocks FIRST (§ column alignment)
+    text = this.convertCaptionBlocksToHtml(text);
+
     // Strip CHART: labels — tables render correctly on their own
     // REMOVE STRAY BACKTICKS (formatting artifacts from AI responses)
     text = text.replace(/^`\s*/gm, ''); // Backticks at start of lines
@@ -1111,6 +1124,174 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     text = text.replace(/<\/(h[1-6]|p|ul|ol|li|blockquote|hr)>\s*<br>/gi, '</$1>');
 
     return text;
+  }
+
+  /**
+   * Convert court caption blocks (lines with § column separators) to aligned HTML tables.
+   * Detects clusters of 3+ lines containing § and converts them to a borderless table
+   * with proper column alignment. Distinguishes caption § from inline legal citations.
+   */
+  private convertCaptionBlocksToHtml(text: string): string {
+    const lines = text.split('\n');
+    const result: string[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      if (lines[i].includes('§') && this.isCaptionSectionLine(lines[i])) {
+        // Collect a potential caption block — § lines with up to 2 blank lines between
+        const blockStart = i;
+        const sectionLines: string[] = [];
+        let consecutiveGap = 0;
+
+        while (i < lines.length && consecutiveGap <= 2) {
+          if (lines[i].includes('§') && this.isCaptionSectionLine(lines[i])) {
+            sectionLines.push(lines[i]);
+            consecutiveGap = 0;
+          } else if (lines[i].trim() === '') {
+            consecutiveGap++;
+          } else {
+            break; // Non-blank, non-§ line ends the block
+          }
+          i++;
+        }
+
+        if (sectionLines.length >= 3) {
+          // Valid caption block — clean duplicate preamble above the § block.
+          // AI often generates CAUSE NO., court name, and county as separate headings
+          // above the § table, where they already appear in the table columns.
+          let causeNoText = '';
+          let relocatedTitle = '';
+
+          // Patterns matching court/state/county lines that duplicate § table content
+          const preamblePatterns = [
+            /CAUSE\s+NO/i,                         // "CAUSE NO. TX-2025-CR-04871"
+            /\bDISTRICT\s+COURT\b/i,               // "IN THE CRIMINAL DISTRICT COURT"
+            /\bCOURT\s+AT\s+LAW\b/i,               // "COURT AT LAW NO. 3"
+            /\bCOUNTY\s+COURT\b/i,                 // "COUNTY COURT AT LAW"
+            /\bCIRCUIT\s+COURT\b/i,                // "IN THE CIRCUIT COURT"
+            /\bSUPERIOR\s+COURT\b/i,               // "IN THE SUPERIOR COURT"
+            /^STATE\s+OF\s+/i,                     // "STATE OF TEXAS"
+            /^COMMONWEALTH\s+OF\s+/i,              // "COMMONWEALTH OF VIRGINIA"
+            /COUNTY,?\s+\w+/i,                     // "DALLAS COUNTY, TEXAS"
+          ];
+
+          // Title relocation only for lines with actual document-type keywords
+          const titleKeywords = /MOTION|PETITION|BRIEF|COMPLAINT|APPLICATION|RESPONSE|REPLY|MEMORANDUM|OBJECTION/i;
+
+          // Scan backward through up to 12 preceding lines
+          const scanStart = Math.max(0, result.length - 12);
+          for (let k = result.length - 1; k >= scanStart; k--) {
+            const raw = result[k].trim();
+            if (raw === '') continue;
+            const stripped = raw.replace(/[#*_]/g, '').trim();
+
+            // Extract CAUSE NO. text for the centered header above the § table
+            if (/CAUSE\s+NO/i.test(stripped) && !causeNoText) {
+              causeNoText = stripped;
+              result.splice(k, 1);
+              continue;
+            }
+
+            // Remove duplicate court/state/county lines (already in § table columns)
+            if (preamblePatterns.some(p => p.test(stripped))) {
+              result.splice(k, 1);
+              continue;
+            }
+
+            // Relocate title heading to AFTER caption (only if it contains document-type keywords)
+            const isHeading = /^#{1,3}\s+/.test(raw);
+            const isAllCapsBold = /^\*\*[A-Z0-9\s,.'():;!&\-]+\*\*$/.test(raw);
+            if ((isHeading || isAllCapsBold) && titleKeywords.test(stripped) && !relocatedTitle) {
+              relocatedTitle = raw;
+              result.splice(k, 1);
+              continue;
+            }
+          }
+
+          // Trim trailing blank lines from result before inserting caption
+          while (result.length > 0 && result[result.length - 1].trim() === '') {
+            result.pop();
+          }
+
+          result.push(this.buildCaptionHtml(sectionLines, causeNoText));
+
+          // Re-insert relocated title AFTER the caption block
+          if (relocatedTitle) {
+            result.push('');
+            result.push(relocatedTitle);
+          }
+        } else {
+          // Not enough § lines — put them back as-is
+          for (let j = blockStart; j < i; j++) {
+            result.push(lines[j]);
+          }
+        }
+      } else {
+        result.push(lines[i]);
+        i++;
+      }
+    }
+
+    return result.join('\n');
+  }
+
+  /**
+   * Determine if a line uses § as a court caption column separator (not an inline legal citation).
+   * Caption: "STATE OF TEXAS §", "§ IN THE COUNTY CRIMINAL", "§" alone
+   * Inline: "art. I, § 9", "§ 724.017", "Tex. Code Crim. Proc. § 38.23"
+   */
+  private isCaptionSectionLine(line: string): boolean {
+    const trimmed = line.trim();
+    if (!trimmed.includes('§')) return false;
+
+    // § alone on a line
+    if (trimmed === '§') return true;
+
+    // Inline citation: § followed immediately by a digit (e.g., § 724.017, § 9)
+    if (/^§\s*\d/.test(trimmed)) return false;
+
+    // Inline citation: preceded by punctuation/text then § + digit (e.g., "art. I, § 9")
+    if (/[,.\s]§\s*\d/.test(trimmed)) return false;
+
+    // Very long lines are prose, not captions
+    if (trimmed.length > 120) return false;
+
+    return true;
+  }
+
+  /**
+   * Build an aligned HTML table from parsed § caption lines.
+   * Output is a SINGLE LINE of HTML to prevent <br> injection from the \n→<br> step.
+   */
+  private buildCaptionHtml(sectionLines: string[], causeNoText: string): string {
+    let html = '';
+
+    if (causeNoText) {
+      const cleanCause = causeNoText.replace(/\|/g, '').replace(/\*\*/g, '').trim();
+      html += `<div align='center'><b>${cleanCause}</b></div>`;
+    }
+
+    // Use HTML attributes (width, align, border, valign, cellpadding, cellspacing)
+    // instead of inline styles — cleanHtmlForExport() strips style="" but preserves these attributes
+    html += `<table width='85%' align='center' border='0' cellpadding='2' cellspacing='0'>`;
+
+    for (const line of sectionLines) {
+      const sectionIdx = line.indexOf('§');
+      // Strip pipes, convert markdown bold/italic to HTML
+      let left = line.substring(0, sectionIdx).replace(/\|/g, '').trim();
+      let right = line.substring(sectionIdx + 1).replace(/\|/g, '').trim();
+      left = left.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\*(.*?)\*/g, '<em>$1</em>');
+      right = right.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+      html += `<tr>`;
+      html += `<td width='40%' valign='top'>${left}</td>`;
+      html += `<td width='8%' align='center' valign='top'>§</td>`;
+      html += `<td width='52%' valign='top'>${right}</td>`;
+      html += `</tr>`;
+    }
+
+    html += `</table>`;
+    return html;
   }
 
   /**

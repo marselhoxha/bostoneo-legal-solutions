@@ -124,6 +124,29 @@ export class PIMedicalSummaryService {
   }
 
   /**
+   * Generate AI adjuster defense analysis
+   */
+  generateAdjusterAnalysis(caseId: number): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/${caseId}/medical-summary/adjuster-analysis`, {}).pipe(
+      map(response => response.data?.analysis)
+    );
+  }
+
+  /**
+   * Retrieve saved adjuster defense analysis (if previously generated)
+   */
+  getSavedAdjusterAnalysis(caseId: number): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/${caseId}/medical-summary/adjuster-analysis`);
+  }
+
+  /**
+   * Check for unscanned documents in the case
+   */
+  getScanStatus(caseId: number): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/${caseId}/medical-records/scan-status`);
+  }
+
+  /**
    * Delete medical summary
    */
   deleteMedicalSummary(caseId: number): Observable<void> {

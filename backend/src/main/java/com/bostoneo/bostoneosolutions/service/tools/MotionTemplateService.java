@@ -36,10 +36,10 @@ public class MotionTemplateService {
         return String.format("""
             ## Sample Motion Language: Motion to Suppress Evidence
 
-            **COMMONWEALTH OF MASSACHUSETTS**
+            **[STATE/COMMONWEALTH OF ___________]**
             **[Court Name] - [Division]**
 
-            **COMMONWEALTH**
+            **[STATE/COMMONWEALTH]**
             **v.**
             **%s, Defendant**
 
@@ -53,7 +53,7 @@ public class MotionTemplateService {
 
             #### I. INTRODUCTION
 
-            This motion seeks suppression of evidence obtained in violation of the Defendant's rights under the Fourth Amendment to the United States Constitution and Article 14 of the Massachusetts Declaration of Rights. The [stop/search/seizure] lacked [probable cause/reasonable suspicion/valid warrant], rendering any evidence obtained thereby inadmissible.
+            This motion seeks suppression of evidence obtained in violation of the Defendant's rights under the Fourth Amendment to the United States Constitution and the applicable state constitutional provisions. The [stop/search/seizure] lacked [probable cause/reasonable suspicion/valid warrant], rendering any evidence obtained thereby inadmissible.
 
             #### II. FACTUAL BACKGROUND
 
@@ -219,7 +219,7 @@ public class MotionTemplateService {
 
             #### LEGAL BASIS
 
-            The Defendant is entitled to discovery under [Mass. R. Crim. P. 14 / applicable discovery rule]. Due process requires disclosure of all material exculpatory evidence.
+            The Defendant is entitled to discovery under the applicable rules of criminal procedure. Due process requires disclosure of all material exculpatory evidence.
 
             #### CONCLUSION
 
@@ -243,7 +243,7 @@ public class MotionTemplateService {
 
             #### LEGAL STANDARD
 
-            Evidence is admissible only if relevant (*Mass. G. Evid. § 401*) and not unfairly prejudicial (*Mass. G. Evid. § 403*). The Court must exclude evidence whose probative value is substantially outweighed by the danger of unfair prejudice.
+            Evidence is admissible only if relevant under the applicable rules of evidence and not unfairly prejudicial. The Court must exclude evidence whose probative value is substantially outweighed by the danger of unfair prejudice.
 
             #### ARGUMENT
 

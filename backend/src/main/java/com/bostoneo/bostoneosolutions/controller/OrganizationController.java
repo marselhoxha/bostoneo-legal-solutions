@@ -6,8 +6,10 @@ import com.bostoneo.bostoneosolutions.dto.OrganizationStatsDTO;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.service.OrganizationService;
+import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -18,7 +20,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +38,7 @@ public class OrganizationController {
 
     private final OrganizationService organizationService;
     private final TenantService tenantService;
+    private final FileStorageService fileStorageService;
 
     /**
      * Common PreAuthorize expression for org-level read access.
@@ -215,6 +220,10 @@ public class OrganizationController {
                                 .build()
                 );
             }
+            // Non-SUPERADMIN cannot change plan or firm type — strip these fields
+            dto.setPlanType(null);
+            dto.setPlanExpiresAt(null);
+            dto.setFirmType(null);
         }
 
         log.info("Updating organization ID: {}", id);
@@ -247,6 +256,67 @@ public class OrganizationController {
                         .statusCode(OK.value())
                         .build()
         );
+    }
+
+    /**
+     * Upload organization logo
+     */
+    @PostMapping("/{id}/logo")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_SUPERADMIN')")
+    public ResponseEntity<HttpResponse> uploadLogo(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        if (!isSuperAdmin()) {
+            Long currentOrgId = getCurrentOrganizationId();
+            if (currentOrgId == null || !currentOrgId.equals(id)) {
+                return ResponseEntity.status(FORBIDDEN).body(
+                        HttpResponse.builder().timeStamp(now().toString())
+                                .message("Access denied").status(FORBIDDEN).statusCode(FORBIDDEN.value()).build());
+            }
+        }
+
+        try {
+            String extension = file.getOriginalFilename() != null
+                    ? file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.'))
+                    : ".png";
+            String fileName = "org-" + id + extension;
+            fileStorageService.storeFile(file, "org-logos", fileName);
+
+            String logoUrl = "/api/organizations/" + id + "/logo-image";
+            OrganizationDTO dto = new OrganizationDTO();
+            dto.setLogoUrl(logoUrl);
+            organizationService.updateOrganization(id, dto);
+
+            return ResponseEntity.ok(HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .data(Map.of("logoUrl", logoUrl))
+                    .message("Logo uploaded successfully")
+                    .status(OK).statusCode(OK.value()).build());
+        } catch (IOException e) {
+            return ResponseEntity.status(INTERNAL_SERVER_ERROR).body(
+                    HttpResponse.builder().timeStamp(now().toString())
+                            .message("Failed to upload logo").status(INTERNAL_SERVER_ERROR)
+                            .statusCode(INTERNAL_SERVER_ERROR.value()).build());
+        }
+    }
+
+    /**
+     * Serve organization logo image (public — no auth required for img src)
+     */
+    @GetMapping(value = "/{id}/logo-image", produces = "image/*")
+    public ResponseEntity<byte[]> getLogoImage(@PathVariable Long id) {
+        try {
+            // Try common extensions
+            for (String ext : new String[]{".png", ".jpg", ".jpeg", ".svg", ".webp"}) {
+                try {
+                    Resource resource = fileStorageService.loadFileAsResource("org-logos/org-" + id + ext);
+                    if (resource.exists()) {
+                        return ResponseEntity.ok(resource.getInputStream().readAllBytes());
+                    }
+                } catch (IOException ignored) {}
+            }
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /**
