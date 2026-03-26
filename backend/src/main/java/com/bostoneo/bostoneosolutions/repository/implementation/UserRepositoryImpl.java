@@ -407,14 +407,13 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
 
     @Override
     public User verifyPasswordKey(String key) {
-        if(isLinkExpired(key, PASSWORD)) throw new ApiException("This link has expired. Please reset your password again.");
+        if(isLinkExpired(key, PASSWORD)) throw new ApiException("This link has expired. Please request a new one from your administrator.");
         try {
             User user = jdbc.queryForObject(SELECT_USER_BY_PASSWORD_URL_QUERY, of("url", getVerificationUrl(key, PASSWORD.getType())), new UserRowMapper());
-            //jdbc.update("DELETE_USER_FROM_PASSWORD_VERIFICATION_QUERY", of("id", user.getId())); //Depends on use case / developer or business
             return user;
         } catch (EmptyResultDataAccessException exception) {
             log.error(exception.getMessage());
-            throw new ApiException("This link is not valid. Please reset your password again.");
+            throw new ApiException("This link is invalid or has already been used. Please contact your administrator.");
         } catch (Exception exception) {
             log.error(exception.getMessage());
             throw new ApiException("An error occurred. Please try again.");
@@ -655,10 +654,10 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             return jdbc.queryForObject(SELECT_EXPIRATION_BY_URL, of("url", getVerificationUrl(key, password.getType())), Boolean.class);
         } catch (EmptyResultDataAccessException exception) {
             log.error(exception.getMessage());
-            throw new ApiException("This link is not valid. Please reset your password again");
+            throw new ApiException("This link is invalid or has already been used. Please contact your administrator.");
         } catch (Exception exception) {
             log.error(exception.getMessage());
-            throw new ApiException("An error occurred. Please try again");
+            throw new ApiException("An error occurred. Please try again.");
         }
     }
 

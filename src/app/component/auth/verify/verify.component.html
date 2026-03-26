@@ -1,187 +1,153 @@
 <section *ngIf="(verifyState$ | async) as state" [ngSwitch]="state.dataState">
+
   <!-- Loading State -->
   <ng-container *ngSwitchCase="DataState.LOADING">
-      <div class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
-          <div class="bg-overlay"></div>
-          <div class="auth-page-content overflow-hidden pt-lg-5">
-              <div class="container">
-                  <div class="row justify-content-center my-5">
-                      <div class="col-md-6">
-                          <div class="card">
-                              <div class="card-body text-center">
-                                  <img src="assets/images/legience-logo-blue.svg" alt="Legience Logo" height="48">
-                                  <h5 class="card-title mt-4 mb-4">{{ state.title }}</h5>
-                                  <div class="spinner-border text-secondary" role="status" style="font-size: 30px;">
-                                      <span class="visually-hidden">Loading...</span>
-                                  </div>
-                                  <p class="mt-4" style="font-size: 20px;">{{ state.message }}</p>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
+    <div class="verify-page d-flex justify-content-center align-items-center min-vh-100">
+      <div class="verify-card text-center">
+        <img src="assets/images/legience-logo-blue.svg" alt="Legience" height="28">
+        <div class="mt-4">
+          <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
+            <span class="visually-hidden">Loading...</span>
           </div>
+        </div>
+        <p class="verify-subtitle mt-3">{{ state.message || 'Validating your link...' }}</p>
       </div>
+    </div>
   </ng-container>
 
   <!-- Loaded State -->
   <ng-container *ngSwitchCase="DataState.LOADED">
-    <div *ngIf="state.type === 'account'">
-      
-        <div class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
-          <div class="bg-overlay"></div>
-          <div class="auth-page-content overflow-hidden pt-lg-5">
-            <div class="container">
-              <div class="row justify-content-center my-5">
-                <div class="col-md-6">
-                  <div class="card">
-                    <div class="card-body text-center">
-                      <img src="assets/images/legience-logo-blue.svg" alt="Legience Logo" height="48">
-                      <h5 class="card-title mt-4 mb-4"></h5>
-                      <i class="bi bi-check-circle-fill" style="font-size: 80px; color: green;"></i>
-                      <p class="mt-2" style="font-size: 20px;">{{ state.message }}</p>
-                    </div>
-                    <div class="row mb-4">
-                      <div class="col d-flex justify-content-center">
-                        <a routerLink="/login" style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Account
-                          Login</a>
-                      </div>
-                      <div class="col">
-                        <a routerLink="/register"
-                          style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Create another account</a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+
+    <!-- Password Set Successfully -->
+    <div *ngIf="state.type === 'account'" class="verify-page d-flex justify-content-center align-items-center min-vh-100">
+      <div class="verify-card text-center">
+        <img src="assets/images/legience-logo-blue.svg" alt="Legience" height="28">
+        <div class="mt-4">
+          <div class="d-flex justify-content-center">
+            <div class="rounded-circle bg-success-subtle d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+              <i class="ri-checkbox-circle-line text-success" style="font-size: 36px;"></i>
             </div>
           </div>
         </div>
-      
-    
-    </div>
-
-    <div *ngIf="state.type === 'password'">
-      <div class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
-        <div class="bg-overlay"></div>
-        <div class="auth-page-content overflow-hidden pt-lg-5">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-12">
-                        <div class="card overflow-hidden">
-                            <div class="row justify-content-center g-0">
-                                <div class="col-lg-6">
-                                    <div class="p-lg-5 p-4 auth-one-bg h-100">
-                                        <div class="bg-overlay"></div>
-                                        <div class="position-relative h-100 d-flex flex-column">
-                                            <div class="mb-4 text-center">
-                                                <a routerLink="/" class="d-block">
-                                                    <img src="assets/images/legience-logo-white.svg" alt="Legience Logo" height="48">
-                                                </a>
-                                            </div>
-                                            <div class="mt-auto">
-                                              <div class="mb-3">
-                                                  <i class="ri-double-quotes-l display-4 text-success"></i>
-                                              </div>
-                                              <p class="fs-15 fst-italic text-white">“Empowering organizations with intelligent, scalable solutions tailored for sustainable growth in a future-focused marketplace.”</p>
-                                          </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- end col -->
-
-                                <div class="col-lg-6">
-                                    <div class="p-lg-5 p-4">
-                                        <div class="mb-4 text-center">
-                                            <div class="avatar-lg mx-auto">
-                                                <div class="avatar-title bg-light text-primary display-5 rounded-circle">
-                                                    <i class="ri-lock-password-line"></i>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="text-muted text-center mx-lg-3">
-                                            <h4 class="">Enter New Password</h4>
-                                            <p>Please enter your new password below.</p>
-                                        </div>
-
-                                        <div *ngIf="state.error" class="alert alert-danger text-center" role="alert">
-                                            {{ state.error }}
-                                        </div>
-
-                                        <div class="mt-4">
-                                            <form #resetPasswordForm="ngForm" (ngSubmit)="renewPassword(resetPasswordForm)">
-                                                <div class="row twostep-input">
-                                                    <div class="form-outline mb-4">
-                                                        <label class="form-label" for="password">New Password</label>
-                                                        <input type="password" ngModel name="password" [disabled]="(isLoading$ | async)" class="form-control" required minlength="2">
-                                                    </div>
-                                                    <div class="form-outline mb-4">
-                                                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                                                        <input type="password" ngModel name="confirmPassword" [disabled]="(isLoading$ | async)" class="form-control" required minlength="2">
-                                                    </div>
-                                                </div>
-
-                                                <div class="mt-3">
-                                                    <button type="submit" class="btn btn-success w-100" [disabled]="(isLoading$ | async) || resetPasswordForm.invalid || resetPasswordForm.pristine">
-                                                        <span *ngIf="(isLoading$ | async)" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right: 5px;"></span>
-                                                        <span *ngIf="(isLoading$ | async)">Loading...</span>
-                                                        <span *ngIf="!(isLoading$ | async)">Update Password</span>
-                                                    </button>
-                                                </div>
-
-                                            </form>
-                                        </div>
-
-                                        <div class="mt-5 text-center">
-                                            <p class="mb-0">Remember your password? <a routerLink="/login" class="fw-semibold text-primary text-decoration-underline">Login</a> </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- end col -->
-                            </div>
-                            <!-- end row -->
-                        </div>
-                        <!-- end card -->
-                    </div>
-                    <!-- end col -->
-                </div>
-                <!-- end row -->
-            </div>
-            <!-- end container -->
+        <h5 class="verify-title mt-3">You're All Set!</h5>
+        <p class="verify-subtitle">{{ state.message }}</p>
+        <div class="mt-4">
+          <a routerLink="/login" class="btn verify-btn w-100">
+            <i class="ri-login-box-line me-1"></i> Sign In Now
+          </a>
         </div>
-        <!-- end auth page content -->
+      </div>
     </div>
-    </div>  
+
+    <!-- Password Setup Form -->
+    <div *ngIf="state.type === 'password'" class="verify-page d-flex justify-content-center align-items-center min-vh-100">
+      <div class="verify-card">
+        <div class="text-center mb-4">
+          <img src="assets/images/legience-logo-blue.svg" alt="Legience" height="28">
+        </div>
+
+        <div class="text-center mb-4">
+          <div class="d-flex justify-content-center mb-3">
+            <div class="rounded-circle bg-primary-subtle d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+              <i class="ri-shield-keyhole-line text-primary" style="font-size: 36px;"></i>
+            </div>
+          </div>
+          <h5 class="verify-title">Set Up Your Password</h5>
+          <p class="verify-subtitle">Create a secure password for your account.</p>
+        </div>
+
+        <div *ngIf="state.error" class="alert alert-danger text-center" role="alert">
+          {{ state.error }}
+        </div>
+
+        <form #resetPasswordForm="ngForm" (ngSubmit)="renewPassword(resetPasswordForm)">
+          <div class="mb-3">
+            <label class="form-label verify-label" for="password">New Password</label>
+            <div class="position-relative">
+              <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="password" name="password" id="password"
+                [disabled]="(isLoading$ | async)" class="form-control verify-input pe-5" placeholder="Enter new password"
+                required minlength="12">
+              <button type="button" class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted"
+                style="padding: 0.6rem 0.75rem;" (click)="showPassword = !showPassword">
+                <i [class]="showPassword ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Password Requirements Checklist -->
+          <div class="password-requirements mb-3" *ngIf="password">
+            <div class="req-item" [class.met]="password.length >= 12">
+              <i [class]="password.length >= 12 ? 'ri-checkbox-circle-fill text-success' : 'ri-checkbox-blank-circle-line text-muted'"></i>
+              <span>At least 12 characters</span>
+            </div>
+            <div class="req-item" [class.met]="hasUppercase(password)">
+              <i [class]="hasUppercase(password) ? 'ri-checkbox-circle-fill text-success' : 'ri-checkbox-blank-circle-line text-muted'"></i>
+              <span>One uppercase letter (A-Z)</span>
+            </div>
+            <div class="req-item" [class.met]="hasLowercase(password)">
+              <i [class]="hasLowercase(password) ? 'ri-checkbox-circle-fill text-success' : 'ri-checkbox-blank-circle-line text-muted'"></i>
+              <span>One lowercase letter (a-z)</span>
+            </div>
+            <div class="req-item" [class.met]="hasNumber(password)">
+              <i [class]="hasNumber(password) ? 'ri-checkbox-circle-fill text-success' : 'ri-checkbox-blank-circle-line text-muted'"></i>
+              <span>One number (0-9)</span>
+            </div>
+            <div class="req-item" [class.met]="hasSpecialChar(password)">
+              <i [class]="hasSpecialChar(password) ? 'ri-checkbox-circle-fill text-success' : 'ri-checkbox-blank-circle-line text-muted'"></i>
+              <span>One special character (!&#64;#$%...)</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="confirmPassword" class="form-label verify-label">Confirm Password</label>
+            <input type="password" [(ngModel)]="confirmPassword" name="confirmPassword" id="confirmPassword"
+              [disabled]="(isLoading$ | async)" class="form-control verify-input" placeholder="Confirm new password"
+              required minlength="12">
+            <div *ngIf="confirmPassword && password !== confirmPassword" class="text-danger mt-1" style="font-size: 0.8rem;">
+              <i class="ri-error-warning-line me-1"></i>Passwords do not match
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <button type="submit" class="btn verify-btn w-100"
+              [disabled]="(isLoading$ | async) || !isPasswordValid() || !password || password !== confirmPassword">
+              <span *ngIf="(isLoading$ | async)" class="spinner-border spinner-border-sm me-1" role="status"></span>
+              <span *ngIf="(isLoading$ | async)">Saving...</span>
+              <span *ngIf="!(isLoading$ | async)">Set Password</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="mt-4 text-center">
+          <a routerLink="/login" class="verify-link">
+            <i class="ri-arrow-left-line me-1"></i>Back to Sign In
+          </a>
+        </div>
+      </div>
+    </div>
   </ng-container>
 
   <!-- Error State -->
   <ng-container *ngSwitchCase="DataState.ERROR">
-      <div class="auth-page-wrapper auth-bg-cover py-5 d-flex justify-content-center align-items-center min-vh-100">
-          <div class="bg-overlay"></div>
-          <div class="auth-page-content overflow-hidden pt-lg-5">
-              <div class="container">
-                  <div class="row justify-content-center my-5">
-                      <div class="col-md-6">
-                          <div class="card">
-                              <div class="card-body text-center">
-                                  <img src="assets/images/legience-logo-blue.svg" alt="Legience Logo" height="48">
-                                  <h5 class="card-title mt-4 mb-4"></h5>
-                                  <i class="bi bi-exclamation-circle-fill" style="font-size: 80px; color: red;"></i>
-                                  <p class="mt-2" style="font-size: 20px;">{{ state.message }}</p>
-                              </div>
-                              <div class="row mb-4">
-                                  <div class="col d-flex justify-content-center">
-                                    <a routerLink="/login" style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Account Login</a>
-                                  </div>
-                                  <div class="col">
-                                      <a routerLink="/register" style="color: #0D6EFD; text-decoration: underline; cursor: pointer;">Create another account</a>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
+    <div class="verify-page d-flex justify-content-center align-items-center min-vh-100">
+      <div class="verify-card text-center">
+        <img src="assets/images/legience-logo-blue.svg" alt="Legience" height="28">
+        <div class="mt-4">
+          <div class="avatar-lg mx-auto">
+            <div class="avatar-title bg-danger-subtle text-danger rounded-circle fs-1">
+              <i class="ri-error-warning-line"></i>
+            </div>
           </div>
+        </div>
+        <h5 class="verify-title mt-3 text-danger">Link Invalid or Expired</h5>
+        <p class="verify-subtitle">This invitation link is no longer valid. Please contact your administrator to receive a new invitation.</p>
+        <div class="mt-4">
+          <a routerLink="/login" class="btn verify-btn w-100">
+            <i class="ri-login-box-line me-1"></i> Go to Sign In
+          </a>
+        </div>
       </div>
+    </div>
   </ng-container>
+
 </section>

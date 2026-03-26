@@ -20,9 +20,12 @@ export class VerifyComponent implements OnInit {
   private isLoadingSubject = new BehaviorSubject<boolean>(false);
   isLoading$ = this.isLoadingSubject.asObservable();
   readonly DataState = DataState;
+  showPassword = false;
+  password = '';
+  confirmPassword = '';
   private readonly ACCOUNT_KEY: string = 'key';
 
-  constructor(private activatedRoute: ActivatedRoute, private userService: UserService) { }
+  constructor(private activatedRoute: ActivatedRoute, private userService: UserService, private router: Router) { }
 
   ngOnInit(): void {
     this.verifyState$ = this.activatedRoute.paramMap.pipe(
@@ -49,7 +52,9 @@ export class VerifyComponent implements OnInit {
       .pipe(
         map(response => {
           this.isLoadingSubject.next(false);
-          return { type: 'account' as AccountType, title: 'Success', dataState: DataState.LOADED, message: response.message, verifySuccess: true };
+          // Auto-redirect to login after 3 seconds
+          setTimeout(() => this.router.navigate(['/login']), 3000);
+          return { type: 'account' as AccountType, title: 'Success', dataState: DataState.LOADED, message: 'Password set successfully! Redirecting to login...', verifySuccess: true };
         }),
         startWith({ type: 'password' as AccountType, title: 'Verified!', dataState: DataState.LOADED, verifySuccess: false }),
         catchError((error: string) => {
@@ -57,6 +62,19 @@ export class VerifyComponent implements OnInit {
           return of({ type: 'password' as AccountType, title: 'Verified!', dataState: DataState.LOADED, error, verifySuccess: true })
         })
       )
+  }
+
+  hasUppercase(pw: string): boolean { return /[A-Z]/.test(pw); }
+  hasLowercase(pw: string): boolean { return /[a-z]/.test(pw); }
+  hasNumber(pw: string): boolean { return /\d/.test(pw); }
+  hasSpecialChar(pw: string): boolean { return /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw); }
+
+  isPasswordValid(): boolean {
+    return this.password.length >= 12
+      && this.hasUppercase(this.password)
+      && this.hasLowercase(this.password)
+      && this.hasNumber(this.password)
+      && this.hasSpecialChar(this.password);
   }
 
   private getAccountType(url: string): AccountType {
