@@ -657,6 +657,21 @@
                 </select>
                 <div class="invalid-feedback">Please select a role.</div>
               </div>
+              <div class="col-12 mt-2">
+                <hr class="my-2">
+                <div class="form-check form-switch mb-2">
+                  <input class="form-check-input" type="checkbox" id="skipEmailUser" formControlName="skipEmail">
+                  <label class="form-check-label ms-2" for="skipEmailUser">
+                    <span class="fw-medium">Skip invitation email</span>
+                    <span class="d-block text-muted fs-13">Set up a temporary password manually.</span>
+                  </label>
+                </div>
+              </div>
+              <div class="col-12" *ngIf="addUserForm.get('skipEmail')?.value">
+                <label class="form-label">Temporary Password</label>
+                <input type="text" class="form-control" formControlName="temporaryPassword" placeholder="Enter temporary password">
+                <div class="form-text text-muted">The user will be required to change this on first login.</div>
+              </div>
             </div>
           </form>
         </div>

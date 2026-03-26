@@ -286,6 +286,8 @@ export interface CreateOrganization {
   maxUsers?: number;
   maxCases?: number;
   maxStorageBytes?: number;
+  skipEmail?: boolean;
+  temporaryPassword?: string;
 }
 
 export interface UpdateOrganization {
@@ -416,6 +418,8 @@ export interface CreateUserForOrg {
   lastName: string;
   email: string;
   roleName: string;
+  skipEmail?: boolean;
+  temporaryPassword?: string;
 }
 
 // === Dashboard Drill-Down Models ===

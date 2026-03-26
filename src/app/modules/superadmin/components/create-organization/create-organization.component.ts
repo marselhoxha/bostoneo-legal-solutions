@@ -121,7 +121,9 @@ export class CreateOrganizationComponent implements OnDestroy {
     this.adminForm = this.fb.group({
       adminFirstName: ['', [Validators.required, Validators.minLength(2)]],
       adminLastName: ['', [Validators.required, Validators.minLength(2)]],
-      adminEmail: ['', [Validators.required, Validators.email]]
+      adminEmail: ['', [Validators.required, Validators.email]],
+      skipEmail: [false],
+      temporaryPassword: ['']
     });
 
     this.featuresForm = this.fb.group({
@@ -249,6 +251,8 @@ export class CreateOrganizationComponent implements OnDestroy {
     this.submitting = true;
     this.cdr.markForCheck();
 
+    const skipEmail = this.adminForm.get('skipEmail')?.value || false;
+    const tempPwd = this.adminForm.get('temporaryPassword')?.value || undefined;
     const data: CreateOrganization = {
       name: this.firmInfoForm.get('name')?.value,
       slug: this.firmInfoForm.get('slug')?.value,
@@ -262,7 +266,9 @@ export class CreateOrganizationComponent implements OnDestroy {
       maxStorageBytes: this.planForm.get('maxStorageBytes')?.value,
       adminFirstName: this.adminForm.get('adminFirstName')?.value,
       adminLastName: this.adminForm.get('adminLastName')?.value,
-      adminEmail: this.adminForm.get('adminEmail')?.value
+      adminEmail: this.adminForm.get('adminEmail')?.value,
+      skipEmail: skipEmail || undefined,
+      temporaryPassword: skipEmail ? tempPwd : undefined
     };
 
     this.superAdminService.createOrganization(data)
@@ -271,10 +277,16 @@ export class CreateOrganizationComponent implements OnDestroy {
         next: () => {
           this.submitting = false;
           this.cdr.markForCheck();
+          const successMsg = skipEmail && tempPwd
+            ? `<p><strong>${data.name}</strong> has been created successfully.</p>
+               <p class="mt-2">Temporary password for <strong>${data.adminEmail}</strong>:</p>
+               <div class="alert alert-warning text-center mt-2" style="font-size: 18px; font-family: monospace; user-select: all;">${tempPwd}</div>
+               <p class="text-muted fs-12">The user will be required to change this password on first login.</p>`
+            : `${data.name} has been created successfully. An invitation email will be sent to ${data.adminEmail}.`;
           Swal.fire({
             icon: 'success',
             title: 'Organization Created',
-            text: `${data.name} has been created successfully. An invitation email will be sent to ${data.adminEmail}.`,
+            html: successMsg,
             showCancelButton: true,
             confirmButtonText: 'Go to Organizations',
             cancelButtonText: 'Create Another',

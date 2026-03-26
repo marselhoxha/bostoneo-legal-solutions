@@ -21,4 +21,8 @@ public class CreateUserForOrgDTO {
 
     @NotEmpty(message = "Role is required")
     private String roleName;
+
+    // Skip email invitation (superadmin sets up password manually)
+    private Boolean skipEmail;
+    private String temporaryPassword;
 }

@@ -61,7 +61,9 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
       firstName: new FormControl('', [Validators.required]),
       lastName: new FormControl('', [Validators.required]),
       email: new FormControl('', [Validators.required, Validators.email]),
-      roleName: new FormControl('', [Validators.required])
+      roleName: new FormControl('', [Validators.required]),
+      skipEmail: new FormControl(false),
+      temporaryPassword: new FormControl('')
     });
 
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
@@ -317,14 +319,22 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
     this.superAdminService.addUserToOrganization(this.organization.id, data)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (result) => {
+        next: () => {
           this.addingUser = false;
           this.showAddUserModal = false;
+          const skipEmail = data.skipEmail;
+          const tempPwd = data.temporaryPassword;
+          const successHtml = skipEmail && tempPwd
+            ? `<p><strong>${data.firstName} ${data.lastName}</strong> has been added to the organization.</p>
+               <p class="mt-2">Temporary password:</p>
+               <div class="alert alert-warning text-center mt-2" style="font-size: 18px; font-family: monospace; user-select: all;">${tempPwd}</div>
+               <p class="text-muted fs-12">The user will be required to change this password on first login.</p>`
+            : `<p><strong>${data.firstName} ${data.lastName}</strong> has been added to the organization.</p>
+               <p class="text-muted mt-2">An invitation email has been sent to <strong>${data.email}</strong> to set up their account.</p>`;
           Swal.fire({
             icon: 'success',
             title: 'User Created',
-            html: `<p><strong>${data.firstName} ${data.lastName}</strong> has been added to the organization.</p>
-                   <p class="text-muted mt-2">An invitation email has been sent to <strong>${data.email}</strong> to set up their account.</p>`,
+            html: successHtml,
             confirmButtonColor: '#405189',
             confirmButtonText: 'Done'
           });

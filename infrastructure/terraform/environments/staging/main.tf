@@ -371,6 +371,14 @@ module "ecs" {
       value = "https://app-staging.legience.com"
     },
     {
+      name  = "EMAIL_FROM_ADDRESS"
+      value = "hello@legience.com"
+    },
+    {
+      name  = "EMAIL_FROM_NAME"
+      value = "Legience"
+    },
+    {
       name  = "REDIS_HOST"
       value = "localhost"
     },
@@ -462,6 +470,57 @@ module "ecs" {
       value_from = "${aws_secretsmanager_secret.app_secrets.arn}:EMAIL_PASSWORD::"
     }
   ]
+}
+
+# -----------------------------------------------------------------------------
+# SES (Email sending via Amazon SES instead of Gmail SMTP)
+# -----------------------------------------------------------------------------
+resource "aws_ses_domain_identity" "legience" {
+  domain = "legience.com"
+}
+
+resource "aws_ses_domain_dkim" "legience" {
+  domain = aws_ses_domain_identity.legience.domain
+}
+
+resource "aws_iam_user" "ses_smtp" {
+  name = "legience-${local.environment}-ses-smtp"
+}
+
+resource "aws_iam_user_policy" "ses_smtp" {
+  name = "ses-send-email"
+  user = aws_iam_user.ses_smtp.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ses:SendEmail", "ses:SendRawEmail"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_access_key" "ses_smtp" {
+  user = aws_iam_user.ses_smtp.name
+}
+
+output "ses_dkim_tokens" {
+  description = "SES DKIM tokens - add as CNAME records in DNS"
+  value       = aws_ses_domain_dkim.legience.dkim_tokens
+}
+
+output "ses_smtp_username" {
+  description = "SES SMTP username (use as EMAIL_ID in Secrets Manager)"
+  value       = aws_iam_access_key.ses_smtp.id
+}
+
+output "ses_smtp_password" {
+  description = "SES SMTP password (use as EMAIL_PASSWORD in Secrets Manager)"
+  value       = aws_iam_access_key.ses_smtp.ses_smtp_password_v4
+  sensitive   = true
 }
 
 # -----------------------------------------------------------------------------

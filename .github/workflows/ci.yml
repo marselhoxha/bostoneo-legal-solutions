@@ -288,7 +288,7 @@ jobs:
               init:
                 mode: never
             mail:
-              host: smtp.gmail.com
+              host: ${SMTP_HOST:email-smtp.us-east-1.amazonaws.com}
               port: 587
               username: ${EMAIL_ID:}
               password: ${EMAIL_PASSWORD:}
@@ -320,6 +320,8 @@ jobs:
               base-url: https://api.anthropic.com
           UI_APP_URL: ${UI_APP_URL:https://app-staging.legience.com}
           VERIFY_EMAIL_HOST: ${VERIFY_EMAIL_HOST:https://api-staging.legience.com}
+          EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:hello@legience.com}
+          EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:Legience}
           file:
             storage:
               type: ${FILE_STORAGE_TYPE:s3}

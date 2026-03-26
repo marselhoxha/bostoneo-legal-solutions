@@ -66,6 +66,9 @@ public class User {
 
     @Column(name = "locked_until")
     private LocalDateTime lockedUntil;
+
+    @Column(name = "force_password_change", nullable = false)
+    private boolean forcePasswordChange = false;
     
     // RBAC fields - This will be handled by the custom repository, not JPA
     @Transient

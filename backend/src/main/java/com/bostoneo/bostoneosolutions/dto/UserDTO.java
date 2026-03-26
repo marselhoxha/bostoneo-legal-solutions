@@ -26,6 +26,7 @@ public class UserDTO {
     private boolean enabled;
     private boolean notLocked;
     private boolean usingMFA;
+    private boolean forcePasswordChange;
     private LocalDateTime createdAt;
     
     // List of role names for the new RBAC system

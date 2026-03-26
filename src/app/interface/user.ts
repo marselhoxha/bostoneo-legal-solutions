@@ -11,6 +11,7 @@ export interface User {
       enabled: boolean;
       notLocked: boolean;
       usingMFA: boolean;
+      forcePasswordChange?: boolean;
       createdAt?: Date;
       organizationName?: string;
       organizationFirmType?: string;

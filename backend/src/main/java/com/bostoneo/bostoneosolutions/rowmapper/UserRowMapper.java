@@ -37,6 +37,7 @@ public class UserRowMapper implements RowMapper<User> {
                 .createdAt(createdAtTimestamp != null ? createdAtTimestamp.toLocalDateTime() : java.time.LocalDateTime.now())
                 .failedLoginAttempts(resultSet.getInt("failed_login_attempts"))
                 .lockedUntil(lockedUntilTimestamp != null ? lockedUntilTimestamp.toLocalDateTime() : null)
+                .forcePasswordChange(resultSet.getBoolean("force_password_change"))
                 .build();
 
     }

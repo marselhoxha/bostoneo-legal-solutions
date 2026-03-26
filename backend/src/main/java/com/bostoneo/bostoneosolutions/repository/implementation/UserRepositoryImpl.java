@@ -426,8 +426,11 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         if(!password.equals(confirmPassword)) throw new ApiException("Passwords don't match. Please try again.");
         passwordPolicyValidator.validate(password);
         try {
-            jdbc.update(UPDATE_USER_PASSWORD_BY_URL_QUERY, of("password", encoder.encode(password), "url", getVerificationUrl(key, PASSWORD.getType())));
-            jdbc.update(DELETE_VERIFICATION_BY_URL_QUERY, of("url", getVerificationUrl(key, PASSWORD.getType())));
+            String verificationUrl = getVerificationUrl(key, PASSWORD.getType());
+            jdbc.update(UPDATE_USER_PASSWORD_BY_URL_QUERY, of("password", encoder.encode(password), "url", verificationUrl));
+            // Clear force_password_change flag for the user associated with this token
+            jdbc.update("UPDATE users SET force_password_change = false WHERE id = (SELECT user_id FROM reset_password_verifications WHERE url = :url)", of("url", verificationUrl));
+            jdbc.update(DELETE_VERIFICATION_BY_URL_QUERY, of("url", verificationUrl));
         } catch (Exception exception) {
             log.error(exception.getMessage());
             throw new ApiException("An error occurred. Please try again.");
@@ -439,7 +442,8 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         passwordPolicyValidator.validate(password);
         try {
             jdbc.update(UPDATE_USER_PASSWORD_BY_USER_ID_QUERY, of("id", userId, "password", encoder.encode(password)));
-            //jdbc.update(DELETE_PASSWORD_VERIFICATION_BY_USER_ID_QUERY, of("userId", userId));
+            // Clear force_password_change flag after user sets their own password
+            jdbc.update("UPDATE users SET force_password_change = false WHERE id = :id", of("id", userId));
         } catch (Exception exception) {
             log.error(exception.getMessage());
             throw new ApiException("An error occurred. Please try again.");
@@ -481,6 +485,8 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         if(encoder.matches(currentPassword, user.getPassword())) {
             try {
                 jdbc.update(UPDATE_USER_PASSWORD_BY_ID_QUERY, of("userId", id, "password", encoder.encode(newPassword)));
+                // Clear force_password_change flag after user sets their own password
+                jdbc.update("UPDATE users SET force_password_change = false WHERE id = :id", of("id", id));
             }  catch (Exception exception) {
                 throw new ApiException("An error occurred. Please try again.");
             }

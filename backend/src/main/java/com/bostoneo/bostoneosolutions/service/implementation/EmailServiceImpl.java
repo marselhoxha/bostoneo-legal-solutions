@@ -37,6 +37,12 @@ public class EmailServiceImpl implements EmailService {
     @Value("${LEGIENCE_LOGO_URL:https://legience.com/legience-logo-blue.svg}")
     private String legienceLogoUrl;
 
+    @Value("${EMAIL_FROM_ADDRESS:hello@legience.com}")
+    private String fromAddress;
+
+    @Value("${EMAIL_FROM_NAME:Legience}")
+    private String fromName;
+
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a");
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\{\\{(\\w+)\\}\\}");
@@ -47,7 +53,7 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             
-            helper.setFrom("hello@legience.com", "Legience");
+            helper.setFrom(fromAddress, fromName);
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(body, true); // true indicates HTML content
@@ -67,7 +73,7 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             
-            helper.setFrom("hello@legience.com", "Legience");
+            helper.setFrom(fromAddress, fromName);
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(body, true); // true indicates HTML content
@@ -161,7 +167,7 @@ public class EmailServiceImpl implements EmailService {
 
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setFrom("hello@legience.com", "Legience");
+            helper.setFrom(fromAddress, fromName);
             helper.setTo(email);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
@@ -246,7 +252,7 @@ public class EmailServiceImpl implements EmailService {
 
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setFrom("hello@legience.com", "Legience");
+            helper.setFrom(fromAddress, fromName);
             helper.setTo(email);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
@@ -276,7 +282,7 @@ public class EmailServiceImpl implements EmailService {
 
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setFrom("hello@legience.com", "Legience");
+            helper.setFrom(fromAddress, fromName);
             helper.setTo(to);
             helper.setSubject("Legience - " + title);
             helper.setText(htmlContent, true);
@@ -305,7 +311,7 @@ public class EmailServiceImpl implements EmailService {
 
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setFrom("hello@legience.com", "Legience");
+            helper.setFrom(fromAddress, fromName);
             helper.setTo(email);
             helper.setSubject("Legience - Your Verification Code");
             helper.setText(htmlContent, true);
@@ -344,7 +350,7 @@ public class EmailServiceImpl implements EmailService {
 
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setFrom("hello@legience.com", "Legience");
+            helper.setFrom(fromAddress, fromName);
             helper.setTo(email);
             helper.setSubject("You've been invited to join " + organizationName);
             helper.setText(htmlContent, true);

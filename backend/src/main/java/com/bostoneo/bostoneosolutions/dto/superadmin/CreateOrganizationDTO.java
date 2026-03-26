@@ -45,4 +45,8 @@ public class CreateOrganizationDTO {
     private Integer maxUsers;
     private Integer maxCases;
     private Long maxStorageBytes;
+
+    // Skip email invitation (superadmin sets up password manually)
+    private Boolean skipEmail;
+    private String temporaryPassword;
 }

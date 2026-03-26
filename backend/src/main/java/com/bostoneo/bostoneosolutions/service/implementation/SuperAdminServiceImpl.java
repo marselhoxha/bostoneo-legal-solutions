@@ -28,6 +28,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -874,7 +875,12 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         // Check if admin email already exists
         Long userId = null;
-        String tempPassword = UUID.randomUUID().toString().substring(0, 8);
+        boolean skipEmail = Boolean.TRUE.equals(dto.getSkipEmail());
+        if (skipEmail && (dto.getTemporaryPassword() == null || dto.getTemporaryPassword().isBlank())) {
+            throw new ApiException("Temporary password is required when skipping invitation email");
+        }
+        String tempPassword = (dto.getTemporaryPassword() != null && !dto.getTemporaryPassword().isBlank())
+            ? dto.getTemporaryPassword() : UUID.randomUUID().toString().substring(0, 8);
         try {
             userId = jdbc.queryForObject(
                 "SELECT id FROM users WHERE email = :email",
@@ -885,16 +891,18 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         } catch (org.springframework.dao.EmptyResultDataAccessException ignored) {
             // Email not found — create new user
             String encodedPassword = passwordEncoder.encode(tempPassword);
+            boolean forceChange = skipEmail && dto.getTemporaryPassword() != null && !dto.getTemporaryPassword().isBlank();
 
             jdbc.update(
-                "INSERT INTO users (first_name, last_name, email, password, organization_id, enabled, non_locked, using_mfa, created_at) " +
-                "VALUES (:firstName, :lastName, :email, :password, :orgId, true, true, false, :createdAt)",
+                "INSERT INTO users (first_name, last_name, email, password, organization_id, enabled, non_locked, using_mfa, force_password_change, created_at) " +
+                "VALUES (:firstName, :lastName, :email, :password, :orgId, true, true, false, :forcePasswordChange, :createdAt)",
                 new MapSqlParameterSource()
                     .addValue("firstName", dto.getAdminFirstName())
                     .addValue("lastName", dto.getAdminLastName())
                     .addValue("email", dto.getAdminEmail())
                     .addValue("password", encodedPassword)
                     .addValue("orgId", org.getId())
+                    .addValue("forcePasswordChange", forceChange)
                     .addValue("createdAt", LocalDateTime.now())
             );
 
@@ -913,35 +921,43 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             }
         }
 
-        // Generate a one-time setup token so the user can set their own password
         if (userId == null) {
             throw new ApiException("Failed to create admin user - could not retrieve user ID");
         }
-        String setupToken = UUID.randomUUID().toString();
-        jdbc.update(
-            "DELETE FROM reset_password_verifications WHERE user_id = :userId",
-            new MapSqlParameterSource().addValue("userId", userId)
-        );
-        jdbc.update(
-            "INSERT INTO reset_password_verifications (user_id, url, expiration_date) VALUES (:userId, :url, :expirationDate)",
-            new MapSqlParameterSource()
-                .addValue("userId", userId)
-                .addValue("url", setupToken)
-                .addValue("expirationDate", LocalDateTime.now().plusDays(7))
-        );
 
-        // Send welcome email with invitation to set password
-        try {
-            String inviteUrl = frontendBaseUrl + "/user/verify/password/" + setupToken;
-            emailService.sendInvitationEmail(
-                dto.getAdminEmail(),
-                org.getName(),
-                "Administrator",
-                inviteUrl,
-                7 // 7 days to accept
+        if (!skipEmail) {
+            // Generate a one-time setup token so the user can set their own password
+            String setupToken = UUID.randomUUID().toString();
+            // Store full URL matching UserRepositoryImpl.getVerificationUrl() format
+            String verificationDbUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/user/verify/password/" + setupToken).toUriString();
+            jdbc.update(
+                "DELETE FROM reset_password_verifications WHERE user_id = :userId",
+                new MapSqlParameterSource().addValue("userId", userId)
             );
-        } catch (Exception e) {
-            log.error("Failed to send welcome email: {}", e.getMessage());
+            jdbc.update(
+                "INSERT INTO reset_password_verifications (user_id, url, expiration_date) VALUES (:userId, :url, :expirationDate)",
+                new MapSqlParameterSource()
+                    .addValue("userId", userId)
+                    .addValue("url", verificationDbUrl)
+                    .addValue("expirationDate", LocalDateTime.now().plusDays(7))
+            );
+
+            // Send welcome email with invitation to set password
+            try {
+                String inviteUrl = frontendBaseUrl + "/user/verify/password/" + setupToken;
+                emailService.sendInvitationEmail(
+                    dto.getAdminEmail(),
+                    org.getName(),
+                    "Administrator",
+                    inviteUrl,
+                    7 // 7 days to accept
+                );
+            } catch (Exception e) {
+                log.error("Failed to send welcome email: {}", e.getMessage());
+            }
+        } else {
+            log.info("SUPERADMIN: Skipping invitation email for admin user {} (skipEmail=true)", dto.getAdminEmail());
         }
 
         log.info("SUPERADMIN: Organization {} created with admin user {}", org.getName(), dto.getAdminEmail());
@@ -1714,19 +1730,26 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         }
 
         // 4. Generate temp password and encode
-        String tempPassword = UUID.randomUUID().toString().substring(0, 8);
+        boolean skipEmail = Boolean.TRUE.equals(dto.getSkipEmail());
+        if (skipEmail && (dto.getTemporaryPassword() == null || dto.getTemporaryPassword().isBlank())) {
+            throw new ApiException("Temporary password is required when skipping invitation email");
+        }
+        String tempPassword = (dto.getTemporaryPassword() != null && !dto.getTemporaryPassword().isBlank())
+            ? dto.getTemporaryPassword() : UUID.randomUUID().toString().substring(0, 8);
         String encodedPassword = passwordEncoder.encode(tempPassword);
+        boolean forceChange = skipEmail && dto.getTemporaryPassword() != null && !dto.getTemporaryPassword().isBlank();
 
         // 5. Insert user
         jdbc.update(
-            "INSERT INTO users (first_name, last_name, email, password, organization_id, enabled, non_locked, using_mfa, created_at) " +
-            "VALUES (:firstName, :lastName, :email, :password, :orgId, true, true, false, :createdAt)",
+            "INSERT INTO users (first_name, last_name, email, password, organization_id, enabled, non_locked, using_mfa, force_password_change, created_at) " +
+            "VALUES (:firstName, :lastName, :email, :password, :orgId, true, true, false, :forcePasswordChange, :createdAt)",
             new MapSqlParameterSource()
                 .addValue("firstName", dto.getFirstName())
                 .addValue("lastName", dto.getLastName())
                 .addValue("email", dto.getEmail())
                 .addValue("password", encodedPassword)
                 .addValue("orgId", organizationId)
+                .addValue("forcePasswordChange", forceChange)
                 .addValue("createdAt", LocalDateTime.now())
         );
 
@@ -1751,35 +1774,43 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             }
         }
 
-        // 7. Generate a one-time setup token so the user can set their own password
         if (userId == null) {
             throw new ApiException("Failed to create user - could not retrieve user ID");
         }
-        String setupToken = UUID.randomUUID().toString();
-        jdbc.update(
-            "DELETE FROM reset_password_verifications WHERE user_id = :userId",
-            new MapSqlParameterSource().addValue("userId", userId)
-        );
-        jdbc.update(
-            "INSERT INTO reset_password_verifications (user_id, url, expiration_date) VALUES (:userId, :url, :expirationDate)",
-            new MapSqlParameterSource()
-                .addValue("userId", userId)
-                .addValue("url", setupToken)
-                .addValue("expirationDate", LocalDateTime.now().plusDays(7))
-        );
 
-        // 8. Send invitation email
-        try {
-            String inviteUrl = frontendBaseUrl + "/user/verify/password/" + setupToken;
-            emailService.sendInvitationEmail(
-                dto.getEmail(),
-                org.getName(),
-                roleName.replace("ROLE_", ""),
-                inviteUrl,
-                7
+        if (!skipEmail) {
+            // 7. Generate a one-time setup token so the user can set their own password
+            String setupToken = UUID.randomUUID().toString();
+            // Store full URL matching UserRepositoryImpl.getVerificationUrl() format
+            String verificationDbUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/user/verify/password/" + setupToken).toUriString();
+            jdbc.update(
+                "DELETE FROM reset_password_verifications WHERE user_id = :userId",
+                new MapSqlParameterSource().addValue("userId", userId)
             );
-        } catch (Exception e) {
-            log.error("Failed to send invitation email to {}: {}", dto.getEmail(), e.getMessage());
+            jdbc.update(
+                "INSERT INTO reset_password_verifications (user_id, url, expiration_date) VALUES (:userId, :url, :expirationDate)",
+                new MapSqlParameterSource()
+                    .addValue("userId", userId)
+                    .addValue("url", verificationDbUrl)
+                    .addValue("expirationDate", LocalDateTime.now().plusDays(7))
+            );
+
+            // 8. Send invitation email
+            try {
+                String inviteUrl = frontendBaseUrl + "/user/verify/password/" + setupToken;
+                emailService.sendInvitationEmail(
+                    dto.getEmail(),
+                    org.getName(),
+                    roleName.replace("ROLE_", ""),
+                    inviteUrl,
+                    7
+                );
+            } catch (Exception e) {
+                log.error("Failed to send invitation email to {}: {}", dto.getEmail(), e.getMessage());
+            }
+        } else {
+            log.info("SUPERADMIN: Skipping invitation email for user {} (skipEmail=true)", dto.getEmail());
         }
 
         // 9. Build and return UserDTO
@@ -1792,6 +1823,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         userDTO.setEnabled(true);
         userDTO.setNotLocked(true);
         userDTO.setUsingMFA(false);
+        userDTO.setForcePasswordChange(forceChange);
         userDTO.setRoleName(roleName);
         userDTO.setRoles(List.of(roleName));
         userDTO.setCreatedAt(LocalDateTime.now());
@@ -1848,6 +1880,9 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         // Generate new setup token
         String setupToken = UUID.randomUUID().toString();
+        // Store full URL matching UserRepositoryImpl.getVerificationUrl() format
+        String verificationDbUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+            .path("/user/verify/password/" + setupToken).toUriString();
         jdbc.update(
             "DELETE FROM reset_password_verifications WHERE user_id = :userId",
             new MapSqlParameterSource().addValue("userId", userId)
@@ -1856,7 +1891,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             "INSERT INTO reset_password_verifications (user_id, url, expiration_date) VALUES (:userId, :url, :expirationDate)",
             new MapSqlParameterSource()
                 .addValue("userId", userId)
-                .addValue("url", setupToken)
+                .addValue("url", verificationDbUrl)
                 .addValue("expirationDate", LocalDateTime.now().plusDays(7))
         );
 
