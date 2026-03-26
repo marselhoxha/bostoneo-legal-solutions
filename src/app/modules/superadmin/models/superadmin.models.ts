@@ -402,6 +402,8 @@ export interface RoleSummary {
   displayName: string;
   hierarchyLevel: number;
   isSystemRole: boolean;
+  description?: string;
+  permissionSummary?: string;
 }
 
 // Login session for session management

@@ -588,7 +588,6 @@ export const ADMIN_MENU: MenuItem[] = [
     link: '/admin/audit-logs',
     subItems: [
       { id: 'admin-admin-org', label: 'Organization Settings', link: '/organizations/details/__ORG_ID__', parentId: 'admin-admin' },
-      { id: 'admin-admin-user-roles', label: 'User Roles', link: '/admin/user-roles', parentId: 'admin-admin' },
       { id: 'admin-admin-audit', label: 'Audit Logs', link: '/admin/audit-logs', parentId: 'admin-admin' }
     ]
   }

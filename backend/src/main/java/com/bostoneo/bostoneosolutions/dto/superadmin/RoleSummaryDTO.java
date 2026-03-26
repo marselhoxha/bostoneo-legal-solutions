@@ -11,4 +11,6 @@ public class RoleSummaryDTO {
     private String displayName;
     private int hierarchyLevel;
     private boolean isSystemRole;
+    private String description;
+    private String permissionSummary;
 }

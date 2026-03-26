@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
 import { NgForm } from '@angular/forms';
-import { Router, NavigationEnd } from '@angular/router';
+import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { Observable, of, BehaviorSubject, map, startWith, catchError, Subject, takeUntil } from 'rxjs';
 import { DataState } from 'src/app/enum/datastate.enum';
 import { EventType } from 'src/app/enum/event-type.enum';
@@ -28,16 +28,27 @@ export class UserComponent implements OnInit, OnDestroy {
   @ViewChild('profileForm') profileForm: NgForm;  // Access the form using ViewChild
   profileCompletion: number = 0;
   user: any = {};
+  activeTab = 1;
+  forcePasswordChange = false;
   private destroy$ = new Subject<void>();
 
   constructor(
     private userService: UserService,
-    private cdr: ChangeDetectorRef, 
+    private cdr: ChangeDetectorRef,
     private noficationService: NotificationService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) { }
 
   ngOnInit(): void {
+    // Check if redirected for forced password change
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      if (params['changePassword'] === 'true') {
+        this.activeTab = 2; // Switch to Change Password tab
+        this.forcePasswordChange = true;
+      }
+    });
+
     // Force a fresh profile data load
     this.userService.refreshUserData();
     

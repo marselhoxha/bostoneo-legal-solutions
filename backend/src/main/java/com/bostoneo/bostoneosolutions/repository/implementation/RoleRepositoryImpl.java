@@ -150,7 +150,18 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     public void updateUserRole(Long userId, String roleName) {
         try {
             Role role = jdbc.queryForObject(SELECT_ROLE_BY_NAME_QUERY, of("name", roleName), new RoleRowMapper());
-            jdbc.update(UPDATE_USER_ROLE_QUERY, of("userId", userId, "roleId",role.getId()));
+            // Safe update: clear primary flags, then upsert the new role
+            jdbc.update("UPDATE user_roles SET is_primary = false WHERE user_id = :userId", of("userId", userId));
+            Integer exists = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM user_roles WHERE user_id = :userId AND role_id = :roleId",
+                of("userId", userId, "roleId", role.getId()), Integer.class);
+            if (exists != null && exists > 0) {
+                jdbc.update("UPDATE user_roles SET is_primary = true WHERE user_id = :userId AND role_id = :roleId",
+                    of("userId", userId, "roleId", role.getId()));
+            } else {
+                jdbc.update("INSERT INTO user_roles (user_id, role_id, is_primary) VALUES (:userId, :roleId, true)",
+                    of("userId", userId, "roleId", role.getId()));
+            }
         } catch (EmptyResultDataAccessException exception) {
             throw new ApiException("No role found by name: " + roleName);
         } catch (Exception exception) {

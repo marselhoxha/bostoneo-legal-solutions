@@ -52,8 +52,8 @@
               <i class="ri-shield-keyhole-line text-primary" style="font-size: 36px;"></i>
             </div>
           </div>
-          <h5 class="verify-title">Set Up Your Password</h5>
-          <p class="verify-subtitle">Create a secure password for your account.</p>
+          <h5 class="verify-title">{{ isForceChange ? 'Change Your Password' : 'Set Up Your Password' }}</h5>
+          <p class="verify-subtitle">{{ isForceChange ? 'Your temporary password must be changed before you can continue.' : 'Create a secure password for your account.' }}</p>
         </div>
 
         <div *ngIf="state.error" class="alert alert-danger text-center" role="alert">
@@ -118,7 +118,7 @@
           </div>
         </form>
 
-        <div class="mt-4 text-center">
+        <div *ngIf="!isForceChange" class="mt-4 text-center">
           <a routerLink="/login" class="verify-link">
             <i class="ri-arrow-left-line me-1"></i>Back to Sign In
           </a>

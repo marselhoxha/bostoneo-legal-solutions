@@ -10,7 +10,6 @@ import { DataState } from 'src/app/enum/datastate.enum';
 import { Key } from 'src/app/enum/key.enum';
 import { NotificationService } from 'src/app/service/notification.service';
 import { HttpCacheService } from 'src/app/service/http.cache.service';
-import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-login',
@@ -72,18 +71,8 @@ export class LoginComponent implements OnInit{
               phone: phone ? phone.substring(phone.length - 4) : ''
             };
           } else if (response.data.user.forcePasswordChange) {
-            // User must change their temporary password before continuing
-            Swal.fire({
-              icon: 'warning',
-              title: 'Password Change Required',
-              text: 'You must change your temporary password before continuing.',
-              confirmButtonColor: '#405189',
-              confirmButtonText: 'Change Password',
-              allowOutsideClick: false,
-              allowEscapeKey: false
-            }).then(() => {
-              this.router.navigate(['/profile'], { queryParams: { changePassword: true } });
-            });
+            // Redirect to standalone password change page — user cannot bypass this
+            this.router.navigate(['/user/verify/password/force-change']);
             return { dataState: DataState.LOADED, loginSuccess: true };
           } else {
             this.notificationService.onSuccess(response.message)

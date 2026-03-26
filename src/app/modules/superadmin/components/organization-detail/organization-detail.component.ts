@@ -309,6 +309,11 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  getSelectedRole(): any {
+    const roleName = this.addUserForm.get('roleName')?.value;
+    return roleName ? this.availableRoles.find(r => r.name === roleName) : null;
+  }
+
   submitAddUser(): void {
     this.addUserForm.markAllAsTouched();
     if (this.addUserForm.invalid || !this.organization) return;

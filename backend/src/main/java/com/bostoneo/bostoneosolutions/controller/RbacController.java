@@ -8,6 +8,7 @@ import com.bostoneo.bostoneosolutions.service.EnhancedRbacService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ import static org.springframework.http.HttpStatus.OK;
 @RequestMapping("/api/rbac")
 @RequiredArgsConstructor
 @Slf4j
-// @CrossOrigin removed - using global CORS config
+@PreAuthorize("hasRole('ROLE_SUPERADMIN')")
 public class RbacController {
 
     private final RoleServiceImpl roleService;

@@ -58,7 +58,19 @@
               </thead>
               <tbody>
                 <tr *ngIf="expenses.length === 0">
-                  <td colspan="7" class="text-center py-4">No expenses found.</td>
+                  <td colspan="7" class="text-center py-5">
+                    <div class="d-flex justify-content-center mb-3">
+                      <div class="rounded-circle bg-primary-subtle d-flex align-items-center justify-content-center" style="width: 64px; height: 64px;">
+                        <i class="ri-money-dollar-circle-line text-primary" style="font-size: 28px;"></i>
+                      </div>
+                    </div>
+                    <h6 class="mb-2">No Expenses Yet</h6>
+                    <p class="text-muted mb-3 fs-13">Before creating expenses, make sure you have set up at least one <strong>vendor</strong> and one <strong>category</strong>.</p>
+                    <div class="d-flex justify-content-center gap-2">
+                      <a routerLink="/expenses/vendors" class="btn btn-soft-primary btn-sm"><i class="ri-store-2-line me-1"></i>Manage Vendors</a>
+                      <a routerLink="/expenses/categories" class="btn btn-soft-info btn-sm"><i class="ri-folder-line me-1"></i>Manage Categories</a>
+                    </div>
+                  </td>
                 </tr>
                 <tr *ngFor="let expense of expenses">
                   <td class="px-4">{{ expense.id }}</td>

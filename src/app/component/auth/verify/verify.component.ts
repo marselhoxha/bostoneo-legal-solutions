@@ -6,6 +6,7 @@ import { DataState } from 'src/app/enum/datastate.enum';
 import { AccountType, VerifyState } from 'src/app/interface/appstates';
 import { User } from 'src/app/interface/user';
 import { UserService } from 'src/app/service/user.service';
+import { Key } from 'src/app/enum/key.enum';
 
 @Component({
   selector: 'app-verify',
@@ -23,6 +24,7 @@ export class VerifyComponent implements OnInit {
   showPassword = false;
   password = '';
   confirmPassword = '';
+  isForceChange = false;
   private readonly ACCOUNT_KEY: string = 'key';
 
   constructor(private activatedRoute: ActivatedRoute, private userService: UserService, private router: Router) { }
@@ -30,8 +32,35 @@ export class VerifyComponent implements OnInit {
   ngOnInit(): void {
     this.verifyState$ = this.activatedRoute.paramMap.pipe(
       switchMap((params: ParamMap) => {
+        const key = params.get(this.ACCOUNT_KEY);
+
+        // Handle force password change (user already logged in with temp password)
+        if (key === 'force-change') {
+          this.isForceChange = true;
+          // Get user ID from the stored profile data
+          return this.userService.profile$().pipe(
+            map(response => {
+              this.userSubject.next(response.data.user);
+              return {
+                type: 'password' as AccountType,
+                title: 'Change Required',
+                dataState: DataState.LOADED,
+                message: 'You must set a new password before continuing.',
+                verifySuccess: true
+              };
+            }),
+            startWith({ title: 'Loading...', dataState: DataState.LOADING, message: 'Please wait...', verifySuccess: false }),
+            catchError(() => {
+              // If not authenticated, redirect to login
+              this.router.navigate(['/login']);
+              return of({ title: 'Error', dataState: DataState.ERROR, error: 'Session expired. Please log in again.', message: 'Session expired', verifySuccess: false });
+            })
+          );
+        }
+
+        // Normal token verification flow
         const type: AccountType = this.getAccountType(window.location.href);
-        return this.userService.verify$(params.get(this.ACCOUNT_KEY), type)
+        return this.userService.verify$(key, type)
           .pipe(
             map(response => {
               type === 'password' ? this.userSubject.next(response.data.user) : null;
@@ -52,9 +81,13 @@ export class VerifyComponent implements OnInit {
       .pipe(
         map(response => {
           this.isLoadingSubject.next(false);
-          // Auto-redirect to login after 3 seconds
+          if (this.isForceChange) {
+            // Clear tokens so user must log in fresh with new password
+            localStorage.removeItem(Key.TOKEN);
+            localStorage.removeItem(Key.REFRESH_TOKEN);
+          }
           setTimeout(() => this.router.navigate(['/login']), 3000);
-          return { type: 'account' as AccountType, title: 'Success', dataState: DataState.LOADED, message: 'Password set successfully! Redirecting to login...', verifySuccess: true };
+          return { type: 'account' as AccountType, title: 'Success', dataState: DataState.LOADED, message: 'Password changed successfully! Redirecting to login...', verifySuccess: true };
         }),
         startWith({ type: 'password' as AccountType, title: 'Verified!', dataState: DataState.LOADED, verifySuccess: false }),
         catchError((error: string) => {

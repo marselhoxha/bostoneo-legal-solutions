@@ -1907,19 +1907,38 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         log.info("SUPERADMIN: Invitation resent to {} for organization {}", email, org.getName());
     }
 
+    // Role descriptions for the SuperAdmin dropdown
+    private static final Map<String, String[]> ROLE_INFO = Map.of(
+        "ROLE_ADMIN", new String[]{"Full platform access, organization management, user management", "All features"},
+        "ROLE_ATTORNEY", new String[]{"Cases, documents, time tracking, billing, legal research", "Cases, Documents, Time Tracking, Billing, Research"},
+        "ROLE_FINANCE", new String[]{"Financial management: billing, invoices, expenses, reports", "Billing, Invoices, Expenses, Reports"},
+        "PARALEGAL", new String[]{"Case support, document management, limited time tracking", "Cases, Documents, Time Tracking (own)"},
+        "ROLE_SECRETARY", new String[]{"Basic access: calendar, documents, client contacts", "Calendar, Documents, Clients (view)"},
+        "ROLE_USER", new String[]{"View-only access to cases and documents", "Cases (view), Documents (view)"}
+    );
+
     @Override
     public List<RoleSummaryDTO> getAvailableRoles() {
         log.info("SUPERADMIN: Fetching available roles");
+        // Only return the 6 core assignable roles (not law-firm hierarchy roles)
         return jdbc.query(
-            "SELECT id, name, display_name, hierarchy_level, is_system_role FROM roles WHERE is_active = true AND name NOT IN ('ROLE_SUPERADMIN', 'ROLE_CLIENT') ORDER BY hierarchy_level DESC",
+            "SELECT id, name, display_name, hierarchy_level, is_system_role FROM roles " +
+            "WHERE is_active = true AND name IN ('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_FINANCE', 'PARALEGAL', 'ROLE_SECRETARY', 'ROLE_USER') " +
+            "ORDER BY hierarchy_level DESC",
             new MapSqlParameterSource(),
-            (rs, rowNum) -> RoleSummaryDTO.builder()
-                .id(rs.getLong("id"))
-                .name(rs.getString("name"))
-                .displayName(rs.getString("display_name"))
-                .hierarchyLevel(rs.getInt("hierarchy_level"))
-                .isSystemRole(rs.getBoolean("is_system_role"))
-                .build()
+            (rs, rowNum) -> {
+                String name = rs.getString("name");
+                String[] info = ROLE_INFO.getOrDefault(name, new String[]{"", ""});
+                return RoleSummaryDTO.builder()
+                    .id(rs.getLong("id"))
+                    .name(name)
+                    .displayName(rs.getString("display_name"))
+                    .hierarchyLevel(rs.getInt("hierarchy_level"))
+                    .isSystemRole(rs.getBoolean("is_system_role"))
+                    .description(info[0])
+                    .permissionSummary(info[1])
+                    .build();
+            }
         );
     }
 
@@ -1989,18 +2008,33 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             );
         } catch (Exception ignored) {}
 
-        // Delete existing roles and assign new one
+        // Safe role update: preserve existing roles, set new one as primary
+        // 1. Clear primary flag on all existing roles
         jdbc.update(
-            "DELETE FROM user_roles WHERE user_id = :userId",
+            "UPDATE user_roles SET is_primary = false WHERE user_id = :userId",
             new MapSqlParameterSource().addValue("userId", userId)
         );
 
-        jdbc.update(
-            "INSERT INTO user_roles (user_id, role_id, is_primary) VALUES (:userId, :roleId, true)",
-            new MapSqlParameterSource()
-                .addValue("userId", userId)
-                .addValue("roleId", roleId)
+        // 2. Check if user already has this role
+        Integer existingCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_roles WHERE user_id = :userId AND role_id = :roleId",
+            new MapSqlParameterSource().addValue("userId", userId).addValue("roleId", roleId),
+            Integer.class
         );
+
+        if (existingCount != null && existingCount > 0) {
+            // User already has this role — just mark it as primary
+            jdbc.update(
+                "UPDATE user_roles SET is_primary = true WHERE user_id = :userId AND role_id = :roleId",
+                new MapSqlParameterSource().addValue("userId", userId).addValue("roleId", roleId)
+            );
+        } else {
+            // Add the new role as primary (keep existing roles)
+            jdbc.update(
+                "INSERT INTO user_roles (user_id, role_id, is_primary) VALUES (:userId, :roleId, true)",
+                new MapSqlParameterSource().addValue("userId", userId).addValue("roleId", roleId)
+            );
+        }
 
         log.info("SUPERADMIN: Role changed from {} to {} for user {}", oldRole, roleName, userId);
     }

@@ -195,25 +195,16 @@ export class AuditLogService {
    */
   queryAuditLog(query: AuditQuery): Observable<AuditEntry[]> {
     let params = new HttpParams();
-    
-    if (query.userId) params = params.set('userId', query.userId.toString());
-    if (query.entityType) params = params.set('entityType', query.entityType);
-    if (query.entityId) params = params.set('entityId', query.entityId.toString());
-    if (query.action) params = params.set('action', query.action);
-    if (query.startDate) params = params.set('startDate', query.startDate.toISOString());
-    if (query.endDate) params = params.set('endDate', query.endDate.toISOString());
-    if (query.severity) params = params.set('severity', query.severity.join(','));
-    if (query.category) params = params.set('category', query.category.join(','));
-    if (query.page) params = params.set('page', query.page.toString());
-    if (query.size) params = params.set('size', query.size.toString());
-    if (query.sortBy) params = params.set('sortBy', query.sortBy);
-    if (query.sortDirection) params = params.set('sortDirection', query.sortDirection);
+    params = params.set('limit', (query.size || 50).toString());
 
-    return this.http.get<CustomHttpResponse<AuditEntry[]>>(
-      `${this.apiUrl}/audit/query`,
+    return this.http.get<any>(
+      `${this.apiUrl}/audit/activities/recent`,
       { params }
     ).pipe(
-      map(response => response.data || []),
+      map(response => {
+        const activities = response?.data?.activities || [];
+        return activities;
+      }),
       catchError(error => {
         console.error('Failed to query audit log:', error);
         return of([]);
