@@ -305,16 +305,6 @@ public class EmailTemplateEngine {
         sb.append("</td></tr></table>");
         sb.append("</td></tr></table>");
 
-        // Show raw URL below button if it looks like a plain URL
-        String url = button.getUrl();
-        if (url.startsWith("http://") || url.startsWith("https://")) {
-            sb.append("<p style=\"font-size:12px; color:").append(TEXT_FAINT)
-              .append("; text-align:center; word-break:break-all; margin:0 0 16px; font-family:")
-              .append(FONT_FAMILY).append(";\">")
-              .append(escapeHtml(url))
-              .append("</p>");
-        }
-
         return sb.toString();
     }
 

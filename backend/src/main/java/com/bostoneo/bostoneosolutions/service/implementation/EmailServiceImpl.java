@@ -15,6 +15,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
 import java.time.format.DateTimeFormatter;
@@ -34,7 +35,7 @@ public class EmailServiceImpl implements EmailService {
     @Value("${UI_APP_URL:http://localhost:4200}")
     private String frontendUrl;
 
-    @Value("${LEGIENCE_LOGO_URL:https://legience.com/legience-logo-blue.svg}")
+    @Value("${LEGIENCE_LOGO_URL:https://app.legience.com/assets/images/legience-logo-blue.svg}")
     private String legienceLogoUrl;
 
     @Value("${EMAIL_FROM_ADDRESS:hello@legience.com}")
@@ -43,9 +44,32 @@ public class EmailServiceImpl implements EmailService {
     @Value("${EMAIL_FROM_NAME:Legience}")
     private String fromName;
 
+    private static final String LOGO_CID = "legience-logo";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a");
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\{\\{(\\w+)\\}\\}");
+
+    /**
+     * Get the logo URL for email templates. Uses CID reference so the logo
+     * is embedded inline in the email and loads instantly.
+     */
+    private String getLogoUrl() {
+        return "cid:" + LOGO_CID;
+    }
+
+    /**
+     * Attach the logo as an inline image so it loads instantly in email clients.
+     */
+    private void addInlineLogo(MimeMessageHelper helper) {
+        try {
+            ClassPathResource logoResource = new ClassPathResource("static/images/legience-logo-blue.svg");
+            if (logoResource.exists()) {
+                helper.addInline(LOGO_CID, logoResource, "image/svg+xml");
+            }
+        } catch (Exception e) {
+            log.warn("Could not attach inline logo: {}", e.getMessage());
+        }
+    }
 
     @Override
     public boolean sendEmail(String to, String subject, String body) {
@@ -122,7 +146,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendVerificationEmail(String firstName, String email, String verificationUrl, VerificationType verificationType) {
         try {
-            EmailBranding branding = EmailBranding.platform(frontendUrl, legienceLogoUrl);
+            EmailBranding branding = EmailBranding.platform(frontendUrl, getLogoUrl());
 
             String subject;
             EmailContent content;
@@ -171,6 +195,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(email);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
+            addInlineLogo(helper);
 
             mailSender.send(mimeMessage);
             log.info("Verification email sent to {}", firstName);
@@ -184,7 +209,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendDeadlineReminderEmail(String email, String firstName, CalendarEvent event, int minutesBefore) {
         try {
-            EmailBranding branding = EmailBranding.firmInternal("Legience", legienceLogoUrl, "#1e56b6", null, frontendUrl);
+            EmailBranding branding = EmailBranding.firmInternal("Legience", getLogoUrl(), "#1e56b6", null, frontendUrl);
 
             // Determine urgency
             boolean isHighPriority = "DEADLINE".equals(event.getEventType()) &&
@@ -256,6 +281,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(email);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
+            addInlineLogo(helper);
             mailSender.send(mimeMessage);
 
             log.info("Deadline reminder email sent to {} for event ID: {}", email, event.getId());
@@ -269,7 +295,7 @@ public class EmailServiceImpl implements EmailService {
         try {
             log.info("Preparing notification email to: {} ({}), Title: '{}', Type: {}", to, firstName, title, notificationType);
 
-            EmailBranding branding = EmailBranding.firmInternal("Legience", legienceLogoUrl, "#1e56b6", null, frontendUrl);
+            EmailBranding branding = EmailBranding.firmInternal("Legience", getLogoUrl(), "#1e56b6", null, frontendUrl);
 
             EmailContent content = EmailContent.builder()
                     .recipientName(firstName)
@@ -286,6 +312,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(to);
             helper.setSubject("Legience - " + title);
             helper.setText(htmlContent, true);
+            addInlineLogo(helper);
             mailSender.send(mimeMessage);
 
             log.info("Notification email sent successfully to {} for type: {}", to, notificationType);
@@ -299,7 +326,7 @@ public class EmailServiceImpl implements EmailService {
         try {
             log.info("Sending MFA verification email to: {}", email);
 
-            EmailBranding branding = EmailBranding.platform(frontendUrl, legienceLogoUrl);
+            EmailBranding branding = EmailBranding.platform(frontendUrl, getLogoUrl());
             EmailContent content = EmailContent.builder()
                     .recipientName(firstName)
                     .bodyParagraphs(List.of("Your multi-factor authentication verification code is:"))
@@ -315,6 +342,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(email);
             helper.setSubject("Legience - Your Verification Code");
             helper.setText(htmlContent, true);
+            addInlineLogo(helper);
 
             mailSender.send(mimeMessage);
             log.info("MFA verification email sent successfully to: {}", email);
@@ -354,6 +382,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(email);
             helper.setSubject("You've been invited to join " + organizationName);
             helper.setText(htmlContent, true);
+            addInlineLogo(helper);
             mailSender.send(mimeMessage);
 
             log.info("Invitation email sent successfully to: {}", email);

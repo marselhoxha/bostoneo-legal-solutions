@@ -59,7 +59,7 @@ public class ReminderQueueServiceImpl implements ReminderQueueService {
     @Value("${UI_APP_URL:http://localhost:4200}")
     private String frontendUrl;
 
-    @Value("${LEGIENCE_LOGO_URL:https://legience.com/assets/legience-logo.png}")
+    @Value("${LEGIENCE_LOGO_URL:https://app.legience.com/assets/images/legience-logo-blue.svg}")
     private String legienceLogoUrl;
 
     private Long getRequiredOrganizationId() {

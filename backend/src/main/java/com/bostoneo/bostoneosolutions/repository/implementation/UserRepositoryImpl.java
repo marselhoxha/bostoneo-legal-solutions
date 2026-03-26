@@ -18,6 +18,7 @@ import com.bostoneo.bostoneosolutions.service.EmailService;
 import com.bostoneo.bostoneosolutions.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -64,6 +65,9 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     private final FileStorageService fileStorageService;
     private final com.bostoneo.bostoneosolutions.util.PasswordPolicyValidator passwordPolicyValidator;
 
+    @Value("${UI_APP_URL:http://localhost:4200}")
+    private String frontendBaseUrl;
+
     @Override
     public User create(User user) {
         if(getEmailCount(user.getEmail().trim().toLowerCase()) > 0) throw new ApiException("Email already in use. Please use a different email and try again.");
@@ -73,9 +77,11 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             jdbc.update(INSERT_USER_QUERY, parameters, holder);
             user.setId(requireNonNull(holder.getKey()).longValue());
             roleRepository.addRoleToUser(user.getId(), ROLE_USER.name());
-            String verificationUrl = getVerificationUrl(UUID.randomUUID().toString(), ACCOUNT.getType());
+            String accountToken = UUID.randomUUID().toString();
+            String verificationUrl = getVerificationUrl(accountToken, ACCOUNT.getType());
             jdbc.update(INSERT_ACCOUNT_VERIFICATION_URL_QUERY, of("userId", user.getId(), "url", verificationUrl));
-            sendEmail(user.getFirstName(), user.getEmail(), verificationUrl, ACCOUNT);
+            String frontendLink = frontendBaseUrl + "/user/verify/account/" + accountToken;
+            sendEmail(user.getFirstName(), user.getEmail(), frontendLink, ACCOUNT);
             user.setEnabled(false);
             user.setNotLocked(true);
             log.debug("Verification URL: {}", verificationUrl);
@@ -394,11 +400,15 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         try {
             java.sql.Timestamp expirationDate = new java.sql.Timestamp(addDays(new Date(), 1).getTime());
             User user = getUserByEmail(email);
-            String verificationUrl = getVerificationUrl(UUID.randomUUID().toString(), PASSWORD.getType());
+            String token = UUID.randomUUID().toString();
+            // Store full backend URL in DB (for token lookup matching)
+            String verificationUrl = getVerificationUrl(token, PASSWORD.getType());
             jdbc.update(DELETE_PASSWORD_VERIFICATION_BY_USER_ID_QUERY, of("userId",  user.getId()));
             jdbc.update(INSERT_PASSWORD_VERIFICATION_QUERY, of("userId",  user.getId(), "url", verificationUrl, "expirationDate", expirationDate));
-            sendEmail(user.getFirstName(), email, verificationUrl, PASSWORD);
-            log.info("Verification URL: {}", verificationUrl);
+            // Send frontend URL in email (so user lands on the Angular page)
+            String frontendLink = frontendBaseUrl + "/user/verify/password/" + token;
+            sendEmail(user.getFirstName(), email, frontendLink, PASSWORD);
+            log.info("Verification URL: {}", frontendLink);
         } catch (Exception exception) {
             log.error("Password reset failed for {}: {}", email, exception.getMessage(), exception);
             throw new ApiException("An error occurred. Please try again.");
