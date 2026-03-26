@@ -288,7 +288,7 @@ jobs:
               init:
                 mode: never
             mail:
-              host: ${SMTP_HOST:email-smtp.us-east-1.amazonaws.com}
+              host: ${SMTP_HOST:smtp.gmail.com}
               port: 587
               username: ${EMAIL_ID:}
               password: ${EMAIL_PASSWORD:}
@@ -432,11 +432,23 @@ jobs:
           else
             BUCKET="app-staging.legience.com"
           fi
-          aws s3 sync dist/velzon s3://$BUCKET --delete
+          # Upload hashed assets with long cache (1 year) - filenames change on new builds
+          aws s3 sync dist/velzon s3://$BUCKET --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html" --exclude "*.json" --exclude "firebase-messaging-sw.js"
+          # Upload index.html and config files with no-cache so users always get latest
+          aws s3 cp dist/velzon/index.html s3://$BUCKET/index.html \
+            --cache-control "no-cache, no-store, must-revalidate"
+          if [ -f dist/velzon/firebase-messaging-sw.js ]; then
+            aws s3 cp dist/velzon/firebase-messaging-sw.js s3://$BUCKET/firebase-messaging-sw.js \
+              --cache-control "no-cache, no-store, must-revalidate"
+          fi
 
       - name: Invalidate CloudFront Cache
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            aws cloudfront create-invalidation --distribution-id E219VY98M9RN4Z --paths "/*"
+          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
             aws cloudfront create-invalidation --distribution-id E1UWEPT9HA7VQX --paths "/*"
           fi
 
