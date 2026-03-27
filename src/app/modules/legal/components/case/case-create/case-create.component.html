@@ -1,552 +1,460 @@
 <div class="page-content">
   <div class="container-fluid">
+
     <!-- Page Title -->
-    <div class="row">
+    <div class="row mb-3">
       <div class="col-12">
-        <div class="page-title-box d-flex align-items-center justify-content-between">
-          <h4 class="mb-0">Create New Case</h4>
-          <div class="page-title-right">
-            <ol class="breadcrumb m-0">
-              <li class="breadcrumb-item"><a href="/legal/cases">Cases</a></li>
-              <li class="breadcrumb-item active">Create Case</li>
-            </ol>
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <a routerLink="/legal/cases" class="text-muted fs-13"><i class="ri-arrow-left-line me-1"></i>Back to Cases</a>
+            <h4 class="mt-1 mb-0">Create New Case</h4>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Case Form -->
-    <div class="row">
+    <!-- Step Indicator -->
+    <div class="row mb-4">
       <div class="col-12">
-        <div class="card">
-          <div class="card-header border-bottom-dashed">
-            <div class="d-flex align-items-center">
-              <h5 class="card-title mb-0 flex-grow-1">Case Information</h5>
-              <div class="flex-shrink-0">
-                <button type="button" class="btn btn-soft-secondary btn-sm" (click)="cancel()">
-                  <i class="ri-arrow-left-line align-middle me-1"></i> Back to Cases
-                </button>
-              </div>
+        <div class="wizard-steps d-flex justify-content-center">
+          <div *ngFor="let step of steps" class="step-item"
+            [class.completed]="getStepState(step.number) === 'completed'"
+            [class.active]="getStepState(step.number) === 'active'"
+            (click)="goToStep(step.number)"
+            [style.cursor]="step.number < currentStep ? 'pointer' : 'default'">
+            <div class="step-circle"
+              [class.active]="getStepState(step.number) === 'active'"
+              [class.completed]="getStepState(step.number) === 'completed'"
+              [class.pending]="getStepState(step.number) === 'pending'">
+              <i *ngIf="getStepState(step.number) === 'completed'" class="ri-check-line"></i>
+              <i *ngIf="getStepState(step.number) !== 'completed'" [class]="step.icon"></i>
             </div>
+            <span class="step-label"
+              [class.active]="getStepState(step.number) === 'active'"
+              [class.completed]="getStepState(step.number) === 'completed'">
+              {{ step.label }}
+            </span>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step Content -->
+    <div class="row justify-content-center">
+      <div class="col-lg-9">
+        <div class="card wizard-card">
           <div class="card-body">
-            <form [formGroup]="caseForm" (ngSubmit)="onSubmit()">
-              <!-- Client Information -->
-              <div class="row mb-4">
-                <div class="col-12">
-                  <div class="card border shadow-none">
-                    <div class="card-header bg-light">
-                      <h5 class="card-title mb-0">Client Information</h5>
+            <form [formGroup]="caseForm">
+
+              <!-- ========== STEP 1: Client ========== -->
+              <div *ngIf="currentStep === 1">
+                <div class="step-header">
+                  <h5><i class="ri-user-line me-2 text-primary"></i>Client Information</h5>
+                  <p>Search for an existing client or create a new one for this case.</p>
+                </div>
+
+                <!-- MODE: Search -->
+                <div *ngIf="clientMode === 'search'">
+                  <div class="position-relative mb-4">
+                    <label class="form-label">Search Existing Clients</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="ri-search-line"></i></span>
+                      <input type="text" class="form-control" [(ngModel)]="clientSearchQuery" [ngModelOptions]="{standalone: true}"
+                        placeholder="Type a name, email, or phone number..." (input)="searchClients(clientSearchQuery)"
+                        autocomplete="off">
                     </div>
-                    <div class="card-body">
-                      <div class="row g-3">
-                        <div class="col-md-6">
-                          <div class="mb-3">
-                            <label for="clientName" class="form-label">Client Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="clientName" formControlName="clientName"
-                              [ngClass]="{'is-invalid': hasError('clientName')}" placeholder="Enter client name">
-                            <div class="invalid-feedback" *ngIf="hasError('clientName')">
-                              {{ getErrorMessage('clientName') }}
-                            </div>
-                          </div>
+                    <div *ngIf="showClientResults" class="client-search-results position-absolute w-100 shadow-sm" style="z-index:10;">
+                      <div *ngFor="let c of clientSearchResults" class="search-result-item d-flex justify-content-between align-items-center"
+                        (click)="selectClient(c)">
+                        <div>
+                          <div class="fw-medium">{{ c.name }}</div>
+                          <small class="text-muted" *ngIf="c.email">{{ c.email }}</small>
+                          <small class="text-muted" *ngIf="!c.email && c.phone">{{ c.phone }}</small>
                         </div>
-                        <div class="col-md-6">
-                          <div class="mb-3">
-                            <label for="clientEmail" class="form-label">Client Email <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" id="clientEmail" formControlName="clientEmail"
-                              [ngClass]="{'is-invalid': hasError('clientEmail')}" placeholder="Enter client email">
-                            <div class="invalid-feedback" *ngIf="hasError('clientEmail')">
-                              {{ getErrorMessage('clientEmail') }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6">
-                          <div class="mb-3">
-                            <label for="clientPhone" class="form-label">Client Phone <span class="text-danger">*</span></label>
-                            <input type="tel" class="form-control" id="clientPhone" formControlName="clientPhone"
-                              [ngClass]="{'is-invalid': hasError('clientPhone')}" placeholder="Enter client phone">
-                            <div class="invalid-feedback" *ngIf="hasError('clientPhone')">
-                              {{ getErrorMessage('clientPhone') }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6">
-                          <div class="mb-3">
-                            <label for="clientAddress" class="form-label">Client Address</label>
-                            <input type="text" class="form-control" id="clientAddress" formControlName="clientAddress"
-                              placeholder="Enter client address">
-                          </div>
-                        </div>
+                        <span class="badge bg-primary-subtle text-primary">Select</span>
                       </div>
                     </div>
+                  </div>
+                  <div class="text-center mb-3">
+                    <span class="text-muted fs-13">— or —</span>
+                  </div>
+                  <button type="button" class="new-client-btn" (click)="switchToNewClient()">
+                    <i class="ri-user-add-line me-2"></i> Create New Client
+                  </button>
+                </div>
+
+                <!-- MODE: Selected (existing client) -->
+                <div *ngIf="clientMode === 'selected'">
+                  <div class="alert alert-soft-success d-flex align-items-center mb-4">
+                    <i class="ri-checkbox-circle-fill me-2 fs-20"></i>
+                    <div class="flex-grow-1">
+                      Case will be linked to existing client: <strong>{{ existingClientName }}</strong>
+                    </div>
+                    <a class="text-primary ms-3 fs-13 fw-medium" style="cursor:pointer; white-space:nowrap;" (click)="clearSelectedClient()">
+                      <i class="ri-arrow-left-line me-1"></i>Change
+                    </a>
+                  </div>
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">Client Name</label>
+                      <input type="text" class="form-control bg-light" formControlName="clientName" readonly>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Email</label>
+                      <input type="text" class="form-control bg-light" [value]="caseForm.get('clientEmail')?.value || '—'" readonly>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Phone</label>
+                      <input type="text" class="form-control bg-light" [value]="caseForm.get('clientPhone')?.value || '—'" readonly>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Address</label>
+                      <input type="text" class="form-control bg-light" [value]="caseForm.get('clientAddress')?.value || '—'" readonly>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- MODE: New client -->
+                <div *ngIf="clientMode === 'new'">
+                  <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h6 class="mb-0 fw-semibold"><i class="ri-user-add-line me-1 text-primary"></i> New Client</h6>
+                    <a class="text-primary fs-13 fw-medium" style="cursor:pointer" (click)="clearSelectedClient()">
+                      <i class="ri-arrow-left-line me-1"></i>Back to search
+                    </a>
+                  </div>
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">Client Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control" formControlName="clientName"
+                        [ngClass]="{'is-invalid': hasError('clientName')}" placeholder="Full name">
+                      <div class="invalid-feedback">Client name is required.</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Email <span class="text-muted fw-normal fs-12">(recommended)</span></label>
+                      <input type="email" class="form-control" formControlName="clientEmail"
+                        [ngClass]="{'is-invalid': hasError('clientEmail')}" placeholder="email&#64;example.com">
+                      <div class="invalid-feedback">Please enter a valid email.</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Phone <span class="text-muted fw-normal fs-12">(recommended)</span></label>
+                      <input type="tel" class="form-control" formControlName="clientPhone" placeholder="(555) 123-4567">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Address</label>
+                      <input type="text" class="form-control" formControlName="clientAddress" placeholder="Street, city, state, zip">
+                    </div>
+                  </div>
+                  <div class="alert alert-soft-info mt-3 py-2 fs-13">
+                    <i class="ri-information-line me-1"></i> A new client record will be created automatically when this case is saved.
                   </div>
                 </div>
               </div>
 
-              <!-- Case Information -->
-              <div class="row mb-4">
-                <div class="col-12">
-                  <div class="card border shadow-none">
-                    <div class="card-header bg-light">
-                      <h5 class="card-title mb-0">Case Details</h5>
-                    </div>
-                    <div class="card-body">
-                      <div class="row g-3">
-                        <div class="col-md-6">
-                          <div class="mb-3">
-                            <label for="caseNumber" class="form-label">Case Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="caseNumber" formControlName="caseNumber"
-                              [ngClass]="{'is-invalid': hasError('caseNumber')}" placeholder="Auto-generated">
-                            <div class="invalid-feedback" *ngIf="hasError('caseNumber')">
-                              {{ getErrorMessage('caseNumber') }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6">
-                          <div class="mb-3">
-                            <label for="title" class="form-label">Case Title <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="title" formControlName="title"
-                              [ngClass]="{'is-invalid': hasError('title')}" placeholder="Enter case title">
-                            <div class="invalid-feedback" *ngIf="hasError('title')">
-                              {{ getErrorMessage('title') }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6">
-                          <div class="mb-3">
-                            <label for="practiceArea" class="form-label">Practice Area <span class="text-danger">*</span></label>
-                            <select class="form-select" id="practiceArea" formControlName="practiceArea"
-                              [ngClass]="{'is-invalid': hasError('practiceArea')}">
-                              <option value="">Select Practice Area</option>
-                              <option *ngFor="let area of practiceAreas" [value]="area">
-                                {{area}}
-                              </option>
-                            </select>
-                            <div class="invalid-feedback" *ngIf="hasError('practiceArea')">
-                              {{ getErrorMessage('practiceArea') }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6">
-                          <div class="mb-3">
-                            <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
-                            <select class="form-select" id="status" formControlName="status"
-                              [ngClass]="{'is-invalid': hasError('status')}">
-                              <option *ngFor="let status of CaseStatus | keyvalue" [value]="status.value">
-                                {{status.value}}
-                              </option>
-                            </select>
-                            <div class="invalid-feedback" *ngIf="hasError('status')">
-                              {{ getErrorMessage('status') }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6">
-                          <div class="mb-3">
-                            <label for="priority" class="form-label">Priority <span class="text-danger">*</span></label>
-                            <select class="form-select" id="priority" formControlName="priority"
-                              [ngClass]="{'is-invalid': hasError('priority')}">
-                              <option *ngFor="let priority of CasePriority | keyvalue" [value]="priority.value">
-                                {{priority.value}}
-                              </option>
-                            </select>
-                            <div class="invalid-feedback" *ngIf="hasError('priority')">
-                              {{ getErrorMessage('priority') }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6">
-                          <div class="mb-3">
-                            <label for="leadAttorneyId" class="form-label">Lead Attorney</label>
-                            <select class="form-select" id="leadAttorneyId" formControlName="leadAttorneyId">
-                              <option value="">Select Lead Attorney</option>
-                              <option *ngFor="let attorney of attorneys" [value]="attorney.id">
-                                {{attorney.firstName}} {{attorney.lastName}} ({{attorney.roleName}})
-                              </option>
-                            </select>
-                          </div>
-                        </div>
-                        <div class="col-12">
-                          <div class="mb-3">
-                            <label for="description" class="form-label">Case Description <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="description" rows="4" formControlName="description"
-                              [ngClass]="{'is-invalid': hasError('description')}" placeholder="Enter case description"></textarea>
-                            <div class="invalid-feedback" *ngIf="hasError('description')">
-                              {{ getErrorMessage('description') }}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+              <!-- ========== STEP 2: Case Details ========== -->
+              <div *ngIf="currentStep === 2">
+                <div class="step-header">
+                  <h5><i class="ri-folder-line me-2 text-primary"></i>Case Details</h5>
+                  <p>Define the case type, title, and key information.</p>
+                </div>
+
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Practice Area <span class="text-danger">*</span></label>
+                    <select class="form-select" formControlName="practiceArea" [ngClass]="{'is-invalid': hasError('practiceArea')}">
+                      <option value="">Select Practice Area</option>
+                      <option *ngFor="let area of practiceAreas" [value]="area">{{ area }}</option>
+                    </select>
+                    <div class="invalid-feedback">Please select a practice area.</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Case Number</label>
+                    <input type="text" class="form-control bg-light" formControlName="caseNumber" readonly>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Case Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" formControlName="title"
+                      [ngClass]="{'is-invalid': hasError('title')}" placeholder="e.g. Rodriguez v. Southwest Logistics Inc.">
+                    <div class="invalid-feedback">Case title is required.</div>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" formControlName="status">
+                      <option *ngFor="let s of CaseStatus | keyvalue" [value]="s.value">{{ s.value }}</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Priority</label>
+                    <select class="form-select" formControlName="priority">
+                      <option *ngFor="let p of CasePriority | keyvalue" [value]="p.value">{{ p.value }}</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Lead Attorney</label>
+                    <select class="form-select" formControlName="leadAttorneyId">
+                      <option value="">Select Attorney</option>
+                      <option *ngFor="let a of attorneys" [value]="a.id">{{ a.firstName }} {{ a.lastName }}</option>
+                    </select>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Description <span class="text-danger">*</span></label>
+                    <textarea class="form-control" rows="4" formControlName="description"
+                      [ngClass]="{'is-invalid': hasError('description')}" placeholder="Describe the case details..."></textarea>
+                    <div class="invalid-feedback">Case description is required.</div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Practice Area Specific Fields -->
-              <div class="row mb-4" *ngIf="currentPracticeAreaSections.length > 0">
-                <div class="col-12">
-                  <div class="card border shadow-none" *ngFor="let section of currentPracticeAreaSections">
-                    <div class="card-header bg-soft-primary">
-                      <h5 class="card-title mb-0">
-                        <i [class]="section.icon + ' align-middle me-2'" *ngIf="section.icon"></i>
-                        {{ section.title }}
-                      </h5>
+                <!-- Practice Area Specific Fields -->
+                <div *ngIf="currentPracticeAreaSections.length > 0" class="mt-4">
+                  <div *ngFor="let section of currentPracticeAreaSections" class="pa-section">
+                    <div class="pa-section-header">
+                      <h6><i [class]="section.icon + ' me-1'" *ngIf="section.icon"></i>{{ section.title }}</h6>
                     </div>
-                    <div class="card-body">
+                    <div class="pa-section-body">
                       <div class="row g-3">
                         <ng-container *ngFor="let field of section.fields">
                           <div [class]="field.colSize || 'col-md-6'">
-                            <div class="mb-3">
-                              <!-- Text Input -->
-                              <ng-container *ngIf="field.type === 'text'">
-                                <label [for]="'pa_' + field.name" class="form-label">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <input type="text" class="form-control" [id]="'pa_' + field.name"
-                                  [formControlName]="field.name"
-                                  [placeholder]="field.placeholder || ''"
-                                  [ngClass]="{'is-invalid': hasError(field.name)}">
-                                <div class="invalid-feedback" *ngIf="hasError(field.name)">
-                                  {{ getErrorMessage(field.name) }}
-                                </div>
-                              </ng-container>
-
-                              <!-- Textarea -->
-                              <ng-container *ngIf="field.type === 'textarea'">
-                                <label [for]="'pa_' + field.name" class="form-label">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <textarea class="form-control" [id]="'pa_' + field.name" rows="3"
-                                  [formControlName]="field.name"
-                                  [placeholder]="field.placeholder || ''"
-                                  [ngClass]="{'is-invalid': hasError(field.name)}"></textarea>
-                                <div class="invalid-feedback" *ngIf="hasError(field.name)">
-                                  {{ getErrorMessage(field.name) }}
-                                </div>
-                              </ng-container>
-
-                              <!-- Select -->
-                              <ng-container *ngIf="field.type === 'select'">
-                                <label [for]="'pa_' + field.name" class="form-label">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <select class="form-select" [id]="'pa_' + field.name"
-                                  [formControlName]="field.name"
-                                  [ngClass]="{'is-invalid': hasError(field.name)}">
-                                  <option value="">Select {{ field.label }}</option>
-                                  <option *ngFor="let opt of field.options" [value]="opt.value">
-                                    {{ opt.label }}
-                                  </option>
-                                </select>
-                                <div class="invalid-feedback" *ngIf="hasError(field.name)">
-                                  {{ getErrorMessage(field.name) }}
-                                </div>
-                              </ng-container>
-
-                              <!-- Date -->
-                              <ng-container *ngIf="field.type === 'date'">
-                                <label [for]="'pa_' + field.name" class="form-label">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <div class="input-group">
-                                  <span class="input-group-text bg-light border-end-0">
-                                    <i class="ri-calendar-line align-middle"></i>
-                                  </span>
-                                  <input type="text" class="form-control border-start-0 flatpickr-input"
-                                    [id]="'pa_' + field.name"
-                                    [formControlName]="field.name"
-                                    [placeholder]="'Select ' + field.label"
-                                    [ngClass]="{'is-invalid': hasError(field.name)}">
-                                </div>
-                                <div class="invalid-feedback d-block" *ngIf="hasError(field.name)">
-                                  {{ getErrorMessage(field.name) }}
-                                </div>
-                              </ng-container>
-
-                              <!-- Currency -->
-                              <ng-container *ngIf="field.type === 'currency'">
-                                <label [for]="'pa_' + field.name" class="form-label">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <div class="input-group">
-                                  <span class="input-group-text bg-light border-end-0">
-                                    <i class="ri-money-dollar-circle-line align-middle"></i>
-                                  </span>
-                                  <input type="number" class="form-control border-start-0"
-                                    [id]="'pa_' + field.name"
-                                    [formControlName]="field.name"
-                                    [placeholder]="field.placeholder || '0.00'"
-                                    min="0" step="0.01"
-                                    [ngClass]="{'is-invalid': hasError(field.name)}">
-                                </div>
-                                <div class="invalid-feedback" *ngIf="hasError(field.name)">
-                                  {{ getErrorMessage(field.name) }}
-                                </div>
-                              </ng-container>
-
-                              <!-- Number -->
-                              <ng-container *ngIf="field.type === 'number'">
-                                <label [for]="'pa_' + field.name" class="form-label">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <input type="number" class="form-control"
-                                  [id]="'pa_' + field.name"
-                                  [formControlName]="field.name"
-                                  [placeholder]="field.placeholder || '0'"
-                                  min="0"
-                                  [ngClass]="{'is-invalid': hasError(field.name)}">
-                                <div class="invalid-feedback" *ngIf="hasError(field.name)">
-                                  {{ getErrorMessage(field.name) }}
-                                </div>
-                              </ng-container>
-
-                              <!-- Checkbox -->
-                              <ng-container *ngIf="field.type === 'checkbox'">
-                                <div class="form-check mt-4">
-                                  <input type="checkbox" class="form-check-input"
-                                    [id]="'pa_' + field.name"
-                                    [formControlName]="field.name">
-                                  <label class="form-check-label" [for]="'pa_' + field.name">
-                                    {{ field.label }}
-                                  </label>
-                                </div>
-                              </ng-container>
-                            </div>
+                            <ng-container *ngIf="field.type === 'text'">
+                              <label class="form-label">{{ field.label }} <span class="text-danger" *ngIf="field.required">*</span></label>
+                              <input type="text" class="form-control" [formControlName]="field.name"
+                                [placeholder]="field.placeholder || ''" [ngClass]="{'is-invalid': hasError(field.name)}">
+                              <div class="invalid-feedback">{{ field.label }} is required.</div>
+                            </ng-container>
+                            <ng-container *ngIf="field.type === 'textarea'">
+                              <label class="form-label">{{ field.label }} <span class="text-danger" *ngIf="field.required">*</span></label>
+                              <textarea class="form-control" rows="3" [formControlName]="field.name"
+                                [placeholder]="field.placeholder || ''" [ngClass]="{'is-invalid': hasError(field.name)}"></textarea>
+                              <div class="invalid-feedback">{{ field.label }} is required.</div>
+                            </ng-container>
+                            <ng-container *ngIf="field.type === 'select'">
+                              <label class="form-label">{{ field.label }} <span class="text-danger" *ngIf="field.required">*</span></label>
+                              <select class="form-select" [formControlName]="field.name" [ngClass]="{'is-invalid': hasError(field.name)}">
+                                <option value="">Select {{ field.label }}</option>
+                                <option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</option>
+                              </select>
+                              <div class="invalid-feedback">{{ field.label }} is required.</div>
+                            </ng-container>
+                            <ng-container *ngIf="field.type === 'date'">
+                              <label class="form-label">{{ field.label }} <span class="text-danger" *ngIf="field.required">*</span></label>
+                              <div class="input-group">
+                                <span class="input-group-text"><i class="ri-calendar-line"></i></span>
+                                <input type="text" class="form-control flatpickr-input" [id]="'pa_' + field.name"
+                                  [formControlName]="field.name" [placeholder]="'Select ' + field.label">
+                              </div>
+                            </ng-container>
+                            <ng-container *ngIf="field.type === 'currency'">
+                              <label class="form-label">{{ field.label }}</label>
+                              <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" [formControlName]="field.name"
+                                  [placeholder]="field.placeholder || '0.00'" min="0" step="0.01">
+                              </div>
+                            </ng-container>
+                            <ng-container *ngIf="field.type === 'number'">
+                              <label class="form-label">{{ field.label }}</label>
+                              <input type="number" class="form-control" [formControlName]="field.name"
+                                [placeholder]="field.placeholder || '0'" min="0">
+                            </ng-container>
+                            <ng-container *ngIf="field.type === 'checkbox'">
+                              <div class="form-check mt-4">
+                                <input type="checkbox" class="form-check-input" [formControlName]="field.name" [id]="'pa_' + field.name">
+                                <label class="form-check-label" [for]="'pa_' + field.name">{{ field.label }}</label>
+                              </div>
+                            </ng-container>
                           </div>
                         </ng-container>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Court Information (Optional) -->
-              <div class="row mb-4">
-                <div class="col-12">
-                  <div class="card border shadow-none">
-                    <div class="card-header bg-light">
-                      <h5 class="card-title mb-0">Court Information <span class="text-muted fs-12 fw-normal">(Optional - can be added later)</span></h5>
+                <!-- Billing -->
+                <div class="mt-4">
+                  <div class="section-title"><i class="ri-money-dollar-circle-line"></i> Billing</div>
+                  <div class="row g-3">
+                    <div class="col-md-3">
+                      <label class="form-label">Billing Type</label>
+                      <select class="form-select" formControlName="billingType">
+                        <option *ngFor="let t of billingTypes" [value]="t.value">{{ t.label }}</option>
+                      </select>
                     </div>
-                    <div class="card-body">
-                      <div class="row g-3">
-                        <div class="col-md-4">
-                          <div class="mb-3">
-                            <label for="jurisdiction" class="form-label">Jurisdiction</label>
-                            <select class="form-select" id="jurisdiction" formControlName="jurisdiction">
-                              <option value="">Select jurisdiction...</option>
-                              <option *ngFor="let j of usJurisdictions" [value]="j">{{ j }}</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div class="col-md-4">
-                          <div class="mb-3">
-                            <label for="countyName" class="form-label">County Name</label>
-                            <input type="text" class="form-control" id="countyName" formControlName="countyName"
-                              placeholder="Enter county name">
-                          </div>
-                        </div>
-                        <div class="col-md-4">
-                          <div class="mb-3">
-                            <label for="judgeName" class="form-label">Judge Name</label>
-                            <input type="text" class="form-control" id="judgeName" formControlName="judgeName"
-                              placeholder="Enter judge name">
-                          </div>
-                        </div>
-                        <div class="col-md-4">
-                          <div class="mb-3">
-                            <label for="courtroom" class="form-label">Courtroom</label>
-                            <input type="text" class="form-control" id="courtroom" formControlName="courtroom"
-                              placeholder="Enter courtroom">
-                          </div>
-                        </div>
+                    <div class="col-md-3">
+                      <label class="form-label">Hourly Rate</label>
+                      <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" formControlName="hourlyRate" placeholder="0.00" min="0" step="0.01">
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Important Dates -->
-              <div class="row mb-4">
-                <div class="col-12">
-                  <div class="card border shadow-none">
-                    <div class="card-header bg-light">
-                      <h5 class="card-title mb-0">Important Dates</h5>
-                    </div>
-                    <div class="card-body">
-                      <div class="row g-3">
-                        <div class="col-md-6 col-lg-3">
-                          <div class="mb-3">
-                            <label for="filingDate" class="form-label">Filing Date <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                              <span class="input-group-text bg-light border-end-0">
-                                <i class="ri-calendar-line align-middle"></i>
-                              </span>
-                              <input type="text"
-                                     class="form-control border-start-0 flatpickr-input"
-                                     id="filingDate"
-                                     formControlName="filingDate"
-                                     [ngClass]="{'is-invalid': hasError('filingDate')}"
-                                     placeholder="Select filing date"
-                                     #filingDate>
-                            </div>
-                            <div class="invalid-feedback" *ngIf="hasError('filingDate')">
-                              {{ getErrorMessage('filingDate') }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                          <div class="mb-3">
-                            <label for="statuteOfLimitationsDate" class="form-label">Statute of Limitations</label>
-                            <div class="input-group">
-                              <span class="input-group-text bg-light border-end-0">
-                                <i class="ri-error-warning-line align-middle text-danger"></i>
-                              </span>
-                              <input type="text"
-                                     class="form-control border-start-0 flatpickr-input"
-                                     id="statuteOfLimitationsDate"
-                                     formControlName="statuteOfLimitationsDate"
-                                     placeholder="Critical deadline"
-                                     #statuteOfLimitationsDate>
-                            </div>
-                            <small class="text-muted">Critical deadline - set if applicable</small>
-                          </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                          <div class="mb-3">
-                            <label for="nextHearingDate" class="form-label">Next Hearing Date</label>
-                            <div class="input-group">
-                              <span class="input-group-text bg-light border-end-0">
-                                <i class="ri-calendar-line align-middle"></i>
-                              </span>
-                              <input type="text"
-                                     class="form-control border-start-0 flatpickr-input"
-                                     id="nextHearingDate"
-                                     formControlName="nextHearingDate"
-                                     placeholder="Select next hearing date"
-                                     #nextHearingDate>
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                          <div class="mb-3">
-                            <label for="estimatedCompletionDate" class="form-label">Est. Completion Date</label>
-                            <div class="input-group">
-                              <span class="input-group-text bg-light border-end-0">
-                                <i class="ri-calendar-line align-middle"></i>
-                              </span>
-                              <input type="text"
-                                     class="form-control border-start-0 flatpickr-input"
-                                     id="estimatedCompletionDate"
-                                     formControlName="estimatedCompletionDate"
-                                     placeholder="Select completion date"
-                                     #estimatedCompletionDate>
-                            </div>
-                          </div>
-                        </div>
+                    <div class="col-md-3">
+                      <label class="form-label">Retainer</label>
+                      <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" formControlName="retainerAmount" placeholder="0.00" min="0" step="0.01">
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Billing Information Section -->
-              <div class="row mb-4">
-                <div class="col-12">
-                  <div class="card border shadow-none">
-                    <div class="card-header bg-light">
-                      <h5 class="card-title mb-0">Billing Information</h5>
-                    </div>
-                    <div class="card-body">
-                      <div class="row g-3">
-                        <div class="col-md-6 col-lg-3">
-                          <div class="mb-3">
-                            <label for="billingType" class="form-label">Billing Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="billingType" formControlName="billingType"
-                              [ngClass]="{'is-invalid': hasError('billingType')}">
-                              <option *ngFor="let type of billingTypes" [value]="type.value">
-                                {{type.label}}
-                              </option>
-                            </select>
-                            <div class="invalid-feedback" *ngIf="hasError('billingType')">
-                              {{ getErrorMessage('billingType') }}
-                            </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                          <div class="mb-3">
-                            <label for="hourlyRate" class="form-label">Hourly Rate</label>
-                            <div class="input-group">
-                              <span class="input-group-text bg-light border-end-0">
-                                <i class="ri-money-dollar-circle-line align-middle"></i>
-                              </span>
-                              <input type="number" class="form-control border-start-0" id="hourlyRate" formControlName="hourlyRate"
-                                placeholder="0.00" min="0" step="0.01">
-                            </div>
-                            <small class="text-muted">Required for hourly billing</small>
-                          </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                          <div class="mb-3">
-                            <label for="retainerAmount" class="form-label">Retainer Amount</label>
-                            <div class="input-group">
-                              <span class="input-group-text bg-light border-end-0">
-                                <i class="ri-money-dollar-circle-line align-middle"></i>
-                              </span>
-                              <input type="number" class="form-control border-start-0" id="retainerAmount" formControlName="retainerAmount"
-                                placeholder="0.00" min="0" step="0.01">
-                            </div>
-                            <small class="text-muted">Initial retainer if applicable</small>
-                          </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                          <div class="mb-3">
-                            <label for="paymentStatus" class="form-label">Payment Status</label>
-                            <select class="form-select" id="paymentStatus" formControlName="paymentStatus">
-                              <option *ngFor="let status of PaymentStatus | keyvalue" [value]="status.value">
-                                {{status.value}}
-                              </option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
+                    <div class="col-md-3">
+                      <label class="form-label">Payment Status</label>
+                      <select class="form-select" formControlName="paymentStatus">
+                        <option *ngFor="let s of PaymentStatus | keyvalue" [value]="s.value">{{ s.value }}</option>
+                      </select>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Form Actions -->
-              <div class="row mt-4">
-                <div class="col-12">
-                  <div class="d-flex justify-content-end gap-2">
-                    <button type="button" class="btn btn-soft-secondary btn-lg px-4" (click)="cancel()">
-                      Cancel
-                    </button>
-                    <button type="submit" class="btn btn-soft-primary btn-lg px-4" [disabled]="isLoading">
-                      <span class="spinner-border spinner-border-sm me-1" *ngIf="isLoading"></span>
-                      <i class="ri-save-line align-middle me-1" *ngIf="!isLoading"></i> Create Case
-                    </button>
+              <!-- ========== STEP 3: Court & Dates ========== -->
+              <div *ngIf="currentStep === 3">
+                <div class="step-header">
+                  <h5><i class="ri-scales-3-line me-2 text-primary"></i>Court & Dates</h5>
+                  <p>Optional — these details can always be added or updated later.</p>
+                </div>
+
+                <div class="section-title"><i class="ri-building-line"></i> Court Information</div>
+                <div class="row g-3 mb-4">
+                  <div class="col-md-4">
+                    <label class="form-label">Jurisdiction</label>
+                    <select class="form-select" formControlName="jurisdiction">
+                      <option value="">Select jurisdiction...</option>
+                      <option *ngFor="let j of usJurisdictions" [value]="j">{{ j }}</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">County</label>
+                    <input type="text" class="form-control" formControlName="countyName" placeholder="Enter county">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Judge</label>
+                    <input type="text" class="form-control" formControlName="judgeName" placeholder="Enter judge name">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Courtroom</label>
+                    <input type="text" class="form-control" formControlName="courtroom" placeholder="Enter courtroom">
+                  </div>
+                </div>
+
+                <div class="section-title"><i class="ri-calendar-line"></i> Important Dates</div>
+                <div class="row g-3">
+                  <div class="col-md-3">
+                    <label class="form-label">Filing Date</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="ri-calendar-line"></i></span>
+                      <input type="text" class="form-control flatpickr-input" id="filingDate" formControlName="filingDate" placeholder="Select date">
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Statute of Limitations</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="ri-error-warning-line text-danger"></i></span>
+                      <input type="text" class="form-control flatpickr-input" id="statuteOfLimitationsDate" formControlName="statuteOfLimitationsDate" placeholder="Critical deadline">
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Next Hearing</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="ri-calendar-line"></i></span>
+                      <input type="text" class="form-control flatpickr-input" id="nextHearingDate" formControlName="nextHearingDate" placeholder="Select date">
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Est. Completion</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="ri-calendar-line"></i></span>
+                      <input type="text" class="form-control flatpickr-input" id="estimatedCompletionDate" formControlName="estimatedCompletionDate" placeholder="Select date">
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Error Message -->
-              <div class="row mt-3" *ngIf="errorMessage">
-                <div class="col-12">
-                  <div class="alert alert-danger" role="alert">
-                    <i class="ri-error-warning-line align-middle me-2"></i> {{ errorMessage }}
+              <!-- ========== STEP 4: Review ========== -->
+              <div *ngIf="currentStep === 4">
+                <div class="step-header">
+                  <h5><i class="ri-check-double-line me-2 text-primary"></i>Review & Create</h5>
+                  <p>Review all information before creating the case.</p>
+                </div>
+
+                <!-- Client -->
+                <div class="review-section">
+                  <div class="review-header">
+                    <h6 class="section-title mb-0"><i class="ri-user-line"></i> Client</h6>
+                    <a class="text-primary fs-13 fw-medium" style="cursor:pointer" (click)="goToStep(1)"><i class="ri-edit-line me-1"></i>Edit</a>
                   </div>
+                  <table class="table review-table">
+                    <tr><td class="text-muted" style="width:150px">Name</td><td class="fw-medium">{{ caseForm.get('clientName')?.value }}</td></tr>
+                    <tr *ngIf="caseForm.get('clientEmail')?.value"><td class="text-muted">Email</td><td>{{ caseForm.get('clientEmail')?.value }}</td></tr>
+                    <tr *ngIf="caseForm.get('clientPhone')?.value"><td class="text-muted">Phone</td><td>{{ caseForm.get('clientPhone')?.value }}</td></tr>
+                    <tr *ngIf="caseForm.get('clientAddress')?.value"><td class="text-muted">Address</td><td>{{ caseForm.get('clientAddress')?.value }}</td></tr>
+                    <tr>
+                      <td class="text-muted">Status</td>
+                      <td>
+                        <span *ngIf="clientMode === 'selected'" class="badge bg-success-subtle text-success">Existing: {{ existingClientName }}</span>
+                        <span *ngIf="clientMode === 'new'" class="badge bg-info-subtle text-info">New client will be created</span>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+
+                <!-- Case Details -->
+                <div class="review-section">
+                  <div class="review-header">
+                    <h6 class="section-title mb-0"><i class="ri-folder-line"></i> Case Details</h6>
+                    <a class="text-primary fs-13 fw-medium" style="cursor:pointer" (click)="goToStep(2)"><i class="ri-edit-line me-1"></i>Edit</a>
+                  </div>
+                  <table class="table review-table">
+                    <tr><td class="text-muted" style="width:150px">Case Number</td><td class="fw-medium">{{ caseForm.get('caseNumber')?.value }}</td></tr>
+                    <tr><td class="text-muted">Title</td><td class="fw-medium">{{ caseForm.get('title')?.value }}</td></tr>
+                    <tr><td class="text-muted">Practice Area</td><td><span class="badge bg-primary-subtle text-primary">{{ getSelectedPracticeArea() }}</span></td></tr>
+                    <tr><td class="text-muted">Priority</td><td>{{ caseForm.get('priority')?.value }}</td></tr>
+                    <tr><td class="text-muted">Lead Attorney</td><td>{{ getLeadAttorneyName() }}</td></tr>
+                    <tr><td class="text-muted">Billing</td><td>{{ getSelectedBillingType() }} <span *ngIf="caseForm.get('hourlyRate')?.value > 0">— ${{ caseForm.get('hourlyRate')?.value }}/hr</span></td></tr>
+                  </table>
+                </div>
+
+                <!-- Court & Dates -->
+                <div class="review-section">
+                  <div class="review-header">
+                    <h6 class="section-title mb-0"><i class="ri-scales-3-line"></i> Court & Dates</h6>
+                    <a class="text-primary fs-13 fw-medium" style="cursor:pointer" (click)="goToStep(3)"><i class="ri-edit-line me-1"></i>Edit</a>
+                  </div>
+                  <table class="table review-table">
+                    <tr *ngIf="caseForm.get('jurisdiction')?.value"><td class="text-muted" style="width:150px">Jurisdiction</td><td>{{ caseForm.get('jurisdiction')?.value }}</td></tr>
+                    <tr *ngIf="caseForm.get('countyName')?.value"><td class="text-muted">County</td><td>{{ caseForm.get('countyName')?.value }}</td></tr>
+                    <tr *ngIf="caseForm.get('judgeName')?.value"><td class="text-muted">Judge</td><td>{{ caseForm.get('judgeName')?.value }}</td></tr>
+                    <tr *ngIf="caseForm.get('filingDate')?.value"><td class="text-muted">Filing Date</td><td>{{ caseForm.get('filingDate')?.value }}</td></tr>
+                    <tr *ngIf="caseForm.get('statuteOfLimitationsDate')?.value"><td class="text-muted">Statute of Limitations</td><td class="text-danger fw-medium">{{ caseForm.get('statuteOfLimitationsDate')?.value }}</td></tr>
+                    <tr *ngIf="!caseForm.get('jurisdiction')?.value && !caseForm.get('filingDate')?.value">
+                      <td colspan="2" class="text-muted fs-13"><i class="ri-information-line me-1"></i> No court information added</td>
+                    </tr>
+                  </table>
                 </div>
               </div>
+
             </form>
+          </div>
+
+          <!-- Footer with navigation -->
+          <div class="card-footer d-flex justify-content-between align-items-center">
+            <div>
+              <button *ngIf="currentStep > 1" class="btn btn-wizard-prev" (click)="prevStep()">
+                <i class="ri-arrow-left-line me-1"></i> Previous
+              </button>
+              <a *ngIf="currentStep === 1" routerLink="/legal/cases" class="btn-wizard-cancel">Cancel</a>
+            </div>
+            <div>
+              <button *ngIf="currentStep < 4" class="btn btn-wizard-next" (click)="nextStep()" [disabled]="!canProceed()">
+                Next <i class="ri-arrow-right-line ms-1"></i>
+              </button>
+              <button *ngIf="currentStep === 4" class="btn btn-wizard-next" (click)="onSubmit()" [disabled]="isLoading">
+                <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1"></span>
+                {{ isLoading ? 'Creating...' : 'Create Case' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Error -->
+          <div *ngIf="errorMessage" class="px-4 pb-3">
+            <div class="alert alert-danger mb-0 fs-13"><i class="ri-error-warning-line me-2"></i>{{ errorMessage }}</div>
           </div>
         </div>
       </div>
     </div>
   </div>
-</div> 
+</div>

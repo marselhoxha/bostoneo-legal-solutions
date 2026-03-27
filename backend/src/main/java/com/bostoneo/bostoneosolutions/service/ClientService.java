@@ -46,4 +46,8 @@ public interface ClientService {
     Client getClientByConsentToken(String token);
 
     Stats getStats();
+
+    List<Client> findByOrganizationIdAndEmail(Long orgId, String email);
+    Long getCurrentOrganizationId();
+    List<Client> quickSearch(Long orgId, String query);
 }

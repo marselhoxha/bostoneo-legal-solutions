@@ -15,7 +15,6 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
 import java.time.format.DateTimeFormatter;
@@ -44,31 +43,15 @@ public class EmailServiceImpl implements EmailService {
     @Value("${EMAIL_FROM_NAME:Legience}")
     private String fromName;
 
-    private static final String LOGO_CID = "legience-logo";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a");
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\{\\{(\\w+)\\}\\}");
 
     /**
-     * Get the logo URL for email templates. Uses CID reference so the logo
-     * is embedded inline in the email and loads instantly.
+     * Get the logo URL for email templates. Uses the CDN-hosted logo URL.
      */
     private String getLogoUrl() {
-        return "cid:" + LOGO_CID;
-    }
-
-    /**
-     * Attach the logo as an inline image so it loads instantly in email clients.
-     */
-    private void addInlineLogo(MimeMessageHelper helper) {
-        try {
-            ClassPathResource logoResource = new ClassPathResource("static/images/legience-logo-blue.svg");
-            if (logoResource.exists()) {
-                helper.addInline(LOGO_CID, logoResource, "image/svg+xml");
-            }
-        } catch (Exception e) {
-            log.warn("Could not attach inline logo: {}", e.getMessage());
-        }
+        return legienceLogoUrl;
     }
 
     @Override
@@ -195,7 +178,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(email);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
-            addInlineLogo(helper);
+
 
             mailSender.send(mimeMessage);
             log.info("Verification email sent to {}", firstName);
@@ -281,7 +264,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(email);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
-            addInlineLogo(helper);
+
             mailSender.send(mimeMessage);
 
             log.info("Deadline reminder email sent to {} for event ID: {}", email, event.getId());
@@ -312,7 +295,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(to);
             helper.setSubject("Legience - " + title);
             helper.setText(htmlContent, true);
-            addInlineLogo(helper);
+
             mailSender.send(mimeMessage);
 
             log.info("Notification email sent successfully to {} for type: {}", to, notificationType);
@@ -342,7 +325,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(email);
             helper.setSubject("Legience - Your Verification Code");
             helper.setText(htmlContent, true);
-            addInlineLogo(helper);
+
 
             mailSender.send(mimeMessage);
             log.info("MFA verification email sent successfully to: {}", email);
@@ -382,7 +365,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(email);
             helper.setSubject("You've been invited to join " + organizationName);
             helper.setText(htmlContent, true);
-            addInlineLogo(helper);
+
             mailSender.send(mimeMessage);
 
             log.info("Invitation email sent successfully to: {}", email);

@@ -21,13 +21,23 @@ export const PRACTICE_AREA_FIELDS: { [key: string]: PracticeAreaSection[] } = {
       icon: 'ri-heart-pulse-line',
       fields: [
         { name: 'injuryDate', label: 'Date of Injury', type: 'date', required: true, colSize: 'col-md-4' },
-        { name: 'injuryType', label: 'Injury Type', type: 'select', required: true, colSize: 'col-md-4',
+        { name: 'injuryType', label: 'Accident Type', type: 'select', required: true, colSize: 'col-md-4',
           options: [
-            { value: 'soft_tissue', label: 'Soft Tissue' },
-            { value: 'tbi', label: 'Traumatic Brain Injury' },
-            { value: 'spinal', label: 'Spinal Injury' },
-            { value: 'fracture', label: 'Fracture' },
-            { value: 'burn', label: 'Burn' },
+            { value: 'motor_vehicle_accident', label: 'Motor Vehicle Accident' },
+            { value: 'truck_accident', label: 'Truck Accident' },
+            { value: 'motorcycle_accident', label: 'Motorcycle Accident' },
+            { value: 'pedestrian_accident', label: 'Pedestrian Accident' },
+            { value: 'bicycle_accident', label: 'Bicycle Accident' },
+            { value: 'rideshare_accident', label: 'Rideshare Accident (Uber/Lyft)' },
+            { value: 'slip_and_fall', label: 'Slip and Fall' },
+            { value: 'workplace_injury', label: 'Workplace Injury' },
+            { value: 'construction_accident', label: 'Construction Accident' },
+            { value: 'medical_malpractice', label: 'Medical Malpractice' },
+            { value: 'product_liability', label: 'Product Liability' },
+            { value: 'premises_liability', label: 'Premises Liability' },
+            { value: 'dog_bite', label: 'Dog Bite / Animal Attack' },
+            { value: 'assault', label: 'Assault / Battery' },
+            { value: 'wrongful_death', label: 'Wrongful Death' },
             { value: 'other', label: 'Other' }
           ]
         },
@@ -58,25 +68,44 @@ export const PRACTICE_AREA_FIELDS: { [key: string]: PracticeAreaSection[] } = {
       title: 'Charge Information',
       icon: 'ri-scales-3-line',
       fields: [
-        { name: 'primaryCharge', label: 'Primary Charge', type: 'text', required: true, colSize: 'col-md-6', placeholder: 'Enter primary charge' },
-        { name: 'chargeLevel', label: 'Charge Level', type: 'select', required: true, colSize: 'col-md-6',
+        { name: 'primaryCharge', label: 'Charge', type: 'text', required: true, colSize: 'col-md-6', placeholder: 'e.g. DWI - 2nd Offense' },
+        { name: 'chargeLevel', label: 'Severity', type: 'select', required: true, colSize: 'col-md-3',
           options: [
-            { value: 'FELONY', label: 'Felony' },
-            { value: 'MISDEMEANOR', label: 'Misdemeanor' },
-            { value: 'VIOLATION', label: 'Violation' },
-            { value: 'INFRACTION', label: 'Infraction' }
+            { value: 'felony', label: 'Felony' },
+            { value: 'misdemeanor', label: 'Misdemeanor' },
+            { value: 'infraction', label: 'Infraction / Violation' },
+            { value: 'federal', label: 'Federal Offense' }
           ]
         },
-        { name: 'docketNumber', label: 'Docket Number', type: 'text', colSize: 'col-md-4', placeholder: 'Enter docket number' },
-        { name: 'arrestDate', label: 'Arrest Date', type: 'date', colSize: 'col-md-4' },
-        { name: 'prosecutorName', label: 'Prosecutor Name', type: 'text', colSize: 'col-md-4', placeholder: 'Enter prosecutor name' }
+        { name: 'chargeDegree', label: 'Degree / Class', type: 'text', colSize: 'col-md-3', placeholder: 'e.g. Class A, 2nd Degree' },
+        { name: 'statuteReference', label: 'Statute', type: 'text', colSize: 'col-md-6', placeholder: 'e.g. Penal Code § 49.04' },
+        { name: 'additionalCharges', label: 'Additional Charges / Counts', type: 'textarea', colSize: 'col-md-6', placeholder: 'List any additional charges with severity and statute, one per line' }
       ]
     },
     {
-      title: 'Bail Information',
-      icon: 'ri-money-dollar-circle-line',
+      title: 'Arrest & Court Details',
+      icon: 'ri-building-line',
       fields: [
-        { name: 'bailAmount', label: 'Bail Amount', type: 'currency', colSize: 'col-md-6', placeholder: '0.00' }
+        { name: 'arrestDate', label: 'Arrest Date', type: 'date', required: true, colSize: 'col-md-4' },
+        { name: 'docketNumber', label: 'Cause / Docket Number', type: 'text', colSize: 'col-md-4', placeholder: 'Enter cause number' },
+        { name: 'prosecutorName', label: 'Prosecutor / ADA', type: 'text', colSize: 'col-md-4', placeholder: 'Enter prosecutor name' },
+        { name: 'custodyStatus', label: 'Custody Status', type: 'select', colSize: 'col-md-4',
+          options: [
+            { value: 'in_custody', label: 'In Custody' },
+            { value: 'released_bond', label: 'Released on Bond' },
+            { value: 'pr_bond', label: 'Personal Recognizance (PR Bond)' },
+            { value: 'pending_bond', label: 'Pending Bond' }
+          ]
+        },
+        { name: 'bailAmount', label: 'Bond Amount', type: 'currency', colSize: 'col-md-4', placeholder: '0.00' },
+        { name: 'priorRecord', label: 'Prior Criminal History', type: 'select', colSize: 'col-md-4',
+          options: [
+            { value: 'none', label: 'No Prior Record' },
+            { value: 'misdemeanor_only', label: 'Prior Misdemeanor(s)' },
+            { value: 'felony', label: 'Prior Felony Conviction(s)' },
+            { value: 'unknown', label: 'Unknown / To Be Determined' }
+          ]
+        }
       ]
     }
   ],

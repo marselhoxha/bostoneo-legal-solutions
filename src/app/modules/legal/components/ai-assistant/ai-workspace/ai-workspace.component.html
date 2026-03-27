@@ -712,9 +712,8 @@
         </div>
 
         <div
-          class="action-card"
-          [class.active]="selectedTask === 'workflow'"
-          (click)="selectTask('workflow')">
+          class="action-card disabled"
+          style="opacity: 0.5; cursor: default; position: relative;">
           <div class="icon-box">
             <i class="ri-flow-chart"></i>
           </div>
@@ -722,6 +721,7 @@
             <span class="card-title">LegiFlow</span>
             <span class="card-subtitle">Case Workflows</span>
           </div>
+          <span class="badge bg-warning text-dark" style="position: absolute; top: 8px; right: 8px; font-size: 10px;">Coming Soon</span>
         </div>
       </div>
 

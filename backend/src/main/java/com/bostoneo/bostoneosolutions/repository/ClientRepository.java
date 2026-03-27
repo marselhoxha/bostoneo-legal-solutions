@@ -69,6 +69,9 @@ public interface ClientRepository extends PagingAndSortingRepository<Client, Lon
                                                        @Param("name") String name,
                                                        Pageable pageable);
 
+    @Query("SELECT c FROM Client c WHERE c.organizationId = :orgId AND (LOWER(c.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(c.email) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Client> quickSearch(@Param("orgId") Long organizationId, @Param("q") String query, Pageable pageable);
+
     @Query("SELECT c FROM Client c WHERE c.organizationId = :orgId AND c.email = :email")
     List<Client> findByOrganizationIdAndEmail(@Param("orgId") Long organizationId,
                                               @Param("email") String email);

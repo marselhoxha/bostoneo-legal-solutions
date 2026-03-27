@@ -121,16 +121,53 @@ public class LegalCaseServiceImpl implements LegalCaseService {
             log.warn("Case created without conflict check for client: {}. Conflict check is recommended.", caseDTO.getClientName());
         }
 
-        log.info("📋 createCase DTO - clientAddress: '{}', defendantAddress: '{}'",
-            caseDTO.getClientAddress(), caseDTO.getDefendantAddress());
         LegalCase legalCase = legalCaseDTOMapper.toEntity(caseDTO);
-        log.info("📋 createCase Entity BEFORE save - clientAddress: '{}', defendantAddress: '{}'",
-            legalCase.getClientAddress(), legalCase.getDefendantAddress());
         legalCase.setOrganizationId(orgId);
+
+        // Auto-create or link client from case data
+        String clientAction = null;
+        if (caseDTO.getClientId() != null && caseDTO.getClientId() > 0) {
+            // Client explicitly selected from search — just link
+            legalCase.setClientId(caseDTO.getClientId());
+            clientAction = "LINKED";
+            log.info("Linked case to selected client id={}", caseDTO.getClientId());
+        } else if (caseDTO.getClientName() != null && !caseDTO.getClientName().isBlank()) {
+            try {
+                // Try to match by email first (if provided)
+                if (caseDTO.getClientEmail() != null && !caseDTO.getClientEmail().isBlank()) {
+                    List<Client> byEmail = clientRepository.findByOrganizationIdAndEmail(orgId, caseDTO.getClientEmail().trim());
+                    if (!byEmail.isEmpty()) {
+                        legalCase.setClientId(byEmail.get(0).getId());
+                        clientAction = "LINKED";
+                        log.info("Linked case to existing client by email: {} (id={})", byEmail.get(0).getName(), byEmail.get(0).getId());
+                    }
+                }
+                // If not linked yet, create new client
+                if (clientAction == null) {
+                    Client newClient = Client.builder()
+                        .name(caseDTO.getClientName())
+                        .email(caseDTO.getClientEmail() != null && !caseDTO.getClientEmail().isBlank() ? caseDTO.getClientEmail().trim() : null)
+                        .phone(caseDTO.getClientPhone())
+                        .address(caseDTO.getClientAddress())
+                        .organizationId(orgId)
+                        .status("ACTIVE")
+                        .type("INDIVIDUAL")
+                        .createdAt(new java.util.Date())
+                        .build();
+                    newClient = clientRepository.save(newClient);
+                    legalCase.setClientId(newClient.getId());
+                    clientAction = "CREATED";
+                    log.info("Auto-created client: {} (id={}) from case creation", newClient.getName(), newClient.getId());
+                }
+            } catch (Exception e) {
+                log.warn("Could not auto-create/link client for case: {}", e.getMessage());
+            }
+        }
+
         legalCase = legalCaseRepository.save(legalCase);
-        log.info("📋 createCase Entity AFTER save - id: {}, clientAddress: '{}', defendantAddress: '{}'",
-            legalCase.getId(), legalCase.getClientAddress(), legalCase.getDefendantAddress());
-        return legalCaseDTOMapper.toDTO(legalCase);
+        LegalCaseDTO result = legalCaseDTOMapper.toDTO(legalCase);
+        result.setClientAction(clientAction);
+        return result;
     }
 
     @Override

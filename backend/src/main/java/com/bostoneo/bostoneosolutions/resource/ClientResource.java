@@ -97,6 +97,46 @@ public class ClientResource {
         }
     }
 
+    @GetMapping("/search-quick")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN')")
+    public ResponseEntity<HttpResponse> searchQuick(@RequestParam String q) {
+        Long orgId = clientService.getCurrentOrganizationId();
+        var results = clientService.quickSearch(orgId, q.trim());
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("clients", results))
+                        .message("Search results")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    @GetMapping("/check-email")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN')")
+    public ResponseEntity<HttpResponse> checkClientEmail(@RequestParam String email) {
+        Long orgId = clientService.getCurrentOrganizationId();
+        var clients = clientService.findByOrganizationIdAndEmail(orgId, email.trim());
+        boolean exists = !clients.isEmpty();
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("exists", exists);
+        if (exists) {
+            var client = clients.get(0);
+            data.put("clientId", client.getId());
+            data.put("clientName", client.getName());
+            data.put("clientPhone", client.getPhone() != null ? client.getPhone() : "");
+            data.put("clientAddress", client.getAddress() != null ? client.getAddress() : "");
+        }
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(data)
+                        .message(exists ? "Client found" : "No client found")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
     @PostMapping("/save")
     @PreAuthorize("hasAuthority('CLIENT:CREATE') or hasRole('ROLE_ADMIN')")
     @AuditLog(action = "CREATE", entityType = "CLIENT", description = "Created new client")

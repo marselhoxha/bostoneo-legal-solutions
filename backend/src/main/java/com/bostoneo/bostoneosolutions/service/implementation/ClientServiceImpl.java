@@ -414,4 +414,21 @@ public class ClientServiceImpl implements ClientService {
         stats.setTotalBilled(0.0);
         return stats;
     }
+
+    @Override
+    public List<Client> findByOrganizationIdAndEmail(Long orgId, String email) {
+        return clientRepository.findByOrganizationIdAndEmail(orgId, email);
+    }
+
+    @Override
+    public Long getCurrentOrganizationId() {
+        return tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new RuntimeException("Organization context required"));
+    }
+
+    @Override
+    public List<Client> quickSearch(Long orgId, String query) {
+        if (query == null || query.length() < 2) return List.of();
+        return clientRepository.quickSearch(orgId, query, org.springframework.data.domain.PageRequest.of(0, 5)).getContent();
+    }
 }

@@ -288,16 +288,18 @@ jobs:
               init:
                 mode: never
             mail:
-              host: ${SMTP_HOST:smtp.gmail.com}
-              port: 587
+              host: ${SMTP_HOST:smtp.hostinger.com}
+              port: ${SMTP_PORT:465}
               username: ${EMAIL_ID:}
               password: ${EMAIL_PASSWORD:}
               properties:
                 mail:
                   smtp:
                     auth: true
-                    starttls:
+                    ssl:
                       enable: true
+                    starttls:
+                      enable: false
           management:
             endpoints:
               web:

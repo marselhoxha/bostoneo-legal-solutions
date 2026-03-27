@@ -1,11 +1,8 @@
-import { Component, OnInit, AfterViewInit, ElementRef, ViewChildren, QueryList, OnDestroy } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef, ViewChildren, QueryList, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { CaseStatus, CasePriority } from '../../../models/case.model';
 import { PaymentStatus } from '../../../interfaces/case.interface';
-import { CalendarModule, DateAdapter } from 'angular-calendar';
-import { adapterFactory } from 'angular-calendar/date-adapters/date-fns';
 import { FlatpickrModule } from 'angularx-flatpickr';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -14,8 +11,11 @@ import { CaseService } from '../../../services/case.service';
 import { UserService } from '../../../../../service/user.service';
 import { OrganizationService } from '../../../../../core/services/organization.service';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField } from '../../../shared/practice-area-fields.config';
+import Swal from 'sweetalert2';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../../../environments/environment';
 
 @Component({
   selector: 'app-case-create',
@@ -36,6 +36,24 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   isLoading = false;
   errorMessage = '';
 
+  // Step wizard
+  currentStep = 1;
+  steps = [
+    { number: 1, label: 'Client', icon: 'ri-user-line' },
+    { number: 2, label: 'Case Details', icon: 'ri-folder-line' },
+    { number: 3, label: 'Court & Dates', icon: 'ri-scales-3-line' },
+    { number: 4, label: 'Review', icon: 'ri-check-double-line' }
+  ];
+
+  // Client search & selection
+  clientCheckStatus: 'idle' | 'checking' | 'found' | 'new' = 'idle';
+  existingClientName = '';
+  clientSearchQuery = '';
+  clientSearchResults: any[] = [];
+  showClientResults = false;
+  selectedClientId: number | null = null;
+  clientMode: 'search' | 'new' | 'selected' = 'search';
+
   // Attorneys for dropdown
   attorneys: any[] = [];
 
@@ -44,30 +62,16 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   CasePriority = CasePriority;
   PaymentStatus = PaymentStatus;
 
-  // Practice areas array for dropdown (only areas with specific fields)
   practiceAreas = [
-    'Personal Injury',
-    'Criminal Defense',
-    'Family Law',
-    'Immigration Law',
-    'Real Estate Law',
-    'Intellectual Property',
-    'Business Law',
-    'Estate Planning',
-    'Employment Law',
-    'Bankruptcy',
-    'Civil Litigation',
-    'Other'
+    'Personal Injury', 'Criminal Defense', 'Family Law', 'Immigration Law',
+    'Real Estate Law', 'Intellectual Property', 'Business Law', 'Estate Planning',
+    'Employment Law', 'Bankruptcy', 'Civil Litigation', 'Other'
   ];
 
-  // Practice area specific fields configuration
   currentPracticeAreaSections: PracticeAreaSection[] = [];
   practiceAreaFieldsConfig = PRACTICE_AREA_FIELDS;
-
-  // Flatpickr instances for practice area date fields
   private practiceAreaDatePickers: any[] = [];
 
-  // Billing types array for dropdown
   billingTypes = [
     { value: 'HOURLY', label: 'Hourly' },
     { value: 'FLAT_FEE', label: 'Flat Fee' },
@@ -76,7 +80,6 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     { value: 'HYBRID', label: 'Hybrid' }
   ];
 
-  // US states for jurisdiction dropdown
   usJurisdictions = [
     'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut',
     'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois',
@@ -107,10 +110,11 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private snackBar: MatSnackBar,
     private caseService: CaseService,
     private userService: UserService,
-    private organizationService: OrganizationService
+    private organizationService: OrganizationService,
+    private cdr: ChangeDetectorRef,
+    private http: HttpClient
   ) {
     this.caseForm = this.fb.group({
       caseNumber: ['', [Validators.required]],
@@ -119,29 +123,19 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       priority: [CasePriority.MEDIUM, [Validators.required]],
       practiceArea: ['', [Validators.required]],
       description: ['', [Validators.required]],
-
-      // Client Information
       clientName: ['', [Validators.required]],
-      clientEmail: ['', [Validators.required, Validators.email]],
-      clientPhone: ['', [Validators.required]],
+      clientEmail: ['', [Validators.email]],
+      clientPhone: [''],
       clientAddress: [''],
-
-      // Assignment
       leadAttorneyId: [''],
-
-      // Court Information (optional at creation)
       jurisdiction: [''],
       countyName: [''],
       judgeName: [''],
       courtroom: [''],
-
-      // Important Dates
       filingDate: [''],
       nextHearingDate: [''],
       estimatedCompletionDate: [''],
       statuteOfLimitationsDate: [''],
-
-      // Billing Information
       billingType: ['HOURLY', [Validators.required]],
       hourlyRate: [0],
       retainerAmount: [0],
@@ -151,13 +145,7 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadAttorneys();
-
-    // Generate a unique case number
-    const uniqueCaseNumber = this.generateUniqueCaseNumber();
-
-    this.caseForm.patchValue({
-      caseNumber: uniqueCaseNumber
-    });
+    this.caseForm.patchValue({ caseNumber: this.generateUniqueCaseNumber() });
 
     // Pre-fill jurisdiction from org state
     const orgId = this.organizationService.getCurrentOrganizationId();
@@ -174,42 +162,166 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     // Subscribe to practice area changes
     this.caseForm.get('practiceArea')?.valueChanges
       .pipe(takeUntil(this.destroy$))
-      .subscribe(value => {
-        this.onPracticeAreaChange(value);
+      .subscribe(value => this.onPracticeAreaChange(value));
+
+    // No auto email check — we use search instead
+  }
+
+  // ==================== STEP WIZARD ====================
+
+  getStepState(step: number): 'active' | 'completed' | 'pending' {
+    if (step === this.currentStep) return 'active';
+    if (step < this.currentStep) return 'completed';
+    return 'pending';
+  }
+
+  canProceed(): boolean {
+    switch (this.currentStep) {
+      case 1: return this.isStepValid(1);
+      case 2: return this.isStepValid(2);
+      case 3: return true; // optional
+      case 4: return true;
+      default: return true;
+    }
+  }
+
+  isStepValid(step: number): boolean {
+    switch (step) {
+      case 1: {
+        return this.caseForm.get('clientName')!.valid;
+      }
+      case 2: {
+        const f = this.caseForm;
+        const coreValid = f.get('title')!.valid && f.get('practiceArea')!.valid && f.get('description')!.valid;
+        // Check practice area required fields
+        let paValid = true;
+        this.currentPracticeAreaSections.forEach(s => {
+          s.fields.forEach(field => {
+            if (field.required && this.caseForm.get(field.name)?.invalid) paValid = false;
+          });
+        });
+        return coreValid && paValid;
+      }
+      default: return true;
+    }
+  }
+
+  nextStep(): void {
+    // Mark current step's fields as touched for validation display
+    if (this.currentStep === 1) {
+      ['clientName'].forEach(f => this.caseForm.get(f)?.markAsTouched());
+    } else if (this.currentStep === 2) {
+      ['title', 'practiceArea', 'description'].forEach(f => this.caseForm.get(f)?.markAsTouched());
+      this.currentPracticeAreaSections.forEach(s => {
+        s.fields.forEach(field => { if (field.required) this.caseForm.get(field.name)?.markAsTouched(); });
+      });
+    }
+    if (!this.canProceed()) return;
+
+    if (this.currentStep < 4) {
+      this.currentStep++;
+      this.cdr.markForCheck();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (this.currentStep === 3) {
+        setTimeout(() => this.initDatePickers(), 100);
+      }
+    }
+  }
+
+  prevStep(): void {
+    if (this.currentStep > 1) {
+      this.currentStep--;
+      this.cdr.markForCheck();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (this.currentStep === 2) {
+        setTimeout(() => this.initPracticeAreaDatePickers(), 100);
+      }
+    }
+  }
+
+  goToStep(step: number): void {
+    if (step < this.currentStep) {
+      this.currentStep = step;
+      this.cdr.markForCheck();
+    }
+  }
+
+  // ==================== CLIENT EMAIL CHECK ====================
+
+  searchClients(query: string): void {
+    this.clientSearchQuery = query;
+    if (!query || query.length < 2) {
+      this.clientSearchResults = [];
+      this.showClientResults = false;
+      return;
+    }
+    this.http.get<any>(`${environment.apiUrl}/client/search-quick?q=${encodeURIComponent(query)}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.clientSearchResults = response?.data?.clients || [];
+          this.showClientResults = this.clientSearchResults.length > 0;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.clientSearchResults = [];
+          this.showClientResults = false;
+        }
       });
   }
 
+  selectClient(client: any): void {
+    this.selectedClientId = client.id;
+    this.existingClientName = client.name;
+    this.clientMode = 'selected';
+    this.showClientResults = false;
+    this.caseForm.patchValue({
+      clientName: client.name,
+      clientEmail: client.email || '',
+      clientPhone: client.phone || '',
+      clientAddress: client.address || ''
+    });
+    this.cdr.markForCheck();
+  }
+
+  switchToNewClient(): void {
+    this.clientMode = 'new';
+    this.selectedClientId = null;
+    this.existingClientName = '';
+    this.showClientResults = false;
+    this.clientSearchQuery = '';
+    this.caseForm.patchValue({ clientName: '', clientEmail: '', clientPhone: '', clientAddress: '' });
+    this.cdr.markForCheck();
+  }
+
+  clearSelectedClient(): void {
+    this.clientMode = 'search';
+    this.selectedClientId = null;
+    this.existingClientName = '';
+    this.clientSearchQuery = '';
+    this.caseForm.patchValue({ clientName: '', clientEmail: '', clientPhone: '', clientAddress: '' });
+    this.cdr.markForCheck();
+  }
+
+  // ==================== PRACTICE AREA ====================
+
   onPracticeAreaChange(practiceArea: string): void {
-    // Destroy existing practice area date pickers
     this.practiceAreaDatePickers.forEach(picker => picker.destroy());
     this.practiceAreaDatePickers = [];
-
-    // Remove old practice area form controls
     const allFieldNames = this.getAllPracticeAreaFieldNames();
     allFieldNames.forEach(fieldName => {
-      if (this.caseForm.contains(fieldName)) {
-        this.caseForm.removeControl(fieldName);
-      }
+      if (this.caseForm.contains(fieldName)) this.caseForm.removeControl(fieldName);
     });
-
-    // Get the new practice area configuration
     this.currentPracticeAreaSections = this.practiceAreaFieldsConfig[practiceArea] || [];
-
-    // Add new form controls for the selected practice area
     this.currentPracticeAreaSections.forEach(section => {
       section.fields.forEach(field => {
         const validators = field.required ? [Validators.required] : [];
         let defaultValue: any = '';
-        if (field.type === 'checkbox') {
-          defaultValue = false;
-        } else if (field.type === 'number' || field.type === 'currency') {
-          defaultValue = null;
-        }
+        if (field.type === 'checkbox') defaultValue = false;
+        else if (field.type === 'number' || field.type === 'currency') defaultValue = null;
         this.caseForm.addControl(field.name, this.fb.control(defaultValue, validators));
       });
     });
-
-    // Initialize date pickers for practice area date fields after view updates
     setTimeout(() => this.initPracticeAreaDatePickers(), 0);
   }
 
@@ -218,14 +330,15 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     Object.values(this.practiceAreaFieldsConfig).forEach(sections => {
       sections.forEach(section => {
         section.fields.forEach(field => {
-          if (!fieldNames.includes(field.name)) {
-            fieldNames.push(field.name);
-          }
+          if (!fieldNames.includes(field.name)) fieldNames.push(field.name);
         });
       });
     });
     return fieldNames;
   }
+
+  // Date fields that represent past events — cannot be in the future
+  private pastDateFields = new Set(['injuryDate', 'arrestDate', 'marriageDate', 'filingDate', 'ipFilingDate']);
 
   private initPracticeAreaDatePickers(): void {
     this.currentPracticeAreaSections.forEach(section => {
@@ -233,12 +346,11 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
         if (field.type === 'date') {
           const element = document.getElementById(`pa_${field.name}`);
           if (element) {
-            const picker = flatpickr(element, {
-              dateFormat: 'Y-m-d',
-              altInput: true,
-              altFormat: 'F j, Y',
-              allowInput: true
-            });
+            const opts: any = { dateFormat: 'Y-m-d', altInput: true, altFormat: 'F j, Y', allowInput: true };
+            if (this.pastDateFields.has(field.name)) {
+              opts.maxDate = 'today';
+            }
+            const picker = flatpickr(element, opts);
             this.practiceAreaDatePickers.push(picker);
           }
         }
@@ -246,56 +358,60 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  private initDatePickers(): void {
+    ['filingDate', 'nextHearingDate', 'estimatedCompletionDate', 'statuteOfLimitationsDate'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !(el as any)._flatpickr) {
+        const opts: any = { dateFormat: 'Y-m-d', altInput: true, altFormat: 'F j, Y', allowInput: true };
+        if (this.pastDateFields.has(id)) {
+          opts.maxDate = 'today';
+        }
+        flatpickr(el, opts);
+      }
+    });
+  }
+
+  // ==================== HELPERS ====================
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    // Clean up practice area date pickers
     this.practiceAreaDatePickers.forEach(picker => picker.destroy());
   }
 
   loadAttorneys(): void {
     this.userService.getAttorneys()
       .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (attorneys) => {
-          this.attorneys = attorneys;
-        },
-        error: (error) => {
-          console.error('Error loading attorneys:', error);
-        }
-      });
+      .subscribe({ next: (a) => { this.attorneys = a; }, error: (e) => console.error('Error loading attorneys:', e) });
   }
 
-  /**
-   * Generates a unique case number using current date and random values
-   * Format: CASE-YYYY-MM-[5 random alphanumeric characters]
-   */
   generateUniqueCaseNumber(): string {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    
-    // Generate 5 random alphanumeric characters
-    const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing chars like I, O, 0, 1
-    let randomPart = '';
-    for (let i = 0; i < 5; i++) {
-      randomPart += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-
-    return `CASE-${year}-${month}-${randomPart}`;
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let rand = '';
+    for (let i = 0; i < 5; i++) rand += chars.charAt(Math.floor(Math.random() * chars.length));
+    return `CASE-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${rand}`;
   }
 
   ngAfterViewInit(): void {
-    // Initialize flatpickr for date inputs
-    this.dateInputs.forEach(input => {
-      flatpickr(input.nativeElement, {
-        dateFormat: 'Y-m-d',
-        altInput: true,
-        altFormat: 'F j, Y',
-        allowInput: true
-      });
-    });
+    // Date pickers initialized when entering step 3
   }
+
+  getSelectedPracticeArea(): string {
+    return this.caseForm.get('practiceArea')?.value || '';
+  }
+
+  getSelectedBillingType(): string {
+    return this.billingTypes.find(b => b.value === this.caseForm.get('billingType')?.value)?.label || '';
+  }
+
+  getLeadAttorneyName(): string {
+    const id = this.caseForm.get('leadAttorneyId')?.value;
+    const a = this.attorneys.find(att => att.id == id);
+    return a ? `${a.firstName} ${a.lastName}` : 'Not assigned';
+  }
+
+  // ==================== SUBMIT ====================
 
   onSubmit(): void {
     if (this.caseForm.invalid) {
@@ -306,34 +422,15 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Format phone number to meet backend validation requirements (digits only)
-    const phoneNumber = this.caseForm.value.clientPhone ?
-      this.caseForm.value.clientPhone.replace(/\D/g, '') : '';
-
-    // Format dates as YYYY-MM-DD strings to avoid timezone drift
+    const phoneNumber = this.caseForm.value.clientPhone?.replace(/\D/g, '') || '';
     const formatDate = (date: any): string | null => {
       if (!date) return null;
-      if (typeof date === 'string') {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
-        const d = new Date(date);
-        if (isNaN(d.getTime())) return null;
-        return d.toISOString().split('T')[0];
-      }
-      if (date instanceof Date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      }
-      return null;
+      if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+      const d = date instanceof Date ? date : new Date(date);
+      if (isNaN(d.getTime())) return null;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
 
-    const filingDate = formatDate(this.caseForm.value.filingDate);
-    const nextHearingDate = formatDate(this.caseForm.value.nextHearingDate);
-    const estimatedCompletionDate = formatDate(this.caseForm.value.estimatedCompletionDate);
-    const statuteOfLimitationsDate = formatDate(this.caseForm.value.statuteOfLimitationsDate);
-
-    // Transform form values to match API expectations - map to LegalCaseDTO
     const caseData: any = {
       caseNumber: this.caseForm.value.caseNumber,
       title: this.caseForm.value.title,
@@ -341,109 +438,67 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       clientEmail: this.caseForm.value.clientEmail,
       clientPhone: phoneNumber,
       clientAddress: this.caseForm.value.clientAddress || '',
+      clientId: this.selectedClientId || null,
       status: this.caseForm.value.status,
       priority: this.caseForm.value.priority,
       practiceArea: this.caseForm.value.practiceArea,
       description: this.caseForm.value.description,
-
-      // Lead Attorney Assignment
       leadAttorneyId: this.caseForm.value.leadAttorneyId || null,
-
-      // Court Information (only include if provided)
       jurisdiction: this.caseForm.value.jurisdiction || '',
-      courtInfo: this.caseForm.value.countyName ? {
-        countyName: this.caseForm.value.countyName,
-        judgeName: this.caseForm.value.judgeName || '',
-        courtroom: this.caseForm.value.courtroom || ''
-      } : null,
       countyName: this.caseForm.value.countyName || '',
       judgeName: this.caseForm.value.judgeName || '',
       courtroom: this.caseForm.value.courtroom || '',
-
-      // Important Dates
-      importantDates: {
-        filingDate: filingDate,
-        nextHearing: nextHearingDate,
-        trialDate: estimatedCompletionDate,
-        statuteOfLimitations: statuteOfLimitationsDate
-      },
-      filingDate: filingDate,
-      nextHearing: nextHearingDate,
-      trialDate: estimatedCompletionDate,
-      statuteOfLimitationsDate: statuteOfLimitationsDate,
-
-      // Billing Information
-      billingInfo: {
-        billingType: this.caseForm.value.billingType,
-        hourlyRate: parseFloat(this.caseForm.value.hourlyRate) || 0,
-        retainerAmount: parseFloat(this.caseForm.value.retainerAmount) || 0,
-        totalHours: 0,
-        totalAmount: 0,
-        paymentStatus: this.caseForm.value.paymentStatus
-      },
+      filingDate: formatDate(this.caseForm.value.filingDate),
+      nextHearing: formatDate(this.caseForm.value.nextHearingDate),
+      trialDate: formatDate(this.caseForm.value.estimatedCompletionDate),
+      statuteOfLimitationsDate: formatDate(this.caseForm.value.statuteOfLimitationsDate),
       billingType: this.caseForm.value.billingType,
       hourlyRate: parseFloat(this.caseForm.value.hourlyRate) || 0,
       retainerAmount: parseFloat(this.caseForm.value.retainerAmount) || 0,
-      totalHours: 0,
-      totalAmount: 0,
+      totalHours: 0, totalAmount: 0,
       paymentStatus: this.caseForm.value.paymentStatus
     };
 
-    // Add practice area specific fields (always include all fields, even empty ones)
+    // Add practice area specific fields
     this.currentPracticeAreaSections.forEach(section => {
       section.fields.forEach(field => {
         const value = this.caseForm.value[field.name];
         if (value !== null && value !== undefined && value !== '') {
-          if (field.type === 'date' && value) {
-            caseData[field.name] = formatDate(value);
-          } else if (field.type === 'currency' || field.type === 'number') {
-            caseData[field.name] = value ? parseFloat(value) : null;
-          } else {
-            caseData[field.name] = value;
-          }
+          if (field.type === 'date') caseData[field.name] = formatDate(value);
+          else if (field.type === 'currency' || field.type === 'number') caseData[field.name] = parseFloat(value) || null;
+          else caseData[field.name] = value;
         } else {
-          // Explicitly send null for empty fields to prevent stale data
           caseData[field.name] = null;
         }
       });
     });
 
-    // DEBUG: Log the exact data being sent
-    console.log('📋 CREATE CASE - clientAddress:', caseData.clientAddress, '| defendantAddress:', caseData.defendantAddress);
-    console.log('📋 CREATE CASE - full data:', JSON.stringify(caseData, null, 2));
-
-    // Make the actual API call
     this.caseService.createCase(caseData).subscribe({
-      next: (response) => {
-        this.snackBar.open('Case created successfully', 'Close', {
-          duration: 3000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top'
+      next: (response: any) => {
+        this.isLoading = false;
+        const createdCase = response?.data?.case || response?.case || {};
+        const clientAction = createdCase.clientAction;
+        const clientMsg = clientAction === 'CREATED'
+          ? `<p class="mt-2 text-muted">New client <strong>${this.caseForm.value.clientName}</strong> was created and linked.</p>`
+          : clientAction === 'LINKED'
+          ? `<p class="mt-2 text-muted">Linked to existing client <strong>${this.existingClientName || this.caseForm.value.clientName}</strong>.</p>`
+          : '';
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Case Created',
+          html: `<p>Case <strong>${caseData.caseNumber}</strong> has been created successfully.</p>${clientMsg}`,
+          confirmButtonColor: '#405189',
+          confirmButtonText: 'View Case'
+        }).then(() => {
+          const caseId = createdCase.id;
+          this.router.navigate(caseId ? ['/legal/cases', caseId] : ['/legal/cases']);
         });
-        this.router.navigate(['/legal/cases']);
       },
       error: (error) => {
-        console.error('API error:', error);
-        let errorMsg = 'Unknown error';
-        
-        if (error.error) {
-          if (error.error.message) {
-            errorMsg = error.error.message;
-          } else if (error.error.reason) {
-            errorMsg = error.error.reason;
-          } else if (typeof error.error === 'string') {
-            errorMsg = error.error;
-          }
-        } else if (error.message) {
-          errorMsg = error.message;
-        }
-        
+        this.isLoading = false;
+        let errorMsg = error?.error?.message || error?.error?.reason || error?.message || 'Unknown error';
         this.errorMessage = 'Failed to create case: ' + errorMsg;
-        console.error('Error creating case:', error);
-        this.isLoading = false;
-      },
-      complete: () => {
-        this.isLoading = false;
       }
     });
   }
@@ -452,23 +507,16 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     this.router.navigate(['/legal/cases']);
   }
 
-  // Helper method to check if a field has errors
   hasError(field: string): boolean {
     const control = this.caseForm.get(field);
     return control ? (control.invalid && (control.dirty || control.touched)) : false;
   }
 
-  // Helper method to get error message for a field
   getErrorMessage(field: string): string {
     const control = this.caseForm.get(field);
     if (!control) return '';
-
-    if (control.hasError('required')) {
-      return 'This field is required';
-    }
-    if (control.hasError('email')) {
-      return 'Please enter a valid email address';
-    }
+    if (control.hasError('required')) return 'This field is required';
+    if (control.hasError('email')) return 'Please enter a valid email address';
     return '';
   }
-} 
+}

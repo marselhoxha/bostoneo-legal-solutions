@@ -41,6 +41,10 @@ public class LegalCaseDTO {
     private String clientEmail;
     private String clientPhone;
     private String clientAddress;
+    private Long clientId;
+
+    // Set by backend after case creation: "CREATED", "LINKED", or null
+    private String clientAction;
 
     @NotNull(message = "Status is required")
     @ValidEnum(enumClass = CaseStatus.class)

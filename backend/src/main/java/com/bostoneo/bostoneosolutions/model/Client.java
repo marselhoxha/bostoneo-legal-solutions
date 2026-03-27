@@ -40,7 +40,7 @@ public class Client {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "email", nullable = false, unique = true, length = 100)
+    @Column(name = "email", length = 100)
     private String email;
 
     @Column(name = "type", length = 50)
