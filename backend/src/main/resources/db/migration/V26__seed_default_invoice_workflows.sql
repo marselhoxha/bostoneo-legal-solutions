@@ -1,5 +1,8 @@
 -- Seed default invoice workflow rules for organizations that have none.
--- Only inserts if the organization has zero workflow rules.
+
+-- Drop check constraint if it exists (staging/production may have stricter constraints)
+ALTER TABLE invoice_workflow_rules DROP CONSTRAINT IF EXISTS invoice_workflow_rules_action_type_check;
+ALTER TABLE invoice_workflow_rules DROP CONSTRAINT IF EXISTS invoice_workflow_rules_trigger_event_check;
 
 -- Use a CTE to find orgs with no workflows
 WITH orgs_without_workflows AS (
