@@ -490,8 +490,9 @@ jobs:
           fi
           # Get current task definition and update container health check
           CURRENT_TD=$(aws ecs describe-task-definition --task-definition $FAMILY --query 'taskDefinition' --output json)
-          # Use branch name as image tag (main or staging — matches docker/metadata-action)
-          IMAGE="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/legience-api:${{ github.ref_name }}"
+          # Use git SHA as image tag for unique deploys (branch tag may be cached by ECS)
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          IMAGE="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/legience-api:${{ github.ref_name }}-${SHORT_SHA}"
           echo "Deploying image: $IMAGE"
           NEW_TD=$(echo "$CURRENT_TD" | python3 -c "
           import json, sys
