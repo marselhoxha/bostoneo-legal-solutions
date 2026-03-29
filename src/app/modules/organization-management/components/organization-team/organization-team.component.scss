@@ -119,6 +119,11 @@
   font-size: 1.5rem;
 }
 
+// Hide dropdown caret on 3-dots button
+.dropdown-toggle-no-caret::after {
+  display: none !important;
+}
+
 // Dropdown Styles
 .dropdown-menu {
   border-radius: 8px;

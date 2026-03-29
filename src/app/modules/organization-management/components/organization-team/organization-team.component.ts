@@ -132,26 +132,75 @@ export class OrganizationTeamComponent implements OnInit, OnDestroy {
     return colors[Math.abs(hash) % colors.length];
   }
 
+  // ── Single source of truth for role display names ──
+  private static readonly ROLE_DISPLAY_NAMES: Record<string, string> = {
+    'ROLE_ADMIN': 'Admin',
+    'ROLE_ATTORNEY': 'Attorney',
+    'ROLE_PARALEGAL': 'Paralegal',
+    'ROLE_SECRETARY': 'Secretary',
+    'ROLE_USER': 'User',
+    'ROLE_CLIENT': 'Client',
+    'ROLE_FINANCE': 'Finance',
+    'ROLE_SUPERADMIN': 'Super Admin',
+    'MANAGING_PARTNER': 'Managing Partner',
+    'SENIOR_PARTNER': 'Senior Partner',
+    'EQUITY_PARTNER': 'Equity Partner',
+    'NON_EQUITY_PARTNER': 'Non-Equity Partner',
+    'OF_COUNSEL': 'Of Counsel',
+    'ASSOCIATE': 'Associate',
+    'SENIOR_ASSOCIATE': 'Senior Associate',
+    'JUNIOR_ASSOCIATE': 'Junior Associate',
+    'PARALEGAL': 'Paralegal',
+    'SENIOR_PARALEGAL': 'Senior Paralegal',
+    'LEGAL_ASSISTANT': 'Legal Assistant',
+    'LAW_CLERK': 'Law Clerk',
+    'PRACTICE_MANAGER': 'Practice Manager',
+    'CFO': 'CFO',
+    'COO': 'COO',
+    'IT_MANAGER': 'IT Manager',
+    'HR_MANAGER': 'HR Manager',
+    'FINANCE_MANAGER': 'Finance Manager',
+  };
+
+  getRoleDisplayName(role: string | undefined): string {
+    if (!role) return 'User';
+    return OrganizationTeamComponent.ROLE_DISPLAY_NAMES[role]
+      || role.replace('ROLE_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
   getRoleBadgeClass(role: string | undefined): string {
-    switch (role?.toUpperCase()) {
-      case 'ADMIN': return 'bg-danger-subtle text-danger';
-      case 'MANAGER': return 'bg-warning-subtle text-warning';
-      case 'USER': return 'bg-info-subtle text-info';
-      default: return 'bg-secondary-subtle text-secondary';
-    }
+    const r = role?.toUpperCase();
+    if (r === 'ROLE_ADMIN') return 'bg-danger-subtle text-danger';
+    if (r === 'ROLE_ATTORNEY') return 'bg-primary-subtle text-primary';
+    if (r === 'ROLE_PARALEGAL' || r === 'PARALEGAL') return 'bg-warning-subtle text-warning';
+    if (r === 'ROLE_SECRETARY') return 'bg-info-subtle text-info';
+    if (r?.includes('PARTNER')) return 'bg-success-subtle text-success';
+    if (r === 'OF_COUNSEL' || r?.includes('ASSOCIATE')) return 'bg-primary-subtle text-primary';
+    if (r === 'ROLE_CLIENT') return 'bg-secondary-subtle text-secondary';
+    return 'bg-secondary-subtle text-secondary';
   }
 
   changeRole(member: TeamMember): void {
+    // Build options: start with the 5 standard roles
+    const options: Record<string, string> = {
+      'ROLE_ATTORNEY': 'Attorney',
+      'ROLE_PARALEGAL': 'Paralegal',
+      'ROLE_SECRETARY': 'Secretary',
+      'ROLE_ADMIN': 'Admin',
+      'ROLE_USER': 'User'
+    };
+    // If user has a role not in the list, add it so it can be pre-selected
+    const currentRole = member.roleName || 'ROLE_USER';
+    if (currentRole && !options[currentRole]) {
+      options[currentRole] = this.getRoleDisplayName(currentRole);
+    }
+
     Swal.fire({
       title: 'Change Role',
       text: `Select new role for ${this.getMemberFullName(member)}`,
       input: 'select',
-      inputOptions: {
-        'USER': 'User',
-        'MANAGER': 'Manager',
-        'ADMIN': 'Admin'
-      },
-      inputValue: member.roleName || 'USER',
+      inputOptions: options,
+      inputValue: currentRole,
       showCancelButton: true,
       confirmButtonText: 'Update',
       confirmButtonColor: '#405189'

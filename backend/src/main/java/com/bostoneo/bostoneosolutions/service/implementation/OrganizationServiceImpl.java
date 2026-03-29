@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -415,15 +416,31 @@ public class OrganizationServiceImpl implements OrganizationService {
 
         List<User> users = query.getResultList();
 
+        // Get role names for all users in one query
+        List<Long> userIds = users.stream().map(User::getId).collect(Collectors.toList());
+        Map<Long, String> roleMap = new java.util.HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<Object[]> roleResults = entityManager.createNativeQuery(
+                "SELECT ur.user_id, r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id IN (:userIds)")
+                .setParameter("userIds", userIds)
+                .getResultList();
+            for (Object[] row : roleResults) {
+                Long uid = ((Number) row[0]).longValue();
+                String roleName = (String) row[1];
+                // Keep the first role found (primary role)
+                roleMap.putIfAbsent(uid, roleName);
+            }
+        }
+
         // Convert to DTOs
         List<UserDTO> userDTOs = users.stream()
-                .map(this::convertToUserDTO)
+                .map(u -> convertToUserDTO(u, roleMap.getOrDefault(u.getId(), null)))
                 .collect(Collectors.toList());
 
         return new PageImpl<>(userDTOs, pageable, totalCount);
     }
 
-    private UserDTO convertToUserDTO(User user) {
+    private UserDTO convertToUserDTO(User user, String roleName) {
         UserDTO dto = new UserDTO();
         dto.setId(user.getId());
         dto.setFirstName(user.getFirstName());
@@ -436,6 +453,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         dto.setUsingMFA(user.isUsingMFA());
         dto.setImageUrl(user.getImageUrl());
         dto.setCreatedAt(user.getCreatedAt());
+        dto.setRoleName(roleName);
         return dto;
     }
 }

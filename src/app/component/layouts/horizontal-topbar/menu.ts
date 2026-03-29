@@ -77,9 +77,9 @@ export const SECRETARY_MENU: MenuItem[] = [
     icon: 'ri-customer-service-2-line',
     link: '/crm/dashboard',
     subItems: [
-      { id: 'sec-crm-dashboard', label: 'Dashboard', link: '/crm/dashboard', parentId: 'sec-crm' },
-      { id: 'sec-crm-intake', label: 'Intake Submissions', link: '/crm/intake-submissions', parentId: 'sec-crm' },
-      { id: 'sec-crm-conflicts', label: 'Conflict Checks', link: '/crm/conflict-checks', parentId: 'sec-crm' }
+      { id: 'sec-crm-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/crm/dashboard', parentId: 'sec-crm' },
+      { id: 'sec-crm-intake', label: 'Intake Submissions', icon: 'ri-inbox-line', link: '/crm/intake-submissions', parentId: 'sec-crm' },
+      { id: 'sec-crm-conflicts', label: 'Conflict Checks', icon: 'ri-shield-check-line', link: '/crm/conflict-checks', parentId: 'sec-crm' }
     ]
   },
   {
@@ -150,10 +150,11 @@ export const FINANCE_MENU: MenuItem[] = [
     icon: 'ri-money-dollar-circle-line',
     link: '/billing-dashboard',
     subItems: [
-      { id: 'fin-billing-dash', label: 'Billing Dashboard', link: '/billing-dashboard', parentId: 'fin-financial' },
+      { id: 'fin-billing-dash', label: 'Billing Dashboard', icon: 'ri-pie-chart-line', link: '/billing-dashboard', parentId: 'fin-financial' },
       {
         id: 'fin-invoices',
         label: 'Invoices',
+        icon: 'ri-file-list-3-line',
         link: '/invoices',
         parentId: 'fin-financial',
         subItems: [
@@ -166,6 +167,7 @@ export const FINANCE_MENU: MenuItem[] = [
       {
         id: 'fin-expenses',
         label: 'Expenses',
+        icon: 'ri-wallet-3-line',
         link: '/expenses',
         parentId: 'fin-financial',
         subItems: [
@@ -232,7 +234,7 @@ export const SOLO_ATTORNEY_MENU: MenuItem[] = [
     icon: 'ri-robot-line',
     link: '/legal/ai-assistant/legispace',
     subItems: [
-      { id: 'solo-att-ai-workspace', label: 'LegiSpace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/legispace', parentId: 'solo-att-ai-tools' },
+      { id: 'solo-att-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'solo-att-ai-tools' },
       { id: 'solo-att-ai-pi', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'solo-att-ai-tools' }
     ]
   },
@@ -254,6 +256,7 @@ export const SOLO_ATTORNEY_MENU: MenuItem[] = [
       {
         id: 'solo-att-invoices',
         label: 'Invoices',
+        icon: 'ri-file-list-3-line',
         link: '/invoices',
         parentId: 'solo-att-billing',
         subItems: [
@@ -264,6 +267,7 @@ export const SOLO_ATTORNEY_MENU: MenuItem[] = [
       {
         id: 'solo-att-expenses',
         label: 'Expenses',
+        icon: 'ri-wallet-3-line',
         link: '/expenses',
         parentId: 'solo-att-billing',
         subItems: [
@@ -317,7 +321,7 @@ export const SOLO_ADMIN_MENU: MenuItem[] = [
     icon: 'ri-robot-line',
     link: '/legal/ai-assistant/legispace',
     subItems: [
-      { id: 'solo-adm-ai-workspace', label: 'LegiSpace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/legispace', parentId: 'solo-adm-ai-tools' },
+      { id: 'solo-adm-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'solo-adm-ai-tools' },
       { id: 'solo-adm-ai-pi', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'solo-adm-ai-tools' }
     ]
   },
@@ -339,6 +343,7 @@ export const SOLO_ADMIN_MENU: MenuItem[] = [
       {
         id: 'solo-adm-invoices',
         label: 'Invoices',
+        icon: 'ri-file-list-3-line',
         link: '/invoices',
         parentId: 'solo-adm-billing',
         subItems: [
@@ -349,6 +354,7 @@ export const SOLO_ADMIN_MENU: MenuItem[] = [
       {
         id: 'solo-adm-expenses',
         label: 'Expenses',
+        icon: 'ri-wallet-3-line',
         link: '/expenses',
         parentId: 'solo-adm-billing',
         subItems: [
@@ -371,8 +377,8 @@ export const SOLO_ADMIN_MENU: MenuItem[] = [
     icon: 'ri-admin-line',
     link: '/admin/audit-logs',
     subItems: [
-      { id: 'solo-adm-admin-org', label: 'Organization Settings', link: '/organizations/details/__ORG_ID__', parentId: 'solo-adm-admin' },
-      { id: 'solo-adm-admin-audit', label: 'Audit Logs', link: '/admin/audit-logs', parentId: 'solo-adm-admin' }
+      { id: 'solo-adm-admin-org', label: 'Organization Settings', icon: 'ri-settings-3-line', link: '/organizations/details/__ORG_ID__', parentId: 'solo-adm-admin' },
+      { id: 'solo-adm-admin-audit', label: 'Audit Logs', icon: 'ri-file-search-line', link: '/admin/audit-logs', parentId: 'solo-adm-admin' }
     ]
   }
 ];
@@ -416,7 +422,7 @@ export const ATTORNEY_MENU: MenuItem[] = [
     icon: 'ri-robot-line',
     link: '/legal/ai-assistant/legispace',
     subItems: [
-      { id: 'att-ai-workspace', label: 'LegiSpace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/legispace', parentId: 'att-ai-tools' },
+      { id: 'att-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'att-ai-tools' },
       { id: 'att-ai-personal-injury', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'att-ai-tools' }
     ]
   },
@@ -439,6 +445,7 @@ export const ATTORNEY_MENU: MenuItem[] = [
       {
         id: 'att-invoices',
         label: 'Invoices',
+        icon: 'ri-file-list-3-line',
         link: '/invoices',
         parentId: 'att-billing',
         subItems: [
@@ -449,6 +456,7 @@ export const ATTORNEY_MENU: MenuItem[] = [
       {
         id: 'att-expenses',
         label: 'Expenses',
+        icon: 'ri-wallet-3-line',
         link: '/expenses',
         parentId: 'att-billing',
         subItems: [
@@ -465,10 +473,10 @@ export const ATTORNEY_MENU: MenuItem[] = [
     icon: 'ri-customer-service-2-line',
     link: '/crm/dashboard',
     subItems: [
-      { id: 'att-crm-dashboard', label: 'Dashboard', link: '/crm/dashboard', parentId: 'att-crm' },
-      { id: 'att-crm-leads', label: 'Leads', link: '/crm/leads', parentId: 'att-crm' },
-      { id: 'att-crm-intake', label: 'Intake Submissions', link: '/crm/intake-submissions', parentId: 'att-crm' },
-      { id: 'att-crm-conflicts', label: 'Conflict Checks', link: '/crm/conflict-checks', parentId: 'att-crm' }
+      { id: 'att-crm-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/crm/dashboard', parentId: 'att-crm' },
+      { id: 'att-crm-leads', label: 'Leads', icon: 'ri-user-add-line', link: '/crm/leads', parentId: 'att-crm' },
+      { id: 'att-crm-intake', label: 'Intake Submissions', icon: 'ri-inbox-line', link: '/crm/intake-submissions', parentId: 'att-crm' },
+      { id: 'att-crm-conflicts', label: 'Conflict Checks', icon: 'ri-shield-check-line', link: '/crm/conflict-checks', parentId: 'att-crm' }
     ]
   },
   {
@@ -518,7 +526,7 @@ export const ADMIN_MENU: MenuItem[] = [
     icon: 'ri-robot-line',
     link: '/legal/ai-assistant/legispace',
     subItems: [
-      { id: 'admin-ai-workspace', label: 'LegiSpace', icon: 'ri-chat-3-line', link: '/legal/ai-assistant/legispace', parentId: 'admin-ai-tools' },
+      { id: 'admin-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'admin-ai-tools' },
       { id: 'admin-ai-personal-injury', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'admin-ai-tools' }
     ]
   },
@@ -534,7 +542,7 @@ export const ADMIN_MENU: MenuItem[] = [
     icon: 'ri-money-dollar-circle-line',
     link: '/billing-dashboard',
     subItems: [
-      { id: 'admin-billing-dash', label: 'Billing Dashboard', link: '/billing-dashboard', parentId: 'admin-billing' },
+      { id: 'admin-billing-dash', label: 'Billing Dashboard', icon: 'ri-pie-chart-line', link: '/billing-dashboard', parentId: 'admin-billing' },
       { id: 'admin-time-dashboard', label: 'Time Dashboard', icon: 'ri-dashboard-line', link: '/time-tracking/dashboard', parentId: 'admin-billing' },
       { id: 'admin-time-entry', label: 'Log Time', icon: 'ri-timer-line', link: '/time-tracking/entry', parentId: 'admin-billing' },
       { id: 'admin-time-approval', label: 'Approval', icon: 'ri-checkbox-circle-line', link: '/time-tracking/approval', parentId: 'admin-billing' },
@@ -543,6 +551,7 @@ export const ADMIN_MENU: MenuItem[] = [
       {
         id: 'admin-invoices',
         label: 'Invoices',
+        icon: 'ri-file-list-3-line',
         link: '/invoices',
         parentId: 'admin-billing',
         subItems: [
@@ -553,6 +562,7 @@ export const ADMIN_MENU: MenuItem[] = [
       {
         id: 'admin-expenses',
         label: 'Expenses',
+        icon: 'ri-wallet-3-line',
         link: '/expenses',
         parentId: 'admin-billing',
         subItems: [
@@ -569,10 +579,10 @@ export const ADMIN_MENU: MenuItem[] = [
     icon: 'ri-customer-service-2-line',
     link: '/crm/dashboard',
     subItems: [
-      { id: 'admin-crm-dashboard', label: 'Dashboard', link: '/crm/dashboard', parentId: 'admin-crm' },
-      { id: 'admin-crm-leads', label: 'Leads', link: '/crm/leads', parentId: 'admin-crm' },
-      { id: 'admin-crm-intake', label: 'Intake Submissions', link: '/crm/intake-submissions', parentId: 'admin-crm' },
-      { id: 'admin-crm-conflicts', label: 'Conflict Checks', link: '/crm/conflict-checks', parentId: 'admin-crm' }
+      { id: 'admin-crm-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/crm/dashboard', parentId: 'admin-crm' },
+      { id: 'admin-crm-leads', label: 'Leads', icon: 'ri-user-add-line', link: '/crm/leads', parentId: 'admin-crm' },
+      { id: 'admin-crm-intake', label: 'Intake Submissions', icon: 'ri-inbox-line', link: '/crm/intake-submissions', parentId: 'admin-crm' },
+      { id: 'admin-crm-conflicts', label: 'Conflict Checks', icon: 'ri-shield-check-line', link: '/crm/conflict-checks', parentId: 'admin-crm' }
     ]
   },
   {
@@ -587,8 +597,8 @@ export const ADMIN_MENU: MenuItem[] = [
     icon: 'ri-admin-line',
     link: '/admin/audit-logs',
     subItems: [
-      { id: 'admin-admin-org', label: 'Organization Settings', link: '/organizations/details/__ORG_ID__', parentId: 'admin-admin' },
-      { id: 'admin-admin-audit', label: 'Audit Logs', link: '/admin/audit-logs', parentId: 'admin-admin' }
+      { id: 'admin-admin-org', label: 'Organization Settings', icon: 'ri-settings-3-line', link: '/organizations/details/__ORG_ID__', parentId: 'admin-admin' },
+      { id: 'admin-admin-audit', label: 'Audit Logs', icon: 'ri-file-search-line', link: '/admin/audit-logs', parentId: 'admin-admin' }
     ]
   }
 ];

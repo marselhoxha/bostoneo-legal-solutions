@@ -73,7 +73,7 @@
           </td>
           <td>
             <span class="badge rounded-pill fs-11" [ngClass]="getRoleBadgeClass(member.roleName)">
-              {{ member.roleName || 'USER' }}
+              {{ getRoleDisplayName(member.roleName) }}
             </span>
           </td>
           <td>
@@ -90,7 +90,7 @@
           </td>
           <td class="text-end">
             <div ngbDropdown class="dropdown" container="body">
-              <button class="btn btn-soft-secondary btn-sm" ngbDropdownToggle>
+              <button class="btn btn-soft-secondary btn-sm dropdown-toggle-no-caret" ngbDropdownToggle>
                 <i class="ri-more-2-fill"></i>
               </button>
               <div ngbDropdownMenu class="dropdown-menu-end">
