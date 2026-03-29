@@ -196,7 +196,7 @@ public class Organization {
     }
 
     public boolean isBoldsignConfigured() {
-        return boldsignEnabled != null && boldsignEnabled;
+        return boldsignApiKeyEncrypted != null && !boldsignApiKeyEncrypted.isEmpty();
     }
 
     public boolean canSendSms() {

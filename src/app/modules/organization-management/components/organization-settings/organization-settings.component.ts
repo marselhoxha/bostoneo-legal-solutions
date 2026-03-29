@@ -22,6 +22,12 @@ export class OrganizationSettingsComponent implements OnInit, OnDestroy {
   // Settings tabs
   activeSettingsTab = 'general';
 
+  // BoldSign integration
+  showBoldsignSetup = false;
+  boldsignApiKey = '';
+  savingBoldsign = false;
+  boldsignError = '';
+
   // Notification settings form
   notificationSettings = {
     smsEnabled: false,
@@ -148,5 +154,74 @@ export class OrganizationSettingsComponent implements OnInit, OnDestroy {
       case 'ENTERPRISE': return 'bg-warning';
       default: return 'bg-secondary';
     }
+  }
+
+  // ==================== BoldSign Integration ====================
+
+  connectBoldSign(): void {
+    if (!this.organizationId || !this.boldsignApiKey) return;
+    this.savingBoldsign = true;
+    this.boldsignError = '';
+
+    // First validate the key
+    this.organizationService.validateBoldSignKey(this.organizationId, this.boldsignApiKey)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result: any) => {
+          if (result?.data?.valid) {
+            // Key is valid — save it
+            this.organizationService.updateBoldSignApiKey(this.organizationId!, this.boldsignApiKey)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: () => {
+                  this.savingBoldsign = false;
+                  this.showBoldsignSetup = false;
+                  this.boldsignApiKey = '';
+                  if (this.organization) this.organization.boldsignConfigured = true;
+                  this.cdr.markForCheck();
+                  Swal.fire({ icon: 'success', title: 'Connected', text: 'BoldSign has been connected successfully.', timer: 2000, showConfirmButton: false });
+                },
+                error: (err) => {
+                  this.savingBoldsign = false;
+                  this.boldsignError = err?.error?.message || 'Failed to save API key';
+                  this.cdr.markForCheck();
+                }
+              });
+          } else {
+            this.savingBoldsign = false;
+            this.boldsignError = 'Invalid API key. Please check and try again.';
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => {
+          this.savingBoldsign = false;
+          this.boldsignError = 'Could not validate API key. Please try again.';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  disconnectBoldSign(): void {
+    if (!this.organizationId) return;
+    Swal.fire({
+      title: 'Disconnect BoldSign?',
+      text: 'Existing signature requests will not be affected, but you won\'t be able to send new ones.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#405189',
+      confirmButtonText: 'Disconnect'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.organizationService.updateBoldSignApiKey(this.organizationId!, '')
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              if (this.organization) this.organization.boldsignConfigured = false;
+              this.cdr.markForCheck();
+              Swal.fire({ icon: 'success', title: 'Disconnected', timer: 2000, showConfirmButton: false });
+            }
+          });
+      }
+    });
   }
 }

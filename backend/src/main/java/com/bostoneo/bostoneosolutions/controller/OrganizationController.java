@@ -20,6 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -384,6 +385,78 @@ public class OrganizationController {
                         .statusCode(OK.value())
                         .build()
         );
+    }
+
+    // ==================== BoldSign Integration ====================
+
+    @PutMapping("/{id}/boldsign")
+    @PreAuthorize(ORG_READ_ACCESS)
+    public ResponseEntity<HttpResponse> updateBoldSignSettings(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body) {
+        String apiKey = body.get("apiKey");
+        organizationService.updateBoldSignApiKey(id, apiKey);
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message(apiKey != null && !apiKey.isBlank() ? "BoldSign connected successfully" : "BoldSign disconnected")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build()
+        );
+    }
+
+    @GetMapping("/{id}/boldsign/status")
+    @PreAuthorize(ORG_READ_ACCESS)
+    public ResponseEntity<HttpResponse> getBoldSignStatus(@PathVariable Long id) {
+        boolean configured = organizationService.isBoldSignConfigured(id);
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(java.util.Map.of("configured", configured))
+                        .message(configured ? "BoldSign is connected" : "BoldSign is not connected")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build()
+        );
+    }
+
+    @PostMapping("/{id}/boldsign/validate")
+    @PreAuthorize(ORG_READ_ACCESS)
+    public ResponseEntity<HttpResponse> validateBoldSignKey(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body) {
+        String apiKey = body.get("apiKey");
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new com.bostoneo.bostoneosolutions.exception.ApiException("API key is required");
+        }
+        // Test the key by calling BoldSign API
+        try {
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set("X-API-KEY", apiKey);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(headers);
+            new RestTemplate().exchange("https://api.boldsign.com/v1/document/list?Page=1&PageSize=1",
+                    org.springframework.http.HttpMethod.GET, entity, String.class);
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(java.util.Map.of("valid", true))
+                            .message("API key is valid")
+                            .status(OK)
+                            .statusCode(OK.value())
+                            .build()
+            );
+        } catch (Exception e) {
+            return ResponseEntity.ok(
+                    HttpResponse.builder()
+                            .timeStamp(now().toString())
+                            .data(java.util.Map.of("valid", false))
+                            .message("Invalid API key")
+                            .status(OK)
+                            .statusCode(OK.value())
+                            .build()
+            );
+        }
     }
 
     /**

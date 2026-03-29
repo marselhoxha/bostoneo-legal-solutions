@@ -84,6 +84,10 @@ export class SignaturesComponent implements OnInit {
   auditLogs: any[] = [];
   loadingAudit = false;
 
+  // BoldSign configuration status
+  boldsignConfigured: boolean | null = null; // null = loading, true/false = known
+  isAdmin = false;
+
   // Embedded URLs
   sendDocumentUrl: string = '';
   templateEmbedUrl: string = '';
@@ -153,10 +157,30 @@ export class SignaturesComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadDashboard();
-    this.loadStats();
-    this.loadTemplates();
-    this.loadClients();
+    this.isAdmin = this.rbacService.hasRole('ROLE_ADMIN') || this.rbacService.hasRole('ROLE_SUPERADMIN') ||
+      this.rbacService.hasRole('MANAGING_PARTNER') || this.rbacService.hasRole('SENIOR_PARTNER');
+
+    // Check if BoldSign is configured before loading data
+    this.organizationService.getBoldSignStatus(this.organizationId).subscribe({
+      next: (response: any) => {
+        this.boldsignConfigured = response?.data?.configured || false;
+        this.cdr.markForCheck();
+        if (this.boldsignConfigured) {
+          this.loadDashboard();
+          this.loadStats();
+          this.loadTemplates();
+          this.loadClients();
+        }
+      },
+      error: () => {
+        // If the endpoint doesn't exist yet (old backend), try loading anyway
+        this.boldsignConfigured = true;
+        this.loadDashboard();
+        this.loadStats();
+        this.loadTemplates();
+        this.loadClients();
+      }
+    });
   }
 
   // ==================== Tab Navigation ====================

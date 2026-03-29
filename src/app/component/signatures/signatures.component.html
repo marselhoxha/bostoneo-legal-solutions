@@ -1,4 +1,56 @@
 <div class="container-fluid">
+
+  <!-- Not Configured State -->
+  <div *ngIf="boldsignConfigured === false" class="esign-empty">
+
+    <div class="esign-empty-center">
+      <!-- CSS Document Illustration -->
+      <div class="esign-doc">
+        <div class="esign-doc-line w-75"></div>
+        <div class="esign-doc-line w-100"></div>
+        <div class="esign-doc-line w-90"></div>
+        <div class="esign-doc-line w-60"></div>
+        <div class="esign-doc-spacer"></div>
+        <div class="esign-doc-sig-area">
+          <div class="esign-doc-sig-line"></div>
+          <div class="esign-doc-sig-label">Sign here</div>
+        </div>
+        <div class="esign-doc-pen">
+          <i class="ri-quill-pen-line"></i>
+        </div>
+      </div>
+
+      <h3 class="esign-empty-title">Electronic Signatures</h3>
+      <p class="esign-empty-desc">
+        Send contracts and legal documents for signature.<br>
+        Clients sign from any device. Legally binding with full audit trail.
+      </p>
+
+      <div *ngIf="isAdmin" class="esign-empty-action">
+        <a routerLink="/organizations/details/{{organizationId}}" [queryParams]="{tab: 'integrations'}"
+          class="btn btn-primary esign-empty-btn">
+          Set Up E-Signatures
+        </a>
+        <span class="esign-empty-hint">2-minute setup &middot; Free plan includes 25 documents/month</span>
+      </div>
+
+      <div *ngIf="!isAdmin" class="esign-empty-locked">
+        <i class="ri-information-line"></i>
+        Contact your administrator to enable e-signatures.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="boldsignConfigured === null" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="text-muted mt-2">Loading...</p>
+  </div>
+
+  <!-- Configured — Show Normal Page -->
+  <div *ngIf="boldsignConfigured === true">
+
   <!-- Page Header - Dashboard Greeting Style -->
   <div class="row">
     <div class="col-12">
@@ -1520,4 +1572,6 @@
     </button>
   </div>
   <div class="fab-backdrop" *ngIf="fabExpanded" (click)="fabExpanded = false"></div>
+
+  </div><!-- end boldsignConfigured === true wrapper -->
 </div>

@@ -30,6 +30,12 @@ export class OrganizationDetailsComponent implements OnInit, OnDestroy {
   isEditingOrgInfo = false;
   isSavingOrgInfo = false;
   selectedLogoFile: File | null = null;
+
+  // BoldSign integration
+  showBoldsignSetup = false;
+  boldsignApiKey = '';
+  savingBoldsign = false;
+  boldsignError = '';
   logoPreviewUrl: string | null = null;
   orgInfo = {
     name: '',
@@ -85,6 +91,7 @@ export class OrganizationDetailsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.isSuperAdmin = this.rbacService.hasRole('ROLE_SUPERADMIN');
+
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       if (params['id']) {
         const requestedOrgId = +params['id'];
@@ -107,7 +114,7 @@ export class OrganizationDetailsComponent implements OnInit, OnDestroy {
     // Support deep-linking via ?tab=team, ?tab=invitations, ?tab=notifications, etc.
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(queryParams => {
       const tab = queryParams['tab'];
-      if (tab && ['overview', 'team', 'invitations', 'notifications'].includes(tab)) {
+      if (tab && ['overview', 'team', 'invitations', 'notifications', 'integrations'].includes(tab)) {
         this.activeTab = tab;
         this.cdr.markForCheck();
       }
@@ -387,5 +394,71 @@ export class OrganizationDetailsComponent implements OnInit, OnDestroy {
     const days = this.notificationSettings.signatureReminderDays.split(',').map(d => d.trim()).filter(d => d);
     if (days.length === 0) return 'No reminders configured';
     return days.map(d => `${d} day${d !== '1' ? 's' : ''}`).join(', ') + ' before deadline';
+  }
+
+  // ==================== BoldSign Integration ====================
+
+  connectBoldSign(): void {
+    if (!this.organizationId || !this.boldsignApiKey) return;
+    this.savingBoldsign = true;
+    this.boldsignError = '';
+    this.organizationService.validateBoldSignKey(this.organizationId, this.boldsignApiKey)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result: any) => {
+          if (result?.data?.valid) {
+            this.organizationService.updateBoldSignApiKey(this.organizationId!, this.boldsignApiKey)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: () => {
+                  this.savingBoldsign = false;
+                  this.showBoldsignSetup = false;
+                  this.boldsignApiKey = '';
+                  if (this.organization) this.organization.boldsignConfigured = true;
+                  this.cdr.markForCheck();
+                  Swal.fire({ icon: 'success', title: 'Connected', text: 'BoldSign has been connected successfully.', timer: 2000, showConfirmButton: false });
+                },
+                error: (err: any) => {
+                  this.savingBoldsign = false;
+                  this.boldsignError = err?.error?.message || 'Failed to save API key';
+                  this.cdr.markForCheck();
+                }
+              });
+          } else {
+            this.savingBoldsign = false;
+            this.boldsignError = 'Invalid API key. Please check and try again.';
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => {
+          this.savingBoldsign = false;
+          this.boldsignError = 'Could not validate API key. Please try again.';
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  disconnectBoldSign(): void {
+    if (!this.organizationId) return;
+    Swal.fire({
+      title: 'Disconnect BoldSign?',
+      text: 'You won\'t be able to send new signature requests until reconnected.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#405189',
+      confirmButtonText: 'Disconnect'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.organizationService.updateBoldSignApiKey(this.organizationId!, '')
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              if (this.organization) this.organization.boldsignConfigured = false;
+              this.cdr.markForCheck();
+              Swal.fire({ icon: 'success', title: 'Disconnected', timer: 2000, showConfirmButton: false });
+            }
+          });
+      }
+    });
   }
 }

@@ -1,5 +1,149 @@
 // E-Signatures Dashboard - Velzon Theme
 
+// ==================== Empty State ====================
+.esign-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 200px);
+}
+
+.esign-empty-center {
+  text-align: center;
+  max-width: 420px;
+}
+
+// CSS Document Illustration
+.esign-doc {
+  width: 120px;
+  height: 148px;
+  background: var(--vz-card-bg);
+  border: 1.5px solid var(--vz-border-color);
+  border-radius: 8px;
+  margin: 0 auto 2rem;
+  padding: 20px 16px 14px;
+  position: relative;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
+
+  // Folded corner
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(225deg, var(--vz-body-bg, #f3f3f9) 50%, var(--vz-border-color) 50%);
+    border-bottom-left-radius: 4px;
+  }
+}
+
+.esign-doc-line {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--vz-border-color);
+  margin-bottom: 7px;
+  opacity: 0.5;
+
+  &.w-75 { width: 75%; }
+  &.w-100 { width: 100%; }
+  &.w-90 { width: 90%; }
+  &.w-60 { width: 60%; }
+}
+
+.esign-doc-spacer {
+  height: 14px;
+}
+
+.esign-doc-sig-area {
+  border-top: 1.5px solid var(--vz-border-color);
+  padding-top: 6px;
+  margin-top: auto;
+}
+
+.esign-doc-sig-line {
+  height: 1.5px;
+  background: var(--vz-primary);
+  width: 70%;
+  margin: 0 auto 3px;
+  opacity: 0.6;
+}
+
+.esign-doc-sig-label {
+  font-size: 7px;
+  color: var(--vz-secondary-color);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.esign-doc-pen {
+  position: absolute;
+  bottom: 22px;
+  right: -14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--vz-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.35);
+  transform: rotate(-15deg);
+}
+
+.esign-empty-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--vz-heading-color);
+  margin-bottom: 0.625rem;
+  letter-spacing: -0.01em;
+}
+
+.esign-empty-desc {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--vz-secondary-color);
+  margin-bottom: 1.75rem;
+}
+
+.esign-empty-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.esign-empty-btn {
+  padding: 0.6rem 1.75rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(var(--vz-primary-rgb), 0.3);
+  }
+}
+
+.esign-empty-hint {
+  font-size: 0.8125rem;
+  color: var(--vz-secondary-color);
+}
+
+.esign-empty-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 8px;
+  background: var(--vz-tertiary-bg, rgba(var(--vz-secondary-rgb), 0.04));
+  color: var(--vz-secondary-color);
+  font-size: 0.875rem;
+}
+
 // ==================== Page Header ====================
 .page-header-wrapper {
   padding: 1.25rem 0 1.5rem;

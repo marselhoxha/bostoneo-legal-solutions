@@ -364,6 +364,20 @@ export class OrganizationService {
     );
   }
 
+  // ==================== BoldSign Integration ====================
+
+  updateBoldSignApiKey(orgId: number, apiKey: string): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/${orgId}/boldsign`, { apiKey });
+  }
+
+  validateBoldSignKey(orgId: number, apiKey: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${orgId}/boldsign/validate`, { apiKey });
+  }
+
+  getBoldSignStatus(orgId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/${orgId}/boldsign/status`);
+  }
+
   /**
    * Get users in an organization (paginated)
    */

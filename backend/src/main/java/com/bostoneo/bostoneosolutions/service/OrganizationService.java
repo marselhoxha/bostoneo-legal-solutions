@@ -91,6 +91,9 @@ public interface OrganizationService {
                                                    Boolean signatureReminderSms, Boolean signatureReminderWhatsapp,
                                                    String signatureReminderDays);
 
+    void updateBoldSignApiKey(Long orgId, String apiKey);
+    boolean isBoldSignConfigured(Long orgId);
+
     /**
      * Get paginated list of all organizations
      */

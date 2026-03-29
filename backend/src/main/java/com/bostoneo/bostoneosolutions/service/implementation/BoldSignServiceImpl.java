@@ -392,7 +392,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         validateBoldSignEnabled();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
         try {
             ResponseEntity<byte[]> response = restTemplate.exchange(
@@ -458,7 +458,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         validateBoldSignEnabled();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -570,7 +570,7 @@ public class BoldSignServiceImpl implements BoldSignService {
 
         // BoldSign requires multipart/form-data with at least one file
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -672,7 +672,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         validateBoldSignEnabled();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         // BoldSign requires POST with JSON body for embedded template edit
@@ -709,7 +709,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         validateBoldSignEnabled();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         var requestBody = new java.util.HashMap<String, Object>();
@@ -1047,7 +1047,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         }
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
         try {
             // Use a single API call to fetch all documents and categorize them locally
@@ -1188,7 +1188,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         validateBoldSignEnabled();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
         try {
             StringBuilder urlBuilder = new StringBuilder(boldSignConfig.getBaseUrl())
@@ -1306,7 +1306,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         validateBoldSignEnabled();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
@@ -1585,7 +1585,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         if (brandId == null || brandId.isEmpty()) return "";
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("X-API-KEY", boldSignConfig.getApiKey());
+            headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
             ResponseEntity<String> response = restTemplate.exchange(
                     boldSignConfig.getBaseUrl() + "/brand/get?brandId=" + brandId,
@@ -1640,8 +1640,30 @@ public class BoldSignServiceImpl implements BoldSignService {
     // ==================== Private Helper Methods ====================
 
     private void validateBoldSignEnabled() {
-        if (!boldSignConfig.isConfigured()) {
-            throw new ApiException("BoldSign is not configured. Please set up the API key.");
+        String apiKey = getApiKeyForCurrentOrg();
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new ApiException("BoldSign is not configured. Please connect your BoldSign account in Organization Settings > Integrations.");
+        }
+    }
+
+    /**
+     * Get BoldSign API key: org-level first, fall back to global config.
+     * Per-tenant isolation — each org uses their own BoldSign account.
+     */
+    private String getApiKeyForCurrentOrg() {
+        try {
+            Long orgId = getRequiredOrganizationId();
+            return organizationRepository.findById(orgId)
+                .map(org -> {
+                    String orgKey = org.getBoldsignApiKeyEncrypted();
+                    if (orgKey != null && !orgKey.isBlank()) {
+                        return orgKey;
+                    }
+                    return boldSignConfig.getApiKey(); // fallback to global
+                })
+                .orElse(boldSignConfig.getApiKey());
+        } catch (Exception e) {
+            return boldSignConfig.getApiKey();
         }
     }
 
@@ -1680,7 +1702,7 @@ public class BoldSignServiceImpl implements BoldSignService {
 
     private String sendToBoldSign(SignatureRequest request, CreateSignatureRequestDTO dto) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -1717,7 +1739,7 @@ public class BoldSignServiceImpl implements BoldSignService {
 
     private void voidInBoldSign(String documentId, String reason) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         String body = "{\"voidReason\":\"" + reason + "\"}";
@@ -1738,7 +1760,7 @@ public class BoldSignServiceImpl implements BoldSignService {
 
     private void sendReminderViaBoldSign(String documentId) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
         HttpEntity<String> request = new HttpEntity<>(headers);
 
@@ -1756,7 +1778,7 @@ public class BoldSignServiceImpl implements BoldSignService {
 
     private String getEmbeddedSigningUrlFromBoldSign(String documentId, String signerEmail) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
@@ -1777,7 +1799,7 @@ public class BoldSignServiceImpl implements BoldSignService {
 
     private byte[] downloadFromBoldSign(String documentId) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
         try {
             ResponseEntity<byte[]> response = restTemplate.exchange(
@@ -1796,7 +1818,7 @@ public class BoldSignServiceImpl implements BoldSignService {
 
     private JsonNode getStatusFromBoldSign(String documentId) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
@@ -2038,7 +2060,7 @@ public class BoldSignServiceImpl implements BoldSignService {
 
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("X-API-KEY", boldSignConfig.getApiKey());
+            headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
             // Fetch documents from BoldSign (page by page)
             int page = 1;
@@ -2129,7 +2151,7 @@ public class BoldSignServiceImpl implements BoldSignService {
 
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("X-API-KEY", boldSignConfig.getApiKey());
+            headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
             // Fetch templates from BoldSign
             int page = 1;
@@ -2256,7 +2278,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         }
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -2333,7 +2355,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         validateBoldSignEnabled();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
@@ -2387,7 +2409,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         }
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -2471,7 +2493,7 @@ public class BoldSignServiceImpl implements BoldSignService {
         }
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-API-KEY", boldSignConfig.getApiKey());
+        headers.set("X-API-KEY", getApiKeyForCurrentOrg());
 
         try {
             restTemplate.exchange(

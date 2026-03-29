@@ -298,6 +298,25 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
+    public void updateBoldSignApiKey(Long orgId, String apiKey) {
+        verifyOrganizationAccess(orgId);
+        Organization org = organizationRepository.findById(orgId)
+                .orElseThrow(() -> new ApiException("Organization not found"));
+        org.setBoldsignApiKeyEncrypted(apiKey != null && !apiKey.isBlank() ? apiKey : null);
+        org.setBoldsignEnabled(apiKey != null && !apiKey.isBlank());
+        organizationRepository.save(org);
+        log.info("BoldSign API key {} for org {}", apiKey != null ? "updated" : "removed", org.getName());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isBoldSignConfigured(Long orgId) {
+        return organizationRepository.findById(orgId)
+                .map(org -> org.getBoldsignApiKeyEncrypted() != null && !org.getBoldsignApiKeyEncrypted().isBlank())
+                .orElse(false);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Page<OrganizationDTO> getAllOrganizationsPaginated(Pageable pageable) {
         // NOTE: Access control is handled in the controller (SUPERADMIN check)
