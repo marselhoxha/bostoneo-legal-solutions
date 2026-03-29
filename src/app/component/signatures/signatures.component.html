@@ -51,55 +51,58 @@
   <!-- Configured — Show Normal Page -->
   <div *ngIf="boldsignConfigured === true">
 
-  <!-- Page Header - Dashboard Greeting Style -->
+  <!-- Page Title & Breadcrumb -->
   <div class="row">
     <div class="col-12">
-      <div class="page-header-wrapper">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-          <div>
-            <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Document Management</div>
-            <h4 class="mb-0">E-Signatures</h4>
-          </div>
-          <div class="d-flex align-items-center gap-3">
-            <!-- Global Search -->
-            <div class="search-box d-none d-md-block">
-              <input type="text" class="form-control search-input"
-                     [(ngModel)]="globalSearch"
-                     (keyup.enter)="onGlobalSearch()"
-                     placeholder="Search documents...">
-              <i class="ri-search-line search-icon"></i>
-            </div>
-            <!-- Quick Actions -->
-            <div class="btn-group">
-              <button class="btn btn-primary" (click)="switchToSendTab()">
-                <i class="ri-add-line me-1"></i> New Document
-              </button>
-              <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
-                      data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="visually-hidden">Toggle Dropdown</span>
-              </button>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li>
-                  <a class="dropdown-item" (click)="switchToSendTab()">
-                    <i class="ri-file-upload-line me-2 text-primary"></i> Upload & Send
-                  </a>
-                </li>
-                <li>
-                  <a class="dropdown-item" (click)="activeTab = 'templates'">
-                    <i class="ri-file-copy-line me-2 text-info"></i> Use Template
-                  </a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                  <a class="dropdown-item" (click)="createNewTemplate()">
-                    <i class="ri-add-circle-line me-2 text-success"></i> Create Template
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
+      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+        <h4 class="mb-sm-0">E-Signatures</h4>
+        <div class="page-title-right">
+          <ol class="breadcrumb m-0">
+            <li class="breadcrumb-item"><a routerLink="/">Home</a></li>
+            <li class="breadcrumb-item active">E-Signatures</li>
+          </ol>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Action Bar -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+    <!-- Global Search -->
+    <div class="search-box d-none d-md-block">
+      <input type="text" class="form-control search-input"
+             [(ngModel)]="globalSearch"
+             (keyup.enter)="onGlobalSearch()"
+             placeholder="Search documents...">
+      <i class="ri-search-line search-icon"></i>
+    </div>
+    <!-- Quick Actions -->
+    <div class="btn-group">
+      <button class="btn btn-primary" (click)="switchToSendTab()">
+        <i class="ri-add-line me-1"></i> New Document
+      </button>
+      <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+              data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="visually-hidden">Toggle Dropdown</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+          <a class="dropdown-item" (click)="switchToSendTab()">
+            <i class="ri-file-upload-line me-2 text-primary"></i> Upload & Send
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" (click)="activeTab = 'templates'">
+            <i class="ri-file-copy-line me-2 text-info"></i> Use Template
+          </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+          <a class="dropdown-item" (click)="createNewTemplate()">
+            <i class="ri-add-circle-line me-2 text-success"></i> Create Template
+          </a>
+        </li>
+      </ul>
     </div>
   </div>
 

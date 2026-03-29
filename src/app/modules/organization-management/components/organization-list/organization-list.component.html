@@ -1,45 +1,49 @@
 <div class="container-fluid">
   <!-- Page Header -->
-  <div class="row">
+  <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+    <h4 class="mb-sm-0">Organizations</h4>
+    <div class="page-title-right">
+      <ol class="breadcrumb m-0">
+        <li class="breadcrumb-item"><a routerLink="/">Home</a></li>
+        <li class="breadcrumb-item"><a routerLink="/organization">Admin</a></li>
+        <li class="breadcrumb-item active">Organizations</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Action Bar -->
+  <div class="row mb-3">
     <div class="col-12">
-      <div class="page-header-wrapper">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-          <div>
-            <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Administration</div>
-            <h4 class="mb-0">Organizations</h4>
-          </div>
-          <div class="d-flex align-items-center gap-3">
-            <!-- Search Box -->
-            <div class="search-box d-none d-md-block">
-              <input type="text" class="form-control search-input"
-                     (input)="onSearch($event)"
-                     placeholder="Search organizations...">
-              <i class="ri-search-line search-icon"></i>
-            </div>
-            <!-- Quick Actions -->
-            <div class="btn-group">
-              <button class="btn btn-primary" (click)="createOrganization()">
-                <i class="ri-add-line me-1"></i> New Organization
-              </button>
-              <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
-                      data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="visually-hidden">Toggle Dropdown</span>
-              </button>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li>
-                  <a class="dropdown-item" (click)="createOrganization()">
-                    <i class="ri-building-line me-2 text-primary"></i> Create Organization
-                  </a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                  <a class="dropdown-item">
-                    <i class="ri-file-download-line me-2 text-info"></i> Export Organizations
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
+      <div class="d-flex align-items-center justify-content-end gap-3">
+        <!-- Search Box -->
+        <div class="search-box d-none d-md-block">
+          <input type="text" class="form-control search-input"
+                 (input)="onSearch($event)"
+                 placeholder="Search organizations...">
+          <i class="ri-search-line search-icon"></i>
+        </div>
+        <!-- Quick Actions -->
+        <div class="btn-group">
+          <button class="btn btn-primary" (click)="createOrganization()">
+            <i class="ri-add-line me-1"></i> New Organization
+          </button>
+          <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="visually-hidden">Toggle Dropdown</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a class="dropdown-item" (click)="createOrganization()">
+                <i class="ri-building-line me-2 text-primary"></i> Create Organization
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item">
+                <i class="ri-file-download-line me-2 text-info"></i> Export Organizations
+              </a>
+            </li>
+          </ul>
         </div>
       </div>
     </div>

@@ -2,51 +2,54 @@
   <ng-container *ngSwitchCase="DataState.LOADED">
     <div class="container-fluid">
 
-      <!-- Page Header -->
+      <!-- Page Title & Breadcrumb -->
       <div class="row">
         <div class="col-12">
-          <div class="page-header-wrapper">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-              <div>
-                <div class="text-muted fs-11 fw-semibold letter-spacing text-uppercase mb-1">Legal Management</div>
-                <h4 class="mb-0">Clients</h4>
-              </div>
-              <div class="d-flex align-items-center gap-3">
-                <!-- Search Box -->
-                <div class="search-box d-none d-md-block">
-                  <form #searchForm="ngForm" (ngSubmit)="searchClients(searchForm)">
-                    <input type="text" class="form-control search-input"
-                           ngModel name="name" #name id="name"
-                           placeholder="Search clients...">
-                    <i class="ri-search-line search-icon"></i>
-                  </form>
-                </div>
-                <!-- Quick Actions -->
-                <div class="btn-group">
-                  <button class="btn btn-primary" (click)="openNewClientModal()">
-                    <i class="ri-add-line me-1"></i> New Client
-                  </button>
-                  <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
-                          data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="visually-hidden">Toggle Dropdown</span>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li>
-                      <a class="dropdown-item" (click)="openNewClientModal()">
-                        <i class="ri-user-add-line me-2 text-primary"></i> Create New Client
-                      </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                      <a class="dropdown-item" (click)="report()">
-                        <i class="ri-file-download-line me-2 text-info"></i> Export Clients
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+          <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <h4 class="mb-sm-0">Clients</h4>
+            <div class="page-title-right">
+              <ol class="breadcrumb m-0">
+                <li class="breadcrumb-item"><a routerLink="/">Home</a></li>
+                <li class="breadcrumb-item active">Clients</li>
+              </ol>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+        <!-- Search Box -->
+        <div class="search-box d-none d-md-block">
+          <form #searchForm="ngForm" (ngSubmit)="searchClients(searchForm)">
+            <input type="text" class="form-control search-input"
+                   ngModel name="name" #name id="name"
+                   placeholder="Search clients...">
+            <i class="ri-search-line search-icon"></i>
+          </form>
+        </div>
+        <!-- Quick Actions -->
+        <div class="btn-group">
+          <button class="btn btn-primary" (click)="openNewClientModal()">
+            <i class="ri-add-line me-1"></i> New Client
+          </button>
+          <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="visually-hidden">Toggle Dropdown</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a class="dropdown-item" (click)="openNewClientModal()">
+                <i class="ri-user-add-line me-2 text-primary"></i> Create New Client
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item" (click)="report()">
+                <i class="ri-file-download-line me-2 text-info"></i> Export Clients
+              </a>
+            </li>
+          </ul>
         </div>
       </div>
 

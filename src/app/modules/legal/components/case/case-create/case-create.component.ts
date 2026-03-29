@@ -143,6 +143,10 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  goBackToCases(): void {
+    this.router.navigate(['/legal/cases']);
+  }
+
   ngOnInit(): void {
     this.loadAttorneys();
     this.caseForm.patchValue({ caseNumber: this.generateUniqueCaseNumber() });
