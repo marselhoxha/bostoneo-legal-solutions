@@ -47,7 +47,7 @@ public class ClientResource {
 
 
     @GetMapping
-    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY') or hasRole('ROLE_USER') or hasRole('ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> getClients(
             @AuthenticationPrincipal UserDTO user,
             @RequestParam Optional<Integer> page,
@@ -98,7 +98,7 @@ public class ClientResource {
     }
 
     @GetMapping("/search-quick")
-    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> searchQuick(@RequestParam String q) {
         Long orgId = clientService.getCurrentOrganizationId();
         var results = clientService.quickSearch(orgId, q.trim());
@@ -113,7 +113,7 @@ public class ClientResource {
     }
 
     @GetMapping("/check-email")
-    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> checkClientEmail(@RequestParam String email) {
         Long orgId = clientService.getCurrentOrganizationId();
         var clients = clientService.findByOrganizationIdAndEmail(orgId, email.trim());
@@ -138,7 +138,7 @@ public class ClientResource {
     }
 
     @PostMapping("/save")
-    @PreAuthorize("hasAuthority('CLIENT:CREATE') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('CLIENT:CREATE') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY')")
     @AuditLog(action = "CREATE", entityType = "CLIENT", description = "Created new client")
     public ResponseEntity<HttpResponse> saveClient(@AuthenticationPrincipal UserDTO user, @RequestBody @Valid Client client) {
         return ResponseEntity.created(URI.create("")).body(
@@ -152,7 +152,7 @@ public class ClientResource {
     }
 
     @GetMapping("/get/{id}")
-    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY') or hasRole('ROLE_USER') or hasRole('ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> getClient(@AuthenticationPrincipal UserDTO user, @PathVariable("id") Long id) {
         Client client = clientService.getClient(id);
         return ResponseEntity.ok(
@@ -166,7 +166,7 @@ public class ClientResource {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY') or hasRole('ROLE_USER') or hasRole('ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> searchClients(@AuthenticationPrincipal UserDTO user,
                                                        @RequestParam Optional<String> name, 
                                                        @RequestParam Optional<Integer> page, 
@@ -183,7 +183,7 @@ public class ClientResource {
     }
 
     @GetMapping("/with-unbilled-time-entries")
-    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> getClientsWithUnbilledTimeEntries(@AuthenticationPrincipal UserDTO user) {
         
         // Add null checking for authentication principal
@@ -231,7 +231,7 @@ public class ClientResource {
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('CLIENT:DELETE') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('CLIENT:DELETE') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY')")
     @AuditLog(action = "DELETE", entityType = "CUSTOMER", description = "Deleted client and associated data")
     public ResponseEntity<HttpResponse> deleteClient(@PathVariable("id") Long id) {
         clientService.deleteClient(id);
@@ -245,7 +245,7 @@ public class ClientResource {
     }
 
     @PutMapping("/update")
-    @PreAuthorize("hasAuthority('CLIENT:UPDATE') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('CLIENT:UPDATE') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY')")
     @AuditLog(action = "UPDATE", entityType = "CUSTOMER", description = "Updated client information")
     public ResponseEntity<HttpResponse> updateClient(@AuthenticationPrincipal UserDTO user, @RequestBody @Valid Client client) {
         return ResponseEntity.ok(
@@ -259,7 +259,7 @@ public class ClientResource {
     }
 
     @PostMapping("/{id}/send-ai-consent")
-    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY') or hasRole('ROLE_USER') or hasRole('ROLE_ATTORNEY')")
     public ResponseEntity<HttpResponse> sendAiConsentEmail(@AuthenticationPrincipal UserDTO user, @PathVariable("id") Long id, @RequestParam Optional<String> email) {
         try {
             clientService.sendAiConsentEmail(id, email.orElse(null));
@@ -398,7 +398,7 @@ public class ClientResource {
     }
 
     @GetMapping("/download/report")
-    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY')")
     @AuditLog(action = "EXPORT", entityType = "CLIENT", description = "Exported client report")
     public ResponseEntity<Resource> downloadReport() {
         List<Client> clients = new ArrayList<>();
