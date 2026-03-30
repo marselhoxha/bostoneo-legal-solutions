@@ -132,8 +132,9 @@ public class InvoiceTemplateService {
     
     public Page<InvoiceTemplateDTO> getTemplates(int page, int size, String sortBy, String sortDirection) {
         Long orgId = getRequiredOrganizationId();
+        String validatedSort = com.bostoneo.bostoneosolutions.util.SortValidator.forInvoices(sortBy);
         Sort sort = sortDirection.equalsIgnoreCase("ASC") ?
-            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+            Sort.by(validatedSort).ascending() : Sort.by(validatedSort).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
         // SECURITY: Use tenant-filtered query

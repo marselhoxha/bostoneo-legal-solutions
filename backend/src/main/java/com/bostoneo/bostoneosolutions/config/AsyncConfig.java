@@ -19,9 +19,9 @@ public class AsyncConfig {
     @Bean(name = "taskExecutor")
     public TaskExecutor taskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(25);
+        executor.setCorePoolSize(20);
+        executor.setMaxPoolSize(50);
+        executor.setQueueCapacity(200);
         executor.setThreadNamePrefix("TenantAware-");
 
         // SECURITY: Propagate tenant context to async threads

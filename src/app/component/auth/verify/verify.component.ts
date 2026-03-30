@@ -25,6 +25,7 @@ export class VerifyComponent implements OnInit {
   password = '';
   confirmPassword = '';
   isForceChange = false;
+  private resetKey: string = '';
   private readonly ACCOUNT_KEY: string = 'key';
 
   constructor(private activatedRoute: ActivatedRoute, private userService: UserService, private router: Router) { }
@@ -60,6 +61,7 @@ export class VerifyComponent implements OnInit {
 
         // Normal token verification flow
         const type: AccountType = this.getAccountType(window.location.href);
+        this.resetKey = key;
         return this.userService.verify$(key, type)
           .pipe(
             map(response => {
@@ -77,12 +79,15 @@ export class VerifyComponent implements OnInit {
 
   renewPassword(resetPasswordform: NgForm): void {
     this.isLoadingSubject.next(true);
-    this.verifyState$ = this.userService.renewPassword$({ userId: this.userSubject.value.id, password: resetPasswordform.value.password, confirmPassword: resetPasswordform.value.confirmPassword })
+    // SECURITY: Force-change uses authenticated endpoint; public reset uses key-based endpoint
+    const passwordCall$ = this.isForceChange
+      ? this.userService.forceChangePassword$({ password: resetPasswordform.value.password, confirmPassword: resetPasswordform.value.confirmPassword })
+      : this.userService.renewPassword$({ key: this.resetKey, password: resetPasswordform.value.password, confirmPassword: resetPasswordform.value.confirmPassword });
+    this.verifyState$ = passwordCall$
       .pipe(
         map(response => {
           this.isLoadingSubject.next(false);
           if (this.isForceChange) {
-            // Clear tokens so user must log in fresh with new password
             localStorage.removeItem(Key.TOKEN);
             localStorage.removeItem(Key.REFRESH_TOKEN);
           }

@@ -44,7 +44,7 @@ public class CaseAssignmentController {
         log.info("Getting all assignments with pagination: page={}, size={}", page, size);
 
         try {
-            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), com.bostoneo.bostoneosolutions.util.SortValidator.forAssignments(sortBy));
             Pageable pageable = PageRequest.of(page, size, sort);
             Page<CaseAssignmentDTO> assignments = caseAssignmentService.getAllAssignments(pageable);
 
@@ -232,7 +232,7 @@ public class CaseAssignmentController {
         log.info("Getting assignments for user {}", userId);
         
         try {
-            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), com.bostoneo.bostoneosolutions.util.SortValidator.forAssignments(sortBy));
             Pageable pageable = PageRequest.of(page, size, sort);
             Page<CaseAssignmentDTO> assignments = caseAssignmentService.getUserAssignments(userId, pageable);
             
@@ -508,7 +508,7 @@ public class CaseAssignmentController {
         log.info("Getting assignment history for case {}", caseId);
         
         try {
-            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), com.bostoneo.bostoneosolutions.util.SortValidator.forAssignments(sortBy));
             Pageable pageable = PageRequest.of(page, size, sort);
             Page<AssignmentHistoryDTO> history = caseAssignmentService.getAssignmentHistory(caseId, pageable);
             
@@ -546,7 +546,7 @@ public class CaseAssignmentController {
         log.info("Getting pending transfer requests");
         
         try {
-            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDir), com.bostoneo.bostoneosolutions.util.SortValidator.forAssignments(sortBy));
             Pageable pageable = PageRequest.of(page, size, sort);
             Page<CaseTransferRequestDTO> requests = caseAssignmentService.getPendingTransferRequests(pageable);
             

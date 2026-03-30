@@ -57,7 +57,7 @@ public class FileManagerResource {
         
         Sort.Direction sortDirection = direction.equalsIgnoreCase("ASC") ? 
             Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, com.bostoneo.bostoneosolutions.util.SortValidator.forFiles(sortBy)));
         
         // If context is "personal", ensure we only get files without caseId
         if ("personal".equals(context)) {
@@ -259,8 +259,9 @@ public class FileManagerResource {
             log.info("Resource loaded: {} ({}) exists: {} readable: {}",
                     resource.getClass().getSimpleName(), resource.getFilename(), resource.exists(), resource.isReadable());
             
-            // Read file content as InputStream to handle large files better
-            byte[] fileContent = resource.getInputStream().readAllBytes();
+            // Read file content with proper stream closing
+            byte[] fileContent;
+            try (java.io.InputStream is = resource.getInputStream()) { fileContent = is.readAllBytes(); }
             log.info("Successfully read {} bytes from file", fileContent.length);
             
             // Determine content type
@@ -613,7 +614,7 @@ public class FileManagerResource {
             @RequestParam(defaultValue = "DESC") String sortDirection) {
         
         Sort.Direction direction = Sort.Direction.fromString(sortDirection);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, com.bostoneo.bostoneosolutions.util.SortValidator.forCases(sortBy)));
         Page<CaseDTO> cases = fileManagerService.getCases(statuses, search, pageable);
         return ResponseEntity.ok(cases);
     }

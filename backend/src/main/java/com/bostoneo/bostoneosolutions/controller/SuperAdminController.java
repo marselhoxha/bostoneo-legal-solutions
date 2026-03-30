@@ -70,9 +70,10 @@ public class SuperAdminController {
 
         log.info("SUPERADMIN: Fetching all organizations - page={}, size={}", page, size);
 
+        String validatedSort = com.bostoneo.bostoneosolutions.util.SortValidator.forOrganizations(sortBy);
         Sort sort = sortDir.equalsIgnoreCase("desc")
-            ? Sort.by(sortBy).descending()
-            : Sort.by(sortBy).ascending();
+            ? Sort.by(validatedSort).descending()
+            : Sort.by(validatedSort).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<OrganizationWithStatsDTO> organizations = superAdminService.getAllOrganizationsWithStats(pageable);

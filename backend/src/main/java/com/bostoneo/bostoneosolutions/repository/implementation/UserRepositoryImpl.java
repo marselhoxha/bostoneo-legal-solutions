@@ -71,6 +71,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     @Override
     public User create(User user) {
         if(getEmailCount(user.getEmail().trim().toLowerCase()) > 0) throw new ApiException("Email already in use. Please use a different email and try again.");
+        passwordPolicyValidator.validate(user.getPassword());
         try {
             KeyHolder holder = new GeneratedKeyHolder();
             SqlParameterSource parameters = getSqlParameterSource(user);

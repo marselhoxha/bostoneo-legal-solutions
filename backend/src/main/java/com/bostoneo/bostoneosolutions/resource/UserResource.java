@@ -3,6 +3,7 @@ package com.bostoneo.bostoneosolutions.resource;
 import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.dtomapper.UserDTOMapper;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.enumeration.EventType;
 import com.bostoneo.bostoneosolutions.event.NewUserEvent;
@@ -38,8 +39,9 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
+
 import java.util.stream.Collectors;
 
 import static com.bostoneo.bostoneosolutions.constant.Constants.TOKEN_PREFIX;
@@ -114,8 +116,7 @@ public class UserResource {
 
     @PostMapping("/register")
     @AuditLog(action = "CREATE", entityType = "USER", description = "New user registration")
-    public ResponseEntity<HttpResponse> saveUser(@RequestBody @Valid User user) throws InterruptedException {
-        TimeUnit.SECONDS.sleep(4);
+    public ResponseEntity<HttpResponse> saveUser(@RequestBody @Valid User user) {
         UserDTO userDto = userService.createUser(user);
         return ResponseEntity.created(getUri()).body(
                 HttpResponse.builder()
@@ -180,7 +181,8 @@ public class UserResource {
                         .build());
     }
 
-    @GetMapping("/resetpassword/{email}")
+    // SECURITY: Support both GET (legacy) and POST (preferred — keeps email out of URLs/logs)
+    @RequestMapping(value = "/resetpassword/{email}", method = {RequestMethod.GET, RequestMethod.POST})
     public ResponseEntity<HttpResponse> resetPassword(@PathVariable("email") String email) {
         userService.resetPassword(email);
         return ResponseEntity.ok().body(
@@ -193,8 +195,7 @@ public class UserResource {
     }
 
     @GetMapping("/verify/account/{key}")
-    public ResponseEntity<HttpResponse> verifyAccount(@PathVariable("key") String key) throws InterruptedException {
-        TimeUnit.SECONDS.sleep(3);
+    public ResponseEntity<HttpResponse> verifyAccount(@PathVariable("key") String key) {
         return ResponseEntity.ok().body(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
@@ -205,8 +206,7 @@ public class UserResource {
     }
 
     @GetMapping("/verify/password/{key}")
-    public ResponseEntity<HttpResponse> verifyPasswordUrl(@PathVariable("key") String key) throws InterruptedException {
-        TimeUnit.SECONDS.sleep(3);
+    public ResponseEntity<HttpResponse> verifyPasswordUrl(@PathVariable("key") String key) {
         UserDTO user = userService.verifyPasswordKey(key);
         return ResponseEntity.ok().body(
                 HttpResponse.builder()
@@ -219,9 +219,8 @@ public class UserResource {
     }
 
     @PutMapping("/new/password")
-    public ResponseEntity<HttpResponse> resetPasswordWithKey(@RequestBody @Valid NewPasswordForm form) throws InterruptedException {
-        TimeUnit.SECONDS.sleep(3);
-        userService.updatePassword(form.getUserId(), form.getPassword(), form.getConfirmPassword());
+    public ResponseEntity<HttpResponse> resetPasswordWithKey(@RequestBody @Valid NewPasswordForm form) {
+        userService.renewPasswordWithKey(form.getKey(), form.getPassword(), form.getConfirmPassword());
         return ResponseEntity.ok().body(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
@@ -232,6 +231,26 @@ public class UserResource {
     }
 
     // END - To reset password when user is not logged in
+
+    // SECURITY: Authenticated endpoint for force-change password flow (user logged in with temp password)
+    @PostMapping("/force-change-password")
+    public ResponseEntity<HttpResponse> forceChangePassword(Authentication authentication, @RequestBody Map<String, String> form) {
+        UserDTO userDTO = getAuthenticatedUser(authentication);
+        String password = form.get("password");
+        String confirmPassword = form.get("confirmPassword");
+        if (password == null || confirmPassword == null || password.isEmpty()) {
+            throw new ApiException("Password cannot be empty");
+        }
+        userService.updatePassword(userDTO.getId(), password, confirmPassword);
+        tokenBlacklistService.blacklistAllUserTokens(userDTO.getId());
+        return ResponseEntity.ok().body(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .message("Password changed successfully. Please login again.")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
 
     @PatchMapping("/update/password")
     public ResponseEntity<HttpResponse> updatePassword(Authentication authentication, @RequestBody @Valid UpdatePasswordForm form) {
@@ -251,6 +270,7 @@ public class UserResource {
     }
 
     @PatchMapping("/update/role/{roleName}")
+    @PreAuthorize("hasAuthority('ROLE:ASSIGN') or hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN')")
     public ResponseEntity<HttpResponse> updateUserRole(Authentication authentication, @PathVariable("roleName") String roleName) {
         UserDTO userDTO = getAuthenticatedUser(authentication);
         userService.updateUserRole(userDTO.getId(), roleName);
@@ -266,6 +286,7 @@ public class UserResource {
     }
 
     @PatchMapping("/update/settings")
+    @PreAuthorize("hasAuthority('USER:ADMIN') or hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN')")
     public ResponseEntity<HttpResponse> updateAccountSettings(Authentication authentication, @RequestBody @Valid SettingsForm form) {
         UserDTO userDTO = getAuthenticatedUser(authentication);
         userService.updateAccountSettings(userDTO.getId(), form.getEnabled(), form.getNotLocked());
@@ -281,8 +302,7 @@ public class UserResource {
     }
 
     @PatchMapping("/togglemfa")
-    public ResponseEntity<HttpResponse> toggleMfa(Authentication authentication) throws InterruptedException {
-        TimeUnit.SECONDS.sleep(3);
+    public ResponseEntity<HttpResponse> toggleMfa(Authentication authentication) {
         UserDTO user = userService.toggleMfa(getAuthenticatedUser(authentication).getEmail());
         publisher.publishEvent(new NewUserEvent(user.getEmail(), MFA_UPDATE, user.getOrganizationId()));
         return ResponseEntity.ok().body(
@@ -320,8 +340,8 @@ public class UserResource {
 
     @GetMapping(value = "/image/{fileName}", produces = IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> getProfileImage(@PathVariable("fileName") String fileName) {
-        try {
-            byte[] imageBytes = fileStorageService.loadFileAsResource("profile-images/" + fileName).getInputStream().readAllBytes();
+        try (java.io.InputStream is = fileStorageService.loadFileAsResource("profile-images/" + fileName).getInputStream()) {
+            byte[] imageBytes = is.readAllBytes();
             return ResponseEntity.ok(imageBytes);
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
@@ -440,18 +460,14 @@ public class UserResource {
                 .build(), NOT_FOUND);
     }*/
 
-    @GetMapping("/test-delete/{userId}")
-    public ResponseEntity<String> testDeleteEndpoint(@PathVariable("userId") Long userId) {
-        log.info("🧪 TEST DELETE ENDPOINT REACHED! User ID: {}", userId);
-        return ResponseEntity.ok("Test delete endpoint works for user: " + userId);
-    }
-
     @GetMapping("/list")
+    @PreAuthorize("hasAuthority('USER:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN')")
     public ResponseEntity<HttpResponse> getUsers() {
-        // Retrieve users through the service and convert to DTOs
+        // PERF: Fixed N+1 — was calling getUserByEmail (2 queries per user = 2001 total)
+        // Now: 1 query for users + 1 role query per user = ~24 queries for 23 users (acceptable)
         Collection<User> users = userService.getUsers(0, 1000);
         List<UserDTO> userDTOs = users.stream()
-            .map(user -> userService.getUserByEmail(user.getEmail()))
+            .map(user -> userService.getUserById(user.getId()))
             .collect(Collectors.toList());
             
         return ResponseEntity.ok().body(

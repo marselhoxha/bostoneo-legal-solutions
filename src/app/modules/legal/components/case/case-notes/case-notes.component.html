@@ -105,7 +105,8 @@
           </div>
           
           <!-- Note content with fallback for null/undefined content -->
-          <div class="mb-2 text-muted note-content" [innerHTML]="note.content ? (note.content | noSanitize) : ''"></div>
+          <!-- SECURITY: Use Angular's built-in sanitizer instead of noSanitize to prevent stored XSS -->
+          <div class="mb-2 text-muted note-content" [innerHTML]="note.content || ''"></div>
           
           <div class="d-flex justify-content-between align-items-center text-muted small">
             <div>

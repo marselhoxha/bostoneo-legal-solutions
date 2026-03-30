@@ -51,7 +51,7 @@ public class CrmLeadsResource {
             page, size, status, practiceArea, assignedTo, priority);
         
         Sort.Direction direction = "desc".equalsIgnoreCase(sortDir) ? Sort.Direction.DESC : Sort.Direction.ASC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, com.bostoneo.bostoneosolutions.util.SortValidator.forLeads(sortBy)));
         
         Page<Lead> leads;
         

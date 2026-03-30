@@ -5,6 +5,7 @@ import com.bostoneo.bostoneosolutions.model.CaseRoleAssignment;
 import com.bostoneo.bostoneosolutions.model.LegalCase;
 import com.bostoneo.bostoneosolutions.model.Role;
 import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.repository.CaseRoleAssignmentRepository;
 import com.bostoneo.bostoneosolutions.repository.RoleRepository;
 import com.bostoneo.bostoneosolutions.rowmapper.CaseRoleAssignmentRowMapper;
@@ -38,16 +39,28 @@ public class CaseRoleAssignmentRepositoryImpl implements CaseRoleAssignmentRepos
     // SQL queries
     private static final String SAVE_CASE_ROLE_ASSIGNMENT = 
         "INSERT INTO case_role_assignments (case_id, user_id, role_id, expires_at) VALUES (:caseId, :userId, :roleId, :expiresAt)";
-    private static final String FIND_BY_ID = 
+    // Unfiltered queries (for SUPERADMIN with null org context)
+    private static final String FIND_BY_ID_UNFILTERED =
         "SELECT * FROM case_role_assignments WHERE id = :id";
-    private static final String FIND_BY_USER_ID = 
+    private static final String FIND_BY_USER_ID_UNFILTERED =
         "SELECT * FROM case_role_assignments WHERE user_id = :userId";
-    private static final String FIND_BY_CASE_ID = 
+    private static final String FIND_BY_CASE_ID_UNFILTERED =
         "SELECT * FROM case_role_assignments WHERE case_id = :caseId";
-    private static final String DELETE_BY_ID = 
+    private static final String DELETE_BY_ID_UNFILTERED =
         "DELETE FROM case_role_assignments WHERE id = :id";
-    private static final String DELETE_BY_CASE_AND_USER = 
+    private static final String DELETE_BY_CASE_AND_USER_UNFILTERED =
         "DELETE FROM case_role_assignments WHERE case_id = :caseId AND user_id = :userId";
+    // SECURITY: Tenant-isolated queries for regular users
+    private static final String FIND_BY_ID_FILTERED =
+        "SELECT cra.* FROM case_role_assignments cra JOIN legal_cases lc ON cra.case_id = lc.id WHERE cra.id = :id AND lc.organization_id = :organizationId";
+    private static final String FIND_BY_USER_ID_FILTERED =
+        "SELECT cra.* FROM case_role_assignments cra JOIN legal_cases lc ON cra.case_id = lc.id WHERE cra.user_id = :userId AND lc.organization_id = :organizationId";
+    private static final String FIND_BY_CASE_ID_FILTERED =
+        "SELECT cra.* FROM case_role_assignments cra JOIN legal_cases lc ON cra.case_id = lc.id WHERE cra.case_id = :caseId AND lc.organization_id = :organizationId";
+    private static final String DELETE_BY_ID_FILTERED =
+        "DELETE FROM case_role_assignments WHERE id = :id AND case_id IN (SELECT id FROM legal_cases WHERE organization_id = :organizationId)";
+    private static final String DELETE_BY_CASE_AND_USER_FILTERED =
+        "DELETE FROM case_role_assignments WHERE case_id = :caseId AND user_id = :userId AND case_id IN (SELECT id FROM legal_cases WHERE organization_id = :organizationId)";
     private static final String CHECK_USER_CASE_ACCESS_QUERY = 
         "SELECT COUNT(*) > 0 FROM case_role_assignments WHERE user_id = :userId AND case_id = :caseId " +
         "AND (expires_at IS NULL OR expires_at > NOW())";
@@ -76,9 +89,11 @@ public class CaseRoleAssignmentRepositoryImpl implements CaseRoleAssignmentRepos
     public Optional<CaseRoleAssignment> findById(Long id) {
         log.info("Finding case role assignment by id: {}", id);
         try {
-            CaseRoleAssignment assignment = jdbc.queryForObject(FIND_BY_ID, 
-                of("id", id), 
-                new CaseRoleAssignmentRowMapper(roleRepository));
+            Long orgId = TenantContext.getCurrentTenant();
+            // SUPERADMIN has null org — allow unfiltered access; regular users get tenant-filtered
+            CaseRoleAssignment assignment = orgId != null
+                ? jdbc.queryForObject(FIND_BY_ID_FILTERED, of("id", id, "organizationId", orgId), new CaseRoleAssignmentRowMapper(roleRepository))
+                : jdbc.queryForObject(FIND_BY_ID_UNFILTERED, of("id", id), new CaseRoleAssignmentRowMapper(roleRepository));
             return Optional.ofNullable(assignment);
         } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
@@ -92,9 +107,11 @@ public class CaseRoleAssignmentRepositoryImpl implements CaseRoleAssignmentRepos
     public Set<CaseRoleAssignment> findByUserId(Long userId) {
         log.info("Finding case role assignments by user id: {}", userId);
         try {
-            return new HashSet<>(jdbc.query(FIND_BY_USER_ID, 
-                of("userId", userId), 
-                new CaseRoleAssignmentRowMapper(roleRepository)));
+            Long orgId = TenantContext.getCurrentTenant();
+            List<CaseRoleAssignment> results = orgId != null
+                ? jdbc.query(FIND_BY_USER_ID_FILTERED, of("userId", userId, "organizationId", orgId), new CaseRoleAssignmentRowMapper(roleRepository))
+                : jdbc.query(FIND_BY_USER_ID_UNFILTERED, of("userId", userId), new CaseRoleAssignmentRowMapper(roleRepository));
+            return new HashSet<>(results);
         } catch (Exception e) {
             log.error("Error finding case role assignments: {}", e.getMessage());
             throw new ApiException("Error finding case role assignments");
@@ -105,9 +122,11 @@ public class CaseRoleAssignmentRepositoryImpl implements CaseRoleAssignmentRepos
     public Set<CaseRoleAssignment> findByCaseId(Long caseId) {
         log.info("Finding case role assignments by case id: {}", caseId);
         try {
-            return new HashSet<>(jdbc.query(FIND_BY_CASE_ID, 
-                of("caseId", caseId), 
-                new CaseRoleAssignmentRowMapper(roleRepository)));
+            Long orgId = TenantContext.getCurrentTenant();
+            List<CaseRoleAssignment> results = orgId != null
+                ? jdbc.query(FIND_BY_CASE_ID_FILTERED, of("caseId", caseId, "organizationId", orgId), new CaseRoleAssignmentRowMapper(roleRepository))
+                : jdbc.query(FIND_BY_CASE_ID_UNFILTERED, of("caseId", caseId), new CaseRoleAssignmentRowMapper(roleRepository));
+            return new HashSet<>(results);
         } catch (Exception e) {
             log.error("Error finding case role assignments: {}", e.getMessage());
             throw new ApiException("Error finding case role assignments");
@@ -118,7 +137,12 @@ public class CaseRoleAssignmentRepositoryImpl implements CaseRoleAssignmentRepos
     public void deleteById(Long id) {
         log.info("Deleting case role assignment by id: {}", id);
         try {
-            jdbc.update(DELETE_BY_ID, of("id", id));
+            Long orgId = TenantContext.getCurrentTenant();
+            if (orgId != null) {
+                jdbc.update(DELETE_BY_ID_FILTERED, of("id", id, "organizationId", orgId));
+            } else {
+                jdbc.update(DELETE_BY_ID_UNFILTERED, of("id", id));
+            }
         } catch (Exception e) {
             log.error("Error deleting case role assignment: {}", e.getMessage());
             throw new ApiException("Error deleting case role assignment");
@@ -129,7 +153,12 @@ public class CaseRoleAssignmentRepositoryImpl implements CaseRoleAssignmentRepos
     public void deleteByCaseIdAndUserId(Long caseId, Long userId) {
         log.info("Deleting case role assignments by case id: {} and user id: {}", caseId, userId);
         try {
-            jdbc.update(DELETE_BY_CASE_AND_USER, of("caseId", caseId, "userId", userId));
+            Long orgId = TenantContext.getCurrentTenant();
+            if (orgId != null) {
+                jdbc.update(DELETE_BY_CASE_AND_USER_FILTERED, of("caseId", caseId, "userId", userId, "organizationId", orgId));
+            } else {
+                jdbc.update(DELETE_BY_CASE_AND_USER_UNFILTERED, of("caseId", caseId, "userId", userId));
+            }
         } catch (Exception e) {
             log.error("Error deleting case role assignments: {}", e.getMessage());
             throw new ApiException("Error deleting case role assignments");
@@ -177,7 +206,12 @@ public class CaseRoleAssignmentRepositoryImpl implements CaseRoleAssignmentRepos
     public void removeCaseRole(Long assignmentId) {
         log.info("Removing case role assignment by id: {}", assignmentId);
         try {
-            jdbc.update(DELETE_BY_ID, of("id", assignmentId));
+            Long orgId = TenantContext.getCurrentTenant();
+            if (orgId != null) {
+                jdbc.update(DELETE_BY_ID_FILTERED, of("id", assignmentId, "organizationId", orgId));
+            } else {
+                jdbc.update(DELETE_BY_ID_UNFILTERED, of("id", assignmentId));
+            }
         } catch (Exception e) {
             log.error("Error removing case role: {}", e.getMessage());
             throw new ApiException("Failed to remove case role: " + e.getMessage());

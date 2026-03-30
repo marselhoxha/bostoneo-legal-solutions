@@ -33,6 +33,18 @@ import static org.springframework.http.HttpStatus.*;
 @RestControllerAdvice
 @Slf4j
 public class HandleException extends ResponseEntityExceptionHandler implements ErrorController {
+
+    @org.springframework.beans.factory.annotation.Value("${spring.profiles.active:dev}")
+    private String activeProfile;
+
+    // SECURITY: Suppress internal details in production/staging responses
+    private String safeDeveloperMessage(String message) {
+        if (activeProfile.contains("prod") || activeProfile.contains("staging")) {
+            return "See server logs for details";
+        }
+        return message;
+    }
+
     @Override
     protected ResponseEntity<Object> handleExceptionInternal(Exception exception, Object body, HttpHeaders headers, HttpStatusCode statusCode, WebRequest request) {
         log.error(exception.getMessage());
@@ -40,7 +52,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason(exception.getMessage())
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(resolve(statusCode.value()))
                         .statusCode(statusCode.value())
                         .build(), statusCode);
@@ -55,7 +67,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason(fieldMessage)
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(resolve(statusCode.value()))
                         .statusCode(statusCode.value())
                         .build(), statusCode);
@@ -80,7 +92,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason(exception.getMessage().contains("Duplicate entry") ? "Information already exists" : exception.getMessage())
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(BAD_REQUEST)
                         .statusCode(BAD_REQUEST.value())
                         .build(), BAD_REQUEST);
@@ -93,7 +105,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason(exception.getMessage() + ", Incorrect email or password")
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(BAD_REQUEST)
                         .statusCode(BAD_REQUEST.value())
                         .build(), BAD_REQUEST);
@@ -106,7 +118,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason(exception.getMessage())
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(BAD_REQUEST)
                         .statusCode(BAD_REQUEST.value())
                         .build(), BAD_REQUEST);
@@ -119,7 +131,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason("Access denied. You don\'t have access")
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(FORBIDDEN)
                         .statusCode(FORBIDDEN.value())
                         .build(), FORBIDDEN);
@@ -132,7 +144,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason("You don't have permission to perform this action")
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(FORBIDDEN)
                         .statusCode(FORBIDDEN.value())
                         .build(), FORBIDDEN);
@@ -160,7 +172,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason(reason)
-                        .developerMessage(exception.getClass().getSimpleName() + ": " + exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getClass().getSimpleName() + ": " + exception.getMessage()))
                         .status(BAD_REQUEST)
                         .statusCode(BAD_REQUEST.value())
                         .build(), BAD_REQUEST);
@@ -193,7 +205,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason(reason)
-                        .developerMessage(exception.getClass().getSimpleName() + ": " + exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getClass().getSimpleName() + ": " + exception.getMessage()))
                         .status(INTERNAL_SERVER_ERROR)
                         .statusCode(INTERNAL_SERVER_ERROR.value())
                         .build(), INTERNAL_SERVER_ERROR);
@@ -206,7 +218,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason("Could not decode the token")
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(UNAUTHORIZED)
                         .statusCode(UNAUTHORIZED.value())
                         .build(), UNAUTHORIZED);
@@ -233,7 +245,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason(exception.getMessage().contains("expected 1, actual 0") ? "Record not found" : exception.getMessage())
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(BAD_REQUEST)
                         .statusCode(BAD_REQUEST.value())
                         .build(), BAD_REQUEST);
@@ -245,7 +257,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         //.reason(exception.getMessage() + ". Please check your email and verify your account.")
                         .reason("User account is currently disabled")
                         .status(BAD_REQUEST)
@@ -259,7 +271,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         //.reason(exception.getMessage() + ", too many failed attempts.")
                         .reason("User account is currently locked")
                         .status(BAD_REQUEST)
@@ -274,7 +286,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .reason(processErrorMessage(exception.getMessage()))
-                        .developerMessage(processErrorMessage(exception.getMessage()))
+                        .developerMessage(safeDeveloperMessage(processErrorMessage(exception.getMessage())))
                         .status(BAD_REQUEST)
                         .statusCode(BAD_REQUEST.value()).build()
                 , BAD_REQUEST);
@@ -289,7 +301,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .developerMessage(exception.getMessage())
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .reason(reason)
                         .status(httpStatus)
                         .statusCode(httpStatus.value()).build()

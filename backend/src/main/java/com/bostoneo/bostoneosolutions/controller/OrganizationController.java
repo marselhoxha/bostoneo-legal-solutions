@@ -310,7 +310,9 @@ public class OrganizationController {
                 try {
                     Resource resource = fileStorageService.loadFileAsResource("org-logos/org-" + id + ext);
                     if (resource.exists()) {
-                        return ResponseEntity.ok(resource.getInputStream().readAllBytes());
+                        try (java.io.InputStream is = resource.getInputStream()) {
+                            return ResponseEntity.ok(is.readAllBytes());
+                        }
                     }
                 } catch (IOException ignored) {}
             }
@@ -472,9 +474,10 @@ public class OrganizationController {
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir) {
 
+        String validatedSort = com.bostoneo.bostoneosolutions.util.SortValidator.forOrganizations(sortBy);
         Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
+                ? Sort.by(validatedSort).descending()
+                : Sort.by(validatedSort).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<OrganizationDTO> organizations;

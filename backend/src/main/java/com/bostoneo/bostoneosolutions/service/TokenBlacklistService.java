@@ -17,12 +17,17 @@ public class TokenBlacklistService {
 
     private final StringRedisTemplate redisTemplate;
 
+    // Track whether Redis was ever successfully connected
+    // If Redis was never available (local dev), fail open; if it went down (production outage), fail closed
+    private volatile boolean redisEverConnected = false;
+
     /**
      * Blacklist a specific token (e.g., on logout)
      */
     public void blacklistToken(String token, Duration ttl) {
         try {
             redisTemplate.opsForValue().set(BLACKLIST_PREFIX + token, "1", ttl);
+            redisEverConnected = true;
             log.debug("Token blacklisted, expires in {}", ttl);
         } catch (Exception e) {
             log.error("Failed to blacklist token: {}", e.getMessage());
@@ -31,13 +36,12 @@ public class TokenBlacklistService {
 
     /**
      * Blacklist all tokens for a user issued before now (e.g., on password change).
-     * Stores a timestamp; any token issued before this time is invalid.
      */
     public void blacklistAllUserTokens(Long userId) {
         try {
             String timestamp = String.valueOf(System.currentTimeMillis());
-            // TTL matches max refresh token lifetime (8 hours)
             redisTemplate.opsForValue().set(USER_BLACKLIST_PREFIX + userId, timestamp, Duration.ofHours(8));
+            redisEverConnected = true;
             log.info("All tokens blacklisted for user {}", userId);
         } catch (Exception e) {
             log.error("Failed to blacklist user tokens for {}: {}", userId, e.getMessage());
@@ -45,27 +49,39 @@ public class TokenBlacklistService {
     }
 
     /**
-     * Check if a specific token is blacklisted
+     * SECURITY: If Redis was previously working and went down (production outage), fail closed.
+     * If Redis was never available (local dev without Redis), fail open to avoid blocking all auth.
      */
     public boolean isTokenBlacklisted(String token) {
         try {
-            return Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token));
+            boolean result = Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token));
+            redisEverConnected = true;
+            return result;
         } catch (Exception e) {
-            log.error("Failed to check token blacklist: {}", e.getMessage());
+            if (redisEverConnected) {
+                log.error("SECURITY: Redis went down — failing closed (denying access): {}", e.getMessage());
+                return true;
+            }
+            log.warn("Redis not available (not started) — skipping blacklist check: {}", e.getMessage());
             return false;
         }
     }
 
     /**
-     * Check if a token was issued before the user's blacklist timestamp
+     * SECURITY: Same fail-closed/fail-open logic as isTokenBlacklisted
      */
     public boolean isUserTokenBlacklisted(Long userId, long tokenIssuedAtMillis) {
         try {
             String blacklistTimestamp = redisTemplate.opsForValue().get(USER_BLACKLIST_PREFIX + userId);
+            redisEverConnected = true;
             if (blacklistTimestamp == null) return false;
             return tokenIssuedAtMillis < Long.parseLong(blacklistTimestamp);
         } catch (Exception e) {
-            log.error("Failed to check user token blacklist: {}", e.getMessage());
+            if (redisEverConnected) {
+                log.error("SECURITY: Redis went down — failing closed (denying access): {}", e.getMessage());
+                return true;
+            }
+            log.warn("Redis not available (not started) — skipping blacklist check: {}", e.getMessage());
             return false;
         }
     }

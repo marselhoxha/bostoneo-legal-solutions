@@ -97,6 +97,30 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
         log.info("WebSocket closed: user={}, session={}, remainingSessions={}", userId, sessionId, allSessions.size());
     }
 
+    /**
+     * PERF: Periodically clean up stale WebSocket sessions that didn't close properly.
+     * Runs every 5 minutes. Prevents memory leak from orphaned connections.
+     */
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 300000)
+    public void cleanupStaleSessions() {
+        int removed = 0;
+        for (var entry : allSessions.entrySet()) {
+            if (!entry.getValue().isOpen()) {
+                String sessionId = entry.getKey();
+                allSessions.remove(sessionId);
+                String userId = sessionUsers.remove(sessionId);
+                sessionOrganizations.remove(sessionId);
+                if (userId != null) {
+                    userSessions.remove(userId);
+                }
+                removed++;
+            }
+        }
+        if (removed > 0) {
+            log.info("Cleaned up {} stale WebSocket sessions, {} active remain", removed, allSessions.size());
+        }
+    }
+
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String userId = sessionUsers.get(session.getId());

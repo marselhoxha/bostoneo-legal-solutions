@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/crm/intake-submissions")
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_SYSADMIN', 'ROLE_ATTORNEY')")
 @RequiredArgsConstructor
 @Slf4j
 public class IntakeSubmissionResource {
@@ -44,7 +46,7 @@ public class IntakeSubmissionResource {
             page, size, status, practiceArea, priority);
         
         Sort.Direction direction = "desc".equalsIgnoreCase(sortDir) ? Sort.Direction.DESC : Sort.Direction.ASC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, com.bostoneo.bostoneosolutions.util.SortValidator.forSubmissions(sortBy)));
         
         Page<IntakeSubmission> submissions;
         

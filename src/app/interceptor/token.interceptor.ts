@@ -228,6 +228,7 @@ export class TokenInterceptor implements HttpInterceptor {
            url.includes('/user/login') ||
            url.includes('/user/register') ||
            url.includes('resetpassword') ||
+           url.includes('/new/password') ||
            url.includes('/webhook/') ||
            url.includes('refresh/token') ||
            url.includes('/invitations/validate/');

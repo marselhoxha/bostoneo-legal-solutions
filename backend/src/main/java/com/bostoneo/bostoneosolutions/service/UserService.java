@@ -15,6 +15,7 @@ public interface UserService {
     void resetPassword(String email);
     UserDTO verifyPasswordKey(String key);
     void updatePassword(Long userId, String password, String confirmPassword);
+    void renewPasswordWithKey(String key, String password, String confirmPassword);
     UserDTO verifyAccountKey(String key);
     UserDTO updateUserDetails(UpdateForm user);
     UserDTO getUserById(Long userId);

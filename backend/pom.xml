@@ -369,6 +369,14 @@
 			<version>2.25.16</version>
 		</dependency>
 
+		<!-- Fix macOS DNS resolution warning for Netty (used by WebClient) -->
+		<dependency>
+			<groupId>io.netty</groupId>
+			<artifactId>netty-resolver-dns-native-macos</artifactId>
+			<classifier>osx-aarch_64</classifier>
+			<scope>runtime</scope>
+		</dependency>
+
 	</dependencies>
 
 	<profiles>

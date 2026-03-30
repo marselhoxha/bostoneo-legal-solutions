@@ -432,45 +432,45 @@ export class UsersDirectoryComponent implements OnInit, OnDestroy {
         userDetailsImg.src = user.imageUrl || 'assets/images/users/avatar-1.jpg';
       }
       
+      // SECURITY: Use textContent instead of innerHTML to prevent XSS from user-controlled fields
       const userName = document.querySelector('.user-details h5') as HTMLElement;
       if (userName) {
-        userName.innerHTML = `${user.firstName} ${user.lastName}`;
+        userName.textContent = `${user.firstName} ${user.lastName}`;
       }
-      
+
       const userTitle = document.querySelector('.user-details p') as HTMLElement;
       if (userTitle) {
-        userTitle.innerHTML = user.title || 'Team Member';
+        userTitle.textContent = user.title || 'Team Member';
       }
-      
-      // Update user bio in the information section
+
       const userBio = document.querySelector('.user-bio') as HTMLElement;
       if (userBio) {
-        userBio.innerHTML = user.bio || 'Professional team member committed to excellence.';
+        userBio.textContent = user.bio || 'Professional team member committed to excellence.';
       }
-      
+
       // Update sidebar action buttons with current user data
       this.updateSidebarActions(user);
-      
+
       // Update information table
       const roleEl = document.querySelector('.role') as HTMLElement;
-      if (roleEl) roleEl.innerHTML = user.roleName || 'N/A';
-      
+      if (roleEl) roleEl.textContent = user.roleName || 'N/A';
+
       const locationEl = document.querySelector('.location') as HTMLElement;
-      if (locationEl) locationEl.innerHTML = user.address || 'N/A';
-      
+      if (locationEl) locationEl.textContent = user.address || 'N/A';
+
       const statusEl = document.querySelector('.status') as HTMLElement;
-      if (statusEl) statusEl.innerHTML = this.getUserStatusText(user);
-      
+      if (statusEl) statusEl.textContent = this.getUserStatusText(user);
+
       const emailEl = document.querySelector('.email') as HTMLElement;
-      if (emailEl) emailEl.innerHTML = user.email;
-      
+      if (emailEl) emailEl.textContent = user.email;
+
       const phoneEl = document.querySelector('.phone') as HTMLElement;
-      if (phoneEl) phoneEl.innerHTML = user.phone || 'N/A';
-      
+      if (phoneEl) phoneEl.textContent = user.phone || 'N/A';
+
       const joinedEl = document.querySelector('.joined') as HTMLElement;
       if (joinedEl) {
         const joinDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A';
-        joinedEl.innerHTML = joinDate;
+        joinedEl.textContent = joinDate;
       }
     }
   }

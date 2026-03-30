@@ -62,9 +62,10 @@ public class PIPortfolioController {
 
         log.info("Getting PI cases: page={}, size={}", page, size);
 
+        String validatedSort = com.bostoneo.bostoneosolutions.util.SortValidator.forPIPortfolio(sortBy);
         Sort sort = sortDir.equalsIgnoreCase("asc")
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+                ? Sort.by(validatedSort).ascending()
+                : Sort.by(validatedSort).descending();
 
         Page<LegalCase> cases = portfolioService.getPICases(null, PageRequest.of(page, size, sort));
 

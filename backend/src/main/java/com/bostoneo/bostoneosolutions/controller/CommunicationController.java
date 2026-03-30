@@ -22,6 +22,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.http.MediaType;
@@ -52,6 +53,7 @@ public class CommunicationController {
     /**
      * Send an SMS message
      */
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_SYSADMIN')")
     @PostMapping("/sms/send")
     public ResponseEntity<HttpResponse> sendSms(
             @RequestBody SmsRequestDTO request,
@@ -88,6 +90,7 @@ public class CommunicationController {
     /**
      * Send SMS using a template
      */
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_SYSADMIN')")
     @PostMapping("/sms/send-template")
     public ResponseEntity<HttpResponse> sendTemplatedSms(
             @RequestBody Map<String, Object> request,
@@ -126,6 +129,7 @@ public class CommunicationController {
     /**
      * Send WhatsApp message
      */
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_SYSADMIN')")
     @PostMapping("/whatsapp/send")
     public ResponseEntity<HttpResponse> sendWhatsApp(
             @RequestBody SmsRequestDTO request,

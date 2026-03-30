@@ -375,8 +375,9 @@ public class InvoiceServiceImpl implements IInvoiceService {
     }
     
     public Page<Invoice> getInvoices(int page, int size, String sortBy, String sortDirection) {
+        String validatedSort = com.bostoneo.bostoneosolutions.util.SortValidator.forInvoices(sortBy);
         Sort sort = sortDirection.equalsIgnoreCase("ASC") ?
-            Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+            Sort.by(validatedSort).ascending() : Sort.by(validatedSort).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
         // Use tenant-filtered query - throw exception if no organization context

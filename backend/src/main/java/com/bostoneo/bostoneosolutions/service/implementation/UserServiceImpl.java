@@ -60,6 +60,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void renewPasswordWithKey(String key, String password, String confirmPassword) {
+        userRepository.renewPassword(key, password, confirmPassword);
+    }
+
+    @Override
     public UserDTO verifyAccountKey(String key) {
         return mapToUserDTO(userRepository.verifyAccountKey(key));
     }

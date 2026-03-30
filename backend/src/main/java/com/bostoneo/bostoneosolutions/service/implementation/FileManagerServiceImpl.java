@@ -1116,7 +1116,9 @@ public class FileManagerServiceImpl implements FileManagerService {
 
         try {
             Resource resource = fileStorageService.loadFileAsResource(version.getFilePath());
-            return resource.getInputStream().readAllBytes();
+            try (java.io.InputStream is = resource.getInputStream()) {
+                return is.readAllBytes();
+            }
         } catch (Exception e) {
             log.error("Failed to download version {}: {}", versionId, e.getMessage());
             throw new RuntimeException("Failed to download file version", e);

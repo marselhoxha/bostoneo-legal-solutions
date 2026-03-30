@@ -25,11 +25,13 @@ const routes: Routes = [
   },
   {
     path: 'edit/:id',
-    component: OrganizationFormComponent
+    component: OrganizationFormComponent,
+    canActivate: [SuperAdminGuard]
   },
   {
     path: 'details/:id',
-    component: OrganizationDetailsComponent
+    component: OrganizationDetailsComponent,
+    canActivate: [SuperAdminGuard]
   },
   {
     path: 'details/:id/settings',

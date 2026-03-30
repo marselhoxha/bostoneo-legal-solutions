@@ -202,7 +202,9 @@ public class AiWorkspaceExhibitService {
 
         try {
             Resource resource = fileStorageService.loadFileAsResource(filePath);
-            return resource.getInputStream().readAllBytes();
+            try (java.io.InputStream is = resource.getInputStream()) {
+                return is.readAllBytes();
+            }
         } catch (Exception e) {
             log.error("Failed to load file for exhibit {}: {}", exhibitId, e.getMessage());
             throw new ApiException("Failed to load exhibit file: " + e.getMessage());

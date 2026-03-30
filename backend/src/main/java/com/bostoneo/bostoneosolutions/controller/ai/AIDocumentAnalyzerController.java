@@ -74,31 +74,8 @@ public class AIDocumentAnalyzerController {
     // RestTemplate with SSL support for fetching documents from various sources
     private final RestTemplate restTemplate = createRestTemplate();
 
-    // Static initializer to configure SSL trust for HTTPS connections
-    static {
-        try {
-            // Create a trust manager that trusts all certificates
-            TrustManager[] trustAllCerts = new TrustManager[]{
-                new X509TrustManager() {
-                    public X509Certificate[] getAcceptedIssuers() { return null; }
-                    public void checkClientTrusted(X509Certificate[] certs, String authType) { }
-                    public void checkServerTrusted(X509Certificate[] certs, String authType) { }
-                }
-            };
-
-            // Install the all-trusting trust manager
-            SSLContext sc = SSLContext.getInstance("TLS");
-            sc.init(null, trustAllCerts, new java.security.SecureRandom());
-            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-
-            // Create all-trusting host name verifier
-            HostnameVerifier allHostsValid = (hostname, session) -> true;
-            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-        } catch (Exception e) {
-            // Log will not be available in static block, use stderr
-            System.err.println("Failed to configure SSL trust: " + e.getMessage());
-        }
-    }
+    // SECURITY: Removed static SSL trust-all initializer that was disabling certificate validation JVM-wide.
+    // All outbound HTTPS connections now properly validate server certificates.
 
     private static RestTemplate createRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory() {
@@ -106,12 +83,7 @@ public class AIDocumentAnalyzerController {
             protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
                 super.prepareConnection(connection, httpMethod);
                 connection.setInstanceFollowRedirects(true);
-
-                // For HTTPS connections, the static initializer already configured SSL trust
-                if (connection instanceof HttpsURLConnection) {
-                    HttpsURLConnection httpsConnection = (HttpsURLConnection) connection;
-                    httpsConnection.setHostnameVerifier((hostname, session) -> true);
-                }
+                // SECURITY: Removed hostname verifier bypass — proper SSL validation now enforced
             }
         };
         factory.setConnectTimeout(30000); // 30 seconds

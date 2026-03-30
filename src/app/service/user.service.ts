@@ -163,9 +163,10 @@ export class UserService {
         catchError(this.handleError)
       );
 
+  // SECURITY: Use POST to keep email out of URL logs, server logs, and browser history
   requestPasswordReset$ = (email: string) => <Observable<CustomHttpResponse<Profile>>>
-    this.http.get<CustomHttpResponse<Profile>>
-      (`${this.server}/user/resetpassword/${encodeURIComponent(email)}`)
+    this.http.post<CustomHttpResponse<Profile>>
+      (`${this.server}/user/resetpassword/${encodeURIComponent(email)}`, {})
       .pipe(
         catchError(this.handleError)
       );
@@ -193,9 +194,16 @@ export class UserService {
         catchError(this.handleError)
       );
 
-  renewPassword$ = (form: { userId: number, password: string, confirmPassword: string }) => <Observable<CustomHttpResponse<Profile>>>
+  renewPassword$ = (form: { key: string, password: string, confirmPassword: string }) => <Observable<CustomHttpResponse<Profile>>>
     this.http.put<CustomHttpResponse<Profile>>
       (`${this.server}/user/new/password`, form)
+      .pipe(
+        catchError(this.handleError)
+      );
+
+  forceChangePassword$ = (form: { password: string, confirmPassword: string }) => <Observable<CustomHttpResponse<Profile>>>
+    this.http.post<CustomHttpResponse<Profile>>
+      (`${this.server}/user/force-change-password`, form)
       .pipe(
         catchError(this.handleError)
       );

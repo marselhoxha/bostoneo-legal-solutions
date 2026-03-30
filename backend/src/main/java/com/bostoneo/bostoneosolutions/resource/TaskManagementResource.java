@@ -46,7 +46,7 @@ public class TaskManagementResource {
         
         Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC") ? 
             Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, com.bostoneo.bostoneosolutions.util.SortValidator.forTasks(sortBy)));
         
         Page<CaseTaskDTO> tasks = taskService.getAllTasks(pageable);
         return ResponseEntity.ok(
@@ -138,7 +138,7 @@ public class TaskManagementResource {
         
         Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC") ? 
             Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, com.bostoneo.bostoneosolutions.util.SortValidator.forTasks(sortBy)));
         
         Page<CaseTaskDTO> tasks = taskService.getCaseTasks(caseId, filter, pageable);
         return ResponseEntity.ok(
@@ -164,7 +164,7 @@ public class TaskManagementResource {
         
         Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC") ? 
             Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, com.bostoneo.bostoneosolutions.util.SortValidator.forTasks(sortBy)));
         
         Page<CaseTaskDTO> tasks = taskService.getUserTasks(userId, filter, pageable);
         return ResponseEntity.ok(

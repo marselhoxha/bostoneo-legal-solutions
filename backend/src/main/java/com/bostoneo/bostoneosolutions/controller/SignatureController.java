@@ -136,7 +136,8 @@ public class SignatureController {
             @RequestParam(defaultValue = "desc") String sortDir) {
 
         Long orgId = getRequiredOrganizationId();
-        Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        String validatedSort = com.bostoneo.bostoneosolutions.util.SortValidator.forSignatures(sortBy);
+        Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(validatedSort).ascending() : Sort.by(validatedSort).descending();
         Page<SignatureRequestDTO> result = boldSignService.getSignatureRequestsByOrganization(
                 orgId, PageRequest.of(page, size, sort));
 

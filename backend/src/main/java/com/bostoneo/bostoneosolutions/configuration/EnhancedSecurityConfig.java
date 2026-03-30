@@ -57,6 +57,8 @@ public class EnhancedSecurityConfig {
             )
             // Frame Options - disable to allow PDF iframe embedding (CSP frame-ancestors handles security)
             .frameOptions(frame -> frame.disable())
+            // Content Type Options - prevent MIME sniffing
+            .contentTypeOptions(contentType -> {})
             // XSS Protection
             .xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
             // Referrer Policy

@@ -45,7 +45,7 @@ public class ConflictCheckResource {
         log.info("Fetching conflict checks - page: {}, size: {}, status: {}", page, size, status);
         
         Sort.Direction direction = "desc".equalsIgnoreCase(sortDir) ? Sort.Direction.DESC : Sort.Direction.ASC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, com.bostoneo.bostoneosolutions.util.SortValidator.forConflictChecks(sortBy)));
         
         Page<ConflictCheck> conflictChecks;
         
