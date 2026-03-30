@@ -60,7 +60,6 @@ export class LoginComponent implements OnInit{
     this.loginState$ = this.userService.login$(loginForm.value.email, loginForm.value.password)
       .pipe(
         map(response => {
-          this.notificationService.onSuccess(response.message)
           if (response.data.user.usingMFA) {
             this.notificationService.onSuccess(response.message)
             this.phoneSubject.next(response.data.user.phone);

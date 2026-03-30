@@ -67,7 +67,7 @@ export class ClientGuard implements CanActivate, CanActivateChild {
 
     // Redirect non-clients to their appropriate dashboard
     if (user.roleName === 'ROLE_ATTORNEY' || user.roles?.some((r: string) => r === 'ROLE_ATTORNEY')) {
-      return this.router.createUrlTree(['/dashboard/attorney']);
+      return this.router.createUrlTree(['/home']);
     }
     return this.router.createUrlTree(['/home']);
   }

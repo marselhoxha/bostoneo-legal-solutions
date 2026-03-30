@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription, interval, timer } from 'rxjs';
 import { TimerService, ActiveTimer, StartTimerRequest } from '../../services/timer.service';
+import { UserService } from '../../../../service/user.service';
 
 export interface LegalCase {
   id: number;
@@ -85,8 +86,8 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
   selectedCaseId: number | null = null;
   timerDescription: string = '';
   
-  // Current user (would typically come from auth service)
-  private currentUserId = 1; // TODO: Get from auth service
+  private userService = inject(UserService);
+  private currentUserId = this.userService.getCurrentUserId() || 0;
   
   private subscription = new Subscription();
   private timerUpdateSubscription?: Subscription;

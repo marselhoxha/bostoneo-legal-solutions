@@ -12,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import jakarta.validation.Valid;
 import java.util.List;
 
@@ -29,8 +30,9 @@ public class InvoiceTemplateController {
             @AuthenticationPrincipal UserDetails userDetails) {
         log.info("Creating invoice template: {}", templateDto.getName());
         
-        // TODO: Get actual user ID from UserDetails
-        Long userId = 1L; // Placeholder
+        Long userId = (userDetails instanceof UserPrincipal)
+            ? ((UserPrincipal) userDetails).getId()
+            : 1L;
         
         InvoiceTemplateDTO created = templateService.createTemplate(templateDto, userId);
         return ResponseEntity.status(HttpStatus.CREATED)
