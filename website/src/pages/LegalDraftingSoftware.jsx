@@ -29,7 +29,7 @@ const faqs = [
   { q: "How much does LegiDraft cost per document?", a: "$0 per document on all Legience plans. LegiDraft is included in your subscription — no per-case fees, no per-document charges. EvenUp charges $500+ per demand letter. Precedent charges $275+. We include drafting as a feature, not a revenue stream." },
   { q: "What document types can LegiDraft generate?", a: "30+ legal document types including demand letters, motions, briefs, complaints, discovery requests, engagement letters, settlement agreements, legal memoranda, and more. The system adapts to your practice area and jurisdiction." },
   { q: "Can I customize the AI-generated documents?", a: "Yes. Every draft is fully editable. You can adjust arguments, modify the demand amount, add case-specific details, change the tone, and apply your firm's formatting preferences before finalizing." },
-  { q: "Is my client data safe when using AI drafting?", a: "Yes. Legience uses zero-knowledge AI architecture — your client data is processed in memory and never stored by the AI provider. AES-256 encryption, US-only hosting, and no model training on your data. See our Security page for details." },
+  { q: "Is my client data safe when using AI drafting?", a: "Yes. AI features are powered through AWS Bedrock under our Business Associate Agreement (BAA). Your data is never used for AI model training. AES-256 encryption, US-only hosting. See our Security page for details." },
 ]
 
 export default function LegalDraftingSoftware() {

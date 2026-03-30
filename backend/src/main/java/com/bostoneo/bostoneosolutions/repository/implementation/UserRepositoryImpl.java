@@ -614,6 +614,15 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         }
     }
 
+    public void acceptTerms(Long userId) {
+        try {
+            jdbc.update("UPDATE users SET terms_accepted_at = NOW() WHERE id = :id", of("id", userId));
+        } catch (Exception exception) {
+            log.error("Error recording terms acceptance for user {}: {}", userId, exception.getMessage());
+            throw new ApiException("Unable to record terms acceptance. Please try again.");
+        }
+    }
+
     private void sendEmail(String firstName, String email, String verificationUrl, VerificationType verificationType) {
         CompletableFuture.runAsync(() -> emailService.sendVerificationEmail(firstName, email, verificationUrl, verificationType));
 

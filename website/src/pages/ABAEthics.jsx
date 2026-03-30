@@ -26,11 +26,11 @@ export default function ABAEthics() {
         <div style={{ background: "var(--accent-subtle)", borderRadius: 12, padding: 20, margin: "16px 0" }}>
           <strong style={{ color: "var(--accent)" }}>How Legience Helps:</strong>
           <ul>
-            <li><strong>Zero-Knowledge Architecture:</strong> Your data is processed in ephemeral memory and never stored after query completion.</li>
+            <li><strong>Secure AI Processing:</strong> AI features powered through AWS Bedrock under our Business Associate Agreement (BAA).</li>
             <li><strong>No AI Training:</strong> Attorney-client data is never used to train, fine-tune, or improve any AI model.</li>
             <li><strong>AES-256 Encryption:</strong> All data encrypted at rest and in transit.</li>
-            <li><strong>US-Only Processing:</strong> All data remains in AWS US-East. No offshore processing.</li>
-            <li><strong>Data Processing Agreement:</strong> We are finalizing a zero-data-retention agreement with Anthropic (Claude AI provider). Enterprise API terms already exclude inputs from model training.</li>
+            <li><strong>US-Only Processing:</strong> All data remains in AWS US-East (Ohio). No offshore processing.</li>
+            <li><strong>Conversation Management:</strong> AI conversation history is stored in our database for continuity. You can delete individual conversations at any time.</li>
           </ul>
         </div>
 
@@ -77,7 +77,7 @@ export default function ABAEthics() {
         </ul>
 
         <h2>Our Commitment</h2>
-        <p>Legience is built by people who understand that attorney-client privilege is sacred and that ethical AI use requires more than marketing promises — it requires architectural decisions. Our zero-knowledge architecture, encryption standards, and audit capabilities are designed to make ethical AI compliance the default, not an afterthought.</p>
+        <p>Legience is built by people who understand that attorney-client privilege is sacred and that ethical AI use requires more than marketing promises — it requires architectural decisions. Our secure AI processing through AWS Bedrock, encryption standards, and audit capabilities are designed to make ethical AI compliance the default, not an afterthought.</p>
 
         <h2>Questions?</h2>
         <p>For questions about our ethics compliance: ethics@legience.com or legal@legience.com.</p>

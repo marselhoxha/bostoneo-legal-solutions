@@ -6,9 +6,9 @@ import { Component } from '@angular/core';
   styleUrls: ['./privacy-policy.component.scss']
 })
 export class PrivacyPolicyComponent {
-  lastUpdated = 'January 2025';
-  firmName = 'Bostoneo Solutions';
-  contactEmail = 'privacy@bostoneosolutions.com';
-  contactPhone = '(555) 123-4567';
-  contactAddress = 'Boston, MA';
+  lastUpdated = 'March 2026';
+  companyName = 'Bostoneo Solutions LLC';
+  platformName = 'Legience';
+  contactEmail = 'privacy@legience.com';
+  contactAddress = 'Boston, Massachusetts';
 }

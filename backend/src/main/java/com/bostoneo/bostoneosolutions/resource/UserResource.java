@@ -163,6 +163,21 @@ public class UserResource {
                         .build());
     }
 
+    @PostMapping("/accept-terms")
+    public ResponseEntity<HttpResponse> acceptTerms(Authentication authentication) {
+        UserDTO user = userService.getUserByEmail(getAuthenticatedUser(authentication).getEmail());
+        userRepositoryImpl.acceptTerms(user.getId());
+        UserDTO updatedUser = userService.getUserByEmail(user.getEmail());
+        return ResponseEntity.ok().body(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("user", updatedUser))
+                        .message("Terms of Service accepted")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
     // START - To reset password when user is not logged in
 
     @GetMapping("/verify/code/{email}/{code}")

@@ -6,10 +6,11 @@ import { Component } from '@angular/core';
   styleUrls: ['./terms-of-service.component.scss']
 })
 export class TermsOfServiceComponent {
-  lastUpdated = 'January 2025';
-  firmName = 'Bostoneo Solutions';
-  contactEmail = 'contact@bostoneosolutions.com';
-  contactPhone = '(555) 123-4567';
-  contactAddress = 'Boston, MA';
+  lastUpdated = 'March 2026';
+  companyName = 'Bostoneo Solutions LLC';
+  platformName = 'Legience';
+  contactEmail = 'legal@legience.com';
+  contactAddress = 'Boston, Massachusetts';
   jurisdiction = 'Massachusetts';
+  tosVersion = '1.0';
 }

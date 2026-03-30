@@ -6,13 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.reactive.function.client.WebClient;
-import io.netty.channel.ChannelOption;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.resources.ConnectionProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient;
+
 import java.time.Duration;
 
 @Configuration
@@ -20,76 +19,80 @@ import java.time.Duration;
 @Getter
 public class AIConfig {
 
-    @Autowired
-    private Environment env;
+    @Value("${ai.bedrock.region:us-east-2}")
+    private String bedrockRegion;
 
-    @Value("${ai.anthropic.api-key:#{null}}")
-    private String anthropicApiKey;
+    @Value("${ai.bedrock.model-id.opus:us.anthropic.claude-opus-4-6-v1}")
+    private String opusModelId;
 
-    @Value("${ai.anthropic.base-url:https://api.anthropic.com}")
-    private String anthropicBaseUrl;
+    @Value("${ai.bedrock.model-id.sonnet:us.anthropic.claude-sonnet-4-6}")
+    private String sonnetModelId;
 
+    @Value("${ai.bedrock.model-id.haiku:us.anthropic.claude-haiku-4-5-20251001-v1:0}")
+    private String haikuModelId;
 
     @PostConstruct
     public void init() {
-        log.info("=== INITIALIZING AI CONFIG ===");
-        log.info("Active Spring Profiles: {}", String.join(", ", env.getActiveProfiles()));
+        log.info("=== INITIALIZING AI CONFIG (AWS Bedrock) ===");
+        log.info("Bedrock region: {}", bedrockRegion);
+        log.info("Opus model: {}", opusModelId);
+        log.info("Sonnet model: {}", sonnetModelId);
+        log.info("Haiku model: {}", haikuModelId);
 
-        // Try to get API key from multiple sources
-        if (anthropicApiKey == null || anthropicApiKey.isEmpty()) {
-            anthropicApiKey = env.getProperty("ai.anthropic.api-key");
-            if (anthropicApiKey == null || anthropicApiKey.isEmpty()) {
-                anthropicApiKey = System.getProperty("ai.anthropic.api-key");
-            }
-            if (anthropicApiKey == null || anthropicApiKey.isEmpty()) {
-                anthropicApiKey = System.getenv("ANTHROPIC_API_KEY");
-            }
-        }
-
-        if (anthropicApiKey == null || anthropicApiKey.isEmpty()) {
-            log.error("ANTHROPIC_API_KEY is not configured. AI features will be disabled.");
-            log.error("Set the ANTHROPIC_API_KEY environment variable to enable AI features.");
-        } else {
-            // SECURITY: Never log API key contents, only confirm presence
-            log.info("Anthropic API key configured successfully ({} chars)", anthropicApiKey.length());
+        try {
+            DefaultCredentialsProvider.create().resolveCredentials();
+            log.info("AWS credentials configured successfully");
+        } catch (Exception e) {
+            log.error("AWS credentials not configured. AI features will be disabled: {}", e.getMessage());
         }
     }
 
     @Bean
-    public WebClient anthropicWebClient() {
-        log.info("Creating Anthropic WebClient (base URL: {})", anthropicBaseUrl);
-
-        ConnectionProvider connectionProvider = ConnectionProvider.builder("anthropic-pool")
-                .maxConnections(50)
-                .maxIdleTime(Duration.ofMinutes(5))
-                .maxLifeTime(Duration.ofMinutes(30))
-                .pendingAcquireTimeout(Duration.ofSeconds(60))
-                .evictInBackground(Duration.ofMinutes(2))
-                .build();
-
-        HttpClient httpClient = HttpClient.create(connectionProvider)
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-                .responseTimeout(Duration.ofMinutes(10))
-                .option(ChannelOption.SO_KEEPALIVE, true)
-                .option(ChannelOption.TCP_NODELAY, true);
-
-        // COMPLIANCE: ZDR (Zero Data Retention) enterprise agreement is being pursued with Anthropic.
-        // These headers help track our requests and signal professional/legal use.
-        // Once ZDR is active, Anthropic will not retain any prompt or response data.
-        return WebClient.builder()
-                .baseUrl(anthropicBaseUrl)
-                .defaultHeader("Content-Type", "application/json")
-                .defaultHeader("anthropic-version", "2023-06-01")
-                .defaultHeader("X-Request-Source", "bostoneo-legal")
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
+    public BedrockRuntimeClient bedrockClient() {
+        log.info("Creating Bedrock Runtime client (region: {})", bedrockRegion);
+        return BedrockRuntimeClient.builder()
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .region(Region.of(bedrockRegion))
+                .httpClient(ApacheHttpClient.builder()
+                        .socketTimeout(Duration.ofMinutes(5))
+                        .connectionTimeout(Duration.ofSeconds(30))
+                        .build())
+                .overrideConfiguration(config -> config
+                        .apiCallTimeout(Duration.ofMinutes(10))
+                        .apiCallAttemptTimeout(Duration.ofMinutes(5)))
                 .build();
     }
 
-    public String getApiKey() {
-        if (anthropicApiKey == null || anthropicApiKey.isEmpty()) {
-            throw new IllegalStateException(
-                "ANTHROPIC_API_KEY is not configured. Set the environment variable to enable AI features.");
-        }
-        return anthropicApiKey;
+    @Bean
+    public BedrockRuntimeAsyncClient bedrockAsyncClient() {
+        log.info("Creating Bedrock Runtime async client (region: {})", bedrockRegion);
+        return BedrockRuntimeAsyncClient.builder()
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .region(Region.of(bedrockRegion))
+                .overrideConfiguration(config -> config
+                        .apiCallTimeout(Duration.ofMinutes(10))
+                        .apiCallAttemptTimeout(Duration.ofMinutes(5)))
+                .build();
+    }
+
+    /**
+     * Resolve the Bedrock model ID from a short model name (e.g., "claude-opus-4-6" -> full Bedrock ARN).
+     * This maps the model names used in AIOperationType to Bedrock model IDs.
+     */
+    public String resolveBedrockModelId(String modelName) {
+        if (modelName == null) return opusModelId;
+        return switch (modelName) {
+            case "claude-opus-4-6" -> opusModelId;
+            case "claude-sonnet-4-6" -> sonnetModelId;
+            case "claude-haiku-4-5" -> haikuModelId;
+            default -> {
+                // If it already looks like a Bedrock model ID, use it directly
+                if (modelName.contains("anthropic.")) {
+                    yield modelName;
+                }
+                log.warn("Unknown model name '{}', falling back to Opus", modelName);
+                yield opusModelId;
+            }
+        };
     }
 }

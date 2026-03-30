@@ -40,7 +40,17 @@ public class PaymentTransaction {
     
     @Column(name = "routing_number")
     @Convert(converter = EncryptedStringConverter.class)
+    @JsonIgnore // Never expose raw routing number in API responses
     private String routingNumber; // For ACH - encrypted
+
+    /**
+     * Masked routing number for API responses: shows only last 4 digits.
+     */
+    @com.fasterxml.jackson.annotation.JsonProperty("routingNumber")
+    public String getMaskedRoutingNumber() {
+        if (routingNumber == null || routingNumber.length() < 4) return routingNumber;
+        return "****" + routingNumber.substring(routingNumber.length() - 4);
+    }
     
     @Column(name = "account_number_last4")
     private String accountNumberLast4; // For ACH/Wire - only last 4 stored

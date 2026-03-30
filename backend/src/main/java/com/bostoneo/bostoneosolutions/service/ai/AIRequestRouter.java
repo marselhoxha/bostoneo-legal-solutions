@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.dto.ai.AIRoutingRequest;
 import com.bostoneo.bostoneosolutions.dto.ai.AIRoutingResult;
 import com.bostoneo.bostoneosolutions.dto.ai.ConversationMessage;
 import com.bostoneo.bostoneosolutions.enumeration.AIOperationType;
+import com.bostoneo.bostoneosolutions.utils.PiiDetector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -85,10 +86,18 @@ public class AIRequestRouter {
         // Note: history pruning only applies when history is passed as ConversationMessage objects
         // The actual history-in-prompt pruning happens in AILegalResearchService
 
-        // 4. Delegate to ClaudeSonnet4Service with selected model
+        // 4. Enforce PII redaction before sending to external AI service
+        String piiTypes = PiiDetector.detectPiiTypes(query);
+        if (!piiTypes.isEmpty()) {
+            log.warn("PII detected in AI request ({}), redacting before sending to Bedrock: {}", opType, piiTypes);
+        }
+        String safeQuery = PiiDetector.redact(query);
+        String safeSystemMessage = PiiDetector.redact(request.getSystemMessage());
+
+        // 5. Delegate to ClaudeSonnet4Service with selected model
         CompletableFuture<String> aiResponse = claudeService.generateCompletionWithModel(
-                query,
-                request.getSystemMessage(),
+                safeQuery,
+                safeSystemMessage,
                 request.isUseDeepThinking(),
                 request.getSessionId(),
                 request.getTemperature(),
@@ -143,9 +152,13 @@ public class AIRequestRouter {
         log.info("Routing streaming {} → model={}",
                 opType, decision.modelId().contains("sonnet") ? "Sonnet" : "Opus");
 
+        // Enforce PII redaction for streaming requests
+        String safeQuery = PiiDetector.redact(request.getQuery());
+        String safeSystemMessage = PiiDetector.redact(request.getSystemMessage());
+
         claudeService.generateCompletionStreamingWithModel(
-                request.getQuery(),
-                request.getSystemMessage(),
+                safeQuery,
+                safeSystemMessage,
                 request.getSessionId(),
                 tokenConsumer,
                 onComplete,
@@ -166,6 +179,7 @@ public class AIRequestRouter {
             boolean useDeepThinking,
             Long sessionId
     ) {
+        // PII redaction happens in route() — no need to double-redact here
         AIRoutingRequest request = AIRoutingRequest.builder()
                 .operationType(operationType)
                 .query(query)

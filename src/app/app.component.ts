@@ -30,6 +30,8 @@ import { OrganizationService } from './core/services/organization.service';
 })
 export class AppComponent implements OnInit, OnDestroy {
   showPreloader = false;
+  showTosModal = false;
+  private tosAcceptedThisSession = false;
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -111,6 +113,21 @@ export class AppComponent implements OnInit, OnDestroy {
         }, 100);
       });
 
+    // Re-evaluate modal whenever user data changes (profile load on refresh, acceptance, token refresh).
+    // isPublicRoute() uses this.router.url which is '/' at app start → safely suppressed until navigation.
+    this.userService.userData$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        this.evaluateTosModal(user);
+      });
+
+    // Also re-evaluate on every route change so navigating to/from public routes hides/shows correctly.
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd), takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.evaluateTosModal(this.userService.getCurrentUser());
+      });
+
     // Preload user data if already authenticated (page refresh scenario)
     if (this.userService.isAuthenticated()) {
       this.initializeAuthenticatedServices();
@@ -147,6 +164,16 @@ export class AppComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.startProactiveTokenRefresh();
     }, 30000);
+  }
+
+  private isPublicRoute(): boolean {
+    // Use router URL (post-navigation) rather than window.location to avoid firing
+    // during the brief moment before the / → /home redirect completes.
+    const path = this.router.url.split('?')[0];
+    return path === '/' || path === '' ||
+           path.startsWith('/public') || path.startsWith('/login') ||
+           path.startsWith('/register') || path.startsWith('/resetpassword') ||
+           path.startsWith('/changepassword');
   }
 
   private isSuperAdminUser(): boolean {
@@ -258,6 +285,25 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Also do an immediate check on startup
     this.userService.proactiveTokenRefresh();
+  }
+
+  evaluateTosModal(user: any): void {
+    // Once accepted in this browser session, never re-show regardless of reactive state timing.
+    if (this.tosAcceptedThisSession) {
+      this.showTosModal = false;
+      return;
+    }
+    const onPublicRoute = this.isPublicRoute();
+    if (user && !user.termsAcceptedAt && !user.forcePasswordChange && !this.isSuperAdminUser() && !onPublicRoute) {
+      this.showTosModal = true;
+    } else {
+      this.showTosModal = false;
+    }
+  }
+
+  onTosAccepted(): void {
+    this.tosAcceptedThisSession = true;
+    this.showTosModal = false;
   }
 
   ngOnDestroy(): void {

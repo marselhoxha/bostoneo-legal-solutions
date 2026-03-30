@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.dto.ai;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -9,6 +10,7 @@ import java.util.Map;
 
 @Data
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AIResponse {
     private String id;
     private String type;
@@ -22,6 +24,7 @@ public class AIResponse {
     @Data
     @NoArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Content {
         private String type;   // "text" or "tool_use"
         private String text;   // For type="text"
@@ -34,6 +37,7 @@ public class AIResponse {
 
     @Data
     @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Usage {
         private int input_tokens;
         private int output_tokens;

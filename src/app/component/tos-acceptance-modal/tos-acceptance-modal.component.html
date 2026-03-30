@@ -1,0 +1,102 @@
+<!-- Full-screen blocking overlay -->
+<div class="tos-overlay">
+  <div class="tos-modal">
+
+    <!-- Header -->
+    <div class="tos-modal-header">
+      <div class="tos-logo">
+        <img src="assets/images/legience-logo-white.svg" alt="Legience" height="32">
+      </div>
+      <h2 class="tos-title">Terms of Service &amp; Privacy Policy</h2>
+      <p class="tos-subtitle">Please review and accept before continuing</p>
+    </div>
+
+    <!-- Body (scrollable reading area) -->
+    <div class="tos-modal-body">
+
+      <h6 class="tos-summary-title">Before you proceed, please understand the following:</h6>
+
+      <div class="tos-point">
+        <div class="tos-point-icon ai"><i class="ri-robot-line"></i></div>
+        <div>
+          <strong>AI-Generated Content Is Not Legal Advice</strong>
+          <p>All output from LegiSearch, LegiDraft, and LegiLyze is produced by AI. You must independently verify every citation, legal analysis, and document before relying on it. As the attorney of record, you bear sole professional responsibility for all work product.</p>
+        </div>
+      </div>
+
+      <div class="tos-point">
+        <div class="tos-point-icon data"><i class="ri-database-2-line"></i></div>
+        <div>
+          <strong>Your Content Is Processed by Third-Party AI</strong>
+          <p>Text and documents you submit are processed by AWS Bedrock (Claude) under our BAA. Do not upload documents containing third-party patient health information (PHI) without proper authorizations in place.</p>
+        </div>
+      </div>
+
+      <div class="tos-point">
+        <div class="tos-point-icon pro"><i class="ri-scales-3-line"></i></div>
+        <div>
+          <strong>Your Professional Obligations Remain Yours</strong>
+          <p>Use of this platform does not alter your duties under the Rules of Professional Conduct. You remain responsible for competence, confidentiality (Rule 1.6), and supervision of AI tools (ABA Formal Opinion 512).</p>
+        </div>
+      </div>
+
+      <div class="tos-point">
+        <div class="tos-point-icon limit"><i class="ri-shield-line"></i></div>
+        <div>
+          <strong>Limited Liability for AI Errors</strong>
+          <p>Legience is not liable for errors, omissions, or inaccuracies in AI-generated output. Our liability is limited to fees paid in the prior 3 months.</p>
+        </div>
+      </div>
+
+      <!-- Links to full documents -->
+      <div class="tos-links">
+        <p class="tos-links-label">Read the full documents:</p>
+        <a href="/public/terms-of-service" target="_blank" class="tos-link-btn">
+          <i class="ri-file-text-line"></i> Terms of Service
+          <i class="ri-external-link-line ms-1 small"></i>
+        </a>
+        <a href="/public/privacy-policy" target="_blank" class="tos-link-btn">
+          <i class="ri-lock-line"></i> Privacy Policy
+          <i class="ri-external-link-line ms-1 small"></i>
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Footer — checkbox always visible here, no scrolling required -->
+    <div class="tos-modal-footer">
+
+      <!-- Agreement checkbox moved here so it's always visible -->
+      <div class="tos-agreement">
+        <label class="tos-checkbox-label">
+          <input type="checkbox" [(ngModel)]="agreed">
+          <span class="tos-checkbox-custom"></span>
+          <span class="tos-checkbox-text">
+            I have read and agree to the <a href="/public/terms-of-service" target="_blank">Terms of Service</a>
+            and <a href="/public/privacy-policy" target="_blank">Privacy Policy</a>.
+            I understand that AI-generated content must be independently verified and is not a substitute for professional legal judgment.
+          </span>
+        </label>
+      </div>
+
+      <!-- Error -->
+      <div class="alert alert-danger py-2 mt-2" *ngIf="error">
+        <i class="ri-error-warning-line me-1"></i>{{ error }}
+      </div>
+
+      <p class="tos-footer-note mt-2">
+        <i class="ri-information-line me-1"></i>
+        Your acceptance is recorded with a timestamp for compliance purposes.
+      </p>
+      <button
+        class="btn btn-primary btn-accept"
+        [disabled]="!agreed || submitting"
+        (click)="accept()">
+        <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2" role="status"></span>
+        <i *ngIf="!submitting" class="ri-check-line me-1"></i>
+        {{ submitting ? 'Recording acceptance...' : 'I Accept — Continue to Legience' }}
+      </button>
+    </div>
+
+  </div>
+</div>

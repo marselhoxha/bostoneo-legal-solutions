@@ -28,6 +28,7 @@ public class UserDTO {
     private boolean usingMFA;
     private boolean forcePasswordChange;
     private LocalDateTime createdAt;
+    private LocalDateTime termsAcceptedAt;
     
     // List of role names for the new RBAC system
     private List<String> roles = new ArrayList<>();

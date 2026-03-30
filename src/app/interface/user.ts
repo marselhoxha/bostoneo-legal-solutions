@@ -13,6 +13,7 @@ export interface User {
       usingMFA: boolean;
       forcePasswordChange?: boolean;
       createdAt?: Date;
+      termsAcceptedAt?: string | null;
       organizationName?: string;
       organizationFirmType?: string;
       roleName: string;

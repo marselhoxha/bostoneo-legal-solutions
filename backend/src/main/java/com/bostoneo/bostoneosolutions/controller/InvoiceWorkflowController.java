@@ -47,8 +47,8 @@ public class InvoiceWorkflowController {
     @GetMapping("/rules")
     @PreAuthorize("hasAuthority('BILLING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<List<InvoiceWorkflowRule>>> getWorkflowRules() {
-        // GLOBAL: Workflow rules are shared across all organizations
-        List<InvoiceWorkflowRule> rules = workflowRuleRepository.findAll();
+        Long orgId = getRequiredOrganizationId();
+        List<InvoiceWorkflowRule> rules = workflowRuleRepository.findByOrganizationId(orgId);
         CustomHttpResponse<List<InvoiceWorkflowRule>> response = new CustomHttpResponse<>();
         response.setMessage("Workflow rules fetched successfully");
         response.setData(rules);
@@ -58,8 +58,8 @@ public class InvoiceWorkflowController {
     @GetMapping("/rules/{id}")
     @PreAuthorize("hasAuthority('BILLING:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<CustomHttpResponse<InvoiceWorkflowRule>> getWorkflowRule(@PathVariable Long id) {
-        // GLOBAL: Workflow rules are shared across all organizations
-        return workflowRuleRepository.findById(id)
+        Long orgId = getRequiredOrganizationId();
+        return workflowRuleRepository.findByIdAndOrganizationId(id, orgId)
             .map(rule -> ResponseEntity.ok(new CustomHttpResponse<>("Workflow rule fetched successfully", rule)))
             .orElse(ResponseEntity.notFound().build());
     }
@@ -86,8 +86,8 @@ public class InvoiceWorkflowController {
         }
         
         try {
-            // GLOBAL: Workflow rules are shared across all organizations
-            return workflowRuleRepository.findById(id)
+            Long orgId = getRequiredOrganizationId();
+            return workflowRuleRepository.findByIdAndOrganizationId(id, orgId)
                 .map(rule -> {
                     // Handle null isActive value
                     Boolean currentStatus = rule.getIsActive();
@@ -231,8 +231,8 @@ public class InvoiceWorkflowController {
     public ResponseEntity<CustomHttpResponse<InvoiceWorkflowRule>> updateWorkflowConfig(
             @PathVariable Long id,
             @RequestBody Map<String, Object> configUpdate) {
-        // GLOBAL: Workflow rules are shared across all organizations
-        return workflowRuleRepository.findById(id)
+        Long orgId = getRequiredOrganizationId();
+        return workflowRuleRepository.findByIdAndOrganizationId(id, orgId)
             .map(rule -> {
                 // Update action config
                 if (configUpdate.containsKey("actionConfig")) {

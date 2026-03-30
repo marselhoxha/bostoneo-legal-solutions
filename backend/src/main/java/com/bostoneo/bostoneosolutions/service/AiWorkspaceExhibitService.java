@@ -43,7 +43,7 @@ public class AiWorkspaceExhibitService {
     private final FileStorageService fileStorageService;
     private final NamedParameterJdbcTemplate jdbc;
     private final AIConfig aiConfig;
-    private final WebClient anthropicWebClient;
+    private final software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient bedrockClient;
     private final ObjectMapper objectMapper;
 
     private static final int MAX_VISION_PAGES = 10;
@@ -370,20 +370,22 @@ public class AiWorkspaceExhibitService {
                 return "[Unsupported file type for OCR: " + mimeType + "]";
             }
 
-            // Call Claude Haiku Vision API (same pattern as CaseDocumentService)
-            Map<String, Object> request = Map.of(
-                    "model", "claude-haiku-4-5-20251001",
-                    "max_tokens", 16000,
-                    "messages", List.of(Map.of("role", "user", "content", contentBlocks))
-            );
+            // Call Claude Haiku Vision API via Bedrock
+            Map<String, Object> requestBody = new java.util.HashMap<>();
+            requestBody.put("anthropic_version", "bedrock-2023-05-31");
+            requestBody.put("max_tokens", 16000);
+            requestBody.put("messages", List.of(Map.of("role", "user", "content", contentBlocks)));
 
-            String response = anthropicWebClient.post()
-                    .uri("/v1/messages")
-                    .header("x-api-key", aiConfig.getApiKey())
-                    .bodyValue(request)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block(java.time.Duration.ofMinutes(3));
+            String bedrockModelId = aiConfig.resolveBedrockModelId("claude-haiku-4-5");
+            var invokeRequest = software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest.builder()
+                    .modelId(bedrockModelId)
+                    .contentType("application/json")
+                    .accept("application/json")
+                    .body(software.amazon.awssdk.core.SdkBytes.fromUtf8String(objectMapper.writeValueAsString(requestBody)))
+                    .build();
+
+            var invokeResponse = bedrockClient.invokeModel(invokeRequest);
+            String response = invokeResponse.body().asUtf8String();
 
             if (response != null) {
                 var root = objectMapper.readTree(response);

@@ -2,7 +2,7 @@ import PageHero from "../components/ui/PageHero"
 
 export default function CookiePolicy() {
   return <>
-    <PageHero badge="Legal" title="Cookie Policy" subtitle="Last updated: March 1, 2026. This policy explains how Legience uses cookies and similar tracking technologies." />
+    <PageHero badge="Legal" title="Cookie Policy" subtitle="Last updated: March 30, 2026. This policy explains how Legience uses cookies and similar tracking technologies." />
     <section className="section"><div className="container" style={{ maxWidth: 800, margin: "0 auto" }}>
       <div className="legal-content">
         <h2>1. What Are Cookies?</h2>

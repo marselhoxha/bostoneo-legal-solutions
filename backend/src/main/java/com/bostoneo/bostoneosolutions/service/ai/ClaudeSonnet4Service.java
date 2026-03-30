@@ -17,12 +17,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientRequestException;
 import reactor.core.publisher.Mono;
-import reactor.util.retry.Retry;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient;
+import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest;
+import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelResponse;
+import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelWithResponseStreamRequest;
+import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelWithResponseStreamResponseHandler;
 
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.*;
 import java.util.List;
@@ -35,7 +39,8 @@ import java.util.ArrayList;
 @Slf4j
 public class ClaudeSonnet4Service implements AIService {
 
-    private final WebClient anthropicWebClient;
+    private final BedrockRuntimeClient bedrockClient;
+    private final BedrockRuntimeAsyncClient bedrockAsyncClient;
     private final AIConfig aiConfig;
     private final LegalResearchTools legalResearchTools;
     private final ResearchProgressPublisher progressPublisher;
@@ -92,84 +97,72 @@ public class ClaudeSonnet4Service implements AIService {
 
         AIRequest request = createRequest(redactedPrompt, redactedSystemMessage, useDeepThinking, temperature, model);
 
-        log.info("Sending request to Anthropic: model={}, maxTokens={}, promptLen={}",
-                request.getModel(), request.getMax_tokens(), redactedPrompt.length());
-
-        String apiKey = aiConfig.getApiKey();
+        // Resolve model to Bedrock model ID
+        String bedrockModelId = aiConfig.resolveBedrockModelId(request.getModel());
+        log.info("Sending request to Bedrock: model={}, maxTokens={}, promptLen={}",
+                bedrockModelId, request.getMax_tokens(), redactedPrompt.length());
 
         // Capture user context from request thread BEFORE going async
         AuditContext auditCtx = captureAuditContext();
 
-        CompletableFuture<String> future = new CompletableFuture<>();
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // Build Bedrock-compatible JSON body
+                String requestBody = buildBedrockRequestBody(request);
 
-        Mono<String> responseMono = anthropicWebClient
-                .post()
-                .uri("/v1/messages")
-                .header("x-api-key", apiKey)  // Inject API key per request
-                .bodyValue(request)
-                .exchangeToMono(response -> {
-                    log.info("Response status: {}", response.statusCode());
-                    if (response.statusCode().is2xxSuccessful()) {
-                        return response.bodyToMono(AIResponse.class);
-                    } else {
-                        return response.bodyToMono(String.class)
-                                .flatMap(body -> {
-                                    log.error("Error response from Anthropic: {}", body);
-                                    return Mono.error(new RuntimeException("API Error: " + body));
-                                });
-                    }
-                })
-                .map(this::extractTextFromResponse)
-                // Add retry logic with exponential backoff for transient failures
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))  // 3 retries: 2s, 4s, 8s
-                        .filter(e -> {
-                            // Only retry on connection/network errors, not API errors
-                            boolean shouldRetry = e instanceof WebClientRequestException ||
-                                    e.getMessage() != null && (
-                                            e.getMessage().contains("Connection reset") ||
-                                            e.getMessage().contains("Connection refused") ||
-                                            e.getMessage().contains("Connection closed") ||
-                                            e.getMessage().contains("Broken pipe"));
-                            if (shouldRetry) {
-                                log.warn("Transient error detected, will retry: {}", e.getMessage());
-                            }
-                            return shouldRetry;
-                        })
-                        .doAfterRetry(retrySignal -> {
-                            log.warn("Retry attempt {} after {}ms",
-                                    retrySignal.totalRetries() + 1,
-                                    retrySignal.totalRetriesInARow() * 2000);
-                        })
-                        .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
-                            log.error("Retry exhausted after {} attempts", retrySignal.totalRetries());
-                            Throwable lastError = retrySignal.failure();
-                            return new RuntimeException("AI service unavailable after " + retrySignal.totalRetries() + " retries: " + lastError.getMessage(), lastError);
-                        }))
-                .onErrorMap(e -> {
-                    if (e instanceof RuntimeException && e.getMessage() != null && e.getMessage().contains("AI service unavailable after")) {
-                        return e;  // Already wrapped with retry info
-                    }
-                    log.error("Error calling Claude API: {}", e.getMessage(), e);
-                    return new RuntimeException("AI service unavailable: " + e.getMessage(), e);
-                });
+                InvokeModelRequest invokeRequest = InvokeModelRequest.builder()
+                        .modelId(bedrockModelId)
+                        .contentType("application/json")
+                        .accept("application/json")
+                        .body(SdkBytes.fromUtf8String(requestBody))
+                        .build();
 
-        reactor.core.Disposable subscription = responseMono.subscribe(
-            result -> {
+                // Retry logic: up to 3 attempts with exponential backoff
+                InvokeModelResponse response = null;
+                int maxRetries = 3;
+                for (int attempt = 0; attempt <= maxRetries; attempt++) {
+                    // Check cancellation before each attempt
+                    if (sessionId != null && cancellationService.isCancelled(sessionId)) {
+                        cancellationService.clearCancellation(sessionId);
+                        throw new IllegalStateException("AI generation cancelled by user");
+                    }
+                    try {
+                        response = bedrockClient.invokeModel(invokeRequest);
+                        break; // Success
+                    } catch (SdkClientException e) {
+                        if (attempt < maxRetries && isRetryable(e)) {
+                            long backoffMs = (long) (Math.pow(2, attempt) * 2000);
+                            log.warn("Transient Bedrock error (attempt {}/{}), retrying in {}ms: {}",
+                                    attempt + 1, maxRetries, backoffMs, e.getMessage());
+                            Thread.sleep(backoffMs);
+                        } else {
+                            throw e;
+                        }
+                    }
+                }
+
+                // Parse response (same format as Anthropic API)
+                String responseJson = response.body().asUtf8String();
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                AIResponse aiResponse = mapper.readValue(responseJson, AIResponse.class);
+                String result = extractTextFromResponse(aiResponse);
+
                 log.info("AI request completed for session {}", sessionId);
-                future.complete(result);
                 if (sessionId != null) {
                     cancellationService.clearCancellation(sessionId);
                 }
+
                 // Audit log: success
                 aiAuditLogService.logAiCall(
                         auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
                         auditCtx.organizationId, "AI_COMPLETION", "AI_QUERY",
                         sessionId, auditCtx.ipAddress, auditCtx.userAgent,
                         prompt, result, true, null);
-            },
-            error -> {
-                log.error("AI request failed for session {}: {}", sessionId, error.getMessage());
-                future.completeExceptionally(error);
+
+                return result;
+
+            } catch (Exception e) {
+                log.error("AI request failed for session {}: {}", sessionId, e.getMessage());
                 if (sessionId != null) {
                     cancellationService.clearCancellation(sessionId);
                 }
@@ -178,15 +171,25 @@ public class ClaudeSonnet4Service implements AIService {
                         auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
                         auditCtx.organizationId, "AI_COMPLETION", "AI_QUERY",
                         sessionId, auditCtx.ipAddress, auditCtx.userAgent,
-                        prompt, null, false, error.getMessage());
+                        prompt, null, false, e.getMessage());
+                throw new RuntimeException("AI service unavailable: " + e.getMessage(), e);
             }
-        );
+        });
+    }
 
-        if (sessionId != null) {
-            cancellationService.registerSubscription(sessionId, subscription);
-        }
-
-        return future;
+    /**
+     * Check if an exception is retryable (transient network/connection errors).
+     */
+    private boolean isRetryable(Exception e) {
+        String msg = e.getMessage();
+        if (msg == null) return false;
+        return msg.contains("Connection reset") ||
+                msg.contains("Connection refused") ||
+                msg.contains("Connection closed") ||
+                msg.contains("Broken pipe") ||
+                msg.contains("timed out") ||
+                msg.contains("ThrottlingException") ||
+                msg.contains("ServiceUnavailableException");
     }
 
     @Override
@@ -1194,38 +1197,38 @@ public class ClaudeSonnet4Service implements AIService {
             log.warn("Could not serialize request for logging: {}", e.getMessage());
         }
 
-        String apiKey = aiConfig.getApiKey();
+        String bedrockModelId = aiConfig.resolveBedrockModelId(request.getModel());
 
-        return anthropicWebClient
-                .post()
-                .uri("/v1/messages")
-                .header("x-api-key", apiKey)
-                .header("anthropic-version", "2023-06-01")
-                .bodyValue(request)
-                .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
-                    clientResponse -> clientResponse.bodyToMono(String.class)
-                        .flatMap(errorBody -> {
-                            log.error("❌ Anthropic API error response: {}", errorBody);
-                            return Mono.error(new RuntimeException("API Error: " + errorBody));
-                        }))
-                .bodyToMono(AIResponse.class)
+        // Use Mono.fromCallable to bridge Bedrock sync SDK into Reactor chain
+        return reactor.core.publisher.Mono.<AIResponse>fromCallable(() -> {
+                    String requestBody = buildBedrockRequestBody(request);
+                    InvokeModelRequest invokeRequest = InvokeModelRequest.builder()
+                            .modelId(bedrockModelId)
+                            .contentType("application/json")
+                            .accept("application/json")
+                            .body(SdkBytes.fromUtf8String(requestBody))
+                            .build();
+                    InvokeModelResponse invokeResponse = bedrockClient.invokeModel(invokeRequest);
+                    String responseJson = invokeResponse.body().asUtf8String();
+                    com.fasterxml.jackson.databind.ObjectMapper mapper2 = new com.fasterxml.jackson.databind.ObjectMapper();
+                    return mapper2.readValue(responseJson, AIResponse.class);
+                })
+                .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
                 .retryWhen(reactor.util.retry.Retry.backoff(2, java.time.Duration.ofSeconds(2))
                         .filter(throwable -> {
-                            // Only retry on connection errors, not API errors
                             String msg = throwable.getMessage();
                             boolean shouldRetry = msg != null &&
-                                (msg.contains("Connection prematurely closed") ||
-                                 msg.contains("Connection reset") ||
-                                 msg.contains("Broken pipe"));
+                                (msg.contains("Connection") ||
+                                 msg.contains("ThrottlingException") ||
+                                 msg.contains("ServiceUnavailable"));
                             if (shouldRetry) {
-                                log.warn("⚠️ Connection error, will retry: {}", msg);
+                                log.warn("Bedrock error, will retry: {}", msg);
                             }
                             return shouldRetry;
                         })
                         .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
-                            log.error("❌ Max retries exhausted for connection error");
-                            return new RuntimeException("Connection failed after retries: " + retrySignal.failure().getMessage());
+                            log.error("Max retries exhausted for Bedrock error");
+                            return new RuntimeException("Bedrock connection failed after retries: " + retrySignal.failure().getMessage());
                         }))
                 .flatMap(response -> {
                     log.info("📡 Response stop reason: {}", response.getStopReason());
@@ -1545,6 +1548,31 @@ public class ClaudeSonnet4Service implements AIService {
         return request;
     }
 
+    /**
+     * Convert AIRequest to Bedrock-compatible JSON body.
+     * Bedrock requires `anthropic_version` in the body, and the model ID is passed separately.
+     */
+    private String buildBedrockRequestBody(AIRequest request) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.setSerializationInclusion(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL);
+
+            // Serialize the AIRequest to a JsonNode, then modify for Bedrock format
+            com.fasterxml.jackson.databind.node.ObjectNode body = mapper.valueToTree(request);
+
+            // Add Bedrock-required field
+            body.put("anthropic_version", "bedrock-2023-05-31");
+
+            // Remove fields that Bedrock doesn't expect in the body
+            body.remove("model");   // Model ID is in the InvokeModel request params
+            body.remove("stream");  // Streaming is controlled by the SDK method
+
+            return mapper.writeValueAsString(body);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to build Bedrock request body", e);
+        }
+    }
+
     private String extractTextFromResponse(AIResponse response) {
         if (response.getContent() != null && response.getContent().length > 0) {
             return response.getContent()[0].getText();
@@ -1634,9 +1662,9 @@ public class ClaudeSonnet4Service implements AIService {
     // ===== STREAMING API =====
 
     /**
-     * Generate completion via Anthropic streaming API.
+     * Generate completion via Bedrock streaming API.
      * Tokens are relayed to tokenConsumer as they arrive.
-     * onComplete fires when the stream ends successfully (full text is accumulated externally).
+     * onComplete fires when the stream ends successfully.
      * onError fires on any failure.
      */
     public void generateCompletionStreaming(
@@ -1652,7 +1680,7 @@ public class ClaudeSonnet4Service implements AIService {
 
     /**
      * Streaming completion with explicit model selection. Used by AIRequestRouter.
-     * If model is null, defaults to Opus 4.5.
+     * If model is null, defaults to Opus.
      */
     public void generateCompletionStreamingWithModel(
             String prompt,
@@ -1679,81 +1707,85 @@ public class ClaudeSonnet4Service implements AIService {
         String redactedPrompt = PiiDetector.redact(prompt);
         String redactedSystemMessage = PiiDetector.redact(systemMessage);
 
-        // Build request with stream=true and explicit model
+        // Build request (no stream flag needed — Bedrock handles streaming via the method)
         AIRequest request = createRequest(redactedPrompt, redactedSystemMessage, false, null, model);
-        request.setStream(true);
 
-        String apiKey = aiConfig.getApiKey();
+        String bedrockModelId = aiConfig.resolveBedrockModelId(request.getModel());
         AuditContext auditCtx = captureAuditContext();
 
         log.info("Starting streaming request: model={}, maxTokens={}, sessionId={}",
-                request.getModel(), request.getMax_tokens(), sessionId);
+                bedrockModelId, request.getMax_tokens(), sessionId);
 
         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
-        // Use ParameterizedTypeReference<ServerSentEvent<String>> for proper SSE parsing.
-        // Anthropic returns text/event-stream with event: and data: lines.
-        reactor.core.Disposable subscription = anthropicWebClient
-                .post()
-                .uri("/v1/messages")
-                .header("x-api-key", apiKey)
-                .bodyValue(request)
-                .retrieve()
-                .bodyToFlux(new org.springframework.core.ParameterizedTypeReference<
-                        org.springframework.http.codec.ServerSentEvent<String>>() {})
-                .doOnNext(sse -> {
-                    // Check cancellation mid-stream
-                    if (sessionId != null && cancellationService.isCancelled(sessionId)) {
-                        throw new RuntimeException("AI generation cancelled by user");
-                    }
+        try {
+            String requestBody = buildBedrockRequestBody(request);
 
-                    String data = sse.data();
-                    if (data == null || data.isEmpty()) return;
+            InvokeModelWithResponseStreamRequest streamRequest = InvokeModelWithResponseStreamRequest.builder()
+                    .modelId(bedrockModelId)
+                    .contentType("application/json")
+                    .body(SdkBytes.fromUtf8String(requestBody))
+                    .build();
 
-                    try {
-                        com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(data);
-                        String type = node.has("type") ? node.get("type").asText() : "";
+            var responseHandler = InvokeModelWithResponseStreamResponseHandler.builder()
+                    .subscriber(InvokeModelWithResponseStreamResponseHandler.Visitor.builder()
+                            .onChunk(chunk -> {
+                                // Check cancellation mid-stream
+                                if (sessionId != null && cancellationService.isCancelled(sessionId)) {
+                                    throw new RuntimeException("AI generation cancelled by user");
+                                }
 
-                        if ("content_block_delta".equals(type)) {
-                            com.fasterxml.jackson.databind.JsonNode delta = node.get("delta");
-                            if (delta != null && delta.has("text")) {
-                                String text = delta.get("text").asText();
-                                tokenConsumer.accept(text);
-                            }
+                                String data = chunk.bytes().asUtf8String();
+                                if (data == null || data.isEmpty()) return;
+
+                                try {
+                                    com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(data);
+                                    String type = node.has("type") ? node.get("type").asText() : "";
+
+                                    if ("content_block_delta".equals(type)) {
+                                        com.fasterxml.jackson.databind.JsonNode delta = node.get("delta");
+                                        if (delta != null && delta.has("text")) {
+                                            String text = delta.get("text").asText();
+                                            tokenConsumer.accept(text);
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    log.trace("Skipping non-parseable stream chunk: {}", data);
+                                }
+                            })
+                            .build())
+                    .onComplete(() -> {
+                        log.info("Streaming completed for session {}", sessionId);
+                        if (sessionId != null) {
+                            cancellationService.clearCancellation(sessionId);
                         }
-                    } catch (Exception e) {
-                        log.trace("Skipping non-parseable SSE data: {}", data);
-                    }
-                })
-                .doOnComplete(() -> {
-                    log.info("Streaming completed for session {}", sessionId);
-                    if (sessionId != null) {
-                        cancellationService.clearCancellation(sessionId);
-                    }
-                    aiAuditLogService.logAiCall(
-                            auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
-                            auditCtx.organizationId, "AI_COMPLETION_STREAM", "AI_QUERY",
-                            sessionId, auditCtx.ipAddress, auditCtx.userAgent,
-                            prompt, "(streamed)", true, null);
-                    onComplete.run();
-                })
-                .doOnError(error -> {
-                    log.error("Streaming failed for session {}: {}", sessionId, error.getMessage());
-                    if (sessionId != null) {
-                        cancellationService.clearCancellation(sessionId);
-                    }
-                    aiAuditLogService.logAiCall(
-                            auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
-                            auditCtx.organizationId, "AI_COMPLETION_STREAM", "AI_QUERY",
-                            sessionId, auditCtx.ipAddress, auditCtx.userAgent,
-                            prompt, null, false, error.getMessage());
-                    onError.accept(error);
-                })
-                .subscribe();
+                        aiAuditLogService.logAiCall(
+                                auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
+                                auditCtx.organizationId, "AI_COMPLETION_STREAM", "AI_QUERY",
+                                sessionId, auditCtx.ipAddress, auditCtx.userAgent,
+                                prompt, "(streamed)", true, null);
+                        onComplete.run();
+                    })
+                    .onError(error -> {
+                        log.error("Streaming failed for session {}: {}", sessionId, error.getMessage());
+                        if (sessionId != null) {
+                            cancellationService.clearCancellation(sessionId);
+                        }
+                        aiAuditLogService.logAiCall(
+                                auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
+                                auditCtx.organizationId, "AI_COMPLETION_STREAM", "AI_QUERY",
+                                sessionId, auditCtx.ipAddress, auditCtx.userAgent,
+                                prompt, null, false, error.getMessage());
+                        onError.accept(error);
+                    })
+                    .build();
 
-        // Register subscription for cancellation support
-        if (sessionId != null) {
-            cancellationService.registerSubscription(sessionId, subscription);
+            // Fire async — the callbacks handle completion/error
+            bedrockAsyncClient.invokeModelWithResponseStream(streamRequest, responseHandler);
+
+        } catch (Exception e) {
+            log.error("Failed to start streaming for session {}: {}", sessionId, e.getMessage());
+            onError.accept(e);
         }
     }
 

@@ -1,268 +1,272 @@
 <div class="legal-page-wrapper">
   <div class="container">
     <div class="legal-page-content">
-      <!-- Header -->
+
       <div class="legal-header">
         <h1>Privacy Policy</h1>
         <p class="last-updated">Last Updated: {{ lastUpdated }}</p>
+        <p class="legal-entity">{{ companyName }} d/b/a {{ platformName }}</p>
       </div>
 
-      <!-- Introduction -->
+      <!-- 1. Introduction -->
       <section class="legal-section">
         <h2>1. Introduction</h2>
         <p>
-          {{ firmName }} ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy
-          explains how we collect, use, disclose, and safeguard your information when you use our legal services,
-          visit our website, or communicate with us through any channel including SMS text messaging.
+          {{ companyName }} ("we," "us," or "our"), doing business as {{ platformName }}, is committed to
+          protecting the privacy and confidentiality of information belonging to you and your clients.
+          This Privacy Policy explains how we collect, use, disclose, and safeguard information when you
+          use the {{ platformName }} platform (the "Platform") as a licensed legal professional.
         </p>
         <p>
-          Please read this Privacy Policy carefully. By using our services, you agree to the collection and use
-          of information in accordance with this policy.
+          By using the Platform, you agree to the collection and use of information in accordance with this
+          Privacy Policy. This Policy is incorporated into our <a routerLink="/public/terms-of-service">Terms of Service</a>.
         </p>
       </section>
 
-      <!-- Information We Collect -->
+      <!-- 2. Information We Collect -->
       <section class="legal-section">
         <h2>2. Information We Collect</h2>
 
-        <h3>2.1 Personal Information</h3>
-        <p>We may collect the following types of personal information:</p>
+        <h3>2.1 Account and Profile Information</h3>
+        <p>When you register, we collect:</p>
         <ul>
-          <li>Name, address, email address, and telephone number (including mobile phone number)</li>
-          <li>Date of birth and Social Security Number (when required for legal proceedings)</li>
-          <li>Employment information and financial data relevant to your legal matter</li>
-          <li>Information about your legal case or inquiry</li>
-          <li>Communications between you and our firm</li>
+          <li>Name, email address, and professional title</li>
+          <li>Organization / law firm name and identifiers</li>
+          <li>Billing and payment information (processed by our payment processor; we do not store full card numbers)</li>
         </ul>
 
-        <h3>2.2 Information Collected Automatically</h3>
-        <p>When you visit our website, we may automatically collect:</p>
+        <h3>2.2 Content You Submit</h3>
+        <p>When you use the Platform, we process:</p>
         <ul>
-          <li>IP address and browser type</li>
-          <li>Device information and operating system</li>
-          <li>Pages visited and time spent on our website</li>
-          <li>Referring website addresses</li>
+          <li>Legal research queries submitted to LegiSearch</li>
+          <li>Document drafting prompts submitted to LegiDraft</li>
+          <li>Documents you upload to LegiLyze for analysis</li>
+          <li>Case matter information and client data entered into case management features</li>
+        </ul>
+
+        <h3>2.3 Usage and Technical Data</h3>
+        <p>We automatically collect:</p>
+        <ul>
+          <li>IP address, browser type, and device information</li>
+          <li>Pages visited, features used, and session duration</li>
+          <li>Log data and error reports</li>
+          <li>Authentication events (login, logout, failed attempts)</li>
         </ul>
       </section>
 
-      <!-- How We Use Your Information -->
+      <!-- 3. AI Processing -->
       <section class="legal-section">
-        <h2>3. How We Use Your Information</h2>
-        <p>We use the information we collect to:</p>
-        <ul>
-          <li>Provide legal services and represent you in legal matters</li>
-          <li>Communicate with you about your case, including via SMS text messages when you have consented</li>
-          <li>Send appointment reminders and case updates</li>
-          <li>Process payments and manage billing</li>
-          <li>Comply with legal obligations and court requirements</li>
-          <li>Improve our services and website functionality</li>
-          <li>Respond to your inquiries and provide customer support</li>
-        </ul>
-      </section>
-
-      <!-- SMS/TEXT MESSAGING PRIVACY - CRITICAL SECTION FOR TWILIO -->
-      <section class="legal-section sms-section">
-        <h2>4. SMS/Text Messaging Privacy</h2>
+        <h2>3. Artificial Intelligence Processing</h2>
 
         <div class="highlight-box">
-          <h3>4.1 Mobile Information Collection</h3>
+          <h3>3.1 AI Sub-Processors</h3>
           <p>
-            When you provide your mobile phone number and consent to receive SMS text messages from {{ firmName }},
-            we collect and use your mobile phone number solely for the purpose of communicating with you regarding
-            your legal matter.
+            The Platform's AI features are powered by third-party AI providers. When you submit queries
+            or upload documents to LegiSearch, LegiDraft, or LegiLyze, your Content is transmitted to and
+            processed by the following sub-processors:
           </p>
+          <ul>
+            <li>
+              <strong>Amazon Web Services (AWS Bedrock)</strong> — Powers core AI features using Claude language models
+              hosted within AWS infrastructure. AI processing is covered under our AWS Business Associate Agreement (BAA).
+              Your data is encrypted at rest and in transit, stays within US regions, and is never used to train AI models.
+            </li>
+            <li>
+              <strong>OpenAI, LLC</strong> — Used for document embedding and semantic search features.
+              OpenAI's privacy policy governs their processing.
+            </li>
+          </ul>
         </div>
 
-        <div class="highlight-box important">
-          <h3>4.2 Mobile Information Protection</h3>
-          <p>
-            <strong>We will NEVER sell, rent, share, or disclose your mobile phone number or any information
-            collected through our SMS messaging program to any third parties or affiliates for marketing or
-            promotional purposes.</strong>
-          </p>
-          <p>
-            Your mobile information is used exclusively for direct communication between you and {{ firmName }}
-            regarding your legal representation. No mobile information will be shared with third parties/affiliates
-            for marketing/promotional purposes at any time.
-          </p>
-        </div>
-
-        <h3>4.3 Types of SMS Messages</h3>
-        <p>If you opt in to receive SMS messages, you may receive the following types of communications:</p>
-        <ul>
-          <li>Appointment reminders and scheduling confirmations</li>
-          <li>Case status updates and important notifications</li>
-          <li>Document signature requests</li>
-          <li>Court date reminders</li>
-          <li>Urgent case-related communications</li>
-          <li>Responses to your inquiries</li>
-        </ul>
-
-        <h3>4.4 Message Frequency</h3>
+        <h3>3.2 AI Conversation and Research History</h3>
         <p>
-          Message frequency varies based on your case activity and communication needs. You will only receive
-          messages that are relevant to your legal matter.
+          Your AI queries, responses, uploaded documents, and research history are stored in our database
+          to provide conversation history, bookmarking, and continuity features. You can delete individual
+          conversations or analyses at any time from within the Platform.
         </p>
 
-        <h3>4.5 Opting Out of SMS Messages</h3>
+        <h3>3.3 Sensitive Information</h3>
         <p>
-          You may opt out of receiving SMS text messages at any time by replying <strong>STOP</strong> to any
-          message you receive from us. After opting out, you will receive a confirmation message and will no
-          longer receive SMS communications from our firm. You may also contact us directly to opt out.
-        </p>
-
-        <h3>4.6 SMS Costs</h3>
-        <p>
-          Standard message and data rates may apply to SMS messages sent and received. Please consult your
-          mobile carrier for details about your messaging plan.
-        </p>
-
-        <h3>4.7 Consent Not Required</h3>
-        <p>
-          <strong>Your consent to receive SMS text messages is not a condition of receiving legal services
-          from our firm.</strong> You may decline SMS communications and still receive full legal representation
-          through other communication channels such as email, phone calls, or postal mail.
+          While AI processing is covered under our AWS Business Associate Agreement, you remain responsible
+          for ensuring that any information you submit to the Platform complies with your professional
+          confidentiality obligations, including HIPAA, state privacy laws, and the Rules of Professional Conduct.
+          Exercise professional judgment when submitting sensitive client data to AI features.
         </p>
       </section>
 
-      <!-- Data Security -->
+      <!-- 4. How We Use Information -->
       <section class="legal-section">
-        <h2>5. Data Security</h2>
-        <p>
-          We implement appropriate technical and organizational security measures to protect your personal
-          information against unauthorized access, alteration, disclosure, or destruction. These measures include:
-        </p>
+        <h2>4. How We Use Your Information</h2>
+        <p>We use collected information to:</p>
         <ul>
-          <li>256-bit SSL encryption for all data transmission</li>
-          <li>Secure, encrypted storage of sensitive information</li>
-          <li>Access controls limiting who can view your information</li>
-          <li>Regular security assessments and updates</li>
-          <li>Staff training on data protection and confidentiality</li>
+          <li>Provide, operate, and improve the Platform and its AI features</li>
+          <li>Process AI queries and return AI Output through our third-party AI providers</li>
+          <li>Maintain your account, organization, and subscription</li>
+          <li>Send service communications, security alerts, and updates about the Platform</li>
+          <li>Process billing and payments</li>
+          <li>Monitor for security threats and unauthorized access</li>
+          <li>Comply with applicable legal obligations</li>
+          <li>Analyze aggregate usage patterns to improve Platform performance (using anonymized or aggregated data)</li>
         </ul>
         <p>
-          However, no method of transmission over the Internet or electronic storage is 100% secure. While we
-          strive to protect your personal information, we cannot guarantee its absolute security.
+          We do <strong>not</strong> use your Content or AI queries to train our own AI models or sell your
+          data to third parties for marketing purposes.
         </p>
       </section>
 
-      <!-- Third-Party Sharing -->
+      <!-- 5. Information Sharing -->
       <section class="legal-section">
-        <h2>6. Information Sharing and Disclosure</h2>
-        <p>We do not sell your personal information to third parties. We may share your information only in the following circumstances:</p>
+        <h2>5. Information Sharing and Disclosure</h2>
+        <p>We do not sell your personal information. We may share information only in the following circumstances:</p>
 
-        <h3>6.1 With Your Consent</h3>
-        <p>We may share your information when you have given us explicit permission to do so.</p>
-
-        <h3>6.2 For Legal Proceedings</h3>
+        <h3>5.1 AI Sub-Processors</h3>
         <p>
-          We may disclose information as necessary to represent you in legal proceedings, including sharing
-          with courts, opposing counsel, or other parties involved in your case as required by law or legal process.
+          As described in Section 3, Content submitted to AI features is processed through AWS Bedrock
+          (for Claude models) and/or OpenAI. These providers process your data solely for providing their
+          services and do not use your data for training their models.
         </p>
 
-        <h3>6.3 Service Providers</h3>
+        <h3>5.2 Infrastructure and Service Providers</h3>
         <p>
-          We may share information with trusted service providers who assist us in operating our practice,
-          such as secure document management systems, payment processors, and IT service providers. These
-          providers are contractually obligated to protect your information and use it only for the services
-          they provide to us.
+          We use Amazon Web Services (AWS) for cloud infrastructure and data storage. Our infrastructure
+          is covered under the AWS Business Associate Addendum for HIPAA-eligible services. Other service
+          providers (payment processors, monitoring tools) are bound by appropriate data processing agreements.
         </p>
 
-        <h3>6.4 Legal Requirements</h3>
+        <h3>5.3 Legal Requirements</h3>
         <p>
-          We may disclose information if required by law, subpoena, court order, or other legal process,
-          or if we believe disclosure is necessary to protect our rights, your safety, or the safety of others.
+          We may disclose information if required by a court order, subpoena, or applicable law, or if
+          necessary to protect our rights, the safety of users, or the public.
         </p>
 
-        <div class="highlight-box important">
-          <h3>6.5 Mobile Information - No Third-Party Sharing</h3>
-          <p>
-            <strong>We reiterate that your mobile phone number and SMS opt-in information will NEVER be shared
-            with third parties or affiliates for marketing or promotional purposes.</strong>
-          </p>
-        </div>
+        <h3>5.4 Business Transfers</h3>
+        <p>
+          In the event of a merger, acquisition, or sale of assets, user information may be transferred
+          as part of that transaction. We will notify you via email of any such change in ownership.
+        </p>
+
+        <h3>5.5 No Sale of Data</h3>
+        <p>
+          <strong>We will never sell, rent, or share your personal information, client data, or case
+          information with third parties for marketing or advertising purposes.</strong>
+        </p>
       </section>
 
-      <!-- Attorney-Client Privilege -->
+      <!-- 6. Data Security -->
       <section class="legal-section">
-        <h2>7. Attorney-Client Privilege</h2>
+        <h2>6. Data Security</h2>
+        <p>We implement the following security measures to protect your information:</p>
+        <ul>
+          <li>TLS encryption for all data in transit between your browser and our servers</li>
+          <li>Encryption at rest for sensitive fields (personal identifying information, financial data)</li>
+          <li>Role-based access controls limiting data access to authorized personnel</li>
+          <li>Multi-tenant data isolation ensuring your organization's data is segregated from other organizations</li>
+          <li>BCrypt password hashing with high work factors</li>
+          <li>Audit logging of all access to sensitive data and administrative actions</li>
+          <li>AWS infrastructure with HIPAA-eligible security controls</li>
+        </ul>
         <p>
-          Communications between you and {{ firmName }} may be protected by attorney-client privilege.
-          This privilege helps ensure that you can communicate openly and honestly with your attorney.
-          We take our ethical obligations seriously and will protect privileged communications in accordance
-          with applicable rules of professional conduct.
+          No system is completely immune from security breaches. In the event of a breach that affects your
+          data, we will notify you as required by applicable law.
         </p>
       </section>
 
-      <!-- Data Retention -->
+      <!-- 7. Data Retention -->
       <section class="legal-section">
-        <h2>8. Data Retention</h2>
+        <h2>7. Data Retention</h2>
         <p>
-          We retain your personal information for as long as necessary to provide legal services, comply with
-          legal obligations, resolve disputes, and enforce our agreements. Client files may be retained for
-          a period of years following the conclusion of representation as required by professional responsibility
-          rules and applicable law.
+          We retain your account and organizational data for as long as your Subscription is active and
+          for a reasonable period thereafter to allow for reactivation or account recovery.
+        </p>
+        <p>
+          AI conversation history, research queries, and uploaded document analyses are retained until
+          you delete them or close your account. You can delete individual conversations and analyses
+          at any time from within the Platform.
+        </p>
+        <p>
+          Upon termination or account deletion, we will delete your data within 90 days, subject to
+          legal holds, dispute resolution requirements, and applicable law.
         </p>
       </section>
 
-      <!-- Your Rights -->
+      <!-- 8. SMS Communications -->
+      <section class="legal-section">
+        <h2>8. SMS Text Message Communications</h2>
+
+        <h3>8.1 Mobile Information Protection</h3>
+        <p>
+          <strong>We will never sell, rent, share, or disclose your mobile phone number or any SMS opt-in
+          information to third parties or affiliates for marketing or promotional purposes.</strong>
+        </p>
+
+        <h3>8.2 SMS Opt-In</h3>
+        <p>
+          If you provide a mobile phone number and opt in to SMS communications, you consent to receive
+          service-related text messages including appointment reminders, account alerts, and case notifications.
+          Message and data rates may apply. Reply <strong>STOP</strong> to unsubscribe at any time.
+          Reply <strong>HELP</strong> for assistance.
+        </p>
+
+        <h3>8.3 Consent Not Required</h3>
+        <p>
+          Your consent to receive SMS messages is not a condition of using the Platform.
+        </p>
+      </section>
+
+      <!-- 9. Your Rights -->
       <section class="legal-section">
         <h2>9. Your Rights</h2>
-        <p>Depending on your location, you may have certain rights regarding your personal information:</p>
+        <p>You have the following rights regarding your personal information:</p>
         <ul>
-          <li><strong>Access:</strong> Request a copy of the personal information we hold about you</li>
-          <li><strong>Correction:</strong> Request correction of inaccurate or incomplete information</li>
-          <li><strong>Deletion:</strong> Request deletion of your personal information, subject to legal retention requirements</li>
-          <li><strong>Opt-Out:</strong> Opt out of marketing communications and SMS messages at any time</li>
-          <li><strong>Portability:</strong> Request transfer of your information to another service provider</li>
+          <li><strong>Access:</strong> Request a copy of personal information we hold about you.</li>
+          <li><strong>Correction:</strong> Request correction of inaccurate information.</li>
+          <li><strong>Deletion:</strong> Request deletion of your account and associated personal data, subject to legal retention requirements.</li>
+          <li><strong>Data Portability:</strong> Request an export of your data in a commonly used format.</li>
+          <li><strong>Opt-Out of SMS:</strong> Reply STOP to any SMS message at any time.</li>
         </ul>
         <p>
-          To exercise any of these rights, please contact us using the information provided below.
+          To exercise these rights, contact us at <a href="mailto:{{ contactEmail }}">{{ contactEmail }}</a>.
         </p>
       </section>
 
-      <!-- Children's Privacy -->
+      <!-- 10. Children -->
       <section class="legal-section">
         <h2>10. Children's Privacy</h2>
         <p>
-          Our services are not directed to individuals under the age of 18. We do not knowingly collect
-          personal information from children. If we become aware that we have collected personal information
-          from a child without parental consent, we will take steps to delete that information.
+          The Platform is intended exclusively for licensed legal professionals aged 18 and older. We do
+          not knowingly collect personal information from individuals under 18. If we become aware that we
+          have collected such information, we will delete it promptly.
         </p>
       </section>
 
-      <!-- Changes to Privacy Policy -->
+      <!-- 11. Changes -->
       <section class="legal-section">
         <h2>11. Changes to This Privacy Policy</h2>
         <p>
-          We may update this Privacy Policy from time to time. We will notify you of any changes by posting
-          the new Privacy Policy on this page and updating the "Last Updated" date. You are advised to review
-          this Privacy Policy periodically for any changes.
+          We may update this Privacy Policy from time to time. Material changes will be communicated
+          by email or by requiring re-acceptance within the Platform. The "Last Updated" date at the
+          top of this page indicates when this Policy was last revised.
         </p>
       </section>
 
-      <!-- Contact Information -->
+      <!-- 12. Contact -->
       <section class="legal-section">
         <h2>12. Contact Us</h2>
-        <p>If you have any questions about this Privacy Policy or our privacy practices, please contact us:</p>
+        <p>For privacy questions or to exercise your data rights:</p>
         <div class="contact-info">
-          <p><strong>{{ firmName }}</strong></p>
+          <p><strong>{{ companyName }}</strong> d/b/a {{ platformName }}</p>
           <p>{{ contactAddress }}</p>
-          <p>Email: {{ contactEmail }}</p>
-          <p>Phone: {{ contactPhone }}</p>
+          <p>Email: <a href="mailto:{{ contactEmail }}">{{ contactEmail }}</a></p>
         </div>
-        <p>
-          For SMS-related inquiries or to opt out of text messages, you may also reply <strong>HELP</strong>
-          to any SMS message for assistance, or <strong>STOP</strong> to unsubscribe.
-        </p>
       </section>
 
-      <!-- Footer -->
       <div class="legal-footer">
-        <p>&copy; {{ firmName }}. All rights reserved.</p>
+        <p>&copy; {{ companyName }}. All rights reserved.</p>
         <div class="legal-links">
           <a routerLink="/public/terms-of-service">Terms of Service</a>
         </div>
       </div>
+
     </div>
   </div>
 </div>

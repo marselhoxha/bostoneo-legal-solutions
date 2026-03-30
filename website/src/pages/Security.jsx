@@ -4,15 +4,15 @@ import PageHero from"../components/ui/PageHero"
 import SectionHead from"../components/ui/SectionHead"
 
 const features=[
-  {icon:"ri-shield-keyhole-line",title:"AES-256 Encryption",desc:"All data encrypted at rest with AES-256 and in transit with TLS 1.3. Database-level encryption with customer-specific keys. Documents encrypted individually with unique keys per firm."},
-  {icon:"ri-shield-line",title:"Continuous Security Monitoring",desc:"24/7 intrusion detection, vulnerability scanning, and automated security patching. Architecture designed to meet enterprise trust service criteria — security, availability, processing integrity, and confidentiality."},
-  {icon:"ri-robot-line",title:"Zero-Knowledge AI",desc:"Claude AI processes queries in ephemeral memory without storing your data. No attorney-client data is used for model training, improvement, or any other purpose. Architecturally enforced, not just policy."},
-  {icon:"ri-clipboard-line",title:"201 CMR 17.00",desc:"Full compliance with Massachusetts Standards for the Protection of Personal Information. Written information security plan, risk assessments, employee training, and breach notification procedures."},
-  {icon:"ri-file-text-line",title:"Immutable Audit Logs",desc:"Every login, data access, modification, and export is recorded in tamper-proof audit logs. Complete chain of custody for every action taken in your firm's Legience account."},
-  {icon:"ri-delete-bin-line",title:"Right to Delete",desc:"Request full data deletion at any time. Cryptographic proof of deletion provided within 30 days. No residual data, no backups retained, no exceptions."},
+  {icon:"ri-shield-keyhole-line",title:"AES-256 Encryption",desc:"All data encrypted at rest with AES-256 and in transit with TLS. Database-level encryption on AWS RDS. Sensitive fields use additional application-level encryption."},
+  {icon:"ri-shield-line",title:"Security Monitoring",desc:"Intrusion detection, vulnerability scanning, and security patching on AWS infrastructure. Architecture designed to meet enterprise trust service criteria — security, availability, processing integrity, and confidentiality."},
+  {icon:"ri-robot-line",title:"AI Data Protection",desc:"AI features powered by Claude through AWS Bedrock under our Business Associate Agreement (BAA). Your data is never used for model training, improvement, or any other purpose. Data stays within US AWS regions."},
+  {icon:"ri-clipboard-line",title:"201 CMR 17.00",desc:"Security practices designed to meet Massachusetts Standards for the Protection of Personal Information. Including access controls, encryption, breach notification procedures, and regular security assessments."},
+  {icon:"ri-file-text-line",title:"Comprehensive Audit Logs",desc:"Every login, data access, modification, and export is recorded in detailed audit logs. Complete chain of custody for every action taken in your firm's Legience account."},
+  {icon:"ri-delete-bin-line",title:"Right to Delete",desc:"Request full data deletion at any time. All account data permanently removed within 90 days of request. You can also delete individual AI conversations at any time from within the platform."},
 ]
 
-const compliance=["Attorney-Client Privilege Protected","201 CMR 17.00 Compliant","AES-256 Encryption at Rest","TLS 1.3 Encryption in Transit","Zero AI Training Guarantee","US-Only Data Residency","GDPR Ready","Immutable Audit Logs"]
+const compliance=["Attorney-Client Privilege Protected","201 CMR 17.00 Aligned","AES-256 Encryption at Rest","TLS Encryption in Transit","Zero AI Training Guarantee","US-Only Data Residency (AWS Ohio)","Data Subject Rights Supported","Comprehensive Audit Logs"]
 
 
 function Ic({c,s}){return c&&c.startsWith("ri-")?<Icon name={c} size={20} style={s||{}} />:<span style={s||{}}>{c}</span>}

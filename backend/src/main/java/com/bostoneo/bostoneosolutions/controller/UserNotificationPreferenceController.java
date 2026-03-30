@@ -1,14 +1,15 @@
 package com.bostoneo.bostoneosolutions.controller;
 
+import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.model.UserNotificationPreference;
+import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import com.bostoneo.bostoneosolutions.service.UserNotificationPreferenceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -20,7 +21,7 @@ import java.util.HashMap;
 @RequestMapping("/api/notification-preferences")
 @Slf4j
 public class UserNotificationPreferenceController {
-    
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception e) {
         log.error("Exception handler triggered - type: {}, message: {}", e.getClass().getName(), e.getMessage(), e);
@@ -28,20 +29,54 @@ public class UserNotificationPreferenceController {
         Map<String, String> error = new HashMap<>();
         error.put("error", e.getMessage());
         error.put("type", e.getClass().getSimpleName());
-        
+
+        if (e instanceof SecurityException) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+        }
         if (e instanceof org.springframework.http.converter.HttpMessageNotReadableException) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
-        
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 
     @Autowired
     private UserNotificationPreferenceService notificationPreferenceService;
 
+    /**
+     * Verify the authenticated user owns the requested userId.
+     * Admins can access any user's preferences within their org.
+     */
+    private void verifyUserAccess(Long userId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new SecurityException("Authentication required");
+        }
+
+        Long currentUserId = null;
+        Object principal = auth.getPrincipal();
+        if (principal instanceof UserDTO dto) {
+            currentUserId = dto.getId();
+        } else if (principal instanceof UserPrincipal up) {
+            currentUserId = up.getId();
+        }
+
+        if (currentUserId == null) {
+            throw new SecurityException("Cannot determine current user identity");
+        }
+
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SYSADMIN"));
+        if (!currentUserId.equals(userId) && !isAdmin) {
+            log.warn("IDOR attempt: User {} tried to access preferences of user {}", currentUserId, userId);
+            throw new SecurityException("Access denied: cannot access another user's preferences");
+        }
+    }
+
     @GetMapping("/{userId}")
     public ResponseEntity<List<UserNotificationPreference>> getUserPreferences(@PathVariable Long userId) {
         try {
+            verifyUserAccess(userId);
             List<UserNotificationPreference> preferences = notificationPreferenceService.getUserPreferences(userId);
             return ResponseEntity.ok(preferences);
         } catch (Exception e) {
@@ -52,6 +87,7 @@ public class UserNotificationPreferenceController {
     @GetMapping("/{userId}/map")
     public ResponseEntity<Map<String, UserNotificationPreference>> getUserPreferencesMap(@PathVariable Long userId) {
         try {
+            verifyUserAccess(userId);
             Map<String, UserNotificationPreference> preferencesMap = notificationPreferenceService.getUserPreferencesMap(userId);
             return ResponseEntity.ok(preferencesMap);
         } catch (Exception e) {
@@ -64,6 +100,7 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId, 
             @PathVariable String eventType) {
         try {
+            verifyUserAccess(userId);
             Optional<UserNotificationPreference> preference = notificationPreferenceService.getUserPreference(userId, eventType);
             return preference.map(ResponseEntity::ok)
                            .orElse(ResponseEntity.notFound().build());
@@ -77,6 +114,7 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId,
             @RequestBody UserNotificationPreference preference) {
         try {
+            verifyUserAccess(userId);
             preference.setUserId(userId);
             UserNotificationPreference savedPreference = notificationPreferenceService.savePreference(preference);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedPreference);
@@ -90,6 +128,7 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId,
             @RequestBody List<UserNotificationPreference> preferences) {
         try {
+            verifyUserAccess(userId);
             preferences.forEach(preference -> preference.setUserId(userId));
             List<UserNotificationPreference> savedPreferences = notificationPreferenceService.savePreferences(preferences);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedPreferences);
@@ -103,6 +142,7 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId,
             @RequestBody Map<String, UserNotificationPreference> preferences) {
         try {
+            verifyUserAccess(userId);
             log.debug("Update preferences request - userId: {}, preferences count: {}", userId, preferences != null ? preferences.size() : 0);
 
             if (preferences == null || preferences.isEmpty()) {
@@ -134,6 +174,7 @@ public class UserNotificationPreferenceController {
             @RequestParam(required = false) Boolean inAppEnabled,
             @RequestParam(required = false) UserNotificationPreference.NotificationPriority priority) {
         try {
+            verifyUserAccess(userId);
             UserNotificationPreference updatedPreference = notificationPreferenceService.updatePreference(
                 userId, eventType, enabled, emailEnabled, pushEnabled, inAppEnabled, priority);
             return ResponseEntity.ok(updatedPreference);
@@ -147,6 +188,7 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId,
             @RequestParam Boolean enabled) {
         try {
+            verifyUserAccess(userId);
             List<UserNotificationPreference> updatedPreferences = notificationPreferenceService.setAllNotificationsEnabled(userId, enabled);
             return ResponseEntity.ok(updatedPreferences);
         } catch (Exception e) {
@@ -159,6 +201,7 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId,
             @RequestParam Boolean emailEnabled) {
         try {
+            verifyUserAccess(userId);
             List<UserNotificationPreference> updatedPreferences = notificationPreferenceService.setAllEmailNotificationsEnabled(userId, emailEnabled);
             return ResponseEntity.ok(updatedPreferences);
         } catch (Exception e) {
@@ -171,6 +214,7 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId,
             @RequestParam Boolean pushEnabled) {
         try {
+            verifyUserAccess(userId);
             List<UserNotificationPreference> updatedPreferences = notificationPreferenceService.setAllPushNotificationsEnabled(userId, pushEnabled);
             return ResponseEntity.ok(updatedPreferences);
         } catch (Exception e) {
@@ -183,6 +227,7 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId,
             @RequestParam String roleName) {
         try {
+            verifyUserAccess(userId);
             List<UserNotificationPreference> resetPreferences = notificationPreferenceService.resetToRoleDefaults(userId, roleName);
             return ResponseEntity.ok(resetPreferences);
         } catch (Exception e) {
@@ -195,6 +240,7 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId,
             @RequestParam String roleName) {
         try {
+            verifyUserAccess(userId);
             List<UserNotificationPreference> initializedPreferences = notificationPreferenceService.initializeUserPreferences(userId, roleName);
             return ResponseEntity.status(HttpStatus.CREATED).body(initializedPreferences);
         } catch (Exception e) {
@@ -205,6 +251,7 @@ public class UserNotificationPreferenceController {
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUserPreferences(@PathVariable Long userId) {
         try {
+            verifyUserAccess(userId);
             notificationPreferenceService.deleteUserPreferences(userId);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
@@ -217,6 +264,7 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId,
             @PathVariable String eventType) {
         try {
+            verifyUserAccess(userId);
             notificationPreferenceService.deletePreference(userId, eventType);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
@@ -229,6 +277,7 @@ public class UserNotificationPreferenceController {
             @PathVariable Long userId,
             @PathVariable String eventType) {
         try {
+            verifyUserAccess(userId);
             Map<String, Boolean> settings = Map.of(
                 "shouldReceiveNotification", notificationPreferenceService.shouldReceiveNotification(userId, eventType),
                 "shouldReceiveEmailNotification", notificationPreferenceService.shouldReceiveEmailNotification(userId, eventType),
@@ -256,6 +305,7 @@ public class UserNotificationPreferenceController {
     @GetMapping("/{userId}/stats")
     public ResponseEntity<Map<String, Object>> getUserNotificationStats(@PathVariable Long userId) {
         try {
+            verifyUserAccess(userId);
             Map<String, Object> stats = notificationPreferenceService.getUserNotificationStats(userId);
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
@@ -276,6 +326,7 @@ public class UserNotificationPreferenceController {
     @GetMapping("/{userId}/exists")
     public ResponseEntity<Map<String, Boolean>> hasUserPreferences(@PathVariable Long userId) {
         try {
+            verifyUserAccess(userId);
             boolean hasPreferences = notificationPreferenceService.hasUserPreferences(userId);
             return ResponseEntity.ok(Map.of("hasPreferences", hasPreferences));
         } catch (Exception e) {

@@ -24,6 +24,7 @@ public class AIRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     public static class Message {
         private String role;
         private Object content;  // Can be String or List<ContentBlock> for tool results

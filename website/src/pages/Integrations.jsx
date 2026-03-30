@@ -6,7 +6,7 @@ import SectionHead from"../components/ui/SectionHead"
 const core=[
   {icon:"ri-bank-card-line",name:"Stripe",cat:"Payments",desc:"Accept credit cards, ACH, and bank transfers directly from invoices. Clients pay via secure Stripe checkout. Automatic reconciliation with your billing records. PCI DSS Level 1 compliant.",status:"Live"},
   {icon:"ri-quill-pen-line",name:"BoldSign",cat:"E-Signatures",desc:"Unlimited legally-binding e-signatures. Send, track, and auto-file signed documents to case records. Reusable templates for retainers, releases, and medical authorizations. No per-send fees.",status:"Live"},
-  {icon:"ri-robot-line",name:"Claude AI",cat:"by Anthropic",desc:"Powers LegiSearch™, LegiDraft™, and LegiLyze™. Zero-knowledge architecture means your data is processed in real-time and never stored or used for training.",status:"Live"},
+  {icon:"ri-robot-line",name:"Claude AI",cat:"via AWS Bedrock",desc:"Powers LegiSearch™, LegiDraft™, and LegiLyze™. Processed through AWS Bedrock under our BAA — your data is never stored or used for training.",status:"Live"},
   {icon:"ri-cloud-line",name:"AWS",cat:"Cloud Infrastructure",desc:"US-East hosted with ECS Fargate containers, RDS PostgreSQL databases, S3 document storage, and CloudFront CDN. Auto-scaling, automated backups, and 99.9% uptime SLA.",status:"Live"},
   {icon:"ri-smartphone-line",name:"Twilio",cat:"SMS & Messaging",desc:"Built-in SMS for client communication directly from Legience. Appointment reminders, case status updates, deadline notifications, and two-way messaging. Configurable per case type.",status:"Live"},
 ]

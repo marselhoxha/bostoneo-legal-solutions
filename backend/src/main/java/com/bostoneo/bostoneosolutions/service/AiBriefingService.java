@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class AiBriefingService {
 
-    private final WebClient anthropicWebClient;
+    private final software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient bedrockClient;
     private final AIConfig aiConfig;
 
     // Simple in-memory cache: userId -> (briefing, timestamp)
@@ -179,42 +179,45 @@ public class AiBriefingService {
     }
 
     private CompletableFuture<String> callHaiku(String prompt) {
+        // Redact PII before sending to external AI service
+        String safePrompt = com.bostoneo.bostoneosolutions.utils.PiiDetector.redact(prompt);
+
         AIRequest request = new AIRequest();
-        request.setModel("claude-haiku-4-5-20251001"); // Fast, cheap model
+        request.setModel("claude-haiku-4-5"); // Fast, cheap model
         request.setMax_tokens(250); // Allow for more descriptive briefings
 
         AIRequest.Message message = new AIRequest.Message();
         message.setRole("user");
-        message.setContent(prompt);
+        message.setContent(safePrompt);
         request.setMessages(new AIRequest.Message[]{message});
 
-        String apiKey = aiConfig.getApiKey();
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                mapper.setSerializationInclusion(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL);
 
-        CompletableFuture<String> future = new CompletableFuture<>();
+                // Build Bedrock-compatible body
+                com.fasterxml.jackson.databind.node.ObjectNode body = mapper.valueToTree(request);
+                body.put("anthropic_version", "bedrock-2023-05-31");
+                body.remove("model");
+                body.remove("stream");
 
-        anthropicWebClient
-                .post()
-                .uri("/v1/messages")
-                .header("x-api-key", apiKey)
-                .bodyValue(request)
-                .exchangeToMono(response -> {
-                    if (response.statusCode().is2xxSuccessful()) {
-                        return response.bodyToMono(AIResponse.class);
-                    } else {
-                        return response.bodyToMono(String.class)
-                                .flatMap(body -> {
-                                    log.error("Haiku API error: {}", body);
-                                    return Mono.error(new RuntimeException("API Error: " + body));
-                                });
-                    }
-                })
-                .map(this::extractTextFromResponse)
-                .subscribe(
-                        future::complete,
-                        future::completeExceptionally
-                );
+                String bedrockModelId = aiConfig.resolveBedrockModelId(request.getModel());
+                var invokeRequest = software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest.builder()
+                        .modelId(bedrockModelId)
+                        .contentType("application/json")
+                        .accept("application/json")
+                        .body(software.amazon.awssdk.core.SdkBytes.fromUtf8String(mapper.writeValueAsString(body)))
+                        .build();
 
-        return future;
+                var invokeResponse = bedrockClient.invokeModel(invokeRequest);
+                AIResponse aiResponse = mapper.readValue(invokeResponse.body().asUtf8String(), AIResponse.class);
+                return extractTextFromResponse(aiResponse);
+            } catch (Exception e) {
+                log.error("Haiku Bedrock API error: {}", e.getMessage());
+                throw new RuntimeException("AI briefing service unavailable: " + e.getMessage(), e);
+            }
+        });
     }
 
     private String extractTextFromResponse(AIResponse response) {

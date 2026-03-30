@@ -30,6 +30,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @RestController
 @RequestMapping("/api/test")
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!prod") // SECURITY: Disabled in production
 @PreAuthorize("hasAuthority('ADMIN')") // SECURITY: Restrict all endpoints to admin only
 public class TestUserController {
     

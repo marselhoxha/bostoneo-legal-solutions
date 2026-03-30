@@ -75,6 +75,9 @@ public class User {
 
     @Column(name = "force_password_change", nullable = false)
     private boolean forcePasswordChange = false;
+
+    @Column(name = "terms_accepted_at")
+    private LocalDateTime termsAcceptedAt;
     
     // RBAC fields - This will be handled by the custom repository, not JPA
     @Transient

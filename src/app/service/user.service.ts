@@ -156,6 +156,17 @@ export class UserService {
         catchError(this.handleError)
       );
 
+  acceptTerms$ = (): Observable<CustomHttpResponse<Profile>> =>
+    this.http.post<CustomHttpResponse<Profile>>(`${this.server}/user/accept-terms`, {})
+      .pipe(
+        tap(response => {
+          if (response?.data?.user) {
+            this.setUserData(response.data.user);
+          }
+        }),
+        catchError(this.handleError)
+      );
+
   save$ = (user: User) => <Observable<CustomHttpResponse<Profile>>>
     this.http.post<CustomHttpResponse<Profile>>
       (`${this.server}/user/register`, user)

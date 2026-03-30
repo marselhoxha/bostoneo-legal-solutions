@@ -1,292 +1,342 @@
 <div class="legal-page-wrapper">
   <div class="container">
     <div class="legal-page-content">
-      <!-- Header -->
+
       <div class="legal-header">
         <h1>Terms of Service</h1>
-        <p class="last-updated">Last Updated: {{ lastUpdated }}</p>
+        <p class="last-updated">Version {{ tosVersion }} &mdash; Last Updated: {{ lastUpdated }}</p>
+        <p class="legal-entity">{{ companyName }} d/b/a {{ platformName }}</p>
       </div>
 
-      <!-- Introduction -->
+      <!-- 1. Acceptance -->
       <section class="legal-section">
         <h2>1. Acceptance of Terms</h2>
         <p>
-          Welcome to {{ firmName }}. By accessing our website, using our client portal, submitting intake forms,
-          or engaging our legal services, you agree to be bound by these Terms of Service ("Terms"). If you do
-          not agree to these Terms, please do not use our services.
+          These Terms of Service ("Terms") constitute a legally binding agreement between you ("User," "you," or "your")
+          and {{ companyName }}, a Massachusetts limited liability company doing business as {{ platformName }}
+          ("{{ platformName }}," "we," "us," or "our"), governing your access to and use of the {{ platformName }}
+          platform, including all AI-powered legal tools, features, and services offered through legience.com
+          and associated subdomains (collectively, the "Platform").
         </p>
         <p>
-          These Terms constitute a legally binding agreement between you and {{ firmName }}. Please read them
-          carefully before using our services.
+          <strong>By clicking "I Accept," accessing, or using the Platform, you agree to be bound by these Terms in their
+          entirety.</strong> If you do not agree to these Terms, you may not access or use the Platform.
+        </p>
+        <p>
+          If you are accepting these Terms on behalf of a law firm or other organization, you represent and warrant
+          that you have the authority to bind that organization to these Terms.
         </p>
       </section>
 
-      <!-- Services Description -->
+      <!-- 2. Definitions -->
       <section class="legal-section">
-        <h2>2. Description of Services</h2>
-        <p>
-          {{ firmName }} provides legal services including but not limited to legal consultation, representation
-          in legal matters, document preparation, and related professional services. Our services may be provided
-          through various channels including:
-        </p>
+        <h2>2. Definitions</h2>
         <ul>
-          <li>In-person consultations at our office</li>
-          <li>Telephone and video conference consultations</li>
-          <li>Email correspondence</li>
-          <li>Secure client portal communications</li>
-          <li>SMS text message communications (with your consent)</li>
-        </ul>
-        <p>
-          The scope of legal services will be defined in an engagement letter or retainer agreement signed by
-          you and our firm before representation begins.
-        </p>
-      </section>
-
-      <!-- No Attorney-Client Relationship -->
-      <section class="legal-section">
-        <h2>3. Attorney-Client Relationship</h2>
-        <p>
-          <strong>Submitting an intake form or contacting our office does not create an attorney-client relationship.</strong>
-          An attorney-client relationship is only established when:
-        </p>
-        <ul>
-          <li>You and {{ firmName }} have both signed an engagement letter or retainer agreement</li>
-          <li>We have conducted a conflicts check and determined we can represent you</li>
-          <li>You have agreed to our fee structure and payment terms</li>
-        </ul>
-        <p>
-          Until an attorney-client relationship is established, any information you provide is not protected
-          by attorney-client privilege, although we will treat it as confidential.
-        </p>
-      </section>
-
-      <!-- User Responsibilities -->
-      <section class="legal-section">
-        <h2>4. Your Responsibilities</h2>
-        <p>When using our services, you agree to:</p>
-        <ul>
-          <li>Provide accurate, complete, and truthful information</li>
-          <li>Keep your contact information current and accurate</li>
-          <li>Respond promptly to communications from our office</li>
-          <li>Attend scheduled appointments or provide adequate notice of cancellation</li>
-          <li>Pay fees and costs as agreed in your engagement letter</li>
-          <li>Cooperate fully in the handling of your legal matter</li>
-          <li>Not use our services for any unlawful purpose</li>
-          <li>Keep your client portal login credentials secure</li>
+          <li><strong>"Platform"</strong> means the {{ platformName }} software-as-a-service application, including all modules (LegiSearch, LegiDraft, LegiLyze, and any future features).</li>
+          <li><strong>"AI Services"</strong> means the artificial intelligence features of the Platform powered by third-party providers including Anthropic (Claude) and OpenAI.</li>
+          <li><strong>"AI Output"</strong> means any text, analysis, research, draft document, citation, summary, or other content generated by the AI Services in response to your inputs.</li>
+          <li><strong>"Content"</strong> means any text, documents, data, files, or other materials you upload, submit, or transmit to the Platform.</li>
+          <li><strong>"Organization"</strong> means the law firm or legal organization under which your user account is provisioned.</li>
+          <li><strong>"Subscription"</strong> means your paid or trial access to the Platform under an applicable plan.</li>
         </ul>
       </section>
 
-      <!-- SMS Communications Terms - CRITICAL FOR TWILIO -->
-      <section class="legal-section sms-section">
-        <h2>5. SMS Text Message Communications</h2>
+      <!-- 3. Description of Services -->
+      <section class="legal-section">
+        <h2>3. Description of Platform Services</h2>
+        <p>
+          {{ platformName }} is a software platform designed exclusively for licensed legal professionals. The Platform provides:
+        </p>
+        <ul>
+          <li><strong>LegiSearch</strong> — AI-assisted legal research, case law analysis, and statutory research.</li>
+          <li><strong>LegiDraft</strong> — AI-assisted drafting of legal documents, motions, demand letters, and other legal materials.</li>
+          <li><strong>LegiLyze</strong> — AI-assisted analysis and summarization of uploaded legal documents.</li>
+          <li><strong>Case Management Tools</strong> — Matter tracking, client management, billing, and workflow features.</li>
+        </ul>
+        <p>
+          <strong>{{ platformName }} is a technology platform. It is not a law firm and does not provide legal advice,
+          legal representation, or legal services of any kind.</strong> Nothing on the Platform or in any AI Output
+          constitutes legal advice. The Platform is a tool to assist licensed legal professionals in performing
+          their own professional work.
+        </p>
+      </section>
 
+      <!-- 4. AI Services — Critical Disclosure -->
+      <section class="legal-section">
+        <h2>4. Artificial Intelligence Services — Important Disclosures</h2>
+
+        <h3>4.1 AI Output Is Not Legal Advice</h3>
+        <p>
+          All AI Output generated by the Platform is produced by large language models and is provided for
+          informational and drafting-assistance purposes only. <strong>AI Output is not legal advice and must
+          never be presented to clients or courts without independent attorney review and verification.</strong>
+        </p>
+
+        <h3>4.2 Verification Required</h3>
+        <p>
+          You acknowledge and agree that:
+        </p>
+        <ul>
+          <li>AI Output may contain errors, hallucinations, outdated information, or inaccurate citations.</li>
+          <li>You must independently verify every legal citation, case reference, statutory provision, and legal conclusion generated by the Platform before relying on or using it.</li>
+          <li>AI-generated draft documents require attorney review, editing, and judgment before use in any legal proceeding or client matter.</li>
+          <li>The Platform does not guarantee the accuracy, completeness, or currency of any AI Output.</li>
+        </ul>
+
+        <h3>4.3 Third-Party AI Processing</h3>
+        <p>
+          The AI Services are powered by third-party artificial intelligence providers. <strong>When you submit
+          queries or upload documents, your Content is transmitted to and processed by these providers:</strong>
+        </p>
+        <ul>
+          <li><strong>Amazon Web Services (AWS Bedrock)</strong> — Powers LegiSearch, LegiDraft, LegiLyze, and core AI features using Claude models hosted within AWS infrastructure, covered under our AWS Business Associate Agreement.</li>
+          <li><strong>OpenAI, LLC</strong> — Used for document embedding and semantic search features.</li>
+        </ul>
+        <p>
+          AI processing through AWS Bedrock ensures your data is encrypted, stays within US regions, and is
+          never used to train AI models. Your data is not retained by the AI model provider after processing.
+        </p>
+
+        <h3>4.4 Sensitive Information</h3>
+        <p>
+          While AI processing is covered under our AWS Business Associate Agreement, you are solely responsible
+          for ensuring that any Content you submit to the Platform complies with applicable confidentiality
+          obligations, including HIPAA, HITECH, state privacy laws, and the Rules of Professional Conduct.
+          Exercise professional judgment when submitting sensitive client data to AI features.
+        </p>
+
+        <h3>4.5 ABA Formal Opinion 512 Compliance</h3>
+        <p>
+          The American Bar Association's Formal Opinion 512 (2023) addresses attorney use of generative AI tools.
+          By using this Platform, you represent that you understand your obligations under applicable bar rules
+          regarding competence in the use of AI tools, supervision of AI-assisted work product, and disclosure
+          obligations to clients where required.
+        </p>
+      </section>
+
+      <!-- 5. Professional Responsibility -->
+      <section class="legal-section">
+        <h2>5. Attorney Professional Responsibility</h2>
+        <p>
+          Use of the Platform does not modify, limit, or substitute for your professional obligations as a
+          licensed attorney or legal professional. You remain solely responsible for:
+        </p>
+        <ul>
+          <li>Compliance with the Rules of Professional Conduct applicable in all jurisdictions where you are licensed.</li>
+          <li>The accuracy, completeness, and professional quality of all work product produced using the Platform.</li>
+          <li>Maintaining client confidentiality under Rule 1.6 and applicable state equivalents.</li>
+          <li>Competent supervision of any AI-assisted research, drafting, or analysis (Rule 5.1, 5.3).</li>
+          <li>Disclosure to clients regarding the use of AI tools in their matters, where required by applicable rules.</li>
+          <li>Independent verification of all citations, legal authorities, and factual statements in AI Output before use.</li>
+          <li>Proper conflicts checking — the Platform's case management tools do not constitute a substitute for your firm's conflicts-of-interest procedures.</li>
+        </ul>
+      </section>
+
+      <!-- 6. Account Registration -->
+      <section class="legal-section">
+        <h2>6. Account Registration and Access</h2>
+        <p>To use the Platform, you must:</p>
+        <ul>
+          <li>Be a licensed attorney, paralegal, or other legal professional authorized to use the Platform by your Organization.</li>
+          <li>Provide accurate, complete, and current registration information.</li>
+          <li>Keep your login credentials strictly confidential and not share them with any other person.</li>
+          <li>Notify us immediately at {{ contactEmail }} if you suspect unauthorized access to your account.</li>
+        </ul>
+        <p>
+          You are responsible for all activity that occurs under your account. {{ platformName }} reserves the right
+          to suspend or terminate accounts that violate these Terms or are used fraudulently.
+        </p>
+      </section>
+
+      <!-- 7. Acceptable Use -->
+      <section class="legal-section">
+        <h2>7. Acceptable Use Policy</h2>
+        <p>You agree not to use the Platform to:</p>
+        <ul>
+          <li>Violate any applicable law, regulation, or professional rule of conduct.</li>
+          <li>Upload or transmit malware, viruses, or other harmful code.</li>
+          <li>Attempt to reverse-engineer, decompile, or disassemble the Platform or its AI models.</li>
+          <li>Scrape, harvest, or systematically extract data from the Platform.</li>
+          <li>Use AI Output to create or disseminate fraudulent documents, misrepresent facts to courts, or engage in any deceptive legal practice.</li>
+          <li>Circumvent or attempt to circumvent any security measures of the Platform.</li>
+          <li>Use the Platform for any purpose other than legitimate legal professional work.</li>
+          <li>Share your access credentials or allow unauthorized users to access the Platform through your account.</li>
+        </ul>
+      </section>
+
+      <!-- 8. Intellectual Property -->
+      <section class="legal-section">
+        <h2>8. Intellectual Property</h2>
+
+        <h3>8.1 Platform Ownership</h3>
+        <p>
+          {{ platformName }} and all of its underlying technology, software, user interfaces, proprietary names, logos,
+          and content (excluding User Content) are the exclusive property of {{ companyName }} or its licensors
+          and are protected by applicable intellectual property laws. You receive no ownership interest in the Platform.
+        </p>
+
+        <h3>8.2 Your Content</h3>
+        <p>
+          You retain all ownership rights in the Content you submit to the Platform. By submitting Content,
+          you grant {{ platformName }} a limited, non-exclusive license to process and transmit your Content solely
+          as necessary to provide the Platform services to you. We do not claim any ownership over your Content
+          or AI Output generated from your Content.
+        </p>
+
+        <h3>8.3 AI Output Ownership</h3>
+        <p>
+          Subject to these Terms, AI Output generated in response to your inputs belongs to you. You are
+          responsible for ensuring that your use of AI Output complies with all applicable laws and professional rules.
+        </p>
+
+        <h3>8.4 Feedback</h3>
+        <p>
+          If you provide feedback, suggestions, or ideas about the Platform, you grant {{ platformName }} a
+          royalty-free, perpetual license to use such feedback for any purpose, including improving the Platform.
+        </p>
+      </section>
+
+      <!-- 9. Data and Privacy -->
+      <section class="legal-section">
+        <h2>9. Data, Privacy, and Security</h2>
+        <p>
+          Our collection, use, and protection of your personal information and Content is governed by our
+          <a routerLink="/public/privacy-policy">Privacy Policy</a>, which is incorporated into these Terms
+          by reference. By using the Platform, you consent to our data practices as described in the Privacy Policy.
+        </p>
+        <p>
+          We implement industry-standard security measures including encryption in transit (TLS) and at rest,
+          access controls, and regular security assessments. However, no system is completely secure. You
+          acknowledge that the transmission of information over the internet carries inherent risks.
+        </p>
+      </section>
+
+      <!-- 10. Subscription and Payment -->
+      <section class="legal-section">
+        <h2>10. Subscription and Payment</h2>
+        <p>
+          Access to the Platform may require a paid Subscription. Subscription terms, pricing, billing cycles,
+          and cancellation policies are set forth in the order form or pricing page applicable to your plan.
+          All fees are non-refundable unless expressly stated otherwise. We reserve the right to modify
+          pricing with reasonable advance notice.
+        </p>
+        <p>
+          During any free trial or early access period, we may modify, suspend, or terminate access at our
+          discretion without liability.
+        </p>
+      </section>
+
+      <!-- 11. Disclaimer of Warranties -->
+      <section class="legal-section">
+        <h2>11. Disclaimer of Warranties</h2>
         <div class="highlight-box">
-          <h3>5.1 Consent to Receive SMS Messages</h3>
           <p>
-            If you opt in to receive SMS text messages from {{ firmName }}, you consent to receive text messages
-            at the mobile phone number you provide. These messages may include:
-          </p>
-          <ul>
-            <li>Appointment reminders and scheduling confirmations</li>
-            <li>Case status updates and important notifications</li>
-            <li>Document signature requests</li>
-            <li>Court date reminders</li>
-            <li>Urgent case-related communications</li>
-            <li>Responses to your inquiries</li>
-          </ul>
-        </div>
-
-        <h3>5.2 Message Frequency</h3>
-        <p>
-          Message frequency varies based on your case activity and communication needs. You will only receive
-          messages that are relevant to your legal matter.
-        </p>
-
-        <h3>5.3 Standard Rates Apply</h3>
-        <p>
-          <strong>Message and data rates may apply.</strong> You are responsible for any charges from your
-          mobile carrier for sending and receiving SMS messages. Please consult your mobile carrier for
-          details about your messaging plan.
-        </p>
-
-        <h3>5.4 Opting Out</h3>
-        <p>
-          You may opt out of SMS messages at any time by replying <strong>STOP</strong> to any message.
-          You will receive a confirmation message and will no longer receive SMS communications from our firm.
-          Opting out of SMS will not affect your legal representation - we will communicate through other channels.
-        </p>
-
-        <h3>5.5 Help and Support</h3>
-        <p>
-          For assistance with SMS communications, reply <strong>HELP</strong> to any message or contact our
-          office directly.
-        </p>
-
-        <div class="highlight-box important">
-          <h3>5.6 Consent Not Required for Service</h3>
-          <p>
-            <strong>Your consent to receive SMS text messages is NOT a condition of receiving legal services
-            from {{ firmName }}.</strong> You may decline SMS communications and still receive full legal
-            representation through other communication channels.
+            <strong>THE PLATFORM AND ALL AI SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY
+            OF ANY KIND.</strong> TO THE FULLEST EXTENT PERMITTED BY LAW, {{ companyName | uppercase }} EXPRESSLY
+            DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+            A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE PLATFORM WILL BE
+            UNINTERRUPTED, ERROR-FREE, OR THAT AI OUTPUT WILL BE ACCURATE, COMPLETE, OR CURRENT.
           </p>
         </div>
+      </section>
 
-        <h3>5.7 Privacy of Mobile Information</h3>
+      <!-- 12. Limitation of Liability -->
+      <section class="legal-section">
+        <h2>12. Limitation of Liability</h2>
+        <div class="highlight-box">
+          <p>
+            <strong>TO THE FULLEST EXTENT PERMITTED BY LAW, IN NO EVENT SHALL {{ companyName | uppercase }}
+            BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, PUNITIVE, OR EXEMPLARY DAMAGES,
+            INCLUDING DAMAGES ARISING FROM: (A) ERRORS OR INACCURACIES IN AI OUTPUT; (B) YOUR RELIANCE ON
+            AI-GENERATED CONTENT WITHOUT INDEPENDENT VERIFICATION; (C) SERVICE INTERRUPTIONS OR DATA LOSS;
+            OR (D) ANY UNAUTHORIZED ACCESS TO YOUR ACCOUNT OR CONTENT.</strong>
+          </p>
+          <p>
+            OUR AGGREGATE LIABILITY TO YOU FOR ALL CLAIMS ARISING UNDER THESE TERMS SHALL NOT EXCEED THE
+            GREATER OF (A) THE TOTAL FEES PAID BY YOU TO {{ companyName | uppercase }} IN THE THREE (3) MONTHS
+            IMMEDIATELY PRECEDING THE CLAIM, OR (B) ONE HUNDRED U.S. DOLLARS ($100).
+          </p>
+        </div>
+      </section>
+
+      <!-- 13. Indemnification -->
+      <section class="legal-section">
+        <h2>13. Indemnification</h2>
         <p>
-          Your mobile phone number and SMS opt-in data will never be shared with third parties for marketing
-          purposes. For complete details, please review our <a routerLink="/public/privacy-policy">Privacy Policy</a>.
+          You agree to indemnify, defend, and hold harmless {{ companyName }}, its officers, directors, employees,
+          and agents from any claims, damages, liabilities, costs, and expenses (including reasonable attorneys'
+          fees) arising from: (a) your use of the Platform in violation of these Terms; (b) your violation of
+          any applicable law or professional rule; (c) your reliance on AI Output without independent
+          verification; or (d) any Content you submit to the Platform.
         </p>
       </section>
 
-      <!-- Client Portal -->
+      <!-- 14. Term and Termination -->
       <section class="legal-section">
-        <h2>6. Client Portal</h2>
+        <h2>14. Term and Termination</h2>
         <p>
-          If you are provided access to our secure client portal, you agree to:
+          These Terms remain in effect for as long as you use the Platform. We may suspend or terminate your
+          access immediately and without notice if you materially breach these Terms, fail to pay applicable
+          fees, or engage in conduct that poses a risk to the Platform or other users.
         </p>
+        <p>
+          Upon termination, your right to access the Platform ceases immediately. Sections 4, 5, 8, 11, 12,
+          13, and 16 survive termination.
+        </p>
+      </section>
+
+      <!-- 15. Modifications -->
+      <section class="legal-section">
+        <h2>15. Modifications to These Terms</h2>
+        <p>
+          We may modify these Terms at any time. Material changes will be communicated by email or by
+          displaying a new acceptance prompt within the Platform. Your continued use of the Platform after
+          such modifications constitutes acceptance of the updated Terms. If you do not agree to the updated
+          Terms, you must stop using the Platform.
+        </p>
+      </section>
+
+      <!-- 16. Governing Law and Disputes -->
+      <section class="legal-section">
+        <h2>16. Governing Law and Dispute Resolution</h2>
+        <p>
+          These Terms are governed by the laws of the Commonwealth of {{ jurisdiction }}, without regard to
+          conflict of law principles. Any dispute arising under these Terms shall be resolved exclusively in
+          the state or federal courts located in Suffolk County, {{ jurisdiction }}. You consent to personal
+          jurisdiction in those courts.
+        </p>
+      </section>
+
+      <!-- 17. General -->
+      <section class="legal-section">
+        <h2>17. General Provisions</h2>
         <ul>
-          <li>Keep your login credentials confidential and secure</li>
-          <li>Notify us immediately if you suspect unauthorized access to your account</li>
-          <li>Not share your account access with others</li>
-          <li>Log out of your account when using shared or public computers</li>
-          <li>Use the portal only for legitimate communications with our firm</li>
-        </ul>
-        <p>
-          We reserve the right to suspend or terminate portal access for security reasons or violation of these Terms.
-        </p>
-      </section>
-
-      <!-- Intake Forms -->
-      <section class="legal-section">
-        <h2>7. Intake Forms and Information Submission</h2>
-        <p>
-          When you submit an intake form or provide information through our website:
-        </p>
-        <ul>
-          <li>You represent that the information provided is accurate and complete</li>
-          <li>You understand that submission does not create an attorney-client relationship</li>
-          <li>You consent to our collection and use of the information as described in our Privacy Policy</li>
-          <li>You understand that we may decline representation for any lawful reason</li>
-        </ul>
-        <p>
-          We will review your submission and contact you to discuss whether we can assist with your legal matter.
-        </p>
-      </section>
-
-      <!-- Fees and Payment -->
-      <section class="legal-section">
-        <h2>8. Fees and Payment</h2>
-        <p>
-          Legal fees and payment terms will be outlined in your engagement letter. By engaging our services,
-          you agree to:
-        </p>
-        <ul>
-          <li>Pay fees as outlined in your engagement letter</li>
-          <li>Provide a retainer if required</li>
-          <li>Pay costs and expenses as incurred</li>
-          <li>Review and pay invoices promptly</li>
-        </ul>
-        <p>
-          Failure to pay fees may result in suspension or termination of services as permitted by applicable
-          rules of professional conduct.
-        </p>
-      </section>
-
-      <!-- Limitation of Liability -->
-      <section class="legal-section">
-        <h2>9. Limitation of Liability</h2>
-        <p>
-          To the fullest extent permitted by law, {{ firmName }} shall not be liable for any indirect, incidental,
-          special, consequential, or punitive damages arising out of or relating to your use of our website or
-          services, including but not limited to:
-        </p>
-        <ul>
-          <li>Technical issues or interruptions in website or portal availability</li>
-          <li>Unauthorized access to your account due to your failure to protect credentials</li>
-          <li>Delays in communication due to technical issues</li>
-          <li>Actions taken based on information provided before an attorney-client relationship is established</li>
-        </ul>
-        <p>
-          This limitation does not apply to liability arising from our professional legal services, which
-          is governed by applicable rules of professional conduct and malpractice standards.
-        </p>
-      </section>
-
-      <!-- Intellectual Property -->
-      <section class="legal-section">
-        <h2>10. Intellectual Property</h2>
-        <p>
-          All content on our website, including text, graphics, logos, images, and software, is the property
-          of {{ firmName }} or our content suppliers and is protected by copyright and other intellectual
-          property laws. You may not reproduce, distribute, or create derivative works from our content
-          without our express written permission.
-        </p>
-      </section>
-
-      <!-- Termination -->
-      <section class="legal-section">
-        <h2>11. Termination</h2>
-        <p>
-          Either party may terminate the attorney-client relationship in accordance with the terms of the
-          engagement letter and applicable rules of professional conduct. Upon termination:
-        </p>
-        <ul>
-          <li>You remain responsible for fees and costs incurred prior to termination</li>
-          <li>We will provide you with your files as required by professional rules</li>
-          <li>Your client portal access may be deactivated</li>
-          <li>SMS communications will cease</li>
+          <li><strong>Entire Agreement:</strong> These Terms, together with the Privacy Policy, constitute the entire agreement between you and {{ platformName }} regarding the Platform.</li>
+          <li><strong>Severability:</strong> If any provision is found unenforceable, the remaining provisions continue in full force.</li>
+          <li><strong>No Waiver:</strong> Failure to enforce any provision is not a waiver of future enforcement.</li>
+          <li><strong>Assignment:</strong> You may not assign your rights under these Terms without our written consent.</li>
+          <li><strong>Force Majeure:</strong> We are not liable for failures resulting from circumstances beyond our reasonable control.</li>
         </ul>
       </section>
 
-      <!-- Governing Law -->
+      <!-- 18. Contact -->
       <section class="legal-section">
-        <h2>12. Governing Law</h2>
-        <p>
-          These Terms shall be governed by and construed in accordance with the laws of {{ jurisdiction }},
-          without regard to its conflict of law provisions. Any disputes arising under these Terms shall be
-          resolved in the courts of {{ jurisdiction }}.
-        </p>
-      </section>
-
-      <!-- Modifications -->
-      <section class="legal-section">
-        <h2>13. Modifications to Terms</h2>
-        <p>
-          We reserve the right to modify these Terms at any time. Changes will be effective when posted on
-          our website. Your continued use of our services after changes are posted constitutes acceptance
-          of the modified Terms. We encourage you to review these Terms periodically.
-        </p>
-      </section>
-
-      <!-- Severability -->
-      <section class="legal-section">
-        <h2>14. Severability</h2>
-        <p>
-          If any provision of these Terms is found to be unenforceable or invalid, that provision shall be
-          limited or eliminated to the minimum extent necessary so that these Terms shall otherwise remain
-          in full force and effect.
-        </p>
-      </section>
-
-      <!-- Contact Information -->
-      <section class="legal-section">
-        <h2>15. Contact Us</h2>
-        <p>If you have any questions about these Terms of Service, please contact us:</p>
+        <h2>18. Contact Information</h2>
+        <p>For questions about these Terms, please contact:</p>
         <div class="contact-info">
-          <p><strong>{{ firmName }}</strong></p>
+          <p><strong>{{ companyName }}</strong> d/b/a {{ platformName }}</p>
           <p>{{ contactAddress }}</p>
-          <p>Email: {{ contactEmail }}</p>
-          <p>Phone: {{ contactPhone }}</p>
+          <p>Email: <a href="mailto:{{ contactEmail }}">{{ contactEmail }}</a></p>
         </div>
       </section>
 
-      <!-- Footer -->
       <div class="legal-footer">
-        <p>&copy; {{ firmName }}. All rights reserved.</p>
+        <p>&copy; {{ companyName }}. All rights reserved.</p>
         <div class="legal-links">
           <a routerLink="/public/privacy-policy">Privacy Policy</a>
         </div>
       </div>
+
     </div>
   </div>
 </div>

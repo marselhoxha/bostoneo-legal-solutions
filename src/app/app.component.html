@@ -1,2 +1,3 @@
 <app-preloader [isHidden]="!showPreloader"></app-preloader>
 <router-outlet></router-outlet>
+<app-tos-acceptance-modal *ngIf="showTosModal" (accepted)="onTosAccepted()"></app-tos-acceptance-modal>

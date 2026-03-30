@@ -14,24 +14,24 @@ const comparison = [
   { f: "Research saved to case", us: "Automatic", westlaw: "Manual export", lexis: "Manual export", cocounsel: "Manual" },
   { f: "E-signatures included", us: "Yes", westlaw: "No", lexis: "No", cocounsel: "No" },
   { f: "CRM & billing included", us: "Yes", westlaw: "No", lexis: "No", cocounsel: "No" },
-  { f: "Zero-knowledge AI", us: "Yes", westlaw: "Varies", lexis: "Varies", cocounsel: "Yes" },
+  { f: "No AI training on your data", us: "Yes (AWS Bedrock BAA)", westlaw: "Varies", lexis: "Varies", cocounsel: "Yes" },
 ]
 
 const benefits = [
   { icon: "ri-timer-line", title: "3-5x Faster Research", desc: "Tasks that took 3-6 hours with manual research take 15-30 minutes with LegiSearch. The AI identifies relevant authorities, synthesizes holdings, and presents cited results." },
   { icon: "ri-shield-check-line", title: "Verified Citations", desc: "Every case cited is checked against real databases. No hallucinated citations — the #1 risk with consumer AI tools. Every citation includes a link to the source." },
   { icon: "ri-link", title: "Integrated with Your Cases", desc: "Research results are automatically saved to the relevant case file. No copying between systems. LegiDraft can reference your research when generating documents." },
-  { icon: "ri-money-dollar-box-line", title: "Included in Your Plan", desc: "No separate subscription. LegiSearch is included in every Legience plan from $99/mo. Westlaw costs $85-300+/user/month on top of your case management software." },
-  { icon: "ri-lock-line", title: "Zero-Knowledge Architecture", desc: "Your queries and client data are processed in memory and never stored or used for AI training. AES-256 encryption, US-only hosting, ABA Opinion 512 compliant." },
+  { icon: "ri-money-dollar-box-line", title: "Included in Your Plan", desc: "No separate subscription. LegiSearch is included in every Legience plan from $99/mo — AI research built directly into your case management workflow." },
+  { icon: "ri-lock-line", title: "Secure AI Processing", desc: "AI queries processed through AWS Bedrock under our Business Associate Agreement. Your data is never used for AI training. AES-256 encryption, US-only hosting, ABA Opinion 512 compliant." },
   { icon: "ri-chat-3-line", title: "Plain English Queries", desc: "Ask legal questions in natural language. No Boolean operators required. The AI understands context, jurisdiction, and legal concepts." },
 ]
 
 const faqs = [
   { q: "How does AI legal research work in Legience?", a: "LegiSearch uses Claude AI with retrieval-augmented generation (RAG). When you ask a legal question, the system retrieves relevant case law and statutes from verified databases, then synthesizes a cited answer. Every citation is verified — no hallucinated references." },
-  { q: "Is LegiSearch a replacement for Westlaw?", a: "For many firms, yes. LegiSearch provides AI-powered legal research with verified citations at a fraction of the cost. It's included in your Legience subscription ($99-249/mo) vs. Westlaw at $85-300+/user/month. Some firms keep a Westlaw subscription for specialized research and use LegiSearch for day-to-day queries." },
+  { q: "How does LegiSearch compare to traditional research platforms?", a: "LegiSearch is an AI-assisted research tool built into your case management workflow. It's ideal for day-to-day legal questions, case law lookups, and jurisdiction-specific queries. Some firms use it alongside traditional research platforms for specialized or exhaustive research needs. It's included in your Legience subscription ($99-249/mo) with no additional cost." },
   { q: "How much does LegiSearch cost?", a: "LegiSearch is included in every Legience plan. Starter ($99/mo) includes 200 queries/month, Professional ($169/mo) includes 500 queries/month, and Firm ($249/mo) includes unlimited queries. No per-query fees." },
   { q: "Can I trust AI legal research results?", a: "AI legal research is a research accelerator, not a replacement for attorney judgment. Every result should be verified by the attorney — just as you would verify research from an associate. LegiSearch verifies citations against source databases, but the attorney's professional duty of competence (ABA Rule 1.1) requires independent review." },
-  { q: "Is my research data kept private?", a: "Yes. Legience uses zero-knowledge AI architecture. Your queries and case data are processed in memory and discarded after generating results. Your data is never stored by the AI provider or used for model training. AES-256 encryption, US-only hosting." },
+  { q: "Is my research data kept private?", a: "Yes. AI queries are processed through AWS Bedrock under our Business Associate Agreement (BAA). Your data is never used for model training. AES-256 encryption at rest, TLS encryption in transit, US-only hosting." },
   { q: "What jurisdictions does LegiSearch cover?", a: "LegiSearch covers federal case law and all 50 US states. Results include jurisdiction-specific authorities and are filtered by the state and court level relevant to your query." },
 ]
 
@@ -48,7 +48,7 @@ export default function LegalResearchSoftware() {
     name: "LegiSearch — AI Legal Research Software",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    description: "AI-powered legal research software with verified case law citations. Natural language queries, integrated with case management. Westlaw alternative from $99/month.",
+    description: "AI-assisted legal research software with case law citations. Natural language queries, integrated with case management. Included from $99/month.",
     offers: { "@type": "AggregateOffer", lowPrice: "99", highPrice: "249", priceCurrency: "USD" }
   }
 
@@ -62,7 +62,7 @@ export default function LegalResearchSoftware() {
       badge="AI Legal Research"
       title="AI Legal Research Software"
       gradient="with Verified Citations."
-      subtitle="Ask legal questions in plain English. Get cited case law answers in minutes. Included in every Legience plan — no separate Westlaw subscription needed."
+      subtitle="Ask legal questions in plain English. Get cited case law answers in minutes. Included in every Legience plan — no separate research subscription needed."
     />
 
     {/* Benefits */}

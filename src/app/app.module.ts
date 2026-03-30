@@ -21,6 +21,7 @@ import { rootReducer } from './store';
 import { CountUpModule } from 'ngx-countup';
 import { NgbAccordionModule } from '@ng-bootstrap/ng-bootstrap';
 import { FaqsComponent } from './component/faqs/faqs.component';
+import { TosAcceptanceModalComponent } from './component/tos-acceptance-modal/tos-acceptance-modal.component';
 
 import { PreloaderComponent } from './component/preloader/preloader.component';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
@@ -29,7 +30,8 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
   declarations: [
     AppComponent,
     PreloaderComponent,
-    FaqsComponent
+    FaqsComponent,
+    TosAcceptanceModalComponent
   ],
   imports: [
     CommonModule,

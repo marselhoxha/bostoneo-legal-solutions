@@ -22,11 +22,11 @@ const features = [
     callouts: [{ icon: "ri-clipboard-line", title: "9-Tab Files", desc: "Everything linked" }, { icon: "ri-price-tag-3-line", title: "Custom Fields", desc: "Per practice area" }, { icon: "ri-search-line", title: "Quick Search", desc: "Find any case" }, { icon: "ri-bar-chart-box-line", title: "Bulk Actions", desc: "Multi-select ops" }],
     bullets: ["9-tab organization: Overview, Documents, Billing, Tasks, Calendar, Notes, Contacts, Timeline, Custom", "Practice-area-specific fields: custom metadata tailored to each case type", "Color-coded priority (Urgent/High/Medium/Low) and status tracking", "Advanced search — find any case by client, number, type, status, or assignee", "Automatic deadline calculation based on case type and jurisdiction", "Bulk actions: reassign, change status, export across multiple cases"] },
   { num: "02", short: "LegiSearch", title: "LegiSearch™", tag: "AI", tagClass: "fd-tag--ai", icon: "ri-brain-line",
-    desc: "Ask legal questions the way you'd ask a senior partner. Claude AI returns comprehensive, cited answers with federal and state case law, statutes, and jurisdiction-specific analysis. Every citation is verified. No Boolean, no $200/month Westlaw subscription. 200–500 queries/mo included, unlimited on Firm plans.",
+    desc: "Ask legal questions the way you'd ask a senior partner. Claude AI returns comprehensive, cited answers with federal and state case law, statutes, and jurisdiction-specific analysis. Every citation is checked. No Boolean operators needed. 200-500 queries/mo included, unlimited on Firm plans.",
     mockup: mockup_legisearch, mockupLabel: "LegiSearch — AI Research",
     mockupCaption: "Natural language queries with cited federal and state case law.",
-    callouts: [{ icon: "ri-chat-3-line", title: "Plain English", desc: "No Boolean" }, { icon: "ri-book-open-line", title: "Cited", desc: "Verified case law" }, { icon: "ri-file-text-line", title: "30+ Docs", desc: "Motions, briefs" }, { icon: "ri-lock-line", title: "Zero-Knowledge", desc: "Data never stored" }],
-    bullets: ["Natural language queries — ask like you'd ask a colleague", "Verified citations: Federal & state courts, verified statutes", "Jurisdiction-aware: state-specific case law and statutes", "Conversation history with saved sessions and bookmarks", "200–500 queries/mo included, unlimited on Firm plans", "Zero-knowledge — your data never used for AI training"] },
+    callouts: [{ icon: "ri-chat-3-line", title: "Plain English", desc: "No Boolean" }, { icon: "ri-book-open-line", title: "Cited", desc: "Verified case law" }, { icon: "ri-file-text-line", title: "30+ Docs", desc: "Motions, briefs" }, { icon: "ri-lock-line", title: "Secure AI", desc: "AWS Bedrock BAA" }],
+    bullets: ["Natural language queries — ask like you'd ask a colleague", "Verified citations: Federal & state courts, verified statutes", "Jurisdiction-aware: state-specific case law and statutes", "Conversation history with saved sessions and bookmarks", "200–500 queries/mo included, unlimited on Firm plans", "Secure AI via AWS Bedrock — your data never used for training"] },
   { num: "03", short: "LegiDraft", title: "LegiDraft™", tag: "AI", tagClass: "fd-tag--ai", icon: "ri-file-text-line",
     desc: "AI-powered legal document generation. Draft demand letters, motions, interrogatories, employment agreements, and 30+ document types — linked to your cases for automatic context injection. Select jurisdiction, choose document type, and generate practice-ready drafts in minutes.",
     mockup: mockup_legidraft, mockupLabel: "LegiDraft — Document Generation",
@@ -199,7 +199,7 @@ export default function Features() {
             ["ri-money-dollar-box-line", "AI features cost extra everywhere", "EvenUp charges $300-800/case for demands. Clio charges $50/mo for AI. Legience includes 200–500 AI queries/mo in every plan — no per-query fees.", "from-purple"],
             ["ri-tools-line", "Generic tools adapted for PI", "Clio and MyCase are built for all practice areas. Legience is built from the ground up for PI — insurance tracking, SOL calculators, damage multipliers.", "from-green"],
             ["ri-bar-chart-box-line", "Can't see firm-wide performance", "Most platforms give you basic reports. Legience has 10 role-based dashboards — Admin, Attorney, Paralegal, CFO — each with the metrics that role needs.", "from-amber"],
-            ["ri-lock-line", "Worried about AI and client data", "Zero-knowledge architecture. Anthropic's Enterprise API excludes data from training. Tenant-isolated PostgreSQL. Full audit trail.", "from-red"],
+            ["ri-lock-line", "Worried about AI and client data", "Secure AI processing through AWS Bedrock under BAA. Your data is never used for training. Tenant-isolated PostgreSQL. Full audit trail.", "from-red"],
             ["ri-alarm-line", "Spending hours on demand letters", "LegiDraft™ generates comprehensive demand packages — medical summaries, damage calculations, liability analysis — in 20 minutes instead of 6 hours.", "from-teal"],
           ].map(([icon, pain, solution, color], i) => (
             <div key={i} style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 16, padding: 24, background: "#fff", border: "1px solid var(--gray-100)", borderRadius: 16, transition: "all 0.3s" }}
@@ -225,13 +225,13 @@ export default function Features() {
               <span className="fd-tag" style={{ background: "rgba(56,182,255,0.08)", color: "var(--accent-light)" }}>Administration</span>
             </div>
             <h2 className="feature-showcase__title" style={{ color: "#fff" }}>Enterprise-Grade Administration</h2>
-            <p style={{ color: "rgba(255,255,255,0.65)", marginTop: 12, lineHeight: 1.75 }}>Immutable audit logs, role-based access across 10+ roles, multi-tenant data isolation, and 201 CMR 17.00 compliance monitoring.</p>
+            <p style={{ color: "rgba(255,255,255,0.65)", marginTop: 12, lineHeight: 1.75 }}>Comprehensive audit logs, role-based access across 10+ roles, multi-tenant data isolation, and 201 CMR 17.00 aligned security practices.</p>
             <div className="feature-showcase__bullets" style={{ marginTop: 16 }}>
-              {["Immutable audit logs for every action", "Role-based permissions across 10+ configurable roles", "Multi-tenant architecture with complete data isolation", "201 CMR 17.00 compliance monitoring", "User invitation workflow with verification", "Firm settings, branding, and customization"].map((b, j) => <div key={j} className="feature-showcase__bullet" style={{ color: "rgba(255,255,255,0.7)" }}><div className="feature-showcase__bullet-check">✓</div>{b}</div>)}
+              {["Comprehensive audit logs for every action", "Role-based permissions across 10+ configurable roles", "Multi-tenant architecture with complete data isolation", "201 CMR 17.00 compliance monitoring", "User invitation workflow with verification", "Firm settings, branding, and customization"].map((b, j) => <div key={j} className="feature-showcase__bullet" style={{ color: "rgba(255,255,255,0.7)" }}><div className="feature-showcase__bullet-check">✓</div>{b}</div>)}
             </div>
           </div>
           <div className="feature-showcase__visual">
-            <MockupShowcase html={mockup_admin} label="Audit Logs" caption="immutable audit trail." />
+            <MockupShowcase html={mockup_admin} label="Audit Logs" caption="Comprehensive audit trail." />
           </div>
         </div>
       </div>
