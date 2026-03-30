@@ -247,7 +247,6 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             jdbc.update("UPDATE invoice_workflow_rules SET created_by = NULL WHERE created_by = :userId", of("userId", id));
             jdbc.update("UPDATE invoices SET created_by = NULL WHERE created_by = :userId", of("userId", id));
             jdbc.update("UPDATE payment_transactions SET created_by = NULL WHERE created_by = :userId", of("userId", id));
-            jdbc.update("UPDATE trust_account_transactions SET created_by = NULL WHERE created_by = :userId", of("userId", id));
 
             // Delete legal documents
             jdbc.update("DELETE FROM legal_documents WHERE user_id = :userId", of("userId", id));

@@ -67,7 +67,6 @@ export interface FinancialMetrics {
   collectionRate: number;
   averageCollectionDays: number;
   overdueInvoices: number;
-  trustAccountBalance?: number;
 }
 
 export interface OperationalMetrics {

@@ -135,6 +135,7 @@ $main-content-flex: 1;
   --sidebar-text-light: #6c757d;
 }
 
+
 // Primary Action Button (Dashed)
 .btn-sidebar-new {
   display: flex;
@@ -167,6 +168,7 @@ $main-content-flex: 1;
 // Sidebar Search Input
 .sidebar-search-box {
   padding: 12px 16px;
+  margin-top: 0.75rem;
   border-bottom: 1px solid var(--sidebar-border);
 
   .search-input-wrapper {
@@ -8973,30 +8975,35 @@ button.filter-chip,
 }
 
 // ===========================
-// MOBILE CHAT HEADER
-// Shows back button when in conversation on mobile
+// LEGISEARCH NAV BAR
+// Full-width top bar shown in chat/research view (desktop + mobile)
 // ===========================
 
-.mobile-chat-header {
-  display: none;
+.legisearch-nav-bar {
+  display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  padding: 0.625rem 1rem;
   background: var(--vz-card-bg);
   border-bottom: 1px solid var(--vz-border-color);
+  flex-shrink: 0;
+}
 
-  .chat-header-title {
-    flex: 1;
-    font-size: 0.9375rem;
+.btn-back-legispace {
+  // Override the square icon-only style — make it pill-shaped with label
+  width: auto;
+  height: auto;
+  padding: 0.4rem 0.875rem 0.4rem 0.625rem;
+  border-radius: 6px;
+  gap: 4px;
+
+  .btn-back-label {
+    font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--vz-body-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1;
   }
 
-  @media (max-width: 768px) {
-    display: flex;
+  i {
+    font-size: 18px;
   }
 }
 

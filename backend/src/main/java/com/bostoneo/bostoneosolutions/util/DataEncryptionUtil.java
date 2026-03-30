@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.util;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -27,8 +28,11 @@ public class DataEncryptionUtil {
     private SecretKey secretKey;
     
     public DataEncryptionUtil() {
-        // Initialize with a default key if not provided
-        // In production, this should be loaded from secure storage
+        // Key is initialized in @PostConstruct after @Value injection completes
+    }
+
+    @PostConstruct
+    public void init() {
         if (encryptionKey == null || encryptionKey.isEmpty()) {
             this.secretKey = generateKey();
         } else {

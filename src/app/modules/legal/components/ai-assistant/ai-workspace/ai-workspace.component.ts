@@ -3987,6 +3987,22 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   selectedTask: ConversationType = ConversationType.Question;
   activeTask: ConversationType = ConversationType.Question;
 
+  /**
+   * Switch task type from anywhere in the UI (including when inside a conversation).
+   * Calls selectTask() to update the task type, then resets to the welcome screen
+   * so the user sees the appropriate task card options.
+   */
+  switchToTaskType(task: string): void {
+    const alreadyAtWelcome = !this.stateService.getShowChat()
+      && !this.stateService.getDraftingMode()
+      && !this.stateService.getDocumentViewerMode();
+
+    if (this.selectedTask === task && alreadyAtWelcome) return; // Nothing to do
+
+    this.selectTask(task as ConversationType);
+    this.startNewConversation(); // Reset to welcome screen for the new task type
+  }
+
   selectTask(task: ConversationType): void {
     this.selectedTask = task;
     this.activeTask = task;

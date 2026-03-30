@@ -3,11 +3,13 @@ package com.bostoneo.bostoneosolutions.converter;
 import com.bostoneo.bostoneosolutions.util.EncryptionUtil;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 @Converter
+@Slf4j
 public class EncryptedStringConverter implements AttributeConverter<String, String> {
     
     private static EncryptionUtil encryptionUtil;
@@ -33,7 +35,8 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
         try {
             return encryptionUtil.decrypt(dbData);
         } catch (Exception e) {
-            // Graceful fallback: existing plaintext data that hasn't been encrypted yet
+            // Graceful fallback: plaintext data written before encryption was enabled
+            log.warn("Decryption failed for a column value — returning as-is. This likely means plaintext data that has not been migrated to encryption yet.");
             return dbData;
         }
     }

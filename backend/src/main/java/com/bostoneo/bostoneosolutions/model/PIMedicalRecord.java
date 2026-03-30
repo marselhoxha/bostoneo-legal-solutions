@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
@@ -112,19 +113,24 @@ public class PIMedicalRecord {
     @Column(name = "lien_amount", precision = 12, scale = 2)
     private BigDecimal lienAmount;
 
-    // Clinical Notes
+    // Clinical Notes — encrypted at application layer (HIPAA PHI)
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "key_findings", columnDefinition = "TEXT")
     private String keyFindings;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "treatment_provided", columnDefinition = "TEXT")
     private String treatmentProvided;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "prognosis_notes", columnDefinition = "TEXT")
     private String prognosisNotes;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "work_restrictions", columnDefinition = "TEXT")
     private String workRestrictions;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "follow_up_recommendations", columnDefinition = "TEXT")
     private String followUpRecommendations;
 

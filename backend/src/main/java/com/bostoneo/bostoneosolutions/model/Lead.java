@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
@@ -41,7 +42,8 @@ public class Lead {
     @Column(name = "email", nullable = false, length = 100)
     private String email;
 
-    @Column(name = "phone", length = 30)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "phone", columnDefinition = "TEXT")
     private String phone;
 
     @Column(name = "company", length = 100)

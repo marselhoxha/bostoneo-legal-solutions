@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.controller;
 
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.dto.PIMedicalRecordDTO;
 import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
@@ -47,6 +48,7 @@ public class PIMedicalRecordController {
     /**
      * Get all medical records for a case
      */
+    @AuditLog(action = "VIEW", entityType = "MEDICAL_RECORD", description = "Viewed medical records for case")
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> getRecords(
@@ -87,6 +89,7 @@ public class PIMedicalRecordController {
     /**
      * Get a specific medical record
      */
+    @AuditLog(action = "VIEW", entityType = "MEDICAL_RECORD", description = "Viewed medical record", includeParams = true)
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> getRecordById(
@@ -110,6 +113,7 @@ public class PIMedicalRecordController {
     /**
      * Create a new medical record
      */
+    @AuditLog(action = "CREATE", entityType = "MEDICAL_RECORD", description = "Created medical record", includeParams = true)
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> createRecord(
@@ -133,6 +137,7 @@ public class PIMedicalRecordController {
     /**
      * Update an existing medical record
      */
+    @AuditLog(action = "UPDATE", entityType = "MEDICAL_RECORD", description = "Updated medical record", includeParams = true)
     @PutMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> updateRecord(
@@ -157,6 +162,7 @@ public class PIMedicalRecordController {
     /**
      * Delete a medical record
      */
+    @AuditLog(action = "DELETE", entityType = "MEDICAL_RECORD", description = "Deleted medical record", includeParams = true)
     @DeleteMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> deleteRecord(
@@ -179,6 +185,7 @@ public class PIMedicalRecordController {
     /**
      * Delete ALL medical records for a case — allows a fresh re-scan
      */
+    @AuditLog(action = "DELETE", entityType = "MEDICAL_RECORD", description = "Deleted all medical records for case", includeParams = true)
     @DeleteMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> deleteAllRecords(
@@ -298,6 +305,7 @@ public class PIMedicalRecordController {
     /**
      * Analyze a record with AI
      */
+    @AuditLog(action = "VIEW", entityType = "MEDICAL_RECORD", description = "AI analysis performed on medical record", includeParams = true)
     @PostMapping("/{id}/analyze")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> analyzeRecord(
@@ -444,6 +452,7 @@ public class PIMedicalRecordController {
     /**
      * Analyze a specific file and create a medical record from it
      */
+    @AuditLog(action = "CREATE", entityType = "MEDICAL_RECORD", description = "Medical record created from AI file analysis", includeParams = true)
     @PostMapping("/analyze-file/{fileId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> analyzeFileAndCreateRecord(

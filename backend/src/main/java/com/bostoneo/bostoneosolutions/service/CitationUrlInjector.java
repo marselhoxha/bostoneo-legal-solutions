@@ -157,31 +157,8 @@ public class CitationUrlInjector {
             "[Superior Court Standing Order $1](https://www.mass.gov/guides/massachusetts-rules-of-court-and-standing-orders)"
         );
 
-        // ===== FEDERAL CIRCUIT COURT CASES =====
-
-        // First Circuit with pin cites: United States v. Name, 963 F.3d 1, 12-15 (1st Cir. 2020)
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b((?:United States|U\\.S\\.)\\s+v\\.\\s+[A-Z*][a-zA-Z*-]+),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+),?\\s+([\\d-]+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?!\\]\\()", Pattern.CASE_INSENSITIVE),
-            "[$1, $2 F.3d $3, $4 (1st Cir.)](https://www.courtlistener.com/?q=$2+F.3d+$3)"
-        );
-
-        // First Circuit without pin cites: United States v. Name, 963 F.3d 1 (1st Cir. 2020)
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b((?:United States|U\\.S\\.)\\s+v\\.\\s+[A-Z*][a-zA-Z*-]+),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?!\\]\\()", Pattern.CASE_INSENSITIVE),
-            "[$1, $2 F.3d $3 (1st Cir.)](https://www.courtlistener.com/?q=$2+F.3d+$3)"
-        );
-
-        // Other First Circuit cases with pin cites: Name v. Name, 728 F.3d 1, 5-8 (1st Cir. 2013)
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b([A-Z*][a-zA-Z*\\s&.]+?)\\s+v\\.\\s+([A-Z*][a-zA-Z*\\s&.]+?),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+),?\\s+([\\d-]+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?!\\]\\()"),
-            "[$1 v. $2, $3 F.3d $4, $5 (1st Cir.)](https://www.courtlistener.com/?q=$3+F.3d+$4)"
-        );
-
-        // Other First Circuit cases without pin cites: Name v. Name, 728 F.3d 1 (1st Cir. 2013)
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b([A-Z*][a-zA-Z*\\s&.]+?)\\s+v\\.\\s+([A-Z*][a-zA-Z*\\s&.]+?),?\\s*(\\d+)\\s+F\\.3d\\s+(\\d+)\\s*\\(1st Cir\\.\\s*\\d{4}\\)(?!\\]\\()"),
-            "[$1 v. $2, $3 F.3d $4 (1st Cir.)](https://www.courtlistener.com/?q=$3+F.3d+$4)"
-        );
+        // Federal circuit court case law patterns removed — CourtListener search URLs are unreliable.
+        // Case law citations are only linked when verified with a direct opinion URL from the API.
 
         // General URLs
         CITATION_URL_MAP.put(
@@ -210,17 +187,8 @@ public class CitationUrlInjector {
             "[IRC § $1$2](https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title26-section$1&num=0&edition=prelim)"
         );
 
-        // Tax Court Memo citations: Name v. Comm'r, T.C. Memo 2018-159
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b([A-Z*][a-zA-Z*\\s&.]+?)\\s+v\\.\\s+Comm'r,\\s*T\\.C\\.\\s*Memo\\.?\\s*(\\d{4})-(\\d+)(?! - Source:)(?!\\]\\(http)"),
-            "[$1 v. Comm'r, T.C. Memo $2-$3](https://www.courtlistener.com/?q=T.C.+Memo+$2-$3)"
-        );
-
-        // Tax Court regular citations: Name v. Comm'r, 151 T.C. 247
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b([A-Z*][a-zA-Z*\\s&.]+?)\\s+v\\.\\s+Comm'r,\\s*(\\d+)\\s*T\\.C\\.\\s*(\\d+)(?! - Source:)(?!\\]\\(http)"),
-            "[$1 v. Comm'r, $2 T.C. $3](https://www.courtlistener.com/?q=$2+T.C.+$3)"
-        );
+        // Tax Court case citations removed — search URLs are unreliable.
+        // Only linked when CourtListener API verification finds a direct opinion URL.
 
         // ===== FEDERAL COURT RULES =====
 
@@ -496,6 +464,41 @@ public class CitationUrlInjector {
             "[Tex. R. Evid. $1$2](https://www.txcourts.gov/rules-forms/rules-standards/)"
         );
 
+        // Tex. R. App. P. X (Texas Rules of Appellate Procedure)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*R\\.?\\s*App\\.?\\s*P\\.?\\s*(\\d+[a-z]?\\.?\\d*)((?:\\([a-zA-Z0-9]+\\))*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. R. App. P. $1$2](https://www.txcourts.gov/rules-forms/rules-standards/)"
+        );
+
+        // ===== TEXAS CONSTITUTION (direct links to statutes.capitol.texas.gov) =====
+
+        // Tex. Const. art. I, § 9 — specific article + section
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Const\\.?\\s*art\\.?\\s*(I{1,3}V?|V?I{0,3}|\\d+),?\\s*§\\s*(\\d+[a-z]?)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Const. art. $1, § $2](https://statutes.capitol.texas.gov/Docs/CN/htm/CN.$1.htm)"
+        );
+
+        // Tex. Const. art. X (article only, no section)
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Const\\.?\\s*art\\.?\\s*(I{1,3}V?|V?I{0,3}|\\d+)(?!,?\\s*§)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Const. art. $1](https://statutes.capitol.texas.gov/Docs/CN/htm/CN.$1.htm)"
+        );
+
+        // ===== TEXAS MULTI-SECTION STATUTES (§§ with comma-separated sections) =====
+        // Matches: Tex. Transp. Code §§ 724.011, 724.012, 724.017 — links to first section's chapter
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Transp\\.?\\s*Code\\s*§§\\s*(\\d+)(\\.\\d+(?:,\\s*\\d+\\.\\d+)*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Transp. Code §§ $1$2](https://statutes.capitol.texas.gov/Docs/TN/htm/TN.$1.htm)"
+        );
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Penal\\s*Code\\s*§§\\s*(\\d+)(\\.\\d+(?:,\\s*\\d+\\.\\d+)*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Penal Code §§ $1$2](https://statutes.capitol.texas.gov/Docs/PE/htm/PE.$1.htm)"
+        );
+        CITATION_URL_MAP.put(
+            Pattern.compile("(?<!\\[)\\bTex\\.?\\s*Code\\s*Crim\\.?\\s*Proc\\.?\\s*art\\.?\\s*§§\\s*(\\d+)(\\.\\d+(?:,\\s*\\d+\\.\\d+)*)(?!\\]\\(http)", Pattern.CASE_INSENSITIVE),
+            "[Tex. Code Crim. Proc. §§ $1$2](https://statutes.capitol.texas.gov/Docs/CR/htm/CR.$1.htm)"
+        );
+
         // ===== FLORIDA STATUTES (Tier 1 — direct links to leg.state.fl.us) =====
 
         // Fla. Stat. § X.Y — links to Florida Senate statute viewer
@@ -524,47 +527,12 @@ public class CitationUrlInjector {
             "[U.C.C. § $1-$2$3](https://www.law.cornell.edu/ucc/$1/$1-$2)"
         );
 
-        // ===== MASSACHUSETTS STATE CASE LAW =====
-
-        // Mass. Appeals Court: Name v. Name, ### Mass. App. Ct. ### (year) — MUST be before Mass. SJC
-        // Mass. App. Ct.: Name v. Name, ### Mass. App. Ct. ### (year)
-        // Character class includes * for markdown emphasis (*Name*)
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b([A-Z*][a-zA-Z'*\\s&.]+?)\\s+v\\.\\s+([A-Z*][a-zA-Z'*\\s&.]+?),\\s*(\\d+)\\s+Mass\\.\\s*App\\.\\s*Ct\\.\\s*(\\d+)(?:,?\\s*\\d+(?:-\\d+)?)?(?:\\s*\\(\\d{4}\\))?(?!\\]\\()", Pattern.CASE_INSENSITIVE),
-            "[$1 v. $2, $3 Mass. App. Ct. $4](https://www.courtlistener.com/?q=$3+Mass.+App.+Ct.+$4)"
-        );
-
-        // Mass. SJC: Name v. Name, ### Mass. ### (year)
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b([A-Z*][a-zA-Z'*\\s&.]+?)\\s+v\\.\\s+([A-Z*][a-zA-Z'*\\s&.]+?),\\s*(\\d+)\\s+Mass\\.\\s+(\\d+)(?:,?\\s*\\d+(?:-\\d+)?)?(?:\\s*\\(\\d{4}\\))?(?!\\]\\()", Pattern.CASE_INSENSITIVE),
-            "[$1 v. $2, $3 Mass. $4](https://www.courtlistener.com/?q=$3+Mass.+$4)"
-        );
-
-        // Mass. N.E.2d/N.E.3d citations: Name v. Name, ### N.E.2d/3d ### (Mass. year)
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b([A-Z*][a-zA-Z'*\\s&.]+?)\\s+v\\.\\s+([A-Z*][a-zA-Z'*\\s&.]+?),\\s*(\\d+)\\s+N\\.E\\.(2d|3d)\\s+(\\d+)(?:,?\\s*\\d+(?:-\\d+)?)?(?:\\s*\\(Mass\\.\\s*\\d{4}\\))?(?!\\]\\()", Pattern.CASE_INSENSITIVE),
-            "[$1 v. $2, $3 N.E.$4 $5](https://www.courtlistener.com/?q=$3+N.E.$4+$5)"
-        );
-
-        // ===== FEDERAL CASE LAW =====
-
-        // Federal Circuit F.3d: Name v. Name, 123 F.3d 456
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b([A-Z*][a-zA-Z*\\s&.]+?)\\s+v\\.\\s+([A-Z*][a-zA-Z*\\s&.]+?),\\s*(\\d+)\\s*F\\.3d\\s*(\\d+)(?! - Source:)(?!\\]\\(http)"),
-            "[$1 v. $2, $3 F.3d $4](https://www.courtlistener.com/?q=$3+F.3d+$4)"
-        );
-
-        // Federal Circuit F.2d: Name v. Name, 123 F.2d 456
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b([A-Z*][a-zA-Z*\\s&.]+?)\\s+v\\.\\s+([A-Z*][a-zA-Z*\\s&.]+?),\\s*(\\d+)\\s*F\\.2d\\s*(\\d+)(?! - Source:)(?!\\]\\(http)"),
-            "[$1 v. $2, $3 F.2d $4](https://www.courtlistener.com/?q=$3+F.2d+$4)"
-        );
-
-        // SCOTUS: Name v. Name, ### U.S. ###
-        CITATION_URL_MAP.put(
-            Pattern.compile("(?<!\\[)\\b([A-Z*][a-zA-Z'*\\s&.]+?)\\s+v\\.\\s+([A-Z*][a-zA-Z'*\\s&.]+?),\\s*(\\d+)\\s+U\\.S\\.\\s+(\\d+)(?:,?\\s*\\d+(?:-\\d+)?)?(?:\\s*\\(\\d{4}\\))?(?!\\]\\()"),
-            "[$1 v. $2, $3 U.S. $4](https://www.courtlistener.com/?q=$3+U.S.+$4)"
-        );
+        // ===== CASE LAW =====
+        // Case law citations (Mass., N.E., F.3d, F.2d, U.S., S.W.) are NOT pattern-matched here.
+        // They are only linked when the CourtListener API verification finds a direct opinion URL.
+        // Search URLs (courtlistener.com/?q=...) are unreliable — they often show search results
+        // pages instead of the actual opinion, or return "citation not found."
+        // Plain text is better than a broken/misleading link.
 
         // ===== IMMIGRATION LAW (uscode.house.gov) =====
 
@@ -1063,6 +1031,22 @@ public class CitationUrlInjector {
                 // Handles: *Stine v. Stewart*, O'Bryant*, **bold case names**, etc.
                 source = source.replaceAll("\\*+", "").trim();
 
+                // Handle AI-generated markdown links embedded in source text
+                // e.g. "[Missouri v. McNeely](https://supreme.justia.com/...)" or with trailing text
+                if (source.contains("](http")) {
+                    // Extract the display text and URL from markdown link
+                    java.util.regex.Matcher mdLink = Pattern.compile("\\[([^\\]]+)\\]\\((https?://[^)]+)\\)(.*)").matcher(source);
+                    if (mdLink.find()) {
+                        String displayText = mdLink.group(1).trim();
+                        String url = mdLink.group(2).trim();
+                        String trailing = mdLink.group(3).trim();
+                        // Rebuild as a proper markdown link with any trailing text as display
+                        String fullDisplay = trailing.isEmpty() ? displayText : displayText + ", " + trailing.replaceAll("^[,;\\s]+", "");
+                        enriched.append("[" + fullDisplay + "](" + url + ")");
+                        if (seen.add(fullDisplay.toLowerCase())) appendedCount++;
+                        continue;
+                    }
+                }
                 // Strip bare brackets — AI sometimes outputs [Citation] without URL
                 if (source.startsWith("[") && source.endsWith("]")) {
                     source = source.substring(1, source.length() - 1);
@@ -1086,17 +1070,10 @@ public class CitationUrlInjector {
                         String docMatch = matchCaseDocument(source);
                         if (docMatch != null) {
                             enriched.append(docMatch);
-                        } else if (isSecondaryAuthority(source)) {
-                            // 4. Secondary sources (Restatements, treatises, UCC, Model Penal Code)
-                            // — these don't exist on CourtListener. Show as plain text, no link.
-                            enriched.append(source);
                         } else {
-                            // 5. Fallback: CourtListener search URL for case law only
-                            String encoded = source.trim()
-                                .replaceAll("\\s+", "+")
-                                .replace("(", "%28")
-                                .replace(")", "%29");
-                            enriched.append("[" + source + "](https://www.courtlistener.com/?q=" + encoded + "&type=o)");
+                            // 4. No verified URL, no pattern match, no doc match.
+                            // Show as plain text — a broken/search link is worse than no link.
+                            enriched.append(source);
                         }
                     }
                 }
@@ -1150,7 +1127,47 @@ public class CitationUrlInjector {
                lower.contains("a.l.r.") ||
                lower.contains("legal encyclopedia") ||
                lower.contains("black's law") ||
-               lower.contains("nutshell");
+               lower.contains("nutshell") ||
+               isStatuteOrConstitution(source);
+    }
+
+    /**
+     * Detect statutory and constitutional citations that should NOT be sent to CourtListener.
+     * CourtListener is a case law database — statutes and constitutions aren't there.
+     * These will be handled by CITATION_URL_MAP patterns or shown as plain text.
+     */
+    private boolean isStatuteOrConstitution(String source) {
+        String lower = source.toLowerCase();
+        return lower.contains("const.") ||
+               lower.contains("constitution") ||
+               lower.contains("§") ||
+               lower.matches(".*\\b(u\\.s\\.c|usc)\\b.*") ||
+               lower.contains("code crim. proc") ||
+               lower.contains("penal code") ||
+               lower.contains("transp. code") ||
+               lower.contains("civ. prac") ||
+               lower.contains("fam. code") ||
+               lower.contains("ins. code") ||
+               lower.contains("gov't code") ||
+               lower.contains("health & safety") ||
+               lower.contains("bus. & com") ||
+               lower.contains("lab. code") ||
+               lower.contains("prop. code") ||
+               lower.contains("tax code") ||
+               lower.contains("educ. code") ||
+               lower.contains("occ. code") ||
+               lower.contains("est. code") ||
+               lower.contains("gen. bus. law") ||
+               lower.contains("gen. oblig. law") ||
+               lower.contains("fla. stat") ||
+               lower.contains("m.g.l.") ||
+               lower.contains("general laws") ||
+               lower.contains("cmr") ||
+               lower.contains("r. civ. p") ||
+               lower.contains("r. crim. p") ||
+               lower.contains("r. evid") ||
+               lower.contains("r. app. p") ||
+               lower.contains("r. prof. conduct");
     }
 
     /**

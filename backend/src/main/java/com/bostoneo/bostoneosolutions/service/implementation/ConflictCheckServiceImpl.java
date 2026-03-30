@@ -416,7 +416,7 @@ public class ConflictCheckServiceImpl implements ConflictCheckService {
 
     private void searchCases(Long orgId, String term, List<ConflictMatchDTO> matches, Set<String> seen) {
         try {
-            String sql = "SELECT id, title, client_name, case_number, " +
+            String sql = "SELECT id, title, client_name, case_number, status, " +
                     "GREATEST(similarity(client_name, :term), similarity(title, :term)) AS score " +
                     "FROM legal_cases WHERE organization_id = :orgId " +
                     "AND (similarity(client_name, :term) > 0.3 OR similarity(title, :term) > 0.3 " +
@@ -427,14 +427,23 @@ public class ConflictCheckServiceImpl implements ConflictCheckService {
                 String key = "CASE-" + rs.getLong("id");
                 if (seen.add(key)) {
                     BigDecimal score = rs.getBigDecimal("score").multiply(new BigDecimal("100")).setScale(2, java.math.RoundingMode.HALF_UP);
+                    String caseStatus = rs.getString("status");
+                    boolean isFormerClient = "CLOSED".equalsIgnoreCase(caseStatus) || "ARCHIVED".equalsIgnoreCase(caseStatus);
+                    String matchType = isFormerClient ? "FORMER_CLIENT_CASE" : "CASE_SIMILARITY";
+                    String matchReason = isFormerClient
+                            ? "Former client '" + rs.getString("client_name") + "' in closed case — Rule 1.9 conflict check required"
+                            : "Case client '" + rs.getString("client_name") + "' matches search term";
+                    String recommendedAction = isFormerClient
+                            ? "Former client relationship detected — verify matter is not substantially related under Rule 1.9"
+                            : "Review case for conflict of interest";
                     matches.add(ConflictMatchDTO.builder()
                             .entityType("CASE").entityId(rs.getLong("id"))
-                            .entityName(rs.getString("title") + " (" + rs.getString("case_number") + ")")
-                            .matchType("CASE_SIMILARITY").matchScore(score)
-                            .matchReason("Case client '" + rs.getString("client_name") + "' matches search term")
+                            .entityName(rs.getString("title") + " (" + rs.getString("case_number") + ")" + (isFormerClient ? " [FORMER CLIENT]" : ""))
+                            .matchType(matchType).matchScore(score)
+                            .matchReason(matchReason)
                             .riskLevel(score.compareTo(new BigDecimal("80")) >= 0 ? "HIGH" : "MEDIUM")
                             .status("REQUIRES_REVIEW")
-                            .recommendedAction("Review case for conflict of interest")
+                            .recommendedAction(recommendedAction)
                             .lastUpdated(new Timestamp(System.currentTimeMillis()))
                             .build());
                 }

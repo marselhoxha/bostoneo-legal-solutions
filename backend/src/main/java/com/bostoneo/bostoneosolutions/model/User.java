@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
@@ -43,7 +44,10 @@ public class User {
     @Column(nullable = false)
     private String password;
     
+    @Convert(converter = EncryptedStringConverter.class)
     private String address;
+
+    @Convert(converter = EncryptedStringConverter.class)
     private String phone;
     private String title;
     private String bio;

@@ -2952,6 +2952,8 @@ public class AILegalResearchService {
 
             // POST-PROCESSING for cached response: Convert bullets BEFORE citation injection
             cachedResponse = convertBulletsToNumberedLists(cachedResponse);
+            // Step 2: Verify case law citations via CourtListener (same as non-cached path)
+            cachedResponse = verifyAllCitationsInResponse(cachedResponse);
             String processedCachedResponse = caseDocs.isEmpty()
                 ? citationUrlInjector.inject(cachedResponse)
                 : citationUrlInjector.inject(cachedResponse, caseId, caseDocs);
@@ -3554,23 +3556,13 @@ public class AILegalResearchService {
                     matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
                     verifiedCount++;
                 } else if (sCtMatcher.find()) {
-                    // S. Ct. Reporter citation - construct CourtListener search URL
-                    // S. Ct. citations don't map directly to Justia URLs, so we create a search link
-                    String courtListenerUrl = String.format("https://www.courtlistener.com/?q=%s&type=o",
-                        java.net.URLEncoder.encode(caseName + " " + citation, java.nio.charset.StandardCharsets.UTF_8));
-
-                    String fullCitation = court != null ?
-                        String.format("%s (%s %s)", citation, court.trim(), year) :
-                        String.format("%s (%s)", citation, year);
-
-                    String replacement = String.format("✓ [%s](%s), %s",
-                        caseName, courtListenerUrl, fullCitation);
-
-                    log.info("✅ SUPREME COURT (S. Ct. Reporter) - CourtListener search URL constructed: {}", courtListenerUrl);
-                    log.info("   REPLACING: '{}' → '{}'", fullMatch, replacement.substring(0, Math.min(100, replacement.length())));
-
-                    matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
-                    verifiedCount++;
+                    // S. Ct. Reporter citation - try to find via Google Scholar or Justia by name
+                    // If we can't find a direct opinion URL, leave as plain text (no search link)
+                    // S. Ct. citations: "137 S. Ct. 1773" — try CourtListener API first
+                    // (already tried above via verifyCitation — if not found, leave as plain text)
+                    log.info("ℹ️ UNVERIFIED S. Ct. citation: Leaving as plain text: {} | {}", caseName, citation);
+                    matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(fullMatch));
+                    unverifiedCount++;
                 } else {
                     // Not a Supreme Court case - check if this is a Massachusetts case
                     // Massachusetts SJC pattern: "400 Mass. 425" → https://law.justia.com/cases/massachusetts/supreme-court/{year}/{volume}-mass-{page}.html
@@ -3625,25 +3617,10 @@ public class AILegalResearchService {
                         verifiedCount++;
                     } else {
                         // Not verified via CourtListener or known state patterns.
-                        // Instead of DELETING (which removes legitimate citations for TX, FL, CA, etc.),
-                        // construct a CourtListener search URL so the user can verify manually.
-                        // The citation is preserved with a search link rather than silently removed.
-                        // NOTE: No ✓ prefix — this is a search fallback, NOT a verified citation.
-                        // Frontend will render this as a normal link without the green "verified" badge.
-                        String searchUrl = String.format("https://www.courtlistener.com/?q=%s&type=o",
-                            java.net.URLEncoder.encode(caseName + " " + citation, java.nio.charset.StandardCharsets.UTF_8));
-
-                        String fullCitation = court != null ?
-                            String.format("%s (%s %s)", citation, court.trim(), year) :
-                            String.format("%s (%s)", citation, year);
-
-                        String replacement = String.format("[%s](%s), %s",
-                            caseName, searchUrl, fullCitation);
-
-                        log.info("🔗 FALLBACK: CourtListener search URL for unverified citation: {} | {}", caseName, citation);
-                        log.info("   Search URL: {}", searchUrl);
-
-                        matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
+                        // Leave the citation as plain text — no link is better than a wrong search link.
+                        // CourtListener search URLs often point to irrelevant results (different cases).
+                        log.info("ℹ️ UNVERIFIED: Leaving as plain text (no fallback link): {} | {}", caseName, citation);
+                        matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(fullMatch));
                         unverifiedCount++;
                     }
                 }

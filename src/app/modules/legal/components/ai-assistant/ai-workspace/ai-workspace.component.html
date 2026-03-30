@@ -5,9 +5,9 @@
 
 <div class="drafting-container" [class.drafting-active]="draftingMode$ | async" style="max-width: 100%;">
 
-  <!-- Mobile Menu Toggle Button - Opens history bottom sheet (hidden when in conversation) -->
+  <!-- Mobile Menu Toggle Button - Opens history/task switcher sidebar -->
   <button class="mobile-menu-toggle"
-          *ngIf="!(showChat$ | async) && !(isGenerating$ | async) && !(draftingMode$ | async) && !(documentViewerMode$ | async)"
+          *ngIf="!(isGenerating$ | async) && !(draftingMode$ | async) && !(documentViewerMode$ | async)"
           (click)="toggleSidebar()"
           aria-label="View history">
     <i class="ri-chat-history-line"></i>
@@ -24,14 +24,6 @@
   <!-- ========================================== -->
   <aside class="card conversation-sidebar" [class.open]="sidebarOpen$ | async"
          *ngIf="!(draftingMode$ | async) && selectedTask === 'upload' && !((documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async))">
-
-    <!-- Primary Action Button -->
-    <div class="p-3 border-bottom">
-      <button type="button" class="btn-sidebar-new" (click)="openNewAnalysis()">
-        <i class="ri-add-line"></i>
-        New Analysis
-      </button>
-    </div>
 
     <!-- Search Bar -->
     <div class="sidebar-search-box">
@@ -172,23 +164,7 @@
   <!-- LEFT SIDEBAR: Non-Upload Modes (Question, Draft, Workflow) -->
   <!-- ========================================== -->
   <aside class="card conversation-sidebar" [class.open]="sidebarOpen$ | async"
-         *ngIf="!(draftingMode$ | async) && selectedTask !== 'upload' && !((documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async))">
-
-    <!-- Primary Action Button - Changes based on mode -->
-    <div class="p-3 border-bottom">
-      <button [hidden]="selectedTask !== 'question'" type="button" class="btn-sidebar-new" (click)="startNewConversation()">
-        <i class="ri-add-line"></i>
-        New Question
-      </button>
-      <button [hidden]="selectedTask !== 'draft'" type="button" class="btn-sidebar-new" (click)="startNewConversation()">
-        <i class="ri-add-line"></i>
-        New Draft
-      </button>
-      <button [hidden]="selectedTask !== 'workflow'" type="button" class="btn-sidebar-new" (click)="openWorkflowSelection()">
-        <i class="ri-add-line"></i>
-        New Workflow
-      </button>
-    </div>
+         *ngIf="!(draftingMode$ | async) && !(showChat$ | async) && !(isGenerating$ | async) && selectedTask !== 'upload' && !((documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async))">
 
     <!-- Search Bar -->
     <div class="sidebar-search-box">
@@ -376,7 +352,8 @@
   <!-- ========================================== -->
   <!-- MAIN CONTENT AREA -->
   <!-- ========================================== -->
-  <main class="main-content-area" [class.full-width]="(documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async)">
+  <main class="main-content-area"
+        [class.full-width]="((documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async)) || (showChat$ | async) || (isGenerating$ | async)">
 
     <!-- ========================================== -->
     <!-- WORKFLOW DETAILS PAGE (Full-Page View) -->
@@ -667,7 +644,10 @@
     <div class="welcome-screen" *ngIf="!showWorkflowDetailsPage && !(documentViewerMode$ | async) && !isViewingCollection && !(showChat$ | async) && !(isGenerating$ | async) && !(draftingMode$ | async)">
       <div class="welcome-header">
         <h2 class="welcome-title mb-0">Welcome, {{ getUserDisplayName() }}</h2>
-        <p class="welcome-subtitle">AI-Powered Document Analysis for Legal Professionals</p>
+        <p class="welcome-subtitle" *ngIf="!selectedTask || selectedTask === 'question'">Ask any legal question — get AI-powered answers with cited case law and statutes.</p>
+        <p class="welcome-subtitle" *ngIf="selectedTask === 'draft'">Describe what you need — get a professionally drafted legal document, ready to edit.</p>
+        <p class="welcome-subtitle" *ngIf="selectedTask === 'upload'">Upload a document — extract key provisions, identify risks, and get instant AI insights.</p>
+        <p class="welcome-subtitle" *ngIf="selectedTask === 'workflow'">Build and track step-by-step legal workflows across your matter lifecycle.</p>
       </div>
 
       <!-- Action Cards Grid (always shown for navigation) -->
@@ -2026,12 +2006,12 @@
 
     <!-- Chat Container (Active conversation - full width when not in drafting mode, hidden when document viewer is open) -->
     <div class="chat-container-main" *ngIf="((showChat$ | async) || (isGenerating$ | async)) && !(draftingMode$ | async) && !(documentViewerMode$ | async)">
-      <!-- Mobile Back Button Header -->
-      <div class="mobile-chat-header">
-        <button class="btn-back" (click)="goBackToTaskSelection()" aria-label="Go back">
+      <!-- Full-page navigation bar (back to LegiSpace) -->
+      <div class="legisearch-nav-bar">
+        <button class="btn-back btn-back-legispace" (click)="goBackToTaskSelection()" aria-label="Back to LegiSpace">
           <i class="ri-arrow-left-s-line"></i>
+          <span class="btn-back-label">LegiSpace</span>
         </button>
-        <span class="chat-header-title">{{ getActiveConversationTitle() || 'Conversation' }}</span>
       </div>
       <app-ai-disclaimer></app-ai-disclaimer>
       <div class="chat-messages-area">

@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
@@ -53,9 +54,11 @@ public class LegalCase {
     @Column(name = "client_email", nullable = false)
     private String clientEmail;
     
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "client_phone")
     private String clientPhone;
-    
+
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "client_address")
     private String clientAddress;
 
