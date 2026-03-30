@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/ai/test")
+@org.springframework.context.annotation.Profile("!prod")
 @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN')")
 @RequiredArgsConstructor
 @Slf4j

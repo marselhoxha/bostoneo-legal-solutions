@@ -19,6 +19,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/test")
+@org.springframework.context.annotation.Profile("!prod")
 @RequiredArgsConstructor
 @Slf4j
 public class TestController {
