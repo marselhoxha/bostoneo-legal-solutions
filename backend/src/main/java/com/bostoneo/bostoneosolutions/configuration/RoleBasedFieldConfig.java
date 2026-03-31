@@ -66,17 +66,14 @@ public class RoleBasedFieldConfig implements ResponseBodyAdvice<Object> {
     }
     
     private Object filterClientData(Object body) {
-        // Apply customer field filtering logic
-        return body; // Implement specific filtering
+        return fieldFilter.filterFields(body, "CLIENT");
     }
-    
+
     private Object filterLegalCaseData(Object body) {
-        // Apply legal case field filtering logic
-        return body; // Implement specific filtering
+        return fieldFilter.filterFields(body, "LEGAL_CASE");
     }
-    
+
     private Object filterInvoiceData(Object body) {
-        // Apply invoice field filtering logic
-        return body; // Implement specific filtering
+        return fieldFilter.filterFields(body, "INVOICE");
     }
 } 

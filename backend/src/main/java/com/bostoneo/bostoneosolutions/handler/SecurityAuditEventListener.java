@@ -21,10 +21,10 @@ public class SecurityAuditEventListener {
     @EventListener
     public void onAuthenticationSuccess(AuthenticationSuccessEvent event) {
         String username = event.getAuthentication().getName();
-        String details = event.getAuthentication().getDetails() != null ?
-            event.getAuthentication().getDetails().toString() : "No details";
+        String ipAddress = extractIpAddress();
 
-
+        log.info("SECURITY_AUDIT: Authentication success - User: {}, IP: {}, Time: {}",
+            username, ipAddress, LocalDateTime.now());
     }
 
     @EventListener
@@ -40,11 +40,18 @@ public class SecurityAuditEventListener {
 
     @EventListener
     public void onAuthorizationGranted(AuthorizationGrantedEvent<?> event) {
-        String username = event.getAuthentication() != null ?
-            event.getAuthentication().get().getName() : "Anonymous";
-        String decision = event.getAuthorizationDecision().toString();
+        // Intentionally not logged at INFO to avoid excessive volume.
+        // Authorization grants are the common path — only denials are notable.
+    }
 
-
+    private String extractIpAddress() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                return attrs.getRequest().getRemoteAddr();
+            }
+        } catch (Exception ignored) {}
+        return "unknown";
     }
 
     @EventListener

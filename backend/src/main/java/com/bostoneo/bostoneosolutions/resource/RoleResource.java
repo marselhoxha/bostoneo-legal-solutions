@@ -11,6 +11,8 @@ import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import com.bostoneo.bostoneosolutions.model.Permission;
 import com.bostoneo.bostoneosolutions.model.Role;
 import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.AuditService;
 import com.bostoneo.bostoneosolutions.service.RoleService;
 import com.bostoneo.bostoneosolutions.service.UserService;
@@ -371,6 +373,7 @@ public class RoleResource {
     @GetMapping("/users/{userId}/roles")
     @PreAuthorize("hasAuthority('ROLE:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> getRolesByUserId(@PathVariable("userId") Long userId) {
+        verifyUserInTenant(userId);
         Set<Role> roles = roleService.getRolesByUserId(userId);
         
         return ResponseEntity.ok(
@@ -394,9 +397,10 @@ public class RoleResource {
             @AuthenticationPrincipal UserDTO currentUser,
             @PathVariable("userId") Long userId,
             @RequestBody UserRoleDTO userRoleDTO) {
-        
+
+        verifyUserInTenant(userId);
         userRoleDTO.setUserId(userId); // Ensure userId is set correctly
-        
+
         roleService.assignRoleToUser(userId, userRoleDTO.getRoleId());
         
         // If this is the primary role, update the user's primary role
@@ -438,7 +442,8 @@ public class RoleResource {
             @AuthenticationPrincipal UserDTO currentUser,
             @PathVariable("userId") Long userId,
             @PathVariable("roleId") Long roleId) {
-        
+
+        verifyUserInTenant(userId);
         roleService.removeRoleFromUser(userId, roleId);
         
         // Audit the action
@@ -556,6 +561,7 @@ public class RoleResource {
     @GetMapping("/users/{userId}/case-roles")
     @PreAuthorize("hasAuthority('ROLE:VIEW') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> getCaseRolesByUserId(@PathVariable("userId") Long userId) {
+        verifyUserInTenant(userId);
         Set<CaseRoleAssignment> caseRoles = roleService.getCaseRoleAssignments(userId);
         
         return ResponseEntity.ok(
@@ -579,7 +585,8 @@ public class RoleResource {
             @AuthenticationPrincipal UserDTO currentUser,
             @PathVariable("userId") Long userId,
             @PathVariable("roleId") Long roleId) {
-        
+
+        verifyUserInTenant(userId);
         roleService.setPrimaryRole(userId, roleId);
         
         // Audit the action
@@ -601,6 +608,18 @@ public class RoleResource {
         );
     }
     
+    /**
+     * Verify target user belongs to current tenant before role operations.
+     */
+    private void verifyUserInTenant(Long userId) {
+        Long orgId = TenantContext.getCurrentTenant();
+        if (orgId == null) return; // SUPERADMIN
+        UserDTO targetUser = userService.getUserById(userId);
+        if (targetUser == null || !orgId.equals(targetUser.getOrganizationId())) {
+            throw new ApiException("User does not belong to your organization");
+        }
+    }
+
     // Helper methods
     private RoleDTO convertToRoleDTO(Role role) {
         return RoleDTO.builder()

@@ -86,6 +86,12 @@ public class UserResource {
     public ResponseEntity<HttpResponse> login(@RequestBody @Valid LoginForm loginForm) {
         UserDTO user = authenticate(loginForm.getEmail(), loginForm.getPassword());
         try {
+            // MFA advisory for privileged roles (compliance: 201 CMR 17.00, HIPAA)
+            // Allows login but flags that MFA should be enabled. Frontend can show a warning banner.
+            boolean mfaAdvisory = !user.isUsingMFA() && isPrivilegedRole(user);
+            if (mfaAdvisory) {
+                log.warn("SECURITY: Privileged user {} logged in without MFA enabled", user.getEmail());
+            }
             return user.isUsingMFA() ? sendVerificationCode(user) : sendResponse(user);
         } finally {
             authenticatedPrincipal.remove();
@@ -116,13 +122,19 @@ public class UserResource {
 
     @PostMapping("/register")
     @AuditLog(action = "CREATE", entityType = "USER", description = "New user registration")
-    public ResponseEntity<HttpResponse> saveUser(@RequestBody @Valid User user) {
+    public ResponseEntity<HttpResponse> saveUser(@RequestBody @Valid com.bostoneo.bostoneosolutions.form.RegisterForm form) {
+        // Map only safe fields from form to User entity to prevent mass assignment
+        User user = new User();
+        user.setFirstName(form.getFirstName());
+        user.setLastName(form.getLastName());
+        user.setEmail(form.getEmail());
+        user.setPassword(form.getPassword());
         UserDTO userDto = userService.createUser(user);
         return ResponseEntity.created(getUri()).body(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .data(of("user", userDto))
-                        .message(String.format("User account created for user %s", user.getFirstName()))
+                        .message(String.format("User account created for user %s", form.getFirstName()))
                         .status(CREATED)
                         .statusCode(CREATED.value())
                         .build());
@@ -150,7 +162,10 @@ public class UserResource {
 
     @PatchMapping("/update")
     @AuditLog(action = "UPDATE", entityType = "USER", description = "Updated user profile information")
-    public ResponseEntity<HttpResponse> updateUser(@RequestBody @Valid UpdateForm user) {
+    public ResponseEntity<HttpResponse> updateUser(Authentication authentication, @RequestBody @Valid UpdateForm user) {
+        // Prevent IDOR: always use the authenticated user's ID, not the one from the form
+        UserDTO authUser = getAuthenticatedUser(authentication);
+        user.setId(authUser.getId());
         UserDTO updatedUser = userService.updateUserDetails(user);
         publisher.publishEvent(new NewUserEvent(updatedUser.getEmail(), PROFILE_UPDATE, updatedUser.getOrganizationId()));
         return ResponseEntity.ok().body(
@@ -355,7 +370,12 @@ public class UserResource {
 
     @GetMapping(value = "/image/{fileName}", produces = IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> getProfileImage(@PathVariable("fileName") String fileName) {
-        try (java.io.InputStream is = fileStorageService.loadFileAsResource("profile-images/" + fileName).getInputStream()) {
+        // Prevent path traversal: strip everything except the filename
+        String safeName = java.nio.file.Paths.get(fileName).getFileName().toString();
+        if (safeName.contains("..") || safeName.contains("/") || safeName.contains("\\")) {
+            return ResponseEntity.badRequest().build();
+        }
+        try (java.io.InputStream is = fileStorageService.loadFileAsResource("profile-images/" + safeName).getInputStream()) {
             byte[] imageBytes = is.readAllBytes();
             return ResponseEntity.ok(imageBytes);
         } catch (Exception e) {
@@ -402,6 +422,9 @@ public class UserResource {
 
             UserDTO user = userService.getUserById(userId);
             log.info("Token refresh successful for user: {}", user != null ? user.getEmail() : "unknown");
+
+            // Rotate: blacklist the consumed refresh token to prevent reuse
+            tokenBlacklistService.blacklistToken(token, java.time.Duration.ofHours(8));
 
             // Generate new tokens (cache principal to avoid duplicate DB queries)
             UserPrincipal refreshPrincipal = getUserPrincipal(user);
@@ -585,6 +608,16 @@ public class UserResource {
             processError(request, response, exception);
             throw new ApiException(exception.getMessage());
         }
+    }
+
+    /**
+     * Check if user has a privileged role that requires MFA enforcement.
+     */
+    private boolean isPrivilegedRole(UserDTO user) {
+        if (user.getRoleName() == null) return false;
+        String role = user.getRoleName().toUpperCase();
+        return role.contains("ADMIN") || role.contains("SYSADMIN") || role.contains("SUPERADMIN")
+                || role.contains("MANAGING_PARTNER");
     }
 
     private URI getUri() {

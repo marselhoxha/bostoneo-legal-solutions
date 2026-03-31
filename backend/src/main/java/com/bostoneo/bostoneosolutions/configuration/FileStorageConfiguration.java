@@ -156,12 +156,10 @@ public class FileStorageConfiguration implements WebMvcConfigurer {
     
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Serve static files from uploads directory
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + getBaseDirectoryPath().toString() + "/");
-        
-        // Serve thumbnails
-        registry.addResourceHandler("/thumbnails/**")
-                .addResourceLocations("file:" + getThumbnailPath().toString() + "/");
+        // SECURITY: Do NOT serve uploads or thumbnails via static resource handlers.
+        // All file access must go through authenticated controllers (FileDownloadController)
+        // to enforce tenant isolation and access control.
+        // Previously this mapped /uploads/** and /thumbnails/** directly to filesystem,
+        // bypassing Spring Security entirely.
     }
 }

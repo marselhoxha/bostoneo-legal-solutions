@@ -73,6 +73,16 @@ public class AuditLog {
     @Column(name = "timestamp", nullable = false)
     private LocalDateTime timestamp;
 
+    /**
+     * SHA-256 hash of previous audit log entry for tamper detection.
+     * Chain: hash = SHA256(previousHash + action + entityType + entityId + userId + timestamp)
+     */
+    @Column(name = "previous_hash", length = 64)
+    private String previousHash;
+
+    @Column(name = "entry_hash", length = 64)
+    private String entryHash;
+
     @PrePersist
     protected void onCreate() {
         if (timestamp == null) {

@@ -18,7 +18,7 @@ import java.time.LocalDate;
 @Slf4j
 public class ECFRService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate(new org.springframework.http.client.SimpleClientHttpRequestFactory() {{ setConnectTimeout(java.time.Duration.ofSeconds(10)); setReadTimeout(java.time.Duration.ofSeconds(30)); }});
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String ECFR_BASE_URL = "https://www.ecfr.gov/api/versioner/v1";

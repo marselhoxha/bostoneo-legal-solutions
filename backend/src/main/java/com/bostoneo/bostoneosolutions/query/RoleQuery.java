@@ -32,7 +32,7 @@ public class RoleQuery {
     // Role Hierarchy and Expiration queries
     public static final String SET_PRIMARY_ROLE_QUERY = "UPDATE user_roles SET is_primary = (CASE WHEN role_id = :roleId THEN TRUE ELSE FALSE END) WHERE user_id = :userId";
     public static final String SET_ROLE_EXPIRATION_QUERY = "UPDATE user_roles SET expires_at = :expiresAt WHERE user_id = :userId AND role_id = :roleId";
-    public static final String SELECT_USERS_BY_ROLE_ID_QUERY = "SELECT u.* FROM users u JOIN user_roles ur ON u.id = ur.user_id WHERE ur.role_id = :roleId";
+    public static final String SELECT_USERS_BY_ROLE_ID_QUERY = "SELECT u.* FROM users u JOIN user_roles ur ON u.id = ur.user_id WHERE ur.role_id = :roleId AND u.organization_id = :organizationId";
     
     // Permission queries
     public static final String GET_USER_PERMISSIONS_QUERY = "SELECT DISTINCT p.name FROM permissions p " +

@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.model.Role;
 import com.bostoneo.bostoneosolutions.repository.RoleRepository;
 import com.bostoneo.bostoneosolutions.rowmapper.PermissionRowMapper;
 import com.bostoneo.bostoneosolutions.rowmapper.RoleRowMapper;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -116,6 +117,7 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     @Override
     public void addRoleToUser(Long userId, String roleName) {
         try{
+            verifyUserBelongsToCurrentTenant(userId);
             Role role =jdbc.queryForObject(SELECT_ROLE_BY_NAME_QUERY, Map.of("name", roleName), new RoleRowMapper());
             jdbc.update(INSERT_ROLE_TO_USER_QUERY, Map.of("userId", userId, "roleId", requireNonNull(role).getId()));
 
@@ -123,6 +125,7 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
             throw new ApiException("No role found by name:" + ROLE_USER.name());
 
         }catch (Exception exception) {
+            if (exception instanceof ApiException) throw (ApiException) exception;
             throw new ApiException("An error occurred. Please try again");
 
         }
@@ -149,6 +152,7 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     @Override
     public void updateUserRole(Long userId, String roleName) {
         try {
+            verifyUserBelongsToCurrentTenant(userId);
             Role role = jdbc.queryForObject(SELECT_ROLE_BY_NAME_QUERY, of("name", roleName), new RoleRowMapper());
             // Safe update: clear primary flags, then upsert the new role
             jdbc.update("UPDATE user_roles SET is_primary = false WHERE user_id = :userId", of("userId", userId));
@@ -209,6 +213,7 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     @Override
     public void removeRoleFromUser(Long userId, Long roleId) {
         try {
+            verifyUserBelongsToCurrentTenant(userId);
             jdbc.update(REMOVE_ROLE_FROM_USER_QUERY, of("userId", userId, "roleId", roleId));
         } catch (Exception exception) {
             log.error(exception.getMessage());
@@ -256,6 +261,7 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     @Override
     public void setPrimaryRole(Long userId, Long roleId) {
         try {
+            verifyUserBelongsToCurrentTenant(userId);
             jdbc.update(SET_PRIMARY_ROLE_QUERY, of("userId", userId, "roleId", roleId));
         } catch (Exception exception) {
             log.error("Error setting primary role: {}", exception.getMessage());
@@ -266,6 +272,7 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     @Override
     public void setRoleExpiration(Long userId, Long roleId, LocalDateTime expiresAt) {
         try {
+            verifyUserBelongsToCurrentTenant(userId);
             jdbc.update(SET_ROLE_EXPIRATION_QUERY, of("userId", userId, "roleId", roleId, "expiresAt", expiresAt));
         } catch (Exception exception) {
             log.error("Error setting role expiration: {}", exception.getMessage());
@@ -289,9 +296,36 @@ public class RoleRepositoryImpl implements RoleRepository<Role> {
     }
     
     // Add missing method for getting users by role ID
+    /**
+     * Verify that the target user belongs to the current tenant.
+     * Skips check for SUPERADMIN (null tenant) context.
+     */
+    private void verifyUserBelongsToCurrentTenant(Long userId) {
+        Long organizationId = TenantContext.getCurrentTenant();
+        if (organizationId == null) return; // SUPERADMIN bypass
+        try {
+            Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE id = :userId AND organization_id = :organizationId",
+                of("userId", userId, "organizationId", organizationId), Integer.class);
+            if (count == null || count == 0) {
+                throw new ApiException("User does not belong to your organization");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("An error occurred verifying user membership");
+        }
+    }
+
     public List<com.bostoneo.bostoneosolutions.model.User> getUsersByRoleId(Long roleId) {
         try {
-            return jdbc.query(SELECT_USERS_BY_ROLE_ID_QUERY, of("roleId", roleId), new com.bostoneo.bostoneosolutions.rowmapper.UserRowMapper());
+            Long organizationId = TenantContext.getCurrentTenant();
+            if (organizationId == null) {
+                // SUPERADMIN context: return all users (no tenant filter)
+                return jdbc.query("SELECT u.* FROM users u JOIN user_roles ur ON u.id = ur.user_id WHERE ur.role_id = :roleId",
+                        of("roleId", roleId), new com.bostoneo.bostoneosolutions.rowmapper.UserRowMapper());
+            }
+            return jdbc.query(SELECT_USERS_BY_ROLE_ID_QUERY, of("roleId", roleId, "organizationId", organizationId), new com.bostoneo.bostoneosolutions.rowmapper.UserRowMapper());
         } catch (Exception exception) {
             log.error("Error getting users by role: {}", exception.getMessage());
             throw new ApiException("An error occurred while fetching users by role");

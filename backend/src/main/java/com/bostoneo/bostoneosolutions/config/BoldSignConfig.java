@@ -162,6 +162,10 @@ public class BoldSignConfig {
      */
     @Bean
     public RestTemplate restTemplate() {
-        return new RestTemplate();
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(java.time.Duration.ofSeconds(10));
+        factory.setReadTimeout(java.time.Duration.ofSeconds(30));
+        return new RestTemplate(factory);
     }
 }

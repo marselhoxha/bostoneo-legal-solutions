@@ -106,7 +106,7 @@ public class IntakeSubmissionResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Marking submission {} as reviewed by attorney: {}", id, username);
         
-        Long attorneyId = 1L; // Extract from userDetails in real implementation
+        Long attorneyId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         String reviewNotes = reviewData.get("reviewNotes");
         
         IntakeSubmission submission = intakeSubmissionService.markAsReviewed(id, attorneyId, reviewNotes);
@@ -124,7 +124,7 @@ public class IntakeSubmissionResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Converting submission {} to lead by attorney: {}", id, username);
         
-        Long attorneyId = 1L; // Extract from userDetails in real implementation
+        Long attorneyId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         
         Lead lead = intakeSubmissionService.convertToLead(
             id, 
@@ -150,7 +150,7 @@ public class IntakeSubmissionResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Rejecting submission {} by attorney: {}", id, username);
         
-        Long attorneyId = 1L; // Extract from userDetails in real implementation
+        Long attorneyId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         String rejectionReason = rejectionData.get("rejectionReason");
         
         IntakeSubmission submission = intakeSubmissionService.markAsRejected(id, attorneyId, rejectionReason);
@@ -168,7 +168,7 @@ public class IntakeSubmissionResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Marking submission {} as spam by attorney: {}", id, username);
         
-        Long attorneyId = 1L; // Extract from userDetails in real implementation
+        Long attorneyId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         String spamReason = spamData.get("spamReason");
         
         IntakeSubmission submission = intakeSubmissionService.markAsSpam(id, attorneyId, spamReason);
@@ -190,7 +190,7 @@ public class IntakeSubmissionResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Bulk reviewing {} submissions by attorney: {}", submissionIds.size(), username);
         
-        Long attorneyId = 1L; // Extract from userDetails in real implementation
+        Long attorneyId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         
         List<IntakeSubmission> updatedSubmissions = intakeSubmissionService.bulkReview(submissionIds, attorneyId, reviewNotes);
         
@@ -214,7 +214,7 @@ public class IntakeSubmissionResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Bulk converting {} submissions to leads by attorney: {}", submissionIds.size(), username);
         
-        Long attorneyId = 1L; // Extract from userDetails in real implementation
+        Long attorneyId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         
         List<Lead> createdLeads = intakeSubmissionService.bulkConvertToLeads(submissionIds, attorneyId, assignToAttorney, notes);
         
@@ -238,7 +238,7 @@ public class IntakeSubmissionResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Bulk rejecting {} submissions by attorney: {}", submissionIds.size(), username);
         
-        Long attorneyId = 1L; // Extract from userDetails in real implementation
+        Long attorneyId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         
         List<IntakeSubmission> rejectedSubmissions = intakeSubmissionService.bulkReject(submissionIds, attorneyId, rejectionReason);
         
@@ -261,7 +261,7 @@ public class IntakeSubmissionResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Bulk marking {} submissions as spam by attorney: {}", submissionIds.size(), username);
         
-        Long attorneyId = 1L; // Extract from userDetails in real implementation
+        Long attorneyId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         
         List<IntakeSubmission> spamSubmissions = intakeSubmissionService.bulkMarkAsSpam(submissionIds, attorneyId, spamReason);
         

@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 @Slf4j
 public class JustiaService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate(new org.springframework.http.client.SimpleClientHttpRequestFactory() {{ setConnectTimeout(java.time.Duration.ofSeconds(10)); setReadTimeout(java.time.Duration.ofSeconds(30)); }});
 
     // Pattern to match U.S. Supreme Court citations (e.g., "411 U.S. 792")
     private static final Pattern US_SUPREME_COURT_PATTERN = Pattern.compile(

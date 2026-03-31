@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/ai/test")
-@org.springframework.context.annotation.Profile("!prod")
+@org.springframework.context.annotation.Profile("dev") // SECURITY: Only available in dev (not staging or prod)
 @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN')")
 @RequiredArgsConstructor
 @Slf4j

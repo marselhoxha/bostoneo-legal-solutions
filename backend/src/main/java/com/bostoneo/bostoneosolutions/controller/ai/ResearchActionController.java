@@ -16,7 +16,9 @@ import java.util.Map;
 
 import static java.time.LocalDateTime.now;
 import static org.springframework.http.HttpStatus.CREATED;
+import org.springframework.security.access.prepost.PreAuthorize;
 
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_PARALEGAL', 'ROLE_ASSOCIATE')")
 @RestController
 @RequestMapping("/api/ai/research/actions")
 @RequiredArgsConstructor

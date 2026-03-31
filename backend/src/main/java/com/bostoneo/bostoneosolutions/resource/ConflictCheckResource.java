@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/conflict-checks")
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY')")
 @RequiredArgsConstructor
 @Slf4j
 public class ConflictCheckResource {
@@ -96,20 +98,9 @@ public class ConflictCheckResource {
         return ResponseEntity.ok(updatedDTO);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> deleteConflictCheck(
-            @PathVariable Long id,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        
-        log.info("Deleting conflict check {} by user: {}", id, userDetails.getUsername());
-        
-        conflictCheckService.deleteById(id);
-        
-        return ResponseEntity.ok(Map.of(
-            "success", "true",
-            "message", "ConflictCheck deleted successfully"
-        ));
-    }
+    // SECURITY: Conflict checks are compliance records and must not be permanently deleted.
+    // Use the PUT /{id} endpoint to update status to "ARCHIVED" instead.
+    // DELETE endpoint removed per compliance audit finding H16.
 
     // Conflict checking operations
     @PostMapping("/check-client")
@@ -172,7 +163,7 @@ public class ConflictCheckResource {
         log.info("Reviewing conflict check {} with resolution: {} by user: {}", 
                 id, resolution, userDetails.getUsername());
         
-        Long userId = 1L; // Extract from userDetails in real implementation
+        Long userId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         ConflictCheck conflictCheck = conflictCheckService.reviewConflictCheck(id, userId, resolution, notes);
         ConflictCheckDTO conflictCheckDTO = conflictCheckMapper.toDTO(conflictCheck);
         
@@ -191,7 +182,7 @@ public class ConflictCheckResource {
         
         log.info("Resolving conflict check {} by user: {}", id, userDetails.getUsername());
         
-        Long userId = 1L; // Extract from userDetails in real implementation
+        Long userId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         ConflictCheck conflictCheck = conflictCheckService.resolveConflict(id, userId, resolution, notes, waiverDocumentPath);
         ConflictCheckDTO conflictCheckDTO = conflictCheckMapper.toDTO(conflictCheck);
         

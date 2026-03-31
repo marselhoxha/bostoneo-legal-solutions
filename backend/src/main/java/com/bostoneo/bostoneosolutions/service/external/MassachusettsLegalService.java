@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class MassachusettsLegalService {
 
     private final ExternalApiProperties apiProperties;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate(new org.springframework.http.client.SimpleClientHttpRequestFactory() {{ setConnectTimeout(java.time.Duration.ofSeconds(10)); setReadTimeout(java.time.Duration.ofSeconds(30)); }});
 
     // Rate limiting
     private Instant lastRequestTime = Instant.MIN;

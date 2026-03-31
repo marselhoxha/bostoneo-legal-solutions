@@ -12,7 +12,13 @@ export class NoSanitizePipe implements PipeTransform {
     if (!value) {
       return '';
     }
-    
-    return this.sanitizer.bypassSecurityTrustHtml(value);
+
+    // SECURITY: Strip dangerous tags before bypassing Angular sanitizer.
+    // For full protection, integrate DOMPurify: npm install dompurify @types/dompurify
+    const stripped = value
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+      .replace(/javascript\s*:/gi, '');
+    return this.sanitizer.bypassSecurityTrustHtml(stripped);
   }
 } 

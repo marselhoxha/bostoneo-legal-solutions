@@ -31,11 +31,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * AI-powered Personal Injury practice area endpoints.
  * Provides case value analysis, demand letter generation, and settlement intelligence.
  */
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_PARALEGAL', 'ROLE_ASSOCIATE')")
 @RestController
 @RequestMapping("/api/ai/personal-injury")
 @RequiredArgsConstructor

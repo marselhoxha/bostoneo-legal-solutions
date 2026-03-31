@@ -10,7 +10,9 @@ import org.springframework.web.context.request.async.DeferredResult;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.security.access.prepost.PreAuthorize;
 
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_PARALEGAL', 'ROLE_ASSOCIATE')")
 @RestController
 @RequestMapping("/api/ai/real-estate")
 @RequiredArgsConstructor

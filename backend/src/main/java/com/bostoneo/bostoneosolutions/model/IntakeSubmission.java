@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
@@ -45,6 +46,7 @@ public class IntakeSubmission {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Lead lead;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "submission_data", columnDefinition = "TEXT", nullable = false)
     private String submissionData;
 

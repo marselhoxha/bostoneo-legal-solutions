@@ -55,8 +55,8 @@ public class EnhancedSecurityConfig {
             .contentSecurityPolicy(csp -> csp
                 .policyDirectives(buildCspPolicy())
             )
-            // Frame Options - disable to allow PDF iframe embedding (CSP frame-ancestors handles security)
-            .frameOptions(frame -> frame.disable())
+            // Frame Options - SAMEORIGIN as fallback for older browsers (CSP frame-ancestors is primary)
+            .frameOptions(frame -> frame.sameOrigin())
             // Content Type Options - prevent MIME sniffing
             .contentTypeOptions(contentType -> {})
             // XSS Protection

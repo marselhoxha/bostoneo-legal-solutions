@@ -24,7 +24,7 @@ import java.util.*;
 public class FederalRegisterService {
 
     private final ExternalApiProperties apiProperties;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate(new org.springframework.http.client.SimpleClientHttpRequestFactory() {{ setConnectTimeout(java.time.Duration.ofSeconds(10)); setReadTimeout(java.time.Duration.ofSeconds(30)); }});
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<FrDocument> searchDocuments(String query, String documentType, LocalDate fromDate, LocalDate toDate) {

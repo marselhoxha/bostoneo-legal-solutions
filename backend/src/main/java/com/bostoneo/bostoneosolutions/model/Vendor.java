@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -28,6 +29,7 @@ public class Vendor {
     @Column(name = "contact")
     private String contact;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "tax_id")
     private String taxId;
 

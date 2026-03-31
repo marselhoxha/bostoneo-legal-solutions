@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 @Slf4j
 public class DirectWebScraperService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate(new org.springframework.http.client.SimpleClientHttpRequestFactory() {{ setConnectTimeout(java.time.Duration.ofSeconds(10)); setReadTimeout(java.time.Duration.ofSeconds(30)); }});
 
     /**
      * Main entry point - tries to scrape known sources directly

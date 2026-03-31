@@ -19,7 +19,7 @@ export class SafePipe implements PipeTransform {
       case 'resourceUrl':
         return this.sanitizer.bypassSecurityTrustResourceUrl(value);
       default:
-        return this.sanitizer.bypassSecurityTrustHtml(value);
+        throw new Error(`SafePipe: unknown type "${type}". Use 'html', 'style', 'url', or 'resourceUrl'.`);
     }
   }
 } 

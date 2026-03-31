@@ -16,11 +16,13 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static java.time.LocalDateTime.now;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * REST Controller for legal research conversations
  * Manages conversation sessions and messages for the legal research feature
  */
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_PARALEGAL', 'ROLE_ASSOCIATE')")
 @RestController
 @RequestMapping("/api/legal/research/conversations")
 @RequiredArgsConstructor

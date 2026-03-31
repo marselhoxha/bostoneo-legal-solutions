@@ -65,6 +65,9 @@ public class AuditLogServiceImpl implements AuditLogService {
                     .timestamp(LocalDateTime.now())
                     .build();
 
+            // Tamper-evident hash chain: compute entry hash before saving
+            computeAuditHash(auditLog);
+
             AuditLog saved = auditLogRepository.save(auditLog);
             log.debug("Audit log created: {} {} on {} {}", action, entityType, entityId, description);
             return saved;
@@ -157,5 +160,40 @@ public class AuditLogServiceImpl implements AuditLogService {
             log.debug("Could not get user agent: {}", e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Compute SHA-256 hash chain for tamper detection.
+     * Each entry's hash = SHA256(previousHash + action + entityType + entityId + userId + timestamp)
+     */
+    private void computeAuditHash(AuditLog auditLog) {
+        try {
+            // Get the hash of the most recent entry
+            String previousHash = "GENESIS";
+            try {
+                Page<AuditLog> lastEntry = auditLogRepository.findAll(PageRequest.of(0, 1, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id")));
+                if (lastEntry.hasContent()) {
+                    String lastHash = lastEntry.getContent().get(0).getEntryHash();
+                    if (lastHash != null) previousHash = lastHash;
+                }
+            } catch (Exception ignored) {}
+
+            auditLog.setPreviousHash(previousHash);
+
+            String data = previousHash
+                    + "|" + auditLog.getAction()
+                    + "|" + auditLog.getEntityType()
+                    + "|" + auditLog.getEntityId()
+                    + "|" + auditLog.getUserId()
+                    + "|" + auditLog.getTimestamp();
+
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) hex.append(String.format("%02x", b));
+            auditLog.setEntryHash(hex.toString());
+        } catch (Exception e) {
+            log.warn("Failed to compute audit hash: {}", e.getMessage());
+        }
     }
 }

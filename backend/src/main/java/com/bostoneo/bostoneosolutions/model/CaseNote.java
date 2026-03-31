@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -38,6 +39,7 @@ public class CaseNote {
     @Column(name = "title", nullable = false)
     private String title;
     
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
     

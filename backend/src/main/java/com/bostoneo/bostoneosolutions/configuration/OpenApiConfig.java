@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@org.springframework.context.annotation.Profile("!prod")
 public class OpenApiConfig {
 
     @Bean

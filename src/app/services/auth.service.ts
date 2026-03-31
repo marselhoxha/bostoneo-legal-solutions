@@ -78,11 +78,15 @@ export class AuthService {
   }
 
   logout(): void {
-    // Clear all storage
+    // Clear ALL possible token keys (login, refresh, and legacy keys use different names)
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
-    
+    localStorage.removeItem('[KEY] TOKEN');
+    localStorage.removeItem('[REFRESH] REFRESH_TOKEN');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('currentUser');
+
     // Clear all session storage to prevent stale data
     sessionStorage.clear();
     

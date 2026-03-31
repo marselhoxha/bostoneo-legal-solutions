@@ -48,9 +48,11 @@ public class LegalCase {
     @Column(name = "title", nullable = false)
     private String title;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "client_name", nullable = false)
     private String clientName;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "client_email", nullable = false)
     private String clientEmail;
     
@@ -210,6 +212,7 @@ public class LegalCase {
     @Column(name = "insurance_company")
     private String insuranceCompany;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "insurance_policy_number")
     private String insurancePolicyNumber;
 

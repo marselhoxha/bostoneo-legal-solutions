@@ -152,12 +152,12 @@ public class ClaudeSonnet4Service implements AIService {
                     cancellationService.clearCancellation(sessionId);
                 }
 
-                // Audit log: success
+                // Audit log: success (use redacted prompt to protect PII)
                 aiAuditLogService.logAiCall(
                         auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
                         auditCtx.organizationId, "AI_COMPLETION", "AI_QUERY",
                         sessionId, auditCtx.ipAddress, auditCtx.userAgent,
-                        prompt, result, true, null);
+                        redactedPrompt, result, true, null);
 
                 return result;
 
@@ -166,12 +166,12 @@ public class ClaudeSonnet4Service implements AIService {
                 if (sessionId != null) {
                     cancellationService.clearCancellation(sessionId);
                 }
-                // Audit log: failure
+                // Audit log: failure (use redacted prompt to protect PII)
                 aiAuditLogService.logAiCall(
                         auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
                         auditCtx.organizationId, "AI_COMPLETION", "AI_QUERY",
                         sessionId, auditCtx.ipAddress, auditCtx.userAgent,
-                        prompt, null, false, e.getMessage());
+                        redactedPrompt, null, false, e.getMessage());
                 throw new RuntimeException("AI service unavailable: " + e.getMessage(), e);
             }
         });
@@ -1129,12 +1129,12 @@ public class ClaudeSonnet4Service implements AIService {
 
         return executeAgenticLoop(messageHistory, systemMessage, 0, sessionId, caseId, orgId, questionType).toFuture()
                 .whenComplete((result, error) -> {
-                    // Audit log the agentic research call
+                    // Audit log the agentic research call (use redacted prompt to protect PII)
                     aiAuditLogService.logAiCall(
                             auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
                             auditCtx.organizationId, "AI_AGENTIC_RESEARCH", "AI_RESEARCH",
                             caseId, auditCtx.ipAddress, auditCtx.userAgent,
-                            prompt, result, error == null, error != null ? error.getMessage() : null);
+                            redactedPromptTools, result, error == null, error != null ? error.getMessage() : null);
                 });
     }
 
@@ -1763,7 +1763,7 @@ public class ClaudeSonnet4Service implements AIService {
                                 auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
                                 auditCtx.organizationId, "AI_COMPLETION_STREAM", "AI_QUERY",
                                 sessionId, auditCtx.ipAddress, auditCtx.userAgent,
-                                prompt, "(streamed)", true, null);
+                                redactedPrompt, "(streamed)", true, null);
                         onComplete.run();
                     })
                     .onError(error -> {
@@ -1775,7 +1775,7 @@ public class ClaudeSonnet4Service implements AIService {
                                 auditCtx.userId, auditCtx.userEmail, auditCtx.userRole,
                                 auditCtx.organizationId, "AI_COMPLETION_STREAM", "AI_QUERY",
                                 sessionId, auditCtx.ipAddress, auditCtx.userAgent,
-                                prompt, null, false, error.getMessage());
+                                redactedPrompt, null, false, error.getMessage());
                         onError.accept(error);
                     })
                     .build();

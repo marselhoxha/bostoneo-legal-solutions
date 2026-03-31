@@ -15,11 +15,13 @@ import java.util.List;
 import static java.time.LocalDateTime.now;
 import static java.util.Map.of;
 import static org.springframework.http.HttpStatus.OK;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * Controller for AI-powered attorney briefings.
  * Provides personalized daily briefings based on schedule, urgent items, and team activity.
  */
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_PARALEGAL', 'ROLE_ASSOCIATE')")
 @RestController
 @RequestMapping("/api/ai/briefing")
 @RequiredArgsConstructor

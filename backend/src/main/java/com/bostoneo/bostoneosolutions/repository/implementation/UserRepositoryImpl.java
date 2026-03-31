@@ -284,7 +284,8 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             // NOTE: We're NOT deleting time_entries as they are needed for billing/audit
             
             // FINALLY, delete the user
-            int rowsAffected = jdbc.update(DELETE_USER_QUERY, of("userId", id));
+            Long organizationId = TenantContext.getCurrentTenant();
+            int rowsAffected = jdbc.update(DELETE_USER_QUERY, of("userId", id, "organizationId", organizationId));
             
             return rowsAffected > 0;
             
@@ -450,7 +451,8 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         if(!password.equals(confirmPassword)) throw new ApiException("Passwords don't match. Please try again.");
         passwordPolicyValidator.validate(password);
         try {
-            jdbc.update(UPDATE_USER_PASSWORD_BY_USER_ID_QUERY, of("id", userId, "password", encoder.encode(password)));
+            Long organizationId = TenantContext.getCurrentTenant();
+            jdbc.update(UPDATE_USER_PASSWORD_BY_USER_ID_QUERY, of("id", userId, "password", encoder.encode(password), "organizationId", organizationId));
             // Clear force_password_change flag after user sets their own password
             jdbc.update("UPDATE users SET force_password_change = false WHERE id = :id", of("id", userId));
         } catch (Exception exception) {
@@ -493,7 +495,8 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         User user = get(id);
         if(encoder.matches(currentPassword, user.getPassword())) {
             try {
-                jdbc.update(UPDATE_USER_PASSWORD_BY_ID_QUERY, of("userId", id, "password", encoder.encode(newPassword)));
+                Long organizationId = TenantContext.getCurrentTenant();
+                jdbc.update(UPDATE_USER_PASSWORD_BY_ID_QUERY, of("userId", id, "password", encoder.encode(newPassword), "organizationId", organizationId));
                 // Clear force_password_change flag after user sets their own password
                 jdbc.update("UPDATE users SET force_password_change = false WHERE id = :id", of("id", id));
             }  catch (Exception exception) {
@@ -507,7 +510,8 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     @Override
     public void updateAccountSettings(Long userId, Boolean enabled, Boolean notLocked) {
         try {
-            jdbc.update(UPDATE_USER_SETTINGS_QUERY, of("userId", userId, "enabled", enabled, "notLocked", notLocked));
+            Long organizationId = TenantContext.getCurrentTenant();
+            jdbc.update(UPDATE_USER_SETTINGS_QUERY, of("userId", userId, "enabled", enabled, "notLocked", notLocked, "organizationId", organizationId));
         } catch (Exception exception) {
             log.error(exception.getMessage());
             throw new ApiException("An error occurred. Please try again.");
@@ -532,7 +536,8 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         String userImageUrl = setUserImageUrl(user.getEmail());
         user.setImageUrl(userImageUrl);
         saveImage(user.getEmail(), image);
-        jdbc.update(UPDATE_USER_IMAGE_QUERY, of("imageUrl", userImageUrl, "id", user.getId()));
+        Long organizationId = TenantContext.getCurrentTenant();
+        jdbc.update(UPDATE_USER_IMAGE_QUERY, of("imageUrl", userImageUrl, "id", user.getId(), "organizationId", organizationId));
     }
 
     @Override
@@ -699,6 +704,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     }
 
     private SqlParameterSource getUserDetailsSqlParameterSource(UpdateForm user) {
+        Long organizationId = TenantContext.getCurrentTenant();
         return new MapSqlParameterSource()
                 .addValue("id", user.getId())
                 .addValue("firstName", user.getFirstName())
@@ -707,7 +713,8 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
                 .addValue("phone", user.getPhone())
                 .addValue("address", user.getAddress())
                 .addValue("title", user.getTitle())
-                .addValue("bio", user.getBio());
+                .addValue("bio", user.getBio())
+                .addValue("organizationId", organizationId);
     }
 
     private String getVerificationUrl(String key, String type) {

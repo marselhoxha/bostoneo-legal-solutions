@@ -25,7 +25,7 @@ public class CourtListenerService {
 
     private final ExternalApiProperties apiProperties;
     private final JustiaService justiaService;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate(new org.springframework.http.client.SimpleClientHttpRequestFactory() {{ setConnectTimeout(java.time.Duration.ofSeconds(10)); setReadTimeout(java.time.Duration.ofSeconds(30)); }});
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Universal citation pattern - matches ANY standard legal citation format

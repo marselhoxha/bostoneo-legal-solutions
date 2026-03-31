@@ -33,7 +33,7 @@ public class TimeEntryResource {
 
     // Create new time entry
     @PostMapping
-    // @PreAuthorize("hasAuthority('TIME_TRACKING:CREATE')")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:CREATE')")
     public ResponseEntity<HttpResponse> createTimeEntry(@Valid @RequestBody TimeEntryDTO timeEntryDTO) {
         TimeEntryDTO created = timeTrackingService.createTimeEntry(timeEntryDTO);
         return ResponseEntity.status(CREATED).body(
@@ -208,7 +208,7 @@ public class TimeEntryResource {
 
     // Update time entry
     @PutMapping("/{id}")
-    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
     public ResponseEntity<HttpResponse> updateTimeEntry(@PathVariable Long id, @Valid @RequestBody TimeEntryDTO timeEntryDTO) {
         TimeEntryDTO updated = timeTrackingService.updateTimeEntry(id, timeEntryDTO);
         return ResponseEntity.ok(
@@ -224,7 +224,7 @@ public class TimeEntryResource {
 
     // Update time entry status
     @PatchMapping("/{id}/status")
-    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
     public ResponseEntity<HttpResponse> updateTimeEntryStatus(@PathVariable Long id, @RequestBody Map<String, String> request) {
         TimeEntryStatus status = TimeEntryStatus.valueOf(request.get("status"));
         TimeEntryDTO updated = timeTrackingService.updateTimeEntryStatus(id, status);
@@ -241,7 +241,7 @@ public class TimeEntryResource {
 
     // Update time entry with invoice information (status + invoiceId)
     @PatchMapping("/{id}/invoice")
-    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
     public ResponseEntity<HttpResponse> updateTimeEntryInvoice(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         Long invoiceId = request.get("invoiceId") != null ? Long.valueOf(request.get("invoiceId").toString()) : null;
         String statusStr = (String) request.get("status");
@@ -261,7 +261,7 @@ public class TimeEntryResource {
 
     // Bulk update time entries with invoice information
     @PatchMapping("/bulk/invoice")
-    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
     public ResponseEntity<HttpResponse> bulkUpdateTimeEntriesForInvoice(@RequestBody Map<String, Object> request) {
         List<Long> timeEntryIds = ((List<?>) request.get("timeEntryIds")).stream().map(id -> Long.valueOf(id.toString())).collect(java.util.stream.Collectors.toList());
         Long invoiceId = request.get("invoiceId") != null ? Long.valueOf(request.get("invoiceId").toString()) : null;
@@ -288,7 +288,7 @@ public class TimeEntryResource {
 
     // Submit time entry for approval
     @PostMapping("/{id}/submit")
-    // @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
     public ResponseEntity<HttpResponse> submitTimeEntry(@PathVariable Long id) {
         TimeEntryDTO submitted = timeTrackingService.submitTimeEntry(id);
         return ResponseEntity.ok(
@@ -304,7 +304,7 @@ public class TimeEntryResource {
 
     // Approve time entry
     @PostMapping("/{id}/approve")
-    // @PreAuthorize("hasAuthority('TIME_TRACKING:APPROVE')")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:APPROVE')")
     public ResponseEntity<HttpResponse> approveTimeEntry(@PathVariable Long id) {
         TimeEntryDTO approved = timeTrackingService.approveTimeEntry(id);
         return ResponseEntity.ok(
@@ -320,7 +320,7 @@ public class TimeEntryResource {
 
     // Reject time entry
     @PostMapping("/{id}/reject")
-    // @PreAuthorize("hasAuthority('TIME_TRACKING:APPROVE')")
+    @PreAuthorize("hasAuthority('TIME_TRACKING:APPROVE')")
     public ResponseEntity<HttpResponse> rejectTimeEntry(@PathVariable Long id, @RequestBody Map<String, String> request) {
         String reason = request.get("reason");
         TimeEntryDTO rejected = timeTrackingService.rejectTimeEntry(id, reason);
