@@ -157,7 +157,7 @@ jobs:
   build-push:
     name: Build and Push
     runs-on: ubuntu-latest
-    needs: [security-scan]
+    needs: [backend-test, frontend-test]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
 
     outputs:
@@ -374,7 +374,7 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-latest
-    needs: [security-scan]
+    needs: [backend-test, frontend-test]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
 
     steps:
