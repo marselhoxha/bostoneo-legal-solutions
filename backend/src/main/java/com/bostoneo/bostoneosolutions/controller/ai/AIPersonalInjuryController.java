@@ -1069,6 +1069,8 @@ public class AIPersonalInjuryController {
 
             6. TABLE FORMAT: Use standard markdown pipe tables. Every table needs: header row, separator row (|---|---|), data rows, and a bold Total row at the bottom.
 
+            7. HEADING FORMAT: Number main section headings with Roman numerals: "I. Facts and Liability", "II. Injuries and Medical Treatment", "III. Damages", etc. Use Arabic numbers for subsections (1, 2, 3). Do NOT use "Section 1:", "Section 2:" — the "SECTION N:" labels below are internal prompt directives only, not heading formats.
+
             ============================================================
             SECTION 1: SALUTATION & INTRODUCTION
             ============================================================

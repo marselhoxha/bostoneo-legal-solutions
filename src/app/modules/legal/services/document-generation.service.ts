@@ -707,10 +707,12 @@ export class DocumentGenerationService {
    * Export content to PDF - no document ID required
    * Used for workflow drafts that haven't been saved to database
    */
-  exportContentToPDF(content: string, title: string): Observable<HttpResponse<Blob>> {
+  exportContentToPDF(content: string, title: string, documentType?: string): Observable<HttpResponse<Blob>> {
+    const body: any = { content, title };
+    if (documentType) body.documentType = documentType;
     return this.http.post(
       `${environment.apiUrl}/api/legal/ai-workspace/export/content/pdf`,
-      { content, title },
+      body,
       {
         responseType: 'blob',
         observe: 'response'

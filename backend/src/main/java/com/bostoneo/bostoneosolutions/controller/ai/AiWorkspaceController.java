@@ -1104,15 +1104,16 @@ public class AiWorkspaceController {
         try {
             String content = request.get("content");
             String title = request.getOrDefault("title", "Document");
+            String documentType = request.get("documentType");
 
             if (content == null || content.isEmpty()) {
                 return ResponseEntity.badRequest().build();
             }
 
-            log.info("Exporting content to PDF, title={}", title);
+            log.info("Exporting content to PDF, title={}, documentType={}", title, documentType);
 
             // Generate PDF document from content
-            byte[] pdfDoc = documentService.generatePdfDocumentFromContent(content, title);
+            byte[] pdfDoc = documentService.generatePdfDocumentFromContent(content, title, documentType);
 
             // Sanitize filename — use document service for consistent naming
             String filename = documentService.sanitizeFilenamePublic(title) + ".pdf";

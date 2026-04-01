@@ -2186,7 +2186,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     const content = this.demandDocumentContent || this.generatedDemand;
 
     const exportFn = format === 'pdf'
-      ? this.documentGenerationService.exportContentToPDF(content, title)
+      ? this.documentGenerationService.exportContentToPDF(content, title, 'demand_letter')
       : this.documentGenerationService.exportContentToWord(content, title);
 
     exportFn.subscribe({

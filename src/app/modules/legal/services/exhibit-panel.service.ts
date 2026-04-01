@@ -133,7 +133,10 @@ export class ExhibitPanelService {
       // Single-level numbers get trailing dot (e.g. "1.", "2."), multi-level don't (e.g. "2.1", "3.2")
       const numbering = parts.length === 1 ? `${parts[0]}.` : parts.join('.');
 
-      const text = heading.textContent?.trim() || '';
+      let text = heading.textContent?.trim() || '';
+      // Strip leading numbering from AI-generated headings to avoid duplication
+      // Handles: "I.", "II.", "III.", "IV.", "1.", "2.", "3.1", "A.", "B." etc.
+      text = text.replace(/^[IVXLCDM]+\.\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/^[A-Z]\.\s*/, '');
       // Use deterministic index-based IDs (CKEditor heading IDs are unstable across rebuilds)
       const id = `heading-${entries.length}`;
 

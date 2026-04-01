@@ -2211,6 +2211,8 @@ public class AiWorkspaceDocumentService {
 
             6. TABLE FORMAT: Use standard markdown pipe tables. Every table needs: header row, separator row (|---|---|), data rows, and a bold Total row at the bottom.
 
+            7. HEADING FORMAT: Number main section headings with Roman numerals: "I. Facts and Liability", "II. Injuries and Medical Treatment", "III. Damages", etc. Use Arabic numbers for subsections (1, 2, 3). Do NOT use "Section 1:", "Section 2:" — the "SECTION N:" labels below are internal prompt directives only, not heading formats.
+
             ============================================================
             SECTION 1: SALUTATION & INTRODUCTION
             ============================================================
@@ -4004,7 +4006,11 @@ public class AiWorkspaceDocumentService {
      * Falls back to markdown pipeline for non-HTML content.
      */
     public byte[] generatePdfDocumentFromContent(String content, String title) {
-        log.info("Generating PDF document from content, title={}", title);
+        return generatePdfDocumentFromContent(content, title, null);
+    }
+
+    public byte[] generatePdfDocumentFromContent(String content, String title, String documentType) {
+        log.info("Generating PDF document from content, title={}, type={}", title, documentType);
 
         if (content == null || content.isEmpty()) {
             throw new IllegalArgumentException("Content cannot be empty");
@@ -4016,18 +4022,22 @@ public class AiWorkspaceDocumentService {
                          content.contains("<h2") || content.contains("<table");
 
         if (isHtml) {
-            return generateStyledHtmlPdf(content, title);
+            return generateStyledHtmlPdf(content, title, documentType);
         }
 
         // Fallback: markdown pipeline for plain text content
         return generateMarkdownPdf(content, title);
     }
 
+    private byte[] generateStyledHtmlPdf(String htmlContent, String title) {
+        return generateStyledHtmlPdf(htmlContent, title, null);
+    }
+
     /**
      * Generate PDF from HTML content using iText HtmlConverter.
      * Wraps the editor HTML in a styled HTML document that matches the frontend preview.
      */
-    private byte[] generateStyledHtmlPdf(String htmlContent, String title) {
+    private byte[] generateStyledHtmlPdf(String htmlContent, String title, String documentType) {
         try {
             // Extract footer from HTML — it will be drawn at absolute page bottom via PdfCanvas
             String footerText = null;
@@ -4053,7 +4063,7 @@ public class AiWorkspaceDocumentService {
             htmlContent = wrapSectionsForPageBreaks(htmlContent);
 
             // Build a complete HTML document with embedded CSS matching the frontend
-            String styledHtml = buildStyledHtmlDocument(htmlContent, title, hasFooter);
+            String styledHtml = buildStyledHtmlDocument(htmlContent, title, hasFooter, documentType);
 
             // Use iText HtmlConverter to render the styled HTML → PDF
             java.io.ByteArrayInputStream htmlStream = new java.io.ByteArrayInputStream(
@@ -4081,23 +4091,32 @@ public class AiWorkspaceDocumentService {
      * Build a complete HTML document with CSS that matches the frontend preview styling.
      */
     private String buildStyledHtmlDocument(String bodyHtml, String title) {
-        return buildStyledHtmlDocument(bodyHtml, title, false);
+        return buildStyledHtmlDocument(bodyHtml, title, false, null);
     }
 
     private String buildStyledHtmlDocument(String bodyHtml, String title, boolean hasFooter) {
+        return buildStyledHtmlDocument(bodyHtml, title, hasFooter, null);
+    }
+
+    private String buildStyledHtmlDocument(String bodyHtml, String title, boolean hasFooter, String documentType) {
         // Extra bottom padding when footer will be drawn at page bottom via PdfCanvas
         String bottomPadding = hasFooter ? "96px" : "64px";
+        // Detect letter type from documentType or title fallback
+        boolean isLetter = isLetterType(documentType)
+            || (documentType == null && title != null && (title.toLowerCase().contains("demand") || title.toLowerCase().contains("letter")));
         return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/>"
              + "<style>"
              // Body: court filing format — serif font, 12pt, double-spaced, 1-inch margins
              + "body { font-family: 'Times New Roman', Georgia, serif; "
              + "font-size: 12pt; line-height: 2.0; color: #212529; margin: 0; padding: 72px 72px " + bottomPadding + " 72px; }"
-             // Headings: uniform 12pt, no indent — formatting matches real court filings
-             // h1 = document title (centered + underlined)
-             // h2 = section headings (centered)
-             // h3 = subsection headings (left-aligned)
-             + "h1 { font-size: 12pt; font-weight: 700; margin: 20px 0 10px; color: #212529; text-align: center; text-indent: 0; text-decoration: underline; }"
-             + "h2 { font-size: 12pt; font-weight: 700; margin: 18px 0 8px; color: #212529; text-align: center; text-indent: 0; }"
+             // Headings: uniform 12pt, no indent
+             // Court filings: h1/h2 centered. Letters/demand letters: h1/h2 left-aligned.
+             + (isLetter
+                ? "h1 { font-size: 12pt; font-weight: 700; margin: 20px 0 10px; color: #212529; text-indent: 0; }"
+                  + "h2 { font-size: 12pt; font-weight: 700; margin: 18px 0 8px; color: #212529; text-indent: 0; }"
+                : "h1 { font-size: 12pt; font-weight: 700; margin: 20px 0 10px; color: #212529; text-align: center; text-indent: 0; text-decoration: underline; }"
+                  + "h2 { font-size: 12pt; font-weight: 700; margin: 18px 0 8px; color: #212529; text-align: center; text-indent: 0; }"
+             )
              + "h3 { font-size: 12pt; font-weight: 700; margin: 16px 0 8px; color: #212529; text-indent: 0; }"
              + "h4 { font-size: 12pt; font-weight: 600; margin: 14px 0 6px; color: #212529; text-indent: 0; }"
              // Paragraphs: no global indent — body paragraph indent applied via inline style in template

@@ -3819,7 +3819,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     }
 
     // Use content export — backend converts HTML to PDF
-    this.documentGenerationService.exportContentToPDF(exportHtml, this.activeDocumentTitle)
+    // Pass document type so backend applies appropriate heading styles (e.g., letters = left-aligned)
+    const activeConv = this.stateService.getConversations().find(c => c.id === this.stateService.getActiveConversationId());
+    const docType = activeConv?.documentType || undefined;
+    this.documentGenerationService.exportContentToPDF(exportHtml, this.activeDocumentTitle, docType)
       .subscribe({
         next: (response) => this.handleExportResponse(response, 'pdf'),
         error: (error) => {
@@ -11183,16 +11186,33 @@ You can:
    * Poll for exhibits after document generation.
    * Backend auto-attach is async — retries every 3s until exhibits stabilize or 30s max.
    */
+  private exhibitPollActive = false;
+
   private pollForExhibits(documentId: number): void {
+    // Prevent duplicate polling loops (SSE complete + polling fallback can both fire)
+    if (this.exhibitPollActive) return;
+    this.exhibitPollActive = true;
+
     let attempts = 0;
     let lastCount = 0;
     let stableRounds = 0;
-    const maxAttempts = 10; // 10 × 3s = 30s max
-    const intervalMs = 3000;
+    const maxAttempts = 20; // 20 × 2s = 40s max
+    const intervalMs = 2000;
+    const requiredStableRounds = 4; // 8s of stable count before declaring done
+    const minAttemptsBeforeStable = 5; // Wait at least 10s before accepting stability
+
+    const mapExhibits = (exhibits: any[]) => exhibits.map((e: any) => ({
+      id: String(e.id),
+      label: e.label,
+      fileName: e.fileName,
+      fileUrl: this.exhibitPanelService.getExhibitFileUrl(documentId, e.id),
+      pageCount: e.pageCount
+    }));
 
     const poll = () => {
       if (attempts >= maxAttempts) {
         // Give up — show whatever we have
+        this.exhibitPollActive = false;
         this.loadDocumentExhibits(documentId);
         return;
       }
@@ -11200,6 +11220,12 @@ You can:
       this.exhibitPanelService.getExhibits(documentId).pipe(takeUntil(this.destroy$)).subscribe({
         next: (exhibits) => {
           const count = exhibits.length;
+
+          // Show partial results as they arrive
+          if (count > 0) {
+            this.exhibitPanelService.setExhibits(mapExhibits(exhibits));
+          }
+
           if (count > 0 && count === lastCount) {
             stableRounds++;
           } else {
@@ -11207,16 +11233,10 @@ You can:
           }
           lastCount = count;
 
-          // Stable for 2 consecutive polls (6s) → done
-          if (count > 0 && stableRounds >= 2) {
-            this.exhibitPanelService.setExhibits(exhibits.map((e: any) => ({
-              id: String(e.id),
-              label: e.label,
-              fileName: e.fileName,
-              fileUrl: this.exhibitPanelService.getExhibitFileUrl(documentId, e.id),
-              pageCount: e.pageCount
-            })));
+          // Stable for requiredStableRounds consecutive polls AND minimum attempts reached → done
+          if (count > 0 && stableRounds >= requiredStableRounds && attempts >= minAttemptsBeforeStable) {
             this.exhibitPanelService.setExhibitsLoading(false);
+            this.exhibitPollActive = false;
             return;
           }
 
