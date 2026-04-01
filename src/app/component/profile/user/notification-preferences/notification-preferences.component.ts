@@ -1,4 +1,6 @@
 import { Component, OnInit, Input, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { NotificationPreferencesService } from '../../../../core/services/notification-preferences.service';
 import { Subject, takeUntil, finalize } from 'rxjs';
 import Swal from 'sweetalert2';
@@ -26,7 +28,9 @@ export interface NotificationCategory {
 @Component({
   selector: 'app-notification-preferences',
   templateUrl: './notification-preferences.component.html',
-  styleUrls: ['./notification-preferences.component.css']
+  styleUrls: ['./notification-preferences.component.css'],
+  standalone: true,
+  imports: [CommonModule, FormsModule]
 })
 export class NotificationPreferencesComponent implements OnInit, OnDestroy {
   @Input() userId!: number;

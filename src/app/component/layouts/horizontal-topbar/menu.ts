@@ -371,16 +371,6 @@ export const SOLO_ADMIN_MENU: MenuItem[] = [
     icon: 'ri-quill-pen-line',
     link: '/signatures'
   },
-  {
-    id: 'solo-adm-admin',
-    label: 'Admin',
-    icon: 'ri-admin-line',
-    link: '/admin/audit-logs',
-    subItems: [
-      { id: 'solo-adm-admin-org', label: 'Organization Settings', icon: 'ri-settings-3-line', link: '/organizations/settings/__ORG_ID__', parentId: 'solo-adm-admin' },
-      { id: 'solo-adm-admin-audit', label: 'Audit Logs', icon: 'ri-file-search-line', link: '/admin/audit-logs', parentId: 'solo-adm-admin' }
-    ]
-  }
 ];
 
 // ============================================================================
@@ -591,16 +581,6 @@ export const ADMIN_MENU: MenuItem[] = [
     icon: 'ri-quill-pen-line',
     link: '/signatures'
   },
-  {
-    id: 'admin-admin',
-    label: 'Admin',
-    icon: 'ri-admin-line',
-    link: '/admin/audit-logs',
-    subItems: [
-      { id: 'admin-admin-org', label: 'Organization Settings', icon: 'ri-settings-3-line', link: '/organizations/settings/__ORG_ID__', parentId: 'admin-admin' },
-      { id: 'admin-admin-audit', label: 'Audit Logs', icon: 'ri-file-search-line', link: '/admin/audit-logs', parentId: 'admin-admin' }
-    ]
-  }
 ];
 
 // ============================================================================

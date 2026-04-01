@@ -1,0 +1,10 @@
+.fs-13 { font-size: 0.8125rem; }
+.form-switch .form-check-input {
+  width: 2.5rem;
+  height: 1.25rem;
+  cursor: pointer;
+  &:checked {
+    background-color: var(--vz-primary);
+    border-color: var(--vz-primary);
+  }
+}

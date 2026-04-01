@@ -25,8 +25,9 @@ const routes: Routes = [
     component: LayoutComponent,
     canActivate: [AuthenticationGuard],
     children: [
-      { path: 'user', loadChildren: () => import('./component/profile/user.module').then(m => m.UserModule) },
-      { path: 'profile', redirectTo: 'user', pathMatch: 'full' },
+      { path: 'user', redirectTo: 'settings/profile', pathMatch: 'full' },
+      { path: 'profile', redirectTo: 'settings/profile', pathMatch: 'full' },
+      { path: 'settings', loadChildren: () => import('./modules/settings/settings.module').then(m => m.SettingsModule) },
       { path: 'users', loadChildren: () => import('./component/users/users.module').then(m => m.UsersModule) },
       { path: 'clients', loadChildren: () => import('./component/client/client.module').then(m => m.ClientModule) },
       { path: 'invoices', loadChildren: () => import('./component/invoice/invoice.module').then(m => m.InvoiceModule) },

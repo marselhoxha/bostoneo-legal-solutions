@@ -1,4 +1,7 @@
 import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { OrganizationService } from '../../../../core/services/organization.service';
@@ -9,7 +12,13 @@ import Swal from 'sweetalert2';
   selector: 'app-organization-team',
   templateUrl: './organization-team.component.html',
   styleUrls: ['./organization-team.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    NgbDropdownModule
+  ]
 })
 export class OrganizationTeamComponent implements OnInit, OnDestroy {
   @Input() organizationId!: number;
@@ -23,7 +32,7 @@ export class OrganizationTeamComponent implements OnInit, OnDestroy {
 
   // Pagination
   currentPage = 0;
-  pageSize = 10;
+  pageSize = 50;
   totalElements = 0;
   totalPages = 0;
 
@@ -281,6 +290,10 @@ export class OrganizationTeamComponent implements OnInit, OnDestroy {
       pages.push(i);
     }
     return pages;
+  }
+
+  trackByMemberId(index: number, member: TeamMember): number {
+    return member.id;
   }
 
   get filteredMembers(): TeamMember[] {

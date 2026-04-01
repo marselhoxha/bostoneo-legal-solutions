@@ -1,0 +1,97 @@
+// Settings Shell — Velzon theme integration
+// Using ViewEncapsulation.None — scope all styles under app-settings-shell
+
+app-settings-shell {
+
+  // =============================================
+  // Settings Navigation (Vertical Sidebar Tabs)
+  // =============================================
+  .settings-nav {
+    .settings-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1.25rem;
+      color: var(--vz-secondary-color);
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all 0.2s ease;
+      text-decoration: none;
+
+      &:hover {
+        background: rgba(var(--vz-primary-rgb), 0.05);
+        color: var(--vz-primary);
+      }
+
+      &.active {
+        background: rgba(var(--vz-primary-rgb), 0.08);
+        color: var(--vz-primary);
+        border-left-color: var(--vz-primary);
+        i { color: var(--vz-primary); }
+      }
+
+      i { font-size: 1.125rem; }
+      span { font-weight: 500; font-size: 0.9375rem; }
+    }
+  }
+
+  // Section Headers in sidebar
+  .settings-section-header {
+    padding: 0.75rem 1.25rem 0.25rem;
+
+    &:not(:first-child) {
+      border-top: 1px solid var(--vz-border-color);
+      margin-top: 0.25rem;
+      padding-top: 0.875rem;
+    }
+
+    small {
+      font-size: 0.6875rem;
+      letter-spacing: 0.1em;
+      color: var(--vz-secondary-color);
+      font-weight: 600;
+    }
+  }
+
+  // =============================================
+  // Layout utilities
+  // =============================================
+  .avatar-lg { width: 72px; height: 72px; }
+  .fs-22 { font-size: 1.375rem; }
+  .fs-13 { font-size: 0.8125rem; }
+
+  // Sticky sidebar card
+  .col-lg-3 > .card {
+    position: sticky;
+    top: 80px;
+    border-radius: 12px;
+  }
+
+  // =============================================
+  // Responsive — sidebar becomes horizontal
+  // =============================================
+  @media (max-width: 991px) {
+    .settings-nav {
+      display: flex;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+
+      .settings-nav-item {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        border-left: none;
+        border-bottom: 3px solid transparent;
+        padding: 0.75rem 1rem;
+
+        &.active {
+          border-left: none;
+          border-bottom-color: var(--vz-primary);
+        }
+      }
+    }
+    .settings-section-header { display: none; }
+  }
+}
+
+// Stationery overrides are in global styles.scss
+// (encapsulated component styles can only be overridden globally)

@@ -1,4 +1,47 @@
 /* You can add global styles to this file, and also import other style files */
+
+// ── Settings page: Stationery integration ──────────────────
+// Override encapsulated stationery styles when rendered inside settings
+.stationery-wrapper {
+  .page-header {
+    display: none !important;
+  }
+  .stationery-page {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+  // Flip layout: template list on TOP, editor below (full width)
+  .stationery-layout {
+    flex-direction: column !important;
+    min-height: auto !important;
+  }
+  .template-list-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-shrink: 0 !important;
+
+    // Make the template items horizontal
+    .template-list {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 4px !important;
+      padding: 8px 12px !important;
+    }
+    .template-item {
+      flex: 0 0 auto !important;
+    }
+    .panel-header {
+      border-bottom: none !important;
+      padding: 10px 14px 0 !important;
+    }
+  }
+  // Editor takes full width
+  .editor-panel {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 
 // CKEditor 5 Styles

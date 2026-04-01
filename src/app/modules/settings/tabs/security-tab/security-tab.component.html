@@ -1,0 +1,97 @@
+<!-- Change Password -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-transparent border-bottom">
+    <h6 class="mb-0 fw-semibold">
+      <i class="ri-lock-password-line me-2 text-primary"></i>Change Password
+    </h6>
+  </div>
+  <div class="card-body">
+    <form #passwordForm="ngForm" (ngSubmit)="updatePassword(passwordForm)">
+      <div class="row g-3">
+        <div class="col-lg-4">
+          <label class="form-label">Current Password</label>
+          <input type="password" name="currentPassword" ngModel
+                 class="form-control" required [disabled]="isLoading">
+        </div>
+        <div class="col-lg-4">
+          <label class="form-label">New Password</label>
+          <input type="password" name="newPassword" ngModel
+                 class="form-control" minlength="8" required [disabled]="isLoading">
+        </div>
+        <div class="col-lg-4">
+          <label class="form-label">Confirm Password</label>
+          <input type="password" name="confirmNewPassword" ngModel
+                 class="form-control" minlength="8" required [disabled]="isLoading">
+        </div>
+        <div class="col-12 text-end">
+          <button type="submit" class="btn btn-primary" [disabled]="passwordForm.invalid || isLoading">
+            <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1"></span>
+            {{ isLoading ? 'Updating...' : 'Update Password' }}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Multi-Factor Authentication -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-transparent border-bottom">
+    <h6 class="mb-0 fw-semibold">
+      <i class="ri-shield-keyhole-line me-2 text-primary"></i>Multi-Factor Authentication
+    </h6>
+  </div>
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between">
+      <div>
+        <h6 class="mb-1">Email-based verification</h6>
+        <p class="text-muted mb-0 fs-13">When enabled, a verification code will be sent to your email on each login.</p>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <span class="badge" [ngClass]="user?.usingMFA ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'">
+          {{ user?.usingMFA ? 'Enabled' : 'Disabled' }}
+        </span>
+        <button (click)="toggleMfa()" class="btn btn-sm"
+                [ngClass]="user?.usingMFA ? 'btn-soft-danger' : 'btn-soft-success'"
+                [disabled]="isLoading">
+          {{ user?.usingMFA ? 'Disable' : 'Enable' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Login Activity -->
+<div class="card border-0 shadow-sm" *ngIf="events?.length">
+  <div class="card-header bg-transparent border-bottom">
+    <h6 class="mb-0 fw-semibold">
+      <i class="ri-history-line me-2 text-primary"></i>Login Activity
+    </h6>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Device</th>
+            <th>IP Address</th>
+            <th>Date</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let event of events | slice:0:10">
+            <td class="ps-3">{{ event.device || 'Unknown' }}</td>
+            <td>{{ event.ipAddress }}</td>
+            <td>{{ event.createdAt | date: 'MMM d, y, h:mm a' }}</td>
+            <td>
+              <span class="badge rounded-pill border" [ngClass]="getEventBadgeClass(event.type)">
+                {{ event.type }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

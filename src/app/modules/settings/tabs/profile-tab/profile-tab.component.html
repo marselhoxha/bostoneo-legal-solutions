@@ -1,0 +1,64 @@
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent border-bottom d-flex align-items-center justify-content-between">
+    <h6 class="mb-0 fw-semibold">
+      <i class="ri-user-3-line me-2 text-primary"></i>Personal Details
+    </h6>
+    <!-- Image upload -->
+    <div class="d-flex align-items-center gap-2">
+      <input #imageInput type="file" accept="image/*" (change)="updateImage($event)" class="d-none">
+      <button type="button" class="btn btn-soft-primary btn-sm" (click)="imageInput.click()" [disabled]="isLoading">
+        <i class="ri-camera-line me-1"></i>Change Photo
+      </button>
+    </div>
+  </div>
+  <div class="card-body">
+    <form #profileForm="ngForm" (ngSubmit)="updateProfile(profileForm)">
+      <input type="hidden" name="id" [ngModel]="user?.id">
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <label class="form-label">First Name</label>
+          <input type="text" name="firstName" [ngModel]="user?.firstName"
+                 class="form-control" [disabled]="isLoading">
+        </div>
+        <div class="col-lg-6">
+          <label class="form-label">Last Name</label>
+          <input type="text" name="lastName" [ngModel]="user?.lastName"
+                 class="form-control" [disabled]="isLoading">
+        </div>
+        <div class="col-lg-6">
+          <label class="form-label">Email Address</label>
+          <input type="email" name="email" [ngModel]="user?.email"
+                 class="form-control" [disabled]="isLoading">
+        </div>
+        <div class="col-lg-6">
+          <label class="form-label">Phone Number</label>
+          <input type="text" name="phone" [ngModel]="user?.phone"
+                 class="form-control" [disabled]="isLoading">
+        </div>
+        <div class="col-lg-6">
+          <label class="form-label">Address</label>
+          <input type="text" name="address" [ngModel]="user?.address"
+                 class="form-control" [disabled]="isLoading">
+        </div>
+        <div class="col-lg-6">
+          <label class="form-label">Job Title</label>
+          <input type="text" name="title" [ngModel]="user?.title"
+                 class="form-control" [disabled]="isLoading">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Bio</label>
+          <textarea name="bio" [ngModel]="user?.bio" class="form-control"
+                    rows="3" [disabled]="isLoading"></textarea>
+        </div>
+        <div class="col-12">
+          <div class="hstack gap-2 justify-content-end">
+            <button type="submit" class="btn btn-primary" [disabled]="isLoading">
+              <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1"></span>
+              {{ isLoading ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

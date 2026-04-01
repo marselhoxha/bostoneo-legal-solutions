@@ -37,7 +37,7 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
     @Query("SELECT COUNT(c) FROM LegalCase c WHERE c.organizationId = :organizationId")
     Integer countCasesByOrganizationId(@Param("organizationId") Long organizationId);
 
-    @Query("SELECT COUNT(f) FROM Folder f WHERE f.organizationId = :organizationId")
+    @Query("SELECT COUNT(f) FROM FileItem f WHERE f.organizationId = :organizationId AND f.deleted = false")
     Integer countDocumentsByOrganizationId(@Param("organizationId") Long organizationId);
 
     @Query("SELECT COUNT(c) FROM Client c WHERE c.organizationId = :organizationId")

@@ -196,7 +196,19 @@ public class SystemAuditServiceImpl implements SystemAuditService {
             Pageable pageable = PageRequest.of(0, limit, Sort.by("timestamp").descending());
             Page<AuditLog> auditPage = auditLogRepository.findByOrganizationIdOrderByTimestampDesc(orgId, pageable);
 
+            // Filter out platform-level entries for non-superadmin users
+            java.util.Set<AuditLog.EntityType> adminOnlyTypes = java.util.EnumSet.of(
+                AuditLog.EntityType.ORGANIZATION, AuditLog.EntityType.PLATFORM,
+                AuditLog.EntityType.SYSTEM, AuditLog.EntityType.SECURITY,
+                AuditLog.EntityType.ANNOUNCEMENT, AuditLog.EntityType.INTEGRATION,
+                AuditLog.EntityType.AUDIT_LOG
+            );
+            boolean isSuperAdmin = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"));
+
             List<AuditLogDTO> activities = auditPage.getContent().stream()
+                .filter(log -> isSuperAdmin || !adminOnlyTypes.contains(log.getEntityType()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
 

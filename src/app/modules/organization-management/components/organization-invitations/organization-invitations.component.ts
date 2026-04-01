@@ -1,4 +1,6 @@
 import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -10,7 +12,9 @@ import Swal from 'sweetalert2';
   selector: 'app-organization-invitations',
   templateUrl: './organization-invitations.component.html',
   styleUrls: ['./organization-invitations.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [CommonModule, FormsModule]
 })
 export class OrganizationInvitationsComponent implements OnInit, OnDestroy {
   @Input() organizationId!: number;

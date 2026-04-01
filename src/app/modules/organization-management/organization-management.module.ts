@@ -20,8 +20,6 @@ import { OrganizationPlanComponent } from './components/organization-plan/organi
     OrganizationFormComponent,
     OrganizationDetailsComponent,
     OrganizationSwitcherComponent,
-    OrganizationTeamComponent,
-    OrganizationInvitationsComponent,
     OrganizationSettingsComponent,
     OrganizationPlanComponent
   ],
@@ -32,7 +30,9 @@ import { OrganizationPlanComponent } from './components/organization-plan/organi
     RouterModule,
     NgbDropdownModule,
     NgbModalModule,
-    OrganizationManagementRoutingModule
+    OrganizationManagementRoutingModule,
+    OrganizationTeamComponent,
+    OrganizationInvitationsComponent
   ],
   exports: [
     OrganizationSwitcherComponent

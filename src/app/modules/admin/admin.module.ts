@@ -47,13 +47,10 @@ const routes: Routes = [
           permission: { resource: 'SYSTEM', action: 'VIEW' } 
         }
       },
-      { 
-        path: 'audit-logs', 
-        component: AuditLogsComponent,
-        canActivate: [AuthenticationGuard, PermissionGuard],
-        data: { 
-          permission: { resource: 'SYSTEM', action: 'VIEW' } 
-        }
+      {
+        path: 'audit-logs',
+        redirectTo: '/home',
+        pathMatch: 'full'
       }
     ]
   }

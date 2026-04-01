@@ -8,10 +8,8 @@ import { NgbNavModule } from "@ng-bootstrap/ng-bootstrap";
 
 @NgModule({
   declarations: [
-    UserComponent,
-    NotificationPreferencesComponent
+    UserComponent
   ],
-  imports: [SharedModule,NgbNavModule,UserRoutingModule],
-  
+  imports: [SharedModule, NgbNavModule, UserRoutingModule, NotificationPreferencesComponent],
 })
 export class UserModule { }

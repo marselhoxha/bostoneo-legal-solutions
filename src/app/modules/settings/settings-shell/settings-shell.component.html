@@ -1,0 +1,106 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+    <h4 class="mb-sm-0">Settings</h4>
+    <ol class="breadcrumb m-0">
+      <li class="breadcrumb-item"><a routerLink="/home">Home</a></li>
+      <li class="breadcrumb-item active">Settings</li>
+    </ol>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-grow text-primary" role="status" style="width: 2.5rem; height: 2.5rem;"></div>
+    <p class="text-muted mt-3">Loading settings...</p>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!isLoading && user" class="row" style="margin-bottom: 60px;">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3">
+      <div class="card border-0 shadow-sm">
+        <!-- User Mini Profile -->
+        <div class="card-body text-center border-bottom py-4">
+          <div class="position-relative d-inline-block mb-3">
+            <img *ngIf="user.imageUrl" [src]="user.imageUrl | imageUrl"
+                 class="rounded-circle avatar-lg img-thumbnail"
+                 (error)="$event.target.src='assets/images/users/default-avatar.jpg'"
+                 alt="Profile">
+            <div *ngIf="!user.imageUrl" class="rounded-circle avatar-lg bg-primary-subtle d-flex align-items-center justify-content-center mx-auto">
+              <span class="fs-22 text-primary fw-semibold">{{ getInitials() }}</span>
+            </div>
+          </div>
+          <h6 class="mb-1">{{ user.firstName }} {{ user.lastName }}</h6>
+          <p class="text-muted mb-0 fs-13">{{ user.title || user.roleName }}</p>
+        </div>
+
+        <!-- Navigation -->
+        <div class="card-body p-0 pb-2">
+          <div class="settings-nav">
+            <!-- Personal section header -->
+            <div class="settings-section-header">
+              <small>PERSONAL</small>
+            </div>
+            <ng-container *ngFor="let tab of tabs; let i = index">
+              <!-- Section divider when section changes -->
+              <div *ngIf="i > 0 && tab.section && tab.section !== tabs[i-1]?.section" class="settings-section-header">
+                <small>{{ tab.section | uppercase }}</small>
+              </div>
+              <a class="settings-nav-item"
+                 [class.active]="activeTab === tab.key"
+                 (click)="navigateToTab(tab.key)">
+                <i [class]="tab.icon"></i>
+                <span>{{ tab.label }}</span>
+              </a>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Content Area -->
+    <div class="col-lg-9">
+      <!-- Profile Tab -->
+      <app-settings-profile-tab
+        *ngIf="activeTab === 'profile'"
+        [user]="user"
+        [events]="events"
+        (userUpdated)="onUserUpdated($event)">
+      </app-settings-profile-tab>
+
+      <!-- Security Tab -->
+      <app-settings-security-tab
+        *ngIf="activeTab === 'security'"
+        [user]="user"
+        [events]="events">
+      </app-settings-security-tab>
+
+      <!-- Notifications Tab -->
+      <app-settings-notifications-tab
+        *ngIf="activeTab === 'notifications'"
+        [userId]="user.id"
+        [userRole]="user.roleName">
+      </app-settings-notifications-tab>
+
+      <!-- Organization Tab -->
+      <app-settings-organization-tab
+        *ngIf="activeTab === 'organization'"
+        [organizationId]="organizationId"
+        [organization]="organization"
+        (organizationUpdated)="onOrganizationUpdated($event)">
+      </app-settings-organization-tab>
+
+      <!-- Integrations Tab -->
+      <app-settings-integrations-tab
+        *ngIf="activeTab === 'integrations'"
+        [organizationId]="organizationId"
+        [organization]="organization">
+      </app-settings-integrations-tab>
+
+      <!-- Stationery Tab -->
+      <div *ngIf="activeTab === 'stationery'" class="stationery-wrapper">
+        <app-stationery-settings></app-stationery-settings>
+      </div>
+    </div>
+  </div>
+</div>
