@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
@@ -41,6 +42,7 @@ public class Message {
     @Builder.Default
     private String channel = "PORTAL";
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 

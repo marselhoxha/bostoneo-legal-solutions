@@ -504,7 +504,7 @@ public class AIDocumentAnalyzerController {
         Long orgId = getRequiredOrganizationId();
         String role = (String) request.get("role");
         String content = (String) request.get("content");
-        Long userId = request.get("userId") != null ? ((Number) request.get("userId")).longValue() : 1L;
+        Long userId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
 
         if (role == null || content == null) {
             log.warn("Invalid message request: role and content are required");
@@ -629,7 +629,7 @@ public class AIDocumentAnalyzerController {
 
         Long orgId = getRequiredOrganizationId();
         String question = (String) request.get("question");
-        Long userId = request.get("userId") != null ? ((Number) request.get("userId")).longValue() : 1L;
+        Long userId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
 
         if (question == null || question.trim().isEmpty()) {
             log.warn("Invalid ask request: question is required");

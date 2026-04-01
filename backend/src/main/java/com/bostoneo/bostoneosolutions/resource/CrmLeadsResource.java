@@ -86,11 +86,12 @@ public class CrmLeadsResource {
     @PutMapping("/{id}")
     public ResponseEntity<LeadDTO> updateLead(
             @PathVariable Long id,
-            @RequestBody @Valid LeadDTO leadDTO) {
-        
+            @RequestBody @Valid LeadDTO leadDTO,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
         log.info("Updating lead {}", id);
-        
-        Long userId = 1L; // Extract from userDetails in real implementation
+
+        Long userId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         Lead lead = leadDTOMapper.toEntity(leadDTO);
         
         Lead updatedLead = leadService.updateLead(id, lead, userId);
@@ -122,7 +123,7 @@ public class CrmLeadsResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Advancing lead {} to status: {} by user: {}", id, newStatus, username);
 
-        Long userId = 1L; // Extract from userDetails in real implementation
+        Long userId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         Lead lead = leadService.advanceInPipeline(id, newStatus, userId, notes);
         LeadDTO leadDTO = leadDTOMapper.toDTO(lead);
         
@@ -142,7 +143,7 @@ public class CrmLeadsResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Moving lead {} to stage {} by user: {}", id, stageId, username);
 
-        Long userId = 1L; // Extract from userDetails in real implementation
+        Long userId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         Lead lead = leadService.moveToStage(id, stageId, userId, notes);
         LeadDTO leadDTO = leadDTOMapper.toDTO(lead);
         
@@ -193,7 +194,7 @@ public class CrmLeadsResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Assigning lead {} to user {} by: {}", id, assignToUserId, username);
         
-        Long assignedBy = 1L; // Extract from userDetails in real implementation
+        Long assignedBy = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         Lead lead = leadService.assignLeadWithNotes(id, assignToUserId, assignedBy, notes);
         LeadDTO leadDTO = leadDTOMapper.toDTO(lead);
         
@@ -218,7 +219,7 @@ public class CrmLeadsResource {
         log.info("Scheduling consultation for lead {} on {} by user: {}", 
             id, consultationDateStr, username);
         
-        Long scheduledBy = 1L; // Extract from userDetails in real implementation
+        Long scheduledBy = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         Lead lead = leadService.scheduleConsultation(id, consultationDateStr, scheduledBy, notes);
         LeadDTO leadDTO = leadDTOMapper.toDTO(lead);
         
@@ -239,7 +240,7 @@ public class CrmLeadsResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Adding activity to lead {} by user: {}", id, username);
 
-        Long userId = 1L; // Extract from userDetails in real implementation
+        Long userId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         leadService.addActivity(id, activityType, title, description, userId);
         
         return ResponseEntity.ok(Map.of(
@@ -259,7 +260,7 @@ public class CrmLeadsResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Converting lead {} to Client Only by user: {}", id, username);
         
-        Long convertedBy = 1L; // Extract from userDetails in real implementation
+        Long convertedBy = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         
         try {
             Client client = leadConversionService.convertToClientOnly(id, clientData, convertedBy);
@@ -293,7 +294,7 @@ public class CrmLeadsResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Converting lead {} to Matter Only by user: {}", id, username);
         
-        Long convertedBy = 1L; // Extract from userDetails in real implementation
+        Long convertedBy = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         
         try {
             LegalCase legalCase = leadConversionService.convertToMatterOnly(id, caseData, convertedBy);
@@ -327,7 +328,7 @@ public class CrmLeadsResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Converting lead {} to Client AND Matter by user: {}", id, username);
         
-        Long convertedBy = 1L; // Extract from userDetails in real implementation
+        Long convertedBy = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
         
         @SuppressWarnings("unchecked")
         Map<String, Object> clientData = (Map<String, Object>) conversionData.get("clientData");

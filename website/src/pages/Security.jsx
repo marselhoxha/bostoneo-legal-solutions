@@ -12,7 +12,7 @@ const features=[
   {icon:"ri-delete-bin-line",title:"Right to Delete",desc:"Request full data deletion at any time. All account data permanently removed within 90 days of request. You can also delete individual AI conversations at any time from within the platform."},
 ]
 
-const compliance=["Attorney-Client Privilege Protected","201 CMR 17.00 Aligned","AES-256 Encryption at Rest","TLS Encryption in Transit","Zero AI Training Guarantee","US-Only Data Residency (AWS Ohio)","Data Subject Rights Supported","Comprehensive Audit Logs"]
+const compliance=["Attorney-Client Privilege Protected","201 CMR 17.00 Aligned","AES-256 Encryption at Rest","TLS Encryption in Transit","Zero AI Training Guarantee","US-Only Data Residency (AWS US-East)","Data Subject Rights Supported","Comprehensive Audit Logs"]
 
 
 function Ic({c,s}){return c&&c.startsWith("ri-")?<Icon name={c} size={20} style={s||{}} />:<span style={s||{}}>{c}</span>}

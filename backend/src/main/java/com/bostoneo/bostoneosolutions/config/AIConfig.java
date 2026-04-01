@@ -19,7 +19,7 @@ import java.time.Duration;
 @Getter
 public class AIConfig {
 
-    @Value("${ai.bedrock.region:us-east-2}")
+    @Value("${ai.bedrock.region:us-east-1}")
     private String bedrockRegion;
 
     @Value("${ai.bedrock.model-id.opus:us.anthropic.claude-opus-4-6-v1}")

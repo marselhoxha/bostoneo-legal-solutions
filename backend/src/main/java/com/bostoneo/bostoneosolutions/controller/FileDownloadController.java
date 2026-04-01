@@ -20,12 +20,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * SECURITY: This controller now enforces tenant isolation for file downloads.
  * - Permanent files (uploads/) are verified via FileItem database
  * - Temporary files (/tmp/bostoneo-pdfs/) are session-specific and allowed
  */
+@PreAuthorize("isAuthenticated()")
 @RestController
 @RequestMapping("/api/files")
 @RequiredArgsConstructor

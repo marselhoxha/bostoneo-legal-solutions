@@ -7,7 +7,9 @@ import com.bostoneo.bostoneosolutions.util.CustomHttpResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.access.prepost.PreAuthorize;
 
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_PARALEGAL')")
 @RestController
 @RequestMapping("/api/receipts")
 public class ReceiptController {

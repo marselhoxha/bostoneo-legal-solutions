@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
@@ -41,6 +42,7 @@ public class PIMedicalSummary {
     private Long organizationId;
 
     // Summary Content
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "treatment_chronology", columnDefinition = "TEXT")
     private String treatmentChronology; // Markdown formatted chronology
 
@@ -60,9 +62,11 @@ public class PIMedicalSummary {
     @Column(name = "missing_records", columnDefinition = "jsonb")
     private List<Map<String, Object>> missingRecords; // Array of potentially missing records
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "key_highlights", columnDefinition = "TEXT")
     private String keyHighlights; // Key findings summary
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "prognosis_assessment", columnDefinition = "TEXT")
     private String prognosisAssessment; // MMI, permanent impairment, future treatment
 

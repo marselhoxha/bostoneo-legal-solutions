@@ -11,7 +11,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
+
+    @org.springframework.beans.factory.annotation.Value("${spring.profiles.active:dev}")
+    private String activeProfile;
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
@@ -34,7 +38,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException ex) {
         Map<String, String> error = new HashMap<>();
-        error.put("error", ex.getMessage());
+        // In production, don't expose raw exception messages
+        String msg = (activeProfile.contains("prod") || activeProfile.contains("staging"))
+                ? "Invalid request" : ex.getMessage();
+        error.put("error", msg);
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 } 

@@ -164,6 +164,7 @@ public class CommunicationController {
     /**
      * Get communication logs by client
      */
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_SYSADMIN')")
     @GetMapping("/logs/client/{clientId}")
     public ResponseEntity<HttpResponse> getLogsByClient(
             @PathVariable Long clientId,
@@ -192,6 +193,7 @@ public class CommunicationController {
     /**
      * Get communication logs by case
      */
+        @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_SYSADMIN')")
     @GetMapping("/logs/case/{caseId}")
     public ResponseEntity<HttpResponse> getLogsByCase(
             @PathVariable Long caseId,
@@ -220,6 +222,7 @@ public class CommunicationController {
     /**
      * Get recent communications for a client
      */
+        @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_SYSADMIN')")
     @GetMapping("/logs/client/{clientId}/recent")
     public ResponseEntity<HttpResponse> getRecentLogsByClient(@PathVariable Long clientId) {
         return ResponseEntity.ok(
@@ -236,6 +239,7 @@ public class CommunicationController {
     /**
      * Get communication statistics
      */
+        @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_SYSADMIN')")
     @GetMapping("/stats")
     public ResponseEntity<HttpResponse> getStatistics(
             @RequestParam(defaultValue = "30") int days) {
@@ -257,6 +261,7 @@ public class CommunicationController {
     /**
      * Search communication logs
      */
+        @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_SYSADMIN')")
     @GetMapping("/logs/search")
     public ResponseEntity<HttpResponse> searchLogs(
             @RequestParam String query,
@@ -285,6 +290,7 @@ public class CommunicationController {
     /**
      * Check Twilio service status
      */
+        @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_SYSADMIN')")
     @GetMapping("/status")
     public ResponseEntity<HttpResponse> getServiceStatus() {
         return ResponseEntity.ok(
@@ -503,6 +509,7 @@ public class CommunicationController {
      * Usage: POST /api/communications/test/simulate-incoming-sms
      * Body: { "fromPhone": "+15551234567", "message": "Test message from client" }
      */
+        @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_SYSADMIN')")
     @PostMapping("/test/simulate-incoming-sms")
     public ResponseEntity<HttpResponse> simulateIncomingSms(
             @RequestBody Map<String, String> request,

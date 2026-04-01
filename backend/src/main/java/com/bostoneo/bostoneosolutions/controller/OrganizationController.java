@@ -437,7 +437,7 @@ public class OrganizationController {
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.set("X-API-KEY", apiKey);
             org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(headers);
-            new RestTemplate().exchange("https://api.boldsign.com/v1/document/list?Page=1&PageSize=1",
+            new RestTemplate(new org.springframework.http.client.SimpleClientHttpRequestFactory() {{ setConnectTimeout(java.time.Duration.ofSeconds(10)); setReadTimeout(java.time.Duration.ofSeconds(15)); }}).exchange("https://api.boldsign.com/v1/document/list?Page=1&PageSize=1",
                     org.springframework.http.HttpMethod.GET, entity, String.class);
             return ResponseEntity.ok(
                     HttpResponse.builder()

@@ -48,11 +48,11 @@ public class LegalCase {
     @Column(name = "title", nullable = false)
     private String title;
 
-    @Convert(converter = EncryptedStringConverter.class)
+    // NOTE: clientName and clientEmail are NOT encrypted because they're used in SQL WHERE/LIKE queries.
+    // Encrypting them breaks LegalCaseRepository search, conflict checks, and case assignment lookups.
     @Column(name = "client_name", nullable = false)
     private String clientName;
 
-    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "client_email", nullable = false)
     private String clientEmail;
     
@@ -219,35 +219,45 @@ public class LegalCase {
     @Column(name = "insurance_policy_limit")
     private Double insurancePolicyLimit;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "insurance_adjuster_name")
     private String insuranceAdjusterName;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "insurance_adjuster_contact")
     private String insuranceAdjusterContact;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "insurance_adjuster_email")
     private String insuranceAdjusterEmail;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "insurance_adjuster_phone", length = 50)
     private String insuranceAdjusterPhone;
 
     // Employer Information (for wage documentation requests)
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "employer_name")
     private String employerName;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "employer_email")
     private String employerEmail;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "employer_phone", length = 50)
     private String employerPhone;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "employer_hr_contact")
     private String employerHrContact;
 
     // Defendant Information
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "defendant_name")
     private String defendantName;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "defendant_address", columnDefinition = "TEXT")
     private String defendantAddress;
 
@@ -286,6 +296,7 @@ public class LegalCase {
     @Column(name = "case_subtype")
     private String caseSubtype;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "spouse_name")
     private String spouseName;
 
@@ -314,12 +325,15 @@ public class LegalCase {
     @Column(name = "form_type")
     private String formType;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "uscis_number")
     private String uscisNumber;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "petitioner_name")
     private String petitionerName;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "beneficiary_name")
     private String beneficiaryName;
 

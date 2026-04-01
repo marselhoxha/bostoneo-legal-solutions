@@ -39,7 +39,7 @@ export default function Privacy() {
         <ul>
           <li><strong>Encryption:</strong> AES-256 encryption at rest and TLS encryption in transit for all connections.</li>
           <li><strong>201 CMR 17.00:</strong> Our security practices are designed to meet the requirements of Massachusetts Standards for the Protection of Personal Information.</li>
-          <li><strong>US-Only Data Residency:</strong> All data stored in AWS US-East (Ohio). No offshore processing.</li>
+          <li><strong>US-Only Data Residency:</strong> All data stored in AWS US-East. No offshore processing.</li>
           <li><strong>Role-Based Access:</strong> Configurable permissions ensure users only access data relevant to their role.</li>
           <li><strong>Audit Logs:</strong> Comprehensive logs of access, modification, and export actions across the platform.</li>
         </ul>

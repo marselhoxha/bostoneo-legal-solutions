@@ -16,7 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.HashMap;
+import org.springframework.security.access.prepost.PreAuthorize;
 
+@PreAuthorize("isAuthenticated()")
 @RestController
 @RequestMapping("/api/notification-preferences")
 @Slf4j

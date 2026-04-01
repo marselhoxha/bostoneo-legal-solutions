@@ -1,5 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import DOMPurify from 'dompurify';
 
 @Pipe({
   name: 'noSanitize',
@@ -13,12 +14,15 @@ export class NoSanitizePipe implements PipeTransform {
       return '';
     }
 
-    // SECURITY: Strip dangerous tags before bypassing Angular sanitizer.
-    // For full protection, integrate DOMPurify: npm install dompurify @types/dompurify
-    const stripped = value
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-      .replace(/javascript\s*:/gi, '');
-    return this.sanitizer.bypassSecurityTrustHtml(stripped);
+    // SECURITY: Sanitize with DOMPurify before bypassing Angular's sanitizer
+    const clean = DOMPurify.sanitize(value, {
+      ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div', 'table', 'thead',
+        'tbody', 'tr', 'td', 'th', 'pre', 'code', 'blockquote', 'img', 'hr',
+        'sup', 'sub', 'mark', 'del', 'ins'],
+      ALLOWED_ATTR: ['href', 'target', 'class', 'style', 'src', 'alt', 'width',
+        'height', 'colspan', 'rowspan']
+    });
+    return this.sanitizer.bypassSecurityTrustHtml(clean);
   }
-} 
+}

@@ -12,7 +12,7 @@ import { environment } from '../../../environments/environment';
   providedIn: 'root'
 })
 export class AuditLogService {
-  private readonly apiUrl = `${environment.apiUrl}/api/v1`;
+  private readonly apiUrl = `${environment.apiUrl}/api`;
   
   // Current user info for audit entries
   private currentUser: User | null = null;

@@ -72,7 +72,14 @@ public class FileStorageConfiguration implements WebMvcConfigurer {
      */
     private boolean enableVirusScanning = false;
     private boolean enableEncryption = false;
-    private String encryptionKey = "default-key-change-me";
+    private String encryptionKey;
+
+    @jakarta.annotation.PostConstruct
+    public void validateEncryptionConfig() {
+        if (enableEncryption && (encryptionKey == null || encryptionKey.isBlank() || "default-key-change-me".equals(encryptionKey))) {
+            throw new IllegalStateException("File encryption is enabled but no valid encryption key is configured. Set file.storage.encryption-key.");
+        }
+    }
     
     /**
      * Performance settings

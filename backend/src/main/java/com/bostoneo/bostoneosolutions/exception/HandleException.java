@@ -39,10 +39,21 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
 
     // SECURITY: Suppress internal details in production/staging responses
     private String safeDeveloperMessage(String message) {
-        if (activeProfile.contains("prod") || activeProfile.contains("staging")) {
-            return "See server logs for details";
-        }
+        if (isProduction()) return "See server logs for details";
         return message;
+    }
+
+    // SECURITY: Sanitize reason field for production — only show safe, user-facing messages
+    private String safeReason(String message) {
+        if (!isProduction()) return message;
+        if (message == null || message.isEmpty()) return "An error occurred";
+        // Allow known app-controlled messages (ApiException messages are safe)
+        if (message.contains("Please try again") || message.contains("not found") || message.contains("cannot be")) return message;
+        return "An error occurred processing your request";
+    }
+
+    private boolean isProduction() {
+        return activeProfile.contains("prod") || activeProfile.contains("staging");
     }
 
     @Override
@@ -51,7 +62,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .reason(exception.getMessage())
+                        .reason(safeReason(exception.getMessage()))
                         .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(resolve(statusCode.value()))
                         .statusCode(statusCode.value())
@@ -91,7 +102,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .reason(exception.getMessage().contains("Duplicate entry") ? "Information already exists" : exception.getMessage())
+                        .reason(exception.getMessage().contains("Duplicate entry") ? "Information already exists" : safeReason(exception.getMessage()))
                         .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(BAD_REQUEST)
                         .statusCode(BAD_REQUEST.value())
@@ -104,7 +115,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .reason(exception.getMessage() + ", Incorrect email or password")
+                        .reason("Incorrect email or password")
                         .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(BAD_REQUEST)
                         .statusCode(BAD_REQUEST.value())
@@ -171,13 +182,13 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .reason(reason)
+                        .reason(safeReason(reason))
                         .developerMessage(safeDeveloperMessage(exception.getClass().getSimpleName() + ": " + exception.getMessage()))
                         .status(BAD_REQUEST)
                         .statusCode(BAD_REQUEST.value())
                         .build(), BAD_REQUEST);
     }
-    
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<HttpResponse> exception(Exception exception, WebRequest request) {
         // CRITICAL FIX: Don't handle SSE (Server-Sent Events) exceptions here
@@ -196,7 +207,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
 
         String reason = exception.getMessage();
         if (reason == null || reason.isEmpty()) {
-            reason = exception.getClass().getSimpleName() + " occurred";
+            reason = "An unexpected error occurred";
         } else if (reason.contains("expected 1, actual 0")) {
             reason = "Record not found";
         }
@@ -204,7 +215,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .reason(reason)
+                        .reason(safeReason(reason))
                         .developerMessage(safeDeveloperMessage(exception.getClass().getSimpleName() + ": " + exception.getMessage()))
                         .status(INTERNAL_SERVER_ERROR)
                         .statusCode(INTERNAL_SERVER_ERROR.value())
@@ -244,7 +255,7 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
         return new ResponseEntity<>(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .reason(exception.getMessage().contains("expected 1, actual 0") ? "Record not found" : exception.getMessage())
+                        .reason(exception.getMessage().contains("expected 1, actual 0") ? "Record not found" : safeReason(exception.getMessage()))
                         .developerMessage(safeDeveloperMessage(exception.getMessage()))
                         .status(BAD_REQUEST)
                         .statusCode(BAD_REQUEST.value())

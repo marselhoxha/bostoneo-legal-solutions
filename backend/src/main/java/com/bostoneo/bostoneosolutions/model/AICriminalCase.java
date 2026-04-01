@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.bostoneo.bostoneosolutions.enumeration.OffenseLevel;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
@@ -85,6 +86,7 @@ public class AICriminalCase {
     @Column(name = "bail_conditions", columnDefinition = "TEXT")
     private String bailConditions;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "victim_information", columnDefinition = "TEXT")
     private String victimInformation;
 

@@ -40,6 +40,8 @@ public class Client {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
+    // NOTE: email is NOT encrypted because it's used as a lookup key in SQL WHERE clauses.
+    // Encrypting it would break ClientRepository.findByEmail() and conflict check queries.
     @Column(name = "email", length = 100)
     private String email;
 

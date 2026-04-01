@@ -422,8 +422,9 @@ export class UserService {
     this.fileManagerService.clearCache();
     this.clearUserCache();
     this.backgroundTaskService.clearAllTasks();
-    localStorage.removeItem(Key.TOKEN);
-    localStorage.removeItem(Key.REFRESH_TOKEN);
+    // Clear ALL localStorage to prevent sensitive data persistence
+    localStorage.clear();
+    sessionStorage.clear();
     this.preloaderService.hide();
     this.router.navigate(['/login']);
   }
@@ -437,8 +438,9 @@ export class UserService {
     this.fileManagerService.clearCache();
     this.clearUserCache();
     this.backgroundTaskService.clearAllTasks();
-    localStorage.removeItem(Key.TOKEN);
-    localStorage.removeItem(Key.REFRESH_TOKEN);
+    // Clear ALL localStorage to prevent sensitive data persistence
+    localStorage.clear();
+    sessionStorage.clear();
     this.preloaderService.hide();
     // Redirect to login with session expired flag
     this.router.navigate(['/login'], { queryParams: { sessionExpired: 'true' } });

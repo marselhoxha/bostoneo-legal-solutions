@@ -18,6 +18,7 @@ public class UserRowMapper implements RowMapper<User> {
         }
 
         java.sql.Timestamp lockedUntilTimestamp = resultSet.getTimestamp("locked_until");
+        java.sql.Timestamp termsAcceptedTimestamp = resultSet.getTimestamp("terms_accepted_at");
 
         return User.builder()
                 .id(resultSet.getLong("id"))
@@ -38,6 +39,7 @@ public class UserRowMapper implements RowMapper<User> {
                 .failedLoginAttempts(resultSet.getInt("failed_login_attempts"))
                 .lockedUntil(lockedUntilTimestamp != null ? lockedUntilTimestamp.toLocalDateTime() : null)
                 .forcePasswordChange(resultSet.getBoolean("force_password_change"))
+                .termsAcceptedAt(termsAcceptedTimestamp != null ? termsAcceptedTimestamp.toLocalDateTime() : null)
                 .build();
 
     }

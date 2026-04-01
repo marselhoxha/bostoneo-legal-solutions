@@ -18,11 +18,13 @@ import java.util.Map;
 import static java.time.LocalDateTime.now;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * Controller for Attorney/Staff messaging endpoints.
  * Allows attorneys to view and respond to client messages.
  */
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_PARALEGAL')")
 @RestController
 @RequestMapping("/api/messaging")
 @RequiredArgsConstructor

@@ -20,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/test")
 @org.springframework.context.annotation.Profile("dev") // SECURITY: Only available in dev (not staging or prod)
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_ADMIN')") // Defense-in-depth
 @RequiredArgsConstructor
 @Slf4j
 public class TestController {

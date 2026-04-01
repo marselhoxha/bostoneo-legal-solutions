@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.*;
 import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY')")
 @RestController
 @RequestMapping("/api/invoice-templates")
 @RequiredArgsConstructor

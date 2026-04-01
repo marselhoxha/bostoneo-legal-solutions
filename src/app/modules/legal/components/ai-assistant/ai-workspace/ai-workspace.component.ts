@@ -15,6 +15,7 @@ import { DocumentTypeConfig } from '../../../models/document-type-config';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
+import DOMPurify from 'dompurify';
 import { UserService } from '../../../../../service/user.service';
 import { OrganizationService } from '../../../../../core/services/organization.service';
 import { environment } from '@environments/environment';
@@ -11828,9 +11829,9 @@ You can:
             footer: rendered.footerHtml || ''
           };
           this.activeStationeryRendered = {
-            letterhead: rendered.letterheadHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.letterheadHtml) : null,
-            signature: rendered.signatureBlockHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.signatureBlockHtml) : null,
-            footer: rendered.footerHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.footerHtml) : null
+            letterhead: rendered.letterheadHtml ? this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(rendered.letterheadHtml)) : null,
+            signature: rendered.signatureBlockHtml ? this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(rendered.signatureBlockHtml)) : null,
+            footer: rendered.footerHtml ? this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(rendered.footerHtml)) : null
           };
           this.activeStationeryTemplateId = templateId;
           this.activeStationeryAttorneyId = attorneyId;
@@ -11914,9 +11915,9 @@ You can:
 
           // Keep sanitized copy for legacy compatibility (e.g. export previews)
           this.activeStationeryRendered = {
-            letterhead: rendered.letterheadHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.letterheadHtml) : null,
-            signature: rendered.signatureBlockHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.signatureBlockHtml) : null,
-            footer: rendered.footerHtml ? this.sanitizer.bypassSecurityTrustHtml(rendered.footerHtml) : null
+            letterhead: rendered.letterheadHtml ? this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(rendered.letterheadHtml)) : null,
+            signature: rendered.signatureBlockHtml ? this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(rendered.signatureBlockHtml)) : null,
+            footer: rendered.footerHtml ? this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(rendered.footerHtml)) : null
           };
 
           this.activeStationeryTemplateId = templateId;

@@ -1,5 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { DomSanitizer, SafeHtml, SafeStyle, SafeUrl, SafeResourceUrl } from '@angular/platform-browser';
+import DOMPurify from 'dompurify';
 
 @Pipe({
   name: 'safe'
@@ -10,10 +11,10 @@ export class SafePipe implements PipeTransform {
   transform(value: string, type: string): SafeHtml | SafeStyle | SafeUrl | SafeResourceUrl {
     switch (type) {
       case 'html':
-        return this.sanitizer.bypassSecurityTrustHtml(value);
+        // SECURITY: Sanitize with DOMPurify before bypassing Angular's sanitizer
+        return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(value));
       case 'style':
         return this.sanitizer.bypassSecurityTrustStyle(value);
-      // SECURITY: 'script' case removed — bypassSecurityTrustScript is never safe
       case 'url':
         return this.sanitizer.bypassSecurityTrustUrl(value);
       case 'resourceUrl':
@@ -22,6 +23,4 @@ export class SafePipe implements PipeTransform {
         throw new Error(`SafePipe: unknown type "${type}". Use 'html', 'style', 'url', or 'resourceUrl'.`);
     }
   }
-} 
- 
- 
+}

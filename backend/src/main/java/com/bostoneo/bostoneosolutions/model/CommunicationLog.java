@@ -79,12 +79,14 @@ public class CommunicationLog {
 
     /**
      * Recipient phone/email
+     * NOTE: Not encrypted because used in LIKE search queries (CommunicationLogRepository.searchCommunications)
      */
     @Column(name = "to_address", nullable = false, length = 100)
     private String toAddress;
 
     /**
      * Sender phone/email
+     * NOTE: Not encrypted — same reason as toAddress
      */
     @Column(name = "from_address", nullable = false, length = 100)
     private String fromAddress;

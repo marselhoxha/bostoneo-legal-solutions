@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,12 +36,15 @@ public class AdverseParty {
     @Column(name = "name", nullable = false)
     private String name;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "email")
     private String email;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "phone")
     private String phone;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "address")
     private String address;
 

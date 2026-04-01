@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.bostoneo.bostoneosolutions.enumeration.SignatureStatus;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
@@ -73,12 +74,15 @@ public class SignatureRequest {
     private SignatureStatus status = SignatureStatus.DRAFT;
 
     // Primary signer
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "signer_name", nullable = false, length = 100)
     private String signerName;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "signer_email", nullable = false, length = 100)
     private String signerEmail;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "signer_phone", length = 20)
     private String signerPhone;
 

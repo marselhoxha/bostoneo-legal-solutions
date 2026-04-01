@@ -78,14 +78,8 @@ export class AuthService {
   }
 
   logout(): void {
-    // Clear ALL possible token keys (login, refresh, and legacy keys use different names)
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
-    localStorage.removeItem('[KEY] TOKEN');
-    localStorage.removeItem('[REFRESH] REFRESH_TOKEN');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('currentUser');
+    // Clear ALL localStorage to prevent sensitive data persistence (tokens, case data, org context)
+    localStorage.clear();
 
     // Clear all session storage to prevent stale data
     sessionStorage.clear();
@@ -176,9 +170,10 @@ export class AuthService {
     return this.http.get<any>(`${this.API_URL}/user/refresh/token`, { headers }).pipe(
       tap(response => {
         if (response.data && response.data.access_token) {
-          localStorage.setItem('access_token', response.data.access_token);
+          // Store under the correct keys that getToken() reads from
+          localStorage.setItem(this.TOKEN_KEY, response.data.access_token);
           if (response.data.refresh_token) {
-            localStorage.setItem('refresh_token', response.data.refresh_token);
+            localStorage.setItem(this.REFRESH_TOKEN_KEY, response.data.refresh_token);
           }
         }
       }),

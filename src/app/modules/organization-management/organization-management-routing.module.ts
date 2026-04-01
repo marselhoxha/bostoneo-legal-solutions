@@ -6,6 +6,7 @@ import { OrganizationDetailsComponent } from './components/organization-details/
 import { OrganizationSettingsComponent } from './components/organization-settings/organization-settings.component';
 import { OrganizationPlanComponent } from './components/organization-plan/organization-plan.component';
 import { SuperAdminGuard } from '../superadmin/guards/superadmin.guard';
+import { AuthenticationGuard } from '../../guard/authentication.guard';
 
 const routes: Routes = [
   {
@@ -42,6 +43,11 @@ const routes: Routes = [
     path: 'details/:id/plan',
     component: OrganizationPlanComponent,
     canActivate: [SuperAdminGuard]
+  },
+  {
+    path: 'settings/:id',
+    component: OrganizationSettingsComponent,
+    canActivate: [AuthenticationGuard]
   }
 ];
 

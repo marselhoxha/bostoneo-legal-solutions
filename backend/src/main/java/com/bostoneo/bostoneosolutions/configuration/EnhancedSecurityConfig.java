@@ -93,7 +93,7 @@ public class EnhancedSecurityConfig {
             var corsConfig = new org.springframework.web.cors.CorsConfiguration();
             corsConfig.setAllowedOrigins(java.util.Arrays.asList(allowedOrigins.split(",")));
             corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-            corsConfig.setAllowedHeaders(java.util.List.of("*"));
+            corsConfig.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "Accept", "X-Requested-With", "Cache-Control", "X-XSRF-TOKEN"));
             corsConfig.setExposedHeaders(java.util.List.of("Content-Disposition", "Authorization", "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
             corsConfig.setAllowCredentials(true);
             corsConfig.setMaxAge(3600L);
@@ -166,7 +166,7 @@ public class EnhancedSecurityConfig {
         }
         String frameAncestors = String.join(" ", origins);
         return "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; " +
+            "script-src 'self' 'unsafe-inline' https://apis.google.com; " +
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
             "font-src 'self' https://fonts.gstatic.com; " +
             "img-src 'self' data: https:; " +

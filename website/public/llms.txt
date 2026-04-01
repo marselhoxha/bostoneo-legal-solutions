@@ -49,7 +49,7 @@ Legience is a direct alternative to:
 - AES-256 encryption at rest, TLS encryption in transit
 - Security practices designed to meet Massachusetts 201 CMR 17.00 requirements
 - AI processing through AWS Bedrock under Business Associate Agreement (BAA) — no client data used for AI training
-- US-only hosting (AWS US-East, Ohio)
+- US-only hosting (AWS US-East)
 - Comprehensive audit logs of all access and modifications
 - ABA Formal Opinion 512 compliant
 

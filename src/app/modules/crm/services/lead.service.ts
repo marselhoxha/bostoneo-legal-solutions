@@ -116,7 +116,7 @@ export class LeadService {
 
   // Pipeline operations
   getPipelineStages(): Observable<PipelineStage[]> {
-    return this.http.get<PipelineStage[]>(`${this.apiUrl}/pipeline-stages`);
+    return this.http.get<PipelineStage[]>(`${this.apiUrl}/pipeline/stages`);
   }
 
   moveLeadToStage(leadId: number, stageId: number, notes?: string): Observable<Lead> {

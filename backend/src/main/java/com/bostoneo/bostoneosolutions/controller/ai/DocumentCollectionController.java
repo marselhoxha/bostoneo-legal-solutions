@@ -111,7 +111,7 @@ public class DocumentCollectionController {
     public ResponseEntity<Map<String, Object>> createCollection(@RequestBody Map<String, Object> request) {
         String name = (String) request.get("name");
         String description = (String) request.get("description");
-        Long userId = request.get("userId") != null ? ((Number) request.get("userId")).longValue() : 1L;
+        Long userId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
         Long caseId = request.get("caseId") != null ? ((Number) request.get("caseId")).longValue() : null;
         String color = (String) request.getOrDefault("color", "#405189");
         String icon = (String) request.getOrDefault("icon", "ri-folder-line");
@@ -252,7 +252,7 @@ public class DocumentCollectionController {
 
         Long analysisId = ((Number) request.get("analysisId")).longValue();
         String notes = (String) request.get("notes");
-        Long addedBy = request.get("userId") != null ? ((Number) request.get("userId")).longValue() : 1L;
+        Long addedBy = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
 
         Long orgId = getRequiredOrganizationId();
         log.info("Adding document {} to collection {} in org {}", analysisId, collectionId, orgId);
@@ -800,7 +800,7 @@ public class DocumentCollectionController {
         Long targetId = ((Number) request.get("targetAnalysisId")).longValue();
         String relationshipType = (String) request.get("relationshipType");
         String description = (String) request.get("description");
-        Long userId = request.get("userId") != null ? ((Number) request.get("userId")).longValue() : 1L;
+        Long userId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
 
         Long orgId = getRequiredOrganizationId();
         log.info("Creating relationship: {} {} -> {} in org {}", relationshipType, sourceId, targetId, orgId);

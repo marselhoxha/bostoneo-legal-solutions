@@ -80,9 +80,11 @@ public class RbacController {
     }
 
     /**
-     * Get user permissions and roles
+     * Get user permissions and roles.
+     * Overrides class-level SUPERADMIN restriction — users can query their own permissions.
      */
     @GetMapping("/user/{userId}/permissions")
+    @PreAuthorize("hasRole('ROLE_SUPERADMIN') or #userId == authentication.principal.id")
     public ResponseEntity<Map<String, Object>> getUserPermissions(@PathVariable Long userId) {
         try {
             // Use enhanced RBAC service now that database fields have been added

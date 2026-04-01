@@ -397,6 +397,10 @@ module "ecs" {
     {
       name  = "S3_REGION"
       value = var.region
+    },
+    {
+      name  = "AWS_REGION"
+      value = var.region
     }
   ]
 

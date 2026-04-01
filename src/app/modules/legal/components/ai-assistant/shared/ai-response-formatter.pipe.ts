@@ -1,5 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import DOMPurify from 'dompurify';
 
 @Pipe({
   name: 'aiResponseFormatter',
@@ -20,7 +21,7 @@ export class AiResponseFormatterPipe implements PipeTransform {
     if (isHtml) {
       // Content is HTML - convert markdown tables embedded within
       formatted = this.convertTablesInHtml(formatted);
-      return this.sanitizer.bypassSecurityTrustHtml(formatted);
+      return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(formatted));
     }
 
     // First, convert literal \n\n to actual line breaks
@@ -68,7 +69,7 @@ export class AiResponseFormatterPipe implements PipeTransform {
     // Cleanup any remaining list tags
     formatted = formatted.replace(/<\/ul>\n<ul class="ai-list">/g, '');
 
-    return this.sanitizer.bypassSecurityTrustHtml(formatted);
+    return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(formatted));
   }
 
   /**

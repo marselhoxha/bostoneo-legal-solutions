@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -27,12 +28,24 @@ public class TimerResource {
 
     private final TimerService timerService;
 
+    /** Extract authenticated user's ID — prevents IDOR by ignoring userId from request body */
+    private Long getAuthenticatedUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof com.bostoneo.bostoneosolutions.model.UserPrincipal up) {
+            return up.getId();
+        }
+        if (principal instanceof com.bostoneo.bostoneosolutions.dto.UserDTO dto) {
+            return dto.getId();
+        }
+        throw new com.bostoneo.bostoneosolutions.exception.ApiException("Unable to determine user identity");
+    }
+
     // Start a new timer with enhanced rate configuration
     @PostMapping("/start")
     @PreAuthorize("hasAuthority('TIME_TRACKING:CREATE')")
     public ResponseEntity<HttpResponse> startTimer(@Valid @RequestBody Map<String, Object> request) {
         try {
-            Long userId = Long.valueOf(request.get("userId").toString());
+            Long userId = getAuthenticatedUserId();
             
             // Build StartTimerRequest with enhanced rate parameters
             StartTimerRequest.StartTimerRequestBuilder requestBuilder = StartTimerRequest.builder()
@@ -95,7 +108,7 @@ public class TimerResource {
     @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
     public ResponseEntity<HttpResponse> pauseTimer(@PathVariable Long timerId, @RequestBody Map<String, Object> request) {
         try {
-            Long userId = Long.valueOf(request.get("userId").toString());
+            Long userId = getAuthenticatedUserId();
             ActiveTimerDTO timer = timerService.pauseTimer(userId, timerId);
             return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -122,7 +135,7 @@ public class TimerResource {
     @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
     public ResponseEntity<HttpResponse> resumeTimer(@PathVariable Long timerId, @RequestBody Map<String, Object> request) {
         try {
-            Long userId = Long.valueOf(request.get("userId").toString());
+            Long userId = getAuthenticatedUserId();
             ActiveTimerDTO timer = timerService.resumeTimer(userId, timerId);
             return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -149,7 +162,7 @@ public class TimerResource {
     @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
     public ResponseEntity<HttpResponse> stopTimer(@PathVariable Long timerId, @RequestBody Map<String, Object> request) {
         try {
-            Long userId = Long.valueOf(request.get("userId").toString());
+            Long userId = getAuthenticatedUserId();
             
             // Get timer info before stopping for response
             ActiveTimerDTO timerInfo = timerService.getActiveTimer(timerId);
@@ -233,9 +246,9 @@ public class TimerResource {
     @PostMapping("/{timerId}/convert")
     @PreAuthorize("hasAuthority('TIME_TRACKING:CREATE')")
     public ResponseEntity<HttpResponse> convertTimerToTimeEntry(@PathVariable Long timerId, @RequestBody Map<String, Object> request) {
-        Long userId = Long.valueOf(request.get("userId").toString());
+        Long userId = getAuthenticatedUserId();
         String description = request.get("description") != null ? request.get("description").toString() : null;
-        
+
         TimeEntryDTO timeEntry = timerService.convertTimerToTimeEntry(userId, timerId, description);
         return ResponseEntity.status(CREATED).body(
             HttpResponse.builder()
@@ -300,7 +313,7 @@ public class TimerResource {
     @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
     public ResponseEntity<HttpResponse> updateTimerDescription(@PathVariable Long timerId, @RequestBody Map<String, Object> request) {
         try {
-            Long userId = Long.valueOf(request.get("userId").toString());
+            Long userId = getAuthenticatedUserId();
             String description = request.get("description").toString();
             
             timerService.updateTimerDescription(userId, timerId, description);

@@ -10,11 +10,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * REST Controller for PI Provider Directory operations.
  * CRUD operations for managing medical provider contact information.
  */
+@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER', 'ROLE_ATTORNEY', 'ROLE_PARALEGAL')")
 @RestController
 @RequestMapping("/api/pi/provider-directory")
 @RequiredArgsConstructor

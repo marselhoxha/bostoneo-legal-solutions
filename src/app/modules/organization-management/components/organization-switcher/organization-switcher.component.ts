@@ -201,7 +201,7 @@ export class OrganizationSwitcherComponent implements OnInit, OnDestroy {
   navigateToSettings(): void {
     const orgId = this.organizationService.getCurrentOrganizationId();
     if (orgId) {
-      this.router.navigate(['/organizations/details', orgId, 'settings']);
+      this.router.navigate(['/organizations/settings', orgId]);
     }
   }
 

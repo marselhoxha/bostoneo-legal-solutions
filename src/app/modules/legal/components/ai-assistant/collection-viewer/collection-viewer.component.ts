@@ -10,6 +10,7 @@ import { NgbDropdownModule, NgbNavModule, NgbModal } from '@ng-bootstrap/ng-boot
 import { DocumentCollectionService, CollectionWithDocuments, CollectionDocument, AggregatedTimelineEvent, AggregatedActionItem, SearchResult, QAResponse, QASource, SearchResponse } from '../../../services/document-collection.service';
 import { NotificationService } from '../../../services/notification.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import DOMPurify from 'dompurify';
 import { DocumentPreviewModalComponent } from '../document-preview-modal/document-preview-modal.component';
 
 // Q&A Chat message interface
@@ -572,7 +573,7 @@ export class CollectionViewerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   sanitizeHtml(html: string): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(html);
+    return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(html));
   }
 
   // ============ Q&A FUNCTIONALITY ============
@@ -703,7 +704,7 @@ export class CollectionViewerComponent implements OnInit, OnDestroy, OnChanges {
     // Convert remaining line breaks (but not after block elements)
     formatted = formatted.replace(/(?<!<\/h[3-5]>|<\/li>|<\/ul>|<\/ol>|<hr[^>]*>)\n/g, '<br>');
 
-    return this.sanitizer.bypassSecurityTrustHtml(formatted);
+    return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(formatted));
   }
 
   /**

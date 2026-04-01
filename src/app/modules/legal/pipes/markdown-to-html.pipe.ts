@@ -1,6 +1,7 @@
 import { Pipe, PipeTransform, inject } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ChartSecurityService } from '../services/chart-security.service';
+import DOMPurify from 'dompurify';
 
 @Pipe({
   name: 'markdownToHtml',
@@ -38,8 +39,8 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     // STEP 4: Append SOURCES bar at the end
     html = html + sources.html;
 
-    // IMPORTANT: Use bypassSecurityTrustHtml to allow our custom HTML/CSS classes
-    return this.sanitizer.bypassSecurityTrustHtml(html);
+    // SECURITY: Sanitize with DOMPurify before bypassing Angular's sanitizer
+    return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(html));
   }
 
   /**

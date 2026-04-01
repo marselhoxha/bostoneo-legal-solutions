@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import DOMPurify from 'dompurify';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -586,9 +587,9 @@ export class StationerySettingsComponent implements OnInit, OnDestroy {
     if (ov.firmPhone?.trim()) previewData['{{firm_phone}}'] = ov.firmPhone.trim();
     if (ov.firmEmail?.trim()) previewData['{{firm_email}}'] = ov.firmEmail.trim();
     if (ov.firmWebsite?.trim()) previewData['{{firm_website}}'] = ov.firmWebsite.trim();
-    this.previewLetterhead = this.sanitizer.bypassSecurityTrustHtml(replacePlaceholders(letterheadHtml, previewData));
-    this.previewSignature = this.sanitizer.bypassSecurityTrustHtml(replacePlaceholders(signatureHtml, previewData));
-    this.previewFooter = this.sanitizer.bypassSecurityTrustHtml(replacePlaceholders(footerHtml, previewData));
+    this.previewLetterhead = this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(replacePlaceholders(letterheadHtml, previewData)));
+    this.previewSignature = this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(replacePlaceholders(signatureHtml, previewData)));
+    this.previewFooter = this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(replacePlaceholders(footerHtml, previewData)));
   }
 
   onFormChange(): void {
