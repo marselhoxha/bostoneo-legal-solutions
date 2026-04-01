@@ -1528,6 +1528,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
 
   .total-label {
     display: flex;
@@ -1535,16 +1536,35 @@
     gap: 0.5rem;
     font-weight: 600;
     color: var(--vz-info);
+    white-space: nowrap;
 
     i {
       font-size: 1.25rem;
     }
   }
 
-  .total-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--vz-primary);
+  .total-input-wrapper {
+    flex: 1;
+    max-width: 320px;
+
+    .demand-total-input {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--vz-primary);
+      text-align: right;
+
+      &::placeholder {
+        color: var(--vz-secondary);
+        opacity: 0.6;
+      }
+    }
+
+    .demand-total-hint {
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      text-align: right;
+      color: var(--vz-secondary);
+    }
   }
 }
 

@@ -4,7 +4,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } 
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subject, BehaviorSubject, Observable, of } from 'rxjs';
-import { takeUntil, debounceTime, distinctUntilChanged, switchMap, catchError, map } from 'rxjs/operators';
+import { takeUntil, debounceTime, distinctUntilChanged, switchMap, catchError, map, take } from 'rxjs/operators';
 import { NgbNavModule, NgbDropdownModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { PracticeAreaBaseComponent } from '../../shared/practice-area-base.component';
 import { AiResponseFormatterPipe } from '../../shared/ai-response-formatter.pipe';
@@ -279,6 +279,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   private scanTimeoutId: any = null;
   private scanTaskId: string | null = null;
   private scanPollId: any = null;
+  private preScanRecordCount: number = 0;
   medicalRecordForm: FormGroup;
   editingMedicalRecord: PIMedicalRecord | null = null;
   recordTypes = RECORD_TYPES;
@@ -542,7 +543,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       lostWages: [0],
       futureMedical: [0],
       policyLimit: [null],
-      painSufferingMultiplier: [2.5, Validators.required]
+      painSufferingMultiplier: [2.5, Validators.required],
+      demandTotalOverride: [null]
     });
 
     // Initialize Settlement Form
@@ -751,8 +753,19 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           // Got 202 = backend accepted a NEW scan = previous scan is done.
           // The backend is now running a fresh (redundant) scan that will complete instantly.
           // Complete the original task and reload data.
+          // WebSocket payload was lost — fetch records to derive the actual count.
           if (this.isScanningDocuments) {
-            this.handleScanComplete(taskId);
+            // Stop polling immediately to prevent duplicate completions from concurrent ticks
+            this.stopScanPolling();
+            this.medicalRecordService.getRecordsByCaseId(caseId)
+              .pipe(take(1))
+              .subscribe({
+                next: (records) => {
+                  const recordsCreated = Math.max(0, records.length - this.preScanRecordCount);
+                  this.handleScanComplete(taskId, { recordsCreated });
+                },
+                error: () => this.handleScanComplete(taskId)
+              });
           }
         },
         error: (err) => {
@@ -830,20 +843,24 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     // Show Swal result dialog to the user (they're on the page)
     this.scanResult = payload;
     if (recordsCreated > 0) {
+      const detail = documentsScanned > 0
+        ? ` from ${documentsScanned} documents` : '';
       Swal.fire({
         icon: 'success',
         title: 'Scan Complete',
-        html: `Created <strong>${recordsCreated}</strong> medical records from ${documentsScanned} documents.`,
+        html: `Created <strong>${recordsCreated}</strong> new medical records${detail}.`,
         confirmButtonText: 'OK',
         customClass: { confirmButton: 'btn btn-primary' },
         buttonsStyling: false
       });
     } else {
+      const detail = documentsScanned > 0
+        ? `All <strong>${documentsScanned}</strong> documents have already been processed.<br>`
+        : '';
       Swal.fire({
         icon: 'info',
         title: 'Scan Complete',
-        html: `All <strong>${documentsScanned}</strong> documents have already been processed.<br>No new medical records found.`,
-        text: 'Use "Clear All" to re-scan from scratch.',
+        html: `${detail}No new medical records found.`,
         confirmButtonText: 'OK',
         customClass: { confirmButton: 'btn btn-primary' },
         buttonsStyling: false
@@ -1839,6 +1856,20 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     return economic + nonEconomic;
   }
 
+  getEffectiveDemandTotal(): number {
+    const override = this.demandForm.get('demandTotalOverride')?.value;
+    return (override !== null && override !== undefined && override !== '') ? +override : this.calculateDemandTotal();
+  }
+
+  resetDemandTotal(): void {
+    this.demandForm.get('demandTotalOverride')?.setValue(null);
+  }
+
+  isDemandOverridden(): boolean {
+    const override = this.demandForm.get('demandTotalOverride')?.value;
+    return override !== null && override !== undefined && override !== '';
+  }
+
   generateDemandLetter(): void {
     if (this.demandForm.invalid) {
       this.markFormGroupTouched(this.demandForm);
@@ -1881,7 +1912,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
 
     this.isGeneratingDemand = true;
     const formData = this.demandForm.value;
-    const totalDemand = this.calculateDemandTotal();
+    const totalDemand = this.getEffectiveDemandTotal();
     const userId = this.userService.getCurrentUserId();
 
     // Build case context for AI (if case is linked)
@@ -3896,6 +3927,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.isScanningDocuments = true;
     this.scanResult = null;
     this.scanProgress = null;
+    this.preScanRecordCount = this.medicalRecords.length;
 
     // Register as a background task (like document drafting)
     const taskId = this.backgroundTaskService.registerTask(

@@ -357,7 +357,7 @@
         </div>
         <div class="stat-body">
           <i [class]="getDaysSinceInjury() ? 'ri-time-line stat-icon text-info' : 'ri-file-list-line stat-icon text-info'"></i>
-          <span class="stat-value">{{ getDaysSinceInjury() || (documentCompleteness?.score || 0) + '%' }}</span>
+          <span class="stat-value">{{ getDaysSinceInjury() || (getCompletenessPercent() || 0) + '%' }}</span>
         </div>
       </div>
 
@@ -446,7 +446,7 @@
                         <div class="summary-stat-card info" (click)="activeTab = 'documents'; documentsSubTab = 'checklist'">
                           <div class="ssc-icon"><i class="ri-file-list-3-line"></i></div>
                           <div class="ssc-content">
-                            <div class="ssc-value">{{ documentCompleteness?.score || 0 }}<span class="ssc-unit">%</span></div>
+                            <div class="ssc-value">{{ getCompletenessPercent() || 0 }}<span class="ssc-unit">%</span></div>
                             <div class="ssc-label">Documents</div>
                           </div>
                           <div class="ssc-action"><i class="ri-arrow-right-s-line"></i></div>
@@ -1016,9 +1016,9 @@
               <a ngbNavLink class="d-flex align-items-center gap-2">
                 <i class="ri-file-list-3-line fs-16"></i>
                 <span>Documents</span>
-                <span class="badge bg-success-subtle text-success ms-1" *ngIf="documentCompleteness?.score >= 80">{{ documentCompleteness?.score }}%</span>
-                <span class="badge bg-warning-subtle text-warning ms-1" *ngIf="documentCompleteness?.score >= 50 && documentCompleteness?.score < 80">{{ documentCompleteness?.score }}%</span>
-                <span class="badge bg-danger-subtle text-danger ms-1" *ngIf="documentCompleteness?.score > 0 && documentCompleteness?.score < 50">{{ documentCompleteness?.score }}%</span>
+                <span class="badge bg-success-subtle text-success ms-1" *ngIf="getCompletenessPercent() >= 80">{{ getCompletenessPercent() }}%</span>
+                <span class="badge bg-warning-subtle text-warning ms-1" *ngIf="getCompletenessPercent() >= 50 && getCompletenessPercent() < 80">{{ getCompletenessPercent() }}%</span>
+                <span class="badge bg-danger-subtle text-danger ms-1" *ngIf="getCompletenessPercent() > 0 && getCompletenessPercent() < 50">{{ getCompletenessPercent() }}%</span>
               </a>
               <ng-template ngbNavContent>
                 <!-- Documents Tab Content with Sub-tabs -->
@@ -1174,7 +1174,29 @@
                               <div class="total-label">
                                 <i class="ri-money-dollar-circle-line"></i> Total Demand
                               </div>
-                              <div class="total-value">{{ formatCurrency(calculateDemandTotal()) }}</div>
+                              <div class="total-input-wrapper">
+                                <div class="input-group">
+                                  <span class="input-group-text">$</span>
+                                  <input type="number" class="form-control demand-total-input"
+                                         formControlName="demandTotalOverride"
+                                         [placeholder]="calculateDemandTotal()"
+                                         min="0" step="100">
+                                  <button *ngIf="isDemandOverridden()" type="button"
+                                          class="btn btn-outline-secondary btn-sm"
+                                          (click)="resetDemandTotal()"
+                                          title="Reset to calculated amount">
+                                    <i class="ri-refresh-line"></i>
+                                  </button>
+                                </div>
+                                <div class="demand-total-hint">
+                                  <span *ngIf="isDemandOverridden(); else calculatedLabel">
+                                    Calculated: {{ formatCurrency(calculateDemandTotal()) }}
+                                  </span>
+                                  <ng-template #calculatedLabel>
+                                    <span class="text-muted">Auto-calculated — enter amount to override</span>
+                                  </ng-template>
+                                </div>
+                              </div>
                             </div>
 
                             <!-- Generate Button -->
