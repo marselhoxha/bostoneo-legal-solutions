@@ -202,7 +202,7 @@ resource "aws_db_instance" "main" {
   copy_tags_to_snapshot   = true
   skip_final_snapshot     = false
   final_snapshot_identifier = "legience-${local.environment}-final-snapshot"
-  deletion_protection     = false  # Demo phase: easier teardown if needed
+  deletion_protection     = true
 
   tags = {
     Name = "legience-${local.environment}-db"
@@ -275,7 +275,7 @@ resource "aws_lb" "api" {
   security_groups    = [aws_security_group.alb.id]
   subnets            = module.vpc.public_subnet_ids
 
-  enable_deletion_protection = false  # Demo phase
+  enable_deletion_protection = true
 
   tags = {
     Name = "legience-${local.environment}-alb"

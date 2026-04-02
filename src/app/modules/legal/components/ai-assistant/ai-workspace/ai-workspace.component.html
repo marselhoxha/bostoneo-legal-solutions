@@ -1882,7 +1882,7 @@
 
                         <div class="tab-content">
                           <div class="tab-pane fade show active" id="overview-{{i}}" role="tabpanel">
-                            <div [innerHTML]="message.parsedSections?.overview || message.content" apexChartsContainer></div>
+                            <div [innerHTML]="(message.parsedSections?.overview || message.content) | markdownToHtml" apexChartsContainer></div>
                           </div>
                           <div class="tab-pane fade" id="action-items-{{i}}" role="tabpanel">
                             <app-action-items-list *ngIf="message.analysisId" [analysisId]="message.analysisId"></app-action-items-list>

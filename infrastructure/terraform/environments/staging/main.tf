@@ -547,11 +547,13 @@ resource "aws_iam_role" "github_actions" {
         }
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
-          StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:marselhoxha/bostoneo-legal-solutions:*"
-          }
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:marselhoxha/bostoneo-legal-solutions:ref:refs/heads/main",
+              "repo:marselhoxha/bostoneo-legal-solutions:ref:refs/heads/staging",
+              "repo:marselhoxha/bostoneo-legal-solutions:ref:refs/heads/develop"
+            ]
           }
         }
       }

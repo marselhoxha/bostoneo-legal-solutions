@@ -30,9 +30,17 @@
         <appender-ref ref="Console" />
     </root>
 
-    <!-- LOG "com.bostoneo*" at DEBUG level -->
-    <logger name="com.bostoneo" level="debug" additivity="false">
-        <appender-ref ref="RollingFile" />
-        <appender-ref ref="Console" />
-    </logger>
+    <!-- DEBUG only in dev — production uses INFO to avoid logging PII/tokens -->
+    <springProfile name="dev,local">
+        <logger name="com.bostoneo" level="debug" additivity="false">
+            <appender-ref ref="RollingFile" />
+            <appender-ref ref="Console" />
+        </logger>
+    </springProfile>
+    <springProfile name="staging,production,prod">
+        <logger name="com.bostoneo" level="info" additivity="false">
+            <appender-ref ref="RollingFile" />
+            <appender-ref ref="Console" />
+        </logger>
+    </springProfile>
 </configuration> 

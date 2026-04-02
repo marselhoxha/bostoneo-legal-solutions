@@ -83,7 +83,7 @@ public class CrmLeadsResource {
         return ResponseEntity.ok(leadDTO);
     }
 
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<LeadDTO> createLead(@RequestBody LeadDTO leadDTO) {
         log.info("Creating new lead: {} {}", leadDTO.getFirstName(), leadDTO.getLastName());
         Long userId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
@@ -146,7 +146,7 @@ public class CrmLeadsResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Advancing lead {} to status: {} by user: {}", id, newStatus, username);
 
-        Long userId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
+        Long userId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
         Lead lead = leadService.advanceInPipeline(id, newStatus, userId, notes);
         LeadDTO leadDTO = leadDTOMapper.toDTO(lead);
         
@@ -166,7 +166,7 @@ public class CrmLeadsResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Moving lead {} to stage {} by user: {}", id, stageId, username);
 
-        Long userId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
+        Long userId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
         Lead lead = leadService.moveToStage(id, stageId, userId, notes);
         LeadDTO leadDTO = leadDTOMapper.toDTO(lead);
         
@@ -264,7 +264,7 @@ public class CrmLeadsResource {
         String username = userDetails != null ? userDetails.getUsername() : "system";
         log.info("Adding activity to lead {} by user: {}", id, username);
 
-        Long userId = ((com.bostoneo.bostoneosolutions.model.UserPrincipal) userDetails).getId();
+        Long userId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
         leadService.addActivity(id, activityType, title, description, userId);
         
         return ResponseEntity.ok(Map.of(

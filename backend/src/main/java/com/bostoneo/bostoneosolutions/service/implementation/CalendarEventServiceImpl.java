@@ -223,10 +223,9 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         }
         
         // Ensure user ID is not null for events with reminders
-        if (event.getUserId() == null && 
+        if (event.getUserId() == null &&
            (event.getReminderMinutes() != null && event.getReminderMinutes() > 0)) {
-            log.warn("Updated event with reminder has null user ID, using default system user ID");
-            event.setUserId(1L); // Set to default system user as fallback
+            throw new IllegalArgumentException("Cannot update event with reminder: userId is required");
         }
         
         CalendarEvent updatedEvent = calendarEventRepository.save(event);

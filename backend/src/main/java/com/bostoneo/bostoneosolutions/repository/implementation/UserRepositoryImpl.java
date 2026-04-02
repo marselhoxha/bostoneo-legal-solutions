@@ -3,6 +3,7 @@ package com.bostoneo.bostoneosolutions.repository.implementation;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.enumeration.VerificationType;
 import com.bostoneo.bostoneosolutions.exception.ApiException;
+import org.springframework.transaction.annotation.Transactional;
 import com.bostoneo.bostoneosolutions.form.UpdateForm;
 import com.bostoneo.bostoneosolutions.model.CaseRoleAssignment;
 import com.bostoneo.bostoneosolutions.model.Permission;
@@ -149,6 +150,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     }
 
     @Override
+    @Transactional
     public Boolean delete(Long id) {
         try {
             // Check if user exists
@@ -619,9 +621,16 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         }
     }
 
+    @Transactional
     public void acceptTerms(Long userId) {
         try {
-            jdbc.update("UPDATE users SET terms_accepted_at = NOW() WHERE id = :id", of("id", userId));
+            int rowsUpdated = jdbc.update("UPDATE users SET terms_accepted_at = NOW() WHERE id = :id", of("id", userId));
+            log.info("Terms accepted for user {}: {} row(s) updated", userId, rowsUpdated);
+            if (rowsUpdated == 0) {
+                throw new ApiException("No user found with ID " + userId + ". Terms acceptance not recorded.");
+            }
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception exception) {
             log.error("Error recording terms acceptance for user {}: {}", userId, exception.getMessage());
             throw new ApiException("Unable to record terms acceptance. Please try again.");

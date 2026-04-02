@@ -1,4 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChildren, ViewChild, QueryList, OnDestroy } from '@angular/core';
+import DOMPurify from 'dompurify';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -1476,11 +1477,12 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   formatDescription(description: string | null | undefined): string {
     if (!description) return '<span class="text-muted">No description provided</span>';
 
-    // Convert line breaks to <br> tags and preserve paragraph structure
-    return description
-      .split(/\n\n+/)  // Split by double line breaks (paragraphs)
+    // Sanitize user-supplied content to prevent stored XSS
+    const raw = description
+      .split(/\n\n+/)
       .map(paragraph => `<p class="description-paragraph">${paragraph.replace(/\n/g, '<br>')}</p>`)
       .join('');
+    return DOMPurify.sanitize(raw);
   }
 
   isDescriptionLong(description: string | null | undefined): boolean {

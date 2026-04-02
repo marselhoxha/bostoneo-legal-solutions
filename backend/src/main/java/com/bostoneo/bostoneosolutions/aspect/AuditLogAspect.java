@@ -143,8 +143,14 @@ public class AuditLogAspect {
             ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attrs != null) {
                 HttpServletRequest request = attrs.getRequest();
+                // Only trust X-Forwarded-For when direct connection is from a private/proxy IP
+                String remoteAddr = request.getRemoteAddr();
                 String xff = request.getHeader("X-Forwarded-For");
-                ipAddress = (xff != null && !xff.isEmpty()) ? xff.split(",")[0].trim() : request.getRemoteAddr();
+                if (xff != null && !xff.isEmpty() && isPrivateIp(remoteAddr)) {
+                    ipAddress = xff.split(",")[0].trim();
+                } else {
+                    ipAddress = remoteAddr;
+                }
                 userAgent = request.getHeader("User-Agent");
             }
         } catch (Exception e) {
@@ -244,5 +250,14 @@ public class AuditLogAspect {
                                     com.bostoneo.bostoneosolutions.model.AuditLog.EntityType entityType,
                                     String methodName) {
         return String.format("%s %s via %s", action.name().toLowerCase(), entityType.name().toLowerCase(), methodName);
+    }
+
+    /** Only trust X-Forwarded-For when the direct connection is from a known proxy/private IP */
+    private boolean isPrivateIp(String ip) {
+        if (ip == null) return false;
+        return ip.startsWith("10.") || ip.startsWith("172.16.") || ip.startsWith("172.17.") ||
+               ip.startsWith("172.18.") || ip.startsWith("172.19.") || ip.startsWith("172.2") ||
+               ip.startsWith("172.30.") || ip.startsWith("172.31.") || ip.startsWith("192.168.") ||
+               ip.equals("127.0.0.1") || ip.equals("0:0:0:0:0:0:0:1");
     }
 }

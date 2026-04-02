@@ -1102,7 +1102,7 @@
                   </div>
 
                   <div class="document-content">
-                    <div class="text-justify lh-lg" [innerHTML]="selectedResult.fullText || selectedResult.summary"></div>
+                    <div class="text-justify lh-lg" [innerHTML]="(selectedResult.fullText || selectedResult.summary) | markdownToHtml"></div>
                   </div>
                 </div>
               </div>

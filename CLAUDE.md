@@ -33,8 +33,8 @@ Standard Workflow
 * Use environment variables for database access. Never hardcode credentials.
 * For user testing, use the test user with default password.
 * The main user is Marsel Hoxha with email: "marsel.hox@gmail.com"
-- database name is legience and password legience_dev
-- password for user marsel.hox@gmail.com is 1234
+- database name is legience (credentials in local .env / Secrets Manager)
+- test with default dev credentials (see local environment setup)
 * When i upload something to the chat, you have permission to view it directly, don't need to ask permission
 * create a md file for every plan you create in order to keep live tracking of everything you do and implement
 * dont run: npm run build unless requested by the user

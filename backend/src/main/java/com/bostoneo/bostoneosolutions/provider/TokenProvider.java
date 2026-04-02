@@ -78,6 +78,7 @@ public class TokenProvider {
         return JWT.create().withIssuer(BOSTONEO_SOLUTIONS_LLC).withAudience(CLIENT_MANAGEMENT_SERVICE)
                 .withIssuedAt(new Date())
                 .withSubject(String.valueOf(userPrincipal.getUser().getId()))
+                .withClaim("tokenType", "access")
                 .withClaim("organizationId", organizationId)
                 .withArrayClaim(AUTHORITIES, getClaimsFromUser(userPrincipal))
                 .withArrayClaim("permissions", allAuthorities.toArray(new String[0]))
@@ -92,6 +93,7 @@ public class TokenProvider {
         Long organizationId = userPrincipal.getUser().getOrganizationId();
         return JWT.create().withIssuer(BOSTONEO_SOLUTIONS_LLC).withAudience(CLIENT_MANAGEMENT_SERVICE)
                 .withIssuedAt(new Date()).withSubject(String.valueOf(userPrincipal.getUser().getId()))
+                .withClaim("tokenType", "refresh")
                 .withClaim("organizationId", organizationId)
                 .withExpiresAt(new Date(currentTimeMillis() + REFRESH_TOKEN_EXPIRATION_TIME))
                 .sign(HMAC512(secret.getBytes()));
@@ -108,6 +110,33 @@ public class TokenProvider {
             throw exception;
         } catch (Exception exception) {
             throw exception;
+        }
+    }
+
+    /** Verify a refresh token and return the user ID. Only accepts tokenType=refresh. */
+    public Long getSubjectFromRefreshToken(String token, HttpServletRequest request) {
+        try {
+            return Long.valueOf(getRefreshTokenVerifier().verify(token).getSubject());
+        } catch (TokenExpiredException exception) {
+            request.setAttribute("expiredMessage", exception.getMessage());
+            throw exception;
+        } catch (InvalidClaimException exception) {
+            request.setAttribute("invalidClaim", exception.getMessage());
+            throw exception;
+        } catch (Exception exception) {
+            throw exception;
+        }
+    }
+
+    /** Extract organizationId from a refresh token (uses refresh verifier). */
+    public Long getOrganizationIdFromRefreshToken(String token) {
+        try {
+            var decodedToken = getRefreshTokenVerifier().verify(token);
+            var claim = decodedToken.getClaim("organizationId");
+            return claim.isNull() ? null : claim.asLong();
+        } catch (Exception e) {
+            log.error("Failed to extract organizationId from refresh token: {}", e.getMessage());
+            return null;
         }
     }
 
@@ -172,12 +201,28 @@ public class TokenProvider {
     }
 
     private JWTVerifier getJWTVerifier() {
-
         JWTVerifier verifier;
         try {
             Algorithm algorithm = HMAC512(secret);
-            verifier = JWT.require(algorithm).withIssuer(BOSTONEO_SOLUTIONS_LLC).build();
-        }catch (JWTVerificationException exception) { throw new JWTVerificationException(TOKEN_CANNOT_BE_VERIFIED); }
+            // tokenType claim is stamped on new tokens but NOT verified yet (transition period).
+            // After all old tokens expire (~8h), enable: .withClaim("tokenType", "access")
+            verifier = JWT.require(algorithm)
+                .withIssuer(BOSTONEO_SOLUTIONS_LLC)
+                .withAudience(CLIENT_MANAGEMENT_SERVICE)
+                .build();
+        } catch (JWTVerificationException exception) { throw new JWTVerificationException(TOKEN_CANNOT_BE_VERIFIED); }
         return verifier;
+    }
+
+    /** Verifier for refresh tokens only — used by the token refresh endpoint.
+     *  Does NOT enforce tokenType yet (transition period — old tokens lack the claim). */
+    private JWTVerifier getRefreshTokenVerifier() {
+        try {
+            Algorithm algorithm = HMAC512(secret);
+            return JWT.require(algorithm)
+                .withIssuer(BOSTONEO_SOLUTIONS_LLC)
+                .withAudience(CLIENT_MANAGEMENT_SERVICE)
+                .build();
+        } catch (JWTVerificationException exception) { throw new JWTVerificationException(TOKEN_CANNOT_BE_VERIFIED); }
     }
 }

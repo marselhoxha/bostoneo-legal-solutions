@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.util;
 
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
 
+@Slf4j
 @Component
 public class DataEncryptionUtil {
     
@@ -31,9 +33,18 @@ public class DataEncryptionUtil {
         // Key is initialized in @PostConstruct after @Value injection completes
     }
 
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
+
     @PostConstruct
     public void init() {
         if (encryptionKey == null || encryptionKey.isEmpty()) {
+            if (activeProfile.contains("prod") || activeProfile.contains("staging")) {
+                log.error("WARNING: app.encryption.key is NOT set in {}. Using ephemeral key — " +
+                    "encrypted data will NOT survive restarts or work across ECS instances. " +
+                    "Set APP_ENCRYPTION_KEY in Secrets Manager to fix this.", activeProfile);
+            }
+            log.warn("No app.encryption.key configured — using ephemeral key");
             this.secretKey = generateKey();
         } else {
             this.secretKey = new SecretKeySpec(
