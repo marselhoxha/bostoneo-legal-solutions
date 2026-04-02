@@ -1,110 +1,98 @@
-<!-- Notification Channels -->
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-header bg-transparent border-bottom">
-    <h6 class="mb-0 fw-semibold">
-      <i class="ri-notification-3-line me-2 text-primary"></i>Notification Channels
-    </h6>
-  </div>
-  <div class="card-body">
-    <div class="row g-3">
-      <div class="col-md-4">
-        <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
-          <div>
-            <i class="ri-mail-line text-primary me-2"></i>
-            <span class="fw-medium">Email</span>
-          </div>
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.emailEnabled">
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
-          <div>
-            <i class="ri-chat-3-line text-success me-2"></i>
-            <span class="fw-medium">SMS</span>
-          </div>
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.smsEnabled"
-                   [disabled]="!organization?.twilioConfigured">
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
-          <div>
-            <i class="ri-whatsapp-line text-success me-2"></i>
-            <span class="fw-medium">WhatsApp</span>
-          </div>
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.whatsappEnabled"
-                   [disabled]="!organization?.twilioConfigured">
-          </div>
-        </div>
-      </div>
-      <div class="col-12 text-end">
-        <button class="btn btn-primary btn-sm" (click)="saveNotificationSettings()" [disabled]="isSaving">
-          <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
-          Save Notification Settings
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Integrations -->
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-header bg-transparent border-bottom">
-    <h6 class="mb-0 fw-semibold">
-      <i class="ri-plug-line me-2 text-primary"></i>Connected Services
-    </h6>
+<!-- ═══════════ Connected Services ═══════════ -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent border-bottom py-3">
+    <h6 class="mb-0 fw-semibold"><i class="ri-plug-line me-2 text-primary"></i>Connected Services</h6>
   </div>
   <div class="card-body">
     <div class="row g-3">
       <!-- Twilio -->
       <div class="col-md-6">
-        <div class="border rounded p-3" [ngClass]="organization?.twilioConfigured ? 'border-success' : ''">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <h6 class="mb-0"><i class="ri-phone-line me-2"></i>Twilio</h6>
-            <span class="badge" [ngClass]="organization?.twilioConfigured ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
+        <div class="p-3 rounded-3 border position-relative overflow-hidden"
+             [style.border-left]="organization?.twilioConfigured ? '3px solid var(--vz-success)' : '3px solid var(--vz-border-color)'"
+             [style.background]="organization?.twilioConfigured ? 'rgba(var(--vz-success-rgb), 0.03)' : ''">
+          <div class="d-flex align-items-start justify-content-between mb-2">
+            <div class="d-flex align-items-center gap-2">
+              <div class="d-flex align-items-center justify-content-center rounded-2"
+                   [style.width.px]="38" [style.height.px]="38"
+                   [style.background]="organization?.twilioConfigured ? 'rgba(var(--vz-success-rgb), 0.1)' : 'var(--vz-light)'"
+                   [style.color]="organization?.twilioConfigured ? 'var(--vz-success)' : 'var(--vz-secondary-color)'">
+                <i class="ri-phone-line" style="font-size:1.125rem"></i>
+              </div>
+              <div>
+                <h6 class="mb-0 fw-semibold" style="font-size:0.9375rem">Twilio</h6>
+              </div>
+            </div>
+            <span class="badge rounded-pill px-2 py-1"
+                  [ngClass]="organization?.twilioConfigured ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'"
+                  style="font-size:0.6875rem; font-weight:600">
+              <i class="ri-checkbox-circle-fill me-1" *ngIf="organization?.twilioConfigured"></i>
               {{ organization?.twilioConfigured ? 'Connected' : 'Not Connected' }}
             </span>
           </div>
-          <p class="text-muted fs-13 mb-0">SMS, WhatsApp, and voice communications</p>
-          <small *ngIf="organization?.twilioConfigured && organization?.twilioPhoneNumber" class="text-muted">
-            Phone: {{ organization.twilioPhoneNumber }}
-          </small>
+          <p class="text-muted mb-0" style="font-size:0.8125rem">SMS, WhatsApp, and voice communications</p>
+          <div *ngIf="organization?.twilioConfigured && organization?.twilioPhoneNumber" class="mt-2"
+               style="font-size:0.8125rem; font-weight:500; color:var(--vz-heading-color)">
+            <i class="ri-phone-fill me-1 text-success"></i>{{ organization.twilioPhoneNumber }}
+          </div>
+          <div *ngIf="!organization?.twilioConfigured" class="mt-2" style="font-size:0.75rem; color:var(--vz-secondary-color)">
+            <i class="ri-information-line me-1"></i>Contact support to configure
+          </div>
         </div>
       </div>
 
       <!-- BoldSign -->
       <div class="col-md-6">
-        <div class="border rounded p-3" [ngClass]="organization?.boldsignConfigured ? 'border-success' : ''">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <h6 class="mb-0"><i class="ri-quill-pen-line me-2"></i>BoldSign</h6>
-            <span class="badge" [ngClass]="organization?.boldsignConfigured ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
+        <div class="p-3 rounded-3 border position-relative overflow-hidden"
+             [style.border-left]="organization?.boldsignConfigured ? '3px solid var(--vz-success)' : '3px solid var(--vz-border-color)'"
+             [style.background]="organization?.boldsignConfigured ? 'rgba(var(--vz-success-rgb), 0.03)' : ''">
+          <div class="d-flex align-items-start justify-content-between mb-2">
+            <div class="d-flex align-items-center gap-2">
+              <div class="d-flex align-items-center justify-content-center rounded-2"
+                   [style.width.px]="38" [style.height.px]="38"
+                   [style.background]="organization?.boldsignConfigured ? 'rgba(var(--vz-success-rgb), 0.1)' : 'var(--vz-light)'"
+                   [style.color]="organization?.boldsignConfigured ? 'var(--vz-success)' : 'var(--vz-secondary-color)'">
+                <i class="ri-quill-pen-line" style="font-size:1.125rem"></i>
+              </div>
+              <div>
+                <h6 class="mb-0 fw-semibold" style="font-size:0.9375rem">BoldSign</h6>
+              </div>
+            </div>
+            <span class="badge rounded-pill px-2 py-1"
+                  [ngClass]="organization?.boldsignConfigured ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'"
+                  style="font-size:0.6875rem; font-weight:600">
+              <i class="ri-checkbox-circle-fill me-1" *ngIf="organization?.boldsignConfigured"></i>
               {{ organization?.boldsignConfigured ? 'Connected' : 'Not Connected' }}
             </span>
           </div>
-          <p class="text-muted fs-13 mb-2">Electronic document signatures</p>
-          <div *ngIf="organization?.boldsignConfigured">
-            <button class="btn btn-soft-danger btn-sm" (click)="disconnectBoldSign()">Disconnect</button>
+          <p class="text-muted mb-0" style="font-size:0.8125rem">Electronic document signatures — legally binding with audit trail</p>
+
+          <div *ngIf="organization?.boldsignConfigured" class="mt-3">
+            <button class="btn btn-sm btn-outline-danger" (click)="disconnectBoldSign()">
+              <i class="ri-link-unlink me-1"></i>Disconnect
+            </button>
           </div>
-          <div *ngIf="!organization?.boldsignConfigured && !showBoldsignSetup">
-            <button class="btn btn-soft-primary btn-sm" (click)="showBoldsignSetup = true">Connect</button>
+          <div *ngIf="!organization?.boldsignConfigured && !showBoldsignSetup" class="mt-3">
+            <button class="btn btn-sm btn-primary" (click)="showBoldsignSetup = true">
+              <i class="ri-link me-1"></i>Connect
+            </button>
           </div>
-          <!-- BoldSign Setup Form -->
-          <div *ngIf="showBoldsignSetup" class="mt-3">
-            <label class="form-label fs-13">BoldSign API Key</label>
-            <div class="input-group">
-              <input type="password" class="form-control form-control-sm" [(ngModel)]="boldsignApiKey"
-                     placeholder="Enter API key" [disabled]="savingBoldsign">
-              <button class="btn btn-primary btn-sm" (click)="connectBoldSign()" [disabled]="!boldsignApiKey || savingBoldsign">
+          <!-- Connect form -->
+          <div *ngIf="showBoldsignSetup" class="mt-3 pt-3" style="border-top:1px dashed var(--vz-border-color)">
+            <label class="form-label fw-medium" style="font-size:0.8125rem">BoldSign API Key</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-light"><i class="ri-key-2-line"></i></span>
+              <input type="password" class="form-control" [(ngModel)]="boldsignApiKey"
+                     placeholder="Paste your API key" [disabled]="savingBoldsign">
+              <button class="btn btn-primary" (click)="connectBoldSign()" [disabled]="!boldsignApiKey || savingBoldsign">
                 <span *ngIf="savingBoldsign" class="spinner-border spinner-border-sm me-1"></span>
-                Connect
+                {{ savingBoldsign ? 'Validating...' : 'Connect' }}
               </button>
             </div>
-            <small *ngIf="boldsignError" class="text-danger">{{ boldsignError }}</small>
+            <div *ngIf="boldsignError" class="text-danger mt-2" style="font-size:0.8125rem">
+              <i class="ri-error-warning-line me-1"></i>{{ boldsignError }}
+            </div>
+            <button class="btn btn-link btn-sm text-muted p-0 mt-2" (click)="showBoldsignSetup = false"
+                    style="font-size:0.75rem">Cancel</button>
           </div>
         </div>
       </div>
@@ -112,46 +100,153 @@
   </div>
 </div>
 
-<!-- Signature Reminders -->
+<!-- ═══════════ Notification Channels ═══════════ -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-transparent border-bottom py-3 d-flex align-items-center justify-content-between">
+    <h6 class="mb-0 fw-semibold"><i class="ri-notification-3-line me-2 text-primary"></i>Notification Channels</h6>
+    <button class="btn btn-primary btn-sm" (click)="saveNotificationSettings()" [disabled]="isSaving">
+      <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+      {{ isSaving ? 'Saving...' : 'Save' }}
+    </button>
+  </div>
+  <div class="card-body p-0">
+    <!-- Email -->
+    <div class="d-flex align-items-center justify-content-between px-4 py-3" style="border-bottom:1px solid var(--vz-border-color)">
+      <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center justify-content-center rounded-2 bg-primary-subtle text-primary"
+             style="width:36px; height:36px; flex-shrink:0">
+          <i class="ri-mail-line"></i>
+        </div>
+        <div>
+          <h6 class="mb-0 fw-semibold" style="font-size:0.875rem">Email</h6>
+          <span class="text-muted" style="font-size:0.75rem">Send notifications via email</span>
+        </div>
+      </div>
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.emailEnabled"
+               style="width:2.5rem; height:1.25rem; cursor:pointer">
+      </div>
+    </div>
+    <!-- SMS -->
+    <div class="d-flex align-items-center justify-content-between px-4 py-3" style="border-bottom:1px solid var(--vz-border-color)">
+      <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center justify-content-center rounded-2 bg-success-subtle text-success"
+             style="width:36px; height:36px; flex-shrink:0">
+          <i class="ri-chat-3-line"></i>
+        </div>
+        <div>
+          <h6 class="mb-0 fw-semibold" style="font-size:0.875rem">SMS</h6>
+          <span class="text-muted" style="font-size:0.75rem">
+            {{ organization?.twilioConfigured ? 'Text message notifications' : 'Requires Twilio connection' }}
+          </span>
+        </div>
+      </div>
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.smsEnabled"
+               [disabled]="!organization?.twilioConfigured"
+               style="width:2.5rem; height:1.25rem; cursor:pointer">
+      </div>
+    </div>
+    <!-- WhatsApp -->
+    <div class="d-flex align-items-center justify-content-between px-4 py-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center justify-content-center rounded-2 bg-success-subtle text-success"
+             style="width:36px; height:36px; flex-shrink:0">
+          <i class="ri-whatsapp-line"></i>
+        </div>
+        <div>
+          <h6 class="mb-0 fw-semibold" style="font-size:0.875rem">WhatsApp</h6>
+          <span class="text-muted" style="font-size:0.75rem">
+            {{ organization?.twilioConfigured ? 'WhatsApp message notifications' : 'Requires Twilio connection' }}
+          </span>
+        </div>
+      </div>
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.whatsappEnabled"
+               [disabled]="!organization?.twilioConfigured"
+               style="width:2.5rem; height:1.25rem; cursor:pointer">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ Signature Reminders ═══════════ -->
 <div class="card border-0 shadow-sm">
-  <div class="card-header bg-transparent border-bottom">
-    <h6 class="mb-0 fw-semibold">
-      <i class="ri-time-line me-2 text-primary"></i>Signature Reminders
-    </h6>
+  <div class="card-header bg-transparent border-bottom py-3 d-flex align-items-center justify-content-between">
+    <h6 class="mb-0 fw-semibold"><i class="ri-timer-line me-2 text-primary"></i>Signature Reminders</h6>
+    <button class="btn btn-primary btn-sm" (click)="saveNotificationSettings()" [disabled]="isSaving">
+      <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+      {{ isSaving ? 'Saving...' : 'Save' }}
+    </button>
   </div>
   <div class="card-body">
-    <div class="row g-3">
+    <!-- Channels -->
+    <div class="row g-3 mb-4">
       <div class="col-md-4">
-        <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.signatureReminderEmail">
-          <label class="form-check-label">Email Reminders</label>
+        <div class="d-flex align-items-center justify-content-between p-3 rounded-3"
+             [style.border]="notificationSettings.signatureReminderEmail ? '1px solid rgba(var(--vz-primary-rgb), 0.3)' : '1px solid var(--vz-border-color)'"
+             [style.background]="notificationSettings.signatureReminderEmail ? 'rgba(var(--vz-primary-rgb), 0.03)' : ''">
+          <div class="d-flex align-items-center gap-2">
+            <i class="ri-mail-line" [style.color]="notificationSettings.signatureReminderEmail ? 'var(--vz-primary)' : 'var(--vz-secondary-color)'"></i>
+            <span class="fw-medium" style="font-size:0.875rem">Email</span>
+          </div>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.signatureReminderEmail"
+                   style="width:2.25rem; height:1.125rem; cursor:pointer">
+          </div>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.signatureReminderSms"
-                 [disabled]="!organization?.twilioConfigured">
-          <label class="form-check-label">SMS Reminders</label>
+        <div class="d-flex align-items-center justify-content-between p-3 rounded-3"
+             [style.border]="notificationSettings.signatureReminderSms ? '1px solid rgba(var(--vz-primary-rgb), 0.3)' : '1px solid var(--vz-border-color)'"
+             [style.background]="notificationSettings.signatureReminderSms ? 'rgba(var(--vz-primary-rgb), 0.03)' : ''"
+             [style.opacity]="organization?.twilioConfigured ? '1' : '0.5'">
+          <div class="d-flex align-items-center gap-2">
+            <i class="ri-chat-3-line" style="color:var(--vz-secondary-color)"></i>
+            <span class="fw-medium" style="font-size:0.875rem">SMS</span>
+          </div>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.signatureReminderSms"
+                   [disabled]="!organization?.twilioConfigured"
+                   style="width:2.25rem; height:1.125rem; cursor:pointer">
+          </div>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.signatureReminderWhatsapp"
-                 [disabled]="!organization?.twilioConfigured">
-          <label class="form-check-label">WhatsApp Reminders</label>
+        <div class="d-flex align-items-center justify-content-between p-3 rounded-3"
+             [style.border]="notificationSettings.signatureReminderWhatsapp ? '1px solid rgba(var(--vz-primary-rgb), 0.3)' : '1px solid var(--vz-border-color)'"
+             [style.background]="notificationSettings.signatureReminderWhatsapp ? 'rgba(var(--vz-primary-rgb), 0.03)' : ''"
+             [style.opacity]="organization?.twilioConfigured ? '1' : '0.5'">
+          <div class="d-flex align-items-center gap-2">
+            <i class="ri-whatsapp-line" style="color:var(--vz-secondary-color)"></i>
+            <span class="fw-medium" style="font-size:0.875rem">WhatsApp</span>
+          </div>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" [(ngModel)]="notificationSettings.signatureReminderWhatsapp"
+                   [disabled]="!organization?.twilioConfigured"
+                   style="width:2.25rem; height:1.125rem; cursor:pointer">
+          </div>
         </div>
       </div>
-      <div class="col-12">
-        <label class="form-label fw-medium">Reminder Schedule (days before deadline)</label>
-        <input type="text" class="form-control" [(ngModel)]="notificationSettings.signatureReminderDays"
-               placeholder="7,3,1">
-        <small class="text-muted">{{ formatReminderDays() }}</small>
-      </div>
-      <div class="col-12 text-end">
-        <button class="btn btn-primary btn-sm" (click)="saveNotificationSettings()" [disabled]="isSaving">
-          <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
-          Save Reminder Settings
-        </button>
+    </div>
+
+    <!-- Schedule input -->
+    <label class="form-label fw-semibold" style="font-size:0.875rem">
+      <i class="ri-calendar-schedule-line me-1 text-primary"></i>Reminder Schedule
+    </label>
+    <input type="text" class="form-control" [(ngModel)]="notificationSettings.signatureReminderDays" placeholder="7,3,1">
+
+    <!-- Visual preview -->
+    <div *ngIf="getReminderDaysArray().length > 0" class="mt-3 p-3 rounded-3" style="background:var(--vz-light)">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span *ngFor="let day of getReminderDaysArray()" class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2"
+              style="font-size:0.8125rem; font-weight:600">
+          {{ day }} day{{ day !== '1' ? 's' : '' }} before
+        </span>
+        <span class="badge rounded-pill bg-danger-subtle text-danger px-3 py-2"
+              style="font-size:0.8125rem; font-weight:600">
+          <i class="ri-flag-line me-1"></i>Deadline
+        </span>
       </div>
     </div>
   </div>

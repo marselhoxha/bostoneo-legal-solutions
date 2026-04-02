@@ -464,8 +464,8 @@ export const ATTORNEY_MENU: MenuItem[] = [
     link: '/crm/dashboard',
     subItems: [
       { id: 'att-crm-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/crm/dashboard', parentId: 'att-crm' },
-      { id: 'att-crm-leads', label: 'Leads', icon: 'ri-user-add-line', link: '/crm/leads', parentId: 'att-crm' },
       { id: 'att-crm-intake', label: 'Intake Submissions', icon: 'ri-inbox-line', link: '/crm/intake-submissions', parentId: 'att-crm' },
+      { id: 'att-crm-leads', label: 'Leads', icon: 'ri-user-add-line', link: '/crm/leads', parentId: 'att-crm' },
       { id: 'att-crm-conflicts', label: 'Conflict Checks', icon: 'ri-shield-check-line', link: '/crm/conflict-checks', parentId: 'att-crm' }
     ]
   },
@@ -570,8 +570,8 @@ export const ADMIN_MENU: MenuItem[] = [
     link: '/crm/dashboard',
     subItems: [
       { id: 'admin-crm-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/crm/dashboard', parentId: 'admin-crm' },
-      { id: 'admin-crm-leads', label: 'Leads', icon: 'ri-user-add-line', link: '/crm/leads', parentId: 'admin-crm' },
       { id: 'admin-crm-intake', label: 'Intake Submissions', icon: 'ri-inbox-line', link: '/crm/intake-submissions', parentId: 'admin-crm' },
+      { id: 'admin-crm-leads', label: 'Leads', icon: 'ri-user-add-line', link: '/crm/leads', parentId: 'admin-crm' },
       { id: 'admin-crm-conflicts', label: 'Conflict Checks', icon: 'ri-shield-check-line', link: '/crm/conflict-checks', parentId: 'admin-crm' }
     ]
   },

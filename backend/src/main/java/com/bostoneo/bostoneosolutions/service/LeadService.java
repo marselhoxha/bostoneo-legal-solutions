@@ -155,7 +155,7 @@ public interface LeadService {
     
     Lead assignLeadWithNotes(Long leadId, Long assignedTo, Long assignedBy, String notes);
     
-    Lead scheduleConsultation(Long leadId, String consultationDateStr, Long scheduledBy, String notes);
+    Lead scheduleConsultation(Long leadId, String consultationDateStr, Long scheduledBy, String notes, String consultationType);
     
     Map<String, Long> getLeadCountsByPracticeArea();
     

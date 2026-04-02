@@ -469,8 +469,11 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     }
 
     private LegalCase createCaseFromLead(Lead lead, Map<String, Object> caseData) {
-        // Generate unique case number
-        String caseNumber = generateCaseNumber();
+        // Use frontend-provided case number, or generate one
+        String caseNumber = getStringValue(caseData, "caseNumber");
+        if (caseNumber == null || caseNumber.trim().isEmpty()) {
+            caseNumber = generateCaseNumber();
+        }
 
         LegalCase legalCase = LegalCase.builder()
             .organizationId(lead.getOrganizationId())
@@ -479,11 +482,15 @@ public class LeadConversionServiceImpl implements LeadConversionService {
             .clientName(lead.getFullName())
             .clientEmail(lead.getEmail())
             .clientPhone(lead.getPhone())
-            .status(com.bostoneo.bostoneosolutions.enumeration.CaseStatus.ACTIVE)
+            .status(parseCaseStatus(caseData))
             .priority(com.bostoneo.bostoneosolutions.enumeration.CasePriority.valueOf(getStringValue(caseData, "priority", "MEDIUM")))
             .type(getStringValue(caseData, "type"))
             .description(getStringValue(caseData, "description"))
             .countyName(getStringValue(caseData, "countyName"))
+            .jurisdiction(getStringValue(caseData, "jurisdiction"))
+            .courtroom(getStringValue(caseData, "courtroom"))
+            .judgeName(getStringValue(caseData, "judgeName"))
+            .filingDate(getDateValue(caseData, "filingDate"))
             .hourlyRate(getDoubleValue(caseData, "hourlyRate", 0.0))
             .paymentStatus(com.bostoneo.bostoneosolutions.enumeration.PaymentStatus.PENDING)
             .build();
@@ -575,8 +582,34 @@ public class LeadConversionServiceImpl implements LeadConversionService {
     }
 
     private String generateCaseNumber() {
-        // Generate unique case number - in reality would use a more sophisticated algorithm
-        return "CASE-" + System.currentTimeMillis();
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        StringBuilder rand = new StringBuilder();
+        java.util.Random random = new java.util.Random();
+        for (int i = 0; i < 5; i++) {
+            rand.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        java.time.LocalDate now = java.time.LocalDate.now();
+        return String.format("CASE-%d-%02d-%s", now.getYear(), now.getMonthValue(), rand.toString());
+    }
+
+    private com.bostoneo.bostoneosolutions.enumeration.CaseStatus parseCaseStatus(Map<String, Object> caseData) {
+        String status = getStringValue(caseData, "status", "OPEN");
+        try {
+            return com.bostoneo.bostoneosolutions.enumeration.CaseStatus.valueOf(status);
+        } catch (IllegalArgumentException e) {
+            return com.bostoneo.bostoneosolutions.enumeration.CaseStatus.OPEN;
+        }
+    }
+
+    private java.util.Date getDateValue(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value == null || value.toString().trim().isEmpty()) return null;
+        try {
+            return java.sql.Date.valueOf(value.toString().trim());
+        } catch (Exception e) {
+            log.warn("Could not parse date for key {}: {}", key, value);
+            return null;
+        }
     }
 
     private String getStringValue(Map<String, Object> data, String key) {

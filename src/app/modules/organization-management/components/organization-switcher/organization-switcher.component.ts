@@ -203,17 +203,11 @@ export class OrganizationSwitcherComponent implements OnInit, OnDestroy {
   }
 
   navigateToTeam(): void {
-    const orgId = this.organizationService.getCurrentOrganizationId();
-    if (orgId) {
-      this.router.navigate(['/organizations/details', orgId], { queryParams: { tab: 'team' } });
-    }
+    this.router.navigate(['/settings/organization'], { queryParams: { tab: 'team' } });
   }
 
   navigateToInvitations(): void {
-    const orgId = this.organizationService.getCurrentOrganizationId();
-    if (orgId) {
-      this.router.navigate(['/organizations/details', orgId], { queryParams: { tab: 'invitations' } });
-    }
+    this.router.navigate(['/settings/organization'], { queryParams: { tab: 'invitations' } });
   }
 
   getPlanBadgeClass(planType: string | undefined): string {

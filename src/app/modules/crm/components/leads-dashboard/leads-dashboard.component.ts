@@ -1,12 +1,16 @@
 import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CrmService } from '../../services/crm.service';
+import { LeadService } from '../../services/lead.service';
 import { UserService } from '../../../../service/user.service';
 import { User } from '../../../../interface/user';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../core/services/notification-manager.service';
+import { NotificationService } from '../../../../service/notification.service';
 import Swal from 'sweetalert2';
 import flatpickr from 'flatpickr';
+import { PRACTICE_AREA_FIELDS, PracticeAreaSection } from '../../../legal/shared/practice-area-fields.config';
 
 export interface LeadDTO {
   id: number;
@@ -64,6 +68,7 @@ export interface PipelineSummary {
   styleUrls: ['./leads-dashboard.component.scss']
 })
 export class LeadsDashboardComponent implements OnInit, AfterViewInit {
+  activeView: 'list' | 'pipeline' = 'pipeline';
   leads: LeadDTO[] = [];
   allLeads: LeadDTO[] = [];
   filteredLeads: LeadDTO[] = [];
@@ -87,6 +92,9 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   selectedLead: LeadDTO | null = null;
   showLeadModal = false;
   showPipelineModal = false;
+  showCreateModal = false;
+  isCreatingLead = false;
+  newLead: any = { firstName: '', lastName: '', email: '', phone: '', practiceArea: '', source: 'REFERRAL', urgencyLevel: 'MEDIUM', estimatedValue: null, notes: '' };
   
   // Modal states
   showEditModal = false;
@@ -104,29 +112,54 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   // Data arrays
   availableAttorneys: User[] = [];
   conversionTypes = [
-    { 
-      value: 'CLIENT_ONLY', 
-      label: 'Client Only', 
+    {
+      value: 'CLIENT_ONLY',
+      label: 'Client Only',
       description: 'Create client record with contact information only',
       icon: 'ri-user-line',
-      color: '#17a2b8'
+      color: '#17a2b8',
+      features: ['Client profile', 'Contact information', 'Client type classification']
     },
-    { 
-      value: 'MATTER_ONLY', 
-      label: 'Matter/Case Only', 
+    {
+      value: 'MATTER_ONLY',
+      label: 'Matter/Case Only',
       description: 'Create legal case without full client profile',
       icon: 'ri-briefcase-line',
-      color: '#ffc107'
+      color: '#ffc107',
+      features: ['Case record', 'Practice area setup', 'Court & billing info', 'Attorney assignment']
     },
-    { 
-      value: 'CLIENT_AND_MATTER', 
-      label: 'Client & Matter', 
+    {
+      value: 'CLIENT_AND_MATTER',
+      label: 'Client & Matter',
       description: 'Complete conversion with both client and case records',
       icon: 'ri-group-line',
-      color: '#28a745'
+      color: '#28a745',
+      features: ['Client profile', 'Case record', 'Full court details', 'Billing & attorney setup']
     }
   ];
-  
+
+  billingTypes = [
+    { value: 'HOURLY', label: 'Hourly' },
+    { value: 'FLAT_FEE', label: 'Flat Fee' },
+    { value: 'CONTINGENCY', label: 'Contingency' },
+    { value: 'PRO_BONO', label: 'Pro Bono' },
+    { value: 'HYBRID', label: 'Hybrid' }
+  ];
+
+  caseStatuses = [
+    { value: 'OPEN', label: 'Open' },
+    { value: 'ACTIVE', label: 'Active' },
+    { value: 'IN_PROGRESS', label: 'In Progress' },
+    { value: 'PENDING', label: 'Pending' }
+  ];
+
+  casePriorities = [
+    { value: 'LOW', label: 'Low' },
+    { value: 'MEDIUM', label: 'Medium' },
+    { value: 'HIGH', label: 'High' },
+    { value: 'URGENT', label: 'Urgent' }
+  ];
+
   // Conversion wizard state
   selectedConversionType = '';
   conversionStep = 1; // 1: Type Selection, 2: Data Entry, 3: Review & Confirm
@@ -139,30 +172,44 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   // Flatpickr instances
   @ViewChild('consultationDatePicker', { static: false }) consultationDatePicker!: ElementRef;
   private flatpickrInstance: any;
+  private filingDateFlatpickr: any;
+
+  // Practice area dynamic fields
+  currentPracticeAreaSections: PracticeAreaSection[] = [];
+  private practiceAreaDatePickers: any[] = [];
+  private readonly practiceAreaConfigMap: { [key: string]: string } = {
+    'PERSONAL_INJURY': 'Personal Injury',
+    'CRIMINAL_DEFENSE': 'Criminal Defense',
+    'FAMILY_LAW': 'Family Law',
+    'IMMIGRATION': 'Immigration Law',
+    'REAL_ESTATE': 'Real Estate Law',
+    'INTELLECTUAL_PROPERTY': 'Intellectual Property'
+  };
   
   // Make Math available in template
   Math = Math;
 
   // Lead Status Transition Rules (matching backend)
   private readonly VALID_TRANSITIONS: { [key: string]: string[] } = {
-    'NEW': ['CONTACTED', 'UNQUALIFIED', 'LOST'],
-    'CONTACTED': ['QUALIFIED', 'UNQUALIFIED', 'LOST'],
-    'QUALIFIED': ['CONSULTATION_SCHEDULED', 'UNQUALIFIED', 'LOST'],
-    'CONSULTATION_SCHEDULED': ['PROPOSAL_SENT', 'QUALIFIED', 'UNQUALIFIED', 'LOST'],
+    'NEW': ['CONTACTED', 'LOST'],
+    'CONTACTED': ['QUALIFIED', 'LOST'],
+    'QUALIFIED': ['CONSULTATION_SCHEDULED', 'LOST'],
+    'CONSULTATION_SCHEDULED': ['PROPOSAL_SENT', 'QUALIFIED', 'LOST'],
     'PROPOSAL_SENT': ['NEGOTIATION', 'CONVERTED', 'LOST'],
     'NEGOTIATION': ['CONVERTED', 'PROPOSAL_SENT', 'LOST'],
     'CONVERTED': [], // Final state
-    'LOST': [], // Final state
-    'UNQUALIFIED': [] // Final state
+    'LOST': [] // Final state
   };
   
   constructor(
-    private crmService: CrmService, 
+    private crmService: CrmService,
+    private leadService: LeadService,
     private userService: UserService,
     private cdr: ChangeDetectorRef,
     private fb: FormBuilder,
     private router: Router,
-    private notificationManager: NotificationManagerService
+    private notificationManager: NotificationManagerService,
+    private notificationService: NotificationService
   ) {
     this.initializeForms();
   }
@@ -374,8 +421,10 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       clientEmployer: [''],
       emergencyContact: [''],
       emergencyContactPhone: [''],
-      
+      clientType: [''],
+
       // Case/Matter Information
+      caseNumber: [''],
       caseTitle: [''],
       caseDescription: [''],
       practiceArea: [''],
@@ -390,7 +439,14 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       caseNotes: [''],
       expectedOutcome: [''],
       riskAssessment: [''],
-      
+      billingType: ['HOURLY'],
+      status: ['OPEN'],
+      priority: ['MEDIUM'],
+      leadAttorneyId: [''],
+      judgeName: [''],
+      courtroom: [''],
+      filingDate: [''],
+
       // Additional Information
       referralSource: [''],
       marketingCampaign: [''],
@@ -561,6 +617,46 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
     this.showLeadModal = true;
   }
 
+  changeLeadStatusFromModal(newStatus: string): void {
+    if (!this.selectedLead || this.selectedLead.status === newStatus) return;
+    const oldStatus = this.selectedLead.status;
+    this.selectedLead.status = newStatus;
+    this.cdr.detectChanges();
+    this.notificationService.onDefault(`Status changed to ${newStatus.replace(/_/g, ' ')}`);
+    this.leadService.updateLeadStatus(this.selectedLead.id, newStatus).subscribe({
+      error: () => {
+        this.selectedLead.status = oldStatus;
+        this.cdr.detectChanges();
+        this.notificationService.onError('Failed to update status');
+      }
+    });
+  }
+
+  submitNewLead(): void {
+    if (!this.newLead.firstName || !this.newLead.lastName || !this.newLead.email) return;
+    this.isCreatingLead = true;
+    this.leadService.createLead({
+      ...this.newLead,
+      status: 'NEW'
+    }).subscribe({
+      next: (lead) => {
+        this.isCreatingLead = false;
+        this.showCreateModal = false;
+        this.newLead = { firstName: '', lastName: '', email: '', phone: '', practiceArea: '', source: 'REFERRAL', urgencyLevel: 'MEDIUM', estimatedValue: null, notes: '' };
+        // Add to allLeads and filteredLeads
+        this.allLeads.unshift(lead as any);
+        this.filteredLeads.unshift(lead as any);
+        this.cdr.detectChanges();
+        this.notificationService.onSuccess('Lead created successfully');
+      },
+      error: (err) => {
+        this.isCreatingLead = false;
+        this.cdr.detectChanges();
+        this.notificationService.onError(err?.error?.reason || 'Failed to create lead');
+      }
+    });
+  }
+
   showPipelineView() {
     this.showPipelineModal = true;
   }
@@ -574,21 +670,17 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
     this.selectedLead = null;
   }
 
-  getStatusBadgeClass(status: string): string {
-    const statusClasses: { [key: string]: string } = {
-      'NEW': 'bg-primary text-white',
-      'CONTACTED': 'bg-info text-white', 
-      'QUALIFIED': 'bg-warning text-dark',
-      'CONSULTATION_SCHEDULED': 'bg-success text-white',
-      'PROPOSAL_SENT': 'bg-dark text-white',
-      'PROPOSAL SENT': 'bg-dark text-white',
-      'NEGOTIATION': 'bg-warning text-dark',
-      'CONVERTED': 'bg-success text-white fw-bold',
-      'LOST': 'bg-danger text-white',
-      'UNQUALIFIED': 'bg-secondary text-white',
-      'UNRESPONSIVE': 'bg-muted text-white'
+  getStatusBadgeStyle(status: string): { [key: string]: string } {
+    // Use the same color from the pipeline stage (loaded from DB)
+    const statusToStageName: { [key: string]: string } = {
+      'NEW': 'New Lead', 'CONTACTED': 'Contacted', 'QUALIFIED': 'Qualified',
+      'CONSULTATION_SCHEDULED': 'Consultation Scheduled', 'PROPOSAL_SENT': 'Proposal Sent',
+      'NEGOTIATION': 'Negotiation', 'CONVERTED': 'Converted', 'LOST': 'Lost'
     };
-    return statusClasses[status] || 'bg-light text-dark';
+    const stageName = statusToStageName[status];
+    const stage = stageName ? this.pipelineStages.find(s => s.name === stageName) : null;
+    const color = stage?.color || this.getStageColorForStatus(status);
+    return { 'background-color': color, 'border-color': color };
   }
 
   getUrgencyBadgeClass(urgency?: string): string {
@@ -604,37 +696,82 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
   }
 
   getLeadCountForStage(stageName: string): number {
-    // Map pipeline stage names to actual status values  
-    const stageToStatusMap: { [key: string]: string } = {
-      'New Lead': 'NEW',
-      'Initial Contact': 'CONTACTED', 
-      'Qualification': 'QUALIFIED',
-      'Consultation': 'CONSULTATION_SCHEDULED',
-      'Proposal': 'PROPOSAL_SENT',
-      'Negotiation': 'NEGOTIATION', 
-      'Won': 'CONVERTED',
-      'Lost': 'LOST'
-    };
-    
-    const statusKey = stageToStatusMap[stageName] || stageName;
-    return this.pipelineSummary?.statusCounts[statusKey] || 0;
+    return this.getLeadsForStage(stageName).length;
   }
 
   getLeadsForStage(stageName: string): LeadDTO[] {
-    // Map pipeline stage names to actual status values
+    // Map pipeline stage names (from DB) to lead status values
     const stageToStatusMap: { [key: string]: string } = {
       'New Lead': 'NEW',
-      'Initial Contact': 'CONTACTED', 
-      'Qualification': 'QUALIFIED',
-      'Consultation': 'CONSULTATION_SCHEDULED',
-      'Proposal': 'PROPOSAL_SENT',
-      'Negotiation': 'NEGOTIATION', 
-      'Won': 'CONVERTED',
+      'Contacted': 'CONTACTED',
+      'Qualified': 'QUALIFIED',
+      'Consultation Scheduled': 'CONSULTATION_SCHEDULED',
+      'Proposal Sent': 'PROPOSAL_SENT',
+      'Negotiation': 'NEGOTIATION',
+      'Converted': 'CONVERTED',
       'Lost': 'LOST'
     };
     
     const statusKey = stageToStatusMap[stageName] || stageName;
     return this.filteredLeads.filter(lead => lead.status === statusKey);
+  }
+
+  /** Map stage name → lead status for drag-drop */
+  private stageNameToStatus(stageName: string): string {
+    const map: { [key: string]: string } = {
+      'New Lead': 'NEW', 'Contacted': 'CONTACTED', 'Qualified': 'QUALIFIED',
+      'Consultation Scheduled': 'CONSULTATION_SCHEDULED', 'Proposal Sent': 'PROPOSAL_SENT',
+      'Negotiation': 'NEGOTIATION', 'Converted': 'CONVERTED', 'Lost': 'LOST'
+    };
+    return map[stageName] || stageName;
+  }
+
+  /** CDK connected drop list IDs for all stages */
+  getConnectedLists(): string[] {
+    return (this.pipelineStages || []).map((_: any, i: number) => 'stage-' + i);
+  }
+
+  /** Handle drag-drop between pipeline columns */
+  onLeadDropped(event: CdkDragDrop<any[]>, targetStage: any): void {
+    if (event.previousContainer === event.container) return; // Same column — nothing to do
+
+    const lead = event.item.data;
+    if (!lead) return;
+
+    const newStatus = this.stageNameToStatus(targetStage.name);
+    const oldStatus = lead.status;
+
+    // Optimistic: update status immediately so the view re-filters
+    lead.status = newStatus;
+    this.cdr.detectChanges();
+
+    // Toast immediately (optimistic)
+    this.notificationService.onDefault(`Lead moved to ${targetStage.name}`);
+
+    // Persist to backend
+    this.leadService.updateLeadStatus(lead.id, newStatus).subscribe({
+      error: () => {
+        lead.status = oldStatus;
+        this.cdr.detectChanges();
+        this.notificationService.onError('Failed — lead reverted to previous status');
+      }
+    });
+  }
+
+  getStageColorForStatus(status: string): string {
+    const colorMap: { [key: string]: string } = {
+      'NEW': '#6c757d',
+      'CONTACTED': '#3577f1',
+      'QUALIFIED': '#0ab39c',
+      'CONSULTATION_SCHEDULED': '#9b59b6',
+      'PROPOSAL_SENT': '#299cdb',
+      'NEGOTIATION': '#f7b84b',
+      'CONVERTED': '#0ab39c',
+      'LOST': '#f06548',
+      'UNQUALIFIED': '#878a99',
+      'UNRESPONSIVE': '#878a99'
+    };
+    return colorMap[status] || '#6c757d';
   }
 
   getUrgencyDisplayName(urgency: string): string {
@@ -808,6 +945,19 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
     this.requiredFields = null;
     this.convertForm.reset();
     this.convertForm.patchValue({ conversionType: '' });
+
+    if (this.filingDateFlatpickr) {
+      this.filingDateFlatpickr.destroy();
+      this.filingDateFlatpickr = null;
+    }
+
+    // Clean up practice area fields
+    this.practiceAreaDatePickers.forEach(p => p.destroy());
+    this.practiceAreaDatePickers = [];
+    this.getAllPracticeAreaFieldNames().forEach(name => {
+      if (this.convertForm.contains(name)) this.convertForm.removeControl(name);
+    });
+    this.currentPracticeAreaSections = [];
   }
 
 
@@ -971,8 +1121,100 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       formData.clientState,
       formData.clientZip
     ].filter(part => part && part.toString().trim() !== '');
-    
+
     return addressParts.join(', ');
+  }
+
+  onConvertPracticeAreaChange(practiceArea: string): void {
+    // Destroy existing practice area date pickers
+    this.practiceAreaDatePickers.forEach(p => p.destroy());
+    this.practiceAreaDatePickers = [];
+
+    // Remove all previously added practice area form controls
+    this.getAllPracticeAreaFieldNames().forEach(name => {
+      if (this.convertForm.contains(name)) this.convertForm.removeControl(name);
+    });
+
+    // Load sections for selected practice area
+    const configKey = this.practiceAreaConfigMap[practiceArea] || '';
+    this.currentPracticeAreaSections = PRACTICE_AREA_FIELDS[configKey] || [];
+
+    // Add form controls for the new practice area fields
+    this.currentPracticeAreaSections.forEach(section => {
+      section.fields.forEach(field => {
+        const validators = field.required ? [Validators.required] : [];
+        let defaultValue: any = '';
+        if (field.type === 'checkbox') defaultValue = false;
+        else if (field.type === 'number' || field.type === 'currency') defaultValue = null;
+        this.convertForm.addControl(field.name, this.fb.control(defaultValue, validators));
+      });
+    });
+
+    // Initialize date pickers after DOM renders
+    setTimeout(() => this.initPracticeAreaDatePickers(), 50);
+  }
+
+  private getAllPracticeAreaFieldNames(): string[] {
+    const names: string[] = [];
+    Object.values(PRACTICE_AREA_FIELDS).forEach(sections => {
+      sections.forEach(section => {
+        section.fields.forEach(field => names.push(field.name));
+      });
+    });
+    return names;
+  }
+
+  private collectPracticeAreaFieldValues(formData: any): { [key: string]: any } {
+    const result: { [key: string]: any } = {};
+    this.currentPracticeAreaSections.forEach(section => {
+      section.fields.forEach(field => {
+        const value = formData[field.name];
+        if (value !== null && value !== undefined && value !== '') {
+          if (field.type === 'currency' || field.type === 'number') {
+            result[field.name] = parseFloat(value) || null;
+          } else {
+            result[field.name] = value;
+          }
+        } else {
+          result[field.name] = null;
+        }
+      });
+    });
+    return result;
+  }
+
+  private initPracticeAreaDatePickers(): void {
+    const pastDateFields = new Set(['injuryDate', 'arrestDate', 'marriageDate', 'ipFilingDate']);
+    this.currentPracticeAreaSections.forEach(section => {
+      section.fields.filter(f => f.type === 'date').forEach(field => {
+        const el = document.getElementById('pa_convert_' + field.name);
+        if (el) {
+          const instance = flatpickr(el, {
+            dateFormat: 'Y-m-d',
+            allowInput: true,
+            maxDate: pastDateFields.has(field.name) ? 'today' : undefined,
+            onChange: (_d: Date[], dateStr: string) => {
+              this.convertForm.patchValue({ [field.name]: dateStr });
+            }
+          });
+          this.practiceAreaDatePickers.push(instance);
+        }
+      });
+    });
+  }
+
+  private generateCaseNumber(): string {
+    const now = new Date();
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let rand = '';
+    for (let i = 0; i < 5; i++) rand += chars.charAt(Math.floor(Math.random() * chars.length));
+    return `CASE-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${rand}`;
+  }
+
+  getAttorneyName(id: any): string {
+    if (!id) return 'Not assigned';
+    const attorney = this.availableAttorneys.find((a: any) => a.id == id);
+    return attorney ? `${(attorney as any).firstName || ''} ${(attorney as any).lastName || ''}`.trim() : 'Not assigned';
   }
 
   private generateConflictResolutionSuggestion(conflict: any): string {
@@ -1120,6 +1362,25 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       this.loadRequiredFields();
       this.prepopulateFormData();
       this.conversionStep = 2;
+
+      // Initialize flatpickr for filing date after DOM renders
+      if (this.selectedConversionType === 'MATTER_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
+        setTimeout(() => {
+          const filingDateEl = document.getElementById('convertFilingDate');
+          if (filingDateEl) {
+            if (this.filingDateFlatpickr) {
+              this.filingDateFlatpickr.destroy();
+            }
+            this.filingDateFlatpickr = flatpickr(filingDateEl, {
+              dateFormat: 'Y-m-d',
+              allowInput: true,
+              onChange: (_dates: Date[], dateStr: string) => {
+                this.convertForm.patchValue({ filingDate: dateStr });
+              }
+            });
+          }
+        }, 100);
+      }
     } else if (this.conversionStep === 2) {
       // Moving from step 2 (data entry) to step 3 (review)
       // Don't increment step here - let conflict check handle it
@@ -1385,7 +1646,7 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
             }
           });
           
-          this.crmService.scheduleConsultation(this.selectedLead.id, consultationDateTime, notes).subscribe({
+          this.crmService.scheduleConsultation(this.selectedLead.id, consultationDateTime, consultationType, notes).subscribe({
             next: (response) => {
               Swal.fire({
                 title: 'Success!',
@@ -1522,14 +1783,24 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
     if (this.selectedConversionType === 'MATTER_ONLY' || this.selectedConversionType === 'CLIENT_AND_MATTER') {
       const practiceAreaFormatted = this.selectedLead.practiceArea?.replace('_', ' ') || '';
       this.convertForm.patchValue({
+        caseNumber: this.generateCaseNumber(),
         caseTitle: `${practiceAreaFormatted} Matter - ${this.selectedLead.fullName || 'New Case'}`,
         caseDescription: this.selectedLead.initialInquiry || '',
         practiceArea: this.selectedLead.practiceArea || '',
+        status: 'OPEN',
+        priority: this.selectedLead.urgencyLevel === 'URGENT' ? 'URGENT' :
+                  this.selectedLead.urgencyLevel === 'HIGH' ? 'HIGH' : 'MEDIUM',
+        billingType: 'HOURLY',
         retainerAmount: this.selectedLead.estimatedValue || '',
         urgencyLevel: this.selectedLead.urgencyLevel || 'MEDIUM',
         referralSource: this.selectedLead.source || '',
-        leadSource: this.selectedLead.source || ''
+        leadSource: this.selectedLead.source || '',
       });
+
+      // Trigger practice area fields if lead has a practice area
+      if (this.selectedLead.practiceArea) {
+        this.onConvertPracticeAreaChange(this.selectedLead.practiceArea);
+      }
     }
     
     // Common fields
@@ -1583,9 +1854,18 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       clientEmail: 'Client Email',
       clientPhone: 'Client Phone',
       clientAddress: 'Client Address',
+      clientType: 'Client Type',
       caseTitle: 'Case Title',
+      caseNumber: 'Case Number',
       caseDescription: 'Case Description',
       practiceArea: 'Practice Area',
+      billingType: 'Billing Type',
+      status: 'Case Status',
+      priority: 'Priority',
+      leadAttorneyId: 'Lead Attorney',
+      judgeName: 'Judge Name',
+      courtroom: 'Courtroom',
+      filingDate: 'Filing Date',
       retainerAmount: 'Retainer Amount',
       hourlyRate: 'Hourly Rate'
     };
@@ -1868,19 +2148,30 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
         conversionCall = this.crmService.convertToClientOnly(this.selectedLead.id, clientData);
         break;
       case 'MATTER_ONLY':
-        // Structure case data properly for backend
         const matterData = {
           title: formData.caseTitle,
           description: formData.caseDescription,
           type: formData.practiceArea,
+          caseNumber: formData.caseNumber,
+          status: formData.status || 'OPEN',
+          priority: formData.priority || 'MEDIUM',
           urgencyLevel: formData.urgencyLevel || 'MEDIUM',
+          billingType: formData.billingType,
           countyName: formData.countyName,
-          hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null
+          jurisdiction: formData.jurisdiction,
+          judgeName: formData.judgeName,
+          courtroom: formData.courtroom,
+          filingDate: formData.filingDate,
+          opposingParty: formData.opposingParty,
+          opposingCounsel: formData.opposingCounsel,
+          hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
+          retainerAmount: formData.retainerAmount ? parseFloat(formData.retainerAmount) : null,
+          leadAttorneyId: formData.leadAttorneyId ? parseInt(formData.leadAttorneyId) : null,
+          ...this.collectPracticeAreaFieldValues(formData)
         };
         conversionCall = this.crmService.convertToMatterOnly(this.selectedLead.id, matterData);
         break;
       case 'CLIENT_AND_MATTER':
-        // Structure data properly for backend with both clientData and caseData
         const clientAndMatterData = {
           clientData: {
             name: `${formData.clientFirstName || ''} ${formData.clientLastName || ''}`.trim(),
@@ -1895,10 +2186,22 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
             title: formData.caseTitle,
             description: formData.caseDescription,
             type: formData.practiceArea,
+            caseNumber: formData.caseNumber,
+            status: formData.status || 'OPEN',
+            priority: formData.priority || 'MEDIUM',
             urgencyLevel: formData.urgencyLevel || 'MEDIUM',
+            billingType: formData.billingType,
             countyName: formData.countyName,
+            jurisdiction: formData.jurisdiction,
+            judgeName: formData.judgeName,
+            courtroom: formData.courtroom,
+            filingDate: formData.filingDate,
+            opposingParty: formData.opposingParty,
+            opposingCounsel: formData.opposingCounsel,
             hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
-            status: 'ACTIVE'
+            retainerAmount: formData.retainerAmount ? parseFloat(formData.retainerAmount) : null,
+            leadAttorneyId: formData.leadAttorneyId ? parseInt(formData.leadAttorneyId) : null,
+            ...this.collectPracticeAreaFieldValues(formData)
           }
         };
         conversionCall = this.crmService.convertToClientAndMatter(this.selectedLead.id, clientAndMatterData);
@@ -1961,16 +2264,10 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
       timerProgressBar: true
     }).then((result) => {
       if (result.isConfirmed) {
-        // Navigate to view the created records
-        if (response.clientId && response.caseId) {
-          // For CLIENT_AND_MATTER, navigate to the client page which should show both client and case info
-          this.router.navigate(['/client', response.clientId]);
+        if (response.caseId) {
+          this.router.navigate(['/legal/cases', response.caseId]);
         } else if (response.clientId) {
-          // For CLIENT_ONLY, navigate to the client detail page
-          this.router.navigate(['/client', response.clientId]);
-        } else if (response.caseId) {
-          // For MATTER_ONLY, navigate to the case detail page
-          this.router.navigate(['/case', response.caseId]);
+          this.router.navigate(['/clients', response.clientId]);
         }
       }
     });
@@ -2180,11 +2477,10 @@ export class LeadsDashboardComponent implements OnInit, AfterViewInit {
             timer: 5000
           }).then((result) => {
             if (result.isConfirmed) {
-              // Navigate to view the created records
-              if (response.clientId) {
-                this.router.navigate(['/client', response.clientId]);
-              } else if (response.caseId) {
-                this.router.navigate(['/case', response.caseId]);
+              if (response.caseId) {
+                this.router.navigate(['/legal/cases', response.caseId]);
+              } else if (response.clientId) {
+                this.router.navigate(['/clients', response.clientId]);
               }
             }
           });

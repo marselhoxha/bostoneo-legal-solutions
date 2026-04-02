@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
+import com.bostoneo.bostoneosolutions.dto.CalendarEventDTO;
 import com.bostoneo.bostoneosolutions.model.Lead;
 import com.bostoneo.bostoneosolutions.model.LeadActivity;
 import com.bostoneo.bostoneosolutions.model.LeadPipelineHistory;
@@ -8,6 +9,7 @@ import com.bostoneo.bostoneosolutions.repository.LeadRepository;
 import com.bostoneo.bostoneosolutions.repository.LeadActivityRepository;
 import com.bostoneo.bostoneosolutions.repository.LeadPipelineHistoryRepository;
 import com.bostoneo.bostoneosolutions.repository.PipelineStageRepository;
+import com.bostoneo.bostoneosolutions.service.CalendarEventService;
 import com.bostoneo.bostoneosolutions.service.LeadService;
 import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
@@ -36,6 +38,7 @@ public class LeadServiceImpl implements LeadService {
     private final AuthenticatedWebSocketHandler webSocketHandler;
     private final NotificationService notificationService;
     private final TenantService tenantService;
+    private final CalendarEventService calendarEventService;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -107,7 +110,11 @@ public class LeadServiceImpl implements LeadService {
     @Override
     public Lead createLead(Lead lead, Long createdBy) {
         log.info("Creating new lead: {} {} by user: {}", lead.getFirstName(), lead.getLastName(), createdBy);
-        
+
+        // SECURITY: Always stamp organization from tenant context — never trust client-sent value
+        Long orgId = getRequiredOrganizationId();
+        lead.setOrganizationId(orgId);
+
         // Set default values if not provided
         if (lead.getStatus() == null) lead.setStatus("NEW");
         if (lead.getSource() == null) lead.setSource("WEBSITE");
@@ -117,7 +124,7 @@ public class LeadServiceImpl implements LeadService {
         if (lead.getLeadQuality() == null) lead.setLeadQuality("UNKNOWN");
         if (lead.getCommunicationPreference() == null) lead.setCommunicationPreference("EMAIL");
         if (lead.getCaseComplexity() == null) lead.setCaseComplexity("MEDIUM");
-        
+
         Lead savedLead = save(lead);
         
         // Add initial activity
@@ -265,14 +272,14 @@ public class LeadServiceImpl implements LeadService {
         // SECURITY: Use tenant-filtered query
         Lead lead = leadRepository.findByIdAndOrganizationId(id, orgId)
             .orElseThrow(() -> new RuntimeException("Lead not found or access denied: " + id));
-        
+
         lead.setConsultationDate(consultationDate);
         lead = updateStatus(id, "CONSULTATION_SCHEDULED", userId, notes);
-        
-        addActivity(id, "CONSULTATION_SCHEDULED", "Consultation Scheduled", 
-            "Consultation scheduled for " + consultationDate + 
+
+        addActivity(id, "CONSULTATION_SCHEDULED", "Consultation Scheduled",
+            "Consultation scheduled for " + consultationDate +
             (notes != null ? ". Notes: " + notes : ""), userId);
-        
+
         return lead;
     }
 
@@ -950,42 +957,80 @@ public class LeadServiceImpl implements LeadService {
     }
 
     @Override
-    public Lead scheduleConsultation(Long leadId, String consultationDateStr, Long scheduledBy, String notes) {
+    public Lead scheduleConsultation(Long leadId, String consultationDateStr, Long scheduledBy, String notes, String consultationType) {
         try {
             log.info("Parsing consultation date string: {}", consultationDateStr);
-            
-            // Handle null or empty date string
+
             if (consultationDateStr == null || consultationDateStr.trim().isEmpty()) {
                 throw new RuntimeException("Consultation date cannot be null or empty");
             }
-            
-            // Clean and normalize the date string
+
+            // Normalize: replace T separator, add seconds if missing
             String normalizedDateStr = consultationDateStr.trim().replace("T", " ");
-            
-            // Add seconds if missing (format: yyyy-MM-dd HH:mm)
             if (normalizedDateStr.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$")) {
                 normalizedDateStr += ":00";
-                log.info("Added seconds to date string: {}", normalizedDateStr);
             }
-            
-            // Validate the final format before parsing
             if (!normalizedDateStr.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$")) {
                 throw new RuntimeException("Date format does not match expected pattern yyyy-MM-dd HH:mm:ss");
             }
-            
+
             Timestamp consultationDate = Timestamp.valueOf(normalizedDateStr);
             log.info("Successfully parsed consultation date: {}", consultationDate);
-            
-            return scheduleConsultation(leadId, consultationDate, scheduledBy, notes);
+
+            Lead lead = scheduleConsultation(leadId, consultationDate, scheduledBy, notes);
+
+            // Create a calendar event for this consultation (best-effort; failure won't block scheduling)
+            try {
+                String firstName = lead.getFirstName() != null ? lead.getFirstName() : "";
+                String lastName  = lead.getLastName()  != null ? lead.getLastName()  : "";
+                String leadName  = (firstName + " " + lastName).trim();
+                if (leadName.isEmpty()) leadName = "Lead #" + leadId;
+
+                String eventTitle = formatConsultationType(consultationType) + ": " + leadName;
+
+                // Use toLocalDateTime() — Timestamp.valueOf() and toLocalDateTime() both use the JVM timezone,
+                // so they cancel out and preserve the user's intended local time without any offset shift.
+                CalendarEventDTO calendarEvent = CalendarEventDTO.builder()
+                    .title(eventTitle)
+                    .description("Lead consultation" + (notes != null ? ". Notes: " + notes : ""))
+                    .startTime(consultationDate.toLocalDateTime())
+                    .endTime(consultationDate.toLocalDateTime().plusHours(1))
+                    .eventType("CONSULTATION")
+                    .status("SCHEDULED")
+                    .userId(scheduledBy)
+                    .build();
+                calendarEventService.createEvent(calendarEvent);
+                log.info("Calendar event '{}' created for consultation on lead ID: {}", eventTitle, leadId);
+            } catch (Exception e) {
+                log.warn("Failed to create calendar event for consultation on lead {}: {}", leadId, e.getMessage());
+            }
+
+            return lead;
         } catch (IllegalArgumentException e) {
             log.error("Failed to parse consultation date: {} - {}", consultationDateStr, e.getMessage());
-            throw new RuntimeException("Invalid consultation date format: " + consultationDateStr + 
+            throw new RuntimeException("Invalid consultation date format: " + consultationDateStr +
                 ". Expected format: yyyy-MM-dd HH:mm or yyyy-MM-dd HH:mm:ss. Error: " + e.getMessage());
         } catch (Exception e) {
+            if (e instanceof RuntimeException) throw (RuntimeException) e;
             log.error("Unexpected error parsing consultation date: {}", consultationDateStr, e);
-            throw new RuntimeException("Failed to parse consultation date: " + consultationDateStr + 
+            throw new RuntimeException("Failed to parse consultation date: " + consultationDateStr +
                 ". Error: " + e.getMessage());
         }
+    }
+
+    private String formatConsultationType(String consultationType) {
+        if (consultationType == null || consultationType.trim().isEmpty()) return "Consultation";
+        // Convert INITIAL_CONSULTATION → "Initial Consultation"
+        String[] words = consultationType.split("_");
+        StringBuilder sb = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                if (sb.length() > 0) sb.append(" ");
+                sb.append(Character.toUpperCase(word.charAt(0)));
+                sb.append(word.substring(1).toLowerCase());
+            }
+        }
+        return sb.toString();
     }
 
     @Override

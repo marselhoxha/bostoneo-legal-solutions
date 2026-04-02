@@ -3,6 +3,7 @@ import { CommonModule, TitleCasePipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NgbNavModule } from '@ng-bootstrap/ng-bootstrap';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 // Components
 import { CrmDashboardComponent } from './components/crm-dashboard/crm-dashboard.component';
@@ -30,6 +31,7 @@ import { CrmRoutingModule } from './crm-routing.module';
     ReactiveFormsModule,
     RouterModule,
     NgbNavModule,
+    DragDropModule,
     CrmRoutingModule
   ],
   providers: [

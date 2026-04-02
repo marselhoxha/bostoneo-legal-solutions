@@ -6,6 +6,7 @@ import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -290,6 +291,20 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                 , BAD_REQUEST);
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<HttpResponse> dataIntegrityViolationException(DataIntegrityViolationException exception) {
+        log.error(exception.getMessage());
+        String reason = processIntegrityViolationMessage(exception.getMessage());
+        return new ResponseEntity<>(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .reason(reason)
+                        .developerMessage(safeDeveloperMessage(exception.getMessage()))
+                        .status(CONFLICT)
+                        .statusCode(CONFLICT.value()).build()
+                , CONFLICT);
+    }
+
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<HttpResponse> dataAccessException(DataAccessException exception) {
         log.error(exception.getMessage());
@@ -317,6 +332,31 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
                         .status(httpStatus)
                         .statusCode(httpStatus.value()).build()
                 , httpStatus);
+    }
+
+    private String processIntegrityViolationMessage(String message) {
+        if (message == null) return "A data integrity error occurred. Please try again.";
+        // PostgreSQL duplicate key
+        if (message.contains("duplicate key value") || message.contains("unique constraint")) {
+            if (message.contains("(email)")) {
+                return "A lead with this email address already exists.";
+            }
+            if (message.contains("(phone)")) {
+                return "A lead with this phone number already exists.";
+            }
+            return "A record with these details already exists.";
+        }
+        // PostgreSQL not-null / check constraint
+        if (message.contains("violates check constraint") || message.contains("violates not-null constraint")) {
+            return "Required information is missing. Please fill in all required fields.";
+        }
+        // MySQL-style (legacy)
+        if (message.contains("Duplicate entry")) {
+            if (message.contains("AccountVerifications")) return "You already verified your account.";
+            if (message.contains("ResetPasswordVerifications")) return "We already sent you an email to reset your password.";
+            return "Duplicate entry. Please try again.";
+        }
+        return "A data integrity error occurred. Please try again.";
     }
 
     private String processErrorMessage(String errorMessage) {

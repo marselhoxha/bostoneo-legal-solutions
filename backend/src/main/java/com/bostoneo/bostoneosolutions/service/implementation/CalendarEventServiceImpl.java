@@ -27,6 +27,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -62,6 +63,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CalendarEventDTO createEvent(CalendarEventDTO eventDTO) {
        // log.info("Creating calendar event: {}", eventDTO.getTitle());
         

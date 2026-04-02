@@ -3,15 +3,94 @@
   <div class="row">
     <div class="col-12">
       <div class="page-title-box d-flex align-items-center justify-content-between">
-        <h4 class="mb-0">Lead Management Dashboard</h4>
-        <div class="page-title-right">
-          <button type="button" class="btn btn-primary btn-sm" (click)="showPipelineView()">
-            <i class="ri-stack-line me-1"></i>Pipeline View
+        <h4 class="mb-0">Lead Management</h4>
+        <div class="page-title-right d-flex align-items-center gap-3">
+          <button class="btn btn-primary btn-sm" (click)="showCreateModal = true">
+            <i class="ri-add-line me-1"></i>Add Lead
           </button>
+          <ul class="nav nav-pills nav-sm" role="tablist" style="gap: 4px;">
+            <li class="nav-item">
+              <a class="nav-link py-1 px-3" [class.active]="activeView === 'list'" (click)="activeView = 'list'" role="button"
+                 style="font-size: 13px; font-weight: 500;">
+                <i class="ri-list-unordered align-bottom me-1"></i>List
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link py-1 px-3" [class.active]="activeView === 'pipeline'" (click)="activeView = 'pipeline'" role="button"
+                 style="font-size: 13px; font-weight: 500;">
+                <i class="ri-layout-column-line align-bottom me-1"></i>Pipeline
+              </a>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- ═══════════ PIPELINE VIEW ═══════════ -->
+  <ng-template #pipelineColumn let-stage let-idx="idx">
+    <div class="pipeline-column">
+      <div class="pipeline-color-bar" [style.background]="stage.color"></div>
+      <div class="pipeline-col-header">
+        <span class="pipeline-col-title">{{ stage.name }}</span>
+        <span class="pipeline-col-count" [style.background]="stage.color + '15'" [style.color]="stage.color">
+          {{ getLeadCountForStage(stage.name) }}
+        </span>
+      </div>
+      <div class="pipeline-col-body"
+           cdkDropList [cdkDropListData]="getLeadsForStage(stage.name)"
+           [id]="'stage-' + idx"
+           [cdkDropListConnectedTo]="getConnectedLists()"
+           (cdkDropListDropped)="onLeadDropped($event, stage)">
+        <div *ngFor="let lead of getLeadsForStage(stage.name)" class="pipeline-card" cdkDrag [cdkDragData]="lead">
+          <!-- Row 1: Name + open button -->
+          <div class="pc-header">
+            <span class="pc-name">{{ lead.fullName || (lead.firstName + ' ' + lead.lastName) }}</span>
+            <button class="pc-open-btn" (click)="viewLead(lead); $event.stopPropagation()" title="View details">
+              <i class="ri-external-link-line"></i>
+            </button>
+          </div>
+          <!-- Row 2: Practice area -->
+          <div class="pc-practice">{{ lead.practiceArea?.replace('_', ' ') || '—' }}</div>
+          <!-- Row 3: Urgency + Value + Assigned avatar -->
+          <div class="pc-tags">
+            <span class="pc-urgency"
+                  [ngClass]="{ 'urgent': lead.urgencyLevel === 'URGENT', 'high': lead.urgencyLevel === 'HIGH', 'medium': lead.urgencyLevel === 'MEDIUM' }">
+              {{ getUrgencyDisplayName(lead.urgencyLevel) }}
+            </span>
+            <div class="d-flex align-items-center gap-2">
+              <span *ngIf="lead.estimatedValue" class="pc-value">{{ formatCurrency(lead.estimatedValue) }}</span>
+              <span *ngIf="lead.assignedToName" class="pc-assigned" [title]="lead.assignedToName">
+                {{ lead.assignedToName?.split(' ')[0]?.charAt(0) }}{{ lead.assignedToName?.split(' ')[1]?.charAt(0) || '' }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <!-- Empty state only when truly empty -->
+        <div *ngIf="getLeadCountForStage(stage.name) === 0" class="pipeline-empty">
+          <i class="ri-inbox-line"></i><span>Empty</span>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+
+  <div *ngIf="activeView === 'pipeline'" class="pipeline-board" cdkDropListGroup>
+    <!-- Row 1 -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-3" *ngFor="let stage of pipelineStages?.slice(0, 4); let i = index">
+        <ng-container *ngTemplateOutlet="pipelineColumn; context: { $implicit: stage, idx: i }"></ng-container>
+      </div>
+    </div>
+    <!-- Row 2 -->
+    <div class="row g-3" *ngIf="pipelineStages?.length > 4">
+      <div class="col-md-3" *ngFor="let stage of pipelineStages?.slice(4); let j = index">
+        <ng-container *ngTemplateOutlet="pipelineColumn; context: { $implicit: stage, idx: j + 4 }"></ng-container>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ LIST VIEW ═══════════ -->
+  <div *ngIf="activeView === 'list'">
 
   <!-- Pipeline Summary Cards -->
   <div class="row" *ngIf="pipelineSummary">
@@ -154,14 +233,14 @@
                   <td>
                     <!-- Final status: static badge (no dropdown) -->
                     <span *ngIf="getValidNextStatuses(lead.status || 'NEW').length === 0"
-                          class="badge" [class]="getStatusBadgeClass(lead.status)">
+                          class="badge text-white" [ngStyle]="getStatusBadgeStyle(lead.status)">
                       {{getStatusDisplayName(lead.status || 'NEW')}}
                       <i class="ri-lock-line ms-1"></i>
                     </span>
 
                     <!-- Active status: clickable dropdown -->
                     <div class="dropdown" *ngIf="getValidNextStatuses(lead.status || 'NEW').length > 0">
-                      <button class="badge border-0 dropdown-toggle" [class]="getStatusBadgeClass(lead.status)"
+                      <button class="badge text-white border-0 dropdown-toggle" [ngStyle]="getStatusBadgeStyle(lead.status)"
                               type="button" data-bs-toggle="dropdown" style="cursor: pointer;">
                         {{getStatusDisplayName(lead.status || 'NEW')}}
                       </button>
@@ -170,7 +249,7 @@
                         <li *ngFor="let status of getValidNextStatuses(lead.status || 'NEW')">
                           <a class="dropdown-item" href="#"
                              (click)="changeLeadStatus(lead, status); $event.preventDefault()">
-                            <span class="badge me-2" [class]="getStatusBadgeClass(status)">&nbsp;</span>
+                            <span class="badge me-2" [ngStyle]="getStatusBadgeStyle(status)">&nbsp;</span>
                             {{getStatusDisplayName(status)}}
                           </a>
                         </li>
@@ -297,100 +376,176 @@
 </div>
 
 <!-- Lead Details Modal -->
-<div class="modal fade" [class.show]="showLeadModal" [style.display]="showLeadModal ? 'block' : 'none'" 
-     tabindex="-1" *ngIf="selectedLead">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Lead Details - {{selectedLead.fullName}}</h5>
-        <button type="button" class="btn-close" (click)="closeLeadModal()"></button>
+<div class="modal fade" [class.show]="showLeadModal" [style.display]="showLeadModal ? 'block' : 'none'"
+     tabindex="-1" *ngIf="selectedLead" (click)="closeLeadModal()">
+  <div class="modal-dialog modal-lg modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content lead-detail-modal">
+      <!-- Color accent bar based on pipeline stage -->
+      <div class="lead-detail-accent" [style.background]="getStageColorForStatus(selectedLead.status)"></div>
+
+      <!-- Header -->
+      <div class="lead-detail-header">
+        <div class="d-flex align-items-start gap-3 flex-grow-1 min-width-0">
+          <div class="lead-detail-avatar" [style.background]="getStageColorForStatus(selectedLead.status) + '18'" [style.color]="getStageColorForStatus(selectedLead.status)">
+            {{ selectedLead.fullName?.charAt(0) || selectedLead.firstName?.charAt(0) || '?' }}
+          </div>
+          <div class="min-width-0">
+            <h5 class="fw-semibold mb-1" style="font-size: 17px; color: var(--vz-heading-color);">{{ selectedLead.fullName || (selectedLead.firstName + ' ' + selectedLead.lastName) }}</h5>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <span class="lead-detail-meta">
+                <i class="ri-briefcase-line"></i>{{ selectedLead.practiceArea?.replace('_', ' ') || 'Unassigned' }}
+              </span>
+              <span *ngIf="selectedLead.assignedToName" class="lead-detail-meta">
+                <i class="ri-user-line"></i>{{ selectedLead.assignedToName }}
+              </span>
+              <span *ngIf="selectedLead.source" class="lead-detail-meta">
+                <i class="ri-links-line"></i>{{ selectedLead.source?.replace('_', ' ') }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="lead-detail-close" (click)="closeLeadModal()">
+          <i class="ri-close-line"></i>
+        </button>
       </div>
-      <div class="modal-body">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Contact Information</label>
-              <div class="border rounded p-3">
-                <div class="mb-2"><strong>Email:</strong> {{selectedLead.email || '-'}}</div>
-                <div class="mb-2"><strong>Phone:</strong> {{selectedLead.phone || '-'}}</div>
-                <div class="mb-2"><strong>Company:</strong> {{selectedLead.company || '-'}}</div>
-                <div class="mb-0"><strong>Preferred Contact:</strong> {{selectedLead.contactPreference || '-'}}</div>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Lead Information</label>
-              <div class="border rounded p-3">
-                <div class="mb-2"><strong>Status:</strong> 
-                  <span class="badge ms-2" [class]="getStatusBadgeClass(selectedLead.status)">
-                    {{selectedLead.status?.replace('_', ' ')}}
-                  </span>
-                </div>
-                <div class="mb-2"><strong>Urgency:</strong> 
-                  <span class="badge ms-2" [class]="getUrgencyBadgeClass(selectedLead.urgencyLevel)" *ngIf="selectedLead.urgencyLevel">
-                    {{selectedLead.urgencyLevel}}
-                  </span>
-                  <span *ngIf="!selectedLead.urgencyLevel">-</span>
-                </div>
-                <div class="mb-2"><strong>Lead Score:</strong> {{selectedLead.leadScore || '-'}}</div>
-                <div class="mb-0"><strong>Source:</strong> {{selectedLead.source || '-'}}</div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div class="row">
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Case Details</label>
-              <div class="border rounded p-3">
-                <div class="mb-2"><strong>Practice Area:</strong> {{selectedLead.practiceArea?.replace('_', ' ') || '-'}}</div>
-                <div class="mb-0"><strong>Estimated Value:</strong> {{formatCurrency(selectedLead.estimatedValue)}}</div>
-              </div>
-            </div>
+      <!-- Status & Score Bar -->
+      <div class="lead-detail-status-bar">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <div class="d-flex align-items-center gap-2">
+            <label class="text-muted fw-medium mb-0" style="font-size: 12px; letter-spacing: 0.03em;">STATUS</label>
+            <select class="form-select form-select-sm lead-status-select"
+                    [ngModel]="selectedLead.status"
+                    (ngModelChange)="changeLeadStatusFromModal($event)"
+                    [style.border-color]="getStageColorForStatus(selectedLead.status)">
+              <option value="NEW">New Lead</option>
+              <option value="CONTACTED">Contacted</option>
+              <option value="QUALIFIED">Qualified</option>
+              <option value="CONSULTATION_SCHEDULED">Consultation Scheduled</option>
+              <option value="PROPOSAL_SENT">Proposal Sent</option>
+              <option value="NEGOTIATION">Negotiation</option>
+              <option value="CONVERTED">Converted</option>
+              <option value="LOST">Lost</option>
+            </select>
           </div>
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Timeline</label>
-              <div class="border rounded p-3">
-                <div class="mb-2"><strong>Created:</strong> {{formatDateTime(selectedLead.createdAt)}}</div>
-                <div class="mb-2"><strong>Last Contact:</strong> {{formatDateTime(selectedLead.lastContactDate)}}</div>
-                <div class="mb-2"><strong>Contact Attempts:</strong> {{selectedLead.contactAttempts || 0}}</div>
-                <div class="mb-0"><strong>Follow-up Date:</strong> {{formatDate(selectedLead.followUpDate)}}</div>
-              </div>
-            </div>
-          </div>
+          <span class="badge rounded-pill" [class]="getUrgencyBadgeClass(selectedLead.urgencyLevel)" *ngIf="selectedLead.urgencyLevel">
+            {{ getUrgencyDisplayName(selectedLead.urgencyLevel) }}
+          </span>
         </div>
-
-        <div class="row" *ngIf="selectedLead.initialInquiry || selectedLead.notes">
-          <div class="col-12">
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Notes & Inquiry</label>
-              <div class="border rounded p-3">
-                <div class="mb-2" *ngIf="selectedLead.initialInquiry">
-                  <strong>Initial Inquiry:</strong>
-                  <p class="mb-0 mt-1">{{selectedLead.initialInquiry}}</p>
-                </div>
-                <div *ngIf="selectedLead.notes">
-                  <strong>Notes:</strong>
-                  <p class="mb-0 mt-1">{{selectedLead.notes}}</p>
-                </div>
-              </div>
-            </div>
+        <div class="d-flex align-items-center gap-3">
+          <div *ngIf="selectedLead.estimatedValue" class="lead-detail-value">
+            {{ formatCurrency(selectedLead.estimatedValue) }}
+          </div>
+          <div *ngIf="selectedLead.leadScore" class="lead-detail-score"
+               [class.score-high]="selectedLead.leadScore >= 70"
+               [class.score-mid]="selectedLead.leadScore >= 40 && selectedLead.leadScore < 70"
+               [class.score-low]="selectedLead.leadScore < 40">
+            <span class="score-num">{{ selectedLead.leadScore }}</span>
+            <span class="score-label">Score</span>
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-light" (click)="closeLeadModal()">Close</button>
-        <button type="button" class="btn btn-primary">Edit Lead</button>
-        <button type="button" class="btn btn-success">Convert</button>
+
+      <!-- Body -->
+      <div class="lead-detail-body">
+        <div class="row g-3">
+          <!-- Contact Info -->
+          <div class="col-md-6">
+            <div class="lead-info-card">
+              <div class="lead-info-card-header">
+                <i class="ri-contacts-line"></i>Contact Information
+              </div>
+              <div class="lead-info-rows">
+                <div class="lead-info-row" *ngIf="selectedLead.email">
+                  <i class="ri-mail-line"></i>
+                  <span>{{ selectedLead.email }}</span>
+                </div>
+                <div class="lead-info-row" *ngIf="selectedLead.phone">
+                  <i class="ri-phone-line"></i>
+                  <span>{{ selectedLead.phone }}</span>
+                </div>
+                <div class="lead-info-row" *ngIf="selectedLead.company">
+                  <i class="ri-building-line"></i>
+                  <span>{{ selectedLead.company }}</span>
+                </div>
+                <div class="lead-info-row" *ngIf="selectedLead.contactPreference">
+                  <i class="ri-chat-check-line"></i>
+                  <span>Prefers {{ selectedLead.contactPreference?.toLowerCase() }}</span>
+                </div>
+                <div class="lead-info-empty" *ngIf="!selectedLead.email && !selectedLead.phone && !selectedLead.company">
+                  No contact information
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Case Details -->
+          <div class="col-md-6">
+            <div class="lead-info-card">
+              <div class="lead-info-card-header">
+                <i class="ri-folder-info-line"></i>Case Details
+              </div>
+              <div class="lead-info-rows">
+                <div class="lead-info-row">
+                  <span class="text-muted">Created</span>
+                  <span class="fw-medium">{{ formatDateTime(selectedLead.createdAt) }}</span>
+                </div>
+                <div class="lead-info-row" *ngIf="selectedLead.lastContactDate">
+                  <span class="text-muted">Last Contact</span>
+                  <span class="fw-medium">{{ formatDateTime(selectedLead.lastContactDate) }}</span>
+                </div>
+                <div class="lead-info-row" *ngIf="selectedLead.followUpDate">
+                  <span class="text-muted">Follow-up</span>
+                  <span class="fw-medium">{{ formatDate(selectedLead.followUpDate) }}</span>
+                </div>
+                <div class="lead-info-row" *ngIf="selectedLead.contactAttempts">
+                  <span class="text-muted">Contact Attempts</span>
+                  <span class="fw-medium">{{ selectedLead.contactAttempts }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="col-12" *ngIf="selectedLead.initialInquiry || selectedLead.notes">
+            <div class="lead-info-card">
+              <div class="lead-info-card-header">
+                <i class="ri-sticky-note-line"></i>Notes & Inquiry
+              </div>
+              <div class="lead-notes-content">
+                <p *ngIf="selectedLead.initialInquiry" class="mb-2">{{ selectedLead.initialInquiry }}</p>
+                <p *ngIf="selectedLead.notes" class="mb-0 text-muted" style="font-size: 12.5px;">{{ selectedLead.notes }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer actions -->
+      <div class="lead-detail-footer">
+        <button type="button" class="btn btn-soft-secondary btn-sm" (click)="closeLeadModal()">Close</button>
+        <div class="d-flex gap-2">
+          <button *ngIf="canEditLead(selectedLead)" type="button" class="btn btn-soft-info btn-sm" (click)="editLead(selectedLead)">
+            <i class="ri-pencil-line me-1"></i>Edit
+          </button>
+          <button *ngIf="canAssignLead(selectedLead)" type="button" class="btn btn-soft-primary btn-sm" (click)="assignLead(selectedLead)">
+            <i class="ri-user-add-line me-1"></i>Assign
+          </button>
+          <button *ngIf="canScheduleConsultation(selectedLead)" type="button" class="btn btn-soft-warning btn-sm" (click)="scheduleCall(selectedLead)">
+            <i class="ri-calendar-line me-1"></i>Schedule
+          </button>
+          <button *ngIf="canConvertLead(selectedLead)" type="button" class="btn btn-success btn-sm" (click)="convertLead(selectedLead)">
+            <i class="ri-exchange-line me-1"></i>Convert
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Pipeline Modal -->
+  </div><!-- END LIST VIEW -->
+
+<!-- Pipeline Modal (kept for backward compat but no longer used) -->
 <div class="modal fade" [class.show]="showPipelineModal" [style.display]="showPipelineModal ? 'block' : 'none'" 
      tabindex="-1">
   <div class="modal-dialog modal-xl">
@@ -710,10 +865,10 @@
                         [class.is-invalid]="scheduleForm.get('consultationType')?.invalid && scheduleForm.get('consultationType')?.touched"
                         formControlName="consultationType">
                   <option value="INITIAL_CONSULTATION">Initial Consultation</option>
-                  <option value="FOLLOW_UP">Follow-up Meeting</option>
-                  <option value="CASE_REVIEW">Case Review</option>
-                  <option value="DOCUMENT_REVIEW">Document Review</option>
-                  <option value="SETTLEMENT_DISCUSSION">Settlement Discussion</option>
+                  <option value="PHONE_CONSULTATION">Phone Consultation</option>
+                  <option value="IN_PERSON_MEETING">In-Person Meeting</option>
+                  <option value="DISCOVERY_CALL">Discovery Call</option>
+                  <option value="VIRTUAL_CONSULTATION">Virtual Consultation</option>
                 </select>
                 <div class="invalid-feedback" *ngIf="scheduleForm.get('consultationType')?.invalid && scheduleForm.get('consultationType')?.touched">
                   Please select a consultation type
@@ -743,51 +898,45 @@
 </div>
 
 <!-- Convert Lead Modal - Three-Stage Wizard -->
-<div class="modal fade" [class.show]="showConvertModal" [style.display]="showConvertModal ? 'block' : 'none'" 
-     tabindex="-1" *ngIf="selectedLead">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <!-- Modal Header with Progress Indicator -->
-      <div class="modal-header">
+<div class="modal fade" [class.show]="showConvertModal" [style.display]="showConvertModal ? 'block' : 'none'"
+     tabindex="-1" *ngIf="selectedLead" (click)="closeConvertModal()">
+  <div class="modal-dialog modal-xl" (click)="$event.stopPropagation()">
+    <div class="modal-content convert-lead-modal">
+      <!-- Modal Header -->
+      <div class="modal-header border-0 pb-0">
         <div class="w-100">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="modal-title mb-0">
-              <i class="ri-arrow-right-circle-line me-2"></i>
-              Convert Lead - {{selectedLead.fullName}}
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="modal-title mb-0 fw-semibold">
+              <i class="ri-arrow-right-circle-line me-2 text-primary"></i>
+              Convert Lead — {{selectedLead.fullName}}
             </h5>
             <button type="button" class="btn-close" (click)="closeConvertModal()"></button>
           </div>
-          
-          <!-- Progress Steps -->
-          <div class="conversion-wizard-progress mt-3">
-            <div class="row">
-              <div class="col-4">
-                <div class="step-indicator" [class.active]="conversionStep === 1" [class.completed]="conversionStep > 1">
-                  <div class="step-circle">
-                    <i class="ri-settings-line" *ngIf="conversionStep <= 1"></i>
-                    <i class="ri-check-line" *ngIf="conversionStep > 1"></i>
-                  </div>
-                  <div class="step-label">Select Type</div>
-                </div>
+
+          <!-- Wizard Steps -->
+          <div class="convert-wizard-steps d-flex justify-content-center align-items-start gap-0">
+            <div class="convert-step-item" [class.active]="conversionStep === 1" [class.completed]="conversionStep > 1">
+              <div class="convert-step-circle">
+                <i *ngIf="conversionStep > 1" class="ri-check-line"></i>
+                <i *ngIf="conversionStep <= 1" class="ri-settings-line"></i>
               </div>
-              <div class="col-4">
-                <div class="step-indicator" [class.active]="conversionStep === 2" [class.completed]="conversionStep > 2">
-                  <div class="step-circle">
-                    <i class="ri-file-edit-line" *ngIf="conversionStep <= 2"></i>
-                    <i class="ri-check-line" *ngIf="conversionStep > 2"></i>
-                  </div>
-                  <div class="step-label">Enter Information</div>
-                </div>
+              <span class="convert-step-label">Select Type</span>
+            </div>
+            <div class="convert-step-line" [class.completed]="conversionStep > 1"></div>
+            <div class="convert-step-item" [class.active]="conversionStep === 2" [class.completed]="conversionStep > 2">
+              <div class="convert-step-circle">
+                <i *ngIf="conversionStep > 2" class="ri-check-line"></i>
+                <i *ngIf="conversionStep <= 2" class="ri-file-edit-line"></i>
               </div>
-              <div class="col-4">
-                <div class="step-indicator" [class.active]="conversionStep === 3" [class.completed]="conversionStep > 3">
-                  <div class="step-circle">
-                    <i class="ri-eye-line" *ngIf="conversionStep <= 3"></i>
-                    <i class="ri-check-line" *ngIf="conversionStep > 3"></i>
-                  </div>
-                  <div class="step-label">Review & Confirm</div>
-                </div>
+              <span class="convert-step-label">Enter Information</span>
+            </div>
+            <div class="convert-step-line" [class.completed]="conversionStep > 2"></div>
+            <div class="convert-step-item" [class.active]="conversionStep === 3" [class.completed]="conversionStep > 3">
+              <div class="convert-step-circle">
+                <i *ngIf="conversionStep > 3" class="ri-check-line"></i>
+                <i *ngIf="conversionStep <= 3" class="ri-eye-line"></i>
               </div>
+              <span class="convert-step-label">Review & Confirm</span>
             </div>
           </div>
         </div>
@@ -795,144 +944,130 @@
 
       <form [formGroup]="convertForm">
         <div class="modal-body" style="min-height: 500px;">
-          
-          <!-- Step 1: Conversion Type Selection -->
+
+          <!-- ═══ Step 1: Conversion Type Selection ═══ -->
           <div *ngIf="conversionStep === 1">
             <div class="text-center mb-4">
-              <h5 class="text-primary">{{getStepTitle()}}</h5>
-              <p class="text-muted">{{getStepDescription()}}</p>
+              <h5 class="fw-semibold">Select Conversion Type</h5>
+              <p class="text-muted mb-0">Choose how you want to convert this lead</p>
             </div>
 
-            <div class="row">
+            <div class="row g-3">
               <div class="col-md-4" *ngFor="let type of conversionTypes">
-                <div class="conversion-type-card h-100" 
+                <div class="conversion-type-card h-100"
                      [class.selected]="selectedConversionType === type.value"
                      (click)="onConversionTypeChange(type.value)">
-                  <div class="card-icon" [style.color]="type.color">
-                    <i [class]="type.icon"></i>
+                  <div class="conversion-type-icon" [style.background]="type.color + '18'" [style.color]="type.color">
+                    <i [class]="type.icon" style="font-size: 22px;"></i>
                   </div>
-                  <h6>{{type.label}}</h6>
-                  <p class="small text-muted">{{type.description}}</p>
-                  <div class="selection-indicator" *ngIf="selectedConversionType === type.value">
-                    <i class="ri-check-circle-fill"></i>
+                  <h6 class="fw-semibold mb-1" [style.color]="selectedConversionType === type.value ? type.color : ''">{{type.label}}</h6>
+                  <p class="small text-muted mb-2">{{type.description}}</p>
+                  <ul class="conversion-feature-list">
+                    <li *ngFor="let feature of type.features">
+                      <i class="ri-check-line" [style.color]="type.color"></i>
+                      <span>{{feature}}</span>
+                    </li>
+                  </ul>
+                  <div class="conversion-check" *ngIf="selectedConversionType === type.value">
+                    <i class="ri-checkbox-circle-fill" [style.color]="type.color"></i>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Lead Summary for Context -->
-            <div class="row mt-4" *ngIf="selectedConversionType">
-              <div class="col-12">
-                <div class="alert alert-info">
-                  <h6><i class="ri-information-line me-2"></i>Lead Summary</h6>
-                  <div class="row">
-                    <div class="col-md-6">
-                      <p class="mb-1"><strong>Name:</strong> {{selectedLead.fullName}}</p>
-                      <p class="mb-1"><strong>Email:</strong> {{selectedLead.email || 'N/A'}}</p>
-                      <p class="mb-0"><strong>Phone:</strong> {{selectedLead.phone || 'N/A'}}</p>
-                    </div>
-                    <div class="col-md-6">
-                      <p class="mb-1"><strong>Practice Area:</strong> {{selectedLead.practiceArea?.replace('_', ' ') || 'N/A'}}</p>
-                      <p class="mb-1"><strong>Status:</strong> {{getStatusDisplayName(selectedLead.status || 'NEW')}}</p>
-                      <p class="mb-0"><strong>Est. Value:</strong> {{formatCurrency(selectedLead.estimatedValue)}}</p>
-                    </div>
-                  </div>
+            <!-- Lead Summary -->
+            <div class="convert-review-section mt-4" *ngIf="selectedConversionType">
+              <div class="convert-section-header">
+                <i class="ri-information-line"></i> Lead Summary
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Name:</strong> {{selectedLead.fullName}}</p>
+                  <p class="mb-1"><strong>Email:</strong> {{selectedLead.email || 'N/A'}}</p>
+                  <p class="mb-0"><strong>Phone:</strong> {{selectedLead.phone || 'N/A'}}</p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Practice Area:</strong> {{selectedLead.practiceArea?.replace('_', ' ') || 'N/A'}}</p>
+                  <p class="mb-1"><strong>Status:</strong> {{getStatusDisplayName(selectedLead.status || 'NEW')}}</p>
+                  <p class="mb-0"><strong>Est. Value:</strong> {{formatCurrency(selectedLead.estimatedValue)}}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Step 2: Data Entry -->
+          <!-- ═══ Step 2: Data Entry ═══ -->
           <div *ngIf="conversionStep === 2">
-            <div class="text-center mb-4">
-              <h5 class="text-primary">{{getStepTitle()}}</h5>
-              <p class="text-muted">{{getStepDescription()}}</p>
-              <div class="badge bg-info text-white">
+            <div class="text-center mb-3">
+              <span class="badge bg-soft-primary text-primary px-3 py-2">
                 Converting to: {{getSelectedConversionTypeLabel()}}
-              </div>
+              </span>
             </div>
 
             <!-- Validation Errors -->
             <div class="alert alert-danger" *ngIf="validationErrors.length > 0">
-              <h6><i class="ri-alert-line me-2"></i>Please fix the following errors:</h6>
+              <h6 class="mb-2"><i class="ri-alert-line me-2"></i>Please fix the following:</h6>
               <ul class="mb-0">
                 <li *ngFor="let error of validationErrors">{{error}}</li>
               </ul>
             </div>
 
-            <!-- Client Information Section -->
-            <div class="row" *ngIf="selectedConversionType === 'CLIENT_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
-              <div class="col-12">
-                <h6 class="text-info border-bottom pb-2 mb-3">
-                  <i class="ri-user-line me-2"></i>Client Information
-                </h6>
+            <!-- ── Client Information ── -->
+            <div *ngIf="selectedConversionType === 'CLIENT_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
+              <div class="convert-section-header">
+                <i class="ri-user-line"></i> Client Information
               </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label">First Name <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" 
-                         [class.is-invalid]="convertForm.get('clientFirstName')?.invalid && convertForm.get('clientFirstName')?.touched"
-                         formControlName="clientFirstName">
-                  <div class="invalid-feedback" *ngIf="convertForm.get('clientFirstName')?.invalid && convertForm.get('clientFirstName')?.touched">
-                    First name is required
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">First Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control"
+                           [class.is-invalid]="convertForm.get('clientFirstName')?.invalid && convertForm.get('clientFirstName')?.touched"
+                           formControlName="clientFirstName">
+                    <div class="invalid-feedback" *ngIf="convertForm.get('clientFirstName')?.invalid && convertForm.get('clientFirstName')?.touched">First name is required</div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control"
+                           [class.is-invalid]="convertForm.get('clientLastName')?.invalid && convertForm.get('clientLastName')?.touched"
+                           formControlName="clientLastName">
+                    <div class="invalid-feedback" *ngIf="convertForm.get('clientLastName')?.invalid && convertForm.get('clientLastName')?.touched">Last name is required</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Email <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control"
+                           [class.is-invalid]="convertForm.get('clientEmail')?.invalid && convertForm.get('clientEmail')?.touched"
+                           formControlName="clientEmail">
+                    <div class="invalid-feedback" *ngIf="convertForm.get('clientEmail')?.invalid && convertForm.get('clientEmail')?.touched">Valid email is required</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Phone <span class="text-danger">*</span></label>
+                    <input type="tel" class="form-control"
+                           [class.is-invalid]="convertForm.get('clientPhone')?.invalid && convertForm.get('clientPhone')?.touched"
+                           formControlName="clientPhone">
+                    <div class="invalid-feedback" *ngIf="convertForm.get('clientPhone')?.invalid && convertForm.get('clientPhone')?.touched">Phone is required</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Client Type <span class="text-danger">*</span></label>
+                    <select class="form-select" formControlName="clientType">
+                      <option value="">Select type</option>
+                      <option value="INDIVIDUAL">Individual</option>
+                      <option value="CORPORATE">Corporate</option>
+                      <option value="BUSINESS">Business</option>
+                    </select>
                   </div>
                 </div>
               </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label">Last Name <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" 
-                         [class.is-invalid]="convertForm.get('clientLastName')?.invalid && convertForm.get('clientLastName')?.touched"
-                         formControlName="clientLastName">
-                  <div class="invalid-feedback" *ngIf="convertForm.get('clientLastName')?.invalid && convertForm.get('clientLastName')?.touched">
-                    Last name is required
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label">Email <span class="text-danger">*</span></label>
-                  <input type="email" class="form-control" 
-                         [class.is-invalid]="convertForm.get('clientEmail')?.invalid && convertForm.get('clientEmail')?.touched"
-                         formControlName="clientEmail">
-                  <div class="invalid-feedback" *ngIf="convertForm.get('clientEmail')?.invalid && convertForm.get('clientEmail')?.touched">
-                    <div *ngIf="convertForm.get('clientEmail')?.errors?.['required']">Email is required</div>
-                    <div *ngIf="convertForm.get('clientEmail')?.errors?.['email']">Please enter a valid email</div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label">Phone <span class="text-danger">*</span></label>
-                  <input type="tel" class="form-control" 
-                         [class.is-invalid]="convertForm.get('clientPhone')?.invalid && convertForm.get('clientPhone')?.touched"
-                         formControlName="clientPhone">
-                  <div class="invalid-feedback" *ngIf="convertForm.get('clientPhone')?.invalid && convertForm.get('clientPhone')?.touched">
-                    Phone number is required
-                  </div>
-                </div>
-              </div>
-              
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label">Client Type <span class="text-danger">*</span></label>
-                  <select class="form-select" 
-                          [class.is-invalid]="convertForm.get('clientType')?.invalid && convertForm.get('clientType')?.touched"
-                          formControlName="clientType">
-                    <option value="">Select client type</option>
-                    <option value="INDIVIDUAL">Individual</option>
-                    <option value="CORPORATE">Corporate</option>
-                    <option value="BUSINESS">Business</option>
-                  </select>
-                  <div class="invalid-feedback" *ngIf="convertForm.get('clientType')?.invalid && convertForm.get('clientType')?.touched">
-                    Client type is required
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Additional Client Fields for CLIENT_AND_MATTER -->
-              <div *ngIf="selectedConversionType === 'CLIENT_AND_MATTER'" class="col-12">
-                <h6 class="text-muted mt-3 mb-3">Additional Client Details</h6>
+
+              <!-- Additional Client Details -->
+              <div *ngIf="selectedConversionType === 'CLIENT_AND_MATTER'">
                 <div class="row">
                   <div class="col-md-12">
                     <div class="mb-3">
@@ -958,61 +1093,39 @@
                       <input type="text" class="form-control" formControlName="clientZip">
                     </div>
                   </div>
-                  <div class="col-md-6">
-                    <div class="mb-3">
-                      <label class="form-label">Occupation</label>
-                      <input type="text" class="form-control" formControlName="clientOccupation">
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="mb-3">
-                      <label class="form-label">Employer</label>
-                      <input type="text" class="form-control" formControlName="clientEmployer">
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Case/Matter Information Section -->
-            <div class="row" *ngIf="selectedConversionType === 'MATTER_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
-              <div class="col-12">
-                <h6 class="text-warning border-bottom pb-2 mb-3">
-                  <i class="ri-briefcase-line me-2"></i>Case/Matter Information
-                </h6>
+            <!-- ── Case Details ── -->
+            <div *ngIf="selectedConversionType === 'MATTER_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
+              <div class="convert-section-header" [class.mt-3]="selectedConversionType === 'CLIENT_AND_MATTER'">
+                <i class="ri-briefcase-line"></i> Case Details
               </div>
-              <div class="col-12">
-                <div class="mb-3">
-                  <label class="form-label">Case Title <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" 
-                         [class.is-invalid]="convertForm.get('caseTitle')?.invalid && convertForm.get('caseTitle')?.touched"
-                         formControlName="caseTitle" 
-                         placeholder="Brief title describing the case">
-                  <div class="invalid-feedback" *ngIf="convertForm.get('caseTitle')?.invalid && convertForm.get('caseTitle')?.touched">
-                    Case title is required
-                  </div>
-                </div>
-              </div>
-              <div class="col-12">
-                <div class="mb-3">
-                  <label class="form-label">Case Description <span class="text-danger">*</span></label>
-                  <textarea class="form-control" rows="4" 
-                            [class.is-invalid]="convertForm.get('caseDescription')?.invalid && convertForm.get('caseDescription')?.touched"
-                            formControlName="caseDescription" 
-                            placeholder="Detailed description of the legal matter"></textarea>
-                  <div class="invalid-feedback" *ngIf="convertForm.get('caseDescription')?.invalid && convertForm.get('caseDescription')?.touched">
-                    Case description is required
-                  </div>
-                </div>
-              </div>
-              
               <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Case Number</label>
+                    <input type="text" class="form-control" formControlName="caseNumber" readonly
+                           style="background: rgba(var(--vz-secondary-rgb), 0.06);">
+                  </div>
+                </div>
+                <div class="col-md-8">
+                  <div class="mb-3">
+                    <label class="form-label">Case Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control"
+                           [class.is-invalid]="convertForm.get('caseTitle')?.invalid && convertForm.get('caseTitle')?.touched"
+                           formControlName="caseTitle" placeholder="Brief title describing the case">
+                    <div class="invalid-feedback" *ngIf="convertForm.get('caseTitle')?.invalid && convertForm.get('caseTitle')?.touched">Case title is required</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
                   <div class="mb-3">
                     <label class="form-label">Practice Area <span class="text-danger">*</span></label>
-                    <select class="form-select" 
+                    <select class="form-select"
                             [class.is-invalid]="convertForm.get('practiceArea')?.invalid && convertForm.get('practiceArea')?.touched"
-                            formControlName="practiceArea">
+                            formControlName="practiceArea"
+                            (change)="onConvertPracticeAreaChange($any($event.target).value)">
                       <option value="">Select Practice Area</option>
                       <option value="FAMILY_LAW">Family Law</option>
                       <option value="PERSONAL_INJURY">Personal Injury</option>
@@ -1027,190 +1140,328 @@
                       <option value="BANKRUPTCY">Bankruptcy</option>
                       <option value="OTHER">Other</option>
                     </select>
-                    <div class="invalid-feedback" *ngIf="convertForm.get('practiceArea')?.invalid && convertForm.get('practiceArea')?.touched">
-                      Practice area is required
-                    </div>
+                    <div class="invalid-feedback" *ngIf="convertForm.get('practiceArea')?.invalid && convertForm.get('practiceArea')?.touched">Practice area is required</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" formControlName="status">
+                      <option *ngFor="let s of caseStatuses" [value]="s.value">{{s.label}}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Priority</label>
+                    <select class="form-select" formControlName="priority">
+                      <option *ngFor="let p of casePriorities" [value]="p.value">{{p.label}}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="mb-3">
+                    <label class="form-label">Case Description <span class="text-danger">*</span></label>
+                    <textarea class="form-control" rows="3"
+                              [class.is-invalid]="convertForm.get('caseDescription')?.invalid && convertForm.get('caseDescription')?.touched"
+                              formControlName="caseDescription"
+                              placeholder="Detailed description of the legal matter"></textarea>
+                    <div class="invalid-feedback" *ngIf="convertForm.get('caseDescription')?.invalid && convertForm.get('caseDescription')?.touched">Case description is required</div>
                   </div>
                 </div>
               </div>
 
-              <!-- Additional Case Fields for CLIENT_AND_MATTER -->
-              <div *ngIf="selectedConversionType === 'CLIENT_AND_MATTER'" class="col-12">
-                <h6 class="text-muted mt-3 mb-3">Additional Case Details</h6>
-                <div class="row">
-                  <div class="col-md-6">
-                    <div class="mb-3">
-                      <label class="form-label">Jurisdiction</label>
-                      <input type="text" class="form-control" formControlName="jurisdiction" placeholder="Court jurisdiction">
+              <!-- ── Practice Area Specific Fields ── -->
+              <div *ngIf="currentPracticeAreaSections.length > 0" class="mt-2">
+                <div *ngFor="let section of currentPracticeAreaSections">
+                  <div class="convert-section-header mt-2">
+                    <i [class]="section.icon + ' '" *ngIf="section.icon"></i>
+                    <i class="ri-list-check" *ngIf="!section.icon"></i> {{section.title}}
+                  </div>
+                  <div class="row">
+                    <ng-container *ngFor="let field of section.fields">
+                      <div [class]="field.colSize || 'col-md-6'">
+                        <!-- Text -->
+                        <div class="mb-3" *ngIf="field.type === 'text'">
+                          <label class="form-label">{{field.label}} <span class="text-danger" *ngIf="field.required">*</span></label>
+                          <input type="text" class="form-control" [formControlName]="field.name" [placeholder]="field.placeholder || ''">
+                        </div>
+                        <!-- Textarea -->
+                        <div class="mb-3" *ngIf="field.type === 'textarea'">
+                          <label class="form-label">{{field.label}} <span class="text-danger" *ngIf="field.required">*</span></label>
+                          <textarea class="form-control" rows="3" [formControlName]="field.name" [placeholder]="field.placeholder || ''"></textarea>
+                        </div>
+                        <!-- Select -->
+                        <div class="mb-3" *ngIf="field.type === 'select'">
+                          <label class="form-label">{{field.label}} <span class="text-danger" *ngIf="field.required">*</span></label>
+                          <select class="form-select" [formControlName]="field.name">
+                            <option value="">Select {{field.label}}</option>
+                            <option *ngFor="let opt of field.options" [value]="opt.value">{{opt.label}}</option>
+                          </select>
+                        </div>
+                        <!-- Date -->
+                        <div class="mb-3" *ngIf="field.type === 'date'">
+                          <label class="form-label">{{field.label}} <span class="text-danger" *ngIf="field.required">*</span></label>
+                          <div class="input-group">
+                            <span class="input-group-text"><i class="ri-calendar-line"></i></span>
+                            <input type="text" class="form-control" [id]="'pa_convert_' + field.name"
+                                   [formControlName]="field.name" [placeholder]="'Select ' + field.label" readonly>
+                          </div>
+                        </div>
+                        <!-- Currency -->
+                        <div class="mb-3" *ngIf="field.type === 'currency'">
+                          <label class="form-label">{{field.label}}</label>
+                          <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" [formControlName]="field.name" [placeholder]="field.placeholder || '0.00'" min="0" step="0.01">
+                          </div>
+                        </div>
+                        <!-- Number -->
+                        <div class="mb-3" *ngIf="field.type === 'number'">
+                          <label class="form-label">{{field.label}}</label>
+                          <input type="number" class="form-control" [formControlName]="field.name" [placeholder]="field.placeholder || '0'" min="0">
+                        </div>
+                        <!-- Checkbox -->
+                        <div class="mb-3" *ngIf="field.type === 'checkbox'">
+                          <div class="form-check mt-4">
+                            <input type="checkbox" class="form-check-input" [formControlName]="field.name" [id]="'pa_convert_' + field.name">
+                            <label class="form-check-label" [for]="'pa_convert_' + field.name">{{field.label}}</label>
+                          </div>
+                        </div>
+                      </div>
+                    </ng-container>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── Assignment & Billing ── -->
+              <div class="convert-section-header mt-2">
+                <i class="ri-money-dollar-circle-line"></i> Assignment & Billing
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">Lead Attorney</label>
+                    <select class="form-select" formControlName="leadAttorneyId">
+                      <option value="">Select Attorney</option>
+                      <option *ngFor="let attorney of availableAttorneys" [value]="attorney.id">
+                        {{$any(attorney).firstName}} {{$any(attorney).lastName}}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">Billing Type</label>
+                    <select class="form-select" formControlName="billingType">
+                      <option *ngFor="let bt of billingTypes" [value]="bt.value">{{bt.label}}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Hourly Rate</label>
+                    <div class="input-group">
+                      <span class="input-group-text">$</span>
+                      <input type="number" class="form-control" formControlName="hourlyRate" placeholder="0.00">
                     </div>
                   </div>
-                  <div class="col-md-6">
-                    <div class="mb-3">
-                      <label class="form-label">County Name</label>
-                      <input type="text" class="form-control" formControlName="countyName">
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Retainer Amount</label>
+                    <div class="input-group">
+                      <span class="input-group-text">$</span>
+                      <input type="number" class="form-control" formControlName="retainerAmount" placeholder="0.00">
                     </div>
                   </div>
-                  <div class="col-md-6">
-                    <div class="mb-3">
-                      <label class="form-label">Opposing Party</label>
-                      <input type="text" class="form-control" formControlName="opposingParty">
-                    </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Urgency</label>
+                    <select class="form-select" formControlName="urgencyLevel">
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High</option>
+                      <option value="URGENT">Urgent</option>
+                    </select>
                   </div>
-                  <div class="col-md-6">
-                    <div class="mb-3">
-                      <label class="form-label">Opposing Counsel</label>
-                      <input type="text" class="form-control" formControlName="opposingCounsel">
-                    </div>
+                </div>
+              </div>
+
+              <!-- ── Court Information ── -->
+              <div class="convert-section-header mt-2">
+                <i class="ri-government-line"></i> Court Information
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">Jurisdiction</label>
+                    <input type="text" class="form-control" formControlName="jurisdiction" placeholder="Court jurisdiction">
                   </div>
-                  <div class="col-md-4">
-                    <div class="mb-3">
-                      <label class="form-label">Retainer Amount</label>
-                      <input type="number" class="form-control" formControlName="retainerAmount" placeholder="0">
-                    </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">County</label>
+                    <input type="text" class="form-control" formControlName="countyName">
                   </div>
-                  <div class="col-md-4">
-                    <div class="mb-3">
-                      <label class="form-label">Hourly Rate</label>
-                      <input type="number" class="form-control" formControlName="hourlyRate" placeholder="0">
-                    </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Judge Name</label>
+                    <input type="text" class="form-control" formControlName="judgeName">
                   </div>
-                  <div class="col-md-4">
-                    <div class="mb-3">
-                      <label class="form-label">Urgency</label>
-                      <select class="form-select" formControlName="urgencyLevel">
-                        <option value="LOW">Low</option>
-                        <option value="MEDIUM" selected>Medium</option>
-                        <option value="HIGH">High</option>
-                        <option value="URGENT">Urgent</option>
-                      </select>
-                    </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Courtroom</label>
+                    <input type="text" class="form-control" formControlName="courtroom">
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label">Filing Date</label>
+                    <input type="text" class="form-control" id="convertFilingDate" formControlName="filingDate" placeholder="YYYY-MM-DD" readonly>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── Parties ── -->
+              <div class="convert-section-header mt-2">
+                <i class="ri-team-line"></i> Parties
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">Opposing Party</label>
+                    <input type="text" class="form-control" formControlName="opposingParty">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">Opposing Counsel</label>
+                    <input type="text" class="form-control" formControlName="opposingCounsel">
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- General Notes -->
-            <div class="row">
-              <div class="col-12">
-                <h6 class="text-secondary border-bottom pb-2 mb-3">
-                  <i class="ri-file-text-line me-2"></i>Additional Information
-                </h6>
-                <div class="mb-3">
-                  <label class="form-label">Conversion Notes</label>
-                  <textarea class="form-control" rows="3" formControlName="conversionNotes" 
-                            placeholder="Any additional notes about this conversion..."></textarea>
-                </div>
-              </div>
+            <!-- ── Notes ── -->
+            <div class="convert-section-header mt-2">
+              <i class="ri-file-text-line"></i> Notes
+            </div>
+            <div class="mb-3">
+              <textarea class="form-control" rows="2" formControlName="conversionNotes"
+                        placeholder="Any additional notes about this conversion..."></textarea>
             </div>
           </div>
 
-          <!-- Step 3: Review & Confirmation -->
+          <!-- ═══ Step 3: Review & Confirmation ═══ -->
           <div *ngIf="conversionStep === 3">
-            <div class="text-center mb-4">
-              <h5 class="text-primary">{{getStepTitle()}}</h5>
-              <p class="text-muted">{{getStepDescription()}}</p>
-              <div class="badge bg-success text-white">
+            <div class="text-center mb-3">
+              <span class="badge bg-soft-success text-success px-3 py-2">
                 Ready to convert to: {{getSelectedConversionTypeLabel()}}
-              </div>
+              </span>
             </div>
 
             <!-- Conflict Check Results -->
-            <div class="alert" 
+            <div class="alert"
                  [class.alert-success]="conflictCheckResult && !conflictCheckResult.hasConflicts && !conflictCheckResult.checkFailed"
                  [class.alert-warning]="conflictCheckResult && (conflictCheckResult.hasConflicts || conflictCheckResult.checkFailed)">
-              <h6>
+              <h6 class="mb-1">
                 <i class="ri-shield-check-line me-2" *ngIf="conflictCheckResult && !conflictCheckResult.hasConflicts && !conflictCheckResult.checkFailed"></i>
                 <i class="ri-alert-line me-2" *ngIf="conflictCheckResult && (conflictCheckResult.hasConflicts || conflictCheckResult.checkFailed)"></i>
-                Conflict Check Results
+                Conflict Check
               </h6>
-              <p class="mb-0" *ngIf="conflictCheckResult && !conflictCheckResult.hasConflicts && !conflictCheckResult.checkFailed">
-                No conflicts detected. Safe to proceed with conversion.
+              <p class="mb-0 small" *ngIf="conflictCheckResult && !conflictCheckResult.hasConflicts && !conflictCheckResult.checkFailed">
+                No conflicts detected. Safe to proceed.
               </p>
-              <p class="mb-0" *ngIf="conflictCheckResult && conflictCheckResult.hasConflicts && !conflictCheckResult.checkFailed">
-                {{conflictCheckResult.conflicts?.length || 0}} conflict(s) detected. Conversion may proceed with administrator approval or caution.
+              <p class="mb-0 small" *ngIf="conflictCheckResult && conflictCheckResult.hasConflicts && !conflictCheckResult.checkFailed">
+                {{conflictCheckResult.conflicts?.length || 0}} conflict(s) detected. Proceed with caution.
               </p>
-              <p class="mb-0" *ngIf="conflictCheckResult && conflictCheckResult.hasConflicts && conflictCheckResult.proceedDespiteConflicts">
-                <i class="ri-alert-line me-1 text-warning"></i>
-                {{conflictCheckResult.conflicts?.length || 0}} conflict(s) detected - proceeding with administrator override.
-              </p>
-              <p class="mb-0" *ngIf="conflictCheckResult && conflictCheckResult.checkFailed">
+              <p class="mb-0 small" *ngIf="conflictCheckResult && conflictCheckResult.checkFailed">
                 <i class="ri-information-line me-1"></i>{{conflictCheckResult.warning}}
               </p>
-              <div *ngIf="conflictCheckResult && conflictCheckResult.hasConflicts && conflictCheckResult.conflicts && conflictCheckResult.conflicts.length > 0" class="mt-2">
-                <strong>Conflict Details:</strong>
-                <ul class="mt-1 mb-0">
-                  <li *ngFor="let conflict of conflictCheckResult.conflicts" class="small text-danger">
+              <div *ngIf="conflictCheckResult?.hasConflicts && conflictCheckResult?.conflicts?.length > 0" class="mt-2">
+                <ul class="mb-0 small">
+                  <li *ngFor="let conflict of conflictCheckResult.conflicts" class="text-danger">
                     <strong>{{formatConflictTypeForDisplay(conflict.type)}}:</strong> {{formatConflictDescription(conflict.description)}}
                   </li>
                 </ul>
               </div>
             </div>
 
-            <!-- Review Summary -->
-            <div class="row">
-              <div class="col-12">
-                <div class="card">
-                  <div class="card-header bg-light">
-                    <h6 class="mb-0">Conversion Review</h6>
-                  </div>
-                  <div class="card-body">
-                    <div class="row">
-                      <div class="col-md-6">
-                        <h6 class="text-primary">Lead Information</h6>
-                        <p><strong>Name:</strong> {{selectedLead.fullName}}</p>
-                        <p><strong>Email:</strong> {{selectedLead.email || 'N/A'}}</p>
-                        <p><strong>Phone:</strong> {{selectedLead.phone || 'N/A'}}</p>
-                        <p><strong>Current Status:</strong> {{getStatusDisplayName(selectedLead.status || 'NEW')}}</p>
-                        <p><strong>Practice Area:</strong> {{selectedLead.practiceArea?.replace('_', ' ') || 'N/A'}}</p>
+            <!-- Lead Information Review -->
+            <div class="convert-review-section">
+              <div class="convert-section-header">
+                <i class="ri-user-follow-line"></i> Lead Information
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Name:</strong> {{selectedLead.fullName}}</p>
+                  <p class="mb-1"><strong>Email:</strong> {{selectedLead.email || 'N/A'}}</p>
+                  <p class="mb-1"><strong>Phone:</strong> {{selectedLead.phone || 'N/A'}}</p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-1"><strong>Conversion Type:</strong> {{getSelectedConversionTypeLabel()}}</p>
+                  <p class="mb-1"><strong>Current Status:</strong> {{getStatusDisplayName(selectedLead.status || 'NEW')}}</p>
+                  <p class="mb-1"><strong>New Status:</strong> CONVERTED</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Client Information Review -->
+            <div class="convert-review-section mt-3" *ngIf="selectedConversionType === 'CLIENT_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
+              <div class="convert-section-header">
+                <i class="ri-user-line"></i> Client to be Created
+              </div>
+              <div class="row">
+                <div class="col-md-4"><p class="mb-1"><strong>Name:</strong> {{convertForm.get('clientFirstName')?.value}} {{convertForm.get('clientLastName')?.value}}</p></div>
+                <div class="col-md-4"><p class="mb-1"><strong>Email:</strong> {{convertForm.get('clientEmail')?.value}}</p></div>
+                <div class="col-md-4"><p class="mb-1"><strong>Phone:</strong> {{convertForm.get('clientPhone')?.value || 'N/A'}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('clientType')?.value"><p class="mb-1"><strong>Type:</strong> {{convertForm.get('clientType')?.value}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('clientAddress')?.value"><p class="mb-1"><strong>Address:</strong> {{buildFullAddress(convertForm.value)}}</p></div>
+              </div>
+            </div>
+
+            <!-- Case Information Review -->
+            <div class="convert-review-section mt-3" *ngIf="selectedConversionType === 'MATTER_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'">
+              <div class="convert-section-header">
+                <i class="ri-briefcase-line"></i> Case to be Created
+              </div>
+              <div class="row">
+                <div class="col-md-4"><p class="mb-1"><strong>Case #:</strong> {{convertForm.get('caseNumber')?.value}}</p></div>
+                <div class="col-md-8"><p class="mb-1"><strong>Title:</strong> {{convertForm.get('caseTitle')?.value}}</p></div>
+                <div class="col-md-4"><p class="mb-1"><strong>Practice Area:</strong> {{convertForm.get('practiceArea')?.value?.replace('_', ' ') || 'N/A'}}</p></div>
+                <div class="col-md-4"><p class="mb-1"><strong>Status:</strong> {{convertForm.get('status')?.value}}</p></div>
+                <div class="col-md-4"><p class="mb-1"><strong>Priority:</strong> {{convertForm.get('priority')?.value}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('leadAttorneyId')?.value"><p class="mb-1"><strong>Attorney:</strong> {{getAttorneyName(convertForm.get('leadAttorneyId')?.value)}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('billingType')?.value"><p class="mb-1"><strong>Billing:</strong> {{convertForm.get('billingType')?.value}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('hourlyRate')?.value"><p class="mb-1"><strong>Hourly Rate:</strong> ${{convertForm.get('hourlyRate')?.value}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('retainerAmount')?.value"><p class="mb-1"><strong>Retainer:</strong> ${{convertForm.get('retainerAmount')?.value}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('jurisdiction')?.value"><p class="mb-1"><strong>Jurisdiction:</strong> {{convertForm.get('jurisdiction')?.value}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('countyName')?.value"><p class="mb-1"><strong>County:</strong> {{convertForm.get('countyName')?.value}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('judgeName')?.value"><p class="mb-1"><strong>Judge:</strong> {{convertForm.get('judgeName')?.value}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('courtroom')?.value"><p class="mb-1"><strong>Courtroom:</strong> {{convertForm.get('courtroom')?.value}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('filingDate')?.value"><p class="mb-1"><strong>Filing Date:</strong> {{convertForm.get('filingDate')?.value}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('opposingParty')?.value"><p class="mb-1"><strong>Opposing Party:</strong> {{convertForm.get('opposingParty')?.value}}</p></div>
+                <div class="col-md-4" *ngIf="convertForm.get('opposingCounsel')?.value"><p class="mb-1"><strong>Opposing Counsel:</strong> {{convertForm.get('opposingCounsel')?.value}}</p></div>
+              </div>
+              <div *ngIf="convertForm.get('caseDescription')?.value" class="mt-2">
+                <p class="mb-1"><strong>Description:</strong></p>
+                <div class="p-2 rounded small" style="background: rgba(var(--vz-secondary-rgb), 0.06);">{{convertForm.get('caseDescription')?.value}}</div>
+              </div>
+
+              <!-- Practice Area Specific Fields Review -->
+              <div *ngIf="currentPracticeAreaSections.length > 0" class="mt-2">
+                <div *ngFor="let section of currentPracticeAreaSections">
+                  <p class="mb-1 fw-semibold small text-muted mt-2">{{section.title}}</p>
+                  <div class="row">
+                    <ng-container *ngFor="let field of section.fields">
+                      <div class="col-md-4" *ngIf="convertForm.get(field.name)?.value">
+                        <p class="mb-1"><strong>{{field.label}}:</strong> {{convertForm.get(field.name)?.value}}</p>
                       </div>
-                      <div class="col-md-6">
-                        <h6 class="text-primary">Conversion Details</h6>
-                        <p><strong>Type:</strong> {{getSelectedConversionTypeLabel()}}</p>
-                        <p><strong>Will Create:</strong> 
-                          <span *ngIf="selectedConversionType === 'CLIENT_ONLY'">Client Record</span>
-                          <span *ngIf="selectedConversionType === 'MATTER_ONLY'">Case/Matter Record</span>
-                          <span *ngIf="selectedConversionType === 'CLIENT_AND_MATTER'">Client & Case Records</span>
-                        </p>
-                        <p><strong>New Lead Status:</strong> CONVERTED</p>
-                      </div>
-                    </div>
-                    
-                    <!-- Client Information Review -->
-                    <div *ngIf="selectedConversionType === 'CLIENT_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'" class="mt-4">
-                      <h6 class="text-info border-bottom pb-2 mb-3">Client Information to be Created</h6>
-                      <div class="row">
-                        <div class="col-md-6">
-                          <p><strong>Name:</strong> {{convertForm.get('clientFirstName')?.value}} {{convertForm.get('clientLastName')?.value}}</p>
-                          <p><strong>Email:</strong> {{convertForm.get('clientEmail')?.value}}</p>
-                          <p><strong>Phone:</strong> {{convertForm.get('clientPhone')?.value || 'N/A'}}</p>
-                        </div>
-                        <div class="col-md-6">
-                          <p *ngIf="convertForm.get('clientAddress')?.value"><strong>Address:</strong> {{convertForm.get('clientAddress')?.value}}</p>
-                          <p *ngIf="convertForm.get('clientOccupation')?.value"><strong>Occupation:</strong> {{convertForm.get('clientOccupation')?.value}}</p>
-                          <p *ngIf="convertForm.get('clientEmployer')?.value"><strong>Employer:</strong> {{convertForm.get('clientEmployer')?.value}}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <!-- Case Information Review -->
-                    <div *ngIf="selectedConversionType === 'MATTER_ONLY' || selectedConversionType === 'CLIENT_AND_MATTER'" class="mt-4">
-                      <h6 class="text-warning border-bottom pb-2 mb-3">Case Information to be Created</h6>
-                      <div class="row">
-                        <div class="col-md-6">
-                          <p><strong>Title:</strong> {{convertForm.get('caseTitle')?.value}}</p>
-                          <p><strong>Practice Area:</strong> {{convertForm.get('practiceArea')?.value?.replace('_', ' ') || 'N/A'}}</p>
-                        </div>
-                        <div class="col-md-6">
-                          <p *ngIf="convertForm.get('retainerAmount')?.value"><strong>Retainer:</strong> ${{convertForm.get('retainerAmount')?.value}}</p>
-                          <p *ngIf="convertForm.get('urgencyLevel')?.value"><strong>Urgency:</strong> {{convertForm.get('urgencyLevel')?.value}}</p>
-                          <p *ngIf="convertForm.get('jurisdiction')?.value"><strong>Jurisdiction:</strong> {{convertForm.get('jurisdiction')?.value}}</p>
-                        </div>
-                      </div>
-                      <div *ngIf="convertForm.get('caseDescription')?.value" class="mt-2">
-                        <p><strong>Description:</strong></p>
-                        <div class="bg-light p-2 rounded small">{{convertForm.get('caseDescription')?.value}}</div>
-                      </div>
-                    </div>
+                    </ng-container>
                   </div>
                 </div>
               </div>
@@ -1263,8 +1514,119 @@
   </div>
 </div>
 
-<!-- Modal Backdrop -->
-<div class="modal-backdrop fade show" *ngIf="showLeadModal || showPipelineModal || showEditModal || showAssignModal || showScheduleModal || showConvertModal"></div>
+<!-- Create Lead Modal -->
+<div class="modal fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'" tabindex="-1" *ngIf="showCreateModal" (click)="showCreateModal = false">
+  <div class="modal-dialog modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content create-lead-modal">
+      <!-- Green accent bar -->
+      <div class="lead-detail-accent" style="background: var(--vz-success);"></div>
+
+      <div class="create-lead-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="create-lead-icon">
+            <i class="ri-user-add-line"></i>
+          </div>
+          <div>
+            <h5 class="fw-semibold mb-0" style="font-size: 16px; color: var(--vz-heading-color);">Add New Lead</h5>
+            <span class="text-muted" style="font-size: 12px;">Enter lead contact details to create a new pipeline entry</span>
+          </div>
+        </div>
+        <button type="button" class="lead-detail-close" (click)="showCreateModal = false">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <div class="create-lead-body">
+        <form #createLeadForm="ngForm">
+          <!-- Section: Contact -->
+          <div class="create-section-label"><i class="ri-contacts-line"></i>Contact Details</div>
+          <div class="row g-3 mb-4">
+            <div class="col-6">
+              <label class="form-label">First Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" [(ngModel)]="newLead.firstName" name="firstName" required placeholder="John">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Last Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" [(ngModel)]="newLead.lastName" name="lastName" required placeholder="Doe">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              <input type="email" class="form-control" [(ngModel)]="newLead.email" name="email" required placeholder="john@example.com">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Phone</label>
+              <input type="text" class="form-control" [(ngModel)]="newLead.phone" name="phone" placeholder="(617) 555-0100">
+            </div>
+          </div>
+
+          <!-- Section: Case Info -->
+          <div class="create-section-label"><i class="ri-briefcase-line"></i>Case Information</div>
+          <div class="row g-3 mb-4">
+            <div class="col-6">
+              <label class="form-label">Practice Area</label>
+              <select class="form-select" [(ngModel)]="newLead.practiceArea" name="practiceArea">
+                <option value="">Select...</option>
+                <option value="Personal Injury">Personal Injury</option>
+                <option value="Family Law">Family Law</option>
+                <option value="Criminal Defense">Criminal Defense</option>
+                <option value="Immigration">Immigration</option>
+                <option value="Business Law">Business Law</option>
+                <option value="Real Estate">Real Estate</option>
+                <option value="Employment Law">Employment Law</option>
+                <option value="Corporate Law">Corporate Law</option>
+                <option value="Intellectual Property">Intellectual Property</option>
+                <option value="Medical Malpractice">Medical Malpractice</option>
+                <option value="General">General</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Source</label>
+              <select class="form-select" [(ngModel)]="newLead.source" name="source">
+                <option value="REFERRAL">Referral</option>
+                <option value="PHONE_CALL">Phone Call</option>
+                <option value="WALK_IN">Walk-in</option>
+                <option value="WEBSITE">Website</option>
+                <option value="SOCIAL_MEDIA">Social Media</option>
+                <option value="NETWORKING">Networking</option>
+                <option value="ADVERTISING">Advertising</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Urgency</label>
+              <select class="form-select" [(ngModel)]="newLead.urgencyLevel" name="urgencyLevel">
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="URGENT">Urgent</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Estimated Value</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control" [(ngModel)]="newLead.estimatedValue" name="estimatedValue" placeholder="0.00">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Notes -->
+          <div class="create-section-label"><i class="ri-sticky-note-line"></i>Initial Notes</div>
+          <textarea class="form-control" [(ngModel)]="newLead.notes" name="notes" rows="4" placeholder="Brief description of inquiry, referral details, or initial notes..."></textarea>
+        </form>
+      </div>
+
+      <div class="lead-detail-footer">
+        <button type="button" class="btn btn-soft-secondary" (click)="showCreateModal = false">Cancel</button>
+        <button type="button" class="btn btn-success" (click)="submitNewLead()" [disabled]="!newLead.firstName || !newLead.lastName || !newLead.email || isCreatingLead">
+          <span *ngIf="isCreatingLead" class="spinner-border spinner-border-sm me-1" style="width: 14px; height: 14px;"></span>
+          <i *ngIf="!isCreatingLead" class="ri-add-line me-1"></i>{{ isCreatingLead ? 'Creating...' : 'Create Lead' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- Custom Styles -->
 <style>
@@ -1354,7 +1716,6 @@
   
   /* Conversion Type Cards */
   .conversion-type-card {
-    border: 2px solid #e9ecef;
     border-radius: 10px;
     padding: 30px 20px;
     text-align: center;
@@ -1362,7 +1723,6 @@
     transition: all 0.3s ease;
     position: relative;
     margin-bottom: 20px;
-    background: #fff;
   }
   
   .conversion-type-card:hover {
@@ -1373,7 +1733,6 @@
   
   .conversion-type-card.selected {
     border-color: #28a745;
-    background: #f8fff9;
     box-shadow: 0 4px 20px rgba(40, 167, 69, 0.15);
   }
   
@@ -1490,10 +1849,7 @@
   }
   
   /* Modal Enhancements */
-  .modal-header {
-    border-bottom: 1px solid #dee2e6;
-    background: #f8f9fa;
-  }
+
   
   /* Step Navigation */
   .step-info {
@@ -1516,10 +1872,7 @@
     margin-bottom: 0;
   }
   
-  .modal-footer {
-    border-top: 1px solid #dee2e6;
-    background: #f8f9fa;
-  }
+
   
   /* Priority Badge Pulse Animation */
   .priority-urgent-pulse {

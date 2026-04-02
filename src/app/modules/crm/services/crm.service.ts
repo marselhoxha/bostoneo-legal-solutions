@@ -196,9 +196,10 @@ export class CrmService {
     });
   }
 
-  scheduleConsultation(leadId: number, consultationDate: string, notes: string = ''): Observable<any> {
+  scheduleConsultation(leadId: number, consultationDate: string, consultationType: string = '', notes: string = ''): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/leads/${leadId}/schedule-consultation`, {
       consultationDate,
+      consultationType,
       notes
     });
   }
