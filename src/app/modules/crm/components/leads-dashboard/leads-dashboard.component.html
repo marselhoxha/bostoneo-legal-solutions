@@ -75,16 +75,50 @@
   </ng-template>
 
   <div *ngIf="activeView === 'pipeline'" class="pipeline-board" cdkDropListGroup>
-    <!-- Row 1 -->
-    <div class="row g-3 mb-3">
-      <div class="col-md-3" *ngFor="let stage of pipelineStages?.slice(0, 4); let i = index">
-        <ng-container *ngTemplateOutlet="pipelineColumn; context: { $implicit: stage, idx: i }"></ng-container>
+    <!-- Empty state when no pipeline stages loaded -->
+    <div *ngIf="!loading && (!pipelineStages || pipelineStages.length === 0)" class="text-center py-5">
+      <i class="ri-layout-column-line display-3 text-muted"></i>
+      <h5 class="mt-3 text-muted">Pipeline Not Available</h5>
+      <p class="text-muted mb-3">Pipeline stages are loading or not configured yet.</p>
+      <button class="btn btn-soft-primary" (click)="loadPipelineStages()">
+        <i class="ri-refresh-line me-1"></i>Retry
+      </button>
+    </div>
+
+    <!-- Empty state when stages exist but no leads -->
+    <div *ngIf="!loading && pipelineStages?.length > 0 && filteredLeads.length === 0">
+      <!-- Row 1 -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-3" *ngFor="let stage of pipelineStages?.slice(0, 4); let i = index">
+          <ng-container *ngTemplateOutlet="pipelineColumn; context: { $implicit: stage, idx: i }"></ng-container>
+        </div>
+      </div>
+      <!-- Row 2 -->
+      <div class="row g-3" *ngIf="pipelineStages?.length > 4">
+        <div class="col-md-3" *ngFor="let stage of pipelineStages?.slice(4); let j = index">
+          <ng-container *ngTemplateOutlet="pipelineColumn; context: { $implicit: stage, idx: j + 4 }"></ng-container>
+        </div>
+      </div>
+      <div class="text-center py-4 mt-3">
+        <i class="ri-user-add-line display-4 text-muted"></i>
+        <h5 class="mt-3">No leads yet</h5>
+        <p class="text-muted">Click <strong>+ Add Lead</strong> to create your first lead and start building your pipeline.</p>
       </div>
     </div>
-    <!-- Row 2 -->
-    <div class="row g-3" *ngIf="pipelineStages?.length > 4">
-      <div class="col-md-3" *ngFor="let stage of pipelineStages?.slice(4); let j = index">
-        <ng-container *ngTemplateOutlet="pipelineColumn; context: { $implicit: stage, idx: j + 4 }"></ng-container>
+
+    <!-- Normal pipeline with leads -->
+    <div *ngIf="pipelineStages?.length > 0 && filteredLeads.length > 0">
+      <!-- Row 1 -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-3" *ngFor="let stage of pipelineStages?.slice(0, 4); let i = index">
+          <ng-container *ngTemplateOutlet="pipelineColumn; context: { $implicit: stage, idx: i }"></ng-container>
+        </div>
+      </div>
+      <!-- Row 2 -->
+      <div class="row g-3" *ngIf="pipelineStages?.length > 4">
+        <div class="col-md-3" *ngFor="let stage of pipelineStages?.slice(4); let j = index">
+          <ng-container *ngTemplateOutlet="pipelineColumn; context: { $implicit: stage, idx: j + 4 }"></ng-container>
+        </div>
       </div>
     </div>
   </div>

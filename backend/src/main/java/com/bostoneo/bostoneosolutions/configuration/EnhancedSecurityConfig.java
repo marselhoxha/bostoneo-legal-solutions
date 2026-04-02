@@ -18,7 +18,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+// CSRF fully disabled — CookieCsrfTokenRepository no longer needed
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
 
@@ -71,22 +71,11 @@ public class EnhancedSecurityConfig {
             )
         );
         
-        // CSRF Configuration - Only disable for truly stateless API endpoints
-        // SECURITY: CSRF is disabled for JWT-authenticated API endpoints since they use token-based auth
-        http.csrf(csrf -> csrf
-            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .ignoringRequestMatchers(PUBLIC_URLS)
-            .ignoringRequestMatchers("/api/auth/**", "/user/login", "/user/register", "/user/verify/**")
-            .ignoringRequestMatchers("/ws/**")  // WebSocket endpoints use their own auth
-            .ignoringRequestMatchers("/swagger-ui/**", "/v3/api-docs/**")  // Swagger UI
-            .ignoringRequestMatchers("/user/new/password", "/user/resetpassword/**")
-            // Note: All /api/** endpoints use JWT tokens which provide CSRF protection
-            // Disabling CSRF for stateless API is acceptable when using Bearer tokens
-            .ignoringRequestMatchers("/api/**")
-            // Legacy endpoints that also use JWT auth (not under /api/)
-            .ignoringRequestMatchers("/client/**", "/user/**", "/invoice/**", "/customer/**")
-            .ignoringRequestMatchers("/legal/**", "/legal-case/**", "/analytics/**")
-        );
+        // CSRF disabled — this is a stateless JWT API with no browser session cookies.
+        // JWT Bearer tokens are immune to CSRF attacks by design (not auto-attached by browsers).
+        // The previous per-path ignoringRequestMatchers approach was incomplete and caused 405 errors
+        // on production POST endpoints that didn't match the ignore patterns correctly.
+        http.csrf(csrf -> csrf.disable());
         
         // CORS Configuration
         http.cors(cors -> cors.configurationSource(request -> {
