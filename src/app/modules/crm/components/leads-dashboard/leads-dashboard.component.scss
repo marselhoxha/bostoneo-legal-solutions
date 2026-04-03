@@ -2,6 +2,15 @@
   cursor: pointer;
 }
 
+// Prevent table-responsive from clipping dropdown menus
+:host ::ng-deep .table-responsive {
+  overflow: visible !important;
+}
+
+:host ::ng-deep .table .dropdown-menu {
+  z-index: 1050;
+}
+
 .min-width-0 {
   min-width: 0;
 }

@@ -54,6 +54,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private final InvoiceRepository invoiceRepository;
     private final AuditLogRepository auditLogRepository;
     private final PlatformAnnouncementRepository platformAnnouncementRepository;
+    private final PipelineStageRepository pipelineStageRepository;
     private final NamedParameterJdbcTemplate jdbc;
     private final RoleRepository<Role> roleRepository;
     private final EmailService emailService;
@@ -960,8 +961,32 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             log.info("SUPERADMIN: Skipping invitation email for admin user {} (skipEmail=true)", dto.getAdminEmail());
         }
 
+        seedDefaultPipelineStages(org.getId());
+
         log.info("SUPERADMIN: Organization {} created with admin user {}", org.getName(), dto.getAdminEmail());
         return org;
+    }
+
+    private void seedDefaultPipelineStages(Long organizationId) {
+        var defaults = List.of(
+            new Object[]{"New Lead", "Newly submitted lead, pending initial review", 1, "#6c757d", "ri-user-add-line"},
+            new Object[]{"Contacted", "Initial contact made with the lead", 2, "#3577f1", "ri-phone-line"},
+            new Object[]{"Qualified", "Lead has been qualified as a potential client", 3, "#0ab39c", "ri-checkbox-circle-line"},
+            new Object[]{"Consultation Scheduled", "Consultation meeting has been scheduled", 4, "#9b59b6", "ri-calendar-line"},
+            new Object[]{"Proposal Sent", "Engagement proposal or retainer sent to lead", 5, "#299cdb", "ri-mail-send-line"},
+            new Object[]{"Negotiation", "Terms are being negotiated with the lead", 7, "#f7b84b", "ri-discuss-line"},
+            new Object[]{"Converted", "Lead has been converted to a client", 8, "#0ab39c", "ri-check-double-line"},
+            new Object[]{"Lost", "Lead was lost or declined services", 9, "#f06548", "ri-close-circle-line"}
+        );
+        for (Object[] s : defaults) {
+            PipelineStage stage = PipelineStage.builder()
+                .name((String) s[0]).description((String) s[1])
+                .stageOrder((Integer) s[2]).color((String) s[3]).icon((String) s[4])
+                .isActive(true).isSystem(false).organizationId(organizationId)
+                .build();
+            pipelineStageRepository.save(stage);
+        }
+        log.info("Seeded {} default pipeline stages for organization {}", defaults.size(), organizationId);
     }
 
     @Override
