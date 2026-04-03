@@ -121,7 +121,22 @@ public class FileManagerResource {
                     .message("File must have a valid name")
                     .build());
         }
-        
+
+        // File extension allowlist
+        String ext = filename.contains(".") ? filename.substring(filename.lastIndexOf('.') + 1).toLowerCase() : "";
+        java.util.Set<String> ALLOWED_EXTENSIONS = java.util.Set.of(
+            "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv", "rtf",
+            "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "svg",
+            "zip", "msg", "eml", "json", "xml"
+        );
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            return ResponseEntity.badRequest().body(
+                FileUploadResponseDTO.builder()
+                    .success(false)
+                    .message("File type '" + ext + "' is not allowed")
+                    .build());
+        }
+
         try {
             FileUploadResponseDTO response = fileManagerService.uploadFile(file, folderId, caseId, description, tags, documentCategory, documentType);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);

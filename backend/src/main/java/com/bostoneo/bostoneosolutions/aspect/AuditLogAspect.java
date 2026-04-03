@@ -255,9 +255,12 @@ public class AuditLogAspect {
     /** Only trust X-Forwarded-For when the direct connection is from a known proxy/private IP */
     private boolean isPrivateIp(String ip) {
         if (ip == null) return false;
-        return ip.startsWith("10.") || ip.startsWith("172.16.") || ip.startsWith("172.17.") ||
-               ip.startsWith("172.18.") || ip.startsWith("172.19.") || ip.startsWith("172.2") ||
-               ip.startsWith("172.30.") || ip.startsWith("172.31.") || ip.startsWith("192.168.") ||
-               ip.equals("127.0.0.1") || ip.equals("0:0:0:0:0:0:0:1");
+        if (ip.startsWith("10.") || ip.startsWith("192.168.") ||
+            ip.equals("127.0.0.1") || ip.equals("0:0:0:0:0:0:0:1") || ip.equals("::1")) return true;
+        if (ip.startsWith("172.")) {
+            try { int s = Integer.parseInt(ip.split("\\.")[1]); return s >= 16 && s <= 31; }
+            catch (Exception e) { return false; }
+        }
+        return false;
     }
 }

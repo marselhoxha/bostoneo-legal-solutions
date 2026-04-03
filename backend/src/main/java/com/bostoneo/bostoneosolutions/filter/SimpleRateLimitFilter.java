@@ -51,13 +51,12 @@ public class SimpleRateLimitFilter extends OncePerRequestFilter {
         if (isAuthPath(path)) {
             RequestCounter authCounter = authCounters.computeIfAbsent(clientIp,
                 k -> new RequestCounter(Instant.now()));
-            if (!authCounter.isAllowed(Instant.now(), Duration.ofMinutes(1), AUTH_REQUESTS_PER_MINUTE)) {
+            if (!authCounter.tryAcquire(Instant.now(), Duration.ofMinutes(1), AUTH_REQUESTS_PER_MINUTE)) {
                 response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
                 response.getWriter().write("Too many authentication attempts. Please wait and try again.");
                 log.warn("SECURITY: Auth rate limit exceeded for IP: {} on path: {}", clientIp, path);
                 return;
             }
-            authCounter.increment();
         }
 
         // General rate limit (by IP only — not URI, to prevent bypass via URL variations)
@@ -81,18 +80,16 @@ public class SimpleRateLimitFilter extends OncePerRequestFilter {
 
         RequestCounter minuteCounter = minuteCounters.computeIfAbsent(clientKey,
             k -> new RequestCounter(now));
-        if (!minuteCounter.isAllowed(now, Duration.ofMinutes(1), MAX_REQUESTS_PER_MINUTE)) {
+        if (!minuteCounter.tryAcquire(now, Duration.ofMinutes(1), MAX_REQUESTS_PER_MINUTE)) {
             return false;
         }
 
         RequestCounter hourCounter = hourCounters.computeIfAbsent(clientKey,
             k -> new RequestCounter(now));
-        if (!hourCounter.isAllowed(now, Duration.ofHours(1), MAX_REQUESTS_PER_HOUR)) {
+        if (!hourCounter.tryAcquire(now, Duration.ofHours(1), MAX_REQUESTS_PER_HOUR)) {
             return false;
         }
 
-        minuteCounter.increment();
-        hourCounter.increment();
         return true;
     }
 
@@ -123,8 +120,14 @@ public class SimpleRateLimitFilter extends OncePerRequestFilter {
     }
 
     private boolean isPrivateIp(String ip) {
-        return ip.startsWith("10.") || ip.startsWith("172.") || ip.startsWith("192.168.")
-            || ip.equals("127.0.0.1") || ip.equals("0:0:0:0:0:0:0:1") || ip.equals("::1");
+        if (ip == null) return false;
+        if (ip.startsWith("10.") || ip.startsWith("192.168.") ||
+            ip.equals("127.0.0.1") || ip.equals("0:0:0:0:0:0:0:1") || ip.equals("::1")) return true;
+        if (ip.startsWith("172.")) {
+            try { int s = Integer.parseInt(ip.split("\\.")[1]); return s >= 16 && s <= 31; }
+            catch (Exception e) { return false; }
+        }
+        return false;
     }
 
     private void cleanupOldEntries() {
@@ -154,17 +157,13 @@ public class SimpleRateLimitFilter extends OncePerRequestFilter {
             this.windowStart = windowStart;
         }
         
-        public boolean isAllowed(Instant now, Duration windowDuration, int maxRequests) {
+        /** Atomic check-and-increment: returns true if request is allowed */
+        public boolean tryAcquire(Instant now, Duration windowDuration, int maxRequests) {
             if (now.isAfter(windowStart.plus(windowDuration))) {
-                // Reset window
                 windowStart = now;
                 count.set(0);
             }
-            return count.get() < maxRequests;
-        }
-        
-        public void increment() {
-            count.incrementAndGet();
+            return count.getAndIncrement() < maxRequests;
         }
         
         public Instant getWindowStart() {

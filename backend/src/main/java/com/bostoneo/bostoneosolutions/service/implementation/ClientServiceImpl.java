@@ -330,7 +330,7 @@ public class ClientServiceImpl implements ClientService {
         html.append("<div class=\"container\">");
         html.append("<div class=\"header\"><h2>Legience</h2></div>");
         html.append("<div class=\"content\">");
-        html.append("<h3>Hello ").append(clientName != null ? clientName : "").append(",</h3>");
+        html.append("<h3>Hello ").append(org.springframework.web.util.HtmlUtils.htmlEscape(clientName != null ? clientName : "")).append(",</h3>");
 
         html.append("<div class=\"info-box\">");
         html.append("<h4>AI Technology Disclosure</h4>");

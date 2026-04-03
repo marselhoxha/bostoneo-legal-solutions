@@ -33,6 +33,11 @@ public interface OrganizationInvitationService {
     OrganizationInvitation acceptInvitation(String token, Long userId);
 
     /**
+     * Get invitation by ID
+     */
+    OrganizationInvitation getInvitationById(Long invitationId);
+
+    /**
      * Resend an invitation (generates new token and expiration)
      */
     OrganizationInvitation resendInvitation(Long invitationId);

@@ -20,7 +20,7 @@ export class NoSanitizePipe implements PipeTransform {
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div', 'table', 'thead',
         'tbody', 'tr', 'td', 'th', 'pre', 'code', 'blockquote', 'img', 'hr',
         'sup', 'sub', 'mark', 'del', 'ins'],
-      ALLOWED_ATTR: ['href', 'target', 'class', 'style', 'src', 'alt', 'width',
+      ALLOWED_ATTR: ['href', 'target', 'class', 'src', 'alt', 'width',
         'height', 'colspan', 'rowspan']
     });
     return this.sanitizer.bypassSecurityTrustHtml(clean);

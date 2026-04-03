@@ -106,6 +106,7 @@ public class OrganizationInvitationController {
     @PostMapping("/invitations/{id}/resend")
     @PreAuthorize("hasAuthority('organization:update') or hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN')")
     public ResponseEntity<HttpResponse> resendInvitation(@PathVariable Long id) {
+        // Tenant isolation enforced in service layer (findByIdAndOrganizationId)
         OrganizationInvitation invitation = invitationService.resendInvitation(id);
 
         return ResponseEntity.ok(
@@ -126,6 +127,7 @@ public class OrganizationInvitationController {
     @PreAuthorize("hasAuthority('organization:update') or hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN')")
     @AuditLog(action = "DELETE", entityType = "INVITATION", description = "Cancelled invitation")
     public ResponseEntity<HttpResponse> cancelInvitation(@PathVariable Long id) {
+        // Tenant isolation enforced in service layer (findByIdAndOrganizationId)
         invitationService.cancelInvitation(id);
 
         return ResponseEntity.ok(

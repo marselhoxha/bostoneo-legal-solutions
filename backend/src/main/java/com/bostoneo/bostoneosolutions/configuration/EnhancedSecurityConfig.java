@@ -155,7 +155,7 @@ public class EnhancedSecurityConfig {
         }
         String frameAncestors = String.join(" ", origins);
         return "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline' https://apis.google.com; " +
+            "script-src 'self' https://apis.google.com; " +
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
             "font-src 'self' https://fonts.gstatic.com; " +
             "img-src 'self' data: https:; " +

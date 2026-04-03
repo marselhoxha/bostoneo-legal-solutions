@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.model;
 
 import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
@@ -99,6 +100,7 @@ public class Organization {
     @Column(name = "twilio_subaccount_sid", length = 50)
     private String twilioSubaccountSid;
 
+    @JsonIgnore
     @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "twilio_auth_token_encrypted")
     private String twilioAuthTokenEncrypted;
@@ -120,6 +122,7 @@ public class Organization {
     private LocalDateTime twilioProvisionedAt;
 
     // BoldSign Settings
+    @JsonIgnore
     @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "boldsign_api_key_encrypted")
     private String boldsignApiKeyEncrypted;

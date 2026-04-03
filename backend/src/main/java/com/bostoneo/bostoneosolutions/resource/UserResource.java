@@ -193,37 +193,6 @@ public class UserResource {
                         .build());
     }
 
-    // TEMPORARY DIAGNOSTIC — check Flyway + schema state. Remove after production debug.
-    @GetMapping("/diagnostics/schema")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN')")
-    public ResponseEntity<HttpResponse> schemaCheck(
-            @org.springframework.beans.factory.annotation.Autowired javax.sql.DataSource dataSource) {
-        var result = new java.util.LinkedHashMap<String, Object>();
-        try (var conn = dataSource.getConnection(); var stmt = conn.createStatement()) {
-            // Flyway history
-            var flyway = new java.util.ArrayList<String>();
-            try (var rs = stmt.executeQuery("SELECT installed_rank, version, description, success FROM flyway_schema_history ORDER BY installed_rank")) {
-                while (rs.next()) flyway.add("V" + rs.getString("version") + " - " + rs.getString("description") + " [" + (rs.getBoolean("success") ? "OK" : "FAILED") + "]");
-            }
-            result.put("flyway", flyway);
-            // Check key columns
-            var cols = new java.util.ArrayList<String>();
-            try (var rs = stmt.executeQuery("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema='public' ORDER BY table_name, ordinal_position")) {
-                while (rs.next()) cols.add(rs.getString("table_name") + "|" + rs.getString("column_name"));
-            }
-            result.put("total_columns", cols.size());
-            result.put("total_tables", cols.stream().map(c -> c.split("\\|")[0]).distinct().count());
-            // Check specific columns we care about
-            result.put("has_terms_accepted_at", cols.contains("users|terms_accepted_at"));
-            result.put("has_force_password_change", cols.contains("users|force_password_change"));
-            result.put("has_phone_lead", cols.contains("leads|phone"));
-            result.put("columns", cols);
-        } catch (Exception e) {
-            result.put("error", e.getClass().getName() + ": " + e.getMessage());
-        }
-        return ResponseEntity.ok().body(HttpResponse.builder().timeStamp(now().toString()).data(of("schema", result)).message("Schema check").status(OK).statusCode(OK.value()).build());
-    }
-
     // START - To reset password when user is not logged in
 
     @GetMapping("/verify/code/{email}/{code}")
@@ -334,6 +303,12 @@ public class UserResource {
     @PreAuthorize("hasAuthority('ROLE:ASSIGN') or hasRole('ROLE_ADMIN') or hasRole('ROLE_SYSADMIN')")
     public ResponseEntity<HttpResponse> updateUserRole(Authentication authentication, @PathVariable("roleName") String roleName) {
         UserDTO userDTO = getAuthenticatedUser(authentication);
+        // Prevent escalation to privileged roles
+        if ("ROLE_SYSADMIN".equalsIgnoreCase(roleName) || "ROLE_SUPERADMIN".equalsIgnoreCase(roleName)) {
+            return ResponseEntity.status(FORBIDDEN).body(
+                    HttpResponse.builder().timeStamp(now().toString())
+                            .reason("Cannot self-assign this role").status(FORBIDDEN).statusCode(FORBIDDEN.value()).build());
+        }
         userService.updateUserRole(userDTO.getId(), roleName);
         publisher.publishEvent(new NewUserEvent(userDTO.getEmail(), ROLE_UPDATE, userDTO.getOrganizationId()));
         return ResponseEntity.ok().body(
@@ -432,6 +407,19 @@ public class UserResource {
             }
 
             String token = authHeader.substring(TOKEN_PREFIX.length());
+
+            // Reject blacklisted tokens (e.g., after logout)
+            if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                log.warn("Attempted refresh with blacklisted token");
+                return ResponseEntity.status(UNAUTHORIZED).body(
+                        HttpResponse.builder()
+                                .timeStamp(now().toString())
+                                .reason("Token has been revoked")
+                                .status(UNAUTHORIZED)
+                                .statusCode(UNAUTHORIZED.value())
+                                .build());
+            }
+
             // Use refresh-specific verifier (rejects access tokens)
             Long userId = tokenProvider.getSubjectFromRefreshToken(token, request);
 

@@ -491,6 +491,8 @@ public class CommunicationController {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid signature");
                 }
                 log.debug("Twilio status webhook signature verified successfully");
+            } else {
+                log.warn("SECURITY: Twilio auth token not configured - status webhook signature verification skipped");
             }
 
             communicationLogService.updateStatus(messageSid, messageStatus.toUpperCase(), errorCode, errorMessage);

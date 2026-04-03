@@ -204,8 +204,8 @@ public class TokenProvider {
         JWTVerifier verifier;
         try {
             Algorithm algorithm = HMAC512(secret);
-            // tokenType claim is stamped on new tokens but NOT verified yet (transition period).
-            // After all old tokens expire (~8h), enable: .withClaim("tokenType", "access")
+            // tokenType is stamped on new tokens. NOT enforced yet — old tokens lack the claim.
+            // Enable enforcement after all old tokens expire (~7 days after deploy).
             verifier = JWT.require(algorithm)
                 .withIssuer(BOSTONEO_SOLUTIONS_LLC)
                 .withAudience(CLIENT_MANAGEMENT_SERVICE)
@@ -214,8 +214,7 @@ public class TokenProvider {
         return verifier;
     }
 
-    /** Verifier for refresh tokens only — used by the token refresh endpoint.
-     *  Does NOT enforce tokenType yet (transition period — old tokens lack the claim). */
+    /** Verifier for refresh tokens — will enforce tokenType=refresh after transition period */
     private JWTVerifier getRefreshTokenVerifier() {
         try {
             Algorithm algorithm = HMAC512(secret);

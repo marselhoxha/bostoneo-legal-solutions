@@ -158,6 +158,11 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             if (user == null) {
                 throw new ApiException("User not found with ID: " + id);
             }
+            // Tenant isolation: verify org context matches user's org
+            Long currentOrgId = com.bostoneo.bostoneosolutions.multitenancy.TenantContext.getCurrentTenant();
+            if (currentOrgId != null && !currentOrgId.equals(user.getOrganizationId())) {
+                throw new ApiException("Cannot delete user from another organization");
+            }
             
             // DELETE ALL FOREIGN KEY REFERENCES - BASED ON ACTUAL DATABASE SCHEMA
 
@@ -169,7 +174,8 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             // Delete user events and activities
             jdbc.update("DELETE FROM user_events WHERE user_id = :userId", of("userId", id));
             jdbc.update("DELETE FROM activity_summary WHERE user_id = :userId", of("userId", id));
-            jdbc.update("DELETE FROM audit_log WHERE user_id = :userId", of("userId", id));
+            // Anonymize audit logs instead of deleting (preserve hash chain + compliance trail)
+            jdbc.update("UPDATE audit_log SET user_id = NULL WHERE user_id = :userId", of("userId", id));
             
             // Delete attorney expertise
             jdbc.update("DELETE FROM attorney_expertise WHERE user_id = :userId", of("userId", id));
@@ -366,7 +372,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
 
     @Override
     public void sendVerificationCode(UserDTO user) {
-        String verificationCode = randomNumeric(6);
+        String verificationCode = String.format("%06d", new java.security.SecureRandom().nextInt(1_000_000));
         try {
             jdbc.update(DELETE_VERIFICATION_CODE_BY_USER_ID, of("id", user.getId()));
             jdbc.update(INSERT_VERIFICATION_CODE_QUERY, of("userId", user.getId(), "code", verificationCode));
@@ -388,10 +394,15 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
                 jdbc.update(DELETE_CODE, of("code", code));
                 return userByCode;
             } else {
+                // Record failed MFA attempt for lockout
+                recordLoginFailure(email);
                 throw new ApiException("Code is invalid. Please try again.");
             }
         } catch (EmptyResultDataAccessException exception) {
-            throw new ApiException("Could not find record");
+            recordLoginFailure(email);
+            throw new ApiException("Code is invalid. Please try again.");
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception exception) {
             throw new ApiException("An error occurred. Please try again.");
         }

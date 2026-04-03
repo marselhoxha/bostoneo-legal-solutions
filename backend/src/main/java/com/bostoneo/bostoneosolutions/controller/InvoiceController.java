@@ -35,6 +35,10 @@ public class InvoiceController {
     @PreAuthorize("hasAuthority('CREATE:INVOICE')")
     public ResponseEntity<CustomHttpResponse<Invoice>> createInvoice(@RequestBody Invoice invoice) {
         log.info("Creating new invoice for client ID: {}", invoice.getClientId());
+        // Prevent mass assignment: server controls these fields
+        invoice.setId(null);
+        invoice.setOrganizationId(com.bostoneo.bostoneosolutions.multitenancy.TenantContext.getCurrentTenant());
+        invoice.setCreatedBy(com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId());
         Invoice createdInvoice = invoiceService.createInvoice(invoice);
         return ResponseEntity.ok(new CustomHttpResponse<>("Invoice created successfully", createdInvoice));
     }

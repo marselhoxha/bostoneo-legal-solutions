@@ -3,6 +3,7 @@ package com.bostoneo.bostoneosolutions.handler;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.bostoneo.bostoneosolutions.provider.TokenProvider;
+import com.bostoneo.bostoneosolutions.service.TokenBlacklistService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,11 @@ import java.util.Map;
 public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
 
     private final TokenProvider tokenProvider;
+    private final TokenBlacklistService tokenBlacklistService;
     private final ObjectMapper objectMapper;
+
+    private static final int MAX_SESSIONS_PER_USER = 5;
+    private static final int MAX_MESSAGE_SIZE = 4096;
 
     @Value("${jwt.secret}")
     private String secret;
@@ -49,7 +54,23 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
                 Long userId = extractUserIdFromToken(token);
                 
                 if (userId != null && tokenProvider.isTokenValid(userId, token)) {
+                    // SECURITY: Check token blacklist (reject logged-out/revoked tokens)
+                    if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                        log.warn("WebSocket rejected — blacklisted token for user {}", userId);
+                        session.close(CloseStatus.NOT_ACCEPTABLE.withReason("Token has been revoked"));
+                        return;
+                    }
+
                     String userIdStr = userId.toString();
+
+                    // SECURITY: Limit concurrent sessions per user (DoS prevention)
+                    long userSessionCount = sessionUsers.values().stream()
+                            .filter(userIdStr::equals).count();
+                    if (userSessionCount >= MAX_SESSIONS_PER_USER) {
+                        log.warn("WebSocket rejected — user {} exceeded max sessions ({})", userId, MAX_SESSIONS_PER_USER);
+                        session.close(CloseStatus.SERVICE_OVERLOAD.withReason("Too many connections"));
+                        return;
+                    }
 
                     // Store the session in ALL maps
                     allSessions.put(session.getId(), session);
@@ -103,19 +124,18 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
      */
     @org.springframework.scheduling.annotation.Scheduled(fixedRate = 300000)
     public void cleanupStaleSessions() {
-        int removed = 0;
-        for (var entry : allSessions.entrySet()) {
+        int before = allSessions.size();
+        allSessions.entrySet().removeIf(entry -> {
             if (!entry.getValue().isOpen()) {
                 String sessionId = entry.getKey();
-                allSessions.remove(sessionId);
                 String userId = sessionUsers.remove(sessionId);
                 sessionOrganizations.remove(sessionId);
-                if (userId != null) {
-                    userSessions.remove(userId);
-                }
-                removed++;
+                if (userId != null) userSessions.remove(userId);
+                return true;
             }
-        }
+            return false;
+        });
+        int removed = before - allSessions.size();
         if (removed > 0) {
             log.info("Cleaned up {} stale WebSocket sessions, {} active remain", removed, allSessions.size());
         }
@@ -125,10 +145,15 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String userId = sessionUsers.get(session.getId());
         if (userId != null) {
-            log.debug("Received message from user {}: {}", userId, message.getPayload());
-            
-            // Echo the message back (can be extended for specific message handling)
-            sendMessage(session, createMessage("echo", "Message received: " + message.getPayload()));
+            String payload = message.getPayload();
+            // SECURITY: Limit message size to prevent memory abuse
+            if (payload.length() > MAX_MESSAGE_SIZE) {
+                sendMessage(session, createMessage("error", "Message too large"));
+                return;
+            }
+            // SECURITY: Log length only, not raw content (prevent log injection)
+            log.debug("Received message from user {}: {} chars", userId, payload.length());
+            sendMessage(session, createMessage("echo", "Message received"));
         }
     }
 

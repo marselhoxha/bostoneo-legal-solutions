@@ -172,8 +172,9 @@ resource "aws_db_instance" "main" {
   backup_window           = "03:00-04:00"
   maintenance_window      = "sun:04:00-sun:05:00"
   copy_tags_to_snapshot   = true
-  skip_final_snapshot     = true
-  deletion_protection     = false
+  skip_final_snapshot     = false
+  final_snapshot_identifier = "legience-staging-final"
+  deletion_protection     = true
 
   tags = {
     Name = "legience-${local.environment}-db"
@@ -551,8 +552,7 @@ resource "aws_iam_role" "github_actions" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
             "token.actions.githubusercontent.com:sub" = [
               "repo:marselhoxha/bostoneo-legal-solutions:ref:refs/heads/main",
-              "repo:marselhoxha/bostoneo-legal-solutions:ref:refs/heads/staging",
-              "repo:marselhoxha/bostoneo-legal-solutions:ref:refs/heads/develop"
+              "repo:marselhoxha/bostoneo-legal-solutions:ref:refs/heads/staging"
             ]
           }
         }

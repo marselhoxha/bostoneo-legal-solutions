@@ -145,6 +145,12 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
     }
 
     @Override
+    public OrganizationInvitation getInvitationById(Long invitationId) {
+        Long orgId = getRequiredOrganizationId();
+        return invitationRepository.findByIdAndOrganizationId(invitationId, orgId).orElse(null);
+    }
+
+    @Override
     public OrganizationInvitation resendInvitation(Long invitationId) {
         log.info("Resending invitation: {}", invitationId);
         Long orgId = getRequiredOrganizationId();

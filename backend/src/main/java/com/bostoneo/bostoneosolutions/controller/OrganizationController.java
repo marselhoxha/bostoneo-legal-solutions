@@ -396,6 +396,13 @@ public class OrganizationController {
     public ResponseEntity<HttpResponse> updateBoldSignSettings(
             @PathVariable Long id,
             @RequestBody java.util.Map<String, String> body) {
+        if (!isSuperAdmin()) {
+            Long currentOrgId = getCurrentOrganizationId();
+            if (currentOrgId == null || !currentOrgId.equals(id)) {
+                return ResponseEntity.status(FORBIDDEN).body(HttpResponse.builder().timeStamp(now().toString())
+                        .reason("Access denied").status(FORBIDDEN).statusCode(FORBIDDEN.value()).build());
+            }
+        }
         String apiKey = body.get("apiKey");
         organizationService.updateBoldSignApiKey(id, apiKey);
         return ResponseEntity.ok(

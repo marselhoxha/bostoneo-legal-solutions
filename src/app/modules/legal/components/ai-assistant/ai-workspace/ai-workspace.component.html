@@ -1893,13 +1893,13 @@
                             <p *ngIf="!message.analysisId" class="text-muted">No timeline available</p>
                           </div>
                           <div class="tab-pane fade" id="weaknesses-{{i}}" role="tabpanel">
-                            <div [innerHTML]="message.parsedSections?.weaknesses || 'No weaknesses section found'" apexChartsContainer></div>
+                            <div [innerHTML]="(message.parsedSections?.weaknesses || 'No weaknesses section found') | markdownToHtml" apexChartsContainer></div>
                           </div>
                           <div class="tab-pane fade" id="evidence-{{i}}" role="tabpanel">
-                            <div [innerHTML]="message.parsedSections?.evidence || 'No evidence section found'" apexChartsContainer></div>
+                            <div [innerHTML]="(message.parsedSections?.evidence || 'No evidence section found') | markdownToHtml" apexChartsContainer></div>
                           </div>
                           <div class="tab-pane fade" id="strategy-{{i}}" role="tabpanel">
-                            <div [innerHTML]="message.parsedSections?.strategy || 'No strategy section found'" apexChartsContainer></div>
+                            <div [innerHTML]="(message.parsedSections?.strategy || 'No strategy section found') | markdownToHtml" apexChartsContainer></div>
                           </div>
                         </div>
 
