@@ -204,23 +204,23 @@ public class TokenProvider {
         JWTVerifier verifier;
         try {
             Algorithm algorithm = HMAC512(secret);
-            // tokenType is stamped on new tokens. NOT enforced yet — old tokens lack the claim.
-            // Enable enforcement after all old tokens expire (~7 days after deploy).
             verifier = JWT.require(algorithm)
                 .withIssuer(BOSTONEO_SOLUTIONS_LLC)
                 .withAudience(CLIENT_MANAGEMENT_SERVICE)
+                .withClaim("tokenType", "access")
                 .build();
         } catch (JWTVerificationException exception) { throw new JWTVerificationException(TOKEN_CANNOT_BE_VERIFIED); }
         return verifier;
     }
 
-    /** Verifier for refresh tokens — will enforce tokenType=refresh after transition period */
+    /** Verifier for refresh tokens only — rejects access tokens */
     private JWTVerifier getRefreshTokenVerifier() {
         try {
             Algorithm algorithm = HMAC512(secret);
             return JWT.require(algorithm)
                 .withIssuer(BOSTONEO_SOLUTIONS_LLC)
                 .withAudience(CLIENT_MANAGEMENT_SERVICE)
+                .withClaim("tokenType", "refresh")
                 .build();
         } catch (JWTVerificationException exception) { throw new JWTVerificationException(TOKEN_CANNOT_BE_VERIFIED); }
     }

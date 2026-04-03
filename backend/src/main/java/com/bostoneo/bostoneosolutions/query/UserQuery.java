@@ -18,12 +18,12 @@ public class UserQuery {
     public static final String UPDATE_USER_PASSWORD_BY_URL_QUERY = "UPDATE users SET password = :password WHERE id = (SELECT user_id FROM reset_password_verifications WHERE url = :url)";
     public static final String DELETE_VERIFICATION_BY_URL_QUERY = "DELETE FROM reset_password_verifications WHERE url = :url";
     public static final String SELECT_USER_BY_ACCOUNT_URL_QUERY = "SELECT * FROM users WHERE id = (SELECT user_id FROM account_verifications WHERE url = :url)";
-    public static final String UPDATE_USER_ENABLED_QUERY = "UPDATE users SET enabled = :enabled WHERE id = :id";
+    public static final String UPDATE_USER_ENABLED_QUERY = "UPDATE users SET enabled = :enabled WHERE id = :id AND (organization_id = :organizationId OR (:organizationId IS NULL AND organization_id IS NULL))";
     public static final String UPDATE_USER_DETAILS_QUERY = "UPDATE users SET first_name = :firstName, last_name = :lastName, email = :email, phone = :phone, address = :address, title = :title, bio = :bio WHERE id = :id AND organization_id = :organizationId";
     public static final String SELECT_USER_BY_ID_QUERY = "SELECT * FROM users WHERE id = :id";
     public static final String UPDATE_USER_PASSWORD_BY_ID_QUERY = "UPDATE users SET password = :password WHERE id = :userId AND organization_id = :organizationId";
     public static final String UPDATE_USER_SETTINGS_QUERY = "UPDATE users SET enabled = :enabled, non_locked = :notLocked WHERE id = :userId AND organization_id = :organizationId";
-    public static final String TOGGLE_USER_MFA_QUERY = "UPDATE users SET using_mfa = :isUsingMfa WHERE email = :email";
+    public static final String TOGGLE_USER_MFA_QUERY = "UPDATE users SET using_mfa = :isUsingMfa WHERE email = :email AND (organization_id = :organizationId OR (:organizationId IS NULL AND organization_id IS NULL))";
     public static final String UPDATE_USER_IMAGE_QUERY = "UPDATE users SET image_url = :imageUrl WHERE id = :id AND organization_id = :organizationId";
     public static final String UPDATE_USER_PASSWORD_BY_USER_ID_QUERY = "UPDATE users SET password = :password WHERE id = :id AND organization_id = :organizationId";
     public static final String SELECT_ALL_USERS_QUERY = "SELECT * FROM users ORDER BY id LIMIT :pageSize OFFSET :offset";

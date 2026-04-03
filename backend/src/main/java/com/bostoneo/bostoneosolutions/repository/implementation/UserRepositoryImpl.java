@@ -478,7 +478,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     public User verifyAccountKey(String key) {
         try {
             User user = jdbc.queryForObject(SELECT_USER_BY_ACCOUNT_URL_QUERY, of("url", getVerificationUrl(key, ACCOUNT.getType())), new UserRowMapper());
-            jdbc.update(UPDATE_USER_ENABLED_QUERY, of("enabled", true, "id", user.getId()));
+            jdbc.update(UPDATE_USER_ENABLED_QUERY, of("enabled", true, "id", user.getId(), "organizationId", user.getOrganizationId()));
             // Delete after updating - depends on your requirements
             return user;
         } catch (EmptyResultDataAccessException exception) {
@@ -536,7 +536,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
         User user = getUserByEmail(email);
         user.setUsingMFA(!user.isUsingMFA());
         try {
-            jdbc.update(TOGGLE_USER_MFA_QUERY, of("email", email, "isUsingMfa", user.isUsingMFA()));
+            jdbc.update(TOGGLE_USER_MFA_QUERY, of("email", email, "isUsingMfa", user.isUsingMFA(), "organizationId", user.getOrganizationId()));
             return user;
         } catch (Exception exception) {
             log.error(exception.getMessage());

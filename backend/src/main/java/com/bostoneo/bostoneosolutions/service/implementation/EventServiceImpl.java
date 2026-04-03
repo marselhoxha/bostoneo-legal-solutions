@@ -49,11 +49,11 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public Collection<UserEvent> getEventsByUserId(Long userId) {
-        // Verify user belongs to current organization
-        if (!isUserInCurrentOrganization(userId)) {
-            log.warn("Attempted to access events for user {} outside current organization", userId);
-            return Collections.emptyList();
+        Long orgId = getCurrentOrganizationId();
+        if (orgId != null) {
+            return eventRepository.getEventsByUserIdAndOrganizationId(userId, orgId);
         }
+        // SUPERADMIN (null org) — fall back to unfiltered
         return eventRepository.getEventsByUserId(userId);
     }
 
