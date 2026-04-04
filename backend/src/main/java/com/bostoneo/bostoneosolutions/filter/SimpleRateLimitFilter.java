@@ -157,8 +157,8 @@ public class SimpleRateLimitFilter extends OncePerRequestFilter {
             this.windowStart = windowStart;
         }
         
-        /** Atomic check-and-increment: returns true if request is allowed */
-        public boolean tryAcquire(Instant now, Duration windowDuration, int maxRequests) {
+        /** Thread-safe check-and-increment: returns true if request is allowed */
+        public synchronized boolean tryAcquire(Instant now, Duration windowDuration, int maxRequests) {
             if (now.isAfter(windowStart.plus(windowDuration))) {
                 windowStart = now;
                 count.set(0);

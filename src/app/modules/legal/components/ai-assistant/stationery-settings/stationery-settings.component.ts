@@ -8,6 +8,7 @@ import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { StationeryService, StationeryTemplate } from '../../../services/stationery.service';
+import { UserService } from '../../../../../service/user.service';
 
 // ── Config types ───────────────────────────────────────────
 
@@ -63,20 +64,7 @@ function sanitizeColor(color: string): string {
   return /^#[0-9a-fA-F]{3,8}$/.test(color) ? color : '#1a3a5c';
 }
 
-// ── Sample data for preview ────────────────────────────────
-
-const PREVIEW_DATA: Record<string, string> = {
-  '{{attorney_name}}': 'David H. Altman',
-  '{{bar_number}}': '654321',
-  '{{license_state}}': 'Massachusetts',
-  '{{firm_name}}': 'Altman Nussbaum Shunnarah Trial Attorneys',
-  '{{firm_address}}': '675 Massachusetts Ave., Floor 9, Cambridge, MA 02139',
-  '{{firm_phone}}': '(857) 242-4846',
-  '{{firm_email}}': 'info@ansfirm.com',
-  '{{firm_website}}': 'www.ansfirm.com',
-  '{{firm_logo_url}}': '',
-  '{{date}}': new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-};
+// ── Sample data for preview (built dynamically from logged-in user) ──
 
 // ── Grid helpers ───────────────────────────────────────────
 
@@ -411,12 +399,37 @@ export class StationerySettingsComponent implements OnInit, OnDestroy {
 
   constructor(
     private stationeryService: StationeryService,
+    private userService: UserService,
     private sanitizer: DomSanitizer,
     private cdr: ChangeDetectorRef
   ) {}
 
+  /** Build preview data from the logged-in user's profile */
+  private buildPreviewData(): Record<string, string> {
+    const user = this.userService.getCurrentUser();
+    const name = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Your Name';
+    return {
+      '{{attorney_name}}': name || 'Your Name',
+      '{{bar_number}}': '000000',
+      '{{license_state}}': 'Your State',
+      '{{firm_name}}': user?.organizationName || 'Your Firm Name',
+      '{{firm_address}}': user?.address || 'Your Address',
+      '{{firm_phone}}': user?.phone || '(000) 000-0000',
+      '{{firm_email}}': user?.email || 'email@example.com',
+      '{{firm_website}}': '',
+      '{{firm_logo_url}}': '',
+      '{{date}}': new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    };
+  }
+
   ngOnInit(): void {
     this.loadTemplates();
+    // Re-render preview when user data arrives (handles page refresh timing)
+    this.userService.userData$.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      if (this.selectedTemplate || this.isNew) {
+        this.updatePreview();
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -580,7 +593,7 @@ export class StationerySettingsComponent implements OnInit, OnDestroy {
   updatePreview(): void {
     const { letterheadHtml, signatureHtml, footerHtml } = generateLayoutHtml(this.config);
     // Override preview data with config values when present (so preview shows what you typed)
-    const previewData = { ...PREVIEW_DATA };
+    const previewData = { ...this.buildPreviewData() };
     const ov = this.config.letterhead.contactOverrides;
     if (ov.firmName?.trim()) previewData['{{firm_name}}'] = ov.firmName.trim();
     if (ov.firmAddress?.trim()) previewData['{{firm_address}}'] = ov.firmAddress.trim();

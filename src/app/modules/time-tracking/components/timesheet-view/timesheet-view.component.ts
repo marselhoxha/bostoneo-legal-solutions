@@ -1283,11 +1283,11 @@ export class TimesheetViewComponent implements OnInit {
             </div>
             <div class="row">
               <span class="label">Case:</span>
-              <span>${entry.caseName || 'N/A'}</span>
+              <span>${this.escHtml(entry.caseName || 'N/A')}</span>
             </div>
             <div class="row">
               <span class="label">Description:</span>
-              <span>${entry.description}</span>
+              <span>${this.escHtml(entry.description || '')}</span>
             </div>
             <div class="row">
               <span class="label">Duration:</span>
@@ -1943,4 +1943,7 @@ export class TimesheetViewComponent implements OnInit {
     }
   }
 
+  private escHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
 }

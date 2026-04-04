@@ -147,8 +147,19 @@ public class TimeEntryResource {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
+            // Enforce VIEW_OWN: users with only VIEW_OWN can only see their own entries
+            Long authenticatedUserId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            boolean hasViewAll = auth.getAuthorities().stream().anyMatch(a ->
+                    a.getAuthority().equals("TIME_TRACKING:VIEW_ALL") || a.getAuthority().equals("TIME_TRACKING:VIEW_TEAM"));
+            if (!hasViewAll && !authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body(
+                    HttpResponse.builder().timeStamp(java.time.LocalDateTime.now().toString())
+                        .reason("You can only view your own time entries").status(org.springframework.http.HttpStatus.FORBIDDEN).statusCode(403).build());
+            }
+
             log.info("GET /api/time-entries/user/{} - page: {}, size: {}", userId, page, size);
-            
+
             Page<TimeEntryDTO> timeEntries = timeTrackingService.getTimeEntriesByUser(userId, page, size);
             
             log.info("Successfully retrieved {} time entries for user {}", timeEntries.getTotalElements(), userId);

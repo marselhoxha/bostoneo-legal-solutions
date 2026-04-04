@@ -1,13 +1,10 @@
 package com.bostoneo.bostoneosolutions.handler;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
 import com.bostoneo.bostoneosolutions.provider.TokenProvider;
 import com.bostoneo.bostoneosolutions.service.TokenBlacklistService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -29,9 +26,6 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
 
     private static final int MAX_SESSIONS_PER_USER = 5;
     private static final int MAX_MESSAGE_SIZE = 4096;
-
-    @Value("${jwt.secret}")
-    private String secret;
 
     // Store authenticated sessions - sessionId -> session (supports multiple tabs per user)
     private final Map<String, WebSocketSession> allSessions = new ConcurrentHashMap<>();
@@ -356,31 +350,19 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
         return session != null && session.isOpen();
     }
 
-    /**
-     * Extract user ID from JWT token
-     */
+    /** Reuse TokenProvider's verified extraction (enforces tokenType=access, issuer, audience) */
     private Long extractUserIdFromToken(String token) {
         try {
-            return Long.valueOf(JWT.require(Algorithm.HMAC512(secret.getBytes()))
-                    .build()
-                    .verify(token)
-                    .getSubject());
+            return tokenProvider.getSubject(token, null);
         } catch (Exception e) {
-            log.error("Failed to extract user ID from token: {}", e.getMessage());
+            log.warn("WebSocket token validation failed: {}", e.getMessage());
             return null;
         }
     }
 
     private Long extractOrganizationIdFromToken(String token) {
         try {
-            var decodedJWT = JWT.require(Algorithm.HMAC512(secret.getBytes()))
-                    .build()
-                    .verify(token);
-            var orgClaim = decodedJWT.getClaim("organizationId");
-            if (!orgClaim.isNull()) {
-                return orgClaim.asLong();
-            }
-            return null;
+            return tokenProvider.getOrganizationId(token);
         } catch (Exception e) {
             log.error("Failed to extract organization ID from token: {}", e.getMessage());
             return null;

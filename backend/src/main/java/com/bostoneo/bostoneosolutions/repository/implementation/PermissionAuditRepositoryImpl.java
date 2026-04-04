@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
@@ -28,10 +29,10 @@ public class PermissionAuditRepositoryImpl implements PermissionAuditRepository<
     // SQL queries
     private static final String INSERT_AUDIT_LOG = 
         "INSERT INTO permission_audit_logs (user_id, action, target_type, target_id, details, performed_by, timestamp) VALUES (:userId, :action, :targetType, :targetId, :details, :performedBy, :timestamp)";
-    private static final String FIND_BY_USER_ID = 
-        "SELECT * FROM permission_audit_logs WHERE user_id = :userId ORDER BY timestamp DESC LIMIT :limit";
-    private static final String FIND_RECENT_LOGS = 
-        "SELECT * FROM permission_audit_logs ORDER BY timestamp DESC LIMIT :limit";
+    private static final String FIND_BY_USER_ID =
+        "SELECT * FROM permission_audit_logs WHERE user_id = :userId AND (organization_id = :organizationId OR (:organizationId IS NULL AND organization_id IS NULL)) ORDER BY timestamp DESC LIMIT :limit";
+    private static final String FIND_RECENT_LOGS =
+        "SELECT * FROM permission_audit_logs WHERE (organization_id = :organizationId OR (:organizationId IS NULL)) ORDER BY timestamp DESC LIMIT :limit";
     
     @Override
     public PermissionAuditLog create(PermissionAuditLog auditLog) {
@@ -58,7 +59,7 @@ public class PermissionAuditRepositoryImpl implements PermissionAuditRepository<
     @Override
     public List<PermissionAuditLog> getRecentLogs(int limit) {
         try {
-            return jdbc.query(FIND_RECENT_LOGS, of("limit", limit), new AuditLogRowMapper());
+            return jdbc.query(FIND_RECENT_LOGS, of("limit", limit, "organizationId", TenantContext.getCurrentTenant()), new AuditLogRowMapper());
         } catch (Exception e) {
             log.error("Error getting recent logs: {}", e.getMessage());
             throw new ApiException("Error getting recent logs");
@@ -68,7 +69,7 @@ public class PermissionAuditRepositoryImpl implements PermissionAuditRepository<
     @Override
     public List<PermissionAuditLog> getLogsByUserId(Long userId, int limit) {
         try {
-            return jdbc.query(FIND_BY_USER_ID, of("userId", userId, "limit", limit), new AuditLogRowMapper());
+            return jdbc.query(FIND_BY_USER_ID, of("userId", userId, "limit", limit, "organizationId", TenantContext.getCurrentTenant()), new AuditLogRowMapper());
         } catch (Exception e) {
             log.error("Error getting logs by user ID: {}", e.getMessage());
             throw new ApiException("Error getting logs by user ID");

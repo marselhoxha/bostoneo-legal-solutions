@@ -371,7 +371,13 @@ public class OrganizationController {
             @RequestParam(required = false) Boolean signatureReminderSms,
             @RequestParam(required = false) Boolean signatureReminderWhatsapp,
             @RequestParam(required = false) String signatureReminderDays) {
-
+        if (!isSuperAdmin()) {
+            Long currentOrgId = getCurrentOrganizationId();
+            if (currentOrgId == null || !currentOrgId.equals(id)) {
+                return ResponseEntity.status(FORBIDDEN).body(HttpResponse.builder().timeStamp(now().toString())
+                        .reason("Access denied").status(FORBIDDEN).statusCode(FORBIDDEN.value()).build());
+            }
+        }
         OrganizationDTO updated = organizationService.updateNotificationPreferences(
                 id, smsEnabled, whatsappEnabled, emailEnabled,
                 signatureReminderEmail, signatureReminderSms, signatureReminderWhatsapp,

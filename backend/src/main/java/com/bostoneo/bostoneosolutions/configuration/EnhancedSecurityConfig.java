@@ -155,10 +155,12 @@ public class EnhancedSecurityConfig {
         }
         String frameAncestors = String.join(" ", origins);
         return "default-src 'self'; " +
-            "script-src 'self' https://apis.google.com; " +
+            // unsafe-eval required by lordicon animated icons library (uses eval internally)
+            "script-src 'self' 'unsafe-eval' https://apis.google.com https://cdn.lordicon.com https://www.googletagmanager.com; " +
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-            "font-src 'self' https://fonts.gstatic.com; " +
+            "font-src 'self' data: https://fonts.gstatic.com; " +
             "img-src 'self' data: https:; " +
+            "worker-src 'self' blob:; " +
             "connect-src 'self' " + connectSrc + wsSrc + extraConnect + "; " +
             "frame-ancestors 'self' " + frameAncestors;
     }

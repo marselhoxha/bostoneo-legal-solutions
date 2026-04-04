@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { RbacService } from '../core/services/rbac.service';
 import { environment } from '../../environments/environment';
@@ -95,7 +95,8 @@ export class DashboardService {
     return this.rbacService.getCurrentUserPermissions().pipe(
       switchMap(permissions => {
         if (!permissions) {
-          return throwError(() => new Error('No permissions found'));
+          // Permissions not yet loaded (async init) — return defaults silently
+          return of(this.getDefaultMetrics());
         }
 
         const hierarchyLevel = permissions.hierarchyLevel;

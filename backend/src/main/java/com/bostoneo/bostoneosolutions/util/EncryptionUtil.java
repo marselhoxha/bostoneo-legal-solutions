@@ -28,7 +28,8 @@ public class EncryptionUtil {
 
     private static final java.util.Set<String> INSECURE_DEFAULTS = java.util.Set.of(
             "default-encryption-secret-key", "dev-encryption-secret-change-prod",
-            "default-salt-value", "dev-salt-value-change-in-production"
+            "default-salt-value", "dev-salt-value-change-in-production",
+            "dev-encryption-secret-key-32chars!", "dev-encryption-salt-value-16char"
     );
 
     private final Environment environment;
@@ -116,7 +117,7 @@ public class EncryptionUtil {
     
     private SecretKey generateSecretKey() throws Exception {
         SecretKeyFactory factory = SecretKeyFactory.getInstance(SECRET_KEY_ALGORITHM);
-        KeySpec spec = new PBEKeySpec(encryptionSecret.toCharArray(), salt.getBytes(), ITERATION_COUNT, KEY_LENGTH);
+        KeySpec spec = new PBEKeySpec(encryptionSecret.toCharArray(), salt.getBytes(java.nio.charset.StandardCharsets.UTF_8), ITERATION_COUNT, KEY_LENGTH);
         SecretKey tmp = factory.generateSecret(spec);
         return new SecretKeySpec(tmp.getEncoded(), "AES");
     }

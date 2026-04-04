@@ -333,26 +333,26 @@ public class ClientResource {
              user.getRoles().contains("ROLE_SYSADMIN") ||
              user.getRoles().contains("ADMINISTRATOR"));
         
-        // Clients only see their own invoices
+        // Admins/attorneys see all invoices; non-admin users see only their own
         if (isAdmin) {
             return ResponseEntity.ok(
                     HttpResponse.builder()
                             .timeStamp(now().toString())
-                            .data(of("user", userService.getUserByEmail(user.getEmail()), 
-                                    "page", clientService.getInvoicesForClient(user.getId(), page.orElse(0), size.orElse(10))))
-                            .message("Your invoices retrieved successfully")
+                            .data(of("user", userService.getUserByEmail(user.getEmail()),
+                                    "page", clientService.getInvoices(page.orElse(0), size.orElse(10))))
+                            .message("Invoices retrieved successfully")
                             .status(OK)
                             .statusCode(OK.value())
                             .build());
         }
-        
-        // Admin and Manager see all invoices
+
+        // Non-admin users (clients) only see their own invoices
         return ResponseEntity.ok(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .data(of("user", userService.getUserByEmail(user.getEmail()), 
-                                "page", clientService.getInvoices(page.orElse(0), size.orElse(10))))
-                        .message("Invoices retrieved successfully")
+                        .data(of("user", userService.getUserByEmail(user.getEmail()),
+                                "page", clientService.getInvoicesForClient(user.getId(), page.orElse(0), size.orElse(10))))
+                        .message("Your invoices retrieved successfully")
                         .status(OK)
                         .statusCode(OK.value())
                         .build());

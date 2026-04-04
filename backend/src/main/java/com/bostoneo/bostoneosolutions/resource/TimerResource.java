@@ -342,6 +342,12 @@ public class TimerResource {
     @PreAuthorize("hasAuthority('TIME_TRACKING:EDIT')")
     public ResponseEntity<HttpResponse> deleteTimer(@PathVariable Long timerId, @RequestParam Long userId) {
         try {
+            Long authenticatedUserId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
+            if (!authenticatedUserId.equals(userId)) {
+                return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body(
+                    HttpResponse.builder().timeStamp(now().toString()).reason("Cannot delete another user's timer")
+                        .status(org.springframework.http.HttpStatus.FORBIDDEN).statusCode(403).build());
+            }
             timerService.deleteTimer(timerId);
             return ResponseEntity.ok(
                 HttpResponse.builder()

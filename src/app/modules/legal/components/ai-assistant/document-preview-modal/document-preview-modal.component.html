@@ -82,7 +82,7 @@
       <div class="document-content" #contentContainer>
         <!-- Full content display if no chunks -->
         <div class="full-content" *ngIf="documentChunks.length === 0 && document.content">
-          <div class="content-text" [innerHTML]="highlightQuery ? highlightSearchTerms(document.content, highlightQuery) : document.content"></div>
+          <div class="content-text" [innerHTML]="highlightQuery ? highlightSearchTerms(document.content, highlightQuery) : (document.content | noSanitize)"></div>
         </div>
 
         <!-- Chunked content display -->

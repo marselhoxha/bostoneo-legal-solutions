@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
+import { NoSanitizePipe } from '../../../../../shared/pipes/no-sanitize.pipe';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { DocumentCollectionService, DocumentContent, DocumentChunk } from '../../../services/document-collection.service';
 import { environment } from '../../../../../../environments/environment';
@@ -8,7 +9,7 @@ import { environment } from '../../../../../../environments/environment';
 @Component({
   selector: 'app-document-preview-modal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NoSanitizePipe],
   templateUrl: './document-preview-modal.component.html',
   styleUrls: ['./document-preview-modal.component.scss']
 })

@@ -3,6 +3,8 @@ package com.bostoneo.bostoneosolutions.controller;
 import com.bostoneo.bostoneosolutions.dto.SmsResponseDTO;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import com.bostoneo.bostoneosolutions.model.Organization;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.OrganizationTwilioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,14 @@ public class OrganizationTwilioController {
 
     private final OrganizationTwilioService organizationTwilioService;
 
+    /** Verify the caller belongs to the target organization */
+    private void verifyOrgOwnership(Long organizationId) {
+        Long currentOrgId = TenantContext.getCurrentTenant();
+        if (currentOrgId != null && !currentOrgId.equals(organizationId)) {
+            throw new ApiException("Access denied: cannot manage Twilio for another organization");
+        }
+    }
+
     /**
      * Provision a new Twilio subaccount for an organization
      */
@@ -31,7 +41,7 @@ public class OrganizationTwilioController {
     public ResponseEntity<HttpResponse> provisionSubaccount(
             @PathVariable Long organizationId,
             @RequestParam(required = false) String friendlyName) {
-
+        verifyOrgOwnership(organizationId);
         log.info("Provisioning Twilio subaccount for organization ID: {}", organizationId);
         Organization org = organizationTwilioService.provisionSubaccount(organizationId, friendlyName);
 
@@ -58,6 +68,7 @@ public class OrganizationTwilioController {
             @PathVariable Long organizationId,
             @RequestParam(required = false, defaultValue = "617") String areaCode) {
 
+        verifyOrgOwnership(organizationId);
         log.info("Purchasing phone number for organization ID: {} with area code: {}", organizationId, areaCode);
         String phoneNumber = organizationTwilioService.purchasePhoneNumber(organizationId, areaCode);
 
@@ -78,6 +89,7 @@ public class OrganizationTwilioController {
     @DeleteMapping("/deprovision")
     @PreAuthorize("hasRole('ROLE_SYSADMIN')")
     public ResponseEntity<HttpResponse> deprovisionSubaccount(@PathVariable Long organizationId) {
+        verifyOrgOwnership(organizationId);
         log.info("Deprovisioning Twilio subaccount for organization ID: {}", organizationId);
         organizationTwilioService.deprovisionSubaccount(organizationId);
 
@@ -97,6 +109,7 @@ public class OrganizationTwilioController {
     @GetMapping("/status")
     @PreAuthorize("hasRole('ROLE_SYSADMIN') or hasRole('ROLE_ADMIN') or hasAuthority('organization:read')")
     public ResponseEntity<HttpResponse> getTwilioStatus(@PathVariable Long organizationId) {
+        verifyOrgOwnership(organizationId);
         Map<String, Object> stats = organizationTwilioService.getUsageStats(organizationId);
 
         return ResponseEntity.ok(
@@ -119,6 +132,7 @@ public class OrganizationTwilioController {
             @PathVariable Long organizationId,
             @RequestParam String phoneNumber) {
 
+        verifyOrgOwnership(organizationId);
         log.info("Sending test SMS for organization ID: {} to: {}", organizationId, phoneNumber);
         SmsResponseDTO response = organizationTwilioService.sendTestSms(organizationId, phoneNumber);
 
@@ -146,6 +160,7 @@ public class OrganizationTwilioController {
             @RequestParam String phoneNumber,
             @RequestParam(required = false) String whatsappNumber) {
 
+        verifyOrgOwnership(organizationId);
         log.info("Updating Twilio settings for organization ID: {}", organizationId);
         Organization org = organizationTwilioService.updateTwilioSettings(
                 organizationId, subaccountSid, authToken, phoneNumber, whatsappNumber);
@@ -167,6 +182,7 @@ public class OrganizationTwilioController {
     @PutMapping("/disable")
     @PreAuthorize("hasRole('ROLE_SYSADMIN') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> disableTwilio(@PathVariable Long organizationId) {
+        verifyOrgOwnership(organizationId);
         log.info("Disabling Twilio for organization ID: {}", organizationId);
         Organization org = organizationTwilioService.disableTwilio(organizationId);
 
@@ -187,6 +203,7 @@ public class OrganizationTwilioController {
     @PutMapping("/enable")
     @PreAuthorize("hasRole('ROLE_SYSADMIN') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<HttpResponse> enableTwilio(@PathVariable Long organizationId) {
+        verifyOrgOwnership(organizationId);
         log.info("Enabling Twilio for organization ID: {}", organizationId);
 
         // Re-enable by updating settings (this will set enabled to true)

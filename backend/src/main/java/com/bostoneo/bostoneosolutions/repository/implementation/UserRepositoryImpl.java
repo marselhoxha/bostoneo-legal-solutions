@@ -291,9 +291,14 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             
             // NOTE: We're NOT deleting time_entries as they are needed for billing/audit
             
-            // FINALLY, delete the user
+            // FINALLY, delete the user (handle NULL org for SUPERADMIN)
             Long organizationId = TenantContext.getCurrentTenant();
-            int rowsAffected = jdbc.update(DELETE_USER_QUERY, of("userId", id, "organizationId", organizationId));
+            int rowsAffected;
+            if (organizationId != null) {
+                rowsAffected = jdbc.update(DELETE_USER_QUERY, of("userId", id, "organizationId", organizationId));
+            } else {
+                rowsAffected = jdbc.update("DELETE FROM users WHERE id = :userId AND organization_id IS NULL", of("userId", id));
+            }
             
             return rowsAffected > 0;
             

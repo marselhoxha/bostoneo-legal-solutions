@@ -62,16 +62,22 @@ public interface NotificationService {
      * Mark notification as read
      */
     void markNotificationAsRead(Long notificationId);
-    
+
+    /** Mark notification as read — verifies ownership */
+    void markNotificationAsRead(Long notificationId, Long userId);
+
     /**
      * Mark all notifications as read for a user
      */
     void markAllNotificationsAsRead(Long userId);
-    
+
     /**
      * Delete a notification
      */
     void deleteNotification(Long notificationId);
+
+    /** Delete notification — verifies ownership */
+    void deleteNotification(Long notificationId, Long userId);
     
     /**
      * Get notification count for a user

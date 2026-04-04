@@ -30,7 +30,7 @@
 .template-list-panel {
   width: 220px;
   flex-shrink: 0;
-  background: var(--vz-card-bg);
+  background: var(--vz-secondary-bg);
   border: 1px solid var(--vz-border-color);
   border-radius: 8px;
   overflow: hidden;
@@ -42,7 +42,7 @@
     justify-content: space-between;
     padding: 10px 14px;
     border-bottom: 1px solid var(--vz-border-color);
-    background: var(--vz-light);
+    background: var(--vz-secondary-bg);
 
     .panel-title {
       font-size: 12px;
@@ -77,7 +77,7 @@
     border-bottom: 1px solid var(--vz-border-color);
     transition: background 0.15s;
 
-    &:hover { background: var(--vz-light); }
+    &:hover { background: var(--vz-secondary-bg); }
 
     &.active {
       background: rgba(var(--vz-primary-rgb), 0.08);
@@ -100,7 +100,7 @@
 .builder-main-panel {
   flex: 1;
   min-width: 0;
-  background: var(--vz-card-bg);
+  background: var(--vz-secondary-bg);
   border: 1px solid var(--vz-border-color);
   border-radius: 8px;
   display: flex;
@@ -140,7 +140,7 @@
   gap: 12px;
   padding: 12px 20px;
   border-bottom: 1px solid var(--vz-border-color);
-  background: var(--vz-light);
+  background: var(--vz-secondary-bg);
   border-radius: 8px 8px 0 0;
 
   .top-bar-fields {
@@ -186,7 +186,7 @@
     align-items: center;
     padding: 10px 14px;
     cursor: pointer;
-    background: var(--vz-light);
+    background: var(--vz-secondary-bg);
     font-size: 13px;
     font-weight: 600;
     color: var(--vz-heading-color);
@@ -251,7 +251,7 @@
   align-items: center;
   gap: 16px;
   padding: 12px;
-  background: var(--vz-light);
+  background: var(--vz-secondary-bg);
   border: 1px dashed var(--vz-border-color);
   border-radius: 6px;
 
@@ -290,7 +290,7 @@
   height: 26px;
   border: 1px solid var(--vz-border-color);
   border-radius: 4px;
-  background: var(--vz-card-bg);
+  background: var(--vz-secondary-bg);
   font-size: 11px;
   font-weight: 600;
   color: var(--vz-heading-color);
@@ -347,7 +347,7 @@
   grid-template-rows: 1fr 1fr;
   gap: 6px;
   padding: 16px;
-  background: var(--vz-light, #f8f9fa);
+  background: var(--vz-secondary-bg, #f8f9fa);
   border: 2px dashed #d5d8dd;
   border-radius: 8px;
   min-height: 140px;
@@ -616,7 +616,7 @@
   text-align: center;
   padding: 24px 20px;
   margin: 20px;
-  background: var(--vz-light);
+  background: var(--vz-secondary-bg);
   border-radius: 8px;
   border: 1px dashed var(--vz-border-color);
 

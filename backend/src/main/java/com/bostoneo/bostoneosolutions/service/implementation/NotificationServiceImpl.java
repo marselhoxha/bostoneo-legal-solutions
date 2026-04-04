@@ -529,6 +529,20 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
+    public void markNotificationAsRead(Long notificationId, Long userId) {
+        log.info("Marking notification {} as read for user {}", notificationId, userId);
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+        var notification = userNotificationRepository.findByIdAndOrganizationId(notificationId, orgId)
+                .orElseThrow(() -> new RuntimeException("Notification not found or access denied"));
+        if (!notification.getUserId().equals(userId)) {
+            throw new RuntimeException("Cannot modify another user's notification");
+        }
+        userNotificationRepository.markAsReadByIdAndOrganizationId(notificationId, orgId, LocalDateTime.now());
+    }
+
+    @Override
+    @Transactional
     public void markAllNotificationsAsRead(Long userId) {
         log.info("Marking all notifications as read for user: {}", userId);
         Long orgId = tenantService.getCurrentOrganizationId()
@@ -549,7 +563,19 @@ public class NotificationServiceImpl implements NotificationService {
 
         userNotificationRepository.deleteById(notificationId);
     }
-    
+
+    @Override
+    public void deleteNotification(Long notificationId, Long userId) {
+        Long orgId = tenantService.getCurrentOrganizationId()
+                .orElseThrow(() -> new RuntimeException("Organization context required"));
+        UserNotification notification = userNotificationRepository.findByIdAndOrganizationId(notificationId, orgId)
+                .orElseThrow(() -> new RuntimeException("Notification not found or access denied"));
+        if (!notification.getUserId().equals(userId)) {
+            throw new RuntimeException("Cannot delete another user's notification");
+        }
+        userNotificationRepository.deleteById(notificationId);
+    }
+
     @Override
     public long getUnreadNotificationCount(Long userId) {
         Long orgId = tenantService.getCurrentOrganizationId()

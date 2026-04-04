@@ -339,10 +339,11 @@ public class NotificationController {
     @PutMapping("/{notificationId}/read")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> markAsRead(@PathVariable Long notificationId) {
-        log.info("Marking notification as read: {}", notificationId);
-        
+        Long userId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
+        log.info("Marking notification as read: {} for user: {}", notificationId, userId);
+
         try {
-            notificationService.markNotificationAsRead(notificationId);
+            notificationService.markNotificationAsRead(notificationId, userId);
             
             return ResponseEntity.ok(
                 HttpResponse.builder()
@@ -407,10 +408,11 @@ public class NotificationController {
     @DeleteMapping("/{notificationId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<HttpResponse> deleteNotification(@PathVariable Long notificationId) {
-        log.info("Deleting notification: {}", notificationId);
+        Long userId = com.bostoneo.bostoneosolutions.util.AuthUtils.getAuthenticatedUserId();
+        log.info("Deleting notification: {} for user: {}", notificationId, userId);
 
         try {
-            notificationService.deleteNotification(notificationId);
+            notificationService.deleteNotification(notificationId, userId);
 
             return ResponseEntity.ok(
                 HttpResponse.builder()

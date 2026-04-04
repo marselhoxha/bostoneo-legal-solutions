@@ -1410,7 +1410,7 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
               <div>
                 <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 2px;">Case</div>
                 <div style="font-size: 14px; font-weight: 600; color: ${t.text};">${caseDisplay}</div>
-                ${entry.caseNumber && entry.caseName ? `<div style="font-size: 12px; color: ${t.textMuted};">${entry.caseNumber}</div>` : ''}
+                ${entry.caseNumber && entry.caseName ? `<div style="font-size: 12px; color: ${t.textMuted};">${this.escHtml(entry.caseNumber)}</div>` : ''}
               </div>
             </div>
           </div>
@@ -1418,7 +1418,7 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
           <!-- Description -->
           <div style="background: ${t.cardBg}; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
             <div style="font-size: 11px; color: ${t.textMuted}; text-transform: uppercase; margin-bottom: 8px;">Description</div>
-            <div style="font-size: 14px; color: ${t.textLight}; line-height: 1.6;">${entry.description || '<span style="font-style: italic; opacity: 0.6;">No description</span>'}</div>
+            <div style="font-size: 14px; color: ${t.textLight}; line-height: 1.6;">${entry.description ? this.escHtml(entry.description) : '<span style="font-style: italic; opacity: 0.6;">No description</span>'}</div>
           </div>
 
           <!-- User -->
@@ -2018,11 +2018,11 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
             </div>
             <div class="row">
               <span class="label">Case:</span>
-              <span>${entry.caseName || 'N/A'}</span>
+              <span>${this.escHtml(entry.caseName || 'N/A')}</span>
             </div>
             <div class="row">
               <span class="label">Description:</span>
-              <span>${entry.description}</span>
+              <span>${this.escHtml(entry.description || '')}</span>
             </div>
             <div class="row">
               <span class="label">Duration:</span>
@@ -2309,4 +2309,8 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       confirmButtonColor: '#0ab39c'
     });
   }
-} 
+
+  private escHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+}

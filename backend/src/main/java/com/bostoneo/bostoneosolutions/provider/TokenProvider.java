@@ -103,10 +103,10 @@ public class TokenProvider {
         try {
             return Long.valueOf(getJWTVerifier().verify(token).getSubject());
         } catch (TokenExpiredException exception) {
-            request.setAttribute("expiredMessage", exception.getMessage());
+            if (request != null) request.setAttribute("expiredMessage", exception.getMessage());
             throw exception;
         } catch (InvalidClaimException exception) {
-            request.setAttribute("invalidClaim", exception.getMessage());
+            if (request != null) request.setAttribute("invalidClaim", exception.getMessage());
             throw exception;
         } catch (Exception exception) {
             throw exception;
