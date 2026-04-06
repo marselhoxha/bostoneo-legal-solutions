@@ -12,6 +12,7 @@ import { catchError, filter, switchMap, take, timeout, delay } from 'rxjs/operat
 import { UserService } from '../service/user.service';
 import { CustomHttpResponse, Profile } from '../interface/appstates';
 import { Router } from '@angular/router';
+import { decodeJwtPayload } from '../core/utils/jwt.util';
 
 interface RefreshState {
   inProgress: boolean;
@@ -209,10 +210,8 @@ export class TokenInterceptor implements HttpInterceptor {
    */
   private isJwtExpired(token: string): boolean {
     try {
-      const parts = token.split('.');
-      if (parts.length !== 3) return true;
-
-      const payload = JSON.parse(atob(parts[1]));
+      const payload = decodeJwtPayload(token);
+      if (!payload) return true;
       if (!payload.exp) return true;
 
       // exp is in seconds, Date.now() is in milliseconds

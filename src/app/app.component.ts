@@ -22,6 +22,7 @@ import { PushNotificationService } from './core/services/push-notification.servi
 import { WebSocketService } from './core/services/websocket.service';
 import { DeadlineAlertService } from './core/services/deadline-alert.service';
 import { OrganizationService } from './core/services/organization.service';
+import { decodeJwtPayload } from './core/utils/jwt.util';
 
 @Component({
   selector: 'app-root',
@@ -180,7 +181,7 @@ export class AppComponent implements OnInit, OnDestroy {
     try {
       const token = localStorage.getItem('[KEY] TOKEN');
       if (!token) return false;
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = decodeJwtPayload(token);
       return payload.roles?.includes('ROLE_SUPERADMIN') || false;
     } catch {
       return false;

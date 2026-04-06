@@ -33,6 +33,7 @@ import { TimerService, ActiveTimer } from 'src/app/modules/time-tracking/service
 import { LegalCaseService } from 'src/app/modules/legal/services/legal-case.service';
 import { BackgroundTask, BackgroundTaskService } from 'src/app/modules/legal/services/background-task.service';
 import Swal from 'sweetalert2';
+import { decodeJwtPayload } from '../../../core/utils/jwt.util';
 
 @Component({
   selector: 'app-topbar',
@@ -1164,7 +1165,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
     try {
       const token = localStorage.getItem(Key.TOKEN);
       if (!token) return;
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = decodeJwtPayload(token);
       if (payload.roles?.includes('ROLE_SUPERADMIN')) {
         this.isSuperAdmin = true;
       }

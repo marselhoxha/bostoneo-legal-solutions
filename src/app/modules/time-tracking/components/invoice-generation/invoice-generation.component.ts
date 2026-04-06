@@ -16,6 +16,7 @@ import flatpickr from 'flatpickr';
 import { Instance } from 'flatpickr/dist/types/instance';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { Key } from '../../../../enum/key.enum';
+import { decodeJwtPayload } from '../../../../core/utils/jwt.util';
 
 interface Client {
   id: number;
@@ -761,7 +762,7 @@ export class InvoiceGenerationComponent implements OnInit, OnDestroy, AfterViewI
         return false;
       }
       
-      const payload = JSON.parse(atob(tokenParts[1]));
+      const payload = decodeJwtPayload(tokenParts.join('.'));
       const isExpired = Date.now() > payload.exp * 1000;
       return !isExpired;
     } catch (e) {

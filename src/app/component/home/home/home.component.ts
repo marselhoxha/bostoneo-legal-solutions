@@ -6,6 +6,7 @@ import { UserService } from 'src/app/service/user.service';
 import { RbacService } from 'src/app/core/services/rbac.service';
 import { AuthService } from 'src/app/services/auth.service';
 import { Key } from 'src/app/enum/key.enum';
+import { decodeJwtPayload } from '../../../core/utils/jwt.util';
 
 @Component({
   selector: 'app-home',
@@ -203,7 +204,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       const token = localStorage.getItem(Key.TOKEN);
       if (token) {
         try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
+          const payload = decodeJwtPayload(token);
           if (payload.role) roles.push(payload.role);
           if (payload.primaryRoleName) roles.push(payload.primaryRoleName);
           if (payload.roleName) roles.push(payload.roleName);

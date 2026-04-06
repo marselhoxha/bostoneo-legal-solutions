@@ -8,6 +8,7 @@ import { UserNotification, NotificationAction, NotificationPreferences, Notifica
 import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
 import { Key } from '../enum/key.enum';
+import { decodeJwtPayload } from '../core/utils/jwt.util';
 
 // Interface for push notifications displayed in topbar
 export interface PushNotification {
@@ -95,7 +96,7 @@ export class NotificationService {
         try {
             const token = localStorage.getItem(Key.TOKEN);
             if (!token) return false;
-            const payload = JSON.parse(atob(token.split('.')[1]));
+            const payload = decodeJwtPayload(token);
             return payload.roles?.includes('ROLE_SUPERADMIN') || false;
         } catch { return false; }
     }

@@ -7,6 +7,7 @@ import { CustomHttpResponse } from '../models/custom-http-response';
 import { JwtHelperService } from '@auth0/angular-jwt';
 import { Key } from '../../enum/key.enum';
 import { environment } from '../../../environments/environment';
+import { decodeJwtPayload } from '../utils/jwt.util';
 
 export interface Permission {
   id: number;
@@ -294,7 +295,7 @@ export class RbacService {
       // Fallback: try to get from token payload
       const token = localStorage.getItem(Key.TOKEN);
       if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        const payload = decodeJwtPayload(token);
         return payload.user || payload;
       }
       
@@ -1037,7 +1038,7 @@ export class RbacService {
       // Import Key enum for correct token key
       const token = localStorage.getItem(Key.TOKEN);
       if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        const payload = decodeJwtPayload(token);
         const userId = Number(payload.sub || payload.userId || payload.id);
         return userId;
       }

@@ -159,7 +159,8 @@ public class EnhancedSecurityConfig {
             "script-src 'self' 'unsafe-eval' https://apis.google.com https://cdn.lordicon.com https://www.googletagmanager.com; " +
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
             "font-src 'self' data: https://fonts.gstatic.com; " +
-            "img-src 'self' data: https:; " +
+            "img-src 'self' data: https: blob:; " +
+            "frame-src 'self' blob:; " +
             "worker-src 'self' blob:; " +
             "connect-src 'self' " + connectSrc + wsSrc + extraConnect + "; " +
             "frame-ancestors 'self' " + frameAncestors;

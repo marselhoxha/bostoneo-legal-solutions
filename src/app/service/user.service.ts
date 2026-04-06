@@ -12,6 +12,7 @@ import { PreloaderService } from './preloader.service';
 import { FileManagerService } from '../modules/file-manager/services/file-manager.service';
 import { BackgroundTaskService } from '../modules/legal/services/background-task.service';
 import { environment } from '../../environments/environment';
+import { decodeJwtPayload } from '../core/utils/jwt.util';
 
 @Injectable({
   providedIn: 'root'
@@ -268,7 +269,7 @@ export class UserService {
       const tokenParts = token.split('.');
       if (tokenParts.length !== 3) return true;
 
-      const payload = JSON.parse(atob(tokenParts[1]));
+      const payload = decodeJwtPayload(tokenParts.join('.'));
       const expirationTime = payload.exp * 1000; // Convert to milliseconds
       const thresholdMs = thresholdMinutes * 60 * 1000;
       const now = Date.now();

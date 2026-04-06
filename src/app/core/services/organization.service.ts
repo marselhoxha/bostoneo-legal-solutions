@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
+import { decodeJwtPayload } from '../utils/jwt.util';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
@@ -93,18 +94,6 @@ export class OrganizationService {
     // Don't auto-load on startup - let the app component trigger this after auth is ready
   }
 
-  /**
-   * Decode base64url (JWT uses this, not standard base64)
-   */
-  private base64UrlDecode(str: string): string {
-    // Replace base64url characters with base64 characters
-    let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
-    // Pad with '=' to make length a multiple of 4
-    while (base64.length % 4) {
-      base64 += '=';
-    }
-    return atob(base64);
-  }
 
   /**
    * Get the user's organization ID from JWT token or stored profile
@@ -122,7 +111,7 @@ export class OrganizationService {
       if (token) {
         const tokenParts = token.split('.');
         if (tokenParts.length === 3) {
-          const payload = JSON.parse(this.base64UrlDecode(tokenParts[1]));
+          const payload = decodeJwtPayload(token);
           // JWT claims can be organizationId or organization_id
           if (payload.organizationId) {
             return payload.organizationId;

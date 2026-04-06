@@ -4,6 +4,7 @@ import { Observable, interval, Subscription } from 'rxjs';
 import { NotificationTriggerService } from './notification-trigger.service';
 import { environment } from '../../../environments/environment';
 import { Key } from '../../enum/key.enum';
+import { decodeJwtPayload } from '../utils/jwt.util';
 
 export interface Task {
   id: number;
@@ -226,7 +227,7 @@ export class DeadlineAlertService {
     try {
       const token = localStorage.getItem(Key.TOKEN);
       if (!token) return false;
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = decodeJwtPayload(token);
       return payload.roles?.includes('ROLE_SUPERADMIN') || false;
     } catch {
       return false;

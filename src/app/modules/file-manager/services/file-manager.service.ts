@@ -248,9 +248,16 @@ export class FileManagerService {
             progress 
           } as FileUploadResponse;
         } else if (event.type === HttpEventType.Response) {
+          const body = event.body;
+          if (body && body.success === false) {
+            return {
+              success: false,
+              message: body.message || 'Upload failed'
+            } as FileUploadResponse;
+          }
           return {
             success: true,
-            file: this.transformFileFromAPI(event.body),
+            file: this.transformFileFromAPI(body),
             message: 'File uploaded successfully'
           } as FileUploadResponse;
         }

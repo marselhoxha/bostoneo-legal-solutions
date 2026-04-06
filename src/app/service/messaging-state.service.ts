@@ -5,6 +5,7 @@ import { MessagingService, MessageThread, Message } from './messaging.service';
 import { WebSocketService, WebSocketMessage } from './websocket.service';
 import { UserService } from './user.service';
 import { Key } from '../enum/key.enum';
+import { decodeJwtPayload } from '../core/utils/jwt.util';
 
 /**
  * Centralized messaging state service that persists across route navigation.
@@ -103,7 +104,7 @@ export class MessagingStateService implements OnDestroy {
     try {
       const token = localStorage.getItem(Key.TOKEN);
       if (!token) return false;
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = decodeJwtPayload(token);
       return payload.roles?.includes('ROLE_SUPERADMIN') || false;
     } catch { return false; }
   }

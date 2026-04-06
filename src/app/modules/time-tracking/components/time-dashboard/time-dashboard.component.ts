@@ -12,6 +12,7 @@ import { timeout, catchError, of, finalize, distinctUntilChanged, map } from 'rx
 import { Key } from '../../../../enum/key.enum';
 import Swal from 'sweetalert2';
 import flatpickr from 'flatpickr';
+import { decodeJwtPayload } from '../../../../core/utils/jwt.util';
 
 interface DashboardStats {
   todayHours: number;
@@ -1296,7 +1297,7 @@ export class TimeDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     try {
       const token = localStorage.getItem(Key.TOKEN);
       if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        const payload = decodeJwtPayload(token);
         return payload.sub ? parseInt(payload.sub) : null;
       }
     } catch (error) {

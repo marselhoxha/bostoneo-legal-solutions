@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { decodeJwtPayload } from '../../../core/utils/jwt.util';
 
 @Component({
   selector: 'app-debug-permissions',
@@ -37,8 +38,7 @@ export class DebugPermissionsComponent implements OnInit {
         return;
       }
 
-      const payload = parts[1];
-      const decodedPayload = JSON.parse(atob(payload));
+      const decodedPayload = decodeJwtPayload(token);
       this.tokenData = decodedPayload;
 
       // Extract authorities

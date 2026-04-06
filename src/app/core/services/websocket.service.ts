@@ -4,6 +4,7 @@ import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { retryWhen, delay, takeUntil, tap, catchError, filter } from 'rxjs/operators';
 import { Key } from '../../enum/key.enum';
 import { environment } from '../../../environments/environment';
+import { decodeJwtPayload } from '../utils/jwt.util';
 
 export interface WebSocketMessage {
   type: string;
@@ -76,7 +77,7 @@ export class WebSocketService implements OnDestroy {
     try {
       const token = localStorage.getItem(Key.TOKEN);
       if (!token) return false;
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = decodeJwtPayload(token);
       return payload.roles?.includes('ROLE_SUPERADMIN') || false;
     } catch { return false; }
   }
