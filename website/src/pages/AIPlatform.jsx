@@ -1,10 +1,31 @@
 import Icon from "../components/ui/Icon"
 import{useState,useEffect}from"react"
 import{Link,useLocation}from"react-router-dom"
+import{Helmet}from"react-helmet-async"
 import PageHero from"../components/ui/PageHero"
 import SectionHead from"../components/ui/SectionHead"
 import MockupShowcase from"../components/mockups/MockupShowcase"
 import{mockup_ai_workspace}from"../assets/mockups"
+
+const aiPlatformSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "LegiSpace AI",
+  applicationCategory: "BusinessApplication",
+  applicationSubCategory: "AI Legal Research & Document Drafting Software",
+  operatingSystem: "Web",
+  url: "https://legience.com/ai-platform",
+  description: "Claude-powered LegiSearch with verified citations, LegiDraft at $0/case for 30+ document types, LegiLyze contract analysis, and LegiMed medical records AI. Zero-knowledge AI for attorneys.",
+  offers: {
+    "@type": "AggregateOffer",
+    lowPrice: "99",
+    highPrice: "249",
+    priceCurrency: "USD",
+    offerCount: 3,
+  },
+  featureList: "LegiSearch AI Legal Research, LegiDraft AI Document Drafting, LegiLyze Document Analysis, LegiMed Medical Records AI, Verified Case Citations, $0/Case Demand Letters, AWS Bedrock Security",
+  publisher: { "@type": "Organization", name: "Legience", url: "https://legience.com" },
+}
 
 const tools=[
   {icon:"ri-chat-3-line",tab:"LegiSearch",title:"LegiSearch™",desc:"Ask legal questions the way you'd ask a senior partner. Claude AI returns comprehensive, cited answers with federal and state case law, statute references, and jurisdiction-specific analysis. Natural language queries that understand context and intent — no Boolean operators required.",features:["Natural language queries — \"What's the statute of limitations for a rear-end collision?\"","Verified case citations across federal and state courts","applicable state laws chapter & section references","Follow-up questions that build on prior context","Export research memos directly to any case file","Conversation history with saved sessions and bookmarks"],highlights:["Federal & State Courts","Natural Language","Cited Results","Session History","Export to Case","Follow-up Queries"]},
@@ -35,6 +56,9 @@ export default function AIPlatform(){
 
   const t=tools[tab]
   return<>
+    <Helmet>
+      <script type="application/ld+json">{JSON.stringify(aiPlatformSchema)}</script>
+    </Helmet>
     <PageHero badge="LegiSpace AI" title="AI That Understands" gradient="Personal Injury Law." subtitle="Claude-powered LegiSearch™ with cited case law, LegiDraft™ for 30+ document types and $0/case demand letters, and LegiLyze™ for contract analysis. Secure AI processing via AWS Bedrock — your data is never used for training."/>
 
     {/* AI Workspace Hero */}

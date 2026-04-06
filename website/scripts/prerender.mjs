@@ -15,6 +15,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { pathToFileURL } from 'url'
+import seo from '../src/data/seo.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DIST = join(__dirname, '..', 'dist')
@@ -22,146 +23,19 @@ const SERVER_DIR = join(DIST, 'server')
 const BASE = 'https://legience.com'
 const OG_IMAGE = `${BASE}/og-image.png`
 
-// ── Route SEO data ──
-const pages = {
-  '/': {
-    title: 'Legience — #1 AI-Powered Legal Practice Management for Law Firms',
-    desc: 'Replace Clio, Westlaw & DocuSign with one AI platform for attorneys. Case management, AI research, document drafting, billing & client portal — from $99/mo.',
-    keywords: 'legal practice management, AI legal research, law firm software, Clio alternative, attorney case management',
-  },
-  '/features': {
-    title: 'Features — 14 Modules: Cases, AI, Billing, Conflict Checking & More | Legience',
-    desc: 'Case management, AI research, demand letters, billing, e-signatures, CRM, conflict checking, expense management, client portal & analytics — 14 modules, one platform.',
-    keywords: 'legal case management, AI legal research, law firm billing, conflict checking',
-  },
-  '/ai-platform': {
-    title: 'LegiSpace AI — LegiSearch, LegiDraft, LegiLyze | Legience',
-    desc: 'Claude-powered LegiSearch™ with verified citations, LegiDraft™ at $0/case, LegiLyze™ contract analysis. Zero-knowledge AI for attorneys.',
-    keywords: 'AI legal research, AI document drafting, LegiDraft, Claude AI',
-  },
-  '/pi-workspace': {
-    title: 'PI Workspace — AI Case Management for Personal Injury | Legience',
-    desc: 'All-in-one PI workspace: AI demand letters, medical records analysis, settlement tracking, document checklist & damage calculator.',
-    keywords: 'PI workspace, personal injury case management, AI demand letters',
-  },
-  '/practice-areas': {
-    title: 'Practice Area Solutions — PI, Family Law, Business & More | Legience',
-    desc: 'Purpose-built tools for every practice area: personal injury, family law, business litigation & beyond.',
-    keywords: 'law firm practice management, personal injury software, legal practice areas',
-  },
-  '/pricing': {
-    title: 'Pricing — Plans from $99/mo | No Per-Case AI Fees | Legience',
-    desc: 'Starter $99/mo, Professional $169/mo, Firm $249/mo. Unlimited AI, e-signatures & client portal included. Save 22% annually.',
-    keywords: 'legal software pricing, Clio alternative pricing, law firm software cost',
-  },
-  '/blog': {
-    title: 'Resources & Blog | Legience',
-    desc: 'Guides, case studies & advice for attorneys on AI, practice management & firm growth.',
-    keywords: 'legal tech blog, AI for lawyers, attorney resources',
-  },
-  '/integrations': {
-    title: 'Integrations — Stripe, BoldSign, Claude AI & More | Legience',
-    desc: 'Built-in integrations with Stripe, BoldSign, Claude AI, Twilio & AWS. No setup fees.',
-    keywords: 'legal software integrations, Stripe for law firms',
-  },
-  '/about': {
-    title: 'About Legience — Built for Modern Law Firms | Legience',
-    desc: 'Born from frustration with 5-6 disconnected legal tools. One AI platform for attorneys who want to practice law, not manage software.',
-    keywords: 'about Legience, legal tech startup',
-  },
-  '/security': {
-    title: 'Security — AES-256, 201 CMR 17.00 Compliance | Legience',
-    desc: 'AES-256 encryption, 201 CMR 17.00 compliant, zero-knowledge AI, US-only hosting, immutable audit logs.',
-    keywords: 'legal software security, law firm data protection',
-  },
-  '/contact': {
-    title: 'Start Free Trial — Book a Demo | Legience',
-    desc: '14-day free trial, no credit card. Full access to AI research, case management & every feature.',
-    keywords: 'legal software demo, Legience free trial',
-  },
-  '/privacy': {
-    title: 'Privacy Policy | Legience',
-    desc: 'How Legience by Bostoneo Solutions LLC collects, uses, and protects your personal information.',
-    keywords: 'legal software privacy policy',
-  },
-  '/terms': {
-    title: 'Terms of Service | Legience',
-    desc: 'Terms governing your use of the Legience legal practice management platform.',
-    keywords: 'legal software terms of service',
-  },
-  '/cookie-policy': {
-    title: 'Cookie Policy | Legience',
-    desc: 'How Legience uses cookies and tracking technologies.',
-    keywords: 'legal software cookie policy',
-  },
-  '/aba-ethics': {
-    title: 'ABA Ethics & AI Compliance | Legience',
-    desc: 'How Legience addresses ABA Formal Opinion 512 and applicable Rules of Professional Conduct for AI in legal practice.',
-    keywords: 'ABA ethics AI legal, Formal Opinion 512 compliance',
-  },
-  '/compare/legience-vs-clio': {
-    title: 'Legience vs Clio (2026) — Feature & Pricing Comparison | Legience',
-    desc: 'Side-by-side comparison of Legience vs Clio for law firms. Compare pricing, AI features, e-signatures, CRM, and total cost for a 5-attorney firm.',
-    keywords: 'Legience vs Clio, Clio alternative, Clio comparison, law firm software comparison',
-  },
-  '/compare/legience-vs-mycase': {
-    title: 'Legience vs MyCase (2026) — Feature & Pricing Comparison | Legience',
-    desc: 'Detailed comparison of Legience vs MyCase for law firms. See how AI research, document drafting, and all-inclusive pricing stack up.',
-    keywords: 'Legience vs MyCase, MyCase alternative, MyCase comparison, law firm software comparison',
-  },
-  '/compare/legience-vs-practicepanther': {
-    title: 'Legience vs PracticePanther (2026) — Feature & Pricing Comparison | Legience',
-    desc: 'Compare Legience and PracticePanther for law firms. Side-by-side feature comparison, real pricing data, and total cost analysis for a 5-attorney firm.',
-    keywords: 'Legience vs PracticePanther, PracticePanther alternative, PracticePanther comparison, law firm software',
-  },
-  '/compare/legience-vs-filevine': {
-    title: 'Legience vs Filevine (2026) — Feature & Pricing Comparison | Legience',
-    desc: 'Compare Legience and Filevine for law firms. Side-by-side feature comparison with pricing and AI capabilities.',
-    keywords: 'Legience vs Filevine, Filevine alternative, Filevine comparison',
-  },
-  '/compare/legience-vs-cloudlex': {
-    title: 'Legience vs CloudLex (2026) — Feature & Pricing Comparison | Legience',
-    desc: 'Compare Legience and CloudLex for PI law firms. Pricing, AI features, and total cost analysis.',
-    keywords: 'Legience vs CloudLex, CloudLex alternative, CloudLex comparison',
-  },
-  '/compare/legience-vs-evenup': {
-    title: 'Legience vs EvenUp (2026) — Feature & Pricing Comparison | Legience',
-    desc: 'Compare Legience and EvenUp for personal injury firms. AI demand letters at $0/case vs $300-800/case.',
-    keywords: 'Legience vs EvenUp, EvenUp alternative, EvenUp comparison, AI demand letters',
-  },
-  '/tools/sol-calculator': {
-    title: 'Statute of Limitations Calculator — All 50 States | Legience',
-    desc: 'Free statute of limitations calculator for all 50 states. Look up SOL deadlines for personal injury, medical malpractice, breach of contract, property damage, wrongful death, fraud, and more.',
-    keywords: 'statute of limitations calculator, SOL calculator, statute of limitations by state, personal injury statute of limitations, medical malpractice deadline, filing deadline calculator',
-  },
-  '/tools/pi-settlement-calculator': {
-    title: 'Personal Injury Settlement Calculator — Free Estimate | Legience',
-    desc: 'Free PI settlement calculator using the multiplier method. Estimate pain and suffering damages, attorney fees, and net settlement for personal injury cases in all 50 states.',
-    keywords: 'personal injury settlement calculator, PI settlement calculator, pain and suffering calculator, personal injury case value, settlement estimate calculator',
-  },
-  '/tools/court-filing-fees': {
-    title: 'Court Filing Fees by State — All 50 States Lookup | Legience',
-    desc: 'Look up court filing fees for all 50 states. Civil, small claims, family, probate, and appeals court fees with fee waiver info and official court links.',
-    keywords: 'court filing fees, court filing fees by state, how much to file a lawsuit, small claims filing fee, civil court filing fee, court costs by state',
-  },
-  '/legal-drafting-software': {
-    title: 'AI Legal Drafting Software — LegiDraft™ | Legience',
-    desc: 'AI-powered legal document drafting. Generate demand letters, motions, briefs, and 30+ document types linked to your cases. $0/case, no per-document fees.',
-    keywords: 'AI legal drafting software, legal document automation, LegiDraft, AI demand letters',
-  },
-  '/legal-research-software': {
-    title: 'AI Legal Research Software — LegiSearch™ | Legience',
-    desc: 'AI legal research with verified citations. Federal and state case law, statutes, jurisdiction-specific analysis. No Boolean, no Westlaw subscription.',
-    keywords: 'AI legal research software, LegiSearch, legal research tool, Westlaw alternative',
-  },
-  '/law-firm-crm': {
-    title: 'Law Firm CRM & Client Intake — Built-In, No Add-Ons | Legience',
-    desc: 'Law firm CRM with lead scoring, pipeline management, automated conflict checking, and referral tracking. Included free — Clio charges $49/user/mo extra.',
-    keywords: 'law firm CRM, legal CRM, client intake software, Clio Grow alternative',
-  },
+// ── Build pages object from seo.js (single source of truth) ──
+// seo.js entries have both short keys (t/d/k/u) and long keys (title/desc/keywords).
+// prerender.mjs uses the long keys.
+const pages = {}
+for (const [route, data] of Object.entries(seo)) {
+  pages[route] = {
+    title: data.title,
+    desc: data.desc,
+    keywords: data.keywords,
+  }
 }
 
-// ── Blog posts ──
+// ── Blog posts (build-time only, not needed at runtime) ──
 const blogPosts = [
   { slug: 'why-pi-firms-switching-clio-to-legience-2026', title: 'Why PI Firms Are Switching from Clio to Legience in 2026', desc: 'A detailed comparison of Clio vs Legience for personal injury law firms.' },
   { slug: 'ai-ethics-attorney-client-privilege', title: 'AI Ethics & Attorney-Client Privilege', desc: 'How AI legal tools handle confidentiality and ethical obligations.' },
@@ -217,20 +91,36 @@ function buildHead(route, seo, ogImage = OG_IMAGE) {
     <meta name="robots" content="index, follow">`
 }
 
+/**
+ * Strip head-related tags from SSR body output.
+ * React Helmet renders <title>, <meta>, <link rel="canonical"> inline in the
+ * component tree. These duplicate the tags already injected into <head> by
+ * buildHead() and confuse Google (duplicate titles, multiple canonicals).
+ */
+function stripHeadTagsFromBody(html) {
+  return html
+    .replace(/<title>.*?<\/title>/g, '')
+    .replace(/<meta[^>]*>/g, '')
+    .replace(/<link[^>]*rel="canonical"[^>]*>/g, '')
+}
+
 function processRoute(template, route, seo) {
   const headTags = buildHead(route, seo)
 
-  // 1. Inject meta tags into <head>
+  // 1. Inject meta tags into <head> — remove template defaults first to avoid duplicates
   let html = template
     .replace(/<title>.*?<\/title>/, '')
     .replace(/<meta name="description"[^>]*>/, '')
+    .replace(/<meta name="robots"[^>]*>/, '')
     .replace('</head>', headTags + '\n  </head>')
 
   // 2. Try SSR body content injection
   if (render) {
     try {
-      const bodyHtml = render(route)
+      let bodyHtml = render(route)
       if (bodyHtml && bodyHtml.length > 50) {
+        // Remove head tags from SSR output — they're already in <head> via buildHead()
+        bodyHtml = stripHeadTagsFromBody(bodyHtml)
         html = html.replace(
           '<div id="root"></div>',
           `<div id="root">${bodyHtml}</div>`

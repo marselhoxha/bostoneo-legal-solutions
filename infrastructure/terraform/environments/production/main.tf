@@ -95,7 +95,7 @@ module "vpc" {
   enable_nat_gateway      = true
   single_nat_gateway      = true  # Demo phase: single NAT saves ~$32/month
   enable_flow_logs        = true
-  enable_vpc_endpoints    = true
+  enable_vpc_endpoints    = false  # NAT Gateway handles all routing — re-enable at scale
   flow_log_retention_days = 90
 }
 

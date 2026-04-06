@@ -67,8 +67,8 @@ module "vpc" {
 
   enable_nat_gateway   = true
   single_nat_gateway   = true  # Cost savings for staging
-  enable_flow_logs     = true
-  enable_vpc_endpoints = true
+  enable_flow_logs     = false  # Not needed for staging — saves ~$3-5/month
+  enable_vpc_endpoints = false  # NAT Gateway handles all routing — saves ~$58/month
   flow_log_retention_days = 30
 }
 

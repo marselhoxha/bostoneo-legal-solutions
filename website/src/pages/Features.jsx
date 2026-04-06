@@ -1,10 +1,31 @@
 import Icon from "../components/ui/Icon"
 import { useState, useEffect, useRef } from "react"
 import { Link, useLocation } from "react-router-dom"
+import { Helmet } from "react-helmet-async"
 import { motion } from "framer-motion"
 import PageHero from "../components/ui/PageHero"
 import SectionHead from "../components/ui/SectionHead"
 import MockupShowcase from "../components/mockups/MockupShowcase"
+
+const featuresSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Legience",
+  applicationCategory: "BusinessApplication",
+  applicationSubCategory: "Legal Practice Management Software",
+  operatingSystem: "Web",
+  url: "https://legience.com/features",
+  description: "14 legal case management modules in one platform: cases, AI research, document drafting, billing, e-signatures, CRM, conflict checking, client portal & analytics. From $99/mo.",
+  offers: {
+    "@type": "AggregateOffer",
+    lowPrice: "99",
+    highPrice: "249",
+    priceCurrency: "USD",
+    offerCount: 3,
+  },
+  featureList: "Case Management, AI Legal Research (LegiSearch), AI Document Drafting (LegiDraft), AI Document Analysis (LegiLyze), Calendar & Deadlines, Time Tracking & Invoicing, E-Signatures, CRM & Lead Pipeline, Client Portal, Task Management, Document Manager, Firm Analytics, Conflict Checking, Expense Management",
+  publisher: { "@type": "Organization", name: "Legience", url: "https://legience.com" },
+}
 import {
   mockup_cases, mockup_calendar, mockup_time_tracking, mockup_billing,
   mockup_esign, mockup_crm, mockup_client_portal, mockup_file_manager,
@@ -133,6 +154,9 @@ export default function Features() {
   const f = features[active]
 
   return <>
+    <Helmet>
+      <script type="application/ld+json">{JSON.stringify(featuresSchema)}</script>
+    </Helmet>
     <PageHero badge="Platform Features" title="14 Modules. One Platform." gradient="Zero Add-On Fees." subtitle="Case management, AI research, demand letters, billing, e-signatures, CRM, conflict checking, client portal, tasks, documents, calendar, analytics, expense management & admin — all connected. Every feature included in every plan." />
 
     {/* Feature selector — compact icon tabs */}

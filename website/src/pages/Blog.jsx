@@ -1,10 +1,35 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
+import { Helmet } from "react-helmet-async"
 import { motion, AnimatePresence } from "framer-motion"
 import { Clock, ArrowRight, User, Calendar } from "lucide-react"
 import PageHero from "../components/ui/PageHero"
 import SectionHead from "../components/ui/SectionHead"
 import { blogPosts, categories } from "../data/blogPosts.jsx"
+
+const collectionPageSchema = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: "Legal Technology Blog — AI Research, Case Management & Firm Growth",
+  description: "Guides, comparisons & case studies on legal AI, practice management, personal injury software & firm growth. Written for attorneys by legal tech experts.",
+  url: "https://legience.com/blog",
+  isPartOf: { "@type": "WebSite", name: "Legience", url: "https://legience.com" },
+  publisher: {
+    "@type": "Organization",
+    name: "Legience",
+    url: "https://legience.com",
+    logo: { "@type": "ImageObject", url: "https://legience.com/og-image.png" },
+  },
+  mainEntity: {
+    "@type": "ItemList",
+    itemListElement: blogPosts.map((post, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `https://legience.com/blog/${post.slug}`,
+      name: post.title,
+    })),
+  },
+}
 
 const formatDate = (d) =>
   new Date(d + "T00:00:00").toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
@@ -22,6 +47,9 @@ export default function Blog() {
 
   return (
     <>
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(collectionPageSchema)}</script>
+      </Helmet>
       <PageHero
         badge="Resources"
         title="Insights for"

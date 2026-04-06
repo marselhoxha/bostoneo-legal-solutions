@@ -1,10 +1,31 @@
 import Icon from "../components/ui/Icon"
 import { useState } from "react"
 import { Link } from "react-router-dom"
+import { Helmet } from "react-helmet-async"
 import { motion } from "framer-motion"
 import PageHero from "../components/ui/PageHero"
 import SectionHead from "../components/ui/SectionHead"
 import { mockup_settlement, mockup_doc_checklist, mockup_case_detail } from "../assets/mockups"
+
+const piWorkspaceSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Legience PI Workspace",
+  applicationCategory: "BusinessApplication",
+  applicationSubCategory: "Personal Injury Case Management Software",
+  operatingSystem: "Web",
+  url: "https://legience.com/pi-workspace",
+  description: "All-in-one PI workspace: AI demand letters at $0/case, medical records analysis, settlement tracking, document checklist & damage calculator. Purpose-built for personal injury firms.",
+  offers: {
+    "@type": "AggregateOffer",
+    lowPrice: "99",
+    highPrice: "249",
+    priceCurrency: "USD",
+    offerCount: 3,
+  },
+  featureList: "AI Damage Calculator, Document Checklist & Tracking, Settlement Negotiation Tracker, PI Case Overview Dashboard, AI Demand Letters, Medical Records Analysis, Comparable Case Analysis",
+  publisher: { "@type": "Organization", name: "Legience", url: "https://legience.com" },
+}
 
 const fadeUp = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }
 const stagger = { visible: { transition: { staggerChildren: 0.08 } } }
@@ -103,6 +124,9 @@ export default function PIWorkspace() {
   const tool = piTools[activeTab]
 
   return <>
+    <Helmet>
+      <script type="application/ld+json">{JSON.stringify(piWorkspaceSchema)}</script>
+    </Helmet>
     <PageHero badge="Personal Injury Workspace" title="Purpose-Built Tools for" gradient="PI Attorneys." subtitle="Four specialized modules that no general practice management software offers — damage calculators, document tracking, settlement negotiation, and comprehensive case overviews." />
 
     {/* Tool Tabs */}
