@@ -671,8 +671,29 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       const payload = msg?.data;
       if (!payload) return;
 
+      // Check message type
+      const msgType = payload.type || msg?.type;
+
+      // Handle adjuster analysis completion
+      if (msgType === 'ADJUSTER_ANALYSIS_COMPLETE') {
+        const msgCaseId = payload.caseId || msg?.caseId;
+        if (msgCaseId && this.linkedCase?.id && msgCaseId !== Number(this.linkedCase.id)) return;
+
+        this.isGeneratingAdjusterAnalysis = false;
+        Swal.close();
+
+        if (payload.success === false) {
+          Swal.fire({ icon: 'error', title: 'Analysis Failed', text: payload.message || 'Failed to generate adjuster defense analysis.' });
+        } else if (payload.analysis) {
+          this.adjusterAnalysis = payload.analysis;
+          this.adjusterExpandedItems = new Set([0, 1]);
+        }
+        this.cdr.detectChanges();
+        return;
+      }
+
       // Check if this message is a medical scan message (check both nested type and top-level)
-      const scanType = payload.type || msg?.type;
+      const scanType = msgType;
       if (scanType !== 'MEDICAL_SCAN_PROGRESS' && scanType !== 'MEDICAL_SCAN_COMPLETE') return;
 
       // Ignore messages for a different case
@@ -4334,22 +4355,19 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       didOpen: () => { Swal.showLoading(); }
     });
 
+    // POST returns 202 immediately, result arrives via WebSocket
     this.medicalSummaryService.generateAdjusterAnalysis(Number(this.linkedCase.id)).subscribe({
-      next: (analysis) => {
-        this.adjusterAnalysis = analysis;
-        this.isGeneratingAdjusterAnalysis = false;
-        this.adjusterExpandedItems = new Set([0, 1]); // Expand first two by default
-        this.cdr.detectChanges();
-        Swal.close();
+      next: () => {
+        // 202 received — keep loading state, WebSocket handler will close Swal and set the result
       },
       error: (err) => {
-        console.error('Error generating adjuster analysis:', err);
+        console.error('Error starting adjuster analysis:', err);
         this.isGeneratingAdjusterAnalysis = false;
         this.cdr.detectChanges();
         Swal.fire({
           icon: 'error',
           title: 'Analysis Failed',
-          text: err.error?.message || 'Failed to generate adjuster defense analysis.'
+          text: err.error?.message || 'Failed to start adjuster defense analysis.'
         });
       }
     });
@@ -5828,8 +5846,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount);
   }
 
