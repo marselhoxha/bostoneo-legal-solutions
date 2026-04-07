@@ -799,7 +799,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             - For providerName, always use the OFFICIAL institution name exactly as it appears on the letterhead/header of the document. Do not combine or abbreviate differently across documents from the same facility.
             - Extract the most accurate provider name from the letterhead or document header
             - Include all diagnoses with ICD codes if available
-            - Extract billing amounts if shown
+            - BILLING AMOUNTS MUST BE EXACT — NEVER round, estimate, or approximate dollar amounts. Copy the exact amount from the document to the cent. An incorrect billing amount could have serious legal consequences. If the document shows $2,399.50, report exactly $2,399.50, NOT $2,400. If you cannot determine the exact amount, set billedAmount to 0 rather than guessing.
             - Be thorough with key findings
             - ALWAYS include citationMetadata with page numbers and excerpts for traceability
             - Page numbers should be 1-indexed

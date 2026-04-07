@@ -1287,7 +1287,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       const label = injury.label.split('(')[0].trim();
       return label.length > 15 ? label.substring(0, 15) + '...' : label;
     }
-    return injuryType || 'Unknown';
+    // Format raw snake_case values nicely: motor_vehicle_accident → Motor Vehicle Accident
+    return injuryType ? injuryType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Unknown';
   }
 
   /**
@@ -2800,22 +2801,22 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
           <div class="d-flex align-items-center gap-2 mb-3">
             <span class="badge bg-primary-subtle text-primary">${this.getRecordTypeLabel(record.recordType)}</span>
             <span class="badge bg-info-subtle text-info">${this.getProviderTypeLabel(record.providerType)}</span>
-            ${hasCitations ? `<span class="badge bg-success-subtle text-success"><i class="ri-link me-1"></i>${this.getCitationCount(record)} sources</span>` : ''}
           </div>
 
           <div class="row g-3 mb-3">
             <div class="col-6">
               <div class="text-muted small d-flex align-items-center gap-1">Treatment Date ${citLink('treatmentDate')}</div>
-              <div class="fw-medium">${record.treatmentDate ? new Date(record.treatmentDate).toLocaleDateString() : 'Not specified'}</div>
+              <div class="fw-medium">${record.treatmentDate ? new Date(record.treatmentDate).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }) : 'Not specified'}</div>
             </div>
             ${record.treatmentEndDate ? `
             <div class="col-6">
               <div class="text-muted small">End Date</div>
-              <div class="fw-medium">${new Date(record.treatmentEndDate).toLocaleDateString()}</div>
+              <div class="fw-medium">${new Date(record.treatmentEndDate).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' })}</div>
             </div>
             ` : ''}
           </div>
 
+          ${record.recordType === 'BILLING' ? `
           <div class="row g-3 mb-3">
             <div class="col-4">
               <div class="text-muted small d-flex align-items-center gap-1">Billed ${citLink('billedAmount')}</div>
@@ -2830,6 +2831,12 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
               <div class="fw-medium text-success">${this.formatCurrency(record.paidAmount || 0)}</div>
             </div>
           </div>
+          ` : `
+          <div class="mb-3 p-2 rounded" style="background: rgba(var(--vz-info-rgb), 0.05); border-left: 3px solid var(--vz-info);">
+            <div class="text-muted small mb-1"><i class="ri-stethoscope-line me-1"></i>Clinical Record</div>
+            <div class="small">This is a clinical record documenting treatment, not a billing statement.</div>
+          </div>
+          `}
 
           ${record.lienHolder ? `
           <div class="row g-3 mb-3">
@@ -5824,6 +5831,10 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);
+  }
+
+  formatInjuryType(injuryType: string): string {
+    return injuryType ? injuryType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
   }
 
   formatCompactCurrency(amount: number): string {

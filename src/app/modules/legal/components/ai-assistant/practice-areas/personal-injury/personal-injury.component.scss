@@ -1810,6 +1810,14 @@
     padding-top: 0.75rem;
     border-top: 1px solid rgba(0, 0, 0, 0.04);
     min-height: 28px;
+
+    .provider-diagnosis-text {
+      color: var(--vz-body-color);
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 
   .provider-card-actions {

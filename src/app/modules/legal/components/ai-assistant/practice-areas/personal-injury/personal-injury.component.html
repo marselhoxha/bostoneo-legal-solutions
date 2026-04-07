@@ -1930,14 +1930,15 @@
                               {{ record.treatmentDate | date:'MMM d, yyyy' }}
                               <span *ngIf="record.treatmentEndDate"> - {{ record.treatmentEndDate | date:'MMM d, yyyy' }}</span>
                             </span>
-                            <span class="total-bills">{{ formatCurrency(record.billedAmount || 0) }}</span>
+                            <span class="total-bills" *ngIf="record.recordType === 'BILLING'">{{ formatCurrency(record.billedAmount || 0) }}</span>
                           </div>
-                          <div class="provider-card-footer" *ngIf="record.keyFindings || record.recordType || record.citationMetadata">
-                            <span class="badge bg-primary-subtle text-primary me-2" *ngIf="record.recordType">{{ getRecordTypeLabel(record.recordType) }}</span>
-                            <span class="badge bg-success-subtle text-success me-2" *ngIf="record.citationMetadata">
-                              <i class="ri-link me-1"></i>{{ getCitationCount(record) }} sources
-                            </span>
-                            <span class="text-muted small text-truncate" *ngIf="record.keyFindings">{{ record.keyFindings }}</span>
+                          <div class="provider-card-footer" *ngIf="record.recordType">
+                            <span class="badge bg-primary-subtle text-primary me-2">{{ getRecordTypeLabel(record.recordType) }}</span>
+                            <ng-container *ngIf="record.recordType !== 'BILLING'">
+                              <span class="small text-truncate provider-diagnosis-text" *ngIf="record.diagnoses?.length">{{ record.diagnoses[0].description }}</span>
+                              <span class="text-muted small text-truncate" *ngIf="!record.diagnoses?.length && record.keyFindings">{{ record.keyFindings }}</span>
+                            </ng-container>
+                            <span class="text-muted small text-truncate" *ngIf="record.recordType === 'BILLING' && record.keyFindings">{{ record.keyFindings }}</span>
                           </div>
                           <div class="provider-card-actions">
                             <button class="btn btn-sm btn-soft-primary" (click)="editMedicalRecord(record); $event.stopPropagation()" title="Edit">
@@ -1975,9 +1976,6 @@
                               <span class="flex-grow-1 text-muted text-truncate" style="font-size: 12px; max-width: 250px;">{{ record.keyFindings || '—' }}</span>
                               <span [class.text-danger]="record.billedAmount" [class.text-muted]="!record.billedAmount" class="fw-semibold" style="font-size: 13px;">
                                 {{ formatCurrency(record.billedAmount || 0) }}
-                              </span>
-                              <span class="badge bg-success-subtle text-success" style="font-size: 10px;" *ngIf="record.citationMetadata">
-                                <i class="ri-link"></i> {{ getCitationCount(record) }}
                               </span>
                             </div>
                           </div>
@@ -2598,10 +2596,6 @@
                                       <span class="badge bg-info-subtle text-info" style="font-size: 11px;"
                                             *ngIf="item.data.providerType">
                                         {{ getProviderTypeLabel(item.data.providerType) }}
-                                      </span>
-                                      <span class="badge bg-success-subtle text-success" style="font-size: 11px;"
-                                            *ngIf="item.data.citationMetadata">
-                                        <i class="ri-link me-1"></i>sources
                                       </span>
                                     </div>
                                     <div class="text-muted small mt-1 text-truncate" style="max-width: 500px;"
