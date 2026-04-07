@@ -704,7 +704,12 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 if (file.getMimeType() != null) {
                     metadata.set(Metadata.CONTENT_TYPE, file.getMimeType());
                 }
-                AutoDetectParser parser = new AutoDetectParser();
+                // Use PDFParser directly for PDFs to avoid AutoDetectParser misidentifying them as archives
+                boolean isPdf = "application/pdf".equals(file.getMimeType())
+                        || (file.getOriginalName() != null && file.getOriginalName().toLowerCase().endsWith(".pdf"));
+                org.apache.tika.parser.Parser parser = isPdf
+                        ? new org.apache.tika.parser.pdf.PDFParser()
+                        : new AutoDetectParser();
                 ParseContext context = new ParseContext();
                 parser.parse(stream, handler, metadata, context);
                 String text = handler.toString();
