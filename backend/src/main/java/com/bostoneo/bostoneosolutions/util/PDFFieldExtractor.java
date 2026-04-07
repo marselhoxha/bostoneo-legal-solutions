@@ -1,7 +1,7 @@
 package com.bostoneo.bostoneosolutions.util;
 
-// PDFBox 2.x - no Loader class needed
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.pdmodel.interactive.form.PDField;
 import org.apache.pdfbox.pdmodel.interactive.form.PDNonTerminalField;
@@ -29,7 +29,7 @@ public class PDFFieldExtractor {
                 return;
             }
 
-            try (PDDocument document = PDDocument.load(pdfFile)) {
+            try (PDDocument document = Loader.loadPDF(pdfFile)) {
                 if (document.isEncrypted()) {
                     document.setAllSecurityToBeRemoved(true);
                 }

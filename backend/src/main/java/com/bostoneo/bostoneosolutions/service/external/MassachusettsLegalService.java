@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 // PDFBox 2.x - no Loader class needed
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.*;
@@ -252,7 +253,7 @@ public class MassachusettsLegalService {
     private String extractTextFromPDF(byte[] pdfBytes) {
         PDDocument document = null;
         try {
-            document = PDDocument.load(pdfBytes);
+            document = Loader.loadPDF(pdfBytes);
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(document);
             log.info("Extracted {} characters from PDF", text.length());

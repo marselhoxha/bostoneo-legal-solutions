@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -327,7 +329,7 @@ public class AiWorkspaceExhibitService {
             if ("application/pdf".equals(mimeType)) {
                 // Render PDF pages to JPEG images using PDFBox
                 try (InputStream is = new ByteArrayInputStream(fileBytes);
-                     PDDocument document = PDDocument.load(is)) {
+                     PDDocument document = Loader.loadPDF(new RandomAccessReadBuffer(is))) {
 
                     PDFRenderer renderer = new PDFRenderer(document);
                     int pageCount = Math.min(document.getNumberOfPages(), MAX_VISION_PAGES);

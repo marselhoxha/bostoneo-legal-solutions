@@ -207,10 +207,13 @@ public class PIDamageCalculationController {
 
         PIDamageCalculationDTO calculation = damageService.getDamageCalculation(caseId);
 
+        Map<String, Object> data = new java.util.HashMap<>();
+        data.put("calculation", calculation);
+
         return ResponseEntity.ok(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .data(of("calculation", calculation))
+                        .data(data)
                         .message("Damage calculation retrieved successfully")
                         .status(OK)
                         .statusCode(OK.value())

@@ -38,13 +38,14 @@ public class PIMedicalSummaryController {
 
         PIMedicalSummaryDTO summary = summaryService.getMedicalSummary(caseId);
 
+        Map<String, Object> data = new java.util.HashMap<>();
+        data.put("summary", summary);
+        data.put("exists", summary != null);
+
         return ResponseEntity.ok(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .data(of(
-                                "summary", summary,
-                                "exists", summary != null
-                        ))
+                        .data(data)
                         .message("Medical summary retrieved successfully")
                         .status(OK)
                         .statusCode(OK.value())
@@ -275,7 +276,7 @@ public class PIMedicalSummaryController {
             return ResponseEntity.ok(
                     HttpResponse.builder()
                             .timeStamp(now().toString())
-                            .data(of("analysis", (Object) null, "exists", false))
+                            .data(java.util.Map.of("exists", false))
                             .message("No adjuster analysis found")
                             .status(OK)
                             .statusCode(OK.value())
