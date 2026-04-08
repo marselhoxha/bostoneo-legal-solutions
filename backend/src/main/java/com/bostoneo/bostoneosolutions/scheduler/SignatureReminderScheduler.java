@@ -39,10 +39,8 @@ public class SignatureReminderScheduler {
      */
     @Scheduled(cron = "0 */15 * * * *") // Every 15 minutes
     public void processPendingReminders() {
-        log.info("Starting scheduled reminder processing...");
         try {
             signatureReminderService.processPendingReminders();
-            log.info("Completed scheduled reminder processing");
         } catch (Exception e) {
             log.error("Error during scheduled reminder processing: {}", e.getMessage(), e);
         }
@@ -56,7 +54,7 @@ public class SignatureReminderScheduler {
     @Scheduled(cron = "0 0 * * * *") // Every hour at minute 0
     @Transactional
     public void processExpiredRequests() {
-        log.info("Checking for expired signature requests...");
+        log.trace("Checking for expired signature requests...");
         try {
             List<Organization> organizations = organizationRepository.findAll();
             LocalDateTime now = LocalDateTime.now();
@@ -90,10 +88,8 @@ public class SignatureReminderScheduler {
      */
     @Scheduled(cron = "0 0 6 * * *") // Every day at 6 AM
     public void retryFailedReminders() {
-        log.info("Retrying failed reminders...");
         try {
             signatureReminderService.retryFailedReminders();
-            log.info("Completed failed reminder retry");
         } catch (Exception e) {
             log.error("Error retrying failed reminders: {}", e.getMessage(), e);
         }
@@ -105,10 +101,8 @@ public class SignatureReminderScheduler {
      */
     @Scheduled(cron = "0 0 3 * * SUN") // Every Sunday at 3 AM
     public void cleanupOldReminders() {
-        log.info("Cleaning up old reminder records...");
         try {
             signatureReminderService.cleanupOldReminders(30);
-            log.info("Completed reminder cleanup");
         } catch (Exception e) {
             log.error("Error cleaning up reminders: {}", e.getMessage(), e);
         }
@@ -121,7 +115,7 @@ public class SignatureReminderScheduler {
      */
     @Scheduled(cron = "0 0 9 * * *") // Every day at 9 AM
     public void sendExpiryWarnings() {
-        log.info("Checking for signature requests expiring soon...");
+        log.trace("Checking for signature requests expiring soon...");
         try {
             List<Organization> organizations = organizationRepository.findAll();
             LocalDateTime now = LocalDateTime.now();

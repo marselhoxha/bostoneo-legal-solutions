@@ -54,7 +54,7 @@ public class TenantContext {
      */
     public static void setCurrentTenant(Long organizationId) {
         if (organizationId != null) {
-            log.debug("Setting tenant context to organization: {}", organizationId);
+            log.trace("Setting tenant context to organization: {}", organizationId);
             CURRENT_TENANT.set(organizationId);
         }
     }
@@ -64,7 +64,7 @@ public class TenantContext {
      * MUST be called after request completion to prevent memory leaks.
      */
     public static void clear() {
-        log.debug("Clearing tenant context");
+        log.trace("Clearing tenant context");
         CURRENT_TENANT.remove();
     }
 

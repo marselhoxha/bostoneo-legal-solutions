@@ -309,8 +309,7 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
         );
 
         try {
-            String response = claudeService.generateCompletionWithModel(
-                    prompt, null, false, null, null, "claude-sonnet-4-6").get();
+            String response = claudeService.generateCompletion(prompt, false).get();
 
             // Extract JSON
             int start = response.indexOf('{');

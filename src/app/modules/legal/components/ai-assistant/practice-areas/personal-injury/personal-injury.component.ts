@@ -4342,12 +4342,32 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.isGeneratingAdjusterAnalysis = true;
     this.cdr.detectChanges();
 
+    Swal.fire({
+      title: 'Generating Adjuster Defense Analysis',
+      html: 'AI is analyzing your medical records for potential adjuster attacks...<br><small>This may take a minute.</small>',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
     this.medicalSummaryService.generateAdjusterAnalysis(Number(this.linkedCase.id)).subscribe({
       next: (analysis) => {
         this.adjusterAnalysis = analysis;
         this.isGeneratingAdjusterAnalysis = false;
         this.adjusterExpandedItems = new Set([0, 1]);
         this.cdr.detectChanges();
+        Swal.fire({
+          icon: 'success',
+          title: 'Analysis Complete',
+          html: `
+            <div class="text-start">
+              <p><strong>Attack Vectors Found:</strong> ${analysis?.attackVectors?.length || 0}</p>
+              <p class="text-muted mb-0">Review the analysis below to prepare counter-arguments.</p>
+            </div>
+          `,
+          confirmButtonText: 'View Analysis'
+        });
       },
       error: (err) => {
         console.error('Error generating adjuster analysis:', err);

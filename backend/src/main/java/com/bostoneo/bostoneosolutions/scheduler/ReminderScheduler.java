@@ -57,7 +57,7 @@ public class ReminderScheduler {
                 try {
                     // SECURITY: Set tenant context for this organization
                     TenantContext.setCurrentTenant(org.getId());
-                    log.debug("Processing reminders for organization: {} (ID: {})", org.getName(), org.getId());
+                    log.trace("Processing reminders for organization: {} (ID: {})", org.getName(), org.getId());
 
                     // Process calendar event reminders within org context
                     calendarEventService.processEventReminders();

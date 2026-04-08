@@ -109,7 +109,7 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
             userSessions.remove(userId);
         }
 
-        log.info("WebSocket closed: user={}, session={}, remainingSessions={}", userId, sessionId, allSessions.size());
+        log.debug("WebSocket closed: user={}, session={}, remainingSessions={}", userId, sessionId, allSessions.size());
     }
 
     /**
@@ -146,7 +146,7 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
             // SECURITY: Log length only, not raw content (prevent log injection)
-            log.debug("Received message from user {}: {} chars", userId, payload.length());
+            log.trace("Received message from user {}: {} chars", userId, payload.length());
             sendMessage(session, createMessage("echo", "Message received"));
         }
     }
@@ -165,18 +165,18 @@ public class AuthenticatedWebSocketHandler extends TextWebSocketHandler {
      * Send notification to a specific user
      */
     public void sendNotificationToUser(String userId, Object notification) {
-        log.info("Sending WebSocket notification to user: {} (active sessions: {})", userId, userSessions.keySet());
+        log.debug("Sending WebSocket notification to user: {}", userId);
         WebSocketSession session = userSessions.get(userId);
         if (session != null && session.isOpen()) {
             try {
                 String message = createMessage("notification", notification);
                 sendMessage(session, message);
-                log.info("WebSocket notification delivered to user: {}", userId);
+                log.debug("WebSocket notification delivered to user: {}", userId);
             } catch (Exception e) {
                 log.error("Failed to send notification to user {}: {}", userId, e.getMessage());
             }
         } else {
-            log.warn("No active WebSocket session for user: {} - notification will be available on page refresh", userId);
+            log.debug("No active WebSocket session for user: {}", userId);
         }
     }
 

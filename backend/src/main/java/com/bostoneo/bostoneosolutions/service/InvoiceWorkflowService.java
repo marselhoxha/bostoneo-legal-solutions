@@ -104,7 +104,7 @@ public class InvoiceWorkflowService {
             log.debug("Invoice workflow service is disabled");
             return;
         }
-        log.info("Processing scheduled invoice workflows");
+        log.trace("Processing scheduled invoice workflows");
 
         // GLOBAL: Get all active scheduled workflow rules (shared across all orgs)
         List<InvoiceWorkflowRule> scheduledRules = workflowRuleRepository

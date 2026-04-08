@@ -123,11 +123,11 @@ public class SignatureReminderServiceImpl implements SignatureReminderService {
 
     @Override
     public void processPendingReminders() {
-        log.debug("Processing pending reminders...");
-
         List<SignatureReminderQueue> pendingReminders = reminderQueueRepository.findPendingReminders(LocalDateTime.now());
 
-        log.info("Found {} pending reminders to process", pendingReminders.size());
+        if (!pendingReminders.isEmpty()) {
+            log.info("Found {} pending reminders to process", pendingReminders.size());
+        }
 
         for (SignatureReminderQueue reminder : pendingReminders) {
             try {

@@ -53,7 +53,7 @@ public class EncryptionUtil {
                         "CRITICAL: Encryption secret/salt must be changed from defaults in production/staging. " +
                         "Set ENCRYPTION_SECRET and ENCRYPTION_SALT environment variables.");
             }
-            log.warn("WARNING: Using default encryption secret/salt. This is acceptable for dev only.");
+            log.info("Using default encryption secret/salt (dev only).");
         }
     }
     

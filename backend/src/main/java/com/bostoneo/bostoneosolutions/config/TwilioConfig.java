@@ -54,7 +54,7 @@ public class TwilioConfig {
                 log.error("Failed to initialize Twilio SDK: {}", e.getMessage());
             }
         } else {
-            log.warn("Twilio is disabled or credentials not configured");
+            log.info("Twilio is disabled or credentials not configured");
         }
     }
 

@@ -56,7 +56,7 @@ public class WorkflowNotificationScheduler {
     @Scheduled(cron = "${app.workflow.notifications.cron:0 0 8 * * MON-FRI}")
     public void checkWorkflowRecommendations() {
         if (!notificationsEnabled) {
-            log.debug("Workflow notifications are disabled");
+            log.trace("Workflow notifications are disabled");
             return;
         }
 

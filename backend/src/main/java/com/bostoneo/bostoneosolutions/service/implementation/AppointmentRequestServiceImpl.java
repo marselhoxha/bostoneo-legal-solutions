@@ -760,7 +760,7 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
 
     @Override
     public void processAppointmentReminders() {
-        log.debug("Processing appointment reminders...");
+        log.trace("Processing appointment reminders...");
 
         // TENANT ISOLATED: Process each organization separately
         LocalDateTime now = LocalDateTime.now();
@@ -802,7 +802,7 @@ public class AppointmentRequestServiceImpl implements AppointmentRequestService 
             }
         }
 
-        log.debug("Finished processing appointment reminders");
+        log.trace("Finished processing appointment reminders");
     }
 
     private void send24HourReminder(AppointmentRequest appointment) {

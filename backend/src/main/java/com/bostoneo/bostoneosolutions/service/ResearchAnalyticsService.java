@@ -213,7 +213,7 @@ public class ResearchAnalyticsService {
                 log.info("  Avg execution: {}ms", stats.get("avgExecutionTimeMs"));
                 log.info("===================================");
             } else {
-                log.debug("📈 Hourly analytics: No queries in the past hour");
+                log.trace("Hourly analytics: No queries in the past hour");
             }
 
             // Cleanup old hourly metrics (keep last 24 hours)

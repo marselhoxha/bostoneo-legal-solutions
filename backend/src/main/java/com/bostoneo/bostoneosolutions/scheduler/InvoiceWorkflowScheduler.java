@@ -132,7 +132,7 @@ public class InvoiceWorkflowScheduler {
                 );
 
                 for (Invoice invoice : overdueInvoices) {
-                    log.info("Marking invoice {} as overdue", invoice.getInvoiceNumber());
+                    log.debug("Marking invoice {} as overdue", invoice.getInvoiceNumber());
                     invoice.setStatus(InvoiceStatus.OVERDUE);
                     invoiceRepository.save(invoice);
 
@@ -195,7 +195,7 @@ public class InvoiceWorkflowScheduler {
                     .orElseThrow(() -> new RuntimeException("Invoice not found or access denied"));
 
             // Execute email send action
-            log.info("Sending reminder email for invoice {} (org: {})", invoice.getInvoiceNumber(), orgId);
+            log.debug("Sending reminder email for invoice {} (org: {})", invoice.getInvoiceNumber(), orgId);
 
             // Update reminder status
             reminder.setStatus(InvoiceReminder.ReminderStatus.SENT);

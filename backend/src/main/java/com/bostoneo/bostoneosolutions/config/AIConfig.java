@@ -33,11 +33,8 @@ public class AIConfig {
 
     @PostConstruct
     public void init() {
-        log.info("=== INITIALIZING AI CONFIG (AWS Bedrock) ===");
-        log.info("Bedrock region: {}", bedrockRegion);
-        log.info("Opus model: {}", opusModelId);
-        log.info("Sonnet model: {}", sonnetModelId);
-        log.info("Haiku model: {}", haikuModelId);
+        log.info("AI Config initialized: region={}", bedrockRegion);
+        log.debug("Opus={}, Sonnet={}, Haiku={}", opusModelId, sonnetModelId, haikuModelId);
 
         try {
             DefaultCredentialsProvider.create().resolveCredentials();
@@ -49,7 +46,7 @@ public class AIConfig {
 
     @Bean
     public BedrockRuntimeClient bedrockClient() {
-        log.info("Creating Bedrock Runtime client (region: {})", bedrockRegion);
+        log.debug("Creating Bedrock Runtime client (region: {})", bedrockRegion);
         return BedrockRuntimeClient.builder()
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .region(Region.of(bedrockRegion))
@@ -65,7 +62,7 @@ public class AIConfig {
 
     @Bean
     public BedrockRuntimeAsyncClient bedrockAsyncClient() {
-        log.info("Creating Bedrock Runtime async client (region: {})", bedrockRegion);
+        log.debug("Creating Bedrock Runtime async client (region: {})", bedrockRegion);
         return BedrockRuntimeAsyncClient.builder()
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .region(Region.of(bedrockRegion))

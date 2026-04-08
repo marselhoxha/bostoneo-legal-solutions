@@ -62,7 +62,7 @@ public class TokenBlacklistService {
                 log.error("SECURITY: Redis went down — failing closed (denying access): {}", e.getMessage());
                 return true;
             }
-            log.warn("Redis not available (not started) — skipping blacklist check: {}", e.getMessage());
+            log.trace("Redis not available (not started) — skipping blacklist check: {}", e.getMessage());
             return false;
         }
     }
@@ -81,7 +81,7 @@ public class TokenBlacklistService {
                 log.error("SECURITY: Redis went down — failing closed (denying access): {}", e.getMessage());
                 return true;
             }
-            log.warn("Redis not available (not started) — skipping blacklist check: {}", e.getMessage());
+            log.trace("Redis not available (not started) — skipping blacklist check: {}", e.getMessage());
             return false;
         }
     }

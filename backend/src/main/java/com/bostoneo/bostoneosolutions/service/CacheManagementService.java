@@ -39,7 +39,7 @@ public class CacheManagementService {
                 cacheRepository.deleteByExpiresAtBefore(now);
                 log.info("✅ Cache cleanup complete - {} entries removed", expiredCount);
             } else {
-                log.debug("✓ Cache cleanup: No expired entries");
+                log.trace("Cache cleanup: No expired entries");
             }
         } catch (Exception e) {
             log.error("❌ Cache cleanup failed: {}", e.getMessage(), e);

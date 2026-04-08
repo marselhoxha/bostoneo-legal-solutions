@@ -82,10 +82,10 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
                         log.error("Token missing organizationId for non-SUPERADMIN user {}. User needs to re-login.", userId);
                         throw new ApiException("Session invalid. Please login again.");
                     }
-                    log.info("REQUEST: {} {} - SUPERADMIN User: {}", request.getMethod(), request.getRequestURI(), userId);
+                    log.debug("REQUEST: {} {} - SUPERADMIN User: {}", request.getMethod(), request.getRequestURI(), userId);
                 } else {
                     TenantContext.setCurrentTenant(organizationId);
-                    log.info("REQUEST: {} {} - User: {}, Org: {}", request.getMethod(), request.getRequestURI(), userId, organizationId);
+                    log.debug("REQUEST: {} {} - User: {}, Org: {}", request.getMethod(), request.getRequestURI(), userId, organizationId);
                 }
 
                 Authentication authentication = tokenProvider.getAuthentication(userId, authorities, request);
@@ -157,7 +157,6 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
         // on a new thread. This dispatch doesn't have the original Authorization header and would
         // fail with "anonymousUser" without this check.
         if (request.getDispatcherType() == DispatcherType.ASYNC) {
-            log.debug("Skipping filter for async dispatch: {}", request.getRequestURI());
             return true;
         }
 
