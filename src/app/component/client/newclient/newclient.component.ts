@@ -26,6 +26,7 @@ export class NewclientComponent implements OnInit {
   isLoading$ = this.isLoadingSubject.asObservable();
   readonly DataState = DataState;
   private destroy$ = new Subject<void>();
+  // kept for backward compatibility if referenced elsewhere
   private isLaodingSubject = new BehaviorSubject<boolean>(false);
   isLaoding$ = this.isLaodingSubject.asObservable();
 

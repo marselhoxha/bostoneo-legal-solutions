@@ -53,6 +53,7 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   showClientResults = false;
   selectedClientId: number | null = null;
   clientMode: 'search' | 'new' | 'selected' = 'search';
+  duplicateEmailClient: any = null;
 
   // Attorneys for dropdown
   attorneys: any[] = [];
@@ -192,7 +193,7 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   isStepValid(step: number): boolean {
     switch (step) {
       case 1: {
-        return this.caseForm.get('clientName')!.valid;
+        return this.caseForm.get('clientName')!.valid && !this.duplicateEmailClient;
       }
       case 2: {
         const f = this.caseForm;
@@ -294,8 +295,35 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     this.existingClientName = '';
     this.showClientResults = false;
     this.clientSearchQuery = '';
+    this.duplicateEmailClient = null;
     this.caseForm.patchValue({ clientName: '', clientEmail: '', clientPhone: '', clientAddress: '' });
     this.cdr.markForCheck();
+  }
+
+  checkDuplicateEmail(): void {
+    const email = this.caseForm.get('clientEmail')?.value?.trim();
+    this.duplicateEmailClient = null;
+    if (!email || email.length < 3) return;
+
+    this.http.get<any>(`${environment.apiUrl}/client/search-quick?q=${encodeURIComponent(email)}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const clients = response?.data?.clients || [];
+          const match = clients.find((c: any) => c.email?.toLowerCase() === email.toLowerCase());
+          if (match) {
+            this.duplicateEmailClient = match;
+          }
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  linkDuplicateClient(): void {
+    if (this.duplicateEmailClient) {
+      this.selectClient(this.duplicateEmailClient);
+      this.duplicateEmailClient = null;
+    }
   }
 
   clearSelectedClient(): void {

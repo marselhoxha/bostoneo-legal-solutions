@@ -75,6 +75,30 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
+    public boolean sendEmailOnBehalf(String to, String subject, String body, String replyToEmail, String replyToName) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            String senderDisplay = replyToName != null ? replyToName + " via Legience" : fromName;
+            helper.setFrom(fromAddress, senderDisplay);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, true);
+            if (replyToEmail != null) {
+                helper.setReplyTo(replyToEmail, replyToName != null ? replyToName : replyToEmail);
+            }
+
+            mailSender.send(message);
+            log.info("Email sent on behalf of '{}' to: {}", senderDisplay, to);
+            return true;
+        } catch (MessagingException | java.io.UnsupportedEncodingException e) {
+            log.error("Failed to send email on behalf to: {}", to, e);
+            return false;
+        }
+    }
+
+    @Override
     public boolean sendEmailWithAttachment(String to, String subject, String body, Resource attachment, String attachmentName) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

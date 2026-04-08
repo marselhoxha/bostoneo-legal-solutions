@@ -1,109 +1,88 @@
 <ng-container *ngIf="(newClientState$ | async) as state" [ngSwitch]="state.dataState">
     <ng-container *ngSwitchCase="DataState.LOADED">
-      <div class="modal-content border-0 shadow-sm client-modal">
-        <div class="modal-header bg-info dark:bg-dark text-white border-0 py-3">
-          <h5 class="modal-title d-flex align-items-center fs-4">
-            <i class="bi bi-person-badge-fill me-2"></i>New Client
-          </h5>
-          <button type="button" class="btn-close btn-close-white" (click)="closeModal()" aria-label="Close"></button>
+      <div class="modal-content border-0 new-client-modal">
+        <!-- Accent bar -->
+        <div class="new-client-accent"></div>
+
+        <!-- Header -->
+        <div class="new-client-header">
+          <div class="d-flex align-items-center gap-3">
+            <div class="new-client-icon">
+              <i class="ri-user-add-line"></i>
+            </div>
+            <div>
+              <h5 class="fw-semibold mb-0" style="font-size: 16px; color: var(--vz-heading-color);">New Client</h5>
+              <span class="text-muted" style="font-size: 12px;">Create a new client record for your organization</span>
+            </div>
+          </div>
+          <button type="button" class="new-client-close" (click)="closeModal()">
+            <i class="ri-close-line"></i>
+          </button>
         </div>
-        <div class="modal-body p-4">
-          <div *ngIf="state.error" class="alert alert-danger bg-danger text-light border-0 alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ state.error }}
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+
+        <!-- Body -->
+        <div class="new-client-body">
+          <div *ngIf="state.error" class="alert alert-danger border-0 alert-dismissible fade show mb-3" role="alert">
+            <i class="ri-error-warning-line me-2"></i>{{ state.error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
 
           <form #newClientForm="ngForm" (ngSubmit)="createClient(newClientForm)">
-            <div class="row g-4">
-              <!-- Personal Information -->
+            <!-- Section: Personal -->
+            <div class="new-client-section-label"><i class="ri-user-line"></i>Personal Information</div>
+            <div class="row g-3 mb-4">
               <div class="col-12">
-                <label for="name" class="form-label mb-2">Full Name</label>
-                <div class="form-floating mb-3">
-                  <div class="input-group">
-                    <span class="input-group-text bg-light dark:bg-dark border-end-0">
-                      <i class="bi bi-person icon-color"></i>
-                    </span>
-                    <input id="name" type="text" ngModel name="name" class="form-control border-start-0" placeholder="Enter name" required>
-                  </div>
-                </div>
+                <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" ngModel name="name" required placeholder="Enter full name">
               </div>
+            </div>
 
-              <!-- Contact Information -->
-              <div class="col-md-6">
-                <label for="email" class="form-label mb-2">Email Address</label>
-                <div class="form-floating mb-3">
-                  <div class="input-group">
-                    <span class="input-group-text bg-light dark:bg-dark border-end-0">
-                      <i class="bi bi-envelope icon-color"></i>
-                    </span>
-                    <input id="email" type="email" ngModel name="email" class="form-control border-start-0" placeholder="Enter email" required>
-                  </div>
-                </div>
+            <!-- Section: Contact -->
+            <div class="new-client-section-label"><i class="ri-contacts-line"></i>Contact Details</div>
+            <div class="row g-3 mb-4">
+              <div class="col-6">
+                <label class="form-label">Email <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" ngModel name="email" required placeholder="email@example.com">
               </div>
-              <div class="col-md-6">
-                <label for="phone" class="form-label mb-2">Phone Number</label>
-                <div class="form-floating mb-3">
-                  <div class="input-group">
-                    <span class="input-group-text bg-light dark:bg-dark border-end-0">
-                      <i class="bi bi-telephone icon-color"></i>
-                    </span>
-                    <input id="phone" type="tel" ngModel name="phone" class="form-control border-start-0" placeholder="Enter phone" required>
-                  </div>
-                </div>
+              <div class="col-6">
+                <label class="form-label">Phone</label>
+                <input type="tel" class="form-control" ngModel name="phone" placeholder="(555) 123-4567">
               </div>
-
-              <!-- Address -->
               <div class="col-12">
-                <label for="address" class="form-label mb-2">Address</label>
-                <div class="form-floating mb-3">
-                  <div class="input-group">
-                    <span class="input-group-text bg-light dark:bg-dark border-end-0">
-                      <i class="bi bi-geo-alt icon-color"></i>
-                    </span>
-                    <input id="address" type="text" ngModel name="address" class="form-control border-start-0" placeholder="Street, City, State, ZIP">
-                  </div>
-                </div>
+                <label class="form-label">Address</label>
+                <input type="text" class="form-control" ngModel name="address" placeholder="Street, City, State, ZIP">
               </div>
+            </div>
 
-              <!-- Account Information -->
-              <div class="col-md-6">
-                <label for="type" class="form-label mb-2">Client Type</label>
-                <div class="form-floating mb-3">
-                  <div class="input-group">
-                    <span class="input-group-text bg-light dark:bg-dark border-end-0">
-                      <i class="bi bi-person-badge icon-color"></i>
-                    </span>
-                    <select id="type" name="type" ngModel="INDIVIDUAL" class="form-select border-start-0" required>
-                      <option value="INDIVIDUAL">Individual</option>
-                      <option value="BUSINESS">Business</option>
-                      <option value="INSTITUTION">Institution</option>
-                    </select>
-                  </div>
-                </div>
+            <!-- Section: Account -->
+            <div class="new-client-section-label"><i class="ri-settings-3-line"></i>Account Details</div>
+            <div class="row g-3">
+              <div class="col-6">
+                <label class="form-label">Client Type</label>
+                <select class="form-select" name="type" ngModel="INDIVIDUAL">
+                  <option value="INDIVIDUAL">Individual</option>
+                  <option value="BUSINESS">Business</option>
+                  <option value="INSTITUTION">Institution</option>
+                </select>
               </div>
-              <div class="col-md-6">
+              <div class="col-6">
                 <input type="hidden" name="status" ngModel="ACTIVE">
                 <input type="hidden" name="imageUrl" ngModel="">
               </div>
             </div>
-
-            <!-- Form Actions -->
-            <div class="d-flex justify-content-end gap-2 mt-4">
-              <button type="button" class="btn btn-light px-4" (click)="closeModal()">
-                <i class="bi bi-x-circle me-2"></i>Cancel
-              </button>
-              <button [disabled]="state.dataState === DataState.LOADING || newClientForm.invalid || newClientForm.pristine || (isLaoding$ | async)"
-                type="submit" class="btn btn-info px-4">
-                <span *ngIf="isLaoding$ | async" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                <span *ngIf="isLaoding$ | async">Saving...</span>
-                <span *ngIf="!(isLaoding$ | async)">
-                  <i class="bi bi-check-circle me-2"></i>Save Client
-                </span>
-              </button>
-            </div>
           </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="new-client-footer">
+          <button type="button" class="btn btn-soft-secondary" (click)="closeModal()">Cancel</button>
+          <button type="button" class="btn btn-primary"
+            [disabled]="state.dataState === DataState.LOADING || newClientForm.invalid || newClientForm.pristine || (isLoading$ | async)"
+            (click)="createClient(newClientForm)">
+            <span *ngIf="isLoading$ | async" class="spinner-border spinner-border-sm me-1" style="width: 14px; height: 14px;"></span>
+            {{ (isLoading$ | async) ? 'Creating...' : 'Save Client' }}
+          </button>
         </div>
       </div>
     </ng-container>
   </ng-container>
-  

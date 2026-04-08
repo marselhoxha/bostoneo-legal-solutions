@@ -38,6 +38,7 @@ public class PIDocumentRequestServiceImpl implements PIDocumentRequestService {
     private final TenantService tenantService;
     private final EmailService emailService;
     private final TwilioService twilioService;
+    private final OrganizationRepository organizationRepository;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -375,7 +376,7 @@ public class PIDocumentRequestServiceImpl implements PIDocumentRequestService {
         LegalCase legalCase = caseRepository.findByIdAndOrganizationId(caseId, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Case not found"));
 
-        // Get template if specified
+        // Get template: explicit ID > explicit code > auto-match by document type
         PIDocumentRequestTemplate template = null;
         if (request.getTemplateId() != null) {
             template = templateRepository.findByIdAndOrganization(request.getTemplateId(), orgId)
@@ -384,6 +385,15 @@ public class PIDocumentRequestServiceImpl implements PIDocumentRequestService {
             List<PIDocumentRequestTemplate> templates = templateRepository.findByTemplateCode(orgId, request.getTemplateCode());
             if (!templates.isEmpty()) {
                 template = templates.get(0);
+            }
+        }
+        // Auto-resolve template by document type if none explicitly selected
+        if (template == null && item.getDocumentType() != null) {
+            List<PIDocumentRequestTemplate> byType = templateRepository
+                    .findByDocumentType(orgId, item.getDocumentType());
+            if (!byType.isEmpty()) {
+                template = byType.get(0);
+                log.info("Auto-resolved template '{}' for document type '{}'", template.getTemplateName(), item.getDocumentType());
             }
         }
 
@@ -403,13 +413,41 @@ public class PIDocumentRequestServiceImpl implements PIDocumentRequestService {
             }
         }
 
+        // Fallback subject/body if no template and no custom values
+        if (subject == null || subject.isBlank()) {
+            String docType = item.getDocumentType() != null ?
+                    item.getDocumentType().replace("_", " ") : "Document";
+            subject = "Request for " + docType + " — " + (legalCase.getClientName() != null ? legalCase.getClientName() : "Client");
+        }
+        if (body == null || body.isBlank()) {
+            body = String.format(
+                    "<p>Dear %s,</p><p>We are writing to request <strong>%s</strong> for our client <strong>%s</strong>.</p>" +
+                    "<p>Please send the requested documents at your earliest convenience.</p><p>Thank you.</p>",
+                    request.getRecipientName() != null ? request.getRecipientName() : "Sir/Madam",
+                    item.getDocumentType() != null ? item.getDocumentType().replace("_", " ").toLowerCase() : "documents",
+                    legalCase.getClientName() != null ? legalCase.getClientName() : "our client"
+            );
+        }
+
+        // Get organization name and user email for "on behalf of" sending
+        String orgName = organizationRepository.findById(orgId)
+                .map(Organization::getName).orElse("Legience");
+        String userEmail = tenantService.getCurrentUserDTO()
+                .map(u -> u.getEmail()).orElse(null);
+
+        // Prepend firm name to subject for recognition
+        if (subject != null && !subject.startsWith("[")) {
+            subject = "[" + orgName + "] " + subject;
+        }
+
         // Send the actual communication
         String externalMessageId = null;
         String channelStatus = "SENT";
 
         try {
             if ("EMAIL".equals(request.getChannel()) && request.getRecipientEmail() != null) {
-                boolean sent = emailService.sendEmail(request.getRecipientEmail(), subject, body);
+                boolean sent = emailService.sendEmailOnBehalf(
+                        request.getRecipientEmail(), subject, body, userEmail, orgName);
                 channelStatus = sent ? "SENT" : "FAILED";
             } else if ("SMS".equals(request.getChannel()) && request.getRecipientPhone() != null) {
                 SmsResponseDTO smsResponse = twilioService.sendSms(request.getRecipientPhone(), body);
@@ -649,6 +687,12 @@ public class PIDocumentRequestServiceImpl implements PIDocumentRequestService {
         LegalCase legalCase = caseRepository.findByIdAndOrganizationId(caseId, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Case not found"));
 
+        // Get org name and user email for "on behalf of" sending
+        String orgName = organizationRepository.findById(orgId)
+                .map(Organization::getName).orElse("Legience");
+        String userEmail = tenantService.getCurrentUserDTO()
+                .map(u -> u.getEmail()).orElse(null);
+
         // Build override map for quick lookup
         Map<Long, BulkRequestSubmitDTO.RecipientOverride> overrideMap = new HashMap<>();
         if (submitRequest.getRecipientOverrides() != null) {
@@ -735,8 +779,14 @@ public class PIDocumentRequestServiceImpl implements PIDocumentRequestService {
                 String externalMessageId = null;
                 String channelStatus = "SENT";
 
+                // Prepend firm name to subject
+                if (subject != null && !subject.startsWith("[")) {
+                    subject = "[" + orgName + "] " + subject;
+                }
+
                 if ("EMAIL".equals(channel) && recipient.hasEmail()) {
-                    boolean sent = emailService.sendEmail(recipient.getEmail(), subject, consolidatedBody);
+                    boolean sent = emailService.sendEmailOnBehalf(
+                            recipient.getEmail(), subject, consolidatedBody, userEmail, orgName);
                     channelStatus = sent ? "SENT" : "FAILED";
                     if (sent) emailsSent++;
                 } else if ("SMS".equals(channel) && recipient.hasPhone()) {
@@ -1029,13 +1079,19 @@ public class PIDocumentRequestServiceImpl implements PIDocumentRequestService {
 
         vars.put("reportFee", request.getReportFee() != null ? request.getReportFee() : "");
 
-        // Firm info (would come from organization settings in production)
-        vars.put("firmName", "Law Firm");
-        vars.put("firmPhone", "(617) 555-0100");
-        vars.put("firmFax", "(617) 555-0101");
-        vars.put("firmEmail", "records@lawfirm.com");
-        vars.put("firmAddress", "123 Legal Way, Boston, MA 02101");
-        vars.put("senderName", "Records Department");
+        // Firm info from organization
+        Organization org = organizationRepository.findById(orgId).orElse(null);
+        vars.put("firmName", org != null && org.getName() != null ? org.getName() : "");
+        vars.put("firmPhone", org != null && org.getPhone() != null ? org.getPhone() : "");
+        vars.put("firmFax", "");
+        vars.put("firmEmail", org != null && org.getEmail() != null ? org.getEmail() : "");
+        vars.put("firmAddress", org != null && org.getAddress() != null ? org.getAddress() : "");
+        // Sender = current logged-in user
+        String senderName = tenantService.getCurrentUserDTO()
+                .map(u -> (u.getFirstName() != null ? u.getFirstName() : "") +
+                         (u.getLastName() != null ? " " + u.getLastName() : ""))
+                .orElse("");
+        vars.put("senderName", senderName.trim());
 
         return vars;
     }
@@ -1047,6 +1103,10 @@ public class PIDocumentRequestServiceImpl implements PIDocumentRequestService {
         for (Map.Entry<String, String> entry : variables.entrySet()) {
             result = result.replace("{{" + entry.getKey() + "}}", entry.getValue());
         }
+        // Clean up any remaining unreplaced placeholders
+        result = result.replaceAll("\\{\\{\\w+}}", "");
+        // Remove table rows where the value span is empty (e.g., Account Number with no value)
+        result = result.replaceAll("<tr>\\s*<td[^>]*>\\s*<span[^>]*>[^<]*</span>\\s*<span[^>]*>\\s*</span>\\s*</td>\\s*</tr>", "");
         return result;
     }
 

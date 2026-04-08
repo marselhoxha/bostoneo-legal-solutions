@@ -136,7 +136,8 @@
                     <div class="col-md-6">
                       <label class="form-label">Email <span class="text-muted fw-normal fs-12">(recommended)</span></label>
                       <input type="email" class="form-control" formControlName="clientEmail"
-                        [ngClass]="{'is-invalid': hasError('clientEmail')}" placeholder="email&#64;example.com">
+                        [ngClass]="{'is-invalid': hasError('clientEmail'), 'border-warning': duplicateEmailClient}"
+                        placeholder="email&#64;example.com" (blur)="checkDuplicateEmail()">
                       <div class="invalid-feedback">Please enter a valid email.</div>
                     </div>
                     <div class="col-md-6">
@@ -148,7 +149,16 @@
                       <input type="text" class="form-control" formControlName="clientAddress" placeholder="Street, city, state, zip">
                     </div>
                   </div>
-                  <div class="alert alert-soft-info mt-3 py-2 fs-13">
+                  <div class="alert alert-warning d-flex align-items-center mt-3 py-2 fs-13" *ngIf="duplicateEmailClient">
+                    <i class="ri-error-warning-line me-2 fs-5"></i>
+                    <div class="flex-grow-1">
+                      A client with this email already exists: <strong>{{ duplicateEmailClient.name }}</strong>
+                    </div>
+                    <button class="btn btn-sm btn-warning ms-2" (click)="linkDuplicateClient()">
+                      <i class="ri-link me-1"></i> Link Existing
+                    </button>
+                  </div>
+                  <div class="alert alert-soft-info mt-3 py-2 fs-13" *ngIf="!duplicateEmailClient">
                     <i class="ri-information-line me-1"></i> A new client record will be created automatically when this case is saved.
                   </div>
                 </div>

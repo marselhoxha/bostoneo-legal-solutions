@@ -419,6 +419,22 @@ module "ecs" {
     {
       name  = "AWS_REGION"
       value = var.region
+    },
+    {
+      name  = "SPRING_MAIL_HOST"
+      value = "smtp.hostinger.com"
+    },
+    {
+      name  = "SPRING_MAIL_PORT"
+      value = "587"
+    },
+    {
+      name  = "SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH"
+      value = "true"
+    },
+    {
+      name  = "SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE"
+      value = "true"
     }
   ]
 
@@ -489,6 +505,14 @@ module "ecs" {
     },
     {
       name       = "EMAIL_PASSWORD"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:EMAIL_PASSWORD::"
+    },
+    {
+      name       = "SPRING_MAIL_USERNAME"
+      value_from = "${aws_secretsmanager_secret.app_secrets.arn}:EMAIL_ID::"
+    },
+    {
+      name       = "SPRING_MAIL_PASSWORD"
       value_from = "${aws_secretsmanager_secret.app_secrets.arn}:EMAIL_PASSWORD::"
     }
   ]

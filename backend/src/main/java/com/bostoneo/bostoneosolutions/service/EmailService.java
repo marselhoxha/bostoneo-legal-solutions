@@ -10,7 +10,9 @@ import java.util.Map;
 public interface EmailService {
     
     boolean sendEmail(String to, String subject, String body);
-    
+
+    boolean sendEmailOnBehalf(String to, String subject, String body, String replyToEmail, String replyToName);
+
     boolean sendEmailWithAttachment(String to, String subject, String body, Resource attachment, String attachmentName);
     
     boolean sendTemplatedEmail(String to, String subject, String templateContent, Map<String, String> templateData);
