@@ -36,7 +36,7 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
             return encryptionUtil.decrypt(dbData);
         } catch (Exception e) {
             // Graceful fallback: plaintext data written before encryption was enabled
-            log.warn("Decryption failed for a column value — returning as-is. This likely means plaintext data that has not been migrated to encryption yet.");
+            log.debug("Decryption fallback — plaintext data not yet migrated to encryption");
             return dbData;
         }
     }

@@ -62,7 +62,7 @@ public class OnlineUserService {
             redisTemplate.opsForValue().set(key, value, Duration.ofMinutes(TTL_MINUTES));
             recentMarks.put(userId, Instant.now());
         } catch (Exception e) {
-            log.warn("Failed to mark user {} online: {}", userId, e.getMessage());
+            log.debug("Redis unavailable — skipping online mark for user {}", userId);
         }
     }
 
@@ -74,7 +74,7 @@ public class OnlineUserService {
             redisTemplate.delete(PREFIX + userId);
             recentMarks.remove(userId);
         } catch (Exception e) {
-            log.warn("Failed to mark user {} offline: {}", userId, e.getMessage());
+            log.debug("Redis unavailable — skipping offline mark for user {}", userId);
         }
     }
 

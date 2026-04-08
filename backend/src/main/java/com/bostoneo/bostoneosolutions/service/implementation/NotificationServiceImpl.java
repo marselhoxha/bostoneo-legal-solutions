@@ -87,8 +87,8 @@ public class NotificationServiceImpl implements NotificationService {
             }
         }
 
-        // First check if the token already exists within this organization
-        Optional<NotificationToken> existingToken = tokenRepository.findByTokenAndOrganizationId(tokenDTO.getToken(), orgId);
+        // Check if the token already exists (globally — unique constraint is on token, not per-org)
+        Optional<NotificationToken> existingToken = tokenRepository.findByToken(tokenDTO.getToken());
 
         if (existingToken.isPresent()) {
             // Update existing token record
@@ -100,6 +100,7 @@ public class NotificationServiceImpl implements NotificationService {
             }
             token.setUserId(tokenDTO.getUserId());
             token.setPlatform(tokenDTO.getPlatform());
+            token.setOrganizationId(orgId);
             token.setLastUsed(LocalDateTime.now());
 
             NotificationToken savedToken = tokenRepository.save(token);

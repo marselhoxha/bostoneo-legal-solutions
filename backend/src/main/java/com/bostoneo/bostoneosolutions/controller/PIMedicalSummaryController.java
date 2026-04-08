@@ -1,22 +1,16 @@
 package com.bostoneo.bostoneosolutions.controller;
 
 import com.bostoneo.bostoneosolutions.dto.PIMedicalSummaryDTO;
-import com.bostoneo.bostoneosolutions.handler.AuthenticatedWebSocketHandler;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
-import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.service.PIMedicalSummaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import static java.time.LocalDateTime.now;
 import static java.util.Map.of;
@@ -32,7 +26,6 @@ import static org.springframework.http.HttpStatus.*;
 public class PIMedicalSummaryController {
 
     private final PIMedicalSummaryService summaryService;
-    private final AuthenticatedWebSocketHandler webSocketHandler;
 
     /**
      * Get the medical summary for a case
@@ -301,7 +294,6 @@ public class PIMedicalSummaryController {
 
     /**
      * Generate AI-powered adjuster defense analysis.
-     * Returns 202 immediately, processes in background, sends result via WebSocket.
      */
     @PostMapping("/adjuster-analysis")
     @PreAuthorize("isAuthenticated()")
@@ -309,63 +301,16 @@ public class PIMedicalSummaryController {
 
         log.info("Generating adjuster defense analysis for case: {}", caseId);
 
-        Long orgId = TenantContext.getCurrentTenant();
-        SecurityContext securityContext = SecurityContextHolder.getContext();
-        String userId = extractUserId(securityContext);
+        Map<String, Object> analysis = summaryService.generateAdjusterDefenseAnalysis(caseId);
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                TenantContext.setCurrentTenant(orgId);
-                SecurityContextHolder.setContext(securityContext);
-
-                Map<String, Object> analysis = summaryService.generateAdjusterDefenseAnalysis(caseId);
-
-                if (userId != null) {
-                    Map<String, Object> wsPayload = new HashMap<>();
-                    wsPayload.put("type", "ADJUSTER_ANALYSIS_COMPLETE");
-                    wsPayload.put("caseId", caseId);
-                    wsPayload.put("success", true);
-                    wsPayload.put("analysis", analysis);
-                    webSocketHandler.sendDataToUser(userId, wsPayload);
-                }
-
-                log.info("Async adjuster analysis complete for case {}", caseId);
-            } catch (Exception e) {
-                log.error("Async adjuster analysis failed for case {}: {}", caseId, e.getMessage(), e);
-                if (userId != null) {
-                    Map<String, Object> errorPayload = new HashMap<>();
-                    errorPayload.put("type", "ADJUSTER_ANALYSIS_COMPLETE");
-                    errorPayload.put("caseId", caseId);
-                    errorPayload.put("success", false);
-                    errorPayload.put("message", "Failed to generate analysis: " + e.getMessage());
-                    webSocketHandler.sendDataToUser(userId, errorPayload);
-                }
-            } finally {
-                TenantContext.clear();
-                SecurityContextHolder.clearContext();
-            }
-        });
-
-        return ResponseEntity.accepted().body(
+        return ResponseEntity.ok(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
-                        .data(of("status", "generating"))
-                        .message("Adjuster analysis started. You will be notified when it completes.")
-                        .status(ACCEPTED)
-                        .statusCode(ACCEPTED.value())
+                        .data(of("analysis", analysis))
+                        .message("Adjuster defense analysis generated successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
                         .build());
-    }
-
-    private String extractUserId(SecurityContext securityContext) {
-        try {
-            var auth = securityContext.getAuthentication();
-            if (auth != null && auth.getPrincipal() instanceof com.bostoneo.bostoneosolutions.dto.UserDTO userDTO) {
-                return String.valueOf(userDTO.getId());
-            }
-        } catch (Exception e) {
-            log.warn("Could not extract user ID from security context: {}", e.getMessage());
-        }
-        return null;
     }
 
     /**

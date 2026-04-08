@@ -671,29 +671,8 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       const payload = msg?.data;
       if (!payload) return;
 
-      // Check message type
-      const msgType = payload.type || msg?.type;
-
-      // Handle adjuster analysis completion
-      if (msgType === 'ADJUSTER_ANALYSIS_COMPLETE') {
-        const msgCaseId = payload.caseId || msg?.caseId;
-        if (msgCaseId && this.linkedCase?.id && msgCaseId !== Number(this.linkedCase.id)) return;
-
-        this.isGeneratingAdjusterAnalysis = false;
-        Swal.close();
-
-        if (payload.success === false) {
-          Swal.fire({ icon: 'error', title: 'Analysis Failed', text: payload.message || 'Failed to generate adjuster defense analysis.' });
-        } else if (payload.analysis) {
-          this.adjusterAnalysis = payload.analysis;
-          this.adjusterExpandedItems = new Set([0, 1]);
-        }
-        this.cdr.detectChanges();
-        return;
-      }
-
-      // Check if this message is a medical scan message (check both nested type and top-level)
-      const scanType = msgType;
+      // Check if this message is a medical scan message
+      const scanType = payload.type || msg?.type;
       if (scanType !== 'MEDICAL_SCAN_PROGRESS' && scanType !== 'MEDICAL_SCAN_COMPLETE') return;
 
       // Ignore messages for a different case
@@ -4161,6 +4140,11 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
       if (result.isConfirmed) {
         this.medicalRecordService.deleteAllRecords(Number(this.linkedCase!.id)).subscribe({
           next: () => {
+            // Also delete the medical summary (stale data from old records)
+            this.medicalSummaryService.deleteMedicalSummary(Number(this.linkedCase!.id)).subscribe();
+            this.medicalSummary = null;
+            this.adjusterAnalysis = null;
+
             // Clear stale case value state so dashboard shows $0 immediately
             this.latestCaseValue = 0;
             this.calculatedValue = null;
@@ -4335,6 +4319,16 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   generateAdjusterAnalysis(): void {
     if (!this.linkedCase?.id) return;
 
+    if (!this.medicalSummary) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Medical Summary Required',
+        text: 'Please generate a Medical Summary first. The adjuster analysis uses the summary data to identify case vulnerabilities.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
     if (this.isScanningDocuments) {
       Swal.fire({
         icon: 'info',
@@ -4348,27 +4342,18 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     this.isGeneratingAdjusterAnalysis = true;
     this.cdr.detectChanges();
 
-    Swal.fire({
-      title: 'Analyzing Case Vulnerabilities',
-      html: 'AI is predicting adjuster attack strategies...<br><small>This may take a minute.</small>',
-      allowOutsideClick: false,
-      didOpen: () => { Swal.showLoading(); }
-    });
-
-    // POST returns 202 immediately, result arrives via WebSocket
     this.medicalSummaryService.generateAdjusterAnalysis(Number(this.linkedCase.id)).subscribe({
-      next: () => {
-        // 202 received — keep loading state, WebSocket handler will close Swal and set the result
+      next: (analysis) => {
+        this.adjusterAnalysis = analysis;
+        this.isGeneratingAdjusterAnalysis = false;
+        this.adjusterExpandedItems = new Set([0, 1]);
+        this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('Error starting adjuster analysis:', err);
+        console.error('Error generating adjuster analysis:', err);
         this.isGeneratingAdjusterAnalysis = false;
         this.cdr.detectChanges();
-        Swal.fire({
-          icon: 'error',
-          title: 'Analysis Failed',
-          text: err.error?.message || 'Failed to start adjuster defense analysis.'
-        });
+        Swal.fire({ icon: 'error', title: 'Analysis Failed', text: err.error?.message || 'Failed to generate adjuster defense analysis.' });
       }
     });
   }
