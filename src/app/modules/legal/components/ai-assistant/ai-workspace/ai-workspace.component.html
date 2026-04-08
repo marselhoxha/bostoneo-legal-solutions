@@ -1720,33 +1720,52 @@
           </button>
         </div>
         <div class="exhibit-viewer-content">
-          <ngx-extended-pdf-viewer
-            *ngIf="(exhibitPanelService.currentExhibit$ | async) as exhibit"
-            [src]="exhibit.fileUrl"
-            [zoom]="'page-width'"
-            [showToolbar]="false"
-            [showSidebarButton]="false"
-            [showFindButton]="false"
-            [showPagingButtons]="false"
-            [showZoomButtons]="false"
-            [showPresentationModeButton]="false"
-            [showOpenFileButton]="false"
-            [showPrintButton]="false"
-            [showDownloadButton]="false"
-            [showSecondaryToolbarButton]="false"
-            [showRotateButton]="false"
-            [showHandToolButton]="false"
-            [showScrollingButton]="false"
-            [showSpreadButton]="false"
-            [showPropertiesButton]="false"
-            [textLayer]="false"
-            [handTool]="false"
-            height="100%"
-          ></ngx-extended-pdf-viewer>
-          <div *ngIf="!(exhibitPanelService.currentExhibit$ | async)" class="exhibit-empty-state">
-            <i class="ri-file-pdf-line"></i>
-            <p>Select an exhibit to preview</p>
-          </div>
+          <ng-container *ngIf="(exhibitPanelService.currentExhibit$ | async) as exhibit; else exhibitEmptyState">
+            <!-- PDF exhibits -->
+            <ngx-extended-pdf-viewer
+              *ngIf="isPdfExhibit(exhibit)"
+              [src]="exhibit.fileUrl"
+              [zoom]="'page-width'"
+              [showToolbar]="false"
+              [showSidebarButton]="false"
+              [showFindButton]="false"
+              [showPagingButtons]="false"
+              [showZoomButtons]="false"
+              [showPresentationModeButton]="false"
+              [showOpenFileButton]="false"
+              [showPrintButton]="false"
+              [showDownloadButton]="false"
+              [showSecondaryToolbarButton]="false"
+              [showRotateButton]="false"
+              [showHandToolButton]="false"
+              [showScrollingButton]="false"
+              [showSpreadButton]="false"
+              [showPropertiesButton]="false"
+              [textLayer]="false"
+              [handTool]="false"
+              height="100%"
+              (pdfLoadingFailed)="onExhibitPdfLoadFailed($event)"
+            ></ngx-extended-pdf-viewer>
+            <!-- Image exhibits -->
+            <div *ngIf="isImageExhibit(exhibit)" class="exhibit-image-viewer">
+              <img [src]="exhibit.fileUrl" [alt]="exhibit.fileName" />
+            </div>
+            <!-- Unsupported format -->
+            <div *ngIf="!isPdfExhibit(exhibit) && !isImageExhibit(exhibit)" class="exhibit-unsupported-state">
+              <i class="ri-file-text-line" style="font-size: 48px; color: var(--vz-secondary-color);"></i>
+              <p class="mt-2 text-muted">Preview not available for this file type</p>
+              <p class="text-muted small">{{exhibit.fileName}}</p>
+              <button class="btn btn-sm btn-soft-primary mt-2" (click)="downloadCurrentExhibit()">
+                <i class="ri-download-2-line me-1"></i> Download
+              </button>
+            </div>
+          </ng-container>
+          <ng-template #exhibitEmptyState>
+            <div class="exhibit-empty-state">
+              <i class="ri-file-pdf-line"></i>
+              <p>Select an exhibit to preview</p>
+            </div>
+          </ng-template>
         </div>
       </div>
 

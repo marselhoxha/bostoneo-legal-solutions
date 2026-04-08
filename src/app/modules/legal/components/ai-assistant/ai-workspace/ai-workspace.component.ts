@@ -2871,6 +2871,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.destroyScrollSpy();
 
     // Reset exhibit panel state
+    this.exhibitPollActive = false;
     this.exhibitPanelService.reset();
 
     // Clean up stationery DOM injections
@@ -10958,7 +10959,7 @@ You can:
 
     const a = document.createElement('a');
     a.href = exhibit.fileUrl;
-    a.download = exhibit.fileName || `${exhibit.label}.pdf`;
+    a.download = exhibit.fileName || exhibit.label;
     a.click();
   }
 
@@ -10973,6 +10974,24 @@ You can:
         printWindow.addEventListener('load', () => printWindow.print());
       }
     }
+  }
+
+  /** Check if exhibit is a PDF based on mimeType or file extension */
+  isPdfExhibit(exhibit: Exhibit): boolean {
+    if (exhibit.mimeType === 'application/pdf') return true;
+    return /\.pdf$/i.test(exhibit.fileName || '');
+  }
+
+  /** Check if exhibit is an image based on mimeType or file extension */
+  isImageExhibit(exhibit: Exhibit): boolean {
+    if (exhibit.mimeType?.startsWith('image/')) return true;
+    return /\.(jpg|jpeg|png|gif|bmp|tiff|webp)$/i.test(exhibit.fileName || '');
+  }
+
+  /** Handle PDF viewer load failure */
+  onExhibitPdfLoadFailed(error: any): void {
+    console.error('Exhibit PDF load failed:', error);
+    this.notificationService.error('Preview Error', 'Could not render this exhibit. Try downloading it instead.');
   }
 
   // ===== ADD EXHIBIT MODAL =====
@@ -11137,7 +11156,8 @@ You can:
               label: exhibit.label || '',
               fileName: exhibit.fileName || '',
               fileUrl: this.exhibitPanelService.getExhibitFileUrl(docId, exhibit.id),
-              pageCount: exhibit.pageCount
+              pageCount: exhibit.pageCount,
+              mimeType: exhibit.mimeType
             });
           }
         });
@@ -11163,13 +11183,15 @@ You can:
   loadDocumentExhibits(documentId: number): void {
     this.exhibitPanelService.setExhibitsLoading(true);
     this.exhibitPanelService.getExhibits(documentId).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (exhibits) => {
+      next: (response) => {
+        const exhibits = response.exhibits || [];
         this.exhibitPanelService.setExhibits(exhibits.map((e: any) => ({
           id: String(e.id),
           label: e.label,
           fileName: e.fileName,
           fileUrl: this.exhibitPanelService.getExhibitFileUrl(documentId, e.id),
-          pageCount: e.pageCount
+          pageCount: e.pageCount,
+          mimeType: e.mimeType
         })));
         this.exhibitPanelService.setExhibitsLoading(false);
         this.cdr.detectChanges();
@@ -11184,7 +11206,7 @@ You can:
 
   /**
    * Poll for exhibits after document generation.
-   * Backend auto-attach is async — retries every 3s until exhibits stabilize or 30s max.
+   * Backend reports autoAttachComplete flag — polls until true or 40s max.
    */
   private exhibitPollActive = false;
 
@@ -11194,19 +11216,16 @@ You can:
     this.exhibitPollActive = true;
 
     let attempts = 0;
-    let lastCount = 0;
-    let stableRounds = 0;
     const maxAttempts = 20; // 20 × 2s = 40s max
     const intervalMs = 2000;
-    const requiredStableRounds = 4; // 8s of stable count before declaring done
-    const minAttemptsBeforeStable = 5; // Wait at least 10s before accepting stability
 
     const mapExhibits = (exhibits: any[]) => exhibits.map((e: any) => ({
       id: String(e.id),
       label: e.label,
       fileName: e.fileName,
       fileUrl: this.exhibitPanelService.getExhibitFileUrl(documentId, e.id),
-      pageCount: e.pageCount
+      pageCount: e.pageCount,
+      mimeType: e.mimeType
     }));
 
     const poll = () => {
@@ -11218,7 +11237,8 @@ You can:
       }
       attempts++;
       this.exhibitPanelService.getExhibits(documentId).pipe(takeUntil(this.destroy$)).subscribe({
-        next: (exhibits) => {
+        next: (response) => {
+          const exhibits = response.exhibits || [];
           const count = exhibits.length;
 
           // Show partial results as they arrive
@@ -11226,15 +11246,8 @@ You can:
             this.exhibitPanelService.setExhibits(mapExhibits(exhibits));
           }
 
-          if (count > 0 && count === lastCount) {
-            stableRounds++;
-          } else {
-            stableRounds = 0;
-          }
-          lastCount = count;
-
-          // Stable for requiredStableRounds consecutive polls AND minimum attempts reached → done
-          if (count > 0 && stableRounds >= requiredStableRounds && attempts >= minAttemptsBeforeStable) {
+          // Backend signals all exhibits are attached — done
+          if (response.autoAttachComplete) {
             this.exhibitPanelService.setExhibitsLoading(false);
             this.exhibitPollActive = false;
             return;
@@ -11250,7 +11263,7 @@ You can:
       });
     };
 
-    // Start first poll after 3s (give backend time to start async inserts)
+    // Start first poll after 2s (give backend time to start async inserts)
     this.setTrackedTimeout(poll, intervalMs);
   }
 

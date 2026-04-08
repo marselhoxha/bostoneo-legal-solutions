@@ -37,6 +37,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import java.util.regex.Matcher;
@@ -78,6 +79,15 @@ import com.itextpdf.html2pdf.ConverterProperties;
 @RequiredArgsConstructor
 @Slf4j
 public class AiWorkspaceDocumentService {
+
+    /** Tracks which documents currently have an auto-attach process running.
+     *  Entries are added before the async task starts and removed when it finishes. */
+    private static final ConcurrentHashMap<Long, Boolean> autoAttachInProgress = new ConcurrentHashMap<>();
+
+    /** Returns true if no auto-attach process is running for this document. */
+    public static boolean isAutoAttachComplete(Long documentId) {
+        return !autoAttachInProgress.containsKey(documentId);
+    }
 
     /**
      * Citation level for different document types
@@ -1110,6 +1120,7 @@ public class AiWorkspaceDocumentService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
+                autoAttachInProgress.put(docId, true);
                 CompletableFuture.runAsync(() -> autoAttachCaseDocumentsAsExhibits(docId, caseId, orgId));
             }
         });
@@ -1374,8 +1385,10 @@ public class AiWorkspaceDocumentService {
      */
     private void autoAttachCaseDocumentsAsExhibits(Long documentId, Long caseId, Long orgId) {
         if (caseId == null) {
+            autoAttachInProgress.remove(documentId);
             return;
         }
+        List<Long> savedExhibitIds = new ArrayList<>();
         try {
             // Clean up exhibits linked to since-deleted file_items before attaching fresh ones
             exhibitRepository.deleteStaleExhibits(documentId, orgId);
@@ -1384,7 +1397,11 @@ public class AiWorkspaceDocumentService {
             if (caseFiles.isEmpty()) {
                 return;
             }
-            int attached = 0;
+
+            // Phase 1: Save all exhibits to DB (fast — no text extraction).
+            // Text extraction is deferred to phase 2 because @Async self-invocation
+            // within AiWorkspaceExhibitService bypasses Spring's proxy, causing each
+            // OCR call (~10s) to block the loop sequentially.
             int skippedPrivileged = 0;
             for (FileItem file : caseFiles) {
                 if (isPrivilegedDocument(file) || isNonExhibitDocument(file)) {
@@ -1392,8 +1409,8 @@ public class AiWorkspaceDocumentService {
                     continue;
                 }
                 try {
-                    exhibitService.addExhibitFromFileItem(documentId, file, orgId);
-                    attached++;
+                    AiWorkspaceDocumentExhibit saved = exhibitService.addExhibitFromFileItem(documentId, file, orgId, false);
+                    savedExhibitIds.add(saved.getId());
                 } catch (Exception e) {
                     log.warn("Failed to auto-attach file_item {} as exhibit: {}", file.getId(), e.getMessage());
                 }
@@ -1401,11 +1418,19 @@ public class AiWorkspaceDocumentService {
             if (skippedPrivileged > 0) {
                 log.info("Skipped {} privileged documents from auto-attach for document {}", skippedPrivileged, documentId);
             }
-            if (attached > 0) {
-                log.info("Auto-attached {} case files as exhibits for document {}", attached, documentId);
+            if (!savedExhibitIds.isEmpty()) {
+                log.info("Auto-attached {} case files as exhibits for document {}", savedExhibitIds.size(), documentId);
             }
         } catch (Exception e) {
             log.warn("Failed to auto-attach case files as exhibits: {}", e.getMessage());
+        } finally {
+            autoAttachInProgress.remove(documentId);
+        }
+
+        // Phase 2: Trigger text extraction via inter-bean call (goes through Spring proxy,
+        // so @Async actually works — all extractions run in parallel, not blocking exhibit visibility).
+        for (Long exhibitId : savedExhibitIds) {
+            exhibitService.extractTextAsync(exhibitId, orgId);
         }
     }
 
@@ -1567,8 +1592,9 @@ public class AiWorkspaceDocumentService {
 
         // Auto-attach case documents as exhibits AFTER transaction commits
         // (runs in separate connection to avoid PostgreSQL 25P02 cascade on failure)
-        if (txResult != null && txResult.get("documentId") != null) {
+        if (txResult != null && txResult.get("documentId") != null && caseId != null) {
             final Long savedDocId = (Long) txResult.get("documentId");
+            autoAttachInProgress.put(savedDocId, true);
             CompletableFuture.runAsync(() -> autoAttachCaseDocumentsAsExhibits(savedDocId, caseId, orgId));
         }
 

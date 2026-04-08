@@ -1,15 +1,20 @@
 package com.bostoneo.bostoneosolutions.controller;
 
 import com.bostoneo.bostoneosolutions.dto.*;
+import com.bostoneo.bostoneosolutions.model.PIDocumentRequestTemplate;
+import com.bostoneo.bostoneosolutions.repository.PIDocumentRequestTemplateRepository;
 import com.bostoneo.bostoneosolutions.service.PIDocumentRequestService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import java.io.InputStream;
+import java.util.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
@@ -24,6 +29,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 public class PIDocumentRequestController {
 
     private final PIDocumentRequestService documentRequestService;
+    private final PIDocumentRequestTemplateRepository templateRepository;
+    private final ObjectMapper objectMapper;
 
     // ========================
     // Recipient Resolution
@@ -270,5 +277,60 @@ public class PIDocumentRequestController {
                 "message", "Fee status updated",
                 "requestLog", updated
         ));
+    }
+
+    // ========================
+    // Admin: Seed Templates
+    // ========================
+
+    @PreAuthorize("hasAnyRole('ROLE_SYSADMIN', 'ROLE_ADMIN', 'ROLE_MANAGING_PARTNER')")
+    @PostMapping("/admin/seed-document-templates")
+    public ResponseEntity<Map<String, Object>> seedDocumentTemplates() {
+        log.info("Seeding document request templates from classpath resource");
+        try {
+            InputStream is = new ClassPathResource("data/document-request-templates.json").getInputStream();
+            List<Map<String, Object>> templateDataList = objectMapper.readValue(is, new TypeReference<>() {});
+
+            List<String> created = new ArrayList<>();
+            List<String> skipped = new ArrayList<>();
+
+            for (Map<String, Object> data : templateDataList) {
+                String code = (String) data.get("template_code");
+                boolean exists = templateRepository.existsByOrganizationIdAndTemplateCode(null, code);
+                if (exists) {
+                    skipped.add(code);
+                    continue;
+                }
+
+                PIDocumentRequestTemplate template = PIDocumentRequestTemplate.builder()
+                        .organizationId(null)
+                        .templateCode(code)
+                        .templateName((String) data.get("template_name"))
+                        .documentType((String) data.get("document_type"))
+                        .recipientType((String) data.get("recipient_type"))
+                        .emailSubject((String) data.get("email_subject"))
+                        .emailBody((String) data.get("email_body"))
+                        .smsBody((String) data.get("sms_body"))
+                        .isActive(true)
+                        .isSystem(true)
+                        .build();
+                templateRepository.save(template);
+                created.add(code);
+            }
+
+            log.info("Template seeding complete. Created: {}, Skipped: {}", created.size(), skipped.size());
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", String.format("Seeded %d templates, skipped %d existing", created.size(), skipped.size()),
+                    "created", created,
+                    "skipped", skipped
+            ));
+        } catch (Exception e) {
+            log.error("Failed to seed templates", e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "success", false,
+                    "message", "Failed to seed templates: " + e.getMessage()
+            ));
+        }
     }
 }

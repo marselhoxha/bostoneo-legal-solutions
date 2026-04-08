@@ -9,6 +9,12 @@ export interface Exhibit {
   fileName: string;    // e.g. "police_report.pdf"
   fileUrl: string;     // URL or blob URL for the PDF viewer
   pageCount?: number;
+  mimeType?: string;   // e.g. "application/pdf", "image/jpeg"
+}
+
+export interface ExhibitListResponse {
+  exhibits: any[];
+  autoAttachComplete: boolean;
 }
 
 export interface TocEntry {
@@ -26,8 +32,8 @@ export class ExhibitPanelService {
 
   // ===== HTTP METHODS =====
 
-  getExhibits(documentId: number): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/documents/${documentId}/exhibits`);
+  getExhibits(documentId: number): Observable<ExhibitListResponse> {
+    return this.http.get<ExhibitListResponse>(`${this.apiUrl}/documents/${documentId}/exhibits`);
   }
 
   addFromCaseDocument(documentId: number, caseDocumentId: number): Observable<any> {

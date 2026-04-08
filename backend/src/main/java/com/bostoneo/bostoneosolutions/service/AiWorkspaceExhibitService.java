@@ -109,6 +109,15 @@ public class AiWorkspaceExhibitService {
      * Used by auto-attach when generating documents linked to a case.
      */
     public AiWorkspaceDocumentExhibit addExhibitFromFileItem(Long workspaceDocId, FileItem fileItem, Long orgId) {
+        return addExhibitFromFileItem(workspaceDocId, fileItem, orgId, true);
+    }
+
+    /**
+     * Add an exhibit from a FileItem. When skipExtraction=true, only saves to DB
+     * without triggering text extraction (used by auto-attach to decouple fast DB inserts
+     * from slow OCR — extraction is triggered separately via inter-bean call so @Async works).
+     */
+    public AiWorkspaceDocumentExhibit addExhibitFromFileItem(Long workspaceDocId, FileItem fileItem, Long orgId, boolean triggerExtraction) {
         String label = exhibitRepository.getNextLabel(workspaceDocId, orgId);
         int count = exhibitRepository.findByDocumentIdAndOrgId(workspaceDocId, orgId).size();
 
@@ -129,7 +138,9 @@ public class AiWorkspaceExhibitService {
         log.info("Added exhibit {} (label={}) from file_item {} for workspace doc {}",
                 saved.getId(), label, fileItem.getId(), workspaceDocId);
 
-        extractTextAsync(saved.getId(), orgId);
+        if (triggerExtraction) {
+            extractTextAsync(saved.getId(), orgId);
+        }
         return saved;
     }
 

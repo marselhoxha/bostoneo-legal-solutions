@@ -844,7 +844,7 @@ public class AiWorkspaceController {
      * GET /api/legal/ai-workspace/documents/{documentId}/exhibits
      */
     @GetMapping("/documents/{documentId}/exhibits")
-    public ResponseEntity<List<AiWorkspaceDocumentExhibit>> getExhibits(
+    public ResponseEntity<Map<String, Object>> getExhibits(
         @PathVariable Long documentId,
         @AuthenticationPrincipal User user
     ) {
@@ -855,7 +855,10 @@ public class AiWorkspaceController {
             }
 
             List<AiWorkspaceDocumentExhibit> exhibits = exhibitService.getExhibitsForDocument(documentId, orgId);
-            return ResponseEntity.ok(exhibits);
+            Map<String, Object> response = new HashMap<>();
+            response.put("exhibits", exhibits);
+            response.put("autoAttachComplete", AiWorkspaceDocumentService.isAutoAttachComplete(documentId));
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error retrieving exhibits for document {}: {}", documentId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -982,6 +985,10 @@ public class AiWorkspaceController {
             byte[] fileBytes = exhibitService.getExhibitFile(exhibitId, orgId);
 
             String mimeType = exhibit.getMimeType() != null ? exhibit.getMimeType() : "application/octet-stream";
+
+            log.info("Serving exhibit {} (mime={}, size={} bytes, path={})",
+                exhibitId, mimeType, fileBytes.length,
+                exhibit.getFilePath() != null ? exhibit.getFilePath() : "via-case-doc-" + exhibit.getCaseDocumentId());
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(mimeType));
