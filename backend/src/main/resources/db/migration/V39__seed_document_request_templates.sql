@@ -1,10 +1,23 @@
 -- Seed/update system document request templates with styled HTML
--- Uses UPSERT to override existing templates with latest versions
+
+-- Ensure unique constraint exists (may be missing on production)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'pi_document_request_templates_organization_id_template_code_key'
+    ) THEN
+        ALTER TABLE pi_document_request_templates ADD CONSTRAINT pi_document_request_templates_organization_id_template_code_key UNIQUE (organization_id, template_code);
+    END IF;
+END $$;
+
+-- Delete existing system templates and re-insert with latest styled HTML
+DELETE FROM pi_document_request_templates WHERE is_system = true AND organization_id IS NULL;
 
 INSERT INTO pi_document_request_templates (organization_id, template_code, template_name, document_type, recipient_type, email_subject, email_body, sms_body, is_system, is_active)
-VALUES (NULL, E'MEDICAL_RECORDS_REQUEST', E'Medical Records Request', E'MEDICAL_RECORDS', E'MEDICAL_PROVIDER',
-    E'Medical Records Request - {{clientName}} | DOA: {{accidentDate}}',
-    E'<!DOCTYPE html>
+VALUES
+(NULL, E'MEDICAL_RECORDS_REQUEST', E'Medical Records Request', E'MEDICAL_RECORDS', E'MEDICAL_PROVIDER',
+ E'Medical Records Request - {{clientName}} | DOA: {{accidentDate}}',
+ E'<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -105,23 +118,11 @@ VALUES (NULL, E'MEDICAL_RECORDS_REQUEST', E'Medical Records Request', E'MEDICAL_
     </table>
 </body>
 </html>',
-    E'Medical records request sent for {{clientName}}. Please check your email for details. - {{firmName}}',
-    true, true)
-ON CONFLICT (organization_id, template_code)
-DO UPDATE SET
-    template_name = EXCLUDED.template_name,
-    document_type = EXCLUDED.document_type,
-    recipient_type = EXCLUDED.recipient_type,
-    email_subject = EXCLUDED.email_subject,
-    email_body = EXCLUDED.email_body,
-    sms_body = EXCLUDED.sms_body,
-    is_active = true,
-    updated_at = NOW();
-
-INSERT INTO pi_document_request_templates (organization_id, template_code, template_name, document_type, recipient_type, email_subject, email_body, sms_body, is_system, is_active)
-VALUES (NULL, E'MEDICAL_BILLS_REQUEST', E'Medical Bills Request', E'MEDICAL_BILLS', E'BILLING_DEPT',
-    E'Itemized Bill Request - {{clientName}} | Account #{{accountNumber}}',
-    E'<!DOCTYPE html>
+ E'Medical records request sent for {{clientName}}. Please check your email for details. - {{firmName}}',
+ true, true),
+(NULL, E'MEDICAL_BILLS_REQUEST', E'Medical Bills Request', E'MEDICAL_BILLS', E'BILLING_DEPT',
+ E'Itemized Bill Request - {{clientName}} | Account #{{accountNumber}}',
+ E'<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -221,23 +222,11 @@ VALUES (NULL, E'MEDICAL_BILLS_REQUEST', E'Medical Bills Request', E'MEDICAL_BILL
     </table>
 </body>
 </html>',
-    E'Billing records request sent for {{clientName}}. Please check your email. - {{firmName}}',
-    true, true)
-ON CONFLICT (organization_id, template_code)
-DO UPDATE SET
-    template_name = EXCLUDED.template_name,
-    document_type = EXCLUDED.document_type,
-    recipient_type = EXCLUDED.recipient_type,
-    email_subject = EXCLUDED.email_subject,
-    email_body = EXCLUDED.email_body,
-    sms_body = EXCLUDED.sms_body,
-    is_active = true,
-    updated_at = NOW();
-
-INSERT INTO pi_document_request_templates (organization_id, template_code, template_name, document_type, recipient_type, email_subject, email_body, sms_body, is_system, is_active)
-VALUES (NULL, E'INSURANCE_POLICY_REQUEST', E'Insurance Policy Limits Request', E'INSURANCE', E'INSURANCE_ADJUSTER',
-    E'Policy Limits Disclosure Request - Claim #{{claimNumber}} | {{clientName}} v. {{defendantName}}',
-    E'<!DOCTYPE html>
+ E'Billing records request sent for {{clientName}}. Please check your email. - {{firmName}}',
+ true, true),
+(NULL, E'INSURANCE_POLICY_REQUEST', E'Insurance Policy Limits Request', E'INSURANCE', E'INSURANCE_ADJUSTER',
+ E'Policy Limits Disclosure Request - Claim #{{claimNumber}} | {{clientName}} v. {{defendantName}}',
+ E'<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -337,23 +326,11 @@ VALUES (NULL, E'INSURANCE_POLICY_REQUEST', E'Insurance Policy Limits Request', E
     </table>
 </body>
 </html>',
-    E'Policy limits request sent for Claim #{{claimNumber}}. Please check your email. - {{firmName}}',
-    true, true)
-ON CONFLICT (organization_id, template_code)
-DO UPDATE SET
-    template_name = EXCLUDED.template_name,
-    document_type = EXCLUDED.document_type,
-    recipient_type = EXCLUDED.recipient_type,
-    email_subject = EXCLUDED.email_subject,
-    email_body = EXCLUDED.email_body,
-    sms_body = EXCLUDED.sms_body,
-    is_active = true,
-    updated_at = NOW();
-
-INSERT INTO pi_document_request_templates (organization_id, template_code, template_name, document_type, recipient_type, email_subject, email_body, sms_body, is_system, is_active)
-VALUES (NULL, E'WAGE_DOCUMENTATION_REQUEST', E'Wage Documentation Request', E'WAGE_DOCUMENTATION', E'EMPLOYER_HR',
-    E'Employment Verification & Wage Documentation Request - {{clientName}}',
-    E'<!DOCTYPE html>
+ E'Policy limits request sent for Claim #{{claimNumber}}. Please check your email. - {{firmName}}',
+ true, true),
+(NULL, E'WAGE_DOCUMENTATION_REQUEST', E'Wage Documentation Request', E'WAGE_DOCUMENTATION', E'EMPLOYER_HR',
+ E'Employment Verification & Wage Documentation Request - {{clientName}}',
+ E'<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -461,23 +438,11 @@ VALUES (NULL, E'WAGE_DOCUMENTATION_REQUEST', E'Wage Documentation Request', E'WA
     </table>
 </body>
 </html>',
-    E'Wage documentation request sent to your employer. Please check your email. - {{firmName}}',
-    true, true)
-ON CONFLICT (organization_id, template_code)
-DO UPDATE SET
-    template_name = EXCLUDED.template_name,
-    document_type = EXCLUDED.document_type,
-    recipient_type = EXCLUDED.recipient_type,
-    email_subject = EXCLUDED.email_subject,
-    email_body = EXCLUDED.email_body,
-    sms_body = EXCLUDED.sms_body,
-    is_active = true,
-    updated_at = NOW();
-
-INSERT INTO pi_document_request_templates (organization_id, template_code, template_name, document_type, recipient_type, email_subject, email_body, sms_body, is_system, is_active)
-VALUES (NULL, E'POLICE_REPORT_REQUEST', E'Police Report Request', E'POLICE_REPORT', E'POLICE_DEPT',
-    E'Police Report Request - Report #{{reportNumber}} | Date: {{accidentDate}}',
-    E'<!DOCTYPE html>
+ E'Wage documentation request sent to your employer. Please check your email. - {{firmName}}',
+ true, true),
+(NULL, E'POLICE_REPORT_REQUEST', E'Police Report Request', E'POLICE_REPORT', E'POLICE_DEPT',
+ E'Police Report Request - Report #{{reportNumber}} | Date: {{accidentDate}}',
+ E'<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -584,23 +549,11 @@ VALUES (NULL, E'POLICE_REPORT_REQUEST', E'Police Report Request', E'POLICE_REPOR
     </table>
 </body>
 </html>',
-    NULL,
-    true, true)
-ON CONFLICT (organization_id, template_code)
-DO UPDATE SET
-    template_name = EXCLUDED.template_name,
-    document_type = EXCLUDED.document_type,
-    recipient_type = EXCLUDED.recipient_type,
-    email_subject = EXCLUDED.email_subject,
-    email_body = EXCLUDED.email_body,
-    sms_body = EXCLUDED.sms_body,
-    is_active = true,
-    updated_at = NOW();
-
-INSERT INTO pi_document_request_templates (organization_id, template_code, template_name, document_type, recipient_type, email_subject, email_body, sms_body, is_system, is_active)
-VALUES (NULL, E'CLIENT_DOCUMENT_REQUEST', E'Client Document Request', E'PHOTOGRAPHS', E'CLIENT',
-    E'Action Required: Documents Needed for Your Case #{{caseNumber}}',
-    E'<!DOCTYPE html>
+ NULL,
+ true, true),
+(NULL, E'CLIENT_DOCUMENT_REQUEST', E'Client Document Request', E'PHOTOGRAPHS', E'CLIENT',
+ E'Action Required: Documents Needed for Your Case #{{caseNumber}}',
+ E'<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -684,23 +637,11 @@ VALUES (NULL, E'CLIENT_DOCUMENT_REQUEST', E'Client Document Request', E'PHOTOGRA
     </table>
 </body>
 </html>',
-    E'Hi {{clientName}}, we need additional documents for your case. Please check your email or call us at {{firmPhone}}. - {{firmName}}',
-    true, true)
-ON CONFLICT (organization_id, template_code)
-DO UPDATE SET
-    template_name = EXCLUDED.template_name,
-    document_type = EXCLUDED.document_type,
-    recipient_type = EXCLUDED.recipient_type,
-    email_subject = EXCLUDED.email_subject,
-    email_body = EXCLUDED.email_body,
-    sms_body = EXCLUDED.sms_body,
-    is_active = true,
-    updated_at = NOW();
-
-INSERT INTO pi_document_request_templates (organization_id, template_code, template_name, document_type, recipient_type, email_subject, email_body, sms_body, is_system, is_active)
-VALUES (NULL, E'WITNESS_STATEMENT_REQUEST', E'Witness Statement Request', E'WITNESS', E'WITNESS',
-    E'Witness Statement Request - Incident on {{accidentDate}}',
-    E'<!DOCTYPE html>
+ E'Hi {{clientName}}, we need additional documents for your case. Please check your email or call us at {{firmPhone}}. - {{firmName}}',
+ true, true),
+(NULL, E'WITNESS_STATEMENT_REQUEST', E'Witness Statement Request', E'WITNESS', E'WITNESS',
+ E'Witness Statement Request - Incident on {{accidentDate}}',
+ E'<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -776,15 +717,5 @@ VALUES (NULL, E'WITNESS_STATEMENT_REQUEST', E'Witness Statement Request', E'WITN
     </table>
 </body>
 </html>',
-    E'Hi, this is {{firmName}}. You may have witnessed an incident on {{accidentDate}}. Would you be willing to share what you saw? Please call {{firmPhone}}.',
-    true, true)
-ON CONFLICT (organization_id, template_code)
-DO UPDATE SET
-    template_name = EXCLUDED.template_name,
-    document_type = EXCLUDED.document_type,
-    recipient_type = EXCLUDED.recipient_type,
-    email_subject = EXCLUDED.email_subject,
-    email_body = EXCLUDED.email_body,
-    sms_body = EXCLUDED.sms_body,
-    is_active = true,
-    updated_at = NOW();
+ E'Hi, this is {{firmName}}. You may have witnessed an incident on {{accidentDate}}. Would you be willing to share what you saw? Please call {{firmPhone}}.',
+ true, true);
