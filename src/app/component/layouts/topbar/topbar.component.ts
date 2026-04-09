@@ -225,7 +225,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
   /**
    * Direct load without subscription
    */
-  private loadCaseManagementDataDirect(): void {
+  loadCaseManagementDataDirect(): void {
     const userData = this.userService.getCurrentUser();
     if (userData && userData.id) {
       this.loadCaseDataForUser(userData.id);

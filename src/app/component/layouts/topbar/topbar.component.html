@@ -57,7 +57,7 @@
 
            
                 <!-- Case Management Dropdown (hidden for client users) -->
-                <div class="dropdown ms-1 header-item" ngbDropdown #caseDropdown="ngbDropdown" display="dynamic" placement="bottom-end" *ngIf="!isClientUser">
+                <div class="dropdown ms-1 header-item" ngbDropdown #caseDropdown="ngbDropdown" display="dynamic" placement="bottom-end" *ngIf="!isClientUser" (openChange)="$event && loadCaseManagementDataDirect()">
                     <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle position-relative"
                             ngbDropdownToggle
                             id="page-header-case-dropdown">

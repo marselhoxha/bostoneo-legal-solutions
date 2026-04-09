@@ -80,8 +80,8 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
         if (assignedTo == null) {
             throw new ApiException(String.format("User not found with ID: %d", request.getUserId()));
         }
-        User currentUser = getSystemUser(); // Temporarily use system user for testing
-        
+        User currentUser = getCurrentUser();
+
         // Create new assignment
         CaseAssignment assignment = CaseAssignment.builder()
             .legalCase(legalCase)
@@ -341,7 +341,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             throw new ApiException("Assignment not found");
         }
 
-        User currentUser = getSystemUser(); // Temporarily use system user for testing
+        User currentUser = getCurrentUser();
 
         // Get user info for activity logging
         User unassignedUser = userRepository.get(userId);
@@ -779,7 +779,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             throw new ApiException("Transfer request is not pending");
         }
 
-        User currentUser = getSystemUser(); // Temporarily use system user for testing
+        User currentUser = getCurrentUser();
         CaseAssignmentDTO result = processTransfer(request, currentUser, notes);
 
         // Broadcast WebSocket notification for transfer approval
@@ -809,7 +809,7 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
             throw new ApiException("Transfer request is not pending");
         }
 
-        User currentUser = getSystemUser(); // Temporarily use system user for testing
+        User currentUser = getCurrentUser();
 
         request.setStatus(TransferStatus.REJECTED);
         request.setApprovedBy(currentUser);
@@ -1233,15 +1233,12 @@ public class CaseAssignmentServiceImpl implements CaseAssignmentService {
     }
     
     private User getSystemUser() {
-        // Return system user (usually ID 1 or a specific system user)
-        User systemUser = userRepository.get(1L);
-        if (systemUser == null) {
-            systemUser = userRepository.findByEmail("system@legience.com");
-            if (systemUser == null) {
-                throw new ApiException("System user not found");
-            }
+        // For auto-assign flows where no user is authenticated, use the current authenticated user if available
+        try {
+            return getCurrentUser();
+        } catch (Exception e) {
+            throw new ApiException("No authenticated user available for this operation");
         }
-        return systemUser;
     }
     
     private String getFullName(User user) {
