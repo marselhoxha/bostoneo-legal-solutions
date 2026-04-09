@@ -31,7 +31,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 public class LegalResearchConversationController {
 
     private final LegalResearchConversationService conversationService;
-    private final com.bostoneo.bostoneosolutions.service.AuditLogService auditLogService;
 
     /**
      * Get or create a conversation session

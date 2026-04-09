@@ -53,7 +53,6 @@ public class AiWorkspaceController {
     private final com.bostoneo.bostoneosolutions.service.PIMedicalRecordService medicalRecordService;
     private final com.bostoneo.bostoneosolutions.service.PIMedicalSummaryService medicalSummaryService;
     private final com.bostoneo.bostoneosolutions.service.ai.DocumentTypeTemplateRegistry templateRegistry;
-    private final com.bostoneo.bostoneosolutions.service.AuditLogService auditLogService;
 
     /**
      * Transform document (full document or selection)

@@ -49,7 +49,6 @@ public class AIDocumentAnalyzerController {
     private final AIAnalysisMessageRepository analysisMessageRepository;
     private final CloudStorageUrlConverter urlConverter;
     private final TenantService tenantService;
-    private final com.bostoneo.bostoneosolutions.service.AuditLogService auditLogService;
 
     /**
      * Helper method to get the current organization ID (required for tenant isolation)
