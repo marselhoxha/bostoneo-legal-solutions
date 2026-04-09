@@ -90,6 +90,7 @@ export class VerifyComponent implements OnInit {
           if (this.isForceChange) {
             localStorage.removeItem(Key.TOKEN);
             localStorage.removeItem(Key.REFRESH_TOKEN);
+            localStorage.removeItem('currentUser');
           }
           setTimeout(() => this.router.navigate(['/login']), 3000);
           return { type: 'account' as AccountType, title: 'Success', dataState: DataState.LOADED, message: 'Password changed successfully! Redirecting to login...', verifySuccess: true };

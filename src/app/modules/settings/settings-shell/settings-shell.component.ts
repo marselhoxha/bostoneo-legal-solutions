@@ -141,7 +141,7 @@ export class SettingsShellComponent implements OnInit, OnDestroy {
     // Show Professional tab for attorney-like roles
     const role = (this.user?.roleName || '').toUpperCase();
     if (role.includes('ATTORNEY') || role.includes('PARTNER') || role.includes('ASSOCIATE') ||
-        role.includes('COUNSEL') || role.includes('PARALEGAL')) {
+        role.includes('COUNSEL') || role.includes('PARALEGAL') || role.includes('ADMIN')) {
       this.tabs.splice(1, 0, { key: 'professional', label: 'Professional', icon: 'ri-scales-3-line', section: 'Personal' });
     }
 
