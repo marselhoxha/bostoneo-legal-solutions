@@ -363,9 +363,24 @@ public class AIDocumentAnalysisService {
     }
 
     private String extractTextFromFile(MultipartFile file) throws IOException {
-        try (InputStream inputStream = file.getInputStream()) {
-            // Use Apache Tika to extract text from any document type
-            String content = tika.parseToString(inputStream);
+        byte[] fileBytes = file.getBytes();
+        try (InputStream inputStream = new java.io.ByteArrayInputStream(fileBytes)) {
+            String content;
+            String contentType = file.getContentType();
+
+            // Use PDFParser directly for PDFs — Tika's AutoDetectParser has a bug where
+            // DefaultZipContainerDetector throws "No Archiver found" for some valid PDFs
+            if (contentType != null && contentType.contains("pdf")) {
+                org.apache.tika.parser.pdf.PDFParser pdfParser = new org.apache.tika.parser.pdf.PDFParser();
+                org.apache.tika.sax.BodyContentHandler handler = new org.apache.tika.sax.BodyContentHandler(-1);
+                org.apache.tika.metadata.Metadata metadata = new org.apache.tika.metadata.Metadata();
+                org.apache.tika.parser.ParseContext parseContext = new org.apache.tika.parser.ParseContext();
+                pdfParser.parse(inputStream, handler, metadata, parseContext);
+                content = handler.toString();
+            } else {
+                // Use Tika auto-detect for non-PDF files (DOCX, images, etc.)
+                content = tika.parseToString(inputStream);
+            }
 
             // If content extracted successfully, return it
             if (content != null && !content.trim().isEmpty()) {
@@ -377,7 +392,7 @@ public class AIDocumentAnalysisService {
             log.info("No text found, attempting OCR extraction for: {}", file.getOriginalFilename());
             return extractTextWithOCR(file);
 
-        } catch (TikaException e) {
+        } catch (TikaException | org.xml.sax.SAXException e) {
             log.error("Tika extraction error for file {}: {}", file.getOriginalFilename(), e.getMessage());
             // Try OCR as fallback
             log.info("Attempting OCR fallback for: {}", file.getOriginalFilename());

@@ -6397,7 +6397,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     const title = `${firstFileName} - ${analysisTypeLabel}`;
     const userMessage = `Analyzing ${filesToAnalyze.length} document(s) using ${analysisTypeLabel} mode`;
 
-    // Show chat panel for workflow progress
+    // Hide sidebar immediately and show chat panel
+    this.isBatchProcessing = true;
     this.stateService.setShowChat(true);
     this.stateService.setShowBottomSearchBar(false);
     this.stateService.setIsGenerating(true);

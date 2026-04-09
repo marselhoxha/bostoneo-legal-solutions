@@ -23,7 +23,7 @@
   <!-- LEFT SIDEBAR: Document Analysis (Upload mode) -->
   <!-- ========================================== -->
   <aside class="card conversation-sidebar" [class.open]="sidebarOpen$ | async"
-         *ngIf="!(draftingMode$ | async) && selectedTask === 'upload' && !((documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async))">
+         *ngIf="!(draftingMode$ | async) && selectedTask === 'upload' && !isBatchProcessing && !((documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async))">
 
     <!-- Search Bar -->
     <div class="sidebar-search-box">
