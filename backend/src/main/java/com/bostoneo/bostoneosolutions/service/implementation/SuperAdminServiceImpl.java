@@ -2439,7 +2439,9 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             throw new ApiException("User not found with ID: " + userId);
         }
 
+        // Blacklist all tokens (uses Redis + in-memory fallback)
         tokenBlacklistService.blacklistAllUserTokens(userId);
+
         log.info("SUPERADMIN: All sessions terminated for user {}", userId);
     }
 

@@ -37,6 +37,7 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
     private final TokenProvider tokenProvider;
     private final com.bostoneo.bostoneosolutions.service.TokenBlacklistService tokenBlacklistService;
     private final OnlineUserService onlineUserService;
+    private final org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate jdbc;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -65,8 +66,11 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
             if (isTokenValid) {
                 long tokenIssuedAt = tokenProvider.getIssuedAt(token);
                 if (tokenBlacklistService.isUserTokenBlacklisted(userId, tokenIssuedAt)) {
-                    log.warn("Token issued before password change used for user {}", userId);
-                    isTokenValid = false;
+                    log.warn("BLOCKED: User {} session terminated — token blacklisted", userId);
+                    response.setStatus(401);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"message\":\"Your session has been terminated. Please log in again.\"}");
+                    return; // Stop immediately — don't continue filter chain
                 }
             }
 
@@ -84,6 +88,22 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
                     }
                     log.debug("REQUEST: {} {} - SUPERADMIN User: {}", request.getMethod(), request.getRequestURI(), userId);
                 } else {
+                    // Check if organization is suspended or deleted
+                    try {
+                        String orgStatus = jdbc.queryForObject(
+                            "SELECT status FROM organizations WHERE id = :orgId",
+                            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource("orgId", organizationId),
+                            String.class);
+                        if ("SUSPENDED".equals(orgStatus) || "DELETED".equals(orgStatus)) {
+                            log.warn("User {} denied: organization {} is {}", userId, organizationId, orgStatus);
+                            response.setStatus(403);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"message\":\"Your organization has been suspended. Please contact your administrator.\"}");
+                            return;
+                        }
+                    } catch (Exception e) {
+                        log.debug("Could not check org status for org {}: {}", organizationId, e.getMessage());
+                    }
                     TenantContext.setCurrentTenant(organizationId);
                     log.debug("REQUEST: {} {} - User: {}, Org: {}", request.getMethod(), request.getRequestURI(), userId, organizationId);
                 }

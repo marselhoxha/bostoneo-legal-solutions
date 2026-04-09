@@ -274,8 +274,8 @@ export class OrganizationListComponent implements OnInit, OnDestroy {
             Swal.fire('Deleted!', `${org.name} has been deleted.`, 'success');
             this.loadOrganizations();
           },
-          error: () => {
-            Swal.fire('Error', 'Failed to delete organization', 'error');
+          error: (err) => {
+            Swal.fire('Error', err?.error?.message || err?.error?.reason || 'Failed to delete organization', 'error');
           }
         });
     }

@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +21,10 @@ public class TokenBlacklistService {
     // Track whether Redis was ever successfully connected
     // If Redis was never available (local dev), fail open; if it went down (production outage), fail closed
     private volatile boolean redisEverConnected = false;
+
+    /** In-memory fallback for user token blacklisting when Redis is unavailable.
+     *  Maps userId → timestamp (millis) when all tokens were invalidated. */
+    private static final ConcurrentHashMap<Long, Long> memoryBlacklist = new ConcurrentHashMap<>();
 
     /**
      * Blacklist a specific token (e.g., on logout)
@@ -38,13 +43,16 @@ public class TokenBlacklistService {
      * Blacklist all tokens for a user issued before now (e.g., on password change).
      */
     public void blacklistAllUserTokens(Long userId) {
+        long now = System.currentTimeMillis();
+        // Always write to in-memory fallback (works without Redis)
+        memoryBlacklist.put(userId, now);
+        // Also try Redis for cross-instance consistency
         try {
-            String timestamp = String.valueOf(System.currentTimeMillis());
-            redisTemplate.opsForValue().set(USER_BLACKLIST_PREFIX + userId, timestamp, Duration.ofHours(8));
+            redisTemplate.opsForValue().set(USER_BLACKLIST_PREFIX + userId, String.valueOf(now), Duration.ofHours(8));
             redisEverConnected = true;
-            log.info("All tokens blacklisted for user {}", userId);
+            log.info("All tokens blacklisted for user {} (Redis + memory)", userId);
         } catch (Exception e) {
-            log.error("Failed to blacklist user tokens for {}: {}", userId, e.getMessage());
+            log.warn("Redis unavailable — tokens blacklisted in memory only for user {}", userId);
         }
     }
 
@@ -71,6 +79,16 @@ public class TokenBlacklistService {
      * SECURITY: Same fail-closed/fail-open logic as isTokenBlacklisted
      */
     public boolean isUserTokenBlacklisted(Long userId, long tokenIssuedAtMillis) {
+        // Check in-memory blacklist first (always available)
+        Long memoryTimestamp = memoryBlacklist.get(userId);
+        if (memoryTimestamp != null) {
+            log.info("Memory blacklist check for user {}: tokenIssued={}, blacklistAt={}, blocked={}",
+                userId, tokenIssuedAtMillis, memoryTimestamp, tokenIssuedAtMillis < memoryTimestamp);
+            if (tokenIssuedAtMillis < memoryTimestamp) {
+                return true;
+            }
+        }
+        // Then check Redis
         try {
             String blacklistTimestamp = redisTemplate.opsForValue().get(USER_BLACKLIST_PREFIX + userId);
             redisEverConnected = true;
@@ -81,7 +99,7 @@ public class TokenBlacklistService {
                 log.error("SECURITY: Redis went down — failing closed (denying access): {}", e.getMessage());
                 return true;
             }
-            log.trace("Redis not available (not started) — skipping blacklist check: {}", e.getMessage());
+            // Redis never connected — memory check already done above
             return false;
         }
     }
