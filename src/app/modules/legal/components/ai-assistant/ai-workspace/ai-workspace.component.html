@@ -340,7 +340,7 @@
             <!-- Footer: Steps + Due Date -->
             <div class="workflow-card-footer">
               <span class="steps-info">{{ getCompletedStepsCount(workflow) }} of {{ workflow.totalSteps || 0 }} steps complete</span>
-              <span class="due-date" *ngIf="workflow.dueDate">Due {{ workflow.dueDate | date:'MMM d' }}</span>
+              <span class="due-date" *ngIf="workflow.dueDate">Due {{ workflow.dueDate | date:'MMM d':'UTC' }}</span>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.controller;
 
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.dto.CustomHttpResponse;
 import com.bostoneo.bostoneosolutions.dto.AgingReportDTO;
 import com.bostoneo.bostoneosolutions.enumeration.InvoiceStatus;
@@ -119,6 +120,7 @@ public class InvoiceController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('READ:INVOICE')")
+    @AuditLog(action = "VIEW", entityType = "INVOICE", description = "Viewed invoice")
     public ResponseEntity<CustomHttpResponse<Invoice>> getInvoiceById(@PathVariable Long id) {
         log.info("Fetching invoice with ID: {}", id);
         Invoice invoice = invoiceService.getInvoiceById(id);

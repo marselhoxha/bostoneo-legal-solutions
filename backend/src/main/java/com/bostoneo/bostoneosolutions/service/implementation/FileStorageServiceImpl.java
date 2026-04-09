@@ -178,11 +178,11 @@ public class FileStorageServiceImpl implements FileStorageService {
                 return new UrlResource(foundPath.toUri());
             }
             
-            log.error("File not found: {}", filePath);
+            log.debug("File not found: {}", filePath);
             throw new IOException("File not found or not readable: " + filePath);
-            
+
         } catch (Exception e) {
-            log.error("Error loading file resource: {}", filePath, e);
+            log.debug("Error loading file resource: {}", filePath);
             throw new IOException("Could not load file: " + filePath, e);
         }
     }

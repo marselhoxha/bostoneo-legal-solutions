@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.model.AiConversationMessage;
 import com.bostoneo.bostoneosolutions.model.AiConversationSession;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
@@ -421,6 +422,7 @@ public class LegalResearchConversationController {
      * POST /api/legal/research/conversations
      */
     @PostMapping
+    @AuditLog(action = "CREATE", entityType = "LEGAL_RESEARCH", description = "Created research conversation")
     public ResponseEntity<HttpResponse> createGeneralConversation(@RequestBody CreateConversationRequest request) {
         try {
             AiConversationSession session = conversationService.createGeneralConversation(
@@ -460,6 +462,7 @@ public class LegalResearchConversationController {
      * Note: This is a synchronous endpoint to avoid async timeout issues with long AI responses
      */
     @PostMapping("/{sessionId}/query")
+    @AuditLog(action = "CREATE", entityType = "LEGAL_RESEARCH", description = "Performed AI legal research")
     public ResponseEntity<HttpResponse> sendQuery(
             @PathVariable Long sessionId,
             @RequestBody QueryRequest request

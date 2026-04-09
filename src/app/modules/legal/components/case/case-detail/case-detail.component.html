@@ -85,7 +85,7 @@
                   <ng-container *ngIf="case.filingDate">
                     <span class="meta-separator">•</span>
                     <span class="meta-item-inline">
-                      <i class="ri-calendar-line"></i>Filed {{ case.filingDate | date:'MMM dd, yyyy' }}
+                      <i class="ri-calendar-line"></i>Filed {{ case.filingDate | date:'MMM dd, yyyy':'UTC' }}
                     </span>
                   </ng-container>
                 </div>
@@ -131,7 +131,7 @@
             </div>
             <div class="info-content">
               <div class="info-label">Next Hearing</div>
-              <div class="info-value">{{ case.nextHearing ? (case.nextHearing | date:'MMM dd, yyyy') : 'Not scheduled' }}</div>
+              <div class="info-value">{{ case.nextHearing ? (case.nextHearing | date:'MMM dd, yyyy':'UTC') : 'Not scheduled' }}</div>
             </div>
           </div>
         </div>
@@ -268,7 +268,7 @@
                     </div>
                     <div class="info-details">
                       <span class="info-label">Filed On</span>
-                      <span class="info-value">{{ case.filingDate | date:'longDate' }}</span>
+                      <span class="info-value">{{ case.filingDate | date:'longDate':'UTC' }}</span>
                     </div>
                   </div>
 
@@ -432,7 +432,7 @@
                       </div>
                       <div class="date-info">
                         <span class="date-label">Case Filed</span>
-                        <span class="date-value" *ngIf="case.filingDate">{{ case.filingDate | date:'EEEE, MMMM d, y' }}</span>
+                        <span class="date-value" *ngIf="case.filingDate">{{ case.filingDate | date:'EEEE, MMMM d, y':'UTC' }}</span>
                         <span class="date-value text-muted" *ngIf="!case.filingDate">Not set</span>
                       </div>
                     </div>
@@ -449,7 +449,7 @@
                       </div>
                       <div class="date-info">
                         <span class="date-label">Next Hearing</span>
-                        <span class="date-value" *ngIf="case.nextHearing">{{ case.nextHearing | date:'EEEE, MMMM d, y' }}</span>
+                        <span class="date-value" *ngIf="case.nextHearing">{{ case.nextHearing | date:'EEEE, MMMM d, y':'UTC' }}</span>
                         <span class="date-value text-muted" *ngIf="!case.nextHearing">Not scheduled</span>
                       </div>
                       <span class="date-badge" [ngClass]="getHearingStatus(case.nextHearing).class" *ngIf="case.nextHearing">
@@ -468,7 +468,7 @@
                       </div>
                       <div class="date-info">
                         <span class="date-label">Trial Date</span>
-                        <span class="date-value" *ngIf="case.trialDate">{{ case.trialDate | date:'EEEE, MMMM d, y' }}</span>
+                        <span class="date-value" *ngIf="case.trialDate">{{ case.trialDate | date:'EEEE, MMMM d, y':'UTC' }}</span>
                         <span class="date-value text-muted" *ngIf="!case.trialDate">Not scheduled</span>
                       </div>
                       <span class="date-badge" [ngClass]="getTrialStatus(case.trialDate).class" *ngIf="case.trialDate">
@@ -512,7 +512,7 @@
                                 ${{ getFieldValue(field.name) | number:'1.2-2' }}
                               </ng-container>
                               <ng-container *ngSwitchCase="'date'">
-                                {{ getFieldValue(field.name) | date:'mediumDate' }}
+                                {{ getFieldValue(field.name) | date:'mediumDate':'UTC' }}
                               </ng-container>
                               <ng-container *ngSwitchCase="'checkbox'">
                                 {{ getFieldValue(field.name) ? 'Yes' : 'No' }}
@@ -1302,7 +1302,7 @@
                                           'bg-danger-subtle text-danger': task.priority === 'HIGH' || task.priority === 'URGENT'
                                         }">{{ task.priority }}</span>
                                         <span class="text-muted fs-12" *ngIf="task.dueDate">
-                                          Due {{ task.dueDate | date:'shortDate' }}
+                                          Due {{ task.dueDate | date:'shortDate':'UTC' }}
                                         </span>
                                       </div>
                                     </div>
@@ -1370,7 +1370,7 @@
                                 'bg-danger-subtle text-danger': task.priority === 'HIGH' || task.priority === 'URGENT'
                               }">{{ task.priority }}</span>
                               <span class="text-muted fs-12" *ngIf="task.dueDate">
-                                Due {{ task.dueDate | date:'shortDate' }}
+                                Due {{ task.dueDate | date:'shortDate':'UTC' }}
                               </span>
                             </div>
                           </div>

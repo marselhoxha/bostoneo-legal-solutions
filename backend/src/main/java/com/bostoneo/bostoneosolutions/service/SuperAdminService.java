@@ -74,6 +74,12 @@ public interface SuperAdminService {
      */
     void deleteOrganization(Long organizationId);
 
+    /**
+     * Permanently delete an organization and ALL its data from the database.
+     * Audit logs are preserved for compliance.
+     */
+    void hardDeleteOrganization(Long organizationId);
+
     // ==================== USERS ====================
 
     /**
@@ -106,6 +112,12 @@ public interface SuperAdminService {
      * Enable or disable a user account
      */
     void toggleUserStatus(Long userId, boolean enabled);
+
+    /**
+     * Permanently delete a user and ALL their data from the database.
+     * Audit logs are anonymized (user_id set to null) for compliance.
+     */
+    void hardDeleteUser(Long userId);
 
     /**
      * Enable or disable MFA for a user (SuperAdmin override — no phone check)

@@ -337,6 +337,174 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     }
 
     @Override
+    @Transactional
+    public void hardDeleteOrganization(Long organizationId) {
+        log.info("SUPERADMIN: PERMANENTLY DELETING organization ID: {}", organizationId);
+
+        if (organizationId == 1L) {
+            throw new ApiException("Cannot delete the default organization");
+        }
+
+        Integer exists = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM organizations WHERE id = :orgId",
+            new MapSqlParameterSource().addValue("orgId", organizationId), Integer.class);
+        if (exists == null || exists == 0) {
+            throw new ApiException("Organization not found with ID: " + organizationId);
+        }
+
+        MapSqlParameterSource p = new MapSqlParameterSource().addValue("orgId", organizationId);
+        String caseSubq = "(SELECT id FROM legal_cases WHERE organization_id = :orgId)";
+        String userSubq = "(SELECT id FROM users WHERE organization_id = :orgId)";
+        String invSubq = "(SELECT id FROM invoices WHERE organization_id = :orgId)";
+        String leadSubq = "(SELECT id FROM leads WHERE organization_id = :orgId)";
+        String fileSubq = "(SELECT id FROM file_items WHERE organization_id = :orgId)";
+
+        // ===== Phase 1: AI/Research data =====
+        jdbc.update("DELETE FROM ai_conversation_messages WHERE session_id IN (SELECT id FROM ai_conversation_sessions WHERE organization_id = :orgId)", p);
+        jdbc.update("DELETE FROM ai_conversation_sessions WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM ai_workspace_document_exhibits WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM ai_workspace_document_citations WHERE document_id IN (SELECT id FROM ai_workspace_documents WHERE organization_id = :orgId)", p);
+        jdbc.update("DELETE FROM ai_workspace_document_versions WHERE document_id IN (SELECT id FROM ai_workspace_documents WHERE organization_id = :orgId)", p);
+        jdbc.update("DELETE FROM ai_workspace_documents WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM practice_area_tool_history WHERE organization_id = :orgId", p);
+
+        // ===== Phase 2: Case leaf data (FK: legal_cases.id) =====
+        // Tasks (self-referencing FK + child table)
+        jdbc.update("UPDATE case_tasks SET parent_task_id = NULL WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM task_comments WHERE task_id IN (SELECT id FROM case_tasks WHERE case_id IN " + caseSubq + ")", p);
+        jdbc.update("DELETE FROM case_tasks WHERE case_id IN " + caseSubq, p);
+        // Workflow (children first)
+        jdbc.update("DELETE FROM case_workflow_step_executions WHERE workflow_execution_id IN (SELECT id FROM case_workflow_executions WHERE case_id IN " + caseSubq + ")", p);
+        jdbc.update("DELETE FROM case_workflow_history WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM case_workflow_executions WHERE case_id IN " + caseSubq, p);
+        // Other case children (from FK query)
+        jdbc.update("DELETE FROM case_timeline WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM case_reminders WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM case_activities WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM case_access_requests WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM case_notes WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM case_transfer_requests WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM case_team_assignments WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM case_assignment_history WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM case_assignments WHERE case_id IN " + caseSubq, p);
+        // PI-specific tables (FK: legal_cases.id)
+        jdbc.update("DELETE FROM pi_medical_records WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM pi_damage_elements WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM pi_damage_calculations WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM pi_medical_summaries WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM pi_document_checklist WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM pi_document_request_log WHERE case_id IN " + caseSubq, p);
+        // Other case FK children
+        jdbc.update("DELETE FROM adverse_parties WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM appointment_requests WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM calendar_events WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM workflow_recommendations WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM folders WHERE case_id IN " + caseSubq, p);
+        jdbc.update("DELETE FROM expenses WHERE legal_case_id IN " + caseSubq, p);
+
+        // ===== Phase 3: File data (FK: file_items.id) =====
+        jdbc.update("DELETE FROM file_access_logs WHERE file_id IN " + fileSubq, p);
+        jdbc.update("DELETE FROM file_comments WHERE file_id IN " + fileSubq, p);
+        jdbc.update("DELETE FROM file_permissions WHERE file_id IN " + fileSubq, p);
+        jdbc.update("DELETE FROM file_shares WHERE file_id IN " + fileSubq, p);
+        jdbc.update("DELETE FROM file_tags WHERE file_id IN " + fileSubq, p);
+        jdbc.update("DELETE FROM file_versions WHERE file_id IN " + fileSubq, p);
+        jdbc.update("DELETE FROM file_item_text_cache WHERE file_item_id IN " + fileSubq, p);
+        jdbc.update("DELETE FROM file_items WHERE organization_id = :orgId", p);
+        // Legal documents (via user_id)
+        jdbc.update("DELETE FROM legal_documents WHERE user_id IN " + userSubq, p);
+
+        // ===== Phase 4: Financial data (FK: invoices.id, time_entries.id) =====
+        jdbc.update("DELETE FROM invoice_line_items WHERE invoice_id IN " + invSubq, p);
+        jdbc.update("DELETE FROM invoice_reminders WHERE invoice_id IN " + invSubq, p);
+        jdbc.update("DELETE FROM invoice_time_entries WHERE invoice_id IN " + invSubq, p);
+        jdbc.update("DELETE FROM invoice_workflow_executions WHERE invoice_id IN " + invSubq, p);
+        jdbc.update("DELETE FROM payment_transactions WHERE invoice_id IN " + invSubq, p);
+        jdbc.update("DELETE FROM expenses WHERE invoice_id IN " + invSubq, p);
+        jdbc.update("DELETE FROM invoice_items WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM invoice_payments WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM invoices WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM invoice_time_entries WHERE time_entry_id IN (SELECT id FROM time_entries WHERE organization_id = :orgId)", p);
+        jdbc.update("DELETE FROM time_entry_approvals WHERE time_entry_id IN (SELECT id FROM time_entries WHERE organization_id = :orgId)", p);
+        jdbc.update("DELETE FROM time_entries WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM billing_rates WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM expenses WHERE organization_id = :orgId", p);
+
+        // ===== Phase 5: Client/CRM data (FK: leads.id, clients.id) =====
+        jdbc.update("DELETE FROM intake_submissions WHERE lead_id IN " + leadSubq, p);
+        jdbc.update("DELETE FROM lead_activities WHERE lead_id IN " + leadSubq, p);
+        jdbc.update("DELETE FROM lead_pipeline_history WHERE lead_id IN " + leadSubq, p);
+        jdbc.update("DELETE FROM leads WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM intake_submissions WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM adverse_parties WHERE client_id IN (SELECT id FROM clients WHERE organization_id = :orgId)", p);
+        jdbc.update("DELETE FROM appointment_requests WHERE client_id IN (SELECT id FROM clients WHERE organization_id = :orgId)", p);
+        jdbc.update("DELETE FROM clients WHERE organization_id = :orgId", p);
+
+        // ===== Phase 6: Cases =====
+        jdbc.update("DELETE FROM legal_cases WHERE organization_id = :orgId", p);
+
+        // ===== Phase 7: User data (FK: users.id) =====
+        jdbc.update("DELETE FROM two_factor_verifications WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM reset_password_verifications WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM account_verifications WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM user_events WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM activity_summary WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM attorney_expertise WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM active_timers WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM timer_sessions WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM mobile_time_entries WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM time_reports_cache WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM calendar_event_participants WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM calendar_events WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM department_role_assignments WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM document_access_log WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM document_versions WHERE uploaded_by IN " + userSubq, p);
+        jdbc.update("DELETE FROM document_visibility_overrides WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM financial_access_permissions WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM user_workload WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM workload_calculations WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM user_notification_preferences WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM practice_area_tool_history WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM task_comments WHERE user_id IN " + userSubq, p);
+        // Nullify user references in shared tables
+        jdbc.update("UPDATE folders SET created_by = NULL WHERE created_by IN " + userSubq, p);
+        jdbc.update("UPDATE conflict_checks SET checked_by = NULL WHERE checked_by IN " + userSubq, p);
+        jdbc.update("UPDATE conflict_checks SET resolved_by = NULL WHERE resolved_by IN " + userSubq, p);
+        jdbc.update("UPDATE intake_submissions SET reviewed_by = NULL WHERE reviewed_by IN " + userSubq, p);
+        jdbc.update("UPDATE invoice_templates SET created_by = NULL WHERE created_by IN " + userSubq, p);
+        jdbc.update("UPDATE invoice_workflow_rules SET created_by = NULL WHERE created_by IN " + userSubq, p);
+        jdbc.update("UPDATE case_workflow_templates SET created_by = NULL WHERE created_by IN " + userSubq, p);
+        jdbc.update("UPDATE payment_transactions SET created_by = NULL WHERE created_by IN " + userSubq, p);
+        // Anonymize audit logs (compliance — preserve entries)
+        jdbc.update("UPDATE audit_log SET user_id = NULL WHERE user_id IN " + userSubq, p);
+        // User roles and finally users
+        jdbc.update("DELETE FROM organization_invitations WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM user_roles WHERE user_id IN " + userSubq, p);
+        jdbc.update("DELETE FROM users WHERE organization_id = :orgId", p);
+
+        // ===== Phase 8: Org-level data (FK: organizations.id) =====
+        jdbc.update("DELETE FROM doc_automation_permissions WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM doc_automation_fields WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM doc_generation_log WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM doc_automation_templates WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM doc_automation_categories WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM esignature_audit_trail WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM esignature_recipients WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM esignature_requests WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM user_events WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM pi_document_checklist WHERE organization_id = :orgId", p);
+        jdbc.update("DELETE FROM pi_damage_elements WHERE organization_id = :orgId", p);
+
+        // ===== Phase 9: Organization itself =====
+        int deleted = jdbc.update("DELETE FROM organizations WHERE id = :orgId", p);
+        if (deleted == 0) {
+            throw new ApiException("Failed to delete organization with ID: " + organizationId);
+        }
+
+        log.info("SUPERADMIN: Organization {} permanently deleted with all data (audit logs preserved)", organizationId);
+    }
+
+    @Override
     public Page<OrganizationWithStatsDTO> searchOrganizations(String query, Pageable pageable) {
         log.info("SUPERADMIN: Searching organizations with query: {}", query);
 
@@ -551,6 +719,18 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         dto.setCreatedAt(user.getCreatedAt());
         dto.setRoleName(roleName);
         dto.setOrganizationId(user.getOrganizationId());
+        // Resolve org name
+        if (user.getOrganizationId() != null) {
+            try {
+                String orgName = jdbc.queryForObject(
+                    "SELECT name FROM organizations WHERE id = :orgId",
+                    new MapSqlParameterSource().addValue("orgId", user.getOrganizationId()),
+                    String.class);
+                dto.setOrganizationName(orgName);
+            } catch (Exception e) {
+                dto.setOrganizationName("Org #" + user.getOrganizationId());
+            }
+        }
         return dto;
     }
 
@@ -678,12 +858,13 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         if (onlineUserService.isAvailable()) {
             activeSessions = onlineUserService.getOnlineUserCount();
         } else {
-            // Fallback: count users with activity in last 15 minutes (approximates Redis 5-min TTL)
-            LocalDateTime fifteenMinAgo = now.minusMinutes(15);
+            // Fallback: count users with activity in last 15 minutes via audit_log.
+            // audit_log.timestamp is stored in UTC by Hibernate, so compare against UTC NOW.
             Integer sqlCount = jdbc.queryForObject(
                 "SELECT COUNT(DISTINCT user_id) FROM audit_log " +
-                "WHERE timestamp >= :since AND user_id IS NOT NULL",
-                new MapSqlParameterSource().addValue("since", fifteenMinAgo),
+                "WHERE timestamp >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '15 minutes' " +
+                "AND user_id IS NOT NULL",
+                new MapSqlParameterSource(),
                 Integer.class
             );
             activeSessions = sqlCount != null ? sqlCount : 0;
@@ -1138,6 +1319,160 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         if (updated == 0) {
             throw new ApiException("User not found with ID: " + userId);
         }
+    }
+
+    @Override
+    @Transactional
+    public void hardDeleteUser(Long userId) {
+        log.info("SUPERADMIN: PERMANENTLY DELETING user ID: {}", userId);
+
+        // Verify user exists
+        Integer exists = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM users WHERE id = :userId",
+            new MapSqlParameterSource().addValue("userId", userId), Integer.class);
+        if (exists == null || exists == 0) {
+            throw new ApiException("User not found with ID: " + userId);
+        }
+
+        // Prevent deleting SUPERADMIN users (organization_id IS NULL)
+        Integer isSuperAdmin = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_roles ur JOIN roles r ON ur.role_id = r.id " +
+            "WHERE ur.user_id = :userId AND r.name = 'ROLE_SUPERADMIN'",
+            new MapSqlParameterSource().addValue("userId", userId), Integer.class);
+        if (isSuperAdmin != null && isSuperAdmin > 0) {
+            throw new ApiException("Cannot permanently delete a SUPERADMIN user");
+        }
+
+        MapSqlParameterSource p = new MapSqlParameterSource().addValue("userId", userId);
+
+        // Verifications
+        jdbc.update("DELETE FROM two_factor_verifications WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM reset_password_verifications WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM account_verifications WHERE user_id = :userId", p);
+
+        // User events and activities
+        jdbc.update("DELETE FROM user_events WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM activity_summary WHERE user_id = :userId", p);
+        // Anonymize audit logs for compliance (preserve hash chain)
+        jdbc.update("UPDATE audit_log SET user_id = NULL WHERE user_id = :userId", p);
+
+        // Attorney expertise
+        jdbc.update("DELETE FROM attorney_expertise WHERE user_id = :userId", p);
+
+        // Timer and time tracking
+        jdbc.update("DELETE FROM active_timers WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM timer_sessions WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM mobile_time_entries WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM time_entry_approvals WHERE approver_id = :userId", p);
+        jdbc.update("DELETE FROM time_reports_cache WHERE user_id = :userId", p);
+
+        // Billing
+        jdbc.update("DELETE FROM billing_rates WHERE user_id = :userId", p);
+
+        // Calendar
+        jdbc.update("DELETE FROM calendar_event_participants WHERE user_id = :userId OR added_by = :userId", p);
+        jdbc.update("DELETE FROM calendar_events WHERE user_id = :userId", p);
+
+        // Case related
+        jdbc.update("DELETE FROM case_timeline WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM case_reminders WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM case_activities WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM case_access_requests WHERE requested_by = :userId OR reviewed_by = :userId", p);
+        jdbc.update("DELETE FROM case_notes WHERE user_id = :userId OR updated_by = :userId", p);
+        jdbc.update("DELETE FROM case_transfer_requests WHERE from_user_id = :userId OR to_user_id = :userId OR requested_by = :userId OR approved_by = :userId", p);
+        jdbc.update("DELETE FROM case_team_assignments WHERE user_id = :userId OR assigned_by = :userId", p);
+        jdbc.update("DELETE FROM case_assignment_history WHERE user_id = :userId OR previous_user_id = :userId OR new_user_id = :userId OR performed_by = :userId", p);
+        jdbc.update("DELETE FROM case_assignments WHERE user_id = :userId OR assigned_by = :userId", p);
+
+        // Tasks (handle self-reference)
+        jdbc.update("UPDATE case_tasks SET parent_task_id = NULL WHERE parent_task_id IN (SELECT id FROM case_tasks WHERE assigned_to = :userId OR assigned_by = :userId)", p);
+        jdbc.update("DELETE FROM task_comments WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM case_tasks WHERE assigned_to = :userId OR assigned_by = :userId", p);
+
+        // Department roles
+        jdbc.update("DELETE FROM department_role_assignments WHERE user_id = :userId", p);
+
+        // Documents
+        jdbc.update("DELETE FROM document_access_log WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM document_versions WHERE uploaded_by = :userId", p);
+        jdbc.update("DELETE FROM document_visibility_overrides WHERE user_id = :userId OR granted_by = :userId", p);
+        jdbc.update("UPDATE documents SET uploaded_by = NULL WHERE uploaded_by = :userId", p);
+
+        // File system
+        jdbc.update("DELETE FROM file_access_logs WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM file_comments WHERE created_by = :userId", p);
+        jdbc.update("DELETE FROM file_permissions WHERE user_id = :userId OR granted_by = :userId OR revoked_by = :userId", p);
+        jdbc.update("DELETE FROM file_shares WHERE created_by = :userId OR shared_with_user_id = :userId", p);
+        jdbc.update("DELETE FROM file_tags WHERE created_by = :userId", p);
+        jdbc.update("DELETE FROM file_versions WHERE uploaded_by = :userId", p);
+        // Child records of files owned by this user
+        jdbc.update("DELETE FROM file_access_logs WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", p);
+        jdbc.update("DELETE FROM file_comments WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", p);
+        jdbc.update("DELETE FROM file_permissions WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", p);
+        jdbc.update("DELETE FROM file_shares WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", p);
+        jdbc.update("DELETE FROM file_tags WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", p);
+        jdbc.update("DELETE FROM file_versions WHERE file_id IN (SELECT id FROM file_items WHERE created_by = :userId)", p);
+        jdbc.update("DELETE FROM file_item_text_cache WHERE file_item_id IN (SELECT id FROM file_items WHERE created_by = :userId)", p);
+        jdbc.update("DELETE FROM file_items WHERE created_by = :userId", p);
+        jdbc.update("UPDATE folders SET created_by = NULL WHERE created_by = :userId", p);
+
+        // Financial (nullify references, don't delete records)
+        jdbc.update("DELETE FROM financial_access_permissions WHERE user_id = :userId OR granted_by = :userId", p);
+        jdbc.update("UPDATE invoice_templates SET created_by = NULL WHERE created_by = :userId", p);
+        jdbc.update("UPDATE invoice_workflow_rules SET created_by = NULL WHERE created_by = :userId", p);
+        jdbc.update("UPDATE invoices SET created_by = NULL WHERE created_by = :userId", p);
+        jdbc.update("UPDATE payment_transactions SET created_by = NULL WHERE created_by = :userId", p);
+
+        // Legal documents
+        jdbc.update("DELETE FROM legal_documents WHERE user_id = :userId", p);
+
+        // Workflow executions
+        jdbc.update("UPDATE case_tasks SET workflow_execution_id = NULL WHERE workflow_execution_id IN (SELECT id FROM case_workflow_executions WHERE created_by = :userId)", p);
+        jdbc.update("DELETE FROM case_workflow_step_executions WHERE workflow_execution_id IN (SELECT id FROM case_workflow_executions WHERE created_by = :userId)", p);
+        jdbc.update("DELETE FROM case_workflow_history WHERE execution_id IN (SELECT id FROM case_workflow_executions WHERE created_by = :userId)", p);
+        jdbc.update("DELETE FROM case_workflow_executions WHERE created_by = :userId", p);
+        jdbc.update("UPDATE case_workflow_templates SET created_by = NULL WHERE created_by = :userId", p);
+
+        // CRM / leads
+        jdbc.update("DELETE FROM lead_activities WHERE created_by = :userId", p);
+        jdbc.update("DELETE FROM lead_pipeline_history WHERE moved_by = :userId", p);
+        jdbc.update("UPDATE leads SET assigned_to = NULL WHERE assigned_to = :userId", p);
+
+        // Conflict checks
+        jdbc.update("UPDATE conflict_checks SET checked_by = NULL WHERE checked_by = :userId", p);
+        jdbc.update("UPDATE conflict_checks SET resolved_by = NULL WHERE resolved_by = :userId", p);
+
+        // Intake / invitations
+        jdbc.update("UPDATE intake_submissions SET reviewed_by = NULL WHERE reviewed_by = :userId", p);
+        jdbc.update("DELETE FROM organization_invitations WHERE created_by = :userId", p);
+
+        // Practice area tool history
+        jdbc.update("DELETE FROM practice_area_tool_history WHERE user_id = :userId", p);
+
+        // Workload
+        jdbc.update("DELETE FROM user_workload WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM workload_calculations WHERE user_id = :userId", p);
+
+        // AI workspace
+        jdbc.update("DELETE FROM ai_workspace_document_exhibits WHERE organization_id IN (SELECT organization_id FROM users WHERE id = :userId) AND document_id IN (SELECT id FROM ai_workspace_documents WHERE user_id = :userId)", p);
+        jdbc.update("DELETE FROM ai_workspace_documents WHERE user_id = :userId", p);
+        jdbc.update("DELETE FROM ai_conversation_messages WHERE session_id IN (SELECT id FROM ai_conversation_sessions WHERE user_id = :userId)", p);
+        jdbc.update("DELETE FROM ai_conversation_sessions WHERE user_id = :userId", p);
+
+        // Notification preferences
+        jdbc.update("DELETE FROM user_notification_preferences WHERE user_id = :userId", p);
+
+        // User roles
+        jdbc.update("DELETE FROM user_roles WHERE user_id = :userId", p);
+
+        // Finally, delete the user
+        int deleted = jdbc.update("DELETE FROM users WHERE id = :userId", p);
+
+        if (deleted == 0) {
+            throw new ApiException("Failed to delete user with ID: " + userId);
+        }
+
+        log.info("SUPERADMIN: User {} permanently deleted with all dependent data", userId);
     }
 
     @Override
@@ -2122,17 +2457,33 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             default: hours = 1; break;
         }
 
-        String sql = "SELECT DISTINCT ON (ue.user_id) " +
-                "ue.user_id, u.first_name, u.last_name, u.email, " +
-                "u.organization_id, COALESCE(o.name, 'Platform') as org_name, " +
-                "ue.device, ue.ip_address, ue.created_at as login_time " +
-                "FROM user_events ue " +
-                "JOIN users u ON ue.user_id = u.id " +
-                "JOIN events e ON ue.event_id = e.id " +
-                "LEFT JOIN organizations o ON u.organization_id = o.id " +
-                "WHERE e.type = 'LOGIN_ATTEMPT_SUCCESS' " +
-                "AND ue.created_at > NOW() - (:hours * INTERVAL '1 hour') " +
-                "ORDER BY ue.user_id, ue.created_at DESC";
+        // Combine login events (user_events has user_id) with audit_log activity
+        // for the most complete picture of active users.
+        // user_events.created_at is in local time, audit_log.timestamp is in UTC (Hibernate shift).
+        String sql = "SELECT DISTINCT ON (user_id) " +
+                "user_id, first_name, last_name, email, " +
+                "organization_id, org_name, device, ip_address, last_active " +
+                "FROM (" +
+                "  SELECT ue.user_id, u.first_name, u.last_name, u.email, " +
+                "    u.organization_id, COALESCE(o.name, 'Platform') as org_name, " +
+                "    ue.device, ue.ip_address, ue.created_at as last_active " +
+                "  FROM user_events ue " +
+                "  JOIN users u ON ue.user_id = u.id " +
+                "  JOIN events e ON ue.event_id = e.id " +
+                "  LEFT JOIN organizations o ON u.organization_id = o.id " +
+                "  WHERE e.type = 'LOGIN_ATTEMPT_SUCCESS' " +
+                "  AND ue.created_at > NOW() - (:hours * INTERVAL '1 hour') " +
+                "  UNION ALL " +
+                "  SELECT al.user_id, u.first_name, u.last_name, u.email, " +
+                "    al.organization_id, COALESCE(o.name, 'Platform') as org_name, " +
+                "    al.user_agent as device, al.ip_address, al.timestamp as last_active " +
+                "  FROM audit_log al " +
+                "  JOIN users u ON al.user_id = u.id " +
+                "  LEFT JOIN organizations o ON al.organization_id = o.id " +
+                "  WHERE al.user_id IS NOT NULL " +
+                "  AND al.timestamp > (NOW() AT TIME ZONE 'UTC') - (:hours * INTERVAL '1 hour') " +
+                ") combined " +
+                "ORDER BY user_id, last_active DESC";
 
         MapSqlParameterSource sessionParams = new MapSqlParameterSource().addValue("hours", hours);
 
@@ -2146,7 +2497,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                 .organizationName(rs.getString("org_name"))
                 .device(rs.getString("device"))
                 .ipAddress(rs.getString("ip_address"))
-                .loginTime(rs.getTimestamp("login_time") != null ? rs.getTimestamp("login_time").toLocalDateTime() : null)
+                .loginTime(rs.getTimestamp("last_active") != null ? rs.getTimestamp("last_active").toLocalDateTime() : null)
                 .build()
         );
     }

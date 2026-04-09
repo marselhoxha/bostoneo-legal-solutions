@@ -205,7 +205,7 @@
                 </thead>
                 <tbody>
                   <tr *ngFor="let payment of paymentState.appData?.data?.content">
-                    <td>{{ payment.paymentDate | date:'shortDate' }}</td>
+                    <td>{{ payment.paymentDate | date:'shortDate':'UTC' }}</td>
                     <td>
                       <a href="javascript:void(0)" (click)="viewInvoice(payment)" class="text-primary">
                         {{ payment.invoiceNumber || 'N/A' }}

@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.service.AILegalResearchService;
 import com.bostoneo.bostoneosolutions.service.ResearchProgressPublisher;
 import com.bostoneo.bostoneosolutions.model.SearchHistory;
@@ -73,6 +74,7 @@ public class AILegalResearchController {
     }
 
     @PostMapping("/search")
+    @AuditLog(action = "CREATE", entityType = "LEGAL_RESEARCH", description = "Performed legal research")
     public ResponseEntity<Map<String, Object>> performSearch(@RequestBody Map<String, Object> searchRequest) {
         try {
             log.info("Legal research search request: {}", searchRequest);

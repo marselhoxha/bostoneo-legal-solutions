@@ -304,7 +304,7 @@
           <div class="card-header">
             <h5 class="card-title mb-0">Closing Document Checklist</h5>
             <p class="text-muted mb-0" *ngIf="closingDate">
-              Closing Date: {{ closingDate | date:'longDate' }}
+              Closing Date: {{ closingDate | date:'longDate':'UTC' }}
             </p>
           </div>
           <div class="card-body">

@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import static java.time.LocalDateTime.now;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
 
@@ -305,6 +306,39 @@ public class SuperAdminController {
     }
 
     /**
+     * Permanently delete an organization and ALL its data.
+     * Audit logs are preserved for compliance.
+     * Requires ?confirm=PERMANENT_DELETE as a safety check.
+     */
+    @DeleteMapping("/organizations/{id}/permanent")
+    @AuditLog(action = "DELETE", entityType = "ORGANIZATION", description = "Permanently deleted organization")
+    public ResponseEntity<HttpResponse> hardDeleteOrganization(
+            @PathVariable Long id,
+            @RequestParam String confirm) {
+        if (!"PERMANENT_DELETE".equals(confirm)) {
+            return ResponseEntity.badRequest().body(
+                HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .message("Missing or invalid confirmation parameter")
+                    .status(BAD_REQUEST)
+                    .statusCode(BAD_REQUEST.value())
+                    .build());
+        }
+
+        log.info("SUPERADMIN: PERMANENTLY DELETING organization {}", id);
+        superAdminService.hardDeleteOrganization(id);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .message("Organization permanently deleted with all data")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
      * Get all users across all organizations (paginated)
      */
     @GetMapping("/users")
@@ -544,6 +578,38 @@ public class SuperAdminController {
             HttpResponse.builder()
                 .timeStamp(now().toString())
                 .message("All sessions terminated successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
+     * Permanently delete a user and all their data.
+     * Requires ?confirm=PERMANENT_DELETE as a safety check.
+     */
+    @DeleteMapping("/users/{id}/permanent")
+    @AuditLog(action = "DELETE", entityType = "USER", description = "Permanently deleted user")
+    public ResponseEntity<HttpResponse> hardDeleteUser(
+            @PathVariable Long id,
+            @RequestParam String confirm) {
+        if (!"PERMANENT_DELETE".equals(confirm)) {
+            return ResponseEntity.badRequest().body(
+                HttpResponse.builder()
+                    .timeStamp(now().toString())
+                    .message("Missing or invalid confirmation parameter")
+                    .status(BAD_REQUEST)
+                    .statusCode(BAD_REQUEST.value())
+                    .build());
+        }
+
+        log.info("SUPERADMIN: Permanently deleting user {}", id);
+        superAdminService.hardDeleteUser(id);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .message("User permanently deleted")
                 .status(OK)
                 .statusCode(OK.value())
                 .build()

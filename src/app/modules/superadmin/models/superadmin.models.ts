@@ -127,6 +127,7 @@ export interface UserSummary {
   createdAt: string;
   roleName: string;
   organizationId?: number;
+  organizationName?: string;
 }
 
 export interface PageResponse<T> {

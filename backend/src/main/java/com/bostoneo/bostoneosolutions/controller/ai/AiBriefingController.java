@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
 import com.bostoneo.bostoneosolutions.service.AiBriefingService;
@@ -41,6 +42,7 @@ public class AiBriefingController {
      * resulting in "anonymousUser" authorization errors.
      */
     @PostMapping
+    @AuditLog(action = "CREATE", entityType = "AI_BRIEFING", description = "Generated AI case briefing")
     public ResponseEntity<HttpResponse> getBriefing(
             @AuthenticationPrincipal UserDTO userDetails,
             @RequestBody BriefingRequest request) {

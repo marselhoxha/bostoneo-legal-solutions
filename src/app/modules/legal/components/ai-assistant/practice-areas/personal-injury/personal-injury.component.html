@@ -413,7 +413,7 @@
                           </div>
                           <div class="d-flex align-items-center gap-3 text-muted fs-13 flex-wrap">
                             <span><i class="ri-hashtag me-1"></i>{{ linkedCase.caseNumber }}</span>
-                            <span *ngIf="linkedCase.injuryDate"><i class="ri-calendar-event-line me-1"></i>Injury: {{ linkedCase.injuryDate | date:'mediumDate' }}</span>
+                            <span *ngIf="linkedCase.injuryDate"><i class="ri-calendar-event-line me-1"></i>Injury: {{ linkedCase.injuryDate | date:'mediumDate':'UTC' }}</span>
                             <span><i class="ri-time-line me-1"></i>{{ getDaysOpen(linkedCase) }} days open</span>
                           </div>
                         </div>
@@ -1927,8 +1927,8 @@
                           <div class="provider-details">
                             <span class="treatment-dates">
                               <i class="ri-calendar-line me-1"></i>
-                              {{ record.treatmentDate | date:'MMM d, yyyy' }}
-                              <span *ngIf="record.treatmentEndDate"> - {{ record.treatmentEndDate | date:'MMM d, yyyy' }}</span>
+                              {{ record.treatmentDate | date:'MMM d, yyyy':'UTC' }}
+                              <span *ngIf="record.treatmentEndDate"> - {{ record.treatmentEndDate | date:'MMM d, yyyy':'UTC' }}</span>
                             </span>
                             <span class="total-bills" *ngIf="record.recordType === 'BILLING'">{{ formatCurrency(record.billedAmount || 0) }}</span>
                           </div>
@@ -1971,7 +1971,7 @@
                           </div>
                           <div class="provider-group-body" *ngIf="!group.collapsed">
                             <div class="provider-visit-row" *ngFor="let record of group.records" (click)="openRecordDetailModal(record)">
-                              <span class="visit-date">{{ record.treatmentDate | date:'MMM d' }}</span>
+                              <span class="visit-date">{{ record.treatmentDate | date:'MMM d':'UTC' }}</span>
                               <span class="badge bg-primary-subtle text-primary" style="font-size: 11px;">{{ getRecordTypeLabel(record.recordType) }}</span>
                               <span class="flex-grow-1 text-muted text-truncate" style="font-size: 12px; max-width: 250px;">{{ record.keyFindings || '—' }}</span>
                               <span [class.text-danger]="record.billedAmount" [class.text-muted]="!record.billedAmount" class="fw-semibold" style="font-size: 13px;">
@@ -2357,7 +2357,7 @@
                                               [class.has-citation]="hasCitation(record, 'treatmentDate')"
                                               (click)="openCitation(record, 'treatmentDate')"
                                               [title]="hasCitation(record, 'treatmentDate') ? 'Click to view source' : ''">
-                                            <span class="date-value">{{ record.treatmentDate | date:'MMM d, yyyy' }}</span>
+                                            <span class="date-value">{{ record.treatmentDate | date:'MMM d, yyyy':'UTC' }}</span>
                                             <i class="ri-link citation-indicator" *ngIf="hasCitation(record, 'treatmentDate')"></i>
                                           </td>
                                           <td class="col-provider"
@@ -2840,7 +2840,7 @@
                                       [class.has-citation]="hasCitation(record, 'treatmentDate')"
                                       (click)="openCitation(record, 'treatmentDate')"
                                       [title]="hasCitation(record, 'treatmentDate') ? 'Click to view source' : ''">
-                                    <span class="date-value">{{ record.treatmentDate | date:'MMM d, yyyy' }}</span>
+                                    <span class="date-value">{{ record.treatmentDate | date:'MMM d, yyyy':'UTC' }}</span>
                                     <i class="ri-link citation-indicator" *ngIf="hasCitation(record, 'treatmentDate')"></i>
                                   </td>
                                   <td class="col-provider"

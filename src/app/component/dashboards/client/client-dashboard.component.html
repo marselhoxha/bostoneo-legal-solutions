@@ -155,7 +155,7 @@
                     <!-- Next Hearing -->
                     <div class="case-updated mt-3 pt-3 border-top" *ngIf="caseItem.nextHearing">
                       <small class="text-muted">
-                        <i class="ri-calendar-line me-1"></i>Next: {{caseItem.nextHearing | date:'MMM d, y'}}
+                        <i class="ri-calendar-line me-1"></i>Next: {{caseItem.nextHearing | date:'MMM d, y':'UTC'}}
                       </small>
                     </div>
                   </div>

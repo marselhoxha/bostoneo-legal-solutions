@@ -259,7 +259,7 @@
                     </td>
                     <td>
                       <span [class.text-danger]="isOverdue(task.dueDate)" [class.fw-medium]="isOverdue(task.dueDate)">
-                        {{ task.dueDate | date:'mediumDate' }}
+                        {{ task.dueDate | date:'mediumDate':'UTC' }}
                         <i *ngIf="isOverdue(task.dueDate)" class="ri-error-warning-line ms-1"></i>
                       </span>
                     </td>

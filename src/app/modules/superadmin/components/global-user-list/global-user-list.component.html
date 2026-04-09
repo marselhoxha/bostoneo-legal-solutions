@@ -107,11 +107,11 @@
                     </span>
                   </td>
                   <td>
-                    <span *ngIf="user.organizationId" class="text-primary">
-                      Org #{{ user.organizationId }}
+                    <span *ngIf="user.organizationName" class="text-primary">
+                      {{ user.organizationName }}
                     </span>
-                    <span *ngIf="!user.organizationId && user.roleName === 'ROLE_SUPERADMIN'" class="badge bg-info-subtle text-info">Platform</span>
-                    <span *ngIf="!user.organizationId && user.roleName !== 'ROLE_SUPERADMIN'" class="text-muted">-</span>
+                    <span *ngIf="!user.organizationName && user.roleName === 'ROLE_SUPERADMIN'" class="badge bg-info-subtle text-info">Platform</span>
+                    <span *ngIf="!user.organizationName && user.roleName !== 'ROLE_SUPERADMIN'" class="text-muted">-</span>
                   </td>
                   <td>
                     <span *ngIf="user.enabled" class="badge bg-success-subtle text-success">Active</span>
@@ -119,15 +119,15 @@
                     <span *ngIf="!user.notLocked" class="badge bg-warning-subtle text-warning ms-1">Locked</span>
                   </td>
                   <td>{{ formatDate(user.createdAt) }}</td>
-                  <td class="text-center">
-                    <div class="dropdown">
-                      <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown"
-                              (click)="$event.stopPropagation()">
+                  <td class="text-center" (click)="$event.stopPropagation()">
+                    <div class="dropdown" [class.show]="openDropdownId === user.id">
+                      <button class="btn btn-sm btn-light" type="button"
+                              (click)="toggleDropdown(user.id)">
                         <i class="ri-more-2-fill"></i>
                       </button>
-                      <ul class="dropdown-menu dropdown-menu-end">
+                      <ul class="dropdown-menu dropdown-menu-end" [class.show]="openDropdownId === user.id">
                         <li>
-                          <a class="dropdown-item" (click)="viewUser(user.id); $event.stopPropagation()">
+                          <a class="dropdown-item" (click)="viewUser(user.id)">
                             <i class="ri-eye-line me-2"></i>View Details
                           </a>
                         </li>

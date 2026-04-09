@@ -263,6 +263,51 @@ export class UserDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  async permanentDeleteUser(): Promise<void> {
+    if (!this.user) return;
+
+    // Prevent deleting SUPERADMIN users
+    if (this.user.roleName === 'ROLE_SUPERADMIN') {
+      Swal.fire('Not Allowed', 'Cannot permanently delete a SUPERADMIN user.', 'error');
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Permanently Delete User?',
+      html: `<p class="text-danger fw-bold">This will permanently erase <strong>${this.user.firstName} ${this.user.lastName}</strong> and ALL their data.</p>
+             <p class="small text-muted">This includes their cases, documents, activities, calendar events, and all associated records.</p>
+             <p class="text-danger fw-bold">This action CANNOT be undone.</p>
+             <p>Type the user's email to confirm:</p>`,
+      input: 'text',
+      inputPlaceholder: this.user.email,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f06548',
+      cancelButtonColor: '#878a99',
+      confirmButtonText: 'Permanently Delete',
+      inputValidator: (value) => {
+        if (value !== this.user!.email) {
+          return 'Email does not match';
+        }
+        return null;
+      }
+    });
+
+    if (result.isConfirmed) {
+      this.superAdminService.hardDeleteUser(this.userId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            Swal.fire('Deleted!', `${this.user!.firstName} ${this.user!.lastName} has been permanently deleted.`, 'success');
+            this.router.navigate(['/superadmin/users']);
+          },
+          error: (err) => {
+            Swal.fire('Error', err?.error?.reason || err?.error?.message || 'Failed to permanently delete user', 'error');
+          }
+        });
+    }
+  }
+
   goBack(): void {
     this.router.navigate(['/superadmin/users']);
   }

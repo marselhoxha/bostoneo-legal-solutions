@@ -39,7 +39,9 @@ export class AuditLogViewerComponent implements OnInit, OnDestroy {
   entityTypes = [
     'USER', 'ORGANIZATION', 'LEGAL_CASE', 'CLIENT', 'CUSTOMER',
     'DOCUMENT', 'INVOICE', 'PAYMENT', 'EXPENSE',
-    'APPOINTMENT', 'TASK', 'NOTE', 'ANNOUNCEMENT'
+    'APPOINTMENT', 'TASK', 'NOTE', 'ANNOUNCEMENT',
+    'AI_WORKSPACE', 'LEGAL_RESEARCH', 'DEMAND_LETTER', 'DOCUMENT_ANALYSIS',
+    'AI_BRIEFING', 'FILE_MANAGER', 'MEDICAL_RECORD', 'MEDICAL_SUMMARY'
   ];
 
   // Summary stats
@@ -201,6 +203,13 @@ export class AuditLogViewerComponent implements OnInit, OnDestroy {
       case 'TASK': return 'ri-task-line';
       case 'NOTE': return 'ri-sticky-note-line';
       case 'ANNOUNCEMENT': return 'ri-megaphone-line';
+      case 'AI_WORKSPACE': return 'ri-quill-pen-line';
+      case 'LEGAL_RESEARCH': return 'ri-search-eye-line';
+      case 'DEMAND_LETTER': return 'ri-mail-send-line';
+      case 'DOCUMENT_ANALYSIS': return 'ri-file-search-line';
+      case 'AI_BRIEFING': return 'ri-lightbulb-line';
+      case 'FILE_MANAGER': return 'ri-folder-line';
+      case 'MEDICAL_RECORD': case 'MEDICAL_SUMMARY': return 'ri-heart-pulse-line';
       default: return 'ri-file-list-3-line';
     }
   }
@@ -240,6 +249,19 @@ export class AuditLogViewerComponent implements OnInit, OnDestroy {
       case 'ANNOUNCEMENT':
       case 'INTEGRATION':
         return 'pink';
+      case 'AI_WORKSPACE':
+      case 'DEMAND_LETTER':
+        return 'primary';
+      case 'LEGAL_RESEARCH':
+      case 'DOCUMENT_ANALYSIS':
+        return 'info';
+      case 'AI_BRIEFING':
+        return 'warning';
+      case 'FILE_MANAGER':
+        return 'secondary';
+      case 'MEDICAL_RECORD':
+      case 'MEDICAL_SUMMARY':
+        return 'danger';
       default:
         return 'secondary';
     }
@@ -268,7 +290,9 @@ export class AuditLogViewerComponent implements OnInit, OnDestroy {
 
   formatTimeAgo(dateStr: string): string {
     if (!dateStr) return '-';
-    const date = new Date(dateStr);
+    // Backend stores audit_log timestamps in UTC (Hibernate shifts LocalDateTime to UTC).
+    // Append 'Z' so JavaScript parses as UTC, then converts to local display time.
+    const date = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffSec = Math.floor(diffMs / 1000);
@@ -285,7 +309,7 @@ export class AuditLogViewerComponent implements OnInit, OnDestroy {
 
   formatFullDate(dateStr: string): string {
     if (!dateStr) return '';
-    return new Date(dateStr).toLocaleString('en-US', {
+    return new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z').toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

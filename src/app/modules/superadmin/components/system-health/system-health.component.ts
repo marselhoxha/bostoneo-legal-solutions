@@ -234,7 +234,8 @@ export class SystemHealthComponent implements OnInit, OnDestroy {
 
   formatTimeAgo(dateString: string): string {
     if (!dateString) return '-';
-    const date = new Date(dateString);
+    // Backend stores timestamps in UTC (Hibernate shifts LocalDateTime to UTC).
+    const date = new Date(dateString.endsWith('Z') ? dateString : dateString + 'Z');
     const now = new Date();
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     if (seconds < 60) return 'Just now';

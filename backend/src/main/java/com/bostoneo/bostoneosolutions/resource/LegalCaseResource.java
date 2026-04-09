@@ -82,6 +82,7 @@ public class LegalCaseResource {
 
     @GetMapping("/get/{id}")
     @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
+    @AuditLog(action = "VIEW", entityType = "LEGAL_CASE", description = "Viewed case details")
     public ResponseEntity<HttpResponse> getCase(
             @AuthenticationPrincipal UserDTO user,
             @PathVariable("id") Long id) {

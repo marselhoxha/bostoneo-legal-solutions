@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
@@ -28,6 +28,9 @@ export class GlobalUserListComponent implements OnInit, OnDestroy {
 
   // Search
   searchTerm = '';
+
+  // Dropdown toggle
+  openDropdownId: number | null = null;
 
   constructor(
     private superAdminService: SuperAdminService,
@@ -122,7 +125,21 @@ export class GlobalUserListComponent implements OnInit, OnDestroy {
   }
 
   viewUser(id: number): void {
+    this.openDropdownId = null;
     this.router.navigate(['/superadmin/users', id]);
+  }
+
+  toggleDropdown(userId: number): void {
+    this.openDropdownId = this.openDropdownId === userId ? null : userId;
+    this.cdr.markForCheck();
+  }
+
+  @HostListener('document:click')
+  closeDropdown(): void {
+    if (this.openDropdownId !== null) {
+      this.openDropdownId = null;
+      this.cdr.markForCheck();
+    }
   }
 
   async toggleUserStatus(user: UserSummary, event: Event): Promise<void> {

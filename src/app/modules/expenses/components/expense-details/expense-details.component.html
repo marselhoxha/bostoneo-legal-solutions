@@ -58,7 +58,7 @@
                     <div class="col-md-3 col-6">
                       <div>
                         <p class="text-muted mb-1 text-uppercase fw-medium fs-12">Date</p>
-                        <h5 class="fs-16 mb-0">{{ expense.date | date:'mediumDate' }}</h5>
+                        <h5 class="fs-16 mb-0">{{ expense.date | date:'mediumDate':'UTC' }}</h5>
                       </div>
                     </div>
                     <div class="col-md-3 col-6">
@@ -235,7 +235,7 @@
                         
                         <div class="mb-3">
                           <p class="text-muted mb-1 fs-13"><i class="ri-calendar-line me-1 align-bottom"></i> Date Added</p>
-                          <h6 class="fs-14">{{ expense.date | date:'mediumDate' }}</h6>
+                          <h6 class="fs-14">{{ expense.date | date:'mediumDate':'UTC' }}</h6>
                         </div>
                         
                         <!-- Receipt metadata -->

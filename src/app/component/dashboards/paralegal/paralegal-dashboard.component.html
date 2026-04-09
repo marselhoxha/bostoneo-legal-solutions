@@ -216,7 +216,7 @@
                   <h6 class="mb-1 fs-14">{{ task.title }}</h6>
                 </td>
                 <td><span class="badge bg-info-subtle text-info">{{ task.caseNumber }}</span></td>
-                <td>{{ task.dueDate | date:'shortDate' }}</td>
+                <td>{{ task.dueDate | date:'shortDate':'UTC' }}</td>
                 <td>
                   <span [class]="getTaskPriorityClass(task.priority)">{{ task.priority }}</span>
                 </td>

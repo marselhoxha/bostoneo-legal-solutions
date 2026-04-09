@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.dto.DocumentChange;
 import com.bostoneo.bostoneosolutions.dto.DocumentTransformRequest;
 import com.bostoneo.bostoneosolutions.dto.DocumentTransformResponse;
@@ -264,6 +265,7 @@ public class AiWorkspaceController {
      * POST /api/legal/ai-workspace/drafts/generate-streaming
      */
     @PostMapping("/drafts/generate-streaming")
+    @AuditLog(action = "CREATE", entityType = "AI_WORKSPACE", description = "Generated document draft")
     public ResponseEntity<Map<String, Object>> generateDraftStreaming(
             @RequestBody DraftGenerationRequest request,
             @AuthenticationPrincipal User user
@@ -456,6 +458,7 @@ public class AiWorkspaceController {
      * POST /api/legal/ai-workspace/documents/{documentId}/save
      */
     @PostMapping("/documents/{documentId}/save")
+    @AuditLog(action = "UPDATE", entityType = "AI_WORKSPACE", description = "Saved workspace document")
     public ResponseEntity<Map<String, Object>> saveManualEdit(
         @PathVariable Long documentId,
         @RequestBody Map<String, String> payload,
@@ -672,6 +675,7 @@ public class AiWorkspaceController {
      * GET /api/legal/ai-workspace/documents/{documentId}
      */
     @GetMapping("/documents/{documentId}")
+    @AuditLog(action = "VIEW", entityType = "AI_WORKSPACE", description = "Viewed workspace document")
     public ResponseEntity<Map<String, Object>> getDocument(
         @PathVariable Long documentId,
         @AuthenticationPrincipal User user,

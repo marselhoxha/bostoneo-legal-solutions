@@ -24,7 +24,7 @@
               'bg-success-subtle text-success': data.task.status === 'COMPLETED'
             }">{{ data.task.status }}</span>
             <span class="badge bg-light text-muted fs-11 ms-2" *ngIf="data.task.dueDate">
-              Due: {{ data.task.dueDate | date:'mediumDate' }}
+              Due: {{ data.task.dueDate | date:'mediumDate':'UTC' }}
             </span>
           </div>
         </div>

@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.dto.LegalCaseDTO;
 import com.bostoneo.bostoneosolutions.dto.OrganizationDTO;
 import com.bostoneo.bostoneosolutions.dto.PIDamageCalculationDTO;
@@ -181,6 +182,7 @@ public class AIPersonalInjuryController {
      * Analyze case value with AI insights
      */
     @PostMapping("/analyze-case-value")
+    @AuditLog(action = "VIEW", entityType = "LEGAL_CASE", description = "AI case value analysis")
     public DeferredResult<ResponseEntity<Map<String, Object>>> analyzeCaseValue(@RequestBody Map<String, Object> request) {
         log.info("Analyzing PI case value with Claude AI");
 
@@ -309,6 +311,7 @@ public class AIPersonalInjuryController {
      * When caseId is provided, fetches all case data (medical records, damages, summary) to enhance the letter.
      */
     @PostMapping("/generate-demand-letter")
+    @AuditLog(action = "CREATE", entityType = "DEMAND_LETTER", description = "Generated demand letter")
     public ResponseEntity<Map<String, Object>> generateDemandLetter(
             @RequestBody Map<String, Object> request,
             @RequestParam(required = false) Long userId) {

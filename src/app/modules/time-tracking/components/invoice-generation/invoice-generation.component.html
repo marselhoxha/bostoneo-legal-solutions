@@ -296,7 +296,7 @@
                                [checked]="entry.id && selectedEntries.has(entry.id)"
                                (change)="toggleEntrySelection(entry)">
                       </td>
-                      <td>{{ entry.date | date:'shortDate' }}</td>
+                      <td>{{ entry.date | date:'shortDate':'UTC' }}</td>
                       <td>{{ getUserName(entry.userId) }}</td>
                       <td>{{ entry.description }}</td>
                       <td class="text-end">{{ entry.hours }}</td>

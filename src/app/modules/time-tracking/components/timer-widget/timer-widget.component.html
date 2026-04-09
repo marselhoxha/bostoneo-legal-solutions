@@ -219,7 +219,7 @@
         <div class="entry-item" *ngFor="let entry of recentEntries().slice(0, 3)">
           <div class="entry-header">
             <div class="entry-case">{{ entry.caseNumber }}</div>
-            <div class="entry-date">{{ entry.date | date:'MMM dd' }}</div>
+            <div class="entry-date">{{ entry.date | date:'MMM dd':'UTC' }}</div>
           </div>
           <div class="entry-details">
             <div class="entry-description">{{ entry.description | slice:0:50 }}...</div>

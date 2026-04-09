@@ -203,7 +203,7 @@
             <th mat-header-cell *matHeaderCellDef>Date</th>
             <td mat-cell *matCellDef="let entry">
               <ng-container *ngIf="editingEntryId !== entry.id">
-                {{ entry.date | date:'MMM d, y' }}
+                {{ entry.date | date:'MMM d, y':'UTC' }}
               </ng-container>
               <input *ngIf="editingEntryId === entry.id" type="date" class="form-control form-control-sm"
                      [formControl]="editForm.get('date')!">

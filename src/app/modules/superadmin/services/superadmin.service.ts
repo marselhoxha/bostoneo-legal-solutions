@@ -177,6 +177,24 @@ export class SuperAdminService {
   }
 
   /**
+   * Permanently delete an organization and ALL its data (audit logs preserved)
+   */
+  hardDeleteOrganization(organizationId: number): Observable<any> {
+    return this.http.delete<ApiResponse<any>>(
+      `${this.apiUrl}/organizations/${organizationId}/permanent?confirm=PERMANENT_DELETE`
+    );
+  }
+
+  /**
+   * Permanently delete a user and ALL their data
+   */
+  hardDeleteUser(userId: number): Observable<any> {
+    return this.http.delete<ApiResponse<any>>(
+      `${this.apiUrl}/users/${userId}/permanent?confirm=PERMANENT_DELETE`
+    );
+  }
+
+  /**
    * Get all users across all organizations
    */
   getAllUsers(page: number = 0, size: number = 10): Observable<PageData<UserSummary>> {

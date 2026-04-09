@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.controller.ai;
 
+import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.model.ActionItem;
 import com.bostoneo.bostoneosolutions.model.AIAnalysisMessage;
 import com.bostoneo.bostoneosolutions.model.AIDocumentAnalysis;
@@ -94,6 +95,7 @@ public class AIDocumentAnalyzerController {
     }
 
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @AuditLog(action = "CREATE", entityType = "DOCUMENT_ANALYSIS", description = "Analyzed document with AI")
     public DeferredResult<ResponseEntity<Map<String, Object>>> analyzeDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam("analysisType") String analysisType,

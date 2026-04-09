@@ -200,8 +200,8 @@
               <tbody>
                 <tr *ngFor="let entry of getMyEntries()">
                   <td class="ps-4">
-                    <span class="fw-medium">{{ entry.date | date:'MMM d, y' }}</span>
-                    <div class="text-muted fs-12">{{ entry.date | date:'EEEE' }}</div>
+                    <span class="fw-medium">{{ entry.date | date:'MMM d, y':'UTC' }}</span>
+                    <div class="text-muted fs-12">{{ entry.date | date:'EEEE':'UTC' }}</div>
                   </td>
                   <td>
                     <div class="text-truncate" style="max-width: 250px;" [title]="entry.description">
@@ -455,7 +455,7 @@
                     </div>
                   </td>
                   <td>
-                    <span>{{ entry.date | date:'MMM d, y' }}</span>
+                    <span>{{ entry.date | date:'MMM d, y':'UTC' }}</span>
                   </td>
                   <td>
                     <div class="text-truncate" style="max-width: 200px;" [title]="entry.description">
@@ -650,7 +650,7 @@
                       <span class="fw-medium">{{ entry.userName || 'Unknown' }}</span>
                     </div>
                   </td>
-                  <td>{{ entry.date | date:'MMM d, y' }}</td>
+                  <td>{{ entry.date | date:'MMM d, y':'UTC' }}</td>
                   <td>
                     <div class="text-truncate" style="max-width: 200px;">{{ entry.description || '-' }}</div>
                   </td>

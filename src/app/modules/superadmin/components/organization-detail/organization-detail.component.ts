@@ -290,6 +290,51 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  async permanentDeleteOrganization(): Promise<void> {
+    if (!this.organization) return;
+
+    const result = await Swal.fire({
+      title: 'PERMANENTLY Delete Organization?',
+      html: `<p class="text-danger fw-bold">WARNING: This will permanently erase ALL data for <strong>"${this.organization.name}"</strong> including:</p>
+             <ul class="text-start small">
+               <li>All users and their data</li>
+               <li>All cases, clients, and documents</li>
+               <li>All invoices, expenses, and billing</li>
+               <li>All AI workspace documents and research</li>
+               <li>All files, leads, and communications</li>
+             </ul>
+             <p class="text-danger fw-bold">This action CANNOT be undone.</p>
+             <p>Type the organization name to confirm:</p>`,
+      input: 'text',
+      inputPlaceholder: this.organization.name,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f06548',
+      cancelButtonColor: '#878a99',
+      confirmButtonText: 'Permanently Delete Everything',
+      inputValidator: (value) => {
+        if (value !== this.organization!.name) {
+          return 'Organization name does not match';
+        }
+        return null;
+      }
+    });
+
+    if (result.isConfirmed) {
+      this.superAdminService.hardDeleteOrganization(this.organizationId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            Swal.fire('Permanently Deleted!', `${this.organization!.name} and all its data have been permanently erased.`, 'success');
+            this.router.navigate(['/superadmin/organizations']);
+          },
+          error: (err) => {
+            Swal.fire('Error', err?.error?.reason || err?.error?.message || 'Failed to permanently delete organization', 'error');
+          }
+        });
+    }
+  }
+
   openAddUserModal(): void {
     this.addUserForm.reset();
     this.showAddUserModal = true;

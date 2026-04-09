@@ -153,6 +153,7 @@ public class ClientResource {
 
     @GetMapping("/get/{id}")
     @PreAuthorize("hasAuthority('CLIENT:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_ATTORNEY') or hasRole('ROLE_USER') or hasRole('ROLE_ATTORNEY')")
+    @AuditLog(action = "VIEW", entityType = "CLIENT", description = "Viewed client details")
     public ResponseEntity<HttpResponse> getClient(@AuthenticationPrincipal UserDTO user, @PathVariable("id") Long id) {
         Client client = clientService.getClient(id);
         return ResponseEntity.ok(

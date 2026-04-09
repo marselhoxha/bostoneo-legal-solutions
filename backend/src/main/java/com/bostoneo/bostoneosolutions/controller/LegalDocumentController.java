@@ -49,6 +49,7 @@ public class LegalDocumentController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('DOCUMENT:VIEW') or hasRole('ROLE_USER')")
+    @AuditLog(action = "VIEW", entityType = "DOCUMENT", description = "Viewed document")
     public ResponseEntity<CustomHttpResponse<LegalDocument>> getDocumentById(@PathVariable Long id) {
         return ResponseEntity.ok(documentService.getDocumentById(id));
     }

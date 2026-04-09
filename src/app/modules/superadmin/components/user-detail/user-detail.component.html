@@ -274,6 +274,28 @@
       </div>
     </div>
 
+    <!-- Danger Zone -->
+    <div class="row mt-3">
+      <div class="col-12">
+        <div class="card border-danger">
+          <div class="card-header bg-danger bg-opacity-10">
+            <h5 class="card-title mb-0 text-danger"><i class="ri-error-warning-line me-2"></i>Danger Zone</h5>
+          </div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <p class="mb-0 fw-medium text-danger">Permanently delete this user</p>
+                <small class="text-muted">Permanently erases the user and ALL their data (cases, documents, activities, etc.). Cannot be undone.</small>
+              </div>
+              <button class="btn btn-danger btn-sm" (click)="permanentDeleteUser()">
+                <i class="ri-skull-line me-1"></i> Permanently Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Back Button -->
     <div class="row mt-3">
       <div class="col-12">

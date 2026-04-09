@@ -162,7 +162,7 @@ public class EnhancedSecurityConfig {
             "img-src 'self' data: https: blob:; " +
             "frame-src 'self' blob:; " +
             "worker-src 'self' blob:; " +
-            "connect-src 'self' " + connectSrc + wsSrc + extraConnect + "; " +
+            "connect-src 'self' blob: " + connectSrc + wsSrc + extraConnect + "; " +
             "frame-ancestors 'self' " + frameAncestors;
     }
 }

@@ -331,11 +331,21 @@
                 </h6>
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
-                    <p class="mb-0 fw-medium">Delete this organization</p>
-                    <small class="text-muted">Once deleted, all users will be disabled and the organization will be hidden from lists.</small>
+                    <p class="mb-0 fw-medium">Deactivate this organization</p>
+                    <small class="text-muted">Disables all users and hides from lists. Data is preserved and can be reactivated.</small>
                   </div>
                   <button class="btn btn-outline-danger btn-sm" (click)="deleteOrganization()">
-                    <i class="ri-delete-bin-line me-1"></i> Delete Organization
+                    <i class="ri-delete-bin-line me-1"></i> Deactivate
+                  </button>
+                </div>
+                <hr class="my-2">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <p class="mb-0 fw-medium text-danger">Permanently delete this organization</p>
+                    <small class="text-muted">Permanently erases ALL data (users, cases, clients, documents, etc.). Cannot be undone.</small>
+                  </div>
+                  <button class="btn btn-danger btn-sm" (click)="permanentDeleteOrganization()">
+                    <i class="ri-skull-line me-1"></i> Permanently Delete
                   </button>
                 </div>
               </div>
