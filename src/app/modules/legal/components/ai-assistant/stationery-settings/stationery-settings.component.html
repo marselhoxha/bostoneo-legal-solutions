@@ -186,11 +186,16 @@
               </div>
             </div>
 
-            <!-- Contact value overrides — leave blank to use your firm's profile data -->
+            <!-- Contact value overrides -->
             <div class="contact-overrides">
-              <small class="text-muted d-block mb-2">
-                <i class="ri-information-line me-1"></i>Enter values below. Leave blank to use your firm's profile data.
-              </small>
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <small class="text-muted">
+                  <i class="ri-information-line me-1"></i>Leave blank to use your Professional Details.
+                </small>
+                <button type="button" class="btn btn-soft-primary btn-sm" (click)="fillFromProfile()">
+                  <i class="ri-user-settings-line me-1"></i>Fill from Professional Profile
+                </button>
+              </div>
               <div class="form-group">
                 <label class="form-label">Firm Display Name</label>
                 <input type="text" class="form-control form-control-sm"

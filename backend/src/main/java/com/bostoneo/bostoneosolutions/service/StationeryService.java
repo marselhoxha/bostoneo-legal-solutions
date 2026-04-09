@@ -143,17 +143,49 @@ public class StationeryService {
 
     private String replacePlaceholders(String html, String attorneyName, Attorney attorney, Organization org, String date) {
         if (html == null || html.isBlank()) return "";
+
+        // Build full office address from attorney profile fields (fallback to org address)
+        String officeAddress = buildOfficeAddress(attorney, org);
+
+        // Use attorney's firm name if set, otherwise organization name
+        String firmName = attorney.getFirmName() != null && !attorney.getFirmName().isBlank()
+                ? attorney.getFirmName() : safe(org.getName());
+
         return html
                 .replace("{{attorney_name}}", safe(attorneyName))
                 .replace("{{bar_number}}", safe(attorney.getBarNumber()))
                 .replace("{{license_state}}", safe(attorney.getLicenseState()))
-                .replace("{{firm_name}}", safe(org.getName()))
+                .replace("{{direct_phone}}", safe(attorney.getDirectPhone()))
+                .replace("{{fax}}", safe(attorney.getFax()))
+                .replace("{{office_address}}", officeAddress)
+                .replace("{{firm_name}}", firmName)
                 .replace("{{firm_address}}", safe(org.getAddress()))
                 .replace("{{firm_phone}}", safe(org.getPhone()))
                 .replace("{{firm_email}}", safe(org.getEmail()))
                 .replace("{{firm_website}}", safe(org.getWebsite()))
                 .replace("{{firm_logo_url}}", safe(org.getLogoUrl()))
                 .replace("{{date}}", safe(date));
+    }
+
+    /** Build formatted office address from attorney profile, fall back to org address */
+    private String buildOfficeAddress(Attorney attorney, Organization org) {
+        if (attorney.getOfficeStreet() != null && !attorney.getOfficeStreet().isBlank()) {
+            StringBuilder addr = new StringBuilder(attorney.getOfficeStreet());
+            if (attorney.getOfficeSuite() != null && !attorney.getOfficeSuite().isBlank()) {
+                addr.append(", ").append(attorney.getOfficeSuite());
+            }
+            if (attorney.getOfficeCity() != null) {
+                addr.append(", ").append(attorney.getOfficeCity());
+            }
+            if (attorney.getOfficeState() != null) {
+                addr.append(", ").append(attorney.getOfficeState());
+            }
+            if (attorney.getOfficeZip() != null) {
+                addr.append(" ").append(attorney.getOfficeZip());
+            }
+            return addr.toString();
+        }
+        return safe(org.getAddress());
     }
 
     /**
@@ -188,8 +220,16 @@ public class StationeryService {
         }
         ctx.append("\n");
         if (user.getEmail() != null) ctx.append("Attorney email: ").append(user.getEmail()).append("\n");
-        if (user.getPhone() != null) ctx.append("Attorney phone: ").append(user.getPhone()).append("\n");
-        if (org.getAddress() != null) ctx.append("Firm address in letterhead: ").append(org.getAddress()).append("\n");
+        if (attorney.getDirectPhone() != null) ctx.append("Attorney direct phone: ").append(attorney.getDirectPhone()).append("\n");
+        else if (user.getPhone() != null) ctx.append("Attorney phone: ").append(user.getPhone()).append("\n");
+        if (attorney.getFax() != null) ctx.append("Attorney fax: ").append(attorney.getFax()).append("\n");
+        String officeAddr = buildOfficeAddress(attorney, org);
+        if (!officeAddr.isEmpty()) ctx.append("Office address in letterhead: ").append(officeAddr).append("\n");
+        if (attorney.getFirmName() != null && !attorney.getFirmName().isBlank()) {
+            ctx.append("Firm name in letterhead: ").append(attorney.getFirmName()).append("\n");
+        } else if (org.getName() != null) {
+            ctx.append("Firm name in letterhead: ").append(org.getName()).append("\n");
+        }
         if (org.getPhone() != null) ctx.append("Firm phone in letterhead: ").append(org.getPhone()).append("\n");
         // Tell AI which sections are present so it only skips what's actually in the stationery
         ctx.append("Stationery sections present:");

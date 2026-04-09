@@ -60,6 +60,30 @@ public class Attorney {
     @Column(name = "office_location")
     private String officeLocation;
 
+    @Column(name = "direct_phone", length = 50)
+    private String directPhone;
+
+    @Column(length = 50)
+    private String fax;
+
+    @Column(name = "office_street")
+    private String officeStreet;
+
+    @Column(name = "office_suite", length = 100)
+    private String officeSuite;
+
+    @Column(name = "office_city", length = 100)
+    private String officeCity;
+
+    @Column(name = "office_state", length = 50)
+    private String officeState;
+
+    @Column(name = "office_zip", length = 20)
+    private String officeZip;
+
+    @Column(name = "firm_name")
+    private String firmName;
+
     @Column(columnDefinition = "TEXT")
     private String bio;
 

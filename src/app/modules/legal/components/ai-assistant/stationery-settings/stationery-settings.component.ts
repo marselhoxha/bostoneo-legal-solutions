@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, SecurityContext } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, SecurityContext, Inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -8,6 +9,7 @@ import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { StationeryService, StationeryTemplate } from '../../../services/stationery.service';
+import { environment } from '../../../../../../environments/environment';
 import { UserService } from '../../../../../service/user.service';
 
 // ── Config types ───────────────────────────────────────────
@@ -99,9 +101,10 @@ function generateLetterhead(config: StationeryConfig): string {
   const ov = c.contactOverrides;
 
   // Use override values when provided, otherwise keep placeholders for backend resolution
+  // Attorney-specific placeholders (direct_phone, fax, office_address) pull from Professional Details
   const firmName = ov.firmName?.trim() ? escapeHtml(ov.firmName.trim()) : '{{firm_name}}';
-  const firmAddress = ov.firmAddress?.trim() ? escapeHtml(ov.firmAddress.trim()) : '{{firm_address}}';
-  const firmPhone = ov.firmPhone?.trim() ? escapeHtml(ov.firmPhone.trim()) : '{{firm_phone}}';
+  const firmAddress = ov.firmAddress?.trim() ? escapeHtml(ov.firmAddress.trim()) : '{{office_address}}';
+  const firmPhone = ov.firmPhone?.trim() ? escapeHtml(ov.firmPhone.trim()) : '{{direct_phone}}';
   const firmEmail = ov.firmEmail?.trim() ? escapeHtml(ov.firmEmail.trim()) : '{{firm_email}}';
   const firmWebsite = ov.firmWebsite?.trim() ? escapeHtml(ov.firmWebsite.trim()) : '{{firm_website}}';
 
@@ -118,7 +121,8 @@ function generateLetterhead(config: StationeryConfig): string {
   contactLines.push(`<p style="${cFont}font-weight:700;margin:0;">{{attorney_name}}</p>`);
   if (c.contactFields.includes('address')) contactLines.push(`<p style="${cFont}font-weight:500;margin:0;">${firmAddress}</p>`);
   if (c.contactFields.includes('phone')) contactLines.push(`<p style="${cFont}font-weight:500;margin:0;">p: ${firmPhone}</p>`);
-  if (c.contactFields.includes('fax') && c.faxNumber) contactLines.push(`<p style="${cFont}font-weight:500;margin:0;">f: ${escapeHtml(c.faxNumber)}</p>`);
+  const faxValue = c.faxNumber?.trim() ? escapeHtml(c.faxNumber.trim()) : '{{fax}}';
+  if (c.contactFields.includes('fax')) contactLines.push(`<p style="${cFont}font-weight:500;margin:0;">f: ${faxValue}</p>`);
   if (c.contactFields.includes('email')) contactLines.push(`<p style="${cFont}font-weight:500;margin:0;">${firmEmail}</p>`);
   if (c.contactFields.includes('website')) contactLines.push(`<p style="${cFont}font-weight:500;margin:0;">${firmWebsite}</p>`);
   const contactHtml = contactLines.join('\n');
@@ -127,7 +131,7 @@ function generateLetterhead(config: StationeryConfig): string {
   const centeredParts: string[] = ['{{attorney_name}}'];
   if (c.contactFields.includes('address')) centeredParts.push(firmAddress);
   if (c.contactFields.includes('phone')) centeredParts.push(firmPhone);
-  if (c.contactFields.includes('fax') && c.faxNumber) centeredParts.push(escapeHtml(c.faxNumber));
+  if (c.contactFields.includes('fax')) centeredParts.push(faxValue);
   if (c.contactFields.includes('email')) centeredParts.push(firmEmail);
   if (c.contactFields.includes('website')) centeredParts.push(firmWebsite);
   const centeredContactHtml = `<p style="font-family:'Times New Roman',Georgia,serif;font-size:12px;font-weight:500;color:#333;margin:0;">${centeredParts.join(' &middot; ')}</p>`;
@@ -400,6 +404,7 @@ export class StationerySettingsComponent implements OnInit, OnDestroy {
   constructor(
     private stationeryService: StationeryService,
     private userService: UserService,
+    private http: HttpClient,
     private sanitizer: DomSanitizer,
     private cdr: ChangeDetectorRef
   ) {}
@@ -608,6 +613,33 @@ export class StationerySettingsComponent implements OnInit, OnDestroy {
   onFormChange(): void {
     clearTimeout(this.previewDebounce);
     this.previewDebounce = setTimeout(() => this.updatePreview(), 150);
+  }
+
+  /** Pull attorney profile data into stationery contact fields */
+  fillFromProfile(): void {
+    this.http.get<any>(`${environment.apiUrl}/api/attorney-profile`).subscribe({
+      next: (res: any) => {
+        const a = res?.data?.attorney;
+        if (!a || !a.id) {
+          alert('No Professional Details found. Fill them in Settings > Professional first.');
+          return;
+        }
+        if (a.firmName) this.config.letterhead.contactOverrides.firmName = a.firmName;
+        if (a.officeStreet) {
+          let addr = a.officeStreet;
+          if (a.officeSuite) addr += ', ' + a.officeSuite;
+          if (a.officeCity) addr += ', ' + a.officeCity;
+          if (a.officeState) addr += ', ' + a.officeState;
+          if (a.officeZip) addr += ' ' + a.officeZip;
+          this.config.letterhead.contactOverrides.firmAddress = addr;
+        }
+        if (a.directPhone) this.config.letterhead.contactOverrides.firmPhone = a.directPhone;
+        if (a.fax) this.config.letterhead.faxNumber = a.fax;
+        this.onFormChange();
+        this.cdr.markForCheck();
+      },
+      error: () => alert('Could not load Professional Details.')
+    });
   }
 
   // ── Grid drag-drop helpers ─────────────────────────

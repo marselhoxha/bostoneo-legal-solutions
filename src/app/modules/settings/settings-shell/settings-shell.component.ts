@@ -2,10 +2,12 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrateg
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
 import { UserService } from '../../../service/user.service';
 import { OrganizationService } from '../../../core/services/organization.service';
 import { RbacService } from '../../../core/services/rbac.service';
 import { NotificationService } from '../../../service/notification.service';
+import { environment } from '../../../../environments/environment';
 
 export interface SettingsTab {
   key: string;
@@ -40,9 +42,16 @@ export class SettingsShellComponent implements OnInit, OnDestroy {
 
   tabs: SettingsTab[] = [];
 
+  // Attorney profile
+  attorney: any = {};
+  attorneyLoading = false;
+  attorneySaving = false;
+  private attorneyApiUrl = `${environment.apiUrl}/api/attorney-profile`;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private http: HttpClient,
     private userService: UserService,
     private organizationService: OrganizationService,
     private rbacService: RbacService,
@@ -55,6 +64,9 @@ export class SettingsShellComponent implements OnInit, OnDestroy {
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       if (params['tab']) {
         this.activeTab = params['tab'];
+        if (params['tab'] === 'professional') {
+          this.loadAttorneyProfile();
+        }
         this.cdr.markForCheck();
       }
     });
@@ -126,6 +138,13 @@ export class SettingsShellComponent implements OnInit, OnDestroy {
       { key: 'notifications', label: 'Notifications', icon: 'ri-notification-3-line', section: 'Personal' },
     ];
 
+    // Show Professional tab for attorney-like roles
+    const role = (this.user?.roleName || '').toUpperCase();
+    if (role.includes('ATTORNEY') || role.includes('PARTNER') || role.includes('ASSOCIATE') ||
+        role.includes('COUNSEL') || role.includes('PARALEGAL')) {
+      this.tabs.splice(1, 0, { key: 'professional', label: 'Professional', icon: 'ri-scales-3-line', section: 'Personal' });
+    }
+
     if (this.canSeeOrganization) {
       this.tabs.push({ key: 'organization', label: 'Organization', icon: 'ri-building-line', section: 'Firm' });
     }
@@ -139,6 +158,9 @@ export class SettingsShellComponent implements OnInit, OnDestroy {
 
   navigateToTab(tab: string): void {
     this.router.navigate(['/settings', tab]);
+    if (tab === 'professional' && !this.attorney?.id) {
+      this.loadAttorneyProfile();
+    }
   }
 
   onUserUpdated(updatedUser: any): void {
@@ -154,5 +176,38 @@ export class SettingsShellComponent implements OnInit, OnDestroy {
   getInitials(): string {
     if (!this.user) return '?';
     return (this.user.firstName?.charAt(0) || '') + (this.user.lastName?.charAt(0) || '');
+  }
+
+  loadAttorneyProfile(): void {
+    this.attorneyLoading = true;
+    this.http.get<any>(this.attorneyApiUrl).subscribe({
+      next: (res) => {
+        this.attorney = res.data?.attorney || {};
+        this.attorneyLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.attorney = {};
+        this.attorneyLoading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  saveAttorneyProfile(): void {
+    this.attorneySaving = true;
+    this.http.put<any>(this.attorneyApiUrl, this.attorney).subscribe({
+      next: (res) => {
+        this.attorney = res.data?.attorney || this.attorney;
+        this.attorneySaving = false;
+        this.notificationService.onDefault('Professional details saved');
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.attorneySaving = false;
+        this.notificationService.onError('Failed to save professional details');
+        this.cdr.markForCheck();
+      }
+    });
   }
 }
