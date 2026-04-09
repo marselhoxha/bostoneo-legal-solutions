@@ -23,7 +23,9 @@ public class TokenBlacklistService {
     private volatile boolean redisEverConnected = false;
 
     /** In-memory fallback for user token blacklisting when Redis is unavailable.
-     *  Maps userId → timestamp (millis) when all tokens were invalidated. */
+     *  Maps userId → timestamp (millis) when all tokens were invalidated.
+     *  Capped at 500 entries to prevent unbounded memory growth. */
+    private static final int MAX_BLACKLIST_SIZE = 500;
     private static final ConcurrentHashMap<Long, Long> memoryBlacklist = new ConcurrentHashMap<>();
 
     /**
@@ -45,6 +47,12 @@ public class TokenBlacklistService {
     public void blacklistAllUserTokens(Long userId) {
         long now = System.currentTimeMillis();
         // Always write to in-memory fallback (works without Redis)
+        // Evict oldest entries if at capacity to prevent unbounded growth
+        if (memoryBlacklist.size() >= MAX_BLACKLIST_SIZE) {
+            memoryBlacklist.entrySet().stream()
+                .min(java.util.Map.Entry.comparingByValue())
+                .ifPresent(oldest -> memoryBlacklist.remove(oldest.getKey()));
+        }
         memoryBlacklist.put(userId, now);
         // Also try Redis for cross-instance consistency
         try {
@@ -81,12 +89,8 @@ public class TokenBlacklistService {
     public boolean isUserTokenBlacklisted(Long userId, long tokenIssuedAtMillis) {
         // Check in-memory blacklist first (always available)
         Long memoryTimestamp = memoryBlacklist.get(userId);
-        if (memoryTimestamp != null) {
-            log.info("Memory blacklist check for user {}: tokenIssued={}, blacklistAt={}, blocked={}",
-                userId, tokenIssuedAtMillis, memoryTimestamp, tokenIssuedAtMillis < memoryTimestamp);
-            if (tokenIssuedAtMillis < memoryTimestamp) {
-                return true;
-            }
+        if (memoryTimestamp != null && tokenIssuedAtMillis < memoryTimestamp) {
+            return true;
         }
         // Then check Redis
         try {

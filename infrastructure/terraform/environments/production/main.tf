@@ -373,8 +373,8 @@ module "ecs" {
   ]
 
   api_image         = var.api_image
-  api_cpu           = 512    # Demo phase (upgrade to 1024 for full production)
-  api_memory        = 1024   # Demo phase (upgrade to 2048 for full production)
+  api_cpu           = 1024   # Upgraded: 1 vCPU for AI workloads
+  api_memory        = 2048   # Upgraded: 2 GB to prevent OOM crashes (was 1 GB)
   api_desired_count = 1      # Demo phase (upgrade to 3 for full production)
   api_min_count     = 1      # Demo phase (upgrade to 2 for full production)
   api_max_count     = 2      # Demo phase (upgrade to 10 for full production)
