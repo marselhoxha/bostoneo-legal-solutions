@@ -7,7 +7,8 @@ export interface Exhibit {
   id: string;
   label: string;       // e.g. "Exhibit A", "Exhibit B"
   fileName: string;    // e.g. "police_report.pdf"
-  fileUrl: string;     // URL or blob URL for the PDF viewer
+  fileUrl: string;     // API URL or blob URL for images
+  pdfData?: Uint8Array; // Raw PDF bytes for the viewer (avoids blob URL worker issues)
   pageCount?: number;
   mimeType?: string;   // e.g. "application/pdf", "image/jpeg"
 }

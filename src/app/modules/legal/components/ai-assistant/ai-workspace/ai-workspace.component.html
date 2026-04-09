@@ -1724,7 +1724,7 @@
             <!-- PDF exhibits -->
             <ngx-extended-pdf-viewer
               *ngIf="isPdfExhibit(exhibit)"
-              [src]="exhibit.fileUrl"
+              [src]="exhibit.pdfData || exhibit.fileUrl"
               [zoom]="'page-width'"
               [showToolbar]="false"
               [showSidebarButton]="false"

@@ -10928,19 +10928,25 @@ You can:
     const docId = this.currentDocumentId;
     if (!docId) return;
 
-    // If exhibit already has a blob URL, open directly
-    if (exhibit.fileUrl && exhibit.fileUrl.startsWith('blob:')) {
+    // If exhibit already has data loaded, open directly
+    if (exhibit.pdfData || (exhibit.fileUrl && exhibit.fileUrl.startsWith('blob:'))) {
       this.exhibitPanelService.openExhibit(exhibit);
       return;
     }
 
-    // Fetch file via HttpClient (with auth headers) and create blob URL
+    // Fetch file via HttpClient (with auth headers)
     this.exhibitPanelService.getExhibitFileBlob(Number(docId), Number(exhibit.id))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (blob) => {
-          const rawBlobUrl = URL.createObjectURL(blob);
-          exhibit.fileUrl = rawBlobUrl;
+        next: async (blob) => {
+          if (this.isPdfExhibit(exhibit)) {
+            // Pass raw bytes to PDF viewer (avoids blob URL worker access issues on production)
+            const arrayBuffer = await blob.arrayBuffer();
+            exhibit.pdfData = new Uint8Array(arrayBuffer);
+          } else {
+            // For images and other types, blob URL works fine
+            exhibit.fileUrl = URL.createObjectURL(blob);
+          }
           this.exhibitPanelService.openExhibit(exhibit);
           this.cdr.detectChanges();
         },
