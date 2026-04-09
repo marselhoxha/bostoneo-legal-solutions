@@ -40,7 +40,8 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     html = html + sources.html;
 
     // SECURITY: Sanitize with DOMPurify before bypassing Angular's sanitizer
-    return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(html));
+    // ADD_ATTR: allow target="_blank" on links so citations open in new tabs
+    return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(html, { ADD_ATTR: ['target'] }));
   }
 
   /**

@@ -30,6 +30,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=300s --retries=3 \
 EXPOSE 8085
 
 # JVM options for containers
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -XX:+TieredCompilation -Djava.security.egd=file:/dev/./urandom"
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -XX:+TieredCompilation -Duser.timezone=UTC -Djava.security.egd=file:/dev/./urandom"
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
