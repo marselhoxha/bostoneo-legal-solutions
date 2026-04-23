@@ -63,6 +63,7 @@
     "chart.js": "^3.9.1",
     "date-fns": "^4.1.0",
     "docx": "^9.5.1",
+    "docx-preview": "^0.3.7",
     "dompurify": "^3.3.3",
     "echarts": "^5.5.0",
     "feather-icons": "^4.29.2",

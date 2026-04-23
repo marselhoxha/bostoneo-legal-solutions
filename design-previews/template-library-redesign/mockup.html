@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Template Library Redesign — Interactive Preview</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.0.0/fonts/remixicon.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* =========================================
+       Mirrors design-previews/legidraft-redesign/preview.html
+       Same tokens, same frame patterns, same annotation style.
+       ========================================= */
+    :root {
+      --velzon-primary: #405189;
+      --velzon-success: #0ab39c;
+      --velzon-info: #299cdb;
+      --velzon-warning: #f7b84b;
+      --velzon-danger: #f06548;
+      --velzon-muted: #74788d;
+      --velzon-border: #e9ebec;
+      --velzon-bg: #f3f3f9;
+
+      /* Practice-area accent palette (used on card bands + pills) */
+      --pa-pi: #f06548;
+      --pa-pi-soft: #feeae6;
+      --pa-family: #845adf;
+      --pa-family-soft: #f0e8ff;
+      --pa-immigration: #0ab39c;
+      --pa-immigration-soft: #dcf7f1;
+      --pa-criminal: #e59819;
+      --pa-criminal-soft: #fdf1dc;
+      --pa-civil: #5b6b8d;
+      --pa-civil-soft: #e8ecf3;
+      --pa-estate: #299cdb;
+      --pa-estate-soft: #dcf0fa;
+      --pa-realestate: #16a394;
+      --pa-realestate-soft: #d7f3ef;
+    }
+    body { background: var(--velzon-bg); font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; color: #212529; }
+    h1, h2, h3, h4 { font-weight: 600; }
+    h2 { color: var(--velzon-primary); }
+
+    /* Header (identical to reference) */
+    .preview-header { background: white; border-bottom: 1px solid var(--velzon-border); padding: 1.5rem 0; }
+
+    /* Sticky nav */
+    .preview-nav { background: white; border-bottom: 1px solid var(--velzon-border); padding: 0.75rem 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+    .preview-nav .nav-link { color: var(--velzon-muted); font-weight: 500; }
+    .preview-nav .nav-link.active { background: var(--velzon-primary); color: white; }
+
+    /* Sections */
+    .section-divider { border-top: 4px solid var(--velzon-primary); margin: 4rem 0 2rem 0; padding-top: 1.5rem; }
+    .section-number { display: inline-block; background: var(--velzon-primary); color: white; padding: 0.375rem 1rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    /* Mockup frame — the macOS-window signature */
+    .mockup-frame { background: white; border-radius: 10px; box-shadow: 0 4px 16px rgba(56, 65, 74, 0.08); padding: 0; margin-bottom: 2rem; overflow: hidden; }
+    .mockup-frame-header { padding: 1rem 1.5rem; background: #f8f9fa; border-bottom: 1px solid var(--velzon-border); display: flex; align-items: center; gap: 0.75rem; }
+    .mockup-frame-header .dot { width: 12px; height: 12px; border-radius: 50%; background: #ced4da; }
+    .mockup-frame-header .dot.red { background: #f06548; }
+    .mockup-frame-header .dot.yellow { background: #f7b84b; }
+    .mockup-frame-header .dot.green { background: #0ab39c; }
+    .mockup-frame-header .title { font-size: 0.875rem; font-weight: 600; color: var(--velzon-muted); }
+    .mockup-frame-header .url-pill { margin-left: auto; background: white; border: 1px solid var(--velzon-border); padding: 0.2rem 0.75rem; border-radius: 999px; font-size: 0.7rem; color: var(--velzon-muted); font-family: 'SF Mono', Monaco, monospace; }
+    .mockup-frame-body { padding: 1.5rem; }
+
+    /* Annotation callouts */
+    .annotation { background: #fff9e6; border-left: 4px solid var(--velzon-warning); padding: 1rem 1.25rem; margin: 1rem 0; border-radius: 4px; font-size: 0.875rem; }
+    .annotation strong { color: #7a5502; }
+    .annotation-info { background: #e6f4fb; border-left-color: var(--velzon-info); }
+    .annotation-info strong { color: #0f5a73; }
+    .annotation-success { background: #e6f6f3; border-left-color: var(--velzon-success); }
+    .annotation-success strong { color: #066a5e; }
+    .annotation-danger { background: #fbecec; border-left-color: var(--velzon-danger); }
+    .annotation-danger strong { color: #8a2a1a; }
+
+    /* State switcher */
+    .state-switcher { display: flex; gap: 0.5rem; margin-bottom: 1rem; padding: 0.5rem; background: white; border: 1px solid var(--velzon-border); border-radius: 8px; }
+    .state-switcher button { flex: 1; padding: 0.625rem 0.75rem; background: white; border: 1px solid var(--velzon-border); border-radius: 6px; font-size: 0.8rem; cursor: pointer; color: var(--velzon-muted); font-weight: 500; transition: all 0.15s; }
+    .state-switcher button:hover { background: var(--velzon-bg); }
+    .state-switcher button.active { background: var(--velzon-primary); color: white; border-color: var(--velzon-primary); box-shadow: 0 2px 4px rgba(64,81,137,0.2); }
+    .state-tab { display: none; }
+    .state-tab.active { display: block; }
+
+    /* ==================================================
+       TEMPLATE-LIBRARY-SPECIFIC COMPONENTS
+       ================================================== */
+
+    /* App topbar mock (the narrow header strip shown in screenshots) */
+    .app-topbar-mock { background: white; border-bottom: 1px solid var(--velzon-border); padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; }
+    .app-topbar-mock .crumb { color: var(--velzon-muted); }
+    .app-topbar-mock .crumb strong { color: var(--velzon-primary); }
+
+    /* Page title row */
+    .tmpl-page-title { display: flex; align-items: flex-start; justify-content: space-between; padding: 1.5rem 1.5rem 0.75rem; gap: 1rem; }
+    .tmpl-page-title h2 { font-size: 1.35rem; margin: 0 0 0.25rem; color: #212529; display: flex; align-items: center; gap: 0.5rem; }
+    .tmpl-page-title h2 i { color: var(--velzon-primary); }
+    .tmpl-page-title .tagline { font-size: 0.85rem; color: var(--velzon-muted); margin: 0; }
+    .tmpl-page-title .global-search { position: relative; min-width: 280px; }
+    .tmpl-page-title .global-search input { width: 100%; height: 38px; padding: 0 0.875rem 0 2.25rem; border: 1px solid var(--velzon-border); border-radius: 7px; background: var(--velzon-bg); font-size: 0.85rem; }
+    .tmpl-page-title .global-search i { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--velzon-muted); }
+
+    /* COMPACT PAGE HEADER — replaces the heavy gradient hero */
+    .tmpl-page-title { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 1.5rem 0.25rem; gap: 1rem; flex-wrap: wrap; }
+    .tmpl-page-title-left h2 { font-size: 1.4rem; margin: 0 0 0.2rem; color: #212529; display: flex; align-items: center; gap: 0.5rem; }
+    .tmpl-page-title-left h2 i { color: var(--velzon-primary); font-size: 1.3rem; }
+    .tmpl-page-title-left .count-pill { background: var(--velzon-bg); color: var(--velzon-muted); font-size: 0.7rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 999px; margin-left: 0.2rem; font-variant-numeric: tabular-nums; }
+    .tmpl-page-title-left .tagline { font-size: 0.82rem; color: var(--velzon-muted); margin: 0; }
+    .tmpl-page-title-right { display: flex; align-items: center; gap: 0.5rem; }
+    .btn-page-primary { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.95rem; background: linear-gradient(135deg, #405189 0%, #5d74b6 100%); color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 0.82rem; box-shadow: 0 2px 6px rgba(64,81,137,0.22); cursor: pointer; transition: all 0.15s; }
+    .btn-page-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(64,81,137,0.3); }
+    .btn-page-outline { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.95rem; background: white; color: var(--velzon-primary); border: 1px solid var(--velzon-primary); border-radius: 6px; font-weight: 600; font-size: 0.82rem; cursor: pointer; transition: all 0.15s; }
+    .btn-page-outline:hover { background: #f0f4fc; }
+    .btn-page-ghost { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.8rem; background: transparent; color: var(--velzon-muted); border: 1px solid var(--velzon-border); border-radius: 6px; font-weight: 500; font-size: 0.82rem; cursor: pointer; }
+    .btn-page-ghost:hover { background: var(--velzon-bg); color: #212529; }
+
+    /* Summary stat strip */
+    .stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; padding: 0 1.5rem 1.25rem; }
+    .stat-tile { background: white; border: 1px solid var(--velzon-border); border-radius: 8px; padding: 0.875rem 1rem; display: flex; align-items: center; gap: 0.875rem; transition: all 0.15s; }
+    .stat-tile:hover { border-color: var(--velzon-primary); box-shadow: 0 3px 10px rgba(64,81,137,0.06); }
+    .stat-ico { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+    .stat-ico.blue { background: #f0f4fc; color: var(--velzon-primary); }
+    .stat-ico.teal { background: var(--pa-immigration-soft); color: var(--pa-immigration); }
+    .stat-ico.purple { background: var(--pa-family-soft); color: var(--pa-family); }
+    .stat-ico.amber { background: var(--pa-criminal-soft); color: var(--pa-criminal); }
+    .stat-tile .stat-num { font-size: 1.2rem; font-weight: 700; color: #212529; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .stat-tile .stat-lbl { font-size: 0.7rem; color: var(--velzon-muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500; margin-top: 0.1rem; }
+    .stat-tile .stat-trend { margin-left: auto; font-size: 0.72rem; color: var(--velzon-success); font-weight: 600; }
+
+    /* Filter bar */
+    .filter-row { padding: 0 1.5rem; margin-top: 1rem; }
+    .filter-card { background: white; border: 1px solid var(--velzon-border); border-radius: 8px; padding: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .filter-card .search-wrap { position: relative; flex: 1 1 260px; min-width: 220px; }
+    .filter-card .search-wrap input { width: 100%; height: 36px; padding: 0 0.875rem 0 2.15rem; border: 1px solid var(--velzon-border); border-radius: 6px; background: var(--velzon-bg); font-size: 0.85rem; }
+    .filter-card .search-wrap i { position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); color: var(--velzon-muted); }
+    .filter-select { height: 36px; padding: 0 2rem 0 0.7rem; border: 1px solid var(--velzon-border); border-radius: 6px; background: var(--velzon-bg); font-size: 0.82rem; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2374788d' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.7rem center; min-width: 130px; cursor: pointer; }
+    .filter-select:hover { border-color: var(--velzon-primary); }
+    .filter-select.jur-new { border: 2px solid var(--velzon-info); background: #f8fbff; }
+    .new-mini-badge { display: inline-block; background: var(--velzon-info); color: white; font-size: 0.55rem; padding: 0.1rem 0.35rem; border-radius: 999px; font-weight: 700; letter-spacing: 0.05em; vertical-align: 2px; margin-left: 0.25rem; }
+    .filter-card .vdiv { width: 1px; height: 22px; background: var(--velzon-border); margin: 0 0.25rem; }
+    .view-toggle { display: inline-flex; border: 1px solid var(--velzon-border); border-radius: 6px; overflow: hidden; background: var(--velzon-bg); }
+    .view-toggle button { background: transparent; border: none; padding: 0 0.75rem; height: 36px; color: var(--velzon-muted); cursor: pointer; font-size: 1rem; }
+    .view-toggle button.active { background: var(--velzon-primary); color: white; }
+
+    .filter-chip-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 1.5rem 0; font-size: 0.78rem; color: var(--velzon-muted); }
+    .f-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: #f0f4fc; color: var(--velzon-primary); padding: 0.2rem 0.4rem 0.2rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 500; }
+    .f-chip i { cursor: pointer; font-size: 0.85rem; opacity: 0.7; }
+    .f-chip i:hover { opacity: 1; }
+    .clear-all-btn { background: none; border: none; color: var(--velzon-muted); font-size: 0.72rem; cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 3px; }
+    .clear-all-btn:hover { color: var(--velzon-primary); background: var(--velzon-bg); }
+
+    /* Template grid */
+    .tmpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 1rem; padding: 1.25rem 1.5rem 1.5rem; }
+    .tmpl-card { background: white; border: 1px solid var(--velzon-border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; transition: all 0.2s; box-shadow: 0 1px 2px rgba(20,30,55,0.04); }
+    .tmpl-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(20,30,55,0.1); }
+    .tmpl-card .cat-band { height: 3px; background: var(--cat-color, var(--velzon-primary)); }
+    .tmpl-card .tmpl-body { padding: 1rem 1.1rem 0.875rem; flex: 1; display: flex; flex-direction: column; }
+    .tmpl-card .top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.625rem; margin-bottom: 0.75rem; }
+    .tmpl-icon-wrap { width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; background: var(--cat-bg, #f0f4fc); color: var(--cat-color, var(--velzon-primary)); }
+    .own-tag { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.62rem; font-weight: 700; padding: 0.2rem 0.45rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .own-tag.yours { background: var(--pa-immigration-soft); color: #066a5e; }
+    .own-tag.imported { background: var(--pa-family-soft); color: #4b2d9a; }
+    .own-tag.private { background: var(--pa-criminal-soft); color: #946200; }
+    .own-tag.org { background: #f0f4fc; color: var(--velzon-primary); }
+    .tmpl-card .tmpl-title { font-size: 0.9rem; font-weight: 600; color: #212529; line-height: 1.35; margin: 0 0 0.25rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .tmpl-card .tmpl-desc { font-size: 0.78rem; color: var(--velzon-muted); line-height: 1.4; margin: 0 0 0.8rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.28em; }
+    .tag-row { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.65rem; }
+    .tag-pill { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.15rem 0.45rem; border-radius: 999px; font-size: 0.65rem; font-weight: 600; background: var(--cat-bg, #f3f3f9); color: var(--cat-color, var(--velzon-muted)); }
+    .tag-pill.ghost { background: #f3f3f9; color: var(--velzon-muted); font-weight: 500; }
+    .tag-pill i { font-size: 0.75rem; }
+    .tmpl-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: auto; padding-top: 0.625rem; border-top: 1px solid #f3f3f9; }
+    .tmpl-foot .meta { display: flex; align-items: center; gap: 0.45rem; font-size: 0.7rem; color: var(--velzon-muted); }
+    .avatar-sm { width: 20px; height: 20px; border-radius: 50%; background: var(--velzon-primary); color: white; display: inline-flex; align-items: center; justify-content: center; font-size: 0.58rem; font-weight: 600; flex-shrink: 0; }
+    .dot-sep { width: 3px; height: 3px; border-radius: 50%; background: #bdc4d1; }
+    .tmpl-actions { display: flex; gap: 0.25rem; }
+    .iconbtn { width: 28px; height: 28px; border-radius: 5px; background: transparent; border: none; color: var(--velzon-muted); display: inline-flex; align-items: center; justify-content: center; font-size: 0.95rem; cursor: pointer; transition: all 0.15s; }
+    .iconbtn:hover { background: #f0f4fc; color: var(--velzon-primary); }
+    .btn-use-sm { padding: 0.3rem 0.7rem; border-radius: 5px; background: var(--velzon-primary); color: white; border: none; font-size: 0.72rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem; }
+    .btn-use-sm:hover { background: #364971; }
+
+    /* List view */
+    .list-wrap { padding: 0 1.5rem 1.5rem; }
+    .list-card { background: white; border: 1px solid var(--velzon-border); border-radius: 8px; overflow: hidden; }
+    .list-card table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .list-card thead th { padding: 0.65rem 1rem; background: #f8f9fa; color: var(--velzon-muted); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; border-bottom: 1px solid var(--velzon-border); }
+    .list-card tbody td { padding: 0.8rem 1rem; border-bottom: 1px solid #f3f3f9; vertical-align: middle; }
+    .list-card tbody tr:last-child td { border-bottom: none; }
+    .list-card tbody tr:hover { background: #fafbff; }
+    .list-name-cell { display: flex; align-items: center; gap: 0.65rem; }
+    .list-name-cell .tmpl-icon-wrap { width: 32px; height: 32px; font-size: 0.9rem; border-radius: 7px; }
+    .list-name-cell .nm { color: #212529; font-weight: 500; }
+    .list-name-cell .sub { display: block; font-size: 0.72rem; color: var(--velzon-muted); font-weight: 400; margin-top: 1px; }
+
+    /* Modal mockup */
+    .modal-mockup { background: rgba(33, 37, 41, 0.6); border-radius: 8px; padding: 1.5rem; position: relative; min-height: 400px; }
+    .modal-mockup-content { background: white; border-radius: 8px; max-width: 580px; margin: 0 auto; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .modal-mockup-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--velzon-border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-mockup-header h4 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .modal-mockup-header h4 i { color: var(--velzon-primary); }
+    .modal-mockup-body { padding: 1.25rem 1.5rem; }
+    .modal-mockup-footer { padding: 0.875rem 1.5rem; border-top: 1px solid var(--velzon-border); background: #fafbfd; display: flex; justify-content: flex-end; gap: 0.5rem; }
+    .detect-banner { background: linear-gradient(135deg, var(--pa-immigration-soft) 0%, #d2f5ed 100%); border: 1px solid rgba(10,179,156,0.25); border-radius: 8px; padding: 0.8rem 1rem; display: flex; gap: 0.75rem; margin-bottom: 1rem; }
+    .detect-banner i.lead { color: var(--velzon-success); font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+    .detect-banner .txt { font-size: 0.8rem; color: #212529; }
+    .var-chips { display: flex; gap: 0.25rem; flex-wrap: wrap; margin-top: 0.4rem; }
+    .var-pill { font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem; background: rgba(10,179,156,0.18); color: #066a5e; padding: 0.12rem 0.45rem; border-radius: 4px; font-weight: 600; }
+
+    .form-grp { margin-bottom: 0.875rem; }
+    .form-grp label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--velzon-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem; }
+    .form-grp input, .form-grp select, .form-grp textarea { width: 100%; padding: 0.45rem 0.7rem; border: 1px solid var(--velzon-border); border-radius: 5px; background: white; font-size: 0.82rem; font-family: inherit; }
+    .form-grp textarea { min-height: 54px; resize: vertical; }
+    .form-grp input:focus, .form-grp select:focus, .form-grp textarea:focus { outline: none; border-color: var(--velzon-primary); box-shadow: 0 0 0 3px rgba(64,81,137,0.12); }
+    .form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .toggle-block { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--velzon-bg); border-radius: 5px; margin: 0.75rem 0 0.25rem; font-size: 0.8rem; }
+    .toggle-block input { accent-color: var(--velzon-primary); }
+    .toggle-block .hint { color: var(--velzon-muted); font-size: 0.72rem; margin-left: auto; }
+
+    /* Empty state */
+    .empty-card { background: white; border: 1px solid var(--velzon-border); border-radius: 10px; padding: 2.75rem 1.5rem; text-align: center; }
+    .empty-illo { width: 80px; height: 80px; margin: 0 auto 0.875rem; border-radius: 50%; background: linear-gradient(135deg, #f0f4fc 0%, var(--pa-immigration-soft) 100%); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--velzon-primary); position: relative; }
+    .empty-illo::after { content: ''; position: absolute; inset: -8px; border-radius: 50%; border: 2px dashed rgba(64,81,137,0.2); animation: spin 24s linear infinite; }
+    @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+    .empty-card h3 { font-size: 1.15rem; margin-bottom: 0.375rem; }
+    .empty-card p { color: var(--velzon-muted); max-width: 440px; margin: 0 auto 1.25rem; font-size: 0.9rem; }
+    .empty-ctas { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+
+    /* Loading skeleton */
+    .skel { background: #f3f3f9; border-radius: 6px; }
+    .skel-a { background: linear-gradient(90deg, #f3f3f9 0%, #e9ebec 50%, #f3f3f9 100%); background-size: 200% 100%; animation: shimmer 1.6s ease-in-out infinite; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skel-card { background: white; border: 1px solid var(--velzon-border); border-radius: 8px; padding: 1rem; }
+    .skel-card .row1 { display: flex; gap: 0.6rem; margin-bottom: 0.65rem; }
+    .skel-card .sq { width: 40px; height: 40px; border-radius: 9px; }
+    .skel-card .lines { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+    .skel-card .ln1 { height: 11px; width: 75%; }
+    .skel-card .ln2 { height: 9px; width: 55%; }
+    .skel-card .full { height: 9px; margin-bottom: 0.3rem; }
+    .skel-card .short { height: 9px; width: 60%; margin-bottom: 0.65rem; }
+    .skel-card .pills { display: flex; gap: 0.2rem; }
+    .skel-card .pills span { height: 15px; width: 48px; border-radius: 999px; }
+
+    /* Before/After swap table */
+    .before-after { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .ba-col { background: white; border: 1px solid var(--velzon-border); border-radius: 8px; overflow: hidden; }
+    .ba-col .ba-head { padding: 0.5rem 0.9rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: white; }
+    .ba-col.before .ba-head { background: #8a3e3c; }
+    .ba-col.after .ba-head { background: #0a6553; }
+    .ba-col .ba-body { padding: 0.875rem 1rem; font-size: 0.85rem; }
+    .ba-col ul { margin: 0; padding-left: 1rem; }
+    .ba-col li { margin: 0.3rem 0; }
+
+    /* Scope NOT-box */
+    .nope-box { background: linear-gradient(135deg, #fbe8e4 0%, #f9d6d0 100%); border-radius: 8px; padding: 1rem 1.25rem; color: #8a2a1a; font-size: 0.88rem; }
+    .nope-box ul { margin: 0.5rem 0 0 1.15rem; padding: 0; }
+    .nope-box li { margin: 0.2rem 0; }
+
+    /* Import wizard entry button styling re-used from legidraft preview */
+    .import-entry-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; background: linear-gradient(135deg, #5f78d2 0%, #299cdb 100%); color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; box-shadow: 0 2px 6px rgba(95,120,210,0.22); cursor: pointer; }
+    .import-entry-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(95,120,210,0.3); }
+
+    /* ==================================================
+       IMPORT WIZARD MOCKUP (4 steps via state-switcher)
+       ================================================== */
+    .wiz-shell-bg { background: rgba(33, 37, 41, 0.55); border-radius: 8px; padding: 2rem 1.5rem; }
+    .wiz-modal { background: white; border-radius: 10px; overflow: hidden; max-width: 720px; margin: 0 auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .wiz-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--velzon-border); display: flex; align-items: center; justify-content: space-between; background: white; }
+    .wiz-header h4 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+    .wiz-header h4 i { color: var(--velzon-primary); }
+    .wiz-close { background: transparent; border: none; color: var(--velzon-muted); font-size: 1.3rem; cursor: pointer; padding: 0.1rem 0.4rem; line-height: 1; }
+    .wiz-close:hover { color: var(--velzon-danger); }
+    /* Step indicator strip */
+    .wiz-steps { display: flex; align-items: center; padding: 0.9rem 1.5rem; background: #fafbfd; border-bottom: 1px solid var(--velzon-border); }
+    .wiz-step { display: flex; align-items: center; gap: 0.5rem; }
+    .wiz-step .wiz-step-num { width: 26px; height: 26px; border-radius: 50%; background: white; color: var(--velzon-muted); display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; border: 2px solid var(--velzon-border); transition: all 0.2s; }
+    .wiz-step.done .wiz-step-num { background: var(--velzon-success); color: white; border-color: var(--velzon-success); }
+    .wiz-step.active .wiz-step-num { background: var(--velzon-primary); color: white; border-color: var(--velzon-primary); box-shadow: 0 0 0 4px rgba(64,81,137,0.15); }
+    .wiz-step-lbl { font-size: 0.7rem; font-weight: 700; color: var(--velzon-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .wiz-step.active .wiz-step-lbl { color: var(--velzon-primary); }
+    .wiz-step.done .wiz-step-lbl { color: var(--velzon-success); }
+    .wiz-step-line { flex: 1; height: 2px; background: var(--velzon-border); margin: 0 0.75rem; min-width: 24px; }
+    .wiz-step-line.done { background: var(--velzon-success); }
+    .wiz-body { padding: 1.5rem; min-height: 340px; background: white; }
+    .wiz-footer { padding: 0.875rem 1.5rem; border-top: 1px solid var(--velzon-border); background: #fafbfd; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+    .wiz-footer .left-note { font-size: 0.75rem; color: var(--velzon-muted); display: inline-flex; align-items: center; gap: 0.35rem; }
+
+    /* Step 1 — drop zone */
+    .drop-zone { border: 2px dashed var(--velzon-primary); border-radius: 10px; padding: 2.25rem 1.25rem 1.75rem; text-align: center; background: #fafbfd; cursor: pointer; transition: all 0.15s; }
+    .drop-zone:hover, .drop-zone.active { background: #f0f4fc; }
+    .drop-zone .dz-icon { width: 56px; height: 56px; margin: 0 auto 0.75rem; border-radius: 14px; background: #f0f4fc; color: var(--velzon-primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+    .drop-zone h4 { font-size: 1rem; margin: 0 0 0.3rem; font-weight: 600; }
+    .drop-zone p { font-size: 0.82rem; color: var(--velzon-muted); margin: 0 0 0.8rem; }
+    .drop-zone .dz-hint { display: inline-flex; gap: 0.4rem; }
+    .drop-zone .dz-hint code { font-family: 'SF Mono', monospace; font-size: 0.7rem; color: var(--velzon-muted); padding: 0.2rem 0.5rem; background: white; border: 1px solid var(--velzon-border); border-radius: 4px; }
+    .file-list { margin-top: 1.1rem; display: flex; flex-direction: column; gap: 0.4rem; }
+    .file-list-head { font-size: 0.7rem; font-weight: 700; color: var(--velzon-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
+    .file-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.55rem 0.75rem; background: white; border: 1px solid var(--velzon-border); border-radius: 6px; font-size: 0.82rem; }
+    .file-item .fi-icon { width: 28px; height: 28px; border-radius: 6px; background: var(--velzon-bg); color: var(--velzon-primary); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; }
+    .file-item.docx .fi-icon { background: #dbe9ff; color: #1a4db3; }
+    .file-item.pdf .fi-icon { background: #fbecec; color: #c73a2a; }
+    .file-item.zip .fi-icon { background: var(--pa-criminal-soft); color: #946200; }
+    .file-item .fi-name { flex: 1; font-weight: 500; color: #212529; }
+    .file-item .fi-size { font-size: 0.72rem; color: var(--velzon-muted); font-family: 'SF Mono', monospace; }
+    .file-item .fi-remove { width: 24px; height: 24px; border-radius: 50%; background: transparent; border: none; color: var(--velzon-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+    .file-item .fi-remove:hover { background: #fbecec; color: var(--velzon-danger); }
+
+    /* Step 2 — processing list */
+    .proc-head { font-size: 0.85rem; color: var(--velzon-muted); margin-bottom: 0.85rem; display: inline-flex; align-items: center; gap: 0.45rem; }
+    .proc-head i { color: var(--velzon-primary); animation: spin 1.2s linear infinite; }
+    .status-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.9rem; background: white; border: 1px solid var(--velzon-border); border-radius: 7px; margin-bottom: 0.45rem; }
+    .status-item .st-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1rem; }
+    .status-item .st-icon.ready { background: var(--pa-immigration-soft); color: var(--velzon-success); }
+    .status-item .st-icon.process { background: #fff8e8; color: var(--velzon-warning); }
+    .status-item .st-icon.process i { animation: spin 1.1s linear infinite; }
+    .status-item .st-icon.err { background: #fbecec; color: var(--velzon-danger); }
+    .status-item .st-main { flex: 1; min-width: 0; }
+    .status-item .st-name { font-size: 0.85rem; font-weight: 600; color: #212529; }
+    .status-item .st-class { font-size: 0.74rem; color: var(--velzon-muted); margin-top: 0.12rem; }
+    .st-state { font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
+    .st-state.ready { background: var(--pa-immigration-soft); color: #066a5e; }
+    .st-state.analyzing { background: #fff1df; color: #946200; }
+    .st-state.extracting { background: #e6f4fb; color: #0f5a73; }
+    .st-state.dup { background: var(--pa-family-soft); color: #4b2d9a; }
+    .st-state.err { background: #fbecec; color: var(--velzon-danger); }
+
+    /* Step 3 — review */
+    .review-file-tabs { display: flex; gap: 0.25rem; margin-bottom: 0.85rem; padding: 0.3rem; background: var(--velzon-bg); border-radius: 7px; }
+    .review-file-tabs button { flex: 1; padding: 0.4rem 0.6rem; background: transparent; border: none; border-radius: 5px; font-size: 0.72rem; font-weight: 600; color: var(--velzon-muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .review-file-tabs button.active { background: white; color: var(--velzon-primary); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+    .review-file-tabs button .dotind { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .review-file-tabs button .dotind.ready { background: var(--velzon-success); }
+    .review-file-tabs button .dotind.warn { background: var(--velzon-warning); }
+    .class-banner { background: linear-gradient(135deg, #f0f4fc 0%, #e6f4fb 100%); border: 1px solid rgba(64,81,137,0.2); border-radius: 8px; padding: 0.8rem 1rem; display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 0.85rem; }
+    .class-banner .cb-icon { width: 34px; height: 34px; border-radius: 9px; background: white; color: var(--velzon-primary); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+    .class-banner .cb-main { flex: 1; }
+    .class-banner .cb-line { font-size: 0.88rem; font-weight: 600; color: var(--velzon-primary); line-height: 1.3; }
+    .class-banner .cb-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.35rem; }
+    .class-banner .cb-tag { font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 999px; background: white; color: var(--velzon-primary); border: 1px solid rgba(64,81,137,0.2); text-transform: uppercase; letter-spacing: 0.04em; }
+    .class-banner .cb-conf { font-size: 0.7rem; color: var(--velzon-success); font-weight: 700; background: white; padding: 0.25rem 0.55rem; border-radius: 999px; border: 1px solid rgba(10,179,156,0.3); white-space: nowrap; align-self: flex-start; }
+    .warn-strip { display: flex; gap: 0.55rem; align-items: flex-start; padding: 0.55rem 0.75rem; background: #fff9e6; border: 1px solid rgba(247,184,75,0.35); border-radius: 6px; margin-bottom: 0.75rem; font-size: 0.78rem; color: #7a5502; }
+    .warn-strip i { flex-shrink: 0; margin-top: 1px; color: var(--velzon-warning); }
+    .dup-strip { background: var(--pa-family-soft); border-color: rgba(132,90,223,0.3); color: #4b2d9a; }
+    .dup-strip i { color: var(--pa-family); }
+    .review-body { display: grid; grid-template-columns: 1fr 260px; gap: 0.85rem; }
+    .review-body .review-preview { background: white; border: 1px solid var(--velzon-border); border-radius: 7px; padding: 0.85rem 1rem; font-size: 0.82rem; line-height: 1.55; color: #212529; max-height: 200px; overflow-y: auto; }
+    .review-body .review-preview mark { background: var(--pa-immigration-soft); color: #066a5e; padding: 0 0.25em; border-radius: 3px; font-weight: 600; font-family: 'SF Mono', monospace; font-size: 0.9em; }
+    .review-body .review-side { display: flex; flex-direction: column; gap: 0.5rem; }
+    .mini-field { font-size: 0.72rem; }
+    .mini-field label { font-size: 0.65rem; font-weight: 700; color: var(--velzon-muted); text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.2rem; }
+    .mini-field input, .mini-field select { width: 100%; padding: 0.4rem 0.55rem; font-size: 0.78rem; border: 1px solid var(--velzon-border); border-radius: 5px; background: white; font-family: inherit; }
+    .mini-toggle { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; padding: 0.45rem 0.55rem; background: var(--velzon-bg); border-radius: 5px; }
+    .var-review-head { font-size: 0.68rem; font-weight: 700; color: var(--velzon-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.7rem; margin-bottom: 0.35rem; }
+    .var-review-item { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0; border-bottom: 1px dashed var(--velzon-border); font-size: 0.78rem; }
+    .var-review-item:last-child { border-bottom: none; }
+    .var-review-item .vr-orig { font-family: 'SF Mono', monospace; color: var(--velzon-muted); font-size: 0.7rem; padding: 0.1rem 0.3rem; background: var(--velzon-bg); border-radius: 4px; }
+    .var-review-item .vr-arrow { color: var(--velzon-muted); font-size: 0.7rem; }
+    .var-review-item .vr-new { font-family: 'SF Mono', monospace; color: #066a5e; font-size: 0.72rem; padding: 0.1rem 0.35rem; background: var(--pa-immigration-soft); border-radius: 4px; font-weight: 600; flex: 1; }
+    .var-review-item .vr-actions { display: flex; gap: 0.15rem; flex-shrink: 0; }
+    .vr-btn { width: 22px; height: 22px; border-radius: 4px; background: transparent; border: 1px solid var(--velzon-border); color: var(--velzon-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; }
+    .vr-btn.accept { color: var(--velzon-success); border-color: rgba(10,179,156,0.35); background: var(--pa-immigration-soft); }
+    .vr-btn.reject:hover { color: var(--velzon-danger); border-color: rgba(240,101,72,0.4); background: #fbecec; }
+    .vr-btn.rename:hover { color: var(--velzon-primary); border-color: rgba(64,81,137,0.4); background: #f0f4fc; }
+
+    /* Step 4 — commit summary */
+    .commit-summary { text-align: center; padding: 1.5rem 1rem 1rem; }
+    .commit-summary .cs-icon { width: 68px; height: 68px; border-radius: 50%; margin: 0 auto 1rem; background: linear-gradient(135deg, var(--pa-immigration-soft), #c7edf0); color: var(--velzon-success); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+    .commit-summary h3 { font-size: 1.1rem; margin: 0 0 0.3rem; font-weight: 600; }
+    .commit-summary p { color: var(--velzon-muted); margin: 0 0 1rem; font-size: 0.85rem; }
+    .commit-summary .cs-row { display: flex; justify-content: center; gap: 2.5rem; margin-top: 1rem; padding: 1rem 0; border-top: 1px solid var(--velzon-border); border-bottom: 1px solid var(--velzon-border); }
+    .commit-summary .cs-stat { text-align: center; }
+    .commit-summary .cs-stat .n { font-size: 1.7rem; font-weight: 700; color: var(--velzon-primary); font-variant-numeric: tabular-nums; line-height: 1; }
+    .commit-summary .cs-stat.success .n { color: var(--velzon-success); }
+    .commit-summary .cs-stat.warn .n { color: var(--velzon-warning); }
+    .commit-summary .cs-stat.muted .n { color: var(--velzon-muted); }
+    .commit-summary .cs-stat .lbl { font-size: 0.66rem; color: var(--velzon-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 0.3rem; font-weight: 600; }
+
+    /* Wizard buttons */
+    .wiz-btn-primary { padding: 0.5rem 1.1rem; background: var(--velzon-primary); color: white; border: none; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; }
+    .wiz-btn-primary:hover { background: #364971; }
+    .wiz-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .wiz-btn-ghost { padding: 0.5rem 1rem; background: white; color: var(--velzon-muted); border: 1px solid var(--velzon-border); border-radius: 6px; font-size: 0.82rem; font-weight: 500; cursor: pointer; }
+    .wiz-btn-ghost:hover { background: var(--velzon-bg); color: #212529; }
+
+    /* ==================================================
+       CREATE NEW TEMPLATE EDITOR MOCKUP
+       ================================================== */
+    .editor-shell { display: grid; grid-template-columns: 1fr 300px; gap: 0; background: white; min-height: 560px; }
+    .editor-main { border-right: 1px solid var(--velzon-border); display: flex; flex-direction: column; }
+    .editor-toolbar { display: flex; align-items: center; gap: 0.1rem; padding: 0.4rem 0.65rem; border-bottom: 1px solid var(--velzon-border); background: #fafbfd; flex-wrap: wrap; }
+    .editor-toolbar .tb-group { display: flex; gap: 0.1rem; padding: 0 0.25rem; border-right: 1px solid var(--velzon-border); }
+    .editor-toolbar .tb-group:last-child { border-right: none; }
+    .editor-toolbar button { width: 28px; height: 28px; border-radius: 4px; background: transparent; border: none; color: var(--velzon-muted); display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; cursor: pointer; }
+    .editor-toolbar button:hover { background: #e9ebf4; color: var(--velzon-primary); }
+    .editor-toolbar button.on { background: #e9ebf4; color: var(--velzon-primary); }
+    .editor-toolbar .tb-var-btn { width: auto; padding: 0 0.6rem; gap: 0.3rem; color: var(--velzon-success); font-size: 0.74rem; font-weight: 600; border: 1px solid rgba(10,179,156,0.35); background: var(--pa-immigration-soft); border-radius: 5px; height: 28px; }
+    .editor-toolbar .tb-var-btn:hover { background: #c9f1e9; color: #066a5e; }
+    .editor-body { flex: 1; padding: 1.5rem 1.75rem; font-size: 0.93rem; line-height: 1.7; color: #212529; font-family: 'Georgia', 'Times New Roman', serif; overflow-y: auto; max-height: 420px; background: white; }
+    .editor-body h1 { font-size: 1.25rem; font-weight: 700; margin: 0 0 0.75rem; font-family: 'Public Sans', sans-serif; color: #0f2e5e; }
+    .editor-body p { margin: 0 0 0.85rem; }
+    .editor-body strong { font-weight: 700; }
+    .editor-body .ph { font-family: 'SF Mono', 'Monaco', monospace; background: var(--pa-immigration-soft); color: #066a5e; padding: 0.05em 0.4em; border-radius: 3px; font-size: 0.78em; font-weight: 600; cursor: pointer; border-bottom: 1px dashed rgba(10,179,156,0.4); }
+    .editor-body .ph:hover { background: #c9f1e9; }
+    .editor-side { background: #fafbfd; padding: 1rem; display: flex; flex-direction: column; gap: 0.85rem; overflow-y: auto; }
+    .side-section { background: white; border: 1px solid var(--velzon-border); border-radius: 7px; padding: 0.8rem 0.9rem; }
+    .side-section .ss-head { font-size: 0.66rem; font-weight: 700; color: var(--velzon-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.55rem; display: flex; align-items: center; gap: 0.35rem; }
+    .side-section .ss-head i { color: var(--velzon-primary); font-size: 0.88rem; }
+    .side-section .ss-head .count-badge { margin-left: auto; background: var(--pa-immigration-soft); color: #066a5e; font-size: 0.65rem; padding: 0.1rem 0.45rem; border-radius: 999px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+    .side-field { margin-bottom: 0.55rem; }
+    .side-field:last-child { margin-bottom: 0; }
+    .side-field label { display: block; font-size: 0.67rem; color: var(--velzon-muted); margin-bottom: 0.2rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+    .side-field input, .side-field select, .side-field textarea { width: 100%; padding: 0.38rem 0.5rem; border: 1px solid var(--velzon-border); border-radius: 5px; background: white; font-size: 0.78rem; font-family: inherit; }
+    .side-field input:focus, .side-field select:focus, .side-field textarea:focus { outline: none; border-color: var(--velzon-primary); box-shadow: 0 0 0 2px rgba(64,81,137,0.15); }
+    .side-field textarea { resize: vertical; min-height: 48px; }
+    .side-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+    .side-toggle { display: flex; align-items: center; gap: 0.45rem; font-size: 0.76rem; padding: 0.45rem 0.55rem; background: var(--velzon-bg); border-radius: 5px; margin-top: 0.45rem; }
+    .side-toggle .hint { margin-left: auto; color: var(--velzon-muted); font-size: 0.68rem; }
+    .detected-list { display: flex; flex-direction: column; gap: 0.3rem; }
+    .det-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; padding: 0.35rem 0.5rem; background: var(--velzon-bg); border-radius: 5px; border-left: 3px solid var(--velzon-success); font-family: 'SF Mono', monospace; color: #066a5e; font-weight: 600; }
+    .det-item .det-count { margin-left: auto; background: white; color: var(--velzon-muted); font-family: 'Public Sans', sans-serif; font-weight: 500; font-size: 0.66rem; padding: 0.05rem 0.4rem; border-radius: 999px; border: 1px solid var(--velzon-border); }
+    .det-empty { font-size: 0.75rem; color: var(--velzon-muted); font-style: italic; padding: 0.5rem 0.2rem; }
+    .editor-topbar { padding: 0.7rem 1.25rem; background: white; border-bottom: 1px solid var(--velzon-border); display: flex; align-items: center; justify-content: space-between; }
+    .editor-topbar .crumb { font-size: 0.78rem; color: var(--velzon-muted); display: inline-flex; align-items: center; gap: 0.35rem; }
+    .editor-topbar .crumb strong { color: var(--velzon-primary); }
+    .editor-topbar .actions { display: flex; gap: 0.4rem; }
+    .editor-footer-bar { padding: 0.7rem 1.25rem; background: #fafbfd; border-top: 1px solid var(--velzon-border); display: flex; justify-content: space-between; align-items: center; grid-column: 1 / -1; }
+    .editor-footer-bar .status { font-size: 0.76rem; color: var(--velzon-muted); display: inline-flex; align-items: center; gap: 0.35rem; }
+    .editor-footer-bar .status .ok { color: var(--velzon-success); }
+    .editor-footer-bar .actions { display: flex; gap: 0.4rem; }
+
+    @media (max-width: 992px) {
+      .before-after, .form-row2 { grid-template-columns: 1fr; }
+      .stat-strip { grid-template-columns: repeat(2, 1fr); }
+      .editor-shell { grid-template-columns: 1fr; }
+      .editor-main { border-right: none; border-bottom: 1px solid var(--velzon-border); }
+      .review-body { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="preview-header">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div>
+        <h1 class="h3 mb-1">
+          <i class="ri-folder-3-line text-primary"></i> Template Library Redesign — Interactive Preview
+        </h1>
+        <p class="text-muted mb-0">Click through each section to see the new page behavior before we build it. Sister preview to <a href="../legidraft-redesign/preview.html">LegiDraft Redesign</a>.</p>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <span class="badge bg-warning text-dark px-3 py-2">DRAFT — AWAITING APPROVAL</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- STICKY NAV -->
+<nav class="preview-nav">
+  <div class="container">
+    <ul class="nav nav-pills gap-2 flex-nowrap" style="overflow-x: auto;">
+      <li class="nav-item"><a href="#overview" class="nav-link active">Overview</a></li>
+      <li class="nav-item"><a href="#current" class="nav-link">What's wrong today</a></li>
+      <li class="nav-item"><a href="#hero" class="nav-link">1 · Page header</a></li>
+      <li class="nav-item"><a href="#stats" class="nav-link">2 · Stats</a></li>
+      <li class="nav-item"><a href="#filters" class="nav-link">3 · Filters</a></li>
+      <li class="nav-item"><a href="#grid" class="nav-link">4 · Grid</a></li>
+      <li class="nav-item"><a href="#list" class="nav-link">5 · List</a></li>
+      <li class="nav-item"><a href="#modal" class="nav-link">6 · Save-as modal</a></li>
+      <li class="nav-item"><a href="#import-wizard" class="nav-link">7 · Import wizard</a></li>
+      <li class="nav-item"><a href="#create-editor" class="nav-link">8 · New template editor</a></li>
+      <li class="nav-item"><a href="#empty" class="nav-link">9 · Empty states</a></li>
+      <li class="nav-item"><a href="#skeleton" class="nav-link">10 · Loading</a></li>
+      <li class="nav-item"><a href="#scope" class="nav-link">Scope</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main class="container py-4">
+
+  <!-- ============== OVERVIEW ============== -->
+  <section id="overview">
+    <div class="mockup-frame">
+      <div class="mockup-frame-body">
+        <h2 class="mb-3">What this redesign does</h2>
+        <p class="mb-4">Attorneys landing on <code>/legal/ai-assistant/templates</code> today see a flat table with two small action buttons top-right ("Import Templates" and "New Template") that are <strong>visually equal to the search field</strong> — so the highest-value action (importing their existing library of DOCX/PDFs in one pass) gets buried. This redesign promotes both entry points to a hero pair, adds category-colored accents so PI / Family / Immigration templates are scannable at a glance, adds a jurisdiction filter (for the matrix), and modernizes the card chrome.</p>
+
+        <div class="annotation annotation-info mb-4">
+          <strong>Parity with LegiDraft.</strong> The LegiDraft redesign introduced a "two-CTA empty-state" pattern (New Draft · Use Template). This mockup mirrors that idea for the Template Library: a big split-hero where <strong>Import</strong> is the primary action (because onboarding a firm's existing templates unlocks ~80% of the value in one session) and <strong>Create from scratch</strong> is the secondary action (ongoing, occasional).
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="h-100 p-3 rounded bg-light border">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-primary">Phase A</span>
+                <strong>Essentials</strong>
+              </div>
+              <p class="small text-muted mb-0">Hero CTAs, jurisdiction filter, Save-as-Template modal with variable detection, Share/Export cleanup. 2&nbsp;days.</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="h-100 p-3 rounded bg-light border" style="border-left: 3px solid #0ab39c !important;">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-success">Phase B</span>
+                <strong>Visual polish</strong>
+              </div>
+              <p class="small text-muted mb-0">Per-category color accents, per-doc-type icon map (extract from <code>template-picker-inline.component.ts</code>), stat strip, chip-based active filters. 1&nbsp;day.</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="h-100 p-3 rounded bg-light border">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-info">Phase C</span>
+                <strong>Extras</strong>
+              </div>
+              <p class="small text-muted mb-0">Optional Recently Used strip, loading skeleton with shimmer, filtered empty state. 0.5&nbsp;day (or punt).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== CURRENT PAIN ============== -->
+  <section id="current" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number" style="background: var(--velzon-danger);">Before</span>
+      <h2 class="mt-2" style="color: var(--velzon-danger);">What's wrong with the live page today</h2>
+      <p class="text-muted">From the screenshot of the production page at <code>/legal/ai-assistant/templates</code>.</p>
+    </div>
+
+    <div class="mockup-frame">
+      <div class="mockup-frame-body">
+        <div class="before-after">
+          <div class="ba-col before">
+            <div class="ba-head">Live today — pain points</div>
+            <div class="ba-body">
+              <ul>
+                <li><strong>Primary actions buried.</strong> "Import Templates" + "New Template" are 140-px buttons lost in the top-right; the second one is literally cut off when a modal overlays.</li>
+                <li><strong>Single "Total: 17" stat</strong> doesn't tell the attorney how many are theirs vs. imported vs. org-shared vs. private.</li>
+                <li><strong>No jurisdiction filter</strong> — but PA × jurisdiction matrix exists on the backend (Sprint 1). Cards can't be filtered by it.</li>
+                <li><strong>Flat table with generic file icons.</strong> Can't scan for "all Immigration templates" without reading every row.</li>
+                <li><strong>No visual indication of ownership.</strong> Who owns each template? Yours? Imported? Private-to-you?</li>
+                <li><strong>Share / Export buttons</strong> in the row-level menu are placeholders with no real backend — dead UI.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="ba-col after">
+            <div class="ba-head">After this redesign</div>
+            <div class="ba-body">
+              <ul>
+                <li><strong>Split-hero with illustration</strong> promotes Import + Create to first-class citizens.</li>
+                <li><strong>4-tile stat strip</strong> (Total · Yours · Imported · Private) with trend indicators.</li>
+                <li><strong>Jurisdiction select</strong> joins Category + Practice Area + Sort (new-badged on first render).</li>
+                <li><strong>Category-colored card bands</strong> (3px top accent) + per-doc-type icons make scanning O(1).</li>
+                <li><strong>Ownership tag</strong> top-right of every card: YOURS / ORG / IMPORTED / PRIVATE.</li>
+                <li><strong>Share / Export removed</strong> — replaced by real "Use" + "More" (rename, duplicate, delete).</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 1. HERO CTAs (full page mockup) ============== -->
+  <section id="hero" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number">1</span>
+      <h2 class="mt-2">Full page · hero + stats + filters + grid</h2>
+      <p class="text-muted">Wrapped in a browser-window frame so you can see the page as an attorney would land on it.</p>
+    </div>
+
+    <div class="mockup-frame">
+      <div class="mockup-frame-header">
+        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+        <span class="title">Legience — Template Library</span>
+        <span class="url-pill">legience.io/legal/ai-assistant/templates</span>
+      </div>
+      <div class="mockup-frame-body p-0">
+        <!-- Topbar crumb -->
+        <div class="app-topbar-mock">
+          <div class="crumb"><i class="ri-dashboard-2-line"></i> Legal &nbsp;·&nbsp; AI Assistant &nbsp;·&nbsp; <strong>Templates</strong></div>
+          <div class="d-flex align-items-center gap-2 small text-muted"><i class="ri-user-line"></i> David Altman — Partner</div>
+        </div>
+
+        <!-- Compact page header — title left, CTAs right -->
+        <div class="tmpl-page-title">
+          <div class="tmpl-page-title-left">
+            <h2>
+              <i class="ri-folder-3-line"></i>Template Library
+              <span class="count-pill">128 templates</span>
+            </h2>
+            <p class="tagline">Reusable legal documents with <code style="background: #f3f3f9; padding: 0.08em 0.3em; border-radius: 3px; font-size: 0.85em;">{{variables}}</code> — pre-fill to draft a motion, letter, or petition in seconds.</p>
+          </div>
+          <div class="tmpl-page-title-right">
+            <button class="btn-page-primary" title="Import .pdf, .docx, .doc, or .zip"><i class="ri-upload-cloud-2-line"></i>Import templates</button>
+            <button class="btn-page-outline" title="Start a blank template from scratch"><i class="ri-add-line"></i>New template</button>
+            <button class="btn-page-ghost" title="Open Template Library help"><i class="ri-question-line"></i></button>
+          </div>
+        </div>
+
+        <!-- Stats strip -->
+        <div class="stat-strip">
+          <div class="stat-tile">
+            <div class="stat-ico blue"><i class="ri-stack-line"></i></div>
+            <div>
+              <div class="stat-num">128</div>
+              <div class="stat-lbl">Total templates</div>
+            </div>
+            <span class="stat-trend"><i class="ri-arrow-up-line"></i>+18</span>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-ico teal"><i class="ri-user-line"></i></div>
+            <div>
+              <div class="stat-num">32</div>
+              <div class="stat-lbl">Yours</div>
+            </div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-ico purple"><i class="ri-upload-cloud-2-line"></i></div>
+            <div>
+              <div class="stat-num">12</div>
+              <div class="stat-lbl">Imported this month</div>
+            </div>
+            <span class="stat-trend"><i class="ri-arrow-up-line"></i>+4</span>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-ico amber"><i class="ri-lock-2-line"></i></div>
+            <div>
+              <div class="stat-num">4</div>
+              <div class="stat-lbl">Private to you</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-row">
+          <div class="filter-card">
+            <div class="search-wrap">
+              <i class="ri-search-line"></i>
+              <input placeholder="Search templates…" value="letter" />
+            </div>
+            <select class="filter-select"><option>All categories</option><option>Letters</option><option>Motions</option></select>
+            <select class="filter-select"><option>All practice areas</option><option>Personal Injury</option><option>Family</option></select>
+            <select class="filter-select jur-new" title="NEW"><option>All jurisdictions</option><option>Massachusetts</option><option>Federal</option><option>Texas</option></select>
+            <span class="vdiv"></span>
+            <select class="filter-select"><option>Recently updated</option><option>Name (A–Z)</option><option>Most used</option></select>
+            <span class="vdiv"></span>
+            <div class="view-toggle">
+              <button class="active" title="Grid"><i class="ri-layout-grid-line"></i></button>
+              <button title="List"><i class="ri-list-check"></i></button>
+            </div>
+          </div>
+        </div>
+        <div class="filter-chip-row">
+          <span>Active:</span>
+          <span class="f-chip">Personal Injury<i class="ri-close-line"></i></span>
+          <span class="f-chip">Massachusetts<i class="ri-close-line"></i></span>
+          <span class="f-chip">Letters<i class="ri-close-line"></i></span>
+          <button class="clear-all-btn">Clear all</button>
+        </div>
+
+        <!-- Template grid -->
+        <div class="tmpl-grid">
+          <!-- PI LOR -->
+          <div class="tmpl-card" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);">
+            <div class="cat-band"></div>
+            <div class="tmpl-body">
+              <div class="top-row">
+                <div class="tmpl-icon-wrap"><i class="ri-mail-send-line"></i></div>
+                <span class="own-tag yours">YOURS</span>
+              </div>
+              <h4 class="tmpl-title">MA PI Letter of Representation — Client Insurer</h4>
+              <p class="tmpl-desc">For PIP/UIM claims to the client's own carrier. Auto-fills policy #, adjuster, DOL.</p>
+              <div class="tag-row">
+                <span class="tag-pill" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);"><i class="ri-price-tag-3-line"></i>Personal Injury</span>
+                <span class="tag-pill ghost"><i class="ri-map-pin-line"></i>MA</span>
+              </div>
+              <div class="tmpl-foot">
+                <div class="meta"><div class="avatar-sm">M</div>You<span class="dot-sep"></span>2d ago</div>
+                <div class="tmpl-actions">
+                  <button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button>
+                  <button class="iconbtn"><i class="ri-more-2-fill"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- PI Demand -->
+          <div class="tmpl-card" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);">
+            <div class="cat-band"></div>
+            <div class="tmpl-body">
+              <div class="top-row">
+                <div class="tmpl-icon-wrap"><i class="ri-money-dollar-box-line"></i></div>
+                <span class="own-tag org">ORG</span>
+              </div>
+              <h4 class="tmpl-title">Policy Limits Demand — MA</h4>
+              <p class="tmpl-desc">c.176D/93A pressure demand with damages table. 8 variables, AI-detected last run.</p>
+              <div class="tag-row">
+                <span class="tag-pill" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);"><i class="ri-price-tag-3-line"></i>Personal Injury</span>
+                <span class="tag-pill ghost"><i class="ri-map-pin-line"></i>MA</span>
+              </div>
+              <div class="tmpl-foot">
+                <div class="meta"><div class="avatar-sm" style="background: #e3620e;">D</div>David A.<span class="dot-sep"></span>Used 14×</div>
+                <div class="tmpl-actions">
+                  <button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button>
+                  <button class="iconbtn"><i class="ri-more-2-fill"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Civil MTD -->
+          <div class="tmpl-card" style="--cat-color: var(--pa-civil); --cat-bg: var(--pa-civil-soft);">
+            <div class="cat-band"></div>
+            <div class="tmpl-body">
+              <div class="top-row">
+                <div class="tmpl-icon-wrap"><i class="ri-scales-3-line"></i></div>
+                <span class="own-tag imported">IMPORTED</span>
+              </div>
+              <h4 class="tmpl-title">Motion to Dismiss — Rule 12(b)(6)</h4>
+              <p class="tmpl-desc">Federal Iqbal/Twombly framing. Imported from <code style="font-size:0.75em;">MTD_template.docx</code> 3w ago.</p>
+              <div class="tag-row">
+                <span class="tag-pill" style="--cat-color: var(--pa-civil); --cat-bg: var(--pa-civil-soft);"><i class="ri-price-tag-3-line"></i>Civil</span>
+                <span class="tag-pill ghost"><i class="ri-map-pin-line"></i>Federal</span>
+              </div>
+              <div class="tmpl-foot">
+                <div class="meta"><div class="avatar-sm" style="background: var(--pa-family);">A</div>Alicia R.<span class="dot-sep"></span>3w ago</div>
+                <div class="tmpl-actions">
+                  <button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button>
+                  <button class="iconbtn"><i class="ri-more-2-fill"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Family Divorce -->
+          <div class="tmpl-card" style="--cat-color: var(--pa-family); --cat-bg: var(--pa-family-soft);">
+            <div class="cat-band"></div>
+            <div class="tmpl-body">
+              <div class="top-row">
+                <div class="tmpl-icon-wrap"><i class="ri-heart-pulse-line"></i></div>
+                <span class="own-tag yours">YOURS</span>
+              </div>
+              <h4 class="tmpl-title">Divorce Petition — MA Probate &amp; Family</h4>
+              <p class="tmpl-desc">Contested divorce with minor children. Standing orders + financial statement callouts baked in.</p>
+              <div class="tag-row">
+                <span class="tag-pill" style="--cat-color: var(--pa-family); --cat-bg: var(--pa-family-soft);"><i class="ri-price-tag-3-line"></i>Family</span>
+                <span class="tag-pill ghost"><i class="ri-map-pin-line"></i>MA</span>
+              </div>
+              <div class="tmpl-foot">
+                <div class="meta"><div class="avatar-sm">M</div>You<span class="dot-sep"></span>5d ago</div>
+                <div class="tmpl-actions">
+                  <button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button>
+                  <button class="iconbtn"><i class="ri-more-2-fill"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Criminal Suppress -->
+          <div class="tmpl-card" style="--cat-color: var(--pa-criminal); --cat-bg: var(--pa-criminal-soft);">
+            <div class="cat-band"></div>
+            <div class="tmpl-body">
+              <div class="top-row">
+                <div class="tmpl-icon-wrap"><i class="ri-shield-cross-line"></i></div>
+                <span class="own-tag private"><i class="ri-lock-2-line"></i>PRIVATE</span>
+              </div>
+              <h4 class="tmpl-title">Motion to Suppress — 4th Am. &amp; Art. 14</h4>
+              <p class="tmpl-desc">Traffic-stop suppression argument with MA Supreme Judicial Court caselaw callouts.</p>
+              <div class="tag-row">
+                <span class="tag-pill" style="--cat-color: var(--pa-criminal); --cat-bg: var(--pa-criminal-soft);"><i class="ri-price-tag-3-line"></i>Criminal</span>
+                <span class="tag-pill ghost"><i class="ri-map-pin-line"></i>MA</span>
+              </div>
+              <div class="tmpl-foot">
+                <div class="meta"><div class="avatar-sm">M</div>You<span class="dot-sep"></span>Private</div>
+                <div class="tmpl-actions">
+                  <button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button>
+                  <button class="iconbtn"><i class="ri-more-2-fill"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Immigration EAD -->
+          <div class="tmpl-card" style="--cat-color: var(--pa-immigration); --cat-bg: var(--pa-immigration-soft);">
+            <div class="cat-band"></div>
+            <div class="tmpl-body">
+              <div class="top-row">
+                <div class="tmpl-icon-wrap"><i class="ri-passport-line"></i></div>
+                <span class="own-tag imported">IMPORTED</span>
+              </div>
+              <h4 class="tmpl-title">EAD Cover Letter — I-765</h4>
+              <p class="tmpl-desc">USCIS cover letter + evidence index. Good for c(8), c(9), c(33) — swap boilerplate per category.</p>
+              <div class="tag-row">
+                <span class="tag-pill" style="--cat-color: var(--pa-immigration); --cat-bg: var(--pa-immigration-soft);"><i class="ri-price-tag-3-line"></i>Immigration</span>
+                <span class="tag-pill ghost"><i class="ri-map-pin-line"></i>Federal</span>
+              </div>
+              <div class="tmpl-foot">
+                <div class="meta"><div class="avatar-sm" style="background: var(--pa-immigration);">J</div>Julia P.<span class="dot-sep"></span>Used 22×</div>
+                <div class="tmpl-actions">
+                  <button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button>
+                  <button class="iconbtn"><i class="ri-more-2-fill"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Estate Will -->
+          <div class="tmpl-card" style="--cat-color: var(--pa-estate); --cat-bg: var(--pa-estate-soft);">
+            <div class="cat-band"></div>
+            <div class="tmpl-body">
+              <div class="top-row">
+                <div class="tmpl-icon-wrap"><i class="ri-safe-2-line"></i></div>
+                <span class="own-tag org">ORG</span>
+              </div>
+              <h4 class="tmpl-title">Last Will &amp; Testament — Simple</h4>
+              <p class="tmpl-desc">MA-compliant will template. Single testator, named executor, residuary bequest.</p>
+              <div class="tag-row">
+                <span class="tag-pill" style="--cat-color: var(--pa-estate); --cat-bg: var(--pa-estate-soft);"><i class="ri-price-tag-3-line"></i>Estate</span>
+                <span class="tag-pill ghost"><i class="ri-map-pin-line"></i>MA</span>
+              </div>
+              <div class="tmpl-foot">
+                <div class="meta"><div class="avatar-sm" style="background: var(--pa-estate);">R</div>Ravi S.<span class="dot-sep"></span>Used 48×</div>
+                <div class="tmpl-actions">
+                  <button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button>
+                  <button class="iconbtn"><i class="ri-more-2-fill"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Real Estate P&S -->
+          <div class="tmpl-card" style="--cat-color: var(--pa-realestate); --cat-bg: var(--pa-realestate-soft);">
+            <div class="cat-band"></div>
+            <div class="tmpl-body">
+              <div class="top-row">
+                <div class="tmpl-icon-wrap"><i class="ri-home-smile-line"></i></div>
+                <span class="own-tag yours">YOURS</span>
+              </div>
+              <h4 class="tmpl-title">Purchase &amp; Sale Agreement — Residential MA</h4>
+              <p class="tmpl-desc">Standard-form P&amp;S with mortgage contingency, inspection rider, closing date, escrow instructions.</p>
+              <div class="tag-row">
+                <span class="tag-pill" style="--cat-color: var(--pa-realestate); --cat-bg: var(--pa-realestate-soft);"><i class="ri-price-tag-3-line"></i>Real Estate</span>
+                <span class="tag-pill ghost"><i class="ri-map-pin-line"></i>MA</span>
+              </div>
+              <div class="tmpl-foot">
+                <div class="meta"><div class="avatar-sm">M</div>You<span class="dot-sep"></span>1mo ago</div>
+                <div class="tmpl-actions">
+                  <button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button>
+                  <button class="iconbtn"><i class="ri-more-2-fill"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="annotation annotation-info">
+      <strong>Why a compact header instead of a big hero.</strong> Attorneys who already have templates don't need a marketing splash every visit — they need their grid, fast. CTAs moved from a 220px-tall gradient hero into a single-row toolbar: <em>Import templates</em> stays prominent (filled primary gradient, upload icon) while <em>New template</em> is right next to it (outlined). Page chrome shrinks from ~450px to ~160px above the grid, so 6+ template cards are in view on a 13″ MacBook without scrolling. The big hero still appears — just scoped to the first-time empty state (see Section 9) where it earns the space.
+    </div>
+    <div class="annotation annotation-success">
+      <strong>Click-throughs shown below.</strong> Section 7 walks through the <em>Import templates</em> wizard (4 steps — upload, processing, review, commit). Section 8 shows the <em>New template</em> editor experience (CKEditor body + live placeholder detection sidebar).
+    </div>
+  </section>
+
+  <!-- ============== 2. STATS ============== -->
+  <section id="stats" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number">2</span>
+      <h2 class="mt-2">Summary stat strip</h2>
+      <p class="text-muted">Replaces today's single "Total: 17" tile. Four compact cards with an icon, a tabular number, and an optional trend indicator.</p>
+    </div>
+    <div class="mockup-frame">
+      <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Stat strip — zoomed</span></div>
+      <div class="mockup-frame-body">
+        <div class="stat-strip" style="padding: 0;">
+          <div class="stat-tile"><div class="stat-ico blue"><i class="ri-stack-line"></i></div><div><div class="stat-num">128</div><div class="stat-lbl">Total templates</div></div><span class="stat-trend"><i class="ri-arrow-up-line"></i>+18</span></div>
+          <div class="stat-tile"><div class="stat-ico teal"><i class="ri-user-line"></i></div><div><div class="stat-num">32</div><div class="stat-lbl">Yours</div></div></div>
+          <div class="stat-tile"><div class="stat-ico purple"><i class="ri-upload-cloud-2-line"></i></div><div><div class="stat-num">12</div><div class="stat-lbl">Imported this month</div></div><span class="stat-trend"><i class="ri-arrow-up-line"></i>+4</span></div>
+          <div class="stat-tile"><div class="stat-ico amber"><i class="ri-lock-2-line"></i></div><div><div class="stat-num">4</div><div class="stat-lbl">Private to you</div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 3. FILTERS (with state switcher) ============== -->
+  <section id="filters" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number">3</span>
+      <h2 class="mt-2">Filter bar states</h2>
+      <p class="text-muted">Search + 4 selects (Category · Practice Area · Jurisdiction · Sort) + view toggle. Active filters drop into a chip row with a "Clear all" escape hatch.</p>
+    </div>
+
+    <div class="state-switcher" data-sw="filters">
+      <button class="active" data-state="clean">No filters applied</button>
+      <button data-state="active">3 active filters</button>
+      <button data-state="nojuris">Jurisdiction highlighted (new)</button>
+    </div>
+
+    <div class="state-tab active" data-tab="clean">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Clean — no filters active</span></div>
+        <div class="mockup-frame-body">
+          <div class="filter-card">
+            <div class="search-wrap"><i class="ri-search-line"></i><input placeholder="Search templates…" /></div>
+            <select class="filter-select"><option>All categories</option></select>
+            <select class="filter-select"><option>All practice areas</option></select>
+            <select class="filter-select"><option>All jurisdictions</option></select>
+            <span class="vdiv"></span>
+            <select class="filter-select"><option>Recently updated</option></select>
+            <span class="vdiv"></span>
+            <div class="view-toggle"><button class="active"><i class="ri-layout-grid-line"></i></button><button><i class="ri-list-check"></i></button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-tab" data-tab="active">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Attorney has filtered down to "PI letters in MA"</span></div>
+        <div class="mockup-frame-body">
+          <div class="filter-card">
+            <div class="search-wrap"><i class="ri-search-line"></i><input placeholder="Search templates…" value="letter" /></div>
+            <select class="filter-select"><option>Letters</option></select>
+            <select class="filter-select"><option>Personal Injury</option></select>
+            <select class="filter-select"><option>Massachusetts</option></select>
+            <span class="vdiv"></span>
+            <select class="filter-select"><option>Most used</option></select>
+            <span class="vdiv"></span>
+            <div class="view-toggle"><button class="active"><i class="ri-layout-grid-line"></i></button><button><i class="ri-list-check"></i></button></div>
+          </div>
+          <div style="padding: 0.75rem 0 0 0;" class="filter-chip-row">
+            <span>Active:</span>
+            <span class="f-chip">Letters<i class="ri-close-line"></i></span>
+            <span class="f-chip">Personal Injury<i class="ri-close-line"></i></span>
+            <span class="f-chip">Massachusetts<i class="ri-close-line"></i></span>
+            <button class="clear-all-btn">Clear all</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-tab" data-tab="nojuris">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">First render after feature ships — jurisdiction filter gets a "NEW" highlight ring</span></div>
+        <div class="mockup-frame-body">
+          <div class="filter-card">
+            <div class="search-wrap"><i class="ri-search-line"></i><input placeholder="Search templates…" /></div>
+            <select class="filter-select"><option>All categories</option></select>
+            <select class="filter-select"><option>All practice areas</option></select>
+            <select class="filter-select jur-new"><option>All jurisdictions</option></select>
+            <span class="new-mini-badge" style="position: relative; left: -0.5rem;">NEW</span>
+            <span class="vdiv"></span>
+            <select class="filter-select"><option>Recently updated</option></select>
+            <span class="vdiv"></span>
+            <div class="view-toggle"><button class="active"><i class="ri-layout-grid-line"></i></button><button><i class="ri-list-check"></i></button></div>
+          </div>
+          <div class="annotation annotation-info mt-3 mb-0" style="font-size: 0.82rem;">
+            <strong>Onboarding the new filter.</strong> Ring dismisses after the attorney clicks the select once. Stored in localStorage so it doesn't come back on next login.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 4. GRID (with state switcher) ============== -->
+  <section id="grid" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number">4</span>
+      <h2 class="mt-2">Grid view — scanable by category color</h2>
+      <p class="text-muted">3-px accent band across the top + tinted icon background + matching pill color. Ownership tag sits top-right on every card.</p>
+    </div>
+
+    <div class="state-switcher" data-sw="grid">
+      <button class="active" data-state="default">Default state</button>
+      <button data-state="hover">Card hover</button>
+      <button data-state="dense">Dense — no descriptions</button>
+    </div>
+
+    <!-- Default -->
+    <div class="state-tab active" data-tab="default">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Default cards — color-coded by practice area</span></div>
+        <div class="mockup-frame-body">
+          <div class="tmpl-grid" style="padding: 0;">
+            <!-- Repeat a small subset -->
+            <div class="tmpl-card" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);">
+              <div class="cat-band"></div>
+              <div class="tmpl-body">
+                <div class="top-row"><div class="tmpl-icon-wrap"><i class="ri-mail-send-line"></i></div><span class="own-tag yours">YOURS</span></div>
+                <h4 class="tmpl-title">MA PI Letter of Representation — Client Insurer</h4>
+                <p class="tmpl-desc">For PIP/UIM claims to the client's own carrier. Auto-fills policy #, adjuster, DOL.</p>
+                <div class="tag-row"><span class="tag-pill" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);">Personal Injury</span><span class="tag-pill ghost">MA</span></div>
+                <div class="tmpl-foot"><div class="meta"><div class="avatar-sm">M</div>You<span class="dot-sep"></span>2d</div><div class="tmpl-actions"><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button><button class="iconbtn"><i class="ri-more-2-fill"></i></button></div></div>
+              </div>
+            </div>
+            <div class="tmpl-card" style="--cat-color: var(--pa-family); --cat-bg: var(--pa-family-soft);">
+              <div class="cat-band"></div>
+              <div class="tmpl-body">
+                <div class="top-row"><div class="tmpl-icon-wrap"><i class="ri-heart-pulse-line"></i></div><span class="own-tag yours">YOURS</span></div>
+                <h4 class="tmpl-title">Divorce Petition — MA Probate &amp; Family</h4>
+                <p class="tmpl-desc">Contested divorce with minor children. Standing orders baked in.</p>
+                <div class="tag-row"><span class="tag-pill" style="--cat-color: var(--pa-family); --cat-bg: var(--pa-family-soft);">Family</span><span class="tag-pill ghost">MA</span></div>
+                <div class="tmpl-foot"><div class="meta"><div class="avatar-sm">M</div>You<span class="dot-sep"></span>5d</div><div class="tmpl-actions"><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button><button class="iconbtn"><i class="ri-more-2-fill"></i></button></div></div>
+              </div>
+            </div>
+            <div class="tmpl-card" style="--cat-color: var(--pa-immigration); --cat-bg: var(--pa-immigration-soft);">
+              <div class="cat-band"></div>
+              <div class="tmpl-body">
+                <div class="top-row"><div class="tmpl-icon-wrap"><i class="ri-passport-line"></i></div><span class="own-tag imported">IMPORTED</span></div>
+                <h4 class="tmpl-title">EAD Cover Letter — I-765</h4>
+                <p class="tmpl-desc">USCIS cover letter + evidence index. Good for c(8), c(9), c(33).</p>
+                <div class="tag-row"><span class="tag-pill" style="--cat-color: var(--pa-immigration); --cat-bg: var(--pa-immigration-soft);">Immigration</span><span class="tag-pill ghost">Federal</span></div>
+                <div class="tmpl-foot"><div class="meta"><div class="avatar-sm" style="background: var(--pa-immigration);">J</div>Julia P.<span class="dot-sep"></span>Used 22×</div><div class="tmpl-actions"><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button><button class="iconbtn"><i class="ri-more-2-fill"></i></button></div></div>
+              </div>
+            </div>
+            <div class="tmpl-card" style="--cat-color: var(--pa-estate); --cat-bg: var(--pa-estate-soft);">
+              <div class="cat-band"></div>
+              <div class="tmpl-body">
+                <div class="top-row"><div class="tmpl-icon-wrap"><i class="ri-safe-2-line"></i></div><span class="own-tag org">ORG</span></div>
+                <h4 class="tmpl-title">Last Will &amp; Testament — Simple</h4>
+                <p class="tmpl-desc">MA-compliant will. Single testator, named executor, residuary bequest.</p>
+                <div class="tag-row"><span class="tag-pill" style="--cat-color: var(--pa-estate); --cat-bg: var(--pa-estate-soft);">Estate</span><span class="tag-pill ghost">MA</span></div>
+                <div class="tmpl-foot"><div class="meta"><div class="avatar-sm" style="background: var(--pa-estate);">R</div>Ravi S.<span class="dot-sep"></span>Used 48×</div><div class="tmpl-actions"><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button><button class="iconbtn"><i class="ri-more-2-fill"></i></button></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hover -->
+    <div class="state-tab" data-tab="hover">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Cursor over "MA PI Letter of Representation" — lift + shadow</span></div>
+        <div class="mockup-frame-body">
+          <div class="tmpl-grid" style="padding: 0; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));">
+            <div class="tmpl-card" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft); transform: translateY(-3px); box-shadow: 0 10px 24px rgba(240,101,72,0.18); border-color: var(--pa-pi);">
+              <div class="cat-band"></div>
+              <div class="tmpl-body">
+                <div class="top-row"><div class="tmpl-icon-wrap"><i class="ri-mail-send-line"></i></div><span class="own-tag yours">YOURS</span></div>
+                <h4 class="tmpl-title">MA PI Letter of Representation — Client Insurer</h4>
+                <p class="tmpl-desc">For PIP/UIM claims to the client's own carrier. Auto-fills policy #, adjuster, DOL.</p>
+                <div class="tag-row"><span class="tag-pill" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);">Personal Injury</span><span class="tag-pill ghost">MA</span></div>
+                <div class="tmpl-foot"><div class="meta"><div class="avatar-sm">M</div>You<span class="dot-sep"></span>2d</div><div class="tmpl-actions"><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button><button class="iconbtn" style="background: #f0f4fc; color: var(--velzon-primary);"><i class="ri-more-2-fill"></i></button></div></div>
+              </div>
+            </div>
+            <div class="tmpl-card" style="--cat-color: var(--pa-family); --cat-bg: var(--pa-family-soft); opacity: 0.75;">
+              <div class="cat-band"></div>
+              <div class="tmpl-body">
+                <div class="top-row"><div class="tmpl-icon-wrap"><i class="ri-heart-pulse-line"></i></div><span class="own-tag yours">YOURS</span></div>
+                <h4 class="tmpl-title">Divorce Petition — MA Probate &amp; Family</h4>
+                <p class="tmpl-desc">Contested divorce with minor children.</p>
+                <div class="tag-row"><span class="tag-pill" style="--cat-color: var(--pa-family); --cat-bg: var(--pa-family-soft);">Family</span><span class="tag-pill ghost">MA</span></div>
+                <div class="tmpl-foot"><div class="meta"><div class="avatar-sm">M</div>You<span class="dot-sep"></span>5d</div><div class="tmpl-actions"><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button><button class="iconbtn"><i class="ri-more-2-fill"></i></button></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="annotation mt-3" style="font-size: 0.82rem;"><strong>Hover micro-interaction:</strong> card lifts 3 px with a colored shadow that matches its category accent. Kebab menu gets a tinted background to signal "this is now actionable."</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dense -->
+    <div class="state-tab" data-tab="dense">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Dense mode — description hidden, icon + title only</span></div>
+        <div class="mockup-frame-body">
+          <div class="tmpl-grid" style="padding: 0; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
+            <div class="tmpl-card" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);">
+              <div class="cat-band"></div>
+              <div class="tmpl-body">
+                <div class="top-row"><div class="tmpl-icon-wrap"><i class="ri-mail-send-line"></i></div><span class="own-tag yours">YOURS</span></div>
+                <h4 class="tmpl-title">MA PI LOR — Client Insurer</h4>
+                <div class="tmpl-foot" style="border-top: none; padding-top: 0.25rem;"><div class="meta"><span class="tag-pill" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);">PI</span></div><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button></div>
+              </div>
+            </div>
+            <div class="tmpl-card" style="--cat-color: var(--pa-family); --cat-bg: var(--pa-family-soft);">
+              <div class="cat-band"></div>
+              <div class="tmpl-body">
+                <div class="top-row"><div class="tmpl-icon-wrap"><i class="ri-heart-pulse-line"></i></div><span class="own-tag yours">YOURS</span></div>
+                <h4 class="tmpl-title">Divorce Petition — MA</h4>
+                <div class="tmpl-foot" style="border-top: none; padding-top: 0.25rem;"><div class="meta"><span class="tag-pill" style="--cat-color: var(--pa-family); --cat-bg: var(--pa-family-soft);">Family</span></div><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button></div>
+              </div>
+            </div>
+            <div class="tmpl-card" style="--cat-color: var(--pa-immigration); --cat-bg: var(--pa-immigration-soft);">
+              <div class="cat-band"></div>
+              <div class="tmpl-body">
+                <div class="top-row"><div class="tmpl-icon-wrap"><i class="ri-passport-line"></i></div><span class="own-tag imported">IMPORTED</span></div>
+                <h4 class="tmpl-title">EAD Cover Letter I-765</h4>
+                <div class="tmpl-foot" style="border-top: none; padding-top: 0.25rem;"><div class="meta"><span class="tag-pill" style="--cat-color: var(--pa-immigration); --cat-bg: var(--pa-immigration-soft);">Immigration</span></div><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button></div>
+              </div>
+            </div>
+            <div class="tmpl-card" style="--cat-color: var(--pa-criminal); --cat-bg: var(--pa-criminal-soft);">
+              <div class="cat-band"></div>
+              <div class="tmpl-body">
+                <div class="top-row"><div class="tmpl-icon-wrap"><i class="ri-shield-cross-line"></i></div><span class="own-tag private"><i class="ri-lock-2-line"></i></span></div>
+                <h4 class="tmpl-title">Motion to Suppress — MA</h4>
+                <div class="tmpl-foot" style="border-top: none; padding-top: 0.25rem;"><div class="meta"><span class="tag-pill" style="--cat-color: var(--pa-criminal); --cat-bg: var(--pa-criminal-soft);">Criminal</span></div><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button></div>
+              </div>
+            </div>
+          </div>
+          <div class="annotation annotation-info mt-3" style="font-size: 0.82rem;"><strong>Optional — Phase C.</strong> Density toggle for attorneys with huge libraries (200+ templates). Not on day 1; revisit if someone asks.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 5. LIST VIEW ============== -->
+  <section id="list" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number">5</span>
+      <h2 class="mt-2">List view</h2>
+      <p class="text-muted">For attorneys who think in tables. Same category-colored icons, same ownership tags, sortable columns.</p>
+    </div>
+
+    <div class="mockup-frame">
+      <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">List view — dense row layout</span></div>
+      <div class="mockup-frame-body p-0">
+        <div class="list-wrap" style="padding: 1.25rem;">
+          <div class="list-card">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 36%;">Name</th>
+                  <th>Practice area</th>
+                  <th>Jurisdiction</th>
+                  <th>Owner</th>
+                  <th>Updated</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="list-name-cell">
+                      <div class="tmpl-icon-wrap" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);"><i class="ri-mail-send-line"></i></div>
+                      <div class="nm">MA PI Letter of Representation — Client Insurer<span class="sub">Letter · 6 variables</span></div>
+                    </div>
+                  </td>
+                  <td><span class="tag-pill" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);">Personal Injury</span></td>
+                  <td>MA</td>
+                  <td><div class="avatar-sm">M</div></td>
+                  <td class="text-muted">2d ago</td>
+                  <td style="text-align: right;"><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="list-name-cell">
+                      <div class="tmpl-icon-wrap" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);"><i class="ri-money-dollar-box-line"></i></div>
+                      <div class="nm">Policy Limits Demand — MA<span class="sub">Demand · 8 variables</span></div>
+                    </div>
+                  </td>
+                  <td><span class="tag-pill" style="--cat-color: var(--pa-pi); --cat-bg: var(--pa-pi-soft);">Personal Injury</span></td>
+                  <td>MA</td>
+                  <td><div class="avatar-sm" style="background: #e3620e;">D</div></td>
+                  <td class="text-muted">5d ago</td>
+                  <td style="text-align: right;"><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="list-name-cell">
+                      <div class="tmpl-icon-wrap" style="--cat-color: var(--pa-family); --cat-bg: var(--pa-family-soft);"><i class="ri-heart-pulse-line"></i></div>
+                      <div class="nm">Divorce Petition — MA Probate &amp; Family<span class="sub">Pleading · 12 variables</span></div>
+                    </div>
+                  </td>
+                  <td><span class="tag-pill" style="--cat-color: var(--pa-family); --cat-bg: var(--pa-family-soft);">Family</span></td>
+                  <td>MA</td>
+                  <td><div class="avatar-sm">M</div></td>
+                  <td class="text-muted">5d ago</td>
+                  <td style="text-align: right;"><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="list-name-cell">
+                      <div class="tmpl-icon-wrap" style="--cat-color: var(--pa-estate); --cat-bg: var(--pa-estate-soft);"><i class="ri-safe-2-line"></i></div>
+                      <div class="nm">Last Will &amp; Testament — Simple<span class="sub">Instrument · 4 variables</span></div>
+                    </div>
+                  </td>
+                  <td><span class="tag-pill" style="--cat-color: var(--pa-estate); --cat-bg: var(--pa-estate-soft);">Estate Planning</span></td>
+                  <td>MA</td>
+                  <td><div class="avatar-sm" style="background: var(--pa-estate);">R</div></td>
+                  <td class="text-muted">2w ago</td>
+                  <td style="text-align: right;"><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="list-name-cell">
+                      <div class="tmpl-icon-wrap" style="--cat-color: var(--pa-immigration); --cat-bg: var(--pa-immigration-soft);"><i class="ri-passport-line"></i></div>
+                      <div class="nm">EAD Cover Letter — I-765<span class="sub">Letter · 5 variables</span></div>
+                    </div>
+                  </td>
+                  <td><span class="tag-pill" style="--cat-color: var(--pa-immigration); --cat-bg: var(--pa-immigration-soft);">Immigration</span></td>
+                  <td>Federal</td>
+                  <td><div class="avatar-sm" style="background: var(--pa-immigration);">J</div></td>
+                  <td class="text-muted">3w ago</td>
+                  <td style="text-align: right;"><button class="btn-use-sm">Use<i class="ri-arrow-right-line"></i></button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 6. SAVE-AS-TEMPLATE MODAL ============== -->
+  <section id="modal" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number">6</span>
+      <h2 class="mt-2">Save-as-Template modal</h2>
+      <p class="text-muted">Triggered from <code>DocumentEditorComponent</code>'s toolbar. Variable-detection runs client-side on modal open and pre-fills the banner so the attorney knows what will carry into the template.</p>
+    </div>
+
+    <div class="mockup-frame">
+      <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Modal — overlaid on the editor</span></div>
+      <div class="mockup-frame-body">
+        <div class="modal-mockup">
+          <div class="modal-mockup-content">
+            <div class="modal-mockup-header">
+              <h4><i class="ri-save-3-line"></i>Save as Template</h4>
+              <button class="iconbtn"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-mockup-body">
+              <div class="detect-banner">
+                <i class="ri-magic-line lead"></i>
+                <div class="txt">
+                  <strong>3 variables detected</strong> in the current document body — they'll be carried into the template.
+                  <div class="var-chips">
+                    <span class="var-pill">{{client_name}}</span>
+                    <span class="var-pill">{{policy_number}}</span>
+                    <span class="var-pill">{{date_of_incident}}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-grp">
+                <label>Template name</label>
+                <input value="MA PI Letter of Representation — Client Insurer" />
+              </div>
+              <div class="form-grp">
+                <label>Description</label>
+                <textarea>For PIP/UIM claims to the client's own carrier. Auto-fills policy #, adjuster, DOL.</textarea>
+              </div>
+              <div class="form-row2">
+                <div class="form-grp">
+                  <label>Practice area</label>
+                  <select><option>Personal Injury</option></select>
+                </div>
+                <div class="form-grp">
+                  <label>Document type</label>
+                  <select><option>Letter of Representation</option></select>
+                </div>
+              </div>
+              <div class="form-row2">
+                <div class="form-grp">
+                  <label>Jurisdiction</label>
+                  <select><option>Massachusetts</option></select>
+                </div>
+                <div class="form-grp">
+                  <label>Category</label>
+                  <select><option>Letter</option></select>
+                </div>
+              </div>
+
+              <div class="toggle-block">
+                <input type="checkbox" id="sh" checked />
+                <label for="sh">Share with my organization</label>
+                <span class="hint">Off = private to you</span>
+              </div>
+            </div>
+            <div class="modal-mockup-footer">
+              <button class="btn btn-light btn-sm px-3">Cancel</button>
+              <button class="btn btn-primary-velzon btn-sm px-3" style="background: var(--velzon-primary); color: white; border: none;"><i class="ri-save-3-line"></i> Save template</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="annotation annotation-success mt-3">
+          <strong>Where variable detection runs.</strong> Client-side regex <code>/\{\{([a-z_][a-z0-9_]*)\}\}/gi</code> over the CKEditor HTML, deduped by key. No backend call before submit. The pills are echoed back from the parsed set so the user sees exactly what the backend will receive.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 7. IMPORT WIZARD (with state switcher) ============== -->
+  <section id="import-wizard" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number">7</span>
+      <h2 class="mt-2">Import-templates wizard — 4 steps</h2>
+      <p class="text-muted">Opens as an <code>NgbModal</code> from the page-header "Import templates" button. Claude Sonnet does classification + variable detection on upload; Haiku handles re-analyses if the attorney tweaks. Sibling of the shipped Sprint 1.5 flow.</p>
+    </div>
+
+    <div class="state-switcher" data-sw="wiz">
+      <button class="active" data-state="upload">Step 1 · Upload</button>
+      <button data-state="processing">Step 2 · Processing</button>
+      <button data-state="review">Step 3 · Review</button>
+      <button data-state="commit">Step 4 · Commit</button>
+    </div>
+
+    <!-- STEP 1 · UPLOAD -->
+    <div class="state-tab active" data-tab="upload">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Drop a batch — 10 MB / file, 100 MB / batch, up to 50 files</span></div>
+        <div class="mockup-frame-body">
+          <div class="wiz-shell-bg">
+            <div class="wiz-modal">
+              <div class="wiz-header">
+                <h4><i class="ri-upload-cloud-2-line"></i> Import templates</h4>
+                <button class="wiz-close"><i class="ri-close-line"></i></button>
+              </div>
+              <div class="wiz-steps">
+                <div class="wiz-step active"><span class="wiz-step-num">1</span><span class="wiz-step-lbl">Upload</span></div>
+                <div class="wiz-step-line"></div>
+                <div class="wiz-step"><span class="wiz-step-num">2</span><span class="wiz-step-lbl">Processing</span></div>
+                <div class="wiz-step-line"></div>
+                <div class="wiz-step"><span class="wiz-step-num">3</span><span class="wiz-step-lbl">Review</span></div>
+                <div class="wiz-step-line"></div>
+                <div class="wiz-step"><span class="wiz-step-num">4</span><span class="wiz-step-lbl">Commit</span></div>
+              </div>
+              <div class="wiz-body">
+                <div class="drop-zone">
+                  <div class="dz-icon"><i class="ri-upload-cloud-2-line"></i></div>
+                  <h4>Drop your templates here</h4>
+                  <p>or click to browse</p>
+                  <div class="dz-hint">
+                    <code>.docx</code><code>.doc</code><code>.pdf</code><code>.zip</code>
+                  </div>
+                </div>
+
+                <div class="file-list">
+                  <div class="file-list-head">3 files ready · 2.4 MB total</div>
+                  <div class="file-item docx">
+                    <span class="fi-icon"><i class="ri-file-word-2-line"></i></span>
+                    <span class="fi-name">MA Letter of Representation.docx</span>
+                    <span class="fi-size">142 KB</span>
+                    <button class="fi-remove"><i class="ri-close-line"></i></button>
+                  </div>
+                  <div class="file-item pdf">
+                    <span class="fi-icon"><i class="ri-file-pdf-2-line"></i></span>
+                    <span class="fi-name">Settlement Demand — Tellez v. Nguyen.pdf</span>
+                    <span class="fi-size">412 KB</span>
+                    <button class="fi-remove"><i class="ri-close-line"></i></button>
+                  </div>
+                  <div class="file-item zip">
+                    <span class="fi-icon"><i class="ri-folder-zip-line"></i></span>
+                    <span class="fi-name">PI-template-pack.zip <span style="color: var(--velzon-muted); font-weight: 400;">— 28 files inside</span></span>
+                    <span class="fi-size">1.8 MB</span>
+                    <button class="fi-remove"><i class="ri-close-line"></i></button>
+                  </div>
+                </div>
+              </div>
+              <div class="wiz-footer">
+                <span class="left-note"><i class="ri-shield-check-line"></i> Private to you unless you toggle "Share" per template in Step 3.</span>
+                <div style="display: flex; gap: 0.4rem;">
+                  <button class="wiz-btn-ghost">Cancel</button>
+                  <button class="wiz-btn-primary">Analyze <i class="ri-arrow-right-line"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="annotation annotation-info mt-3 mb-0" style="font-size: 0.82rem;">
+            <strong>Why batch + zip are first-class.</strong> Attorneys switching platforms bring 30–200 templates. A single-file loop would take hours. The zip branch expands server-side and the review step ships the same per-file UI either way — batch and single share 100% of the review chrome.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 · PROCESSING -->
+    <div class="state-tab" data-tab="processing">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Per-file status — polled every 2s until all finalized</span></div>
+        <div class="mockup-frame-body">
+          <div class="wiz-shell-bg">
+            <div class="wiz-modal">
+              <div class="wiz-header">
+                <h4><i class="ri-upload-cloud-2-line"></i> Import templates</h4>
+                <button class="wiz-close"><i class="ri-close-line"></i></button>
+              </div>
+              <div class="wiz-steps">
+                <div class="wiz-step done"><span class="wiz-step-num"><i class="ri-check-line"></i></span><span class="wiz-step-lbl">Upload</span></div>
+                <div class="wiz-step-line done"></div>
+                <div class="wiz-step active"><span class="wiz-step-num">2</span><span class="wiz-step-lbl">Processing</span></div>
+                <div class="wiz-step-line"></div>
+                <div class="wiz-step"><span class="wiz-step-num">3</span><span class="wiz-step-lbl">Review</span></div>
+                <div class="wiz-step-line"></div>
+                <div class="wiz-step"><span class="wiz-step-num">4</span><span class="wiz-step-lbl">Commit</span></div>
+              </div>
+              <div class="wiz-body">
+                <div class="proc-head"><i class="ri-loader-4-line"></i> Analyzing 5 of 31 files · Claude Sonnet · ETA ~2 min</div>
+
+                <div class="status-item">
+                  <span class="st-icon ready"><i class="ri-check-line"></i></span>
+                  <div class="st-main">
+                    <div class="st-name">MA Letter of Representation.docx</div>
+                    <div class="st-class">LOR · Personal Injury · Massachusetts — 94% confident</div>
+                  </div>
+                  <span class="st-state ready">Ready</span>
+                </div>
+
+                <div class="status-item">
+                  <span class="st-icon ready"><i class="ri-check-line"></i></span>
+                  <div class="st-main">
+                    <div class="st-name">Settlement Demand — Tellez v. Nguyen.pdf</div>
+                    <div class="st-class">Demand Letter · Personal Injury · Massachusetts — 91% confident</div>
+                  </div>
+                  <span class="st-state ready">Ready</span>
+                </div>
+
+                <div class="status-item">
+                  <span class="st-icon process"><i class="ri-loader-4-line"></i></span>
+                  <div class="st-main">
+                    <div class="st-name">Divorce-Petition-final.docx</div>
+                    <div class="st-class">Claude analyzing classification + variables…</div>
+                  </div>
+                  <span class="st-state analyzing">Analyzing</span>
+                </div>
+
+                <div class="status-item">
+                  <span class="st-icon process"><i class="ri-file-search-line"></i></span>
+                  <div class="st-main">
+                    <div class="st-name">Custody-Mod-Petition.docx</div>
+                    <div class="st-class">Extracting text via Apache POI…</div>
+                  </div>
+                  <span class="st-state extracting">Extracting</span>
+                </div>
+
+                <div class="status-item">
+                  <span class="st-icon err"><i class="ri-error-warning-line"></i></span>
+                  <div class="st-main">
+                    <div class="st-name">Scanned-old-lease.pdf</div>
+                    <div class="st-class" style="color: var(--velzon-danger);">PDF appears scanned. OCR not supported — convert to text and re-upload.</div>
+                  </div>
+                  <span class="st-state err">Error</span>
+                </div>
+              </div>
+              <div class="wiz-footer">
+                <span class="left-note"><i class="ri-information-line"></i> You can start reviewing files as they finish — no need to wait for all.</span>
+                <div style="display: flex; gap: 0.4rem;">
+                  <button class="wiz-btn-ghost">Back</button>
+                  <button class="wiz-btn-primary">Review ready files <i class="ri-arrow-right-line"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="annotation annotation-warning mt-3 mb-0" style="font-size: 0.82rem;">
+            <strong>Failure modes surface here, not at commit.</strong> Scanned PDFs, encrypted files, empty docs, and foreign-language content all get clear per-row errors at this step. Commit is only for files that survived analysis — no silent drops, no "something went wrong" toasts.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 · REVIEW -->
+    <div class="state-tab" data-tab="review">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Reviewing file 3 of 28 — accept Claude's picks or override</span></div>
+        <div class="mockup-frame-body">
+          <div class="wiz-shell-bg">
+            <div class="wiz-modal" style="max-width: 860px;">
+              <div class="wiz-header">
+                <h4><i class="ri-magic-line"></i> Import templates</h4>
+                <button class="wiz-close"><i class="ri-close-line"></i></button>
+              </div>
+              <div class="wiz-steps">
+                <div class="wiz-step done"><span class="wiz-step-num"><i class="ri-check-line"></i></span><span class="wiz-step-lbl">Upload</span></div>
+                <div class="wiz-step-line done"></div>
+                <div class="wiz-step done"><span class="wiz-step-num"><i class="ri-check-line"></i></span><span class="wiz-step-lbl">Processing</span></div>
+                <div class="wiz-step-line done"></div>
+                <div class="wiz-step active"><span class="wiz-step-num">3</span><span class="wiz-step-lbl">Review</span></div>
+                <div class="wiz-step-line"></div>
+                <div class="wiz-step"><span class="wiz-step-num">4</span><span class="wiz-step-lbl">Commit</span></div>
+              </div>
+              <div class="wiz-body">
+
+                <div class="review-file-tabs">
+                  <button><span class="dotind ready"></span>LOR.docx</button>
+                  <button><span class="dotind ready"></span>Demand-Tellez.pdf</button>
+                  <button class="active"><span class="dotind warn"></span>Divorce-Petition-final.docx</button>
+                  <button><span class="dotind ready"></span>+ 25 more</button>
+                </div>
+
+                <div class="class-banner">
+                  <div class="cb-icon"><i class="ri-magic-line"></i></div>
+                  <div class="cb-main">
+                    <div class="cb-line">Divorce Petition · Family Law · Massachusetts</div>
+                    <div class="cb-tags">
+                      <span class="cb-tag">Type: divorce_petition</span>
+                      <span class="cb-tag">Area: Family</span>
+                      <span class="cb-tag">Jur: MA</span>
+                    </div>
+                  </div>
+                  <span class="cb-conf">87% confident</span>
+                </div>
+
+                <div class="warn-strip">
+                  <i class="ri-user-forbid-line"></i>
+                  <div><strong>Client-identifying content detected.</strong> "Jane A. Hoffmann" appears 4× as a named petitioner — looks like a real case, not a template. Parameterize it or continue as-is.</div>
+                </div>
+                <div class="warn-strip dup-strip">
+                  <i class="ri-file-copy-2-line"></i>
+                  <div><strong>Hash matches an existing template: MA Divorce Petition (imported 2 weeks ago).</strong> Overwrite, or skip this file?</div>
+                </div>
+
+                <div class="review-body">
+                  <div class="review-preview">
+                    <p><strong>COMMONWEALTH OF MASSACHUSETTS</strong><br>Probate and Family Court Department<br>Docket No. <mark>docket_no</mark></p>
+                    <p><mark>petitioner_name</mark>, Petitioner<br>v.<br><mark>respondent_name</mark>, Respondent</p>
+                    <p><strong>PETITION FOR DIVORCE</strong></p>
+                    <p>NOW COMES the Petitioner, <mark>petitioner_name</mark>, of <mark>petitioner_address</mark>, and respectfully represents that the parties were lawfully married on <mark>marriage_date</mark> at <mark>marriage_location</mark>, and that the Respondent…</p>
+                    <p style="color: var(--velzon-muted); font-style: italic; font-size: 0.78rem;">+ 4 paragraphs, 11 more variables detected</p>
+                  </div>
+                  <div class="review-side">
+                    <div class="mini-field">
+                      <label>Name</label>
+                      <input value="MA Divorce Petition — Standard" />
+                    </div>
+                    <div class="mini-field">
+                      <label>Practice area</label>
+                      <select><option>Family Law</option></select>
+                    </div>
+                    <div class="mini-field">
+                      <label>Jurisdiction</label>
+                      <select><option>Massachusetts</option></select>
+                    </div>
+                    <div class="mini-toggle">
+                      <input type="checkbox" id="priv" />
+                      <label for="priv" style="margin: 0; cursor: pointer;">Private to me</label>
+                    </div>
+
+                    <div class="var-review-head">13 variables detected</div>
+                    <div class="var-review-item">
+                      <span class="vr-orig">Jane A. Hoffmann</span>
+                      <span class="vr-arrow"><i class="ri-arrow-right-line"></i></span>
+                      <span class="vr-new">{{petitioner_name}}</span>
+                      <div class="vr-actions">
+                        <button class="vr-btn accept" title="Accept"><i class="ri-check-line"></i></button>
+                        <button class="vr-btn reject" title="Reject"><i class="ri-close-line"></i></button>
+                        <button class="vr-btn rename" title="Rename"><i class="ri-pencil-line"></i></button>
+                      </div>
+                    </div>
+                    <div class="var-review-item">
+                      <span class="vr-orig">[DATE]</span>
+                      <span class="vr-arrow"><i class="ri-arrow-right-line"></i></span>
+                      <span class="vr-new">{{marriage_date}}</span>
+                      <div class="vr-actions">
+                        <button class="vr-btn accept"><i class="ri-check-line"></i></button>
+                        <button class="vr-btn reject"><i class="ri-close-line"></i></button>
+                        <button class="vr-btn rename"><i class="ri-pencil-line"></i></button>
+                      </div>
+                    </div>
+                    <div class="var-review-item">
+                      <span class="vr-orig">___________</span>
+                      <span class="vr-arrow"><i class="ri-arrow-right-line"></i></span>
+                      <span class="vr-new">{{docket_no}}</span>
+                      <div class="vr-actions">
+                        <button class="vr-btn accept"><i class="ri-check-line"></i></button>
+                        <button class="vr-btn reject"><i class="ri-close-line"></i></button>
+                        <button class="vr-btn rename"><i class="ri-pencil-line"></i></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+              <div class="wiz-footer">
+                <span class="left-note"><i class="ri-arrow-left-right-line"></i> Use arrow keys to move between files</span>
+                <div style="display: flex; gap: 0.4rem;">
+                  <button class="wiz-btn-ghost">Skip this file</button>
+                  <button class="wiz-btn-primary">Next file <i class="ri-arrow-right-line"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="annotation annotation-success mt-3 mb-0" style="font-size: 0.82rem;">
+            <strong>Why per-variable chips beat a single "Looks good" button.</strong> Claude is right most of the time — but when it's wrong (e.g. proposes <code>{{plaintiff_name}}</code> for a family-law doc where the party is a <em>petitioner</em>), the attorney needs to rename without re-running the whole analysis. Accept/Reject/Rename at the variable level gives fast per-decision granularity.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 · COMMIT -->
+    <div class="state-tab" data-tab="commit">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Summary — confirm, then persist</span></div>
+        <div class="mockup-frame-body">
+          <div class="wiz-shell-bg">
+            <div class="wiz-modal">
+              <div class="wiz-header">
+                <h4><i class="ri-checkbox-circle-line"></i> Import templates</h4>
+                <button class="wiz-close"><i class="ri-close-line"></i></button>
+              </div>
+              <div class="wiz-steps">
+                <div class="wiz-step done"><span class="wiz-step-num"><i class="ri-check-line"></i></span><span class="wiz-step-lbl">Upload</span></div>
+                <div class="wiz-step-line done"></div>
+                <div class="wiz-step done"><span class="wiz-step-num"><i class="ri-check-line"></i></span><span class="wiz-step-lbl">Processing</span></div>
+                <div class="wiz-step-line done"></div>
+                <div class="wiz-step done"><span class="wiz-step-num"><i class="ri-check-line"></i></span><span class="wiz-step-lbl">Review</span></div>
+                <div class="wiz-step-line done"></div>
+                <div class="wiz-step active"><span class="wiz-step-num">4</span><span class="wiz-step-lbl">Commit</span></div>
+              </div>
+              <div class="wiz-body">
+                <div class="commit-summary">
+                  <div class="cs-icon"><i class="ri-checkbox-circle-line"></i></div>
+                  <h3>Ready to import</h3>
+                  <p>You've reviewed 28 files. Here's what happens when you click <strong>Import</strong>:</p>
+                  <div class="cs-row">
+                    <div class="cs-stat success">
+                      <div class="n">24</div>
+                      <div class="lbl">Will create</div>
+                    </div>
+                    <div class="cs-stat warn">
+                      <div class="n">2</div>
+                      <div class="lbl">Overwrite</div>
+                    </div>
+                    <div class="cs-stat muted">
+                      <div class="n">2</div>
+                      <div class="lbl">Skipped</div>
+                    </div>
+                  </div>
+                  <p style="font-size: 0.78rem; margin-top: 0.8rem;"><i class="ri-time-line"></i> Usually takes 3–5 seconds · templates will appear in the library immediately</p>
+                </div>
+              </div>
+              <div class="wiz-footer">
+                <span class="left-note"><i class="ri-shield-check-line"></i> All templates scoped to your organization</span>
+                <div style="display: flex; gap: 0.4rem;">
+                  <button class="wiz-btn-ghost">Back to review</button>
+                  <button class="wiz-btn-primary"><i class="ri-checkbox-circle-line"></i> Import 24 templates</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="annotation annotation-success mt-3 mb-0" style="font-size: 0.82rem;">
+            <strong>No surprises at commit.</strong> Every number here is derived from the review decisions — create / overwrite / skip are each just a filter over the per-file state. The backend receives a single <code>POST /commit</code> with all decisions and runs it in one transaction.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 8. CREATE NEW TEMPLATE EDITOR ============== -->
+  <section id="create-editor" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number">8</span>
+      <h2 class="mt-2">New-template editor — CKEditor + live variable sidebar</h2>
+      <p class="text-muted">Clicking "New template" in the page header opens this editor full-page (same component already used by <code>DocumentEditorComponent</code> on generated drafts). Placeholders typed into the body light up in teal and show up live in the right-rail "Detected variables" list.</p>
+    </div>
+
+    <div class="mockup-frame">
+      <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">/legal/ai-assistant/templates/new — author a template from scratch</span></div>
+      <div class="mockup-frame-body" style="padding: 0;">
+
+        <!-- Top breadcrumb bar -->
+        <div class="editor-topbar">
+          <div class="crumb">
+            <i class="ri-arrow-left-line"></i>
+            <span>Templates</span>
+            <i class="ri-arrow-right-s-line"></i>
+            <strong>New template</strong>
+          </div>
+          <div class="actions">
+            <button class="wiz-btn-ghost"><i class="ri-eye-line"></i> Preview</button>
+            <button class="wiz-btn-ghost">Cancel</button>
+            <button class="wiz-btn-primary"><i class="ri-save-3-line"></i> Save template</button>
+          </div>
+        </div>
+
+        <div class="editor-shell">
+          <!-- LEFT — editor -->
+          <div class="editor-main">
+            <div class="editor-toolbar">
+              <div class="tb-group">
+                <button title="Paragraph style"><i class="ri-text"></i></button>
+                <button title="Heading 1"><span style="font-weight: 700; font-size: 0.72rem;">H1</span></button>
+                <button title="Heading 2"><span style="font-weight: 700; font-size: 0.72rem;">H2</span></button>
+              </div>
+              <div class="tb-group">
+                <button class="on" title="Bold"><i class="ri-bold"></i></button>
+                <button title="Italic"><i class="ri-italic"></i></button>
+                <button title="Underline"><i class="ri-underline"></i></button>
+              </div>
+              <div class="tb-group">
+                <button title="Bulleted list"><i class="ri-list-unordered"></i></button>
+                <button title="Numbered list"><i class="ri-list-ordered"></i></button>
+                <button title="Increase indent"><i class="ri-indent-increase"></i></button>
+              </div>
+              <div class="tb-group">
+                <button title="Align left"><i class="ri-align-left"></i></button>
+                <button title="Align center"><i class="ri-align-center"></i></button>
+                <button title="Align right"><i class="ri-align-right"></i></button>
+              </div>
+              <div class="tb-group">
+                <button title="Insert link"><i class="ri-link"></i></button>
+                <button title="Insert table"><i class="ri-table-2"></i></button>
+              </div>
+              <div class="tb-group" style="margin-left: auto;">
+                <button class="tb-var-btn" title="Insert placeholder"><i class="ri-add-circle-line"></i> Insert {{variable}}</button>
+              </div>
+            </div>
+
+            <div class="editor-body">
+              <h1>Letter of Representation — Client's Auto Insurer (PIP / UIM)</h1>
+
+              <p>
+                <span class="ph">{{date}}</span><br>
+                <span class="ph">{{client_insurance_company}}</span><br>
+                Attn: <span class="ph">{{client_insurance_adjuster_name}}</span><br>
+                Re: Our Client: <span class="ph">{{client_name}}</span><br>
+                Policy #: <span class="ph">{{client_policy_number}}</span> · DOL: <span class="ph">{{date_of_incident}}</span>
+              </p>
+
+              <p>Dear <span class="ph">{{client_insurance_adjuster_name}}</span>:</p>
+
+              <p>Please be advised that our firm represents <span class="ph">{{client_name}}</span> in connection with injuries sustained on <span class="ph">{{date_of_incident}}</span>. Pursuant to M.G.L. c. 90 §34M, we hereby submit a <strong>Personal Injury Protection (PIP)</strong> application on behalf of our client and request the following:</p>
+
+              <p>1. Confirmation of PIP benefits available under policy <span class="ph">{{client_policy_number}}</span>;<br>
+                 2. Assignment of a medical-payments adjuster with direct contact information;<br>
+                 3. Written acknowledgment within 30 days of receipt per <span style="color: var(--velzon-primary); font-style: italic;">[CITATION — auto-filled at generation]</span>.</p>
+
+              <p>Additionally, should your insured's liability coverage prove insufficient to compensate our client's damages, please treat this letter as our formal demand for <strong>Underinsured Motorist (UIM)</strong> coverage…</p>
+            </div>
+          </div>
+
+          <!-- RIGHT — metadata + detected vars sidebar -->
+          <div class="editor-side">
+
+            <div class="side-section">
+              <div class="ss-head"><i class="ri-file-text-line"></i> Details</div>
+              <div class="side-field">
+                <label>Template name</label>
+                <input value="MA LOR — Client Insurer (PIP + UIM)" />
+              </div>
+              <div class="side-field">
+                <label>Description</label>
+                <textarea>Representation notice + PIP application + UIM demand in a single letter to the client's own carrier.</textarea>
+              </div>
+            </div>
+
+            <div class="side-section">
+              <div class="ss-head"><i class="ri-briefcase-line"></i> Classification</div>
+              <div class="side-field">
+                <label>Practice area</label>
+                <select><option>Personal Injury</option></select>
+              </div>
+              <div class="side-field">
+                <label>Document type</label>
+                <select><option>Letter of Representation</option></select>
+              </div>
+              <div class="side-field-row">
+                <div class="side-field">
+                  <label>Jurisdiction</label>
+                  <select><option>Massachusetts</option></select>
+                </div>
+                <div class="side-field">
+                  <label>Category</label>
+                  <select><option>Letter</option></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="side-section">
+              <div class="ss-head">
+                <i class="ri-code-line"></i> Detected variables
+                <span class="count-badge">6</span>
+              </div>
+              <div class="detected-list">
+                <div class="det-item">{{date}}<span class="det-count">1×</span></div>
+                <div class="det-item">{{client_name}}<span class="det-count">2×</span></div>
+                <div class="det-item">{{client_insurance_company}}<span class="det-count">1×</span></div>
+                <div class="det-item">{{client_insurance_adjuster_name}}<span class="det-count">2×</span></div>
+                <div class="det-item">{{client_policy_number}}<span class="det-count">2×</span></div>
+                <div class="det-item">{{date_of_incident}}<span class="det-count">2×</span></div>
+              </div>
+            </div>
+
+            <div class="side-section">
+              <div class="ss-head"><i class="ri-shield-line"></i> Sharing</div>
+              <div class="side-toggle">
+                <input type="checkbox" id="share-all" checked />
+                <label for="share-all" style="margin: 0; cursor: pointer;">Share with org</label>
+                <span class="hint">Off = private to you</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Footer spans both columns -->
+          <div class="editor-footer-bar">
+            <span class="status"><i class="ri-checkbox-circle-line ok"></i> <span class="ok">Auto-saved</span> · 2 seconds ago · 6 variables detected</span>
+            <div class="actions">
+              <button class="wiz-btn-ghost">Cancel</button>
+              <button class="wiz-btn-primary"><i class="ri-save-3-line"></i> Save template</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="annotation annotation-info mt-3">
+      <strong>Why one editor, two entry points.</strong> The "New template" button (page header) and "Save as Template" modal (generated draft toolbar) end up at the same place: a CKEditor body + metadata sidebar + live variable panel. The difference is pre-fill — one starts blank, the other starts with the generated HTML + auto-detected variables — but everything downstream (validation, auto-save, save button) is identical.
+    </div>
+
+    <div class="annotation annotation-success mt-3 mb-0">
+      <strong>Live variable panel is the killer feature.</strong> As soon as the attorney types <code>{{anything}}</code>, the right rail picks it up. No "run variable detection" step, no modal. This is what makes a static legal document feel like a reusable asset — you see the parameters accumulating in real time.
+    </div>
+  </section>
+
+  <!-- ============== 9. EMPTY STATES ============== -->
+  <section id="empty" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number">9</span>
+      <h2 class="mt-2">Empty states</h2>
+      <p class="text-muted">First-time state = illustration + the two hero CTAs side-by-side (no grid shell underneath). Filtered empty state = a softer "no matches" prompt with "Clear filters" as the escape hatch.</p>
+    </div>
+
+    <div class="state-switcher" data-sw="empty">
+      <button class="active" data-state="firsttime">First-time (0 templates in org)</button>
+      <button data-state="filtered">Filtered — no matches</button>
+    </div>
+
+    <div class="state-tab active" data-tab="firsttime">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">First-time visit — org has zero templates</span></div>
+        <div class="mockup-frame-body">
+          <div class="empty-card">
+            <div class="empty-illo"><i class="ri-folder-3-line"></i></div>
+            <h3>Your template library is empty</h3>
+            <p>Templates are reusable legal documents with <code style="background: #f3f3f9; padding: 0.1em 0.4em; border-radius: 3px; font-size: 0.85em;">{{variables}}</code>. The fastest way to get started is to import the documents your firm already uses.</p>
+            <div class="empty-ctas">
+              <button class="import-entry-btn"><i class="ri-upload-cloud-2-line"></i>Import existing templates</button>
+              <button class="btn btn-light" style="padding: 0.55rem 1rem; border: 1px solid var(--velzon-border);"><i class="ri-quill-pen-line"></i> Or build one from scratch</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-tab" data-tab="filtered">
+      <div class="mockup-frame">
+        <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Filters returned zero results</span></div>
+        <div class="mockup-frame-body">
+          <div class="empty-card">
+            <div class="empty-illo" style="background: var(--velzon-bg);"><i class="ri-search-line" style="color: var(--velzon-muted);"></i></div>
+            <h3>No templates match your filters</h3>
+            <p>Try removing a filter, or <a href="#" style="color: var(--velzon-primary);">import a new template</a> that fits.</p>
+            <div class="empty-ctas">
+              <button class="btn btn-light" style="padding: 0.55rem 1rem; border: 1px solid var(--velzon-border);"><i class="ri-close-circle-line"></i> Clear filters</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 10. LOADING ============== -->
+  <section id="skeleton" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number">10</span>
+      <h2 class="mt-2">Loading skeleton (animated shimmer)</h2>
+      <p class="text-muted">Renders during the initial GET <code>/api/ai/templates</code> fetch. Matches the shape of a real card so the layout doesn't jump when data arrives.</p>
+    </div>
+
+    <div class="mockup-frame">
+      <div class="mockup-frame-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="title">Loading — shimmer animation at 1.6s loop</span></div>
+      <div class="mockup-frame-body">
+        <div class="tmpl-grid" style="padding: 0;">
+          <div class="skel-card">
+            <div class="row1"><div class="skel skel-a sq"></div><div class="lines"><div class="skel skel-a ln1"></div><div class="skel skel-a ln2"></div></div></div>
+            <div class="skel skel-a full"></div><div class="skel skel-a short"></div>
+            <div class="pills"><span class="skel skel-a"></span><span class="skel skel-a"></span></div>
+          </div>
+          <div class="skel-card">
+            <div class="row1"><div class="skel skel-a sq"></div><div class="lines"><div class="skel skel-a ln1"></div><div class="skel skel-a ln2"></div></div></div>
+            <div class="skel skel-a full"></div><div class="skel skel-a short"></div>
+            <div class="pills"><span class="skel skel-a"></span><span class="skel skel-a"></span></div>
+          </div>
+          <div class="skel-card">
+            <div class="row1"><div class="skel skel-a sq"></div><div class="lines"><div class="skel skel-a ln1"></div><div class="skel skel-a ln2"></div></div></div>
+            <div class="skel skel-a full"></div><div class="skel skel-a short"></div>
+            <div class="pills"><span class="skel skel-a"></span><span class="skel skel-a"></span></div>
+          </div>
+          <div class="skel-card">
+            <div class="row1"><div class="skel skel-a sq"></div><div class="lines"><div class="skel skel-a ln1"></div><div class="skel skel-a ln2"></div></div></div>
+            <div class="skel skel-a full"></div><div class="skel skel-a short"></div>
+            <div class="pills"><span class="skel skel-a"></span><span class="skel skel-a"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== SCOPE ============== -->
+  <section id="scope" class="section-divider">
+    <div class="mb-4">
+      <span class="section-number" style="background: var(--velzon-danger);">Scope</span>
+      <h2 class="mt-2" style="color: var(--velzon-danger);">What this redesign does NOT do</h2>
+    </div>
+
+    <div class="nope-box">
+      <strong>🚫 Not in this redesign:</strong>
+      <ul>
+        <li>No new backend endpoints — wire existing <code>/api/ai/templates/*</code> and <code>/api/ai/templates/import/*</code> as-is.</li>
+        <li>No changes to <code>AILegalTemplate</code> or <code>AITemplateVariable</code> entities.</li>
+        <li>No new Flyway migration.</li>
+        <li>No Share/Export button placeholders — both removed (replaced by real "Use" + kebab with rename/duplicate/delete).</li>
+        <li>No in-page Collections / Folders grouping — punt to a later sprint.</li>
+        <li>No bulk selection / bulk export — single-item actions only.</li>
+        <li>No changes to the 4-step Import Wizard's <em>backend behavior</em> (Sections 7 is a visual/UX sweep over the already-shipped flow — analyze/poll/review/commit endpoints are untouched).</li>
+        <li>No Claude-model change — Sonnet for first analysis, Haiku for re-analysis stays as shipped.</li>
+        <li>No <code>.legidraft-skin</code> wrapper class — brand tokens are defined inline and work with or without a skin.</li>
+      </ul>
+    </div>
+
+    <div class="annotation mt-4">
+      <strong>Open questions before coding:</strong>
+      <ol class="mb-0 mt-2">
+        <li><strong>Share/Export buttons</strong> — mockup shows them <em>removed</em>. Confirm deletion, or keep them as ghosted placeholders?</li>
+        <li><strong>New-template editor entry</strong> (Section 8) — same CKEditor component as <code>DocumentEditorComponent</code>, or a stripped-down variant without AI rewrite toolbar? Recommendation: reuse verbatim, hide the AI-rewrite buttons via an <code>@Input() mode: 'draft' | 'template'</code>.</li>
+        <li><strong>Phase scope</strong> — Phase A (filters + save-as modal + jurisdiction select), A+B (add category colors + page-header redesign), or A+B+C (add Recently Used strip + import-wizard polish)?</li>
+        <li><strong>Recently Used horizontal strip</strong> — worth a second fetch <code>/api/ai/templates?sort=lastUsed&amp;limit=6</code> on page mount, or skip for v1?</li>
+      </ol>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // State-switcher tabs
+  document.querySelectorAll('.state-switcher').forEach(sw => {
+    sw.addEventListener('click', e => {
+      if (e.target.tagName !== 'BUTTON') return;
+      const group = sw.dataset.sw;
+      const state = e.target.dataset.state;
+      sw.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === e.target));
+      // Find the sibling tabs that belong to this group (nearest following tabs until next switcher)
+      let sibling = sw.nextElementSibling;
+      while (sibling && !sibling.classList.contains('state-switcher') && !sibling.classList.contains('section-divider')) {
+        if (sibling.classList && sibling.classList.contains('state-tab')) {
+          sibling.classList.toggle('active', sibling.dataset.tab === state);
+        }
+        sibling = sibling.nextElementSibling;
+      }
+    });
+  });
+
+  // Nav active-state on scroll
+  const links = document.querySelectorAll('.preview-nav .nav-link');
+  window.addEventListener('scroll', () => {
+    const pos = window.scrollY + 120;
+    let activeId = 'overview';
+    document.querySelectorAll('main section').forEach(sec => {
+      if (sec.offsetTop <= pos) activeId = sec.id;
+    });
+    links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + activeId));
+  });
+</script>
+
+</body>
+</html>

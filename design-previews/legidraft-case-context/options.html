@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LegiDraft — Case Context Placement Options</title>
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+  <style>
+    /* ─── Design tokens (mirror production Velzon dark overrides) ─── */
+    :root {
+      --bg-body: #1a1d21;
+      --bg-card: #1f2327;
+      --bg-nested: #262a2f;
+      --bg-hover: #2c3036;
+      --border: #3a4048;
+      --border-soft: rgba(255, 255, 255, 0.08);
+      --text-heading: #f3f6f9;
+      --text-body: #ced4da;
+      --text-muted: #adb5bd;
+      --text-subtle: #878a99;
+      --accent: #85a7ec;
+      --accent-soft: rgba(102, 145, 231, 0.15);
+      --accent-strong: #6691e7;
+      --success: #0ab39c;
+      --success-soft: rgba(19, 197, 107, 0.15);
+      --success-border: #42d189;
+      --info: #299cdb;
+      --info-soft: rgba(41, 156, 219, 0.2);
+      --info-text: #b6e0f0;
+      --purple: #6f42c1;
+      --purple-soft: rgba(111, 66, 193, 0.3);
+      --purple-text: #d6c6f0;
+      --warn: #f7b84b;
+      --warn-soft: rgba(247, 184, 75, 0.15);
+      --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.35);
+      --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg-body);
+      color: var(--text-body);
+      font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 3rem 2rem 6rem;
+    }
+
+    /* ─── Page header ─── */
+    .page-head {
+      margin-bottom: 3rem;
+    }
+    .page-head .eyebrow {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+    .page-head h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 2.4rem;
+      font-weight: 600;
+      color: var(--text-heading);
+      margin: 0 0 0.6rem;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+    .page-head p.lead {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 720px;
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    /* ─── Problem summary card ─── */
+    .problem {
+      margin-top: 1.75rem;
+      padding: 1.25rem 1.5rem;
+      background: var(--warn-soft);
+      border: 1px solid rgba(247, 184, 75, 0.35);
+      border-radius: 10px;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .problem i {
+      color: var(--warn);
+      font-size: 1.25rem;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+    .problem strong { color: var(--warn); }
+    .problem p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--text-body);
+    }
+
+    /* ─── Option section ─── */
+    .option {
+      margin-top: 4rem;
+      scroll-margin-top: 2rem;
+    }
+    .option-head {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      margin-bottom: 0.6rem;
+    }
+    .option-letter {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Fraunces', serif;
+      font-size: 1.3rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .option.recommended .option-letter {
+      background: var(--success-soft);
+      color: var(--success-border);
+    }
+    .option-title {
+      font-family: 'Public Sans', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-heading);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .rec-pill {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--success-border);
+      background: var(--success-soft);
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(66, 209, 137, 0.3);
+    }
+    .option-subtitle {
+      margin: 0 0 1.5rem 60px;
+      color: var(--text-muted);
+      max-width: 680px;
+      font-size: 0.95rem;
+    }
+
+    /* ─── Mock layout area ─── */
+    .mock-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin: 0 0 1.5rem 60px;
+    }
+    .mock-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .mock-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-subtle);
+      padding-left: 0.2rem;
+    }
+    .mock-label.linked { color: var(--success-border); }
+
+    /* ─── Shared wizard mock styles ─── */
+    .wizard {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow-md);
+      padding: 1.25rem 1.25rem 1rem;
+      position: relative;
+    }
+    .wizard-close {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--bg-nested);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      cursor: default;
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0 1.25rem;
+      gap: 0.3rem;
+      position: relative;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      flex: 0 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+    .step-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--bg-nested);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+    .step.active .step-circle {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+      color: #fff;
+      box-shadow: 0 0 0 4px rgba(102, 145, 231, 0.12);
+    }
+    .step-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+    .step.active .step-label { color: var(--accent); }
+    .connector {
+      flex: 1 1 auto;
+      height: 1px;
+      background: var(--border);
+      margin-top: 14px;
+      margin-bottom: 14px;
+    }
+
+    .wizard-body {
+      padding: 0.5rem 0 0.25rem;
+    }
+    .wizard-q {
+      font-family: 'Public Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-heading);
+      text-align: center;
+      margin: 0.25rem 0 0.4rem;
+    }
+    .wizard-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin: 0 0 0.9rem;
+    }
+    .pa-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.55rem;
+    }
+    .pa-tile {
+      background: var(--bg-nested);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 0.4rem 0.65rem;
+      text-align: center;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .pa-tile .ico {
+      width: 30px;
+      height: 30px;
+      margin: 0 auto 0.45rem;
+      border-radius: 8px;
+      background: var(--bg-hover);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    .pa-tile .lbl {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-body);
+    }
+
+    .wizard-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 0.9rem;
+      margin-top: 0.85rem;
+      border-top: 1px solid var(--border-soft);
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.35rem 0.7rem;
+      border-radius: 6px;
+      cursor: default;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-strong), #7c6bd9);
+      border: none;
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.45rem 0.9rem;
+      border-radius: 6px;
+      cursor: default;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    /* =========================================================== */
+    /*  OPTION A — Inline top-bar strip inside the wizard           */
+    /* =========================================================== */
+    .A-strip {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.55rem 0.85rem;
+      background: var(--bg-nested);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 0.9rem;
+      font-size: 0.78rem;
+    }
+    .A-strip.empty {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--text-muted);
+    }
+    .A-strip .A-ico {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: var(--bg-hover);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .A-strip.linked .A-ico {
+      background: var(--success-soft);
+      color: var(--success-border);
+    }
+    .A-strip .A-text {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .A-strip .A-text strong {
+      color: var(--text-heading);
+      font-weight: 600;
+    }
+    .A-strip .A-pills {
+      display: inline-flex;
+      gap: 0.3rem;
+      margin-left: 0.5rem;
+    }
+    .A-cta {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.25rem 0.6rem;
+      border-radius: 5px;
+      cursor: default;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      flex-shrink: 0;
+    }
+    .A-link {
+      background: transparent;
+      border: 0;
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.25rem 0.45rem;
+      text-decoration: none;
+      cursor: default;
+    }
+
+    /* Reusable pill styles */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 0.14rem 0.5rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+    .pill.pi { background: var(--purple-soft); color: var(--purple-text); }
+    .pill.jur { background: var(--info-soft); color: var(--info-text); }
+
+    /* =========================================================== */
+    /*  OPTION B — Breadcrumb row above the wizard                  */
+    /* =========================================================== */
+    .B-crumb {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.25rem 0.75rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .B-crumb .B-chain {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .B-crumb .B-chain .B-item {
+      color: var(--text-muted);
+    }
+    .B-crumb .B-chain .B-sep {
+      color: var(--text-subtle);
+      font-size: 0.7rem;
+    }
+    .B-crumb .B-chain strong {
+      color: var(--text-heading);
+      font-weight: 600;
+    }
+    .B-crumb .B-divider-dot {
+      width: 3px;
+      height: 3px;
+      background: var(--text-subtle);
+      border-radius: 50%;
+      margin: 0 0.25rem;
+    }
+    .B-case {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .B-case .B-case-icon {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .B-case.linked .B-case-icon { color: var(--success-border); }
+    .B-case.linked .B-case-name {
+      color: var(--text-heading);
+      font-weight: 600;
+    }
+    .B-case .B-mini-pills { display: inline-flex; gap: 0.25rem; margin-left: 0.35rem; }
+    .B-edit {
+      background: transparent;
+      border: 0;
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: default;
+      padding: 0.1rem 0.25rem;
+    }
+    .B-edit:hover { text-decoration: underline; }
+
+    /* =========================================================== */
+    /*  OPTION C — Step-contextual (quiet chip + Step-4 form field) */
+    /* =========================================================== */
+    .C-chip {
+      position: absolute;
+      top: 0.8rem;
+      right: 2.5rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.25rem 0.55rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      background: var(--bg-nested);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-muted);
+    }
+    .C-chip.linked {
+      background: var(--success-soft);
+      border-color: var(--success-border);
+      color: var(--success-border);
+    }
+    .C-chip i { font-size: 0.8rem; }
+
+    .C-step4 {
+      padding: 0.5rem 0 0.25rem;
+    }
+    .C-step4 .C-q {
+      font-family: 'Public Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-heading);
+      text-align: center;
+      margin: 0.25rem 0 0.4rem;
+    }
+    .C-step4 .C-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin: 0 0 1rem;
+    }
+    .C-step4 .C-field {
+      background: var(--bg-nested);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .C-field-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+    .C-field-label .opt {
+      font-size: 0.6rem;
+      font-weight: 500;
+      letter-spacing: normal;
+      text-transform: none;
+      color: var(--text-subtle);
+      margin-left: 0.3rem;
+    }
+    .C-picker {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: var(--text-body);
+    }
+    .C-picker i { color: var(--text-muted); }
+    .C-picker.linked i { color: var(--success-border); }
+    .C-picker .C-case-name { flex: 1 1 auto; color: var(--text-heading); font-weight: 600; }
+    .C-picker .C-case-empty { flex: 1 1 auto; color: var(--text-muted); font-style: italic; }
+    .C-picker-action {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--accent);
+      cursor: default;
+    }
+
+    /* =========================================================== */
+    /*  OPTION D — Floating corner chip with hover popover          */
+    /* =========================================================== */
+    .D-chip {
+      position: absolute;
+      top: 0.8rem;
+      right: 2.7rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.7rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: var(--bg-nested);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-muted);
+      box-shadow: var(--shadow-sm);
+    }
+    .D-chip.linked {
+      background: linear-gradient(135deg, var(--success-soft), var(--accent-soft));
+      border-color: var(--success-border);
+      color: var(--text-heading);
+    }
+    .D-chip i { font-size: 0.9rem; }
+    .D-chip.linked i { color: var(--success-border); }
+    .D-popover {
+      position: absolute;
+      top: 3rem;
+      right: 2.7rem;
+      width: 260px;
+      padding: 0.85rem 1rem;
+      background: var(--bg-nested);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow-lg);
+      font-size: 0.8rem;
+      z-index: 5;
+    }
+    .D-popover::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      right: 20px;
+      width: 12px;
+      height: 12px;
+      background: var(--bg-nested);
+      border-left: 1px solid var(--border);
+      border-top: 1px solid var(--border);
+      transform: rotate(45deg);
+    }
+    .D-popover h6 {
+      margin: 0 0 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-heading);
+    }
+    .D-popover .D-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.2rem 0;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .D-popover .D-row span:last-child { color: var(--text-body); font-weight: 500; }
+
+    /* ─── Pros/Cons panel ─── */
+    .pros-cons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.9rem;
+      margin-left: 60px;
+      margin-top: 0.25rem;
+    }
+    .pc-panel {
+      padding: 1rem 1.2rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .pc-panel h5 {
+      margin: 0 0 0.55rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-subtle);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .pc-panel.pros h5 { color: var(--success-border); }
+    .pc-panel.cons h5 { color: var(--warn); }
+    .pc-panel ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .pc-panel li {
+      padding: 0.25rem 0 0.25rem 1.2rem;
+      font-size: 0.83rem;
+      color: var(--text-body);
+      line-height: 1.45;
+      position: relative;
+    }
+    .pc-panel li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.7rem;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .pc-panel.pros li::before { background: var(--success-border); }
+    .pc-panel.cons li::before { background: var(--warn); }
+
+    /* ─── Navigator sticky pill ─── */
+    .nav-pill {
+      position: sticky;
+      top: 1.5rem;
+      z-index: 10;
+      margin-bottom: 2rem;
+      display: inline-flex;
+      gap: 0.4rem;
+      padding: 0.4rem 0.5rem;
+      background: rgba(31, 35, 39, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+      font-size: 0.75rem;
+    }
+    .nav-pill a {
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .nav-pill a:hover {
+      color: var(--text-heading);
+      background: var(--bg-nested);
+    }
+
+    /* ─── Verdict block at bottom ─── */
+    .verdict {
+      margin-top: 5rem;
+      padding: 2rem;
+      background: linear-gradient(135deg, var(--success-soft) 0%, var(--accent-soft) 100%);
+      border: 1px solid var(--success-border);
+      border-radius: 14px;
+    }
+    .verdict .v-eyebrow {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--success-border);
+      margin-bottom: 0.6rem;
+    }
+    .verdict h2 {
+      font-family: 'Fraunces', serif;
+      margin: 0 0 0.8rem;
+      color: var(--text-heading);
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+    .verdict p {
+      margin: 0 0 0.75rem;
+      color: var(--text-body);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .footnote {
+      margin-top: 3rem;
+      font-size: 0.78rem;
+      color: var(--text-subtle);
+      text-align: center;
+      font-style: italic;
+    }
+
+    @media (max-width: 900px) {
+      .mock-grid { grid-template-columns: 1fr; }
+      .pros-cons { grid-template-columns: 1fr; margin-left: 0; }
+      .option-subtitle, .mock-grid { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- ─── Navigator ─── -->
+    <div class="nav-pill">
+      <a href="#A">A · Top-bar strip</a>
+      <a href="#B">B · Breadcrumb</a>
+      <a href="#C">C · Step-4 only</a>
+      <a href="#D">D · Floating chip</a>
+      <a href="#verdict">Verdict</a>
+    </div>
+
+    <!-- ─── Page head ─── -->
+    <div class="page-head">
+      <span class="eyebrow">LegiDraft · Case Context Redesign</span>
+      <h1>Four ways to place case context without the 320px right rail.</h1>
+      <p class="lead">
+        The standalone Case Context panel eats ~320&thinsp;px of chrome and shows "No case linked" most of the time. Each option below collapses that affordance into UI that scales with its content — small when empty, informative when filled. All mocks use production dark-mode tokens; click any mock's empty &rarr; linked pair to compare.
+      </p>
+      <div class="problem">
+        <i class="ri-alert-line"></i>
+        <p><strong>Current pain:</strong> right rail renders a full-sized card for the empty "No case linked" state, duplicates case info already shown on Step 4's Summary card, and adds a second place the attorney has to manage case linking.</p>
+      </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- OPTION A — Top-bar strip (RECOMMENDED)                  -->
+    <!-- ======================================================= -->
+    <section id="A" class="option recommended">
+      <div class="option-head">
+        <span class="option-letter">A</span>
+        <h2 class="option-title">Top-bar strip inside the wizard <span class="rec-pill">Recommended</span></h2>
+      </div>
+      <p class="option-subtitle">A thin status row at the top of the wizard card, above the stepper. Empty state is ~40&thinsp;px; filled state expands to ~52&thinsp;px with pills. The right rail is removed entirely — the wizard becomes full-width (~1000&thinsp;px on desktop), giving the practice-area grid more breathing room.</p>
+
+      <div class="mock-grid">
+        <!-- EMPTY -->
+        <div class="mock-col">
+          <span class="mock-label">Empty state</span>
+          <div class="wizard">
+            <span class="wizard-close"><i class="ri-close-line"></i></span>
+            <!-- Strip -->
+            <div class="A-strip empty">
+              <span class="A-ico"><i class="ri-folder-3-line"></i></span>
+              <span class="A-text">Not linked to a case — results are stronger when grounded in a case.</span>
+              <button class="A-cta"><i class="ri-link"></i> Link a case</button>
+            </div>
+            <div class="stepper">
+              <div class="step active"><span class="step-circle">1</span><span class="step-label">Practice Area</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">2</span><span class="step-label">Document Type</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">3</span><span class="step-label">Configure</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">4</span><span class="step-label">Review</span></div>
+            </div>
+            <div class="wizard-body">
+              <p class="wizard-q">What practice area is this document for?</p>
+              <p class="wizard-sub">Practice area + jurisdiction determines which template the AI uses.</p>
+              <div class="pa-grid">
+                <div class="pa-tile"><div class="ico"><i class="ri-user-heart-line"></i></div><div class="lbl">Personal Injury</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-home-heart-line"></i></div><div class="lbl">Family Law</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-scales-3-line"></i></div><div class="lbl">Criminal Defense</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-flag-2-line"></i></div><div class="lbl">Immigration</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-gavel-line"></i></div><div class="lbl">Civil Litigation</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-file-text-line"></i></div><div class="lbl">Contract Law</div></div>
+              </div>
+            </div>
+            <div class="wizard-foot">
+              <button class="btn-ghost">Cancel</button>
+              <button class="btn-primary">Next: Document Type <i class="ri-arrow-right-line"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- LINKED -->
+        <div class="mock-col">
+          <span class="mock-label linked">Linked state</span>
+          <div class="wizard">
+            <span class="wizard-close"><i class="ri-close-line"></i></span>
+            <!-- Strip -->
+            <div class="A-strip linked">
+              <span class="A-ico"><i class="ri-folder-check-line"></i></span>
+              <span class="A-text"><strong>Marsel v. Hanover Insurance Co.</strong>
+                <span class="A-pills">
+                  <span class="pill pi">Personal Injury</span>
+                  <span class="pill jur">Massachusetts</span>
+                </span>
+              </span>
+              <button class="A-link">Change</button>
+              <button class="A-cta"><i class="ri-external-link-line"></i> View</button>
+            </div>
+            <div class="stepper">
+              <div class="step active"><span class="step-circle">1</span><span class="step-label">Practice Area</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">2</span><span class="step-label">Document Type</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">3</span><span class="step-label">Configure</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">4</span><span class="step-label">Review</span></div>
+            </div>
+            <div class="wizard-body">
+              <p class="wizard-q">What practice area is this document for?</p>
+              <p class="wizard-sub">Pre-selected from the linked case — override if needed.</p>
+              <div class="pa-grid">
+                <div class="pa-tile" style="border-color: var(--accent-strong); background: rgba(102,145,231,0.08);"><div class="ico" style="background: var(--accent-soft); color: var(--accent);"><i class="ri-user-heart-line"></i></div><div class="lbl" style="color: var(--accent);">Personal Injury</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-home-heart-line"></i></div><div class="lbl">Family Law</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-scales-3-line"></i></div><div class="lbl">Criminal Defense</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-flag-2-line"></i></div><div class="lbl">Immigration</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-gavel-line"></i></div><div class="lbl">Civil Litigation</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-file-text-line"></i></div><div class="lbl">Contract Law</div></div>
+              </div>
+            </div>
+            <div class="wizard-foot">
+              <button class="btn-ghost">Cancel</button>
+              <button class="btn-primary">Next: Document Type <i class="ri-arrow-right-line"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pc-panel pros">
+          <h5><i class="ri-check-double-line"></i> Strengths</h5>
+          <ul>
+            <li>Zero wasted real estate — strip shrinks to ~40&thinsp;px when empty.</li>
+            <li>Wizard becomes full-width; PA grid reads like the approved mockup.</li>
+            <li>Case pills (PI · MA) give instant confirmation the AI has the right context.</li>
+            <li>Always visible across all 4 steps — attorney can change the case mid-flow.</li>
+            <li>"Change" and "View" actions inline — no modal round-trip.</li>
+          </ul>
+        </div>
+        <div class="pc-panel cons">
+          <h5><i class="ri-error-warning-line"></i> Tradeoffs</h5>
+          <ul>
+            <li>Step-4 Summary card overlaps slightly — still shows "Case" row. Worth keeping as explicit confirmation pre-Generate.</li>
+            <li>Pills truncate on narrow viewports (&lt;520&thinsp;px) — needs wrap-or-hide fallback.</li>
+            <li>Links against the mocked mockup's approved 2-column layout; departs from Sprint 4a spec.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= -->
+    <!-- OPTION B — Breadcrumb row above wizard                  -->
+    <!-- ======================================================= -->
+    <section id="B" class="option">
+      <div class="option-head">
+        <span class="option-letter">B</span>
+        <h2 class="option-title">Breadcrumb row above the wizard</h2>
+      </div>
+      <p class="option-subtitle">Velzon-style breadcrumb strip above the wizard card. Shows the LegiSpace › New Draft path and appends a tiny case indicator. No new chrome inside the wizard; pure page-level meta.</p>
+
+      <div class="mock-grid">
+        <div class="mock-col">
+          <span class="mock-label">Empty state</span>
+          <!-- Breadcrumb -->
+          <div class="B-crumb">
+            <div class="B-chain">
+              <span class="B-item">LegiSpace</span>
+              <span class="B-sep">›</span>
+              <span class="B-item">LegiDraft</span>
+              <span class="B-sep">›</span>
+              <strong>New Draft</strong>
+            </div>
+            <span class="B-divider-dot"></span>
+            <div class="B-case">
+              <i class="ri-folder-3-line B-case-icon"></i>
+              <span>No case linked</span>
+              <button class="B-edit">· Link a case</button>
+            </div>
+          </div>
+          <div class="wizard">
+            <span class="wizard-close"><i class="ri-close-line"></i></span>
+            <div class="stepper">
+              <div class="step active"><span class="step-circle">1</span><span class="step-label">Practice Area</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">2</span><span class="step-label">Document Type</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">3</span><span class="step-label">Configure</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">4</span><span class="step-label">Review</span></div>
+            </div>
+            <div class="wizard-body">
+              <p class="wizard-q">What practice area is this document for?</p>
+              <p class="wizard-sub">Practice area + jurisdiction determines which template the AI uses.</p>
+              <div class="pa-grid">
+                <div class="pa-tile"><div class="ico"><i class="ri-user-heart-line"></i></div><div class="lbl">Personal Injury</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-home-heart-line"></i></div><div class="lbl">Family Law</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-scales-3-line"></i></div><div class="lbl">Criminal Defense</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-flag-2-line"></i></div><div class="lbl">Immigration</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-gavel-line"></i></div><div class="lbl">Civil Litigation</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-file-text-line"></i></div><div class="lbl">Contract Law</div></div>
+              </div>
+            </div>
+            <div class="wizard-foot">
+              <button class="btn-ghost">Cancel</button>
+              <button class="btn-primary">Next: Document Type <i class="ri-arrow-right-line"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mock-col">
+          <span class="mock-label linked">Linked state</span>
+          <div class="B-crumb">
+            <div class="B-chain">
+              <span class="B-item">LegiSpace</span>
+              <span class="B-sep">›</span>
+              <span class="B-item">LegiDraft</span>
+              <span class="B-sep">›</span>
+              <strong>New Draft</strong>
+            </div>
+            <span class="B-divider-dot"></span>
+            <div class="B-case linked">
+              <i class="ri-folder-check-line B-case-icon"></i>
+              <span class="B-case-name">Marsel v. Hanover Insurance Co.</span>
+              <span class="B-mini-pills">
+                <span class="pill pi">PI</span>
+                <span class="pill jur">MA</span>
+              </span>
+              <button class="B-edit">· edit</button>
+            </div>
+          </div>
+          <div class="wizard">
+            <span class="wizard-close"><i class="ri-close-line"></i></span>
+            <div class="stepper">
+              <div class="step active"><span class="step-circle">1</span><span class="step-label">Practice Area</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">2</span><span class="step-label">Document Type</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">3</span><span class="step-label">Configure</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">4</span><span class="step-label">Review</span></div>
+            </div>
+            <div class="wizard-body">
+              <p class="wizard-q">What practice area is this document for?</p>
+              <p class="wizard-sub">Pre-selected from the linked case — override if needed.</p>
+              <div class="pa-grid">
+                <div class="pa-tile" style="border-color: var(--accent-strong); background: rgba(102,145,231,0.08);"><div class="ico" style="background: var(--accent-soft); color: var(--accent);"><i class="ri-user-heart-line"></i></div><div class="lbl" style="color: var(--accent);">Personal Injury</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-home-heart-line"></i></div><div class="lbl">Family Law</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-scales-3-line"></i></div><div class="lbl">Criminal Defense</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-flag-2-line"></i></div><div class="lbl">Immigration</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-gavel-line"></i></div><div class="lbl">Civil Litigation</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-file-text-line"></i></div><div class="lbl">Contract Law</div></div>
+              </div>
+            </div>
+            <div class="wizard-foot">
+              <button class="btn-ghost">Cancel</button>
+              <button class="btn-primary">Next: Document Type <i class="ri-arrow-right-line"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pc-panel pros">
+          <h5><i class="ri-check-double-line"></i> Strengths</h5>
+          <ul>
+            <li>Zero chrome inside the wizard — the PA grid owns the entire card.</li>
+            <li>Breadcrumb is familiar Velzon pattern — predictable behavior.</li>
+            <li>Works identically in modal + non-modal modes.</li>
+            <li>Smallest visual weight; minimalist finish.</li>
+          </ul>
+        </div>
+        <div class="pc-panel cons">
+          <h5><i class="ri-error-warning-line"></i> Tradeoffs</h5>
+          <ul>
+            <li>Small text — "Link a case" easy to miss; less discoverable than A or D.</li>
+            <li>Case info at top-left is far from the primary action (Generate on Step 4).</li>
+            <li>Breadcrumbs aren't used elsewhere in LegiSpace — introduces a new pattern.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= -->
+    <!-- OPTION C — Step-contextual (Step-4 only)                 -->
+    <!-- ======================================================= -->
+    <section id="C" class="option">
+      <div class="option-head">
+        <span class="option-letter">C</span>
+        <h2 class="option-title">Step-contextual — quiet chip + Step 4 form field</h2>
+      </div>
+      <p class="option-subtitle">Steps 1–3 show a small quiet chip in the top-right of the wizard indicating link state. Case linking is a first-class form field on Step 4 (Review), where the attorney naturally confirms all inputs before Generate. No persistent panel.</p>
+
+      <div class="mock-grid">
+        <div class="mock-col">
+          <span class="mock-label">Step 1 · Empty chip</span>
+          <div class="wizard">
+            <span class="wizard-close"><i class="ri-close-line"></i></span>
+            <span class="C-chip"><i class="ri-folder-3-line"></i> No case linked</span>
+            <div class="stepper">
+              <div class="step active"><span class="step-circle">1</span><span class="step-label">Practice Area</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">2</span><span class="step-label">Document Type</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">3</span><span class="step-label">Configure</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">4</span><span class="step-label">Review</span></div>
+            </div>
+            <div class="wizard-body">
+              <p class="wizard-q">What practice area is this document for?</p>
+              <p class="wizard-sub">Practice area + jurisdiction determines which template the AI uses.</p>
+              <div class="pa-grid">
+                <div class="pa-tile"><div class="ico"><i class="ri-user-heart-line"></i></div><div class="lbl">Personal Injury</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-home-heart-line"></i></div><div class="lbl">Family Law</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-scales-3-line"></i></div><div class="lbl">Criminal Defense</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-flag-2-line"></i></div><div class="lbl">Immigration</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-gavel-line"></i></div><div class="lbl">Civil Litigation</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-file-text-line"></i></div><div class="lbl">Contract Law</div></div>
+              </div>
+            </div>
+            <div class="wizard-foot">
+              <button class="btn-ghost">Cancel</button>
+              <button class="btn-primary">Next: Document Type <i class="ri-arrow-right-line"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mock-col">
+          <span class="mock-label linked">Step 4 · Review (case is a field)</span>
+          <div class="wizard">
+            <span class="wizard-close"><i class="ri-close-line"></i></span>
+            <span class="C-chip linked"><i class="ri-folder-check-line"></i> Marsel v. Hanover</span>
+            <div class="stepper">
+              <div class="step"><span class="step-circle"><i class="ri-check-line"></i></span><span class="step-label">Practice Area</span></div>
+              <span class="connector" style="background: var(--accent-strong);"></span>
+              <div class="step"><span class="step-circle"><i class="ri-check-line"></i></span><span class="step-label">Document Type</span></div>
+              <span class="connector" style="background: var(--accent-strong);"></span>
+              <div class="step"><span class="step-circle"><i class="ri-check-line"></i></span><span class="step-label">Configure</span></div>
+              <span class="connector" style="background: var(--accent-strong);"></span>
+              <div class="step active"><span class="step-circle">4</span><span class="step-label">Review</span></div>
+            </div>
+            <div class="C-step4">
+              <p class="C-q">Review and generate</p>
+              <p class="C-sub">Confirm your draft settings before we write.</p>
+              <div class="C-field">
+                <div class="C-field-label">Linked Case <span class="opt">optional — stronger results when linked</span></div>
+                <div class="C-picker linked">
+                  <i class="ri-folder-check-line"></i>
+                  <span class="C-case-name">Marsel v. Hanover Insurance Co.</span>
+                  <span class="pill pi">PI</span>
+                  <span class="pill jur">MA</span>
+                  <span class="C-picker-action">Change</span>
+                </div>
+              </div>
+              <div class="C-field">
+                <div class="C-field-label">Additional Instructions <span class="opt">optional</span></div>
+                <div class="C-picker">
+                  <span class="C-case-empty">Any extra guidance for the AI…</span>
+                </div>
+              </div>
+            </div>
+            <div class="wizard-foot">
+              <button class="btn-ghost"><i class="ri-arrow-left-line"></i> Back</button>
+              <button class="btn-primary"><i class="ri-sparkling-2-line"></i> Generate Document</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pc-panel pros">
+          <h5><i class="ri-check-double-line"></i> Strengths</h5>
+          <ul>
+            <li>Case linking becomes a form field, not ambient chrome — stronger conceptual model.</li>
+            <li>Wizard card is at its most minimal in Steps 1–3 (just the stepper + content).</li>
+            <li>Quiet chip is optional — can be hidden on Steps 1–3 entirely for maximum calm.</li>
+            <li>Step 4 matches the existing Summary-card pattern.</li>
+          </ul>
+        </div>
+        <div class="pc-panel cons">
+          <h5><i class="ri-error-warning-line"></i> Tradeoffs</h5>
+          <ul>
+            <li>Attorney can't change the case mid-flow without clicking the chip (extra step).</li>
+            <li>Chip on Steps 1–3 is tiny — low information density if the attorney wants to double-check.</li>
+            <li>Post-wizard generation view loses the Case Context panel entirely.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================= -->
+    <!-- OPTION D — Floating corner chip with popover            -->
+    <!-- ======================================================= -->
+    <section id="D" class="option">
+      <div class="option-head">
+        <span class="option-letter">D</span>
+        <h2 class="option-title">Floating corner chip with hover popover</h2>
+      </div>
+      <p class="option-subtitle">A single pill anchored top-right of the wizard. Click or hover to expand into a 260&thinsp;px popover with the full case summary. Smallest empty-state footprint; full detail on demand.</p>
+
+      <div class="mock-grid">
+        <div class="mock-col">
+          <span class="mock-label">Empty state</span>
+          <div class="wizard" style="padding-top: 3rem;">
+            <span class="wizard-close"><i class="ri-close-line"></i></span>
+            <span class="D-chip"><i class="ri-link-unlink-m"></i> Link a case</span>
+            <div class="stepper">
+              <div class="step active"><span class="step-circle">1</span><span class="step-label">Practice Area</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">2</span><span class="step-label">Document Type</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">3</span><span class="step-label">Configure</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">4</span><span class="step-label">Review</span></div>
+            </div>
+            <div class="wizard-body">
+              <p class="wizard-q">What practice area is this document for?</p>
+              <p class="wizard-sub">Practice area + jurisdiction determines which template the AI uses.</p>
+              <div class="pa-grid">
+                <div class="pa-tile"><div class="ico"><i class="ri-user-heart-line"></i></div><div class="lbl">Personal Injury</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-home-heart-line"></i></div><div class="lbl">Family Law</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-scales-3-line"></i></div><div class="lbl">Criminal Defense</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-flag-2-line"></i></div><div class="lbl">Immigration</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-gavel-line"></i></div><div class="lbl">Civil Litigation</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-file-text-line"></i></div><div class="lbl">Contract Law</div></div>
+              </div>
+            </div>
+            <div class="wizard-foot">
+              <button class="btn-ghost">Cancel</button>
+              <button class="btn-primary">Next: Document Type <i class="ri-arrow-right-line"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mock-col">
+          <span class="mock-label linked">Linked · popover open</span>
+          <div class="wizard" style="padding-top: 3rem;">
+            <span class="wizard-close"><i class="ri-close-line"></i></span>
+            <span class="D-chip linked"><i class="ri-folder-check-line"></i> Marsel v. Hanover</span>
+            <div class="D-popover">
+              <h6>Marsel v. Hanover Insurance Co.</h6>
+              <div class="D-row"><span>Practice Area</span><span><span class="pill pi">PI</span></span></div>
+              <div class="D-row"><span>Jurisdiction</span><span><span class="pill jur">MA</span></span></div>
+              <div class="D-row"><span>Case #</span><span style="font-family: 'SF Mono', monospace;">PI-2024-0042</span></div>
+              <div class="D-row"><span>Plaintiff</span><span>Marsel Hoxha</span></div>
+              <div class="D-row"><span>Defendant</span><span>Hanover Ins.</span></div>
+              <div style="border-top: 1px dashed var(--border); margin-top: 0.55rem; padding-top: 0.5rem; display: flex; justify-content: space-between;">
+                <button class="B-edit">Change</button>
+                <button class="B-edit">View case &rarr;</button>
+              </div>
+            </div>
+            <div class="stepper">
+              <div class="step active"><span class="step-circle">1</span><span class="step-label">Practice Area</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">2</span><span class="step-label">Document Type</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">3</span><span class="step-label">Configure</span></div>
+              <span class="connector"></span>
+              <div class="step"><span class="step-circle">4</span><span class="step-label">Review</span></div>
+            </div>
+            <div class="wizard-body">
+              <p class="wizard-q">What practice area is this document for?</p>
+              <p class="wizard-sub">Pre-selected from the linked case — override if needed.</p>
+              <div class="pa-grid">
+                <div class="pa-tile" style="border-color: var(--accent-strong); background: rgba(102,145,231,0.08);"><div class="ico" style="background: var(--accent-soft); color: var(--accent);"><i class="ri-user-heart-line"></i></div><div class="lbl" style="color: var(--accent);">Personal Injury</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-home-heart-line"></i></div><div class="lbl">Family Law</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-scales-3-line"></i></div><div class="lbl">Criminal Defense</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-flag-2-line"></i></div><div class="lbl">Immigration</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-gavel-line"></i></div><div class="lbl">Civil Litigation</div></div>
+                <div class="pa-tile"><div class="ico"><i class="ri-file-text-line"></i></div><div class="lbl">Contract Law</div></div>
+              </div>
+            </div>
+            <div class="wizard-foot">
+              <button class="btn-ghost">Cancel</button>
+              <button class="btn-primary">Next: Document Type <i class="ri-arrow-right-line"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pc-panel pros">
+          <h5><i class="ri-check-double-line"></i> Strengths</h5>
+          <ul>
+            <li>Smallest empty-state footprint of any option.</li>
+            <li>Full case detail on demand — rivals the current rail's density.</li>
+            <li>Always in the same spot; no layout shift between empty &harr; linked.</li>
+            <li>Feels contemporary (Linear / Notion-style meta chips).</li>
+          </ul>
+        </div>
+        <div class="pc-panel cons">
+          <h5><i class="ri-error-warning-line"></i> Tradeoffs</h5>
+          <ul>
+            <li>Case context is hidden until hover — low glanceability.</li>
+            <li>Mobile-awkward (no hover); needs tap-to-toggle with outside-click dismiss.</li>
+            <li>Popover z-index conflicts with dropdowns inside the wizard (e.g., jurisdiction select).</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Verdict ─── -->
+    <section id="verdict" class="verdict">
+      <span class="v-eyebrow">My recommendation</span>
+      <h2>Go with Option A. Fall back to B if simpler feels better.</h2>
+      <p><strong>Why A wins:</strong> it solves the original Sprint&nbsp;4a rationale (&ldquo;attorneys want visible confirmation that they are drafting against the correct case&rdquo;) with 40–52&thinsp;px of chrome instead of 320&thinsp;px. The pills (PI · MA) give instant confidence; the Change/View actions handle the entire case-link lifecycle inline; and the full-width wizard finally lets the practice-area grid breathe the way the original mockup intended.</p>
+      <p><strong>When B might win:</strong> if you find even the strip feels like visual noise and want the wizard card to be completely undecorated, B pushes all meta up to page-level breadcrumb. Less discoverable, but cleaner.</p>
+      <p><strong>What to drop:</strong> the 320&thinsp;px <code>app-case-context-panel</code> right rail. Moving case context into the wizard means the Step&nbsp;4 Summary card (which already shows case info) becomes the final pre-Generate confirmation — which is what it was built to be.</p>
+    </section>
+
+    <p class="footnote">design-previews/legidraft-case-context/options.html · dark-mode only · uses Velzon dark tokens &amp; Public Sans from Google Fonts</p>
+  </div>
+</body>
+</html>

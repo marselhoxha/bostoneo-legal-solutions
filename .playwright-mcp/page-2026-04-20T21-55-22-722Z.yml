@@ -1,0 +1,25 @@
+- main [ref=e2]:
+  - generic [ref=e6]:
+    - img "Legience Logo" [ref=e8]
+    - paragraph [ref=e10]: Sign in to continue to Legience.
+    - alert [ref=e28]: Bad credentials
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]: Email Address
+        - textbox "Email Address" [ref=e14]:
+          - /placeholder: Enter email
+          - text: marsel.hox@gmail.com
+      - generic [ref=e15]:
+        - link "Forgot password?" [ref=e17] [cursor=pointer]:
+          - /url: /resetpassword
+        - generic [ref=e18]: Password
+        - generic [ref=e19]:
+          - textbox "Password" [ref=e20]:
+            - /placeholder: Enter password
+            - text: Abiajnejd1!
+          - button "󰛑" [ref=e21] [cursor=pointer]:
+            - generic [ref=e22]: 󰛑
+      - generic [ref=e23]:
+        - checkbox "Remember me" [ref=e24] [cursor=pointer]
+        - generic [ref=e25] [cursor=pointer]: Remember me
+      - button "Sign In" [ref=e27] [cursor=pointer]

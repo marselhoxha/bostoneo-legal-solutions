@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Case Detail Redesign — Interactive Preview</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.0.0/fonts/remixicon.css" rel="stylesheet">
+  <style>
+    :root {
+      --velzon-primary: #405189;
+      --velzon-primary-soft: #eef1f9;
+      --velzon-success: #0ab39c;
+      --velzon-success-soft: #daf4f0;
+      --velzon-info: #299cdb;
+      --velzon-warning: #f7b84b;
+      --velzon-danger: #f06548;
+      --velzon-muted: #74788d;
+      --velzon-border: #e9ebec;
+      --velzon-bg: #f3f3f9;
+      --velzon-body: #212529;
+    }
+    body { background: var(--velzon-bg); font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; color: var(--velzon-body); }
+    h1, h2, h3, h4 { font-weight: 600; }
+    h2 { color: var(--velzon-primary); }
+
+    .preview-header { background: white; border-bottom: 1px solid var(--velzon-border); padding: 2rem 0 1.75rem; }
+    .preview-header h1 { font-size: 2rem; color: var(--velzon-primary); margin-bottom: 0.5rem; }
+    .preview-header .lead { color: var(--velzon-muted); font-size: 1rem; margin: 0; }
+
+    .preview-nav { background: white; border-bottom: 1px solid var(--velzon-border); padding: 0.75rem 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+    .preview-nav .nav-link { color: var(--velzon-muted); font-weight: 500; padding: 0.375rem 0.875rem; border-radius: 6px; font-size: 0.8125rem; }
+    .preview-nav .nav-link.active { background: var(--velzon-primary); color: white; }
+
+    .section-divider { border-top: 4px solid var(--velzon-primary); margin: 4rem 0 1.5rem 0; padding-top: 1.25rem; }
+    .section-number { display: inline-block; background: var(--velzon-primary); color: white; padding: 0.375rem 1rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    .mockup-frame { background: white; border-radius: 10px; box-shadow: 0 4px 16px rgba(56,65,74,0.08); margin-bottom: 1.5rem; overflow: hidden; }
+    .mockup-frame-header { padding: 0.875rem 1.25rem; background: #f8f9fa; border-bottom: 1px solid var(--velzon-border); display: flex; align-items: center; gap: 0.75rem; }
+    .mockup-frame-header .dot { width: 10px; height: 10px; border-radius: 50%; background: #ced4da; }
+    .mockup-frame-header .title { font-size: 0.8125rem; font-weight: 600; color: var(--velzon-muted); margin-left: 0.5rem; }
+    .mockup-frame-body { padding: 1.5rem; }
+    .mockup-frame-body.tight { padding: 1rem 1.25rem; }
+
+    .mockup-label { display: inline-block; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.25rem 0.625rem; border-radius: 4px; margin-bottom: 0.75rem; }
+    .mockup-label.before { background: #fde7e3; color: #b33520; }
+    .mockup-label.after  { background: var(--velzon-success-soft); color: #0e7866; }
+
+    .annotation { background: #fff9e6; border-left: 4px solid var(--velzon-warning); padding: 0.875rem 1.125rem; margin: 1rem 0; border-radius: 4px; font-size: 0.875rem; }
+    .annotation strong { color: #7a5502; }
+    .annotation-info { background: #e6f4fb; border-left-color: var(--velzon-info); }
+    .annotation-info strong { color: #0f5a73; }
+    .annotation-success { background: var(--velzon-success-soft); border-left-color: var(--velzon-success); }
+    .annotation-success strong { color: #0e7866; }
+    .annotation-danger { background: #fde7e3; border-left-color: var(--velzon-danger); }
+    .annotation-danger strong { color: #b33520; }
+
+    /* ── Simulated case-detail page chrome ───────────────────────── */
+    .page-chrome { background: var(--velzon-bg); padding: 1rem; border-radius: 6px; border: 1px dashed var(--velzon-border); }
+    .page-title-bar { background: white; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--velzon-border); }
+    .page-title-bar h3 { margin: 0; font-size: 1.125rem; color: var(--velzon-body); }
+    .page-title-bar .meta { color: var(--velzon-muted); font-size: 0.8125rem; margin-top: 0.125rem; }
+
+    /* ── Section card (the critical building block) ──────────────── */
+    .section-card { background: white; border: 1px solid var(--velzon-border); border-radius: 8px; margin-bottom: 1rem; transition: box-shadow 0.15s; }
+    .section-card:hover { box-shadow: 0 2px 8px rgba(64,81,137,0.08); }
+    .section-card-header { padding: 0.875rem 1.125rem; border-bottom: 1px solid var(--velzon-border); display: flex; align-items: center; justify-content: space-between; }
+    .section-card-header .section-title { display: flex; align-items: center; gap: 0.625rem; font-weight: 600; color: var(--velzon-body); font-size: 0.9375rem; }
+    .section-card-header .section-title i { color: var(--velzon-primary); font-size: 1.125rem; }
+
+    /* The new pencil-edit button */
+    .btn-section-edit {
+      width: 34px; height: 34px; border-radius: 6px;
+      background: var(--velzon-primary-soft); color: var(--velzon-primary);
+      border: none; display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-section-edit:hover { background: var(--velzon-primary); color: white; transform: scale(1.05); }
+    .btn-section-edit i { font-size: 1rem; }
+
+    .section-card-body { padding: 1rem 1.125rem; }
+    .field-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px dashed #f1f3f5; font-size: 0.875rem; gap: 1rem; }
+    .field-row:last-child { border-bottom: none; }
+    .field-row .label { color: var(--velzon-muted); font-weight: 500; flex-shrink: 0; }
+    .field-row .value { color: var(--velzon-body); font-weight: 500; text-align: right; word-break: break-word; }
+    .field-row .value.placeholder { color: #adb5bd; font-style: italic; font-weight: 400; }
+
+    /* Empty-state section placeholder */
+    .section-empty { background: #fafbfd; border: 1px dashed #d7d9de; border-radius: 8px; padding: 1.125rem; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 160px; }
+    .section-empty .icon-wrap-empty { width: 42px; height: 42px; border-radius: 8px; background: white; color: var(--velzon-muted); display: inline-flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 0.5rem; border: 1px solid var(--velzon-border); }
+    .section-empty .empty-title { font-weight: 600; color: var(--velzon-body); font-size: 0.875rem; margin: 0 0 0.25rem 0; }
+    .section-empty .empty-hint { color: var(--velzon-muted); font-size: 0.75rem; margin: 0 0 0.75rem 0; }
+    .section-empty .btn-add { background: var(--velzon-primary-soft); color: var(--velzon-primary); border: none; font-weight: 600; font-size: 0.8125rem; padding: 0.375rem 0.875rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.375rem; cursor: pointer; }
+    .section-empty .btn-add:hover { background: var(--velzon-primary); color: white; }
+
+    /* ── Section-edit modal mockup ───────────────────────────────── */
+    .modal-backdrop-mock { background: rgba(33, 37, 41, 0.55); border-radius: 8px; padding: 2rem 1.5rem; min-height: 400px; }
+    .modal-dialog-mock { background: white; border-radius: 10px; max-width: 760px; margin: 0 auto; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .modal-dialog-mock.modal-sm-width { max-width: 520px; }
+    .modal-header-mock { padding: 1rem 1.25rem; border-bottom: 1px solid var(--velzon-border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-header-mock .title { font-weight: 600; display: flex; align-items: center; gap: 0.625rem; }
+    .modal-header-mock .title i { color: var(--velzon-primary); }
+    .modal-header-mock .btn-close-mock { width: 28px; height: 28px; background: transparent; border: none; color: var(--velzon-muted); cursor: pointer; font-size: 1rem; }
+    .modal-body-mock { padding: 1.25rem; }
+    .modal-footer-mock { padding: 0.875rem 1.25rem; border-top: 1px solid var(--velzon-border); display: flex; justify-content: flex-end; gap: 0.5rem; }
+    .form-label-sm { font-weight: 500; font-size: 0.8125rem; color: var(--velzon-body); margin-bottom: 0.25rem; display: block; }
+    .form-label-sm .req { color: var(--velzon-danger); margin-left: 0.125rem; }
+    .form-control-mock { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--velzon-border); border-radius: 6px; font-size: 0.875rem; background: white; }
+    .form-control-mock:focus { outline: none; border-color: var(--velzon-primary); box-shadow: 0 0 0 3px rgba(64,81,137,0.12); }
+    .form-control-mock.is-invalid { border-color: var(--velzon-danger); }
+    .invalid-feedback-mock { color: var(--velzon-danger); font-size: 0.75rem; margin-top: 0.25rem; }
+
+    /* ── Rollout timeline ───────────────────────────────────────── */
+    .phase-timeline { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; }
+    @media (max-width: 900px) { .phase-timeline { grid-template-columns: repeat(2, 1fr); } }
+    .phase-card { background: white; border: 1px solid var(--velzon-border); border-radius: 8px; padding: 1rem; }
+    .phase-card .phase-num { font-size: 0.6875rem; font-weight: 700; color: var(--velzon-primary); letter-spacing: 0.05em; text-transform: uppercase; }
+    .phase-card .phase-title { font-weight: 600; font-size: 0.875rem; margin: 0.25rem 0 0.375rem 0; }
+    .phase-card .phase-body { font-size: 0.75rem; color: var(--velzon-muted); line-height: 1.45; }
+    .phase-card .phase-effort { margin-top: 0.625rem; font-size: 0.6875rem; font-weight: 700; color: var(--velzon-success); }
+
+    /* Mobile view simulation */
+    .mobile-frame { max-width: 380px; margin: 0 auto; background: #111; border-radius: 36px; padding: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+    .mobile-screen { background: var(--velzon-bg); border-radius: 28px; min-height: 520px; overflow: hidden; position: relative; padding-top: 28px; }
+    .mobile-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 20px; background: #111; border-radius: 0 0 16px 16px; }
+    .mobile-content { padding: 0.75rem; overflow-y: auto; max-height: 480px; }
+
+    .caption { font-size: 0.8125rem; color: var(--velzon-muted); text-align: center; margin-top: 0.5rem; }
+
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
+    @media (max-width: 900px) { .compare-grid { grid-template-columns: 1fr; } }
+
+    .change-pill { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 4px; font-size: 0.6875rem; font-weight: 600; margin-left: 0.375rem; }
+    .change-pill.keep { background: var(--velzon-success-soft); color: #0e7866; }
+    .change-pill.del  { background: #fde7e3; color: #b33520; }
+    .change-pill.new  { background: var(--velzon-primary-soft); color: var(--velzon-primary); }
+  </style>
+</head>
+<body>
+
+<header class="preview-header">
+  <div class="container">
+    <h1><i class="ri-file-list-3-line"></i> Case Detail UX Redesign</h1>
+    <p class="lead">Per-section inline editing, empty-state placeholders, partial PATCH saves. No more scroll-to-top edit mode.</p>
+  </div>
+</header>
+
+<nav class="preview-nav">
+  <div class="container">
+    <ul class="nav gap-2">
+      <li class="nav-item"><a class="nav-link active" href="#problem">Problem</a></li>
+      <li class="nav-item"><a class="nav-link" href="#before-after">Before / After</a></li>
+      <li class="nav-item"><a class="nav-link" href="#section-edit">Section Pencil</a></li>
+      <li class="nav-item"><a class="nav-link" href="#empty-state">Empty State</a></li>
+      <li class="nav-item"><a class="nav-link" href="#pair-handling">Pair Handling</a></li>
+      <li class="nav-item"><a class="nav-link" href="#modal">Edit Modal</a></li>
+      <li class="nav-item"><a class="nav-link" href="#single-field">Single-Field</a></li>
+      <li class="nav-item"><a class="nav-link" href="#mobile">Mobile</a></li>
+      <li class="nav-item"><a class="nav-link" href="#rollout">Rollout</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container py-4">
+
+  <!-- ─────────────────── PROBLEM ─────────────────── -->
+  <section id="problem">
+    <div class="section-divider">
+      <span class="section-number">The Problem</span>
+      <h2 class="mt-3">Two compounding failures today</h2>
+      <p class="text-muted">Attorneys stop editing case data because the interaction is painful, and the PI insurance layout looks broken when one side has no data.</p>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="annotation annotation-danger">
+          <strong>Failure 1 — Global Edit Mode.</strong><br>
+          Scroll to top → click "Edit" → scroll back down to the field → change it → scroll back up to Save. On a ~3000-line page with 12+ sections, this is painful enough that attorneys resort to emailing paralegals to update fields for them.
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="annotation annotation-danger">
+          <strong>Failure 2 — Empty sections render as hollow cards.</strong><br>
+          PI "Client's Insurance" next to a populated "Defendant's Insurance" shows as a card with just a header and empty body — looks like a bug, not a blank form.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── BEFORE / AFTER ─────────────────── -->
+  <section id="before-after">
+    <div class="section-divider">
+      <span class="section-number">Before vs After</span>
+      <h2 class="mt-3">The page title bar loses the global Edit button</h2>
+    </div>
+
+    <div class="compare-grid">
+      <div>
+        <span class="mockup-label before">Before · today</span>
+        <div class="mockup-frame">
+          <div class="mockup-frame-header">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            <span class="title">Case Detail — Johnson v. Smith</span>
+          </div>
+          <div class="mockup-frame-body tight">
+            <div class="page-title-bar" style="margin: 0;">
+              <div>
+                <h3>Johnson v. Smith <span class="badge bg-warning-subtle text-warning ms-2">Active</span></h3>
+                <div class="meta">Case #2025-PI-0142 · Personal Injury · Filed Jan 12, 2026</div>
+              </div>
+              <div>
+                <button class="btn btn-warning btn-sm"><i class="ri-edit-line"></i> Edit Mode</button>
+                <button class="btn btn-danger btn-sm ms-1"><i class="ri-delete-bin-line"></i> Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">Click Edit → <em>every</em> section turns into inputs. Saving submits a full PUT of every field.</p>
+      </div>
+
+      <div>
+        <span class="mockup-label after">After · new design</span>
+        <div class="mockup-frame">
+          <div class="mockup-frame-header">
+            <div class="dot" style="background:#28c76f"></div><div class="dot" style="background:#ff9f43"></div><div class="dot" style="background:#ea5455"></div>
+            <span class="title">Case Detail — Johnson v. Smith</span>
+          </div>
+          <div class="mockup-frame-body tight">
+            <div class="page-title-bar" style="margin: 0;">
+              <div>
+                <h3>Johnson v. Smith <span class="badge bg-warning-subtle text-warning ms-2">Active</span></h3>
+                <div class="meta">Case #2025-PI-0142 · Personal Injury · Filed Jan 12, 2026</div>
+              </div>
+              <div>
+                <button class="btn btn-danger btn-sm"><i class="ri-delete-bin-line"></i> Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">The global Edit button is gone. Each section owns its own edit affordance (pencil icon).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── SECTION PENCIL ─────────────────── -->
+  <section id="section-edit">
+    <div class="section-divider">
+      <span class="section-number">Section Edit Affordance</span>
+      <h2 class="mt-3">Every section carries a pencil</h2>
+      <p class="text-muted">One click on any section header's pencil opens a focused modal for just that section. No scrolling, no page-wide mode switch.</p>
+    </div>
+
+    <div class="mockup-frame">
+      <div class="mockup-frame-header">
+        <div class="dot" style="background:#28c76f"></div><div class="dot" style="background:#ff9f43"></div><div class="dot" style="background:#ea5455"></div>
+        <span class="title">Case Detail — Sections with inline edit</span>
+      </div>
+      <div class="mockup-frame-body">
+        <div class="page-chrome">
+
+          <div class="section-card">
+            <div class="section-card-header">
+              <div class="section-title"><i class="ri-user-3-line"></i> Client Information</div>
+              <button class="btn-section-edit" title="Edit section"><i class="ri-pencil-line"></i></button>
+            </div>
+            <div class="section-card-body">
+              <div class="field-row"><span class="label">Name</span><span class="value">Robert Johnson</span></div>
+              <div class="field-row"><span class="label">Email</span><span class="value">robert.johnson@example.com</span></div>
+              <div class="field-row"><span class="label">Phone</span><span class="value">(617) 555-4182</span></div>
+              <div class="field-row"><span class="label">Address</span><span class="value">142 Commonwealth Ave, Boston, MA 02116</span></div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-card-header">
+              <div class="section-title"><i class="ri-government-line"></i> Court Information</div>
+              <button class="btn-section-edit" title="Edit section"><i class="ri-pencil-line"></i></button>
+            </div>
+            <div class="section-card-body">
+              <div class="field-row"><span class="label">Court Name</span><span class="value">Suffolk County Superior Court</span></div>
+              <div class="field-row"><span class="label">Judge</span><span class="value">Hon. Patricia McFadden</span></div>
+              <div class="field-row"><span class="label">Courtroom</span><span class="value">Room 842</span></div>
+              <div class="field-row"><span class="label">Case Number</span><span class="value">2025-PI-0142</span></div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-card-header">
+              <div class="section-title"><i class="ri-calendar-event-line"></i> Important Dates</div>
+              <button class="btn-section-edit" title="Edit section"><i class="ri-pencil-line"></i></button>
+            </div>
+            <div class="section-card-body">
+              <div class="field-row"><span class="label">Filing Date</span><span class="value">Jan 12, 2026</span></div>
+              <div class="field-row"><span class="label">Next Hearing</span><span class="value">May 8, 2026</span></div>
+              <div class="field-row"><span class="label">Trial Date</span><span class="value placeholder">Not set</span></div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="annotation annotation-info">
+          <strong>Key pattern.</strong> Hover the pencil → subtle scale + colour flip (primary soft → primary). No scrolling required. Modal opens → save → card updates in place from the PATCH response. Zero full-page reloads.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── EMPTY STATE ─────────────────── -->
+  <section id="empty-state">
+    <div class="section-divider">
+      <span class="section-number">Empty-State Placeholder</span>
+      <h2 class="mt-3">Sections with no data render as compact "+ Add" cards</h2>
+      <p class="text-muted">Instead of a hollow card with just a header, the section shows a discoverable call to action that opens the same modal in create-mode.</p>
+    </div>
+
+    <div class="compare-grid">
+      <div>
+        <span class="mockup-label before">Before · today</span>
+        <div class="mockup-frame">
+          <div class="mockup-frame-header">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            <span class="title">Empty section — broken look</span>
+          </div>
+          <div class="mockup-frame-body">
+            <div class="section-card" style="margin-bottom:0">
+              <div class="section-card-header">
+                <div class="section-title"><i class="ri-shield-user-line"></i> Client's Insurance (for PIP / UIM)</div>
+              </div>
+              <div class="section-card-body" style="padding: 2.25rem 1rem; text-align: center; color: #cfd3d9;">
+                (nothing renders — just border + header)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <span class="mockup-label after">After · new design</span>
+        <div class="mockup-frame">
+          <div class="mockup-frame-header">
+            <div class="dot" style="background:#28c76f"></div><div class="dot" style="background:#ff9f43"></div><div class="dot" style="background:#ea5455"></div>
+            <span class="title">Empty section — compact "+ Add" card</span>
+          </div>
+          <div class="mockup-frame-body">
+            <div class="section-empty">
+              <div class="icon-wrap-empty"><i class="ri-shield-user-line"></i></div>
+              <p class="empty-title">Client's Insurance (for PIP / UIM)</p>
+              <p class="empty-hint">No PIP/UIM policy on file yet.</p>
+              <button class="btn-add"><i class="ri-add-line"></i> Add Client's Insurance</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="annotation annotation-success">
+      <strong>Side benefit.</strong> The empty-state card also serves as discovery: attorneys see sections that <em>could</em> have data, prompting them to fill PIP/UIM details they would otherwise overlook.
+    </div>
+  </section>
+
+  <!-- ─────────────────── PAIR HANDLING ─────────────────── -->
+  <section id="pair-handling">
+    <div class="section-divider">
+      <span class="section-number">Side-by-side Pair Handling</span>
+      <h2 class="mt-3">Defendant's vs Client's Insurance — three layout states</h2>
+      <p class="text-muted">Attorneys often compare defendant and client insurance side-by-side. The grid stays aligned regardless of which side has data.</p>
+    </div>
+
+    <!-- Both populated -->
+    <h4 class="mt-3 mb-2" style="font-size:1rem">① Both populated</h4>
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="section-card" style="margin-bottom:0">
+          <div class="section-card-header">
+            <div class="section-title"><i class="ri-shield-cross-line"></i> Defendant's Insurance</div>
+            <button class="btn-section-edit"><i class="ri-pencil-line"></i></button>
+          </div>
+          <div class="section-card-body">
+            <div class="field-row"><span class="label">Carrier</span><span class="value">Liberty Mutual</span></div>
+            <div class="field-row"><span class="label">Policy #</span><span class="value">LM-8841-2219-B</span></div>
+            <div class="field-row"><span class="label">Limit</span><span class="value">$100,000 / $300,000</span></div>
+            <div class="field-row"><span class="label">Adjuster</span><span class="value">Maria Delgado</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="section-card" style="margin-bottom:0">
+          <div class="section-card-header">
+            <div class="section-title"><i class="ri-shield-user-line"></i> Client's Insurance (PIP/UIM)</div>
+            <button class="btn-section-edit"><i class="ri-pencil-line"></i></button>
+          </div>
+          <div class="section-card-body">
+            <div class="field-row"><span class="label">Carrier</span><span class="value">GEICO</span></div>
+            <div class="field-row"><span class="label">Policy #</span><span class="value">GC-2019-4499-A</span></div>
+            <div class="field-row"><span class="label">PIP Limit</span><span class="value">$8,000</span></div>
+            <div class="field-row"><span class="label">UIM Limit</span><span class="value">$250,000</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mixed (the broken case today) -->
+    <h4 class="mt-4 mb-2" style="font-size:1rem">② Mixed (defendant filled, client empty — <em>the specific broken case today</em>)</h4>
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="section-card" style="margin-bottom:0">
+          <div class="section-card-header">
+            <div class="section-title"><i class="ri-shield-cross-line"></i> Defendant's Insurance</div>
+            <button class="btn-section-edit"><i class="ri-pencil-line"></i></button>
+          </div>
+          <div class="section-card-body">
+            <div class="field-row"><span class="label">Carrier</span><span class="value">Liberty Mutual</span></div>
+            <div class="field-row"><span class="label">Policy #</span><span class="value">LM-8841-2219-B</span></div>
+            <div class="field-row"><span class="label">Limit</span><span class="value">$100,000 / $300,000</span></div>
+            <div class="field-row"><span class="label">Adjuster</span><span class="value">Maria Delgado</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="section-empty">
+          <div class="icon-wrap-empty"><i class="ri-shield-user-line"></i></div>
+          <p class="empty-title">Client's Insurance (PIP/UIM)</p>
+          <p class="empty-hint">Add client's policy to draft PIP/UIM letters.</p>
+          <button class="btn-add"><i class="ri-add-line"></i> Add Client's Insurance</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Both empty -->
+    <h4 class="mt-4 mb-2" style="font-size:1rem">③ Both empty (brand-new case)</h4>
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="section-empty">
+          <div class="icon-wrap-empty"><i class="ri-shield-cross-line"></i></div>
+          <p class="empty-title">Defendant's Insurance</p>
+          <p class="empty-hint">No liability carrier on file yet.</p>
+          <button class="btn-add"><i class="ri-add-line"></i> Add Defendant's Insurance</button>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="section-empty">
+          <div class="icon-wrap-empty"><i class="ri-shield-user-line"></i></div>
+          <p class="empty-title">Client's Insurance (PIP/UIM)</p>
+          <p class="empty-hint">Add client's policy to draft PIP/UIM letters.</p>
+          <button class="btn-add"><i class="ri-add-line"></i> Add Client's Insurance</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="annotation annotation-info mt-3">
+      <strong>Grid integrity.</strong> Because both the populated card and the empty-state card occupy the same <code>col-lg-6</code> slot with matching min-height, the two-column layout stays visually balanced in every state.
+    </div>
+  </section>
+
+  <!-- ─────────────────── THE MODAL ─────────────────── -->
+  <section id="modal">
+    <div class="section-divider">
+      <span class="section-number">Section Edit Modal</span>
+      <h2 class="mt-3">One reusable modal component for every section</h2>
+      <p class="text-muted">Velzon NgbModal size <code>lg</code>, centered, static backdrop (backdrop click does nothing — ESC or explicit Cancel only). Mirrors the <code>TaskAssignmentModalComponent</code> pattern already used throughout the codebase.</p>
+    </div>
+
+    <div class="mockup-frame">
+      <div class="mockup-frame-header">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="title">Modal — "Edit Client's Insurance"</span>
+      </div>
+      <div class="mockup-frame-body" style="padding: 0;">
+        <div class="modal-backdrop-mock">
+          <div class="modal-dialog-mock">
+            <div class="modal-header-mock">
+              <div class="title"><i class="ri-shield-user-line"></i> Edit Client's Insurance (for PIP / UIM)</div>
+              <button class="btn-close-mock"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-body-mock">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label-sm">Carrier <span class="req">*</span></label>
+                  <input class="form-control-mock" value="GEICO">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label-sm">Policy Number</label>
+                  <input class="form-control-mock" value="GC-2019-4499-A">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label-sm">PIP Limit ($)</label>
+                  <input class="form-control-mock" value="8000">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label-sm">UIM Limit ($)</label>
+                  <input class="form-control-mock" value="250000">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label-sm">Adjuster Name</label>
+                  <input class="form-control-mock" placeholder="e.g. John Smith">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label-sm">Adjuster Email</label>
+                  <input class="form-control-mock is-invalid" value="not-an-email">
+                  <div class="invalid-feedback-mock">Please enter a valid email address.</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label-sm">Adjuster Phone</label>
+                  <input class="form-control-mock" placeholder="(617) 555-0123">
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer-mock">
+              <button class="btn btn-light btn-sm">Cancel</button>
+              <button class="btn btn-primary btn-sm"><i class="ri-save-line me-1"></i>Save Changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-2">
+      <div class="col-md-6">
+        <div class="annotation annotation-info">
+          <strong>Partial PATCH save.</strong> Only <em>dirty</em> form controls are sent to <code>PATCH /api/v1/legal-case/update/:id</code>. If the attorney only touched "Adjuster Email", the body is <code>{ clientInsuranceAdjusterEmail: "..." }</code>. Audit log stays clean, concurrent edits to other fields don't clobber.
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="annotation">
+          <strong>Cancel with unsaved changes.</strong> Clicking Cancel or ESC with a dirty form fires a SweetAlert2 "Discard changes?" confirm. Backdrop is <code>static</code> so an accidental outside click does nothing — no lost work.
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="annotation annotation-success">
+          <strong>On save success.</strong> Modal closes, toast confirms, the parent section card updates in place from the PATCH response payload. No <code>GET /case/:id</code> reload — scroll position preserved exactly.
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="annotation annotation-danger">
+          <strong>On save failure.</strong> Spinner stops, red alert appears inside the modal body, the modal <strong>stays open</strong>, user's edits remain in the form for retry.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── SINGLE-FIELD MODE ─────────────────── -->
+  <section id="single-field">
+    <div class="section-divider">
+      <span class="section-number">Single-Field Mode</span>
+      <h2 class="mt-3">One modal component, two presentations</h2>
+      <p class="text-muted">Top-of-page meta fields (Title, Description, Status, Priority) reuse the same modal with a <code>singleFieldKey</code> prop — no separate inline edit system.</p>
+    </div>
+
+    <div class="mockup-frame">
+      <div class="mockup-frame-header">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="title">Single-field quick edit</span>
+      </div>
+      <div class="mockup-frame-body" style="padding: 0;">
+        <div class="modal-backdrop-mock">
+          <div class="modal-dialog-mock modal-sm-width">
+            <div class="modal-header-mock">
+              <div class="title"><i class="ri-pencil-line"></i> Edit Case Description</div>
+              <button class="btn-close-mock"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-body-mock">
+              <label class="form-label-sm">Description</label>
+              <textarea class="form-control-mock" rows="5">Two-vehicle accident on I-93 northbound near exit 19. Client sustained C5-C6 disc herniation and moderate TBI. Liability clear (rear-end collision, police report confirms defendant at-fault). Treatment ongoing at Mass General Spine Center.</textarea>
+            </div>
+            <div class="modal-footer-mock">
+              <button class="btn btn-light btn-sm">Cancel</button>
+              <button class="btn btn-primary btn-sm"><i class="ri-save-line me-1"></i>Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── MOBILE ─────────────────── -->
+  <section id="mobile">
+    <div class="section-divider">
+      <span class="section-number">Mobile</span>
+      <h2 class="mt-3">Cards stack, pencils stay tappable</h2>
+      <p class="text-muted">At &lt; 768px the grid collapses to single column. Modals present as full-screen bottom sheets (Velzon default). Pencil button is 34×34 — comfortably above the 32px WCAG target.</p>
+    </div>
+
+    <div class="row g-4 align-items-start">
+      <div class="col-md-6">
+        <div class="mobile-frame">
+          <div class="mobile-screen">
+            <div class="mobile-notch"></div>
+            <div class="mobile-content">
+
+              <div class="page-title-bar" style="padding: 0.75rem">
+                <div>
+                  <h3 style="font-size:0.95rem">Johnson v. Smith</h3>
+                  <div class="meta" style="font-size:0.7rem">PI · #2025-PI-0142</div>
+                </div>
+                <button class="btn btn-danger btn-sm" style="padding:0.25rem 0.5rem"><i class="ri-delete-bin-line"></i></button>
+              </div>
+
+              <div class="section-card">
+                <div class="section-card-header" style="padding: 0.625rem 0.875rem">
+                  <div class="section-title" style="font-size:0.8125rem"><i class="ri-user-3-line"></i> Client Info</div>
+                  <button class="btn-section-edit" style="width:28px;height:28px"><i class="ri-pencil-line"></i></button>
+                </div>
+                <div class="section-card-body" style="padding: 0.625rem 0.875rem">
+                  <div class="field-row" style="font-size:0.75rem"><span class="label">Name</span><span class="value">Robert Johnson</span></div>
+                  <div class="field-row" style="font-size:0.75rem"><span class="label">Phone</span><span class="value">(617) 555-4182</span></div>
+                </div>
+              </div>
+
+              <div class="section-card">
+                <div class="section-card-header" style="padding: 0.625rem 0.875rem">
+                  <div class="section-title" style="font-size:0.8125rem"><i class="ri-shield-cross-line"></i> Defendant's Ins.</div>
+                  <button class="btn-section-edit" style="width:28px;height:28px"><i class="ri-pencil-line"></i></button>
+                </div>
+                <div class="section-card-body" style="padding: 0.625rem 0.875rem">
+                  <div class="field-row" style="font-size:0.75rem"><span class="label">Carrier</span><span class="value">Liberty Mutual</span></div>
+                  <div class="field-row" style="font-size:0.75rem"><span class="label">Policy</span><span class="value">LM-8841-…</span></div>
+                </div>
+              </div>
+
+              <div class="section-empty" style="padding: 0.75rem;">
+                <div class="icon-wrap-empty" style="width:32px;height:32px;font-size:0.95rem"><i class="ri-shield-user-line"></i></div>
+                <p class="empty-title" style="font-size:0.8125rem">Client's Insurance</p>
+                <button class="btn-add" style="font-size:0.75rem"><i class="ri-add-line"></i> Add</button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        <p class="caption">View — sections stack vertically.</p>
+      </div>
+
+      <div class="col-md-6">
+        <div class="mobile-frame">
+          <div class="mobile-screen">
+            <div class="mobile-notch"></div>
+            <div class="mobile-content" style="background: rgba(33,37,41,0.6); padding-top: 1.5rem;">
+
+              <div style="background:white; border-radius:10px; margin: 0 0.25rem;">
+                <div class="modal-header-mock" style="padding: 0.75rem 1rem;">
+                  <div class="title" style="font-size:0.875rem"><i class="ri-shield-user-line"></i> Edit Client's Ins.</div>
+                  <button class="btn-close-mock"><i class="ri-close-line"></i></button>
+                </div>
+                <div class="modal-body-mock" style="padding:0.875rem">
+                  <label class="form-label-sm">Carrier</label>
+                  <input class="form-control-mock" value="GEICO" style="margin-bottom:0.625rem">
+                  <label class="form-label-sm">Policy #</label>
+                  <input class="form-control-mock" value="GC-2019-4499-A" style="margin-bottom:0.625rem">
+                  <label class="form-label-sm">PIP Limit</label>
+                  <input class="form-control-mock" value="8000">
+                </div>
+                <div class="modal-footer-mock" style="padding: 0.625rem 0.875rem">
+                  <button class="btn btn-light btn-sm">Cancel</button>
+                  <button class="btn btn-primary btn-sm">Save</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        <p class="caption">Modal — full-screen bottom sheet on mobile.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── ROLLOUT ─────────────────── -->
+  <section id="rollout">
+    <div class="section-divider">
+      <span class="section-number">Phased Rollout</span>
+      <h2 class="mt-3">6.5 half-days — each phase ships independently</h2>
+      <p class="text-muted">The global Edit button stays in place until Phase 4. Any phase can be reverted without touching the others.</p>
+    </div>
+
+    <div class="phase-timeline">
+      <div class="phase-card">
+        <div class="phase-num">Phase 1a</div>
+        <p class="phase-title">Modal scaffold + PI insurance sections</p>
+        <p class="phase-body">Build <code>CaseSectionEditModalComponent</code>. Wire to Defendant's and Client's Insurance. Implement empty-state + paired-row rendering.</p>
+        <div class="phase-effort">~2 half-days</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Phase 1b</div>
+        <p class="phase-title">Remaining PI sections</p>
+        <p class="phase-body">Injury Info, Defendant Info, Accident Details — config-only once the modal is generic.</p>
+        <div class="phase-effort">~0.5 half-day</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Phase 2</div>
+        <p class="phase-title">Other practice areas</p>
+        <p class="phase-body">Criminal, Family, Immigration, Real Estate, IP — same code path, different config.</p>
+        <div class="phase-effort">~0.5 half-day</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Phase 3</div>
+        <p class="phase-title">Core sections + backend gap</p>
+        <p class="phase-body">Client Info, Court Info, Important Dates. Extend <code>patchCaseFields()</code> to cover dates/court/billing fields currently dropped.</p>
+        <div class="phase-effort">~1.5 half-days</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Phase 4</div>
+        <p class="phase-title">Delete global Edit mode</p>
+        <p class="phase-body">Single-field mode for Title/Description/Status/Priority. Rip out <code>isEditing</code>, <code>saveCase()</code>, edit-mode template, <code>editForm</code>. ~250 lines removed.</p>
+        <div class="phase-effort">~1 half-day</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Phase 5</div>
+        <p class="phase-title">Polish</p>
+        <p class="phase-body">Empty-state icons, post-save flash, cancel-confirm, mobile pass, docs.</p>
+        <div class="phase-effort">~1 half-day</div>
+      </div>
+    </div>
+
+    <div class="annotation annotation-info mt-4">
+      <strong>Zero new backend for Phases 1–2.</strong> PATCH endpoint <code>LegalCaseResource.java:277-291</code> and frontend <code>caseService.patchCase()</code> already exist but are unused today. Phase 3 is the only phase that touches the backend (~20 lines added to <code>patchCaseFields()</code> for dates/court/billing/client-insurance fields).
+    </div>
+  </section>
+
+  <!-- ─────────────────── WHAT'S NOT CHANGING ─────────────────── -->
+  <section id="out-of-scope">
+    <div class="section-divider">
+      <span class="section-number">Out of Scope</span>
+      <h2 class="mt-3">Explicitly NOT doing</h2>
+    </div>
+    <ul class="text-muted" style="line-height: 1.9;">
+      <li>Optimistic UI updates before server confirms.</li>
+      <li>Concurrency control (ETag / <code>@Version</code>) for two-tab editing — known limitation, last-write-wins.</li>
+      <li>CanDeactivate route guard for unsaved modal state.</li>
+      <li>Rich-text editor for description.</li>
+      <li>Keyboard shortcuts (Cmd+E etc).</li>
+      <li>Audit-log viewer (who/when changed each field).</li>
+      <li>Field-level inline diff/history.</li>
+      <li>Breaking the 3000-line <code>case-detail.component.ts</code> into child components — we shrink it by ~250 lines, that's the win for this sprint.</li>
+      <li>Documents / Notes / Timeline / Events / Team tabs — unchanged.</li>
+      <li>Billing card visual redesign — only adds PATCH support.</li>
+      <li>Mobile FAB "+" for quick add.</li>
+      <li>Undo toast after save.</li>
+      <li>Custom practice-area field creation by admins.</li>
+    </ul>
+  </section>
+
+  <div class="section-divider"></div>
+  <p class="text-center text-muted small py-4">Preview generated for Marsel Hoxha · April 2026 · Approval gate before Phase 1 starts.</p>
+</div>
+
+<script>
+  // Smooth scroll + active-nav highlight
+  document.querySelectorAll('.preview-nav a').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.preview-nav a').forEach(a => a.classList.remove('active'));
+      link.classList.add('active');
+      const target = document.querySelector(link.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Breadcrumb Options - Legience</title>
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f3f9; color: #495057; }
+
+  .preview-section {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+
+  .option-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #878a99;
+    margin-bottom: 8px;
+  }
+
+  .option-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 4px;
+  }
+
+  .option-desc {
+    font-size: 13px;
+    color: #878a99;
+    margin-bottom: 16px;
+  }
+
+  .preview-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 48px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #e9ebec;
+  }
+
+  .divider {
+    border: none;
+    border-top: 2px dashed #e9ebec;
+    margin: 48px 0;
+  }
+
+  /* Simulated nav bar strip */
+  .fake-nav {
+    background: #fff;
+    border-bottom: 1px solid #e9ebec;
+    padding: 10px 28px;
+    margin: -24px -28px 20px;
+    border-radius: 12px 12px 0 0;
+    font-size: 13px;
+    color: #878a99;
+    display: flex;
+    gap: 20px;
+  }
+  .fake-nav span { font-weight: 500; }
+  .fake-nav .active-item { color: #405189; font-weight: 600; }
+
+  /* Colors */
+  .text-primary { color: #405189; }
+  .text-muted { color: #878a99; }
+  .text-success { color: #0ab39c; }
+
+  /* ============================================ */
+  /* OPTION A: Category + Title (Current Best) */
+  /* ============================================ */
+  .opt-a .category {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #878a99;
+    margin-bottom: 4px;
+  }
+  .opt-a h4 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #495057;
+    margin: 0;
+  }
+  .opt-a .header-wrapper {
+    padding: 16px 0;
+    position: relative;
+    padding-left: 16px;
+  }
+  .opt-a .header-wrapper::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 16px;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #405189, rgba(64,81,137,0.2));
+    border-radius: 2px;
+  }
+
+  /* ============================================ */
+  /* OPTION B: Breadcrumb Trail + Title */
+  /* ============================================ */
+  .opt-b .breadcrumb-trail {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  .opt-b .breadcrumb-trail a {
+    color: #878a99;
+    text-decoration: none;
+  }
+  .opt-b .breadcrumb-trail a:hover { color: #405189; }
+  .opt-b .breadcrumb-trail .sep { color: #c8cad0; font-size: 10px; }
+  .opt-b .breadcrumb-trail .current { color: #495057; font-weight: 500; }
+  .opt-b h4 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #495057;
+    margin: 0;
+  }
+
+  /* ============================================ */
+  /* OPTION C: Back + Category + Title */
+  /* ============================================ */
+  .opt-c .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #405189;
+    text-decoration: none;
+    margin-bottom: 4px;
+  }
+  .opt-c .back-link:hover { text-decoration: underline; }
+  .opt-c .category {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #878a99;
+    margin-bottom: 4px;
+  }
+  .opt-c h4 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #495057;
+    margin: 0;
+  }
+
+  /* ============================================ */
+  /* OPTION D: Inline Breadcrumb (Compact) */
+  /* ============================================ */
+  .opt-d .inline-bc {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+  .opt-d .inline-bc a {
+    font-size: 14px;
+    color: #878a99;
+    text-decoration: none;
+    font-weight: 400;
+  }
+  .opt-d .inline-bc a:hover { color: #405189; }
+  .opt-d .inline-bc .chevron { color: #c8cad0; font-size: 12px; }
+  .opt-d .inline-bc .page-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #495057;
+  }
+
+  /* ============================================ */
+  /* OPTION E: Pill Breadcrumb */
+  /* ============================================ */
+  .opt-e .pill-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f3f3f9;
+    border-radius: 20px;
+    padding: 6px 14px;
+    margin-bottom: 10px;
+  }
+  .opt-e .pill-nav a {
+    font-size: 12px;
+    color: #878a99;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .opt-e .pill-nav a:hover { color: #405189; }
+  .opt-e .pill-nav .sep { color: #c8cad0; font-size: 10px; margin: 0 2px; }
+  .opt-e .pill-nav .current { color: #405189; font-weight: 600; }
+  .opt-e h4 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #495057;
+    margin: 0;
+  }
+
+  /* ============================================ */
+  /* OPTION F: Slash Separator (Modern SaaS) */
+  /* ============================================ */
+  .opt-f .slash-nav {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 0;
+  }
+  .opt-f .slash-nav a {
+    font-size: 15px;
+    color: #878a99;
+    text-decoration: none;
+    font-weight: 400;
+    padding: 4px 0;
+  }
+  .opt-f .slash-nav a:hover { color: #405189; }
+  .opt-f .slash-nav .slash {
+    color: #c8cad0;
+    font-size: 18px;
+    margin: 0 10px;
+    font-weight: 300;
+  }
+  .opt-f .slash-nav .current {
+    font-size: 15px;
+    font-weight: 600;
+    color: #495057;
+  }
+
+  /* ============================================ */
+  /* OPTION G: Velzon Native (Page Title Box) */
+  /* ============================================ */
+  .opt-g .velzon-title-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+  }
+  .opt-g .velzon-title-box h4 {
+    font-weight: 700;
+    font-size: 15px;
+    text-transform: uppercase;
+    color: #495057;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  .opt-g .velzon-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    font-size: 13px;
+  }
+  .opt-g .velzon-breadcrumb a {
+    color: #495057;
+    text-decoration: none;
+    padding: 0 2px;
+  }
+  .opt-g .velzon-breadcrumb a:hover {
+    color: #405189;
+    text-decoration: underline;
+  }
+  .opt-g .velzon-sep {
+    font-family: "Material Design Icons";
+    font-size: 15px;
+    line-height: 20px;
+    color: #878a99;
+    margin: 0 4px;
+  }
+  .opt-g .velzon-current {
+    color: #878a99;
+    padding: 0 2px;
+  }
+
+  /* ============================================ */
+  /* Scenario labels */
+  /* ============================================ */
+  .scenario {
+    display: inline-block;
+    background: #f0f0ff;
+    color: #405189;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    letter-spacing: 0.03em;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+
+  .sub-card {
+    background: #fafbfc;
+    border: 1px solid #e9ebec;
+    border-radius: 8px;
+    padding: 20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="preview-section">
+  <h1 style="font-size: 28px; font-weight: 700; color: #343a40; margin-bottom: 6px;">Breadcrumb Options</h1>
+  <p style="font-size: 15px; color: #878a99; margin-bottom: 40px;">Each option shown for a list page and a detail page</p>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- OPTION A -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="option-label">OPTION A</div>
+  <div class="option-title">Category Label + Title</div>
+  <div class="option-desc">Current pattern on best pages. Minimal, no clickable trail. Left accent bar.</div>
+
+  <div class="two-col">
+    <div class="sub-card opt-a">
+      <div class="scenario">List Page: Cases</div>
+      <div class="header-wrapper">
+        <div class="category">Legal Management</div>
+        <h4>Cases</h4>
+      </div>
+    </div>
+    <div class="sub-card opt-a">
+      <div class="scenario">Detail Page: Case Detail</div>
+      <div class="header-wrapper">
+        <div class="category">Legal Management</div>
+        <h4>Cristiano Ronaldo v. Smith</h4>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- OPTION B -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="option-label">OPTION B</div>
+  <div class="option-title">Breadcrumb Trail + Title</div>
+  <div class="option-desc">Classic SaaS. Small clickable path above the page title.</div>
+
+  <div class="two-col">
+    <div class="sub-card opt-b">
+      <div class="scenario">List Page: Cases</div>
+      <div class="breadcrumb-trail">
+        <a href="#">Home</a>
+        <span class="sep"><i class="ri-arrow-right-s-line"></i></span>
+        <span class="current">Cases</span>
+      </div>
+      <h4>Cases</h4>
+    </div>
+    <div class="sub-card opt-b">
+      <div class="scenario">Detail Page: Case Detail</div>
+      <div class="breadcrumb-trail">
+        <a href="#">Home</a>
+        <span class="sep"><i class="ri-arrow-right-s-line"></i></span>
+        <a href="#">Cases</a>
+        <span class="sep"><i class="ri-arrow-right-s-line"></i></span>
+        <span class="current">Cristiano Ronaldo v. Smith</span>
+      </div>
+      <h4>Case Details</h4>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- OPTION C -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="option-label">OPTION C</div>
+  <div class="option-title">Back Button + Category + Title</div>
+  <div class="option-desc">Hybrid. Category context for list pages, back link for detail pages.</div>
+
+  <div class="two-col">
+    <div class="sub-card opt-c">
+      <div class="scenario">List Page: Cases</div>
+      <div class="category">Legal Management</div>
+      <h4>Cases</h4>
+    </div>
+    <div class="sub-card opt-c">
+      <div class="scenario">Detail Page: Case Detail</div>
+      <a href="#" class="back-link"><i class="ri-arrow-left-line"></i> Cases</a>
+      <h4>Cristiano Ronaldo v. Smith</h4>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- OPTION D -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="option-label">OPTION D</div>
+  <div class="option-title">Inline Path (Single Line)</div>
+  <div class="option-desc">Everything on one line. Compact, modern. Used by Linear, Notion.</div>
+
+  <div class="two-col">
+    <div class="sub-card opt-d">
+      <div class="scenario">List Page: Cases</div>
+      <div class="inline-bc">
+        <a href="#">Home</a>
+        <span class="chevron"><i class="ri-arrow-right-s-line"></i></span>
+        <span class="page-title">Cases</span>
+      </div>
+    </div>
+    <div class="sub-card opt-d">
+      <div class="scenario">Detail Page: Case Detail</div>
+      <div class="inline-bc">
+        <a href="#">Home</a>
+        <span class="chevron"><i class="ri-arrow-right-s-line"></i></span>
+        <a href="#">Cases</a>
+        <span class="chevron"><i class="ri-arrow-right-s-line"></i></span>
+        <span class="page-title">Cristiano Ronaldo v. Smith</span>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- OPTION E -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="option-label">OPTION E</div>
+  <div class="option-title">Pill Breadcrumb + Title</div>
+  <div class="option-desc">Breadcrumb in a subtle pill/chip container. Clean separation from title.</div>
+
+  <div class="two-col">
+    <div class="sub-card opt-e">
+      <div class="scenario">List Page: Cases</div>
+      <div class="pill-nav">
+        <a href="#">Home</a>
+        <span class="sep"><i class="ri-arrow-right-s-line"></i></span>
+        <span class="current">Cases</span>
+      </div>
+      <h4>Cases</h4>
+    </div>
+    <div class="sub-card opt-e">
+      <div class="scenario">Detail Page: Case Detail</div>
+      <div class="pill-nav">
+        <a href="#">Home</a>
+        <span class="sep"><i class="ri-arrow-right-s-line"></i></span>
+        <a href="#">Cases</a>
+        <span class="sep"><i class="ri-arrow-right-s-line"></i></span>
+        <span class="current">Case Detail</span>
+      </div>
+      <h4>Cristiano Ronaldo v. Smith</h4>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- OPTION F -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="option-label">OPTION F</div>
+  <div class="option-title">Slash Separator (Modern SaaS)</div>
+  <div class="option-desc">Single line with slash separators. Used by Vercel, Stripe, GitHub. No separate title.</div>
+
+  <div class="two-col">
+    <div class="sub-card opt-f">
+      <div class="scenario">List Page: Cases</div>
+      <div class="slash-nav">
+        <a href="#">Home</a>
+        <span class="slash">/</span>
+        <span class="current">Cases</span>
+      </div>
+    </div>
+    <div class="sub-card opt-f">
+      <div class="scenario">Detail Page: Case Detail</div>
+      <div class="slash-nav">
+        <a href="#">Home</a>
+        <span class="slash">/</span>
+        <a href="#">Cases</a>
+        <span class="slash">/</span>
+        <span class="current">Cristiano Ronaldo v. Smith</span>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- OPTION G: Velzon Native -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="option-label">OPTION G</div>
+  <div class="option-title">Velzon Default (Page Title Box)</div>
+  <div class="option-desc">The Velzon theme's built-in pattern. Title left, breadcrumb right. Already used on invoice pages. Dark mode compatible out of the box.</div>
+
+  <div class="two-col">
+    <div class="sub-card opt-g">
+      <div class="scenario">List Page: Cases</div>
+      <div class="velzon-title-box">
+        <h4>Cases</h4>
+        <div class="velzon-breadcrumb">
+          <a href="#">Home</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <span class="velzon-current">Cases</span>
+        </div>
+      </div>
+    </div>
+    <div class="sub-card opt-g">
+      <div class="scenario">Detail Page: Case Detail</div>
+      <div class="velzon-title-box">
+        <h4>Case Details</h4>
+        <div class="velzon-breadcrumb">
+          <a href="#">Home</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <a href="#">Cases</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <span class="velzon-current">Cristiano Ronaldo v. Smith</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <br>
+  <div class="two-col">
+    <div class="sub-card opt-g">
+      <div class="scenario">Create Page: New Case</div>
+      <div class="velzon-title-box">
+        <h4>Create New Case</h4>
+        <div class="velzon-breadcrumb">
+          <a href="#">Home</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <a href="#">Cases</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <span class="velzon-current">New</span>
+        </div>
+      </div>
+    </div>
+    <div class="sub-card opt-g">
+      <div class="scenario">Settings Page: Organization</div>
+      <div class="velzon-title-box">
+        <h4>Organization Settings</h4>
+        <div class="velzon-breadcrumb">
+          <a href="#">Home</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <a href="#">Admin</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <span class="velzon-current">Organization</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <br>
+  <div class="two-col">
+    <div class="sub-card opt-g">
+      <div class="scenario">Dashboard: Billing</div>
+      <div class="velzon-title-box">
+        <h4>Billing Dashboard</h4>
+        <div class="velzon-breadcrumb">
+          <a href="#">Home</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <a href="#">Billing</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <span class="velzon-current">Dashboard</span>
+        </div>
+      </div>
+    </div>
+    <div class="sub-card opt-g">
+      <div class="scenario">Nested: Invoice Workflows</div>
+      <div class="velzon-title-box">
+        <h4>Invoice Workflows</h4>
+        <div class="velzon-breadcrumb">
+          <a href="#">Home</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <a href="#">Billing</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <a href="#">Invoices</a>
+          <span class="velzon-sep">&#xF0142;</span>
+          <span class="velzon-current">Workflows</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="height: 60px;"></div>
+</div>
+
+</body>
+</html>

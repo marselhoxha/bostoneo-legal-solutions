@@ -43,7 +43,7 @@ Standard Workflow
 * when creating new features in the backend keep in mind to consider the tenant filter with organization id
 * NEVER commit without explicit user permission. Always ask before committing. No exceptions.
 *When commiting make sure to add descriptive but short messages and DO NOT INLCUDE CLAUDE CO AUTHOR ON THE MESSAGE
-* All changes we make locally should be in the 'develop' branch. they should be tested there, then after commiting to that branch we can merge with 'staging' and 'production' branches
+* All changes we make locally should be in the 'develop' branch. they should be tested there, then after commiting to that branch we can merge with 'staging' and 'main' branches
 *Don't check for diagostics or if the frontend has compiled, if it doesn't compile i will let you know
 *Don't do a compilation check in the frontend, there is no need
 * After every significant code change (new feature, bug fix, refactor), launch the code-reviewer agent to review the code for quality, best practices, potential bugs, and improvements before moving on to the next step.

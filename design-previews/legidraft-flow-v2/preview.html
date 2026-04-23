@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LegiDraft Flow v2 — Unified Inline Workspace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.0.0/fonts/remixicon.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Fraunces:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --vz-primary: #405189;
+      --vz-primary-dark: #364971;
+      --vz-primary-soft: #f0f4fc;
+      --vz-success: #0ab39c;
+      --vz-info: #299cdb;
+      --vz-warning: #f7b84b;
+      --vz-danger: #f06548;
+      --vz-muted: #74788d;
+      --vz-border: #e9ebec;
+      --vz-bg: #f3f3f9;
+      --vz-purple: #6f42c1;
+      --vz-ink: #1b1d2a;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--vz-bg); font-family: 'Public Sans', -apple-system, sans-serif; font-size: 14px; color: #212529; }
+    h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; }
+    .serif { font-family: 'Fraunces', Georgia, serif; letter-spacing: -0.02em; }
+    code { background: var(--vz-primary-soft); color: var(--vz-primary); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85em; font-family: 'SF Mono', Monaco, monospace; }
+
+    /* ========== Hero ========== */
+    .hero { background: linear-gradient(135deg, #1b1d2a 0%, #2a3463 50%, #405189 100%); color: white; padding: 3.5rem 0 4rem; position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(circle at 20% 20%, rgba(41,156,219,0.3) 0, transparent 40%), radial-gradient(circle at 80% 80%, rgba(10,179,156,0.25) 0, transparent 40%); pointer-events: none; }
+    .hero .eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #8fbfff; margin-bottom: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; }
+    .hero .eyebrow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--vz-success); box-shadow: 0 0 0 4px rgba(10,179,156,0.35); }
+    .hero h1 { font-size: 2.75rem; margin-bottom: 1rem; font-weight: 800; }
+    .hero h1 .accent { color: #8fbfff; font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; }
+    .hero p.lead { color: #c9d4f0; font-size: 1.1rem; max-width: 720px; line-height: 1.55; margin-bottom: 1.5rem; }
+    .hero .hero-meta { display: flex; flex-wrap: wrap; gap: 1.5rem; font-size: 0.8rem; color: #a7b5d9; }
+    .hero .hero-meta strong { color: white; font-weight: 600; }
+
+    /* ========== Sticky nav ========== */
+    .preview-nav { background: white; border-bottom: 1px solid var(--vz-border); padding: 0.75rem 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+    .preview-nav .nav-link { color: var(--vz-muted); font-weight: 500; font-size: 0.82rem; padding: 0.4rem 0.85rem; border-radius: 6px; white-space: nowrap; }
+    .preview-nav .nav-link:hover { background: var(--vz-primary-soft); color: var(--vz-primary); }
+    .preview-nav .nav-link.active { background: var(--vz-primary); color: white; }
+
+    /* ========== Section ========== */
+    .sec { margin: 3.5rem 0 0.5rem; }
+    .sec-header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 0.75rem; border-bottom: 3px solid var(--vz-primary); padding-bottom: 0.75rem; }
+    .sec-no { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; padding: 0 0.75rem; border-radius: 8px; background: var(--vz-primary); color: white; font-size: 0.85rem; font-weight: 700; font-family: 'SF Mono', Monaco, monospace; }
+    .sec-header h2 { margin: 0; color: var(--vz-ink); font-size: 1.5rem; }
+    .sec-header .tag { margin-left: auto; font-size: 0.7rem; font-weight: 700; padding: 0.3rem 0.65rem; border-radius: 999px; letter-spacing: 0.07em; text-transform: uppercase; }
+    .sec-header .tag.recommended { background: #e6f6f3; color: #066a5e; }
+    .sec-header .tag.rejected { background: #fdeceb; color: #8b3728; }
+    .sec-header .tag.context { background: #e6f4fb; color: #0f5a73; }
+    .sec-desc { color: var(--vz-muted); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.55; max-width: 900px; }
+
+    /* ========== Mockup frame ========== */
+    .mockup { background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(27, 29, 42, 0.07); margin: 1rem 0 2rem; overflow: hidden; border: 1px solid var(--vz-border); }
+    .mockup-chrome { padding: 0.7rem 1.1rem; background: #f8f9fa; border-bottom: 1px solid var(--vz-border); display: flex; align-items: center; gap: 0.75rem; }
+    .mockup-chrome .dot { width: 12px; height: 12px; border-radius: 50%; background: #ced4da; }
+    .mockup-chrome .dot-r { background: #fc5a5a; }
+    .mockup-chrome .dot-a { background: #ffb84d; }
+    .mockup-chrome .dot-g { background: #3fc37f; }
+    .mockup-chrome .title { font-size: 0.82rem; font-weight: 600; color: var(--vz-muted); margin-left: 0.25rem; }
+    .mockup-chrome .url { margin-left: auto; font-size: 0.72rem; color: var(--vz-muted); background: white; padding: 0.22rem 0.75rem; border-radius: 999px; border: 1px solid var(--vz-border); font-family: 'SF Mono', Monaco, monospace; }
+    .mockup-body { background: var(--vz-bg); padding: 0; }
+
+    /* ========== App shell (sidebar + topbar + main) ========== */
+    .shell { display: flex; min-height: 620px; background: var(--vz-bg); }
+    .shell-sidebar { background: #405189; color: white; width: 220px; flex-shrink: 0; padding: 0.85rem 0; font-size: 0.82rem; }
+    .shell-sidebar .logo { padding: 0 1.1rem 0.8rem; margin-bottom: 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.12); font-weight: 700; display: flex; align-items: center; gap: 0.45rem; }
+    .shell-sidebar .logo .dot-logo { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, #8fbfff, #299cdb); display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; color: white; font-weight: 800; }
+    .shell-sidebar .mlabel { padding: 0.7rem 1.1rem 0.2rem; font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.5); font-weight: 700; }
+    .shell-sidebar ul { list-style: none; padding: 0; margin: 0; }
+    .shell-sidebar li { padding: 0.45rem 1.1rem; color: rgba(255,255,255,0.78); display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+    .shell-sidebar li i { font-size: 0.95rem; }
+    .shell-sidebar li:hover { background: rgba(255,255,255,0.07); color: white; }
+    .shell-sidebar li.active { background: rgba(255,255,255,0.12); color: white; border-left: 3px solid #3fc37f; padding-left: calc(1.1rem - 3px); }
+    .shell-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .shell-topbar { background: white; border-bottom: 1px solid var(--vz-border); padding: 0.65rem 1.25rem; display: flex; align-items: center; gap: 1rem; font-size: 0.82rem; }
+    .shell-topbar .crumb { color: var(--vz-muted); }
+    .shell-topbar .crumb strong { color: var(--vz-primary); }
+    .shell-main { flex: 1; padding: 1rem 1.1rem; overflow: hidden; }
+
+    /* ========== LegiSpace layout: shared left rail + center + right ========== */
+    .legispace { display: flex; gap: 1rem; height: 100%; }
+    .legi-leftrail { width: 230px; flex-shrink: 0; background: white; border: 1px solid var(--vz-border); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+    .legi-leftrail-header { padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--vz-border); display: flex; align-items: center; gap: 0.5rem; }
+    .legi-leftrail-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--vz-muted); }
+    .legi-leftrail-badge { background: var(--vz-primary); color: white; font-size: 0.58rem; padding: 0.1rem 0.4rem; border-radius: 999px; font-weight: 700; margin-left: auto; }
+    .legi-leftrail-search { padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--vz-border); }
+    .legi-leftrail-search input { width: 100%; padding: 0.35rem 0.55rem; border: 1px solid var(--vz-border); border-radius: 6px; font-size: 0.76rem; background: #fafafa; }
+    .legi-leftrail-list { flex: 1; overflow-y: auto; padding: 0.25rem 0.4rem; }
+    .legi-leftrail-item { padding: 0.55rem 0.6rem; margin: 0.15rem 0; border-radius: 7px; cursor: pointer; }
+    .legi-leftrail-item:hover { background: var(--vz-primary-soft); }
+    .legi-leftrail-item.active { background: var(--vz-primary-soft); border-left: 3px solid var(--vz-primary); padding-left: calc(0.6rem - 3px); }
+    .legi-leftrail-item .li-title { font-size: 0.8rem; font-weight: 600; color: #212529; margin-bottom: 0.1rem; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .legi-leftrail-item .li-meta { font-size: 0.66rem; color: var(--vz-muted); display: flex; gap: 0.4rem; align-items: center; }
+    .legi-leftrail-item .li-type { font-size: 0.58rem; padding: 0.08rem 0.35rem; border-radius: 999px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; background: #e6f4fb; color: #0f5a73; }
+    .legi-leftrail-item .li-type.draft { background: #f0f4fc; color: var(--vz-primary); }
+    .legi-leftrail-item .li-type.question { background: #e6f6f3; color: #066a5e; }
+    .legi-leftrail-item .li-type.workflow { background: #fdecf3; color: #8b3760; }
+    .legi-leftrail-item .li-type.upload { background: #fff4e6; color: #7a5502; }
+    .legi-leftrail-footer { padding: 0.55rem 0.75rem; border-top: 1px solid var(--vz-border); }
+    .legi-leftrail-footer .btn { width: 100%; }
+
+    .legi-center { flex: 1; min-width: 0; overflow: hidden; }
+    .legi-rightrail { width: 285px; flex-shrink: 0; }
+
+    /* ========== Task cards (welcome) ========== */
+    .welcome-row { display: flex; align-items: center; margin-bottom: 1rem; padding: 0.5rem 0.25rem; }
+    .welcome-row h3 { margin: 0; font-size: 1.15rem; color: var(--vz-ink); }
+    .welcome-row p { margin: 0.15rem 0 0; color: var(--vz-muted); font-size: 0.82rem; }
+    .task-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+    .task-card { background: white; border: 2px solid var(--vz-border); border-radius: 12px; padding: 1.15rem 0.9rem; cursor: pointer; text-align: center; transition: all 0.18s; position: relative; }
+    .task-card:hover { border-color: var(--vz-primary); box-shadow: 0 8px 20px rgba(64, 81, 137, 0.1); transform: translateY(-2px); }
+    .task-card.selected { border-color: var(--vz-primary); background: var(--vz-primary-soft); }
+    .task-card.selected::after { content: ''; position: absolute; inset: -2px; border-radius: 12px; border: 2px solid var(--vz-primary); box-shadow: 0 0 0 3px rgba(64,81,137,0.15); pointer-events: none; }
+    .task-card .icn { width: 44px; height: 44px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .task-card.q .icn { background: linear-gradient(135deg, #0ab39c, #2dc8a9); }
+    .task-card.d .icn { background: linear-gradient(135deg, #405189, #5d6ea6); }
+    .task-card.w .icn { background: linear-gradient(135deg, #f7b84b, #f5a623); }
+    .task-card.u .icn { background: linear-gradient(135deg, #299cdb, #5ab5e3); }
+    .task-card .t { font-weight: 600; font-size: 0.85rem; color: #212529; margin-bottom: 0.1rem; }
+    .task-card .s { font-size: 0.66rem; color: var(--vz-muted); line-height: 1.3; }
+
+    /* ========== Draft Dashboard (center-arrival, Option A heart) ========== */
+    .draft-dashboard { height: 100%; }
+    .dd-tiles { display: grid; grid-template-columns: 5fr 4fr; gap: 1rem; }
+    .tile-primary { background: linear-gradient(135deg, #405189 0%, #5d6ea6 60%, #8fbfff 110%); border-radius: 14px; padding: 1.6rem 1.4rem; color: white; position: relative; overflow: hidden; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s; min-height: 210px; display: flex; flex-direction: column; }
+    .tile-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(64, 81, 137, 0.25); }
+    .tile-primary::before { content: ''; position: absolute; top: -50px; right: -50px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 60%); pointer-events: none; }
+    .tile-primary .tile-eyebrow { font-size: 0.66rem; letter-spacing: 0.13em; font-weight: 700; text-transform: uppercase; color: #c9d4f0; display: inline-flex; align-items: center; gap: 0.3rem; margin-bottom: 0.65rem; }
+    .tile-primary .tile-title { font-family: 'Fraunces', serif; font-size: 1.7rem; font-weight: 600; line-height: 1.15; margin-bottom: 0.5rem; letter-spacing: -0.015em; }
+    .tile-primary .tile-desc { color: #c9d4f0; font-size: 0.85rem; line-height: 1.45; margin-bottom: auto; max-width: 320px; }
+    .tile-primary .tile-action { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600; font-size: 0.85rem; background: white; color: var(--vz-primary); padding: 0.5rem 1rem; border-radius: 8px; align-self: flex-start; margin-top: 0.75rem; }
+    .tile-primary .tile-hints { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.75rem; }
+    .tile-primary .tile-hints .chip { background: rgba(255,255,255,0.15); padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+
+    .tile-secondary { background: white; border: 1px solid var(--vz-border); border-radius: 14px; padding: 1.3rem 1.1rem; cursor: pointer; transition: all 0.18s; min-height: 210px; display: flex; flex-direction: column; }
+    .tile-secondary:hover { border-color: var(--vz-primary); box-shadow: 0 8px 18px rgba(0,0,0,0.06); }
+    .tile-secondary .tile-eyebrow { font-size: 0.66rem; letter-spacing: 0.13em; font-weight: 700; text-transform: uppercase; color: var(--vz-muted); margin-bottom: 0.55rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+    .tile-secondary .tile-title { font-family: 'Fraunces', serif; font-size: 1.35rem; font-weight: 600; line-height: 1.2; margin-bottom: 0.35rem; color: var(--vz-ink); letter-spacing: -0.015em; }
+    .tile-secondary .tile-desc { color: var(--vz-muted); font-size: 0.78rem; line-height: 1.45; margin-bottom: 0.75rem; }
+    .tile-templates { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; margin-bottom: 0.6rem; }
+    .tpl-mini { background: #fafbfd; border: 1px solid var(--vz-border); border-radius: 7px; padding: 0.45rem 0.55rem; transition: all 0.12s; }
+    .tpl-mini:hover { background: var(--vz-primary-soft); border-color: var(--vz-primary); }
+    .tpl-mini .tpl-name { font-size: 0.74rem; font-weight: 600; color: #212529; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tpl-mini .tpl-meta { font-size: 0.6rem; color: var(--vz-muted); margin-top: 0.15rem; display: flex; gap: 0.3rem; }
+    .tpl-mini .tpl-pill { font-size: 0.55rem; padding: 0.06rem 0.3rem; border-radius: 999px; font-weight: 700; letter-spacing: 0.03em; }
+    .tpl-mini .tpl-pill.pi { background: #f0f4fc; color: var(--vz-primary); }
+    .tpl-mini .tpl-pill.fam { background: #fdecf3; color: #8b3760; }
+    .tpl-mini .tpl-pill.ma { background: #e6f4fb; color: #0f5a73; }
+    .tile-secondary .tile-footer-link { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--vz-primary); font-weight: 600; font-size: 0.78rem; margin-top: auto; }
+
+    .dd-recent { margin-top: 1rem; background: white; border: 1px solid var(--vz-border); border-radius: 12px; padding: 1rem 1.1rem; }
+    .dd-recent-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.6rem; }
+    .dd-recent-header h6 { margin: 0; font-size: 0.72rem; font-weight: 700; color: var(--vz-muted); letter-spacing: 0.07em; text-transform: uppercase; }
+    .dd-recent-header a { font-size: 0.72rem; color: var(--vz-primary); font-weight: 600; text-decoration: none; }
+    .dd-recent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.55rem; }
+    .dd-recent-card { background: #fafbfd; border: 1px solid var(--vz-border); border-radius: 8px; padding: 0.55rem 0.65rem; cursor: pointer; }
+    .dd-recent-card:hover { border-color: var(--vz-primary); background: var(--vz-primary-soft); }
+    .dd-recent-card .dr-type { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--vz-primary); margin-bottom: 0.15rem; }
+    .dd-recent-card .dr-title { font-size: 0.78rem; font-weight: 600; line-height: 1.2; color: #212529; }
+    .dd-recent-card .dr-date { font-size: 0.62rem; color: var(--vz-muted); margin-top: 0.15rem; }
+
+    /* ========== Inline back-bar shared across center states ========== */
+    .inline-backbar { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.85rem; background: white; border: 1px solid var(--vz-border); border-radius: 8px; margin-bottom: 0.7rem; font-size: 0.82rem; }
+    .inline-backbar .bb-back { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--vz-primary); font-weight: 600; cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 6px; }
+    .inline-backbar .bb-back:hover { background: var(--vz-primary-soft); }
+    .inline-backbar .bb-crumb { color: var(--vz-muted); }
+    .inline-backbar .bb-crumb strong { color: var(--vz-ink); }
+    .inline-backbar .bb-step { margin-left: auto; font-size: 0.72rem; color: var(--vz-muted); font-family: 'SF Mono', Monaco, monospace; }
+
+    /* ========== Template picker (inline, replaces modal) ========== */
+    .tpl-picker { background: white; border: 1px solid var(--vz-border); border-radius: 12px; padding: 1.1rem 1.2rem; }
+    .tpl-picker-hero { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; gap: 1rem; }
+    .tpl-picker-hero h4 { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--vz-ink); }
+    .tpl-picker-hero .sub { font-size: 0.78rem; color: var(--vz-muted); margin-top: 0.2rem; }
+    .tpl-picker-hero .hero-r { display: flex; gap: 0.4rem; align-items: center; }
+    .tpl-picker-hero input.tpl-search { padding: 0.45rem 0.8rem 0.45rem 2.1rem; border: 1px solid var(--vz-border); border-radius: 8px; font-size: 0.82rem; width: 260px; background: #fafbfd url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2374788d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') 0.65rem center / 14px no-repeat; }
+    .tpl-filter-chips { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.85rem; padding-bottom: 0.7rem; border-bottom: 1px solid var(--vz-border); }
+    .chip { background: white; border: 1px solid var(--vz-border); border-radius: 999px; padding: 0.22rem 0.65rem; font-size: 0.72rem; font-weight: 500; color: #212529; cursor: pointer; }
+    .chip:hover { background: var(--vz-primary-soft); border-color: var(--vz-primary); color: var(--vz-primary); }
+    .chip.active { background: var(--vz-primary); border-color: var(--vz-primary); color: white; }
+    .chip.active i { color: white; }
+    .tpl-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.65rem; }
+    .tpl-card { background: white; border: 1.5px solid var(--vz-border); border-radius: 10px; padding: 0.85rem 0.9rem; cursor: pointer; transition: all 0.14s; position: relative; }
+    .tpl-card:hover { border-color: var(--vz-primary); box-shadow: 0 6px 16px rgba(64, 81, 137, 0.08); }
+    .tpl-card.suggested { border-color: var(--vz-success); background: #f0fcf9; }
+    .tpl-card.suggested::after { content: 'SUGGESTED'; position: absolute; top: 0.5rem; right: 0.5rem; background: var(--vz-success); color: white; font-size: 0.52rem; letter-spacing: 0.07em; padding: 0.1rem 0.4rem; border-radius: 999px; font-weight: 700; }
+    .tpl-card .tc-icn { width: 32px; height: 32px; border-radius: 8px; background: var(--vz-primary-soft); color: var(--vz-primary); display: inline-flex; align-items: center; justify-content: center; font-size: 0.95rem; margin-bottom: 0.55rem; }
+    .tpl-card.suggested .tc-icn { background: var(--vz-success); color: white; }
+    .tpl-card .tc-title { font-size: 0.86rem; font-weight: 600; color: var(--vz-ink); line-height: 1.25; margin-bottom: 0.2rem; }
+    .tpl-card .tc-desc { font-size: 0.7rem; color: var(--vz-muted); line-height: 1.35; margin-bottom: 0.5rem; max-height: 32px; overflow: hidden; }
+    .tpl-card .tc-meta { display: flex; gap: 0.3rem; flex-wrap: wrap; font-size: 0.58rem; }
+    .tc-meta .tc-pill { font-size: 0.56rem; padding: 0.08rem 0.4rem; border-radius: 999px; font-weight: 700; letter-spacing: 0.04em; }
+    .tc-meta .tc-pill.pa { background: #f0f4fc; color: var(--vz-primary); }
+    .tc-meta .tc-pill.jur { background: #e6f4fb; color: #0f5a73; }
+    .tc-meta .tc-pill.vars { background: #fff4e6; color: #7a5502; }
+
+    /* ========== Fill & Generate (shared convergence step) ========== */
+    .fg-shell { background: white; border: 1px solid var(--vz-border); border-radius: 12px; padding: 1.1rem 1.25rem; }
+    .fg-header { margin-bottom: 1rem; }
+    .fg-header h4 { margin: 0 0 0.2rem; font-size: 1.05rem; font-weight: 700; color: var(--vz-ink); }
+    .fg-header .fg-source { font-size: 0.74rem; color: var(--vz-muted); display: inline-flex; align-items: center; gap: 0.4rem; }
+    .fg-header .fg-source .fg-source-pill { font-size: 0.58rem; padding: 0.1rem 0.5rem; border-radius: 999px; font-weight: 700; letter-spacing: 0.04em; background: var(--vz-primary-soft); color: var(--vz-primary); }
+    .fg-header .fg-source .fg-source-pill.tpl { background: #e6f6f3; color: #066a5e; }
+    .fg-cols { display: grid; grid-template-columns: 7fr 5fr; gap: 1rem; }
+    .fg-main-col { display: flex; flex-direction: column; gap: 0.85rem; }
+    .fg-sum-col { display: flex; flex-direction: column; gap: 0.85rem; }
+    .fg-group { background: #fafbfd; border: 1px solid var(--vz-border); border-radius: 10px; padding: 0.85rem 1rem; }
+    .fg-group h6 { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--vz-muted); margin: 0 0 0.55rem; }
+    .fg-field { margin-bottom: 0.55rem; }
+    .fg-field:last-child { margin-bottom: 0; }
+    .fg-field label { font-size: 0.75rem; font-weight: 500; color: #212529; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.3rem; }
+    .fg-field label .req { color: var(--vz-danger); }
+    .fg-field input, .fg-field textarea, .fg-field select { width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--vz-border); border-radius: 6px; font-size: 0.82rem; font-family: inherit; background: white; }
+    .fg-field textarea { min-height: 68px; resize: vertical; }
+    .fg-field .field-hint { font-size: 0.65rem; color: var(--vz-muted); margin-top: 0.2rem; font-style: italic; }
+    .fg-field.auto-filled input, .fg-field.auto-filled select { background: #f0fcf9; border-color: var(--vz-success); }
+    .fg-field .auto-badge { font-size: 0.55rem; background: var(--vz-success); color: white; padding: 0.06rem 0.3rem; border-radius: 999px; font-weight: 700; letter-spacing: 0.05em; margin-left: 0.3rem; }
+
+    .summary-card { background: #fafbfd; border: 1px solid var(--vz-border); border-radius: 10px; padding: 0.85rem 1rem; position: sticky; top: 1rem; }
+    .summary-card h6 { font-size: 0.7rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--vz-muted); margin: 0 0 0.55rem; font-weight: 700; }
+    .summary-row { display: flex; justify-content: space-between; font-size: 0.76rem; padding: 0.32rem 0; border-bottom: 1px dashed #dee2e6; }
+    .summary-row:last-child { border: none; }
+    .summary-row .sr-label { color: var(--vz-muted); }
+    .summary-row .sr-value { color: #212529; font-weight: 500; text-align: right; }
+    .summary-row .sr-value .pill { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 999px; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.04em; color: white; }
+    .summary-row .sr-value .pill.pa { background: var(--vz-purple); }
+    .summary-row .sr-value .pill.jur { background: var(--vz-info); }
+    .summary-row .sr-value .pill.tpl { background: var(--vz-success); }
+
+    /* ========== Case Context right panel ========== */
+    .ctx-panel { background: white; border: 1px solid var(--vz-border); border-radius: 10px; padding: 1rem 1.05rem; position: sticky; top: 1rem; }
+    .ctx-section { margin-bottom: 0.8rem; }
+    .ctx-title { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--vz-muted); margin-bottom: 0.35rem; }
+    .ctx-case-name { font-weight: 600; font-size: 0.92rem; color: var(--vz-ink); line-height: 1.25; }
+    .ctx-case-num { font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem; color: var(--vz-muted); margin-top: 0.1rem; }
+    .ctx-badges { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.45rem; }
+    .ctx-badge { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.04em; padding: 0.15rem 0.5rem; border-radius: 999px; color: white; }
+    .ctx-badge.purple { background: var(--vz-purple); }
+    .ctx-badge.info { background: var(--vz-info); }
+    .ctx-divider { border-top: 1px dashed var(--vz-border); margin: 0.7rem 0; }
+    .ctx-row { display: flex; justify-content: space-between; font-size: 0.74rem; padding: 0.18rem 0; }
+    .ctx-row .ctx-label { color: var(--vz-muted); }
+    .ctx-row .ctx-value { color: #212529; font-weight: 500; text-align: right; }
+
+    /* ========== Options comparison ========== */
+    .opt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; }
+    .opt-card { background: white; border: 1.5px solid var(--vz-border); border-radius: 12px; padding: 1.1rem 1.15rem; display: flex; flex-direction: column; position: relative; }
+    .opt-card.winner { border-color: var(--vz-success); box-shadow: 0 6px 20px rgba(10, 179, 156, 0.12); }
+    .opt-card.winner::after { content: 'RECOMMENDED'; position: absolute; top: -11px; right: 1rem; background: var(--vz-success); color: white; font-size: 0.6rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 999px; letter-spacing: 0.07em; }
+    .opt-card h4 { margin: 0 0 0.3rem; font-size: 1.1rem; color: var(--vz-ink); font-family: 'Fraunces', serif; font-weight: 600; letter-spacing: -0.01em; }
+    .opt-card .opt-sub { color: var(--vz-muted); font-size: 0.75rem; margin-bottom: 0.7rem; min-height: 2.1em; line-height: 1.4; }
+    .opt-card .opt-diagram { background: #fafbfd; border: 1px solid var(--vz-border); border-radius: 8px; padding: 0.7rem 0.85rem; margin-bottom: 0.75rem; min-height: 110px; }
+    .opt-card ul { list-style: none; padding: 0; margin: 0; font-size: 0.78rem; }
+    .opt-card ul li { padding: 0.25rem 0; display: flex; align-items: flex-start; gap: 0.45rem; line-height: 1.35; }
+    .opt-card ul li i { flex-shrink: 0; margin-top: 0.18rem; font-size: 0.9rem; }
+    .opt-card ul li.pro i { color: var(--vz-success); }
+    .opt-card ul li.con i { color: var(--vz-danger); }
+
+    /* Mini diagrams inside options */
+    .mini-shell { display: flex; gap: 0.3rem; height: 90px; }
+    .mini-side { width: 26px; background: #405189; border-radius: 4px; }
+    .mini-main { flex: 1; background: white; border: 1px solid var(--vz-border); border-radius: 4px; padding: 0.35rem 0.4rem; font-size: 0.58rem; color: var(--vz-muted); display: flex; flex-direction: column; gap: 0.2rem; }
+    .mini-main .tile { flex: 1; background: #f0f4fc; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: var(--vz-primary); font-weight: 600; font-size: 0.56rem; letter-spacing: 0.06em; text-transform: uppercase; }
+    .mini-main .tile.sec { background: white; border: 1px dashed var(--vz-border); color: var(--vz-muted); }
+    .mini-main .tile.hl { background: var(--vz-primary); color: white; }
+    .mini-main .tile.sp { background: transparent; border: none; color: var(--vz-muted); font-family: 'SF Mono', Monaco, monospace; }
+    .mini-main .prompt-bar { background: white; border: 2px solid var(--vz-primary); border-radius: 20px; padding: 0.3rem 0.5rem; color: var(--vz-primary); font-size: 0.55rem; text-align: center; font-weight: 600; }
+    .mini-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--vz-border); margin-bottom: 0.25rem; }
+    .mini-tabs .mt { padding: 0.15rem 0.4rem; font-size: 0.54rem; background: #fafbfd; border: 1px solid var(--vz-border); border-bottom: none; border-radius: 3px 3px 0 0; color: var(--vz-muted); letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; }
+    .mini-tabs .mt.active { background: var(--vz-primary); color: white; border-color: var(--vz-primary); }
+
+    /* ========== Flow arrow ========== */
+    .flow-arrow { text-align: center; color: var(--vz-muted); font-size: 1.4rem; margin: -0.3rem 0; }
+
+    /* ========== Annotations ========== */
+    .ann { background: #fff9e6; border-left: 4px solid var(--vz-warning); padding: 0.85rem 1.1rem; margin: 1rem 0; border-radius: 4px; font-size: 0.85rem; line-height: 1.55; }
+    .ann.info { background: #e6f4fb; border-left-color: var(--vz-info); }
+    .ann.succ { background: #e6f6f3; border-left-color: var(--vz-success); }
+    .ann.dang { background: #fdeceb; border-left-color: var(--vz-danger); }
+    .ann strong { color: #7a5502; }
+    .ann.info strong { color: #0f5a73; }
+    .ann.succ strong { color: #066a5e; }
+    .ann.dang strong { color: #8b3728; }
+
+    /* ========== Diff table ========== */
+    .diff-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.82rem; background: white; border: 1px solid var(--vz-border); border-radius: 10px; overflow: hidden; }
+    .diff-table thead th { background: #f8f9fa; text-align: left; padding: 0.6rem 0.85rem; font-weight: 700; color: var(--vz-muted); border-bottom: 2px solid var(--vz-border); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .diff-table td { padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--vz-border); vertical-align: top; }
+    .diff-table tr:last-child td { border-bottom: none; }
+    .diff-table .cell-strike { color: var(--vz-danger); text-decoration: line-through; }
+    .diff-table .cell-keep { color: var(--vz-success); font-weight: 600; }
+    .diff-table .cell-aspect { font-weight: 700; color: var(--vz-ink); }
+
+    /* ========== Utility ========== */
+    .btn-sm-pri { background: var(--vz-primary); color: white; border: none; padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }
+    .btn-sm-outline { background: white; color: var(--vz-primary); border: 1px solid var(--vz-primary); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }
+    .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+    .tag.ok { background: #e6f6f3; color: #066a5e; }
+    .tag.new { background: #fff4e6; color: #7a5502; }
+    .tag.cut { background: #fdeceb; color: #8b3728; }
+    .tag.keep { background: #e6f4fb; color: #0f5a73; }
+
+    /* ========== Print-safe ========== */
+    @media (max-width: 1100px) {
+      .dd-tiles { grid-template-columns: 1fr; }
+      .fg-cols { grid-template-columns: 1fr; }
+      .opt-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ========== HERO ========== -->
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow"><span class="dot"></span> LegiDraft · Flow v2 · proposal · 2026-04-18</span>
+    <h1>One workspace. <span class="accent">Two paths.</span> Zero modals.</h1>
+    <p class="lead">The current LegiDraft stuffs a page-sized Template Library into an NgbModal, then opens a second modal for the auto-fill wizard. It also duplicates the left sidebar by adding a LegiDraft-specific rail next to the legacy one. This proposal: the legacy sidebar stays shared at the <strong>arrival state</strong> of every task, but <strong>collapses away</strong> the moment the user commits to a draft flow — AI wizard, template picker, fill &amp; generate, or editor all get the full width. One pane, two paths, no modal-on-modal.</p>
+    <div class="hero-meta">
+      <span><strong>Goal</strong> · kill modal-on-modal; sidebar shows at home, hides during the draft flow</span>
+      <span><strong>Routes touched</strong> · <code>/legal/ai-assistant/legispace</code></span>
+      <span><strong>Components affected</strong> · 4 edit · 2 new · 2 delete</span>
+    </div>
+  </div>
+</section>
+
+<!-- ========== STICKY NAV ========== -->
+<nav class="preview-nav">
+  <div class="container">
+    <div class="d-flex gap-1 flex-wrap">
+      <a class="nav-link active" href="#problem">01 · Problem</a>
+      <a class="nav-link" href="#options">02 · Options A / B / C</a>
+      <a class="nav-link" href="#recommend">03 · Recommended flow</a>
+      <a class="nav-link" href="#arrival">04 · Draft Dashboard</a>
+      <a class="nav-link" href="#ai-path">05 · AI-draft path</a>
+      <a class="nav-link" href="#template-path">06 · Template path</a>
+      <a class="nav-link" href="#converge">07 · Fill &amp; Generate</a>
+      <a class="nav-link" href="#sidebar">08 · Sidebar contract</a>
+      <a class="nav-link" href="#diff">09 · What changes</a>
+      <a class="nav-link" href="#risks">10 · Risks</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- ========== 01 PROBLEM ========== -->
+<section id="problem" class="sec">
+  <div class="sec-header">
+    <span class="sec-no">01</span>
+    <h2>Problem — current flow regressions</h2>
+    <span class="tag dang">2 bugs · 3 smells</span>
+  </div>
+  <p class="sec-desc">The LegiDraft flow shipped in Sprint 4a/4b works, but it has two regressions and a few design smells that are eroding trust in the layout.</p>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="ann dang">
+        <strong>Bug 1 · Duplicate sidebar.</strong> Clicking LegiDraft mounts the new <code>DraftHistoryRailComponent</code> (280px) <em>next to</em> the legacy <code>.conversation-sidebar</code>. Two "Recent Drafts" rails appear side-by-side. Root cause: we added the new rail without removing the old one.
+      </div>
+      <div class="ann dang">
+        <strong>Bug 2 · "Link a case" is a no-op.</strong> The Case Context empty-state CTA is wired to <code>startNewDraft()</code>, which opens the wizard at Step 1. The user has no way to just <em>pick a case</em> from the right rail. <span class="tag ok">FIXED in 4a-HF2</span>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="ann">
+        <strong>Smell 1 · Modal-on-modal.</strong> "Use Template" opens <code>template-library-embedded-modal</code> containing a page-sized <code>TemplateLibraryComponent</code>. Clicking <em>Use</em> on a template then opens a <em>second</em> NgbModal with the 4-step <code>AutoFillWizardComponent</code>. Right-rail Case Context disappears during the whole dance.
+      </div>
+      <div class="ann">
+        <strong>Smell 2 · Two parallel wizards.</strong> <code>DraftWizardComponent</code> (AI path) and <code>AutoFillWizardComponent</code> (template path) collect overlapping info (case, client, variables, output format) in incompatible shapes. No shared convergence step.
+      </div>
+      <div class="ann">
+        <strong>Smell 3 · Sidebar inconsistency.</strong> Questions tab has one sidebar layout; Draft tab has a different one. Consistency is the contract we made with the user — we're breaking it.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 02 OPTIONS ========== -->
+<section id="options" class="sec">
+  <div class="sec-header">
+    <span class="sec-no">02</span>
+    <h2>Three options considered</h2>
+    <span class="tag context">A · B · C</span>
+  </div>
+  <p class="sec-desc">I considered three distinct flows before committing. All three preserve the sidebar contract. They differ in how the center pane is structured and how templates become discoverable.</p>
+
+  <div class="opt-grid">
+    <!-- Option A -->
+    <div class="opt-card winner">
+      <h4>Option A · Unified Inline Workspace</h4>
+      <p class="opt-sub">Draft Dashboard lands as two tiles; both AI-draft and template paths morph the same center pane; they converge at a shared Fill &amp; Generate step. No modals.</p>
+      <div class="opt-diagram">
+        <div class="mini-shell">
+          <div class="mini-side"></div>
+          <div class="mini-main">
+            <div style="display: flex; gap: 0.2rem; height: 50%;">
+              <div class="tile hl" style="flex: 1.3;">AI Draft</div>
+              <div class="tile sec" style="flex: 1;">Template</div>
+            </div>
+            <div class="tile sp" style="text-align: center; font-size: 0.5rem;">↓ morphs inline ↓</div>
+            <div class="tile">Fill &amp; Generate</div>
+          </div>
+        </div>
+      </div>
+      <ul>
+        <li class="pro"><i class="ri-checkbox-circle-fill"></i>Kills modal-on-modal entirely</li>
+        <li class="pro"><i class="ri-checkbox-circle-fill"></i>Templates get equal visual weight to AI-draft</li>
+        <li class="pro"><i class="ri-checkbox-circle-fill"></i>Both wizards converge → less code duplication</li>
+        <li class="pro"><i class="ri-checkbox-circle-fill"></i>Reuses Sprint 4a/4b components with minimum rework</li>
+        <li class="con"><i class="ri-close-circle-fill"></i>Slightly more state in ai-workspace (one extra view mode)</li>
+      </ul>
+    </div>
+
+    <!-- Option B -->
+    <div class="opt-card">
+      <h4>Option B · Command Palette</h4>
+      <p class="opt-sub">A single prompt bar ("What do you want to draft?") with inline autocomplete that mixes AI-draft suggestions and matching templates. Power-user pattern.</p>
+      <div class="opt-diagram">
+        <div class="mini-shell">
+          <div class="mini-side"></div>
+          <div class="mini-main">
+            <div class="prompt-bar">🔍  What do you want to draft?</div>
+            <div class="tile sp" style="font-size: 0.5rem;">↓ suggests both ↓</div>
+            <div class="tile sec">AI: Letter of Rep</div>
+            <div class="tile sec">Tpl: MA PI LOR</div>
+          </div>
+        </div>
+      </div>
+      <ul>
+        <li class="pro"><i class="ri-checkbox-circle-fill"></i>Fastest for power users</li>
+        <li class="pro"><i class="ri-checkbox-circle-fill"></i>Minimal visual footprint</li>
+        <li class="con"><i class="ri-close-circle-fill"></i>Discoverability-poor for new attorneys</li>
+        <li class="con"><i class="ri-close-circle-fill"></i>Requires typing skill before any visual scaffolding</li>
+        <li class="con"><i class="ri-close-circle-fill"></i>Templates buried one level deep</li>
+      </ul>
+    </div>
+
+    <!-- Option C -->
+    <div class="opt-card">
+      <h4>Option C · Tabbed Workspace</h4>
+      <p class="opt-sub">Tab strip at the top of the draft pane: [AI Draft] [From Template] [Recent] [All Templates]. Flat, each tab is an inline pane.</p>
+      <div class="opt-diagram">
+        <div class="mini-shell">
+          <div class="mini-side"></div>
+          <div class="mini-main">
+            <div class="mini-tabs">
+              <span class="mt active">AI</span>
+              <span class="mt">Tpl</span>
+              <span class="mt">Recent</span>
+              <span class="mt">All</span>
+            </div>
+            <div class="tile">AI Draft Pane</div>
+            <div class="tile sec" style="font-size: 0.5rem;">…</div>
+          </div>
+        </div>
+      </div>
+      <ul>
+        <li class="pro"><i class="ri-checkbox-circle-fill"></i>Flat; every feature one click away</li>
+        <li class="pro"><i class="ri-checkbox-circle-fill"></i>No modals</li>
+        <li class="con"><i class="ri-close-circle-fill"></i>Loses the "arrival moment" that orients attorneys</li>
+        <li class="con"><i class="ri-close-circle-fill"></i>[All Templates] tab duplicates <code>/legal/ai-assistant/templates</code></li>
+        <li class="con"><i class="ri-close-circle-fill"></i>Tabs imply orthogonality, but the flows actually converge</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ann succ mt-3">
+    <strong>Why Option A wins.</strong> It fixes both regressions in one move, gives templates first-class surface area, merges the two wizard code-paths at the convergence step, and reuses the existing Sprint 4a/4b components (empty-state → dashboard, wizard stays, case-context-panel stays). Option B is clever but discoverability-poor; Option C is flat but loses the arrival moment and duplicates the standalone template library route.
+  </div>
+</section>
+
+<!-- ========== 03 RECOMMENDED FLOW ========== -->
+<section id="recommend" class="sec">
+  <div class="sec-header">
+    <span class="sec-no">03</span>
+    <h2>Recommended flow · full journey</h2>
+    <span class="tag ok">Option A</span>
+  </div>
+  <p class="sec-desc">From "user clicks LegiDraft task card" to "document opens in the editor." The LEFT SIDEBAR stays identical for every task. The CENTER morphs between five states. The RIGHT RAIL (Case Context) appears once the user is past the arrival state.</p>
+
+  <div class="mockup">
+    <div class="mockup-chrome">
+      <div class="dot dot-r"></div><div class="dot dot-a"></div><div class="dot dot-g"></div>
+      <span class="title">legispace.legience.com</span>
+      <span class="url">/legal/ai-assistant/legispace</span>
+    </div>
+    <div class="mockup-body">
+      <div class="shell">
+        <!-- App-level sidebar (global nav) -->
+        <aside class="shell-sidebar">
+          <div class="logo"><span class="dot-logo">L</span> Legience</div>
+          <div class="mlabel">Workspace</div>
+          <ul>
+            <li><i class="ri-dashboard-2-line"></i> Dashboard</li>
+            <li><i class="ri-briefcase-line"></i> Cases</li>
+            <li><i class="ri-user-3-line"></i> Clients</li>
+          </ul>
+          <div class="mlabel">Legi Tools</div>
+          <ul>
+            <li class="active"><i class="ri-magic-line"></i> LegiSpace</li>
+            <li><i class="ri-file-text-line"></i> Templates</li>
+            <li><i class="ri-stethoscope-line"></i> LegiPI</li>
+          </ul>
+        </aside>
+
+        <div class="shell-content">
+          <div class="shell-topbar">
+            <span class="crumb">Legi Tools &rsaquo; <strong>LegiSpace</strong> &rsaquo; Draft</span>
+          </div>
+          <div class="shell-main">
+            <div class="legispace">
+
+              <!-- SHARED LEFT RAIL — identical shell, content swaps per task -->
+              <aside class="legi-leftrail">
+                <div class="legi-leftrail-header">
+                  <span class="legi-leftrail-title">Recent Drafts</span>
+                  <span class="legi-leftrail-badge">12</span>
+                </div>
+                <div class="legi-leftrail-search">
+                  <input type="text" placeholder="Search drafts..." value="">
+                </div>
+                <div class="legi-leftrail-list">
+                  <div class="legi-leftrail-item active">
+                    <div class="li-title">MA PI · Smith LOR</div>
+                    <div class="li-meta"><span class="li-type draft">Draft</span> 2h ago</div>
+                  </div>
+                  <div class="legi-leftrail-item">
+                    <div class="li-title">Johnson Demand Letter</div>
+                    <div class="li-meta"><span class="li-type draft">Draft</span> Yesterday</div>
+                  </div>
+                  <div class="legi-leftrail-item">
+                    <div class="li-title">Wilson v. State — MTD</div>
+                    <div class="li-meta"><span class="li-type draft">Draft</span> 3d ago</div>
+                  </div>
+                  <div class="legi-leftrail-item">
+                    <div class="li-title">Davis Discovery Set 1</div>
+                    <div class="li-meta"><span class="li-type draft">Draft</span> 5d ago</div>
+                  </div>
+                  <div class="legi-leftrail-item">
+                    <div class="li-title">Reyes Retainer Agreement</div>
+                    <div class="li-meta"><span class="li-type draft">Draft</span> 1w ago</div>
+                  </div>
+                </div>
+                <div class="legi-leftrail-footer">
+                  <button class="btn-sm-outline" style="width: 100%;"><i class="ri-add-line"></i> New Draft</button>
+                </div>
+              </aside>
+
+              <!-- CENTER — arrival: Draft Dashboard -->
+              <main class="legi-center">
+                <div class="welcome-row">
+                  <div>
+                    <h3>Hello Marsel — what are you drafting today?</h3>
+                    <p>Start from scratch with AI, or grab one of your saved templates.</p>
+                  </div>
+                </div>
+
+                <!-- Task cards row (compact, above dashboard — user can switch tasks inline) -->
+                <div class="task-grid mb-3">
+                  <div class="task-card q"><div class="icn"><i class="ri-question-answer-line"></i></div><div class="t">Ask a question</div><div class="s">Chat with the AI</div></div>
+                  <div class="task-card d selected"><div class="icn"><i class="ri-quill-pen-line"></i></div><div class="t">Draft a document</div><div class="s">AI or template</div></div>
+                  <div class="task-card w"><div class="icn"><i class="ri-flow-chart"></i></div><div class="t">Run a workflow</div><div class="s">Multi-step ops</div></div>
+                  <div class="task-card u"><div class="icn"><i class="ri-upload-cloud-line"></i></div><div class="t">Analyze upload</div><div class="s">PDFs · DOCX</div></div>
+                </div>
+
+                <!-- Draft Dashboard: two primary tiles -->
+                <div class="draft-dashboard">
+                  <div class="dd-tiles">
+                    <!-- Primary tile: new AI draft -->
+                    <div class="tile-primary">
+                      <div class="tile-eyebrow"><i class="ri-sparkling-2-line"></i> AI · guided flow</div>
+                      <div class="tile-title">Start a new draft</div>
+                      <div class="tile-desc">Pick a practice area and document type, configure the specifics, then Legience writes the first draft.</div>
+                      <div class="tile-hints">
+                        <span class="chip" style="background: rgba(255,255,255,0.18); color: white;">Practice area first</span>
+                        <span class="chip" style="background: rgba(255,255,255,0.18); color: white;">Jurisdiction-aware</span>
+                      </div>
+                      <span class="tile-action">Begin <i class="ri-arrow-right-line"></i></span>
+                    </div>
+                    <!-- Secondary tile: from template -->
+                    <div class="tile-secondary">
+                      <div class="tile-eyebrow"><i class="ri-file-text-line"></i> Saved · your library</div>
+                      <div class="tile-title">Draft from a template</div>
+                      <div class="tile-desc">Fill the blanks on a saved template. Variables auto-fill from the case you pick.</div>
+                      <div class="tile-templates">
+                        <div class="tpl-mini">
+                          <div class="tpl-name">MA PI · LOR</div>
+                          <div class="tpl-meta"><span class="tpl-pill pi">PI</span><span class="tpl-pill ma">MA</span></div>
+                        </div>
+                        <div class="tpl-mini">
+                          <div class="tpl-name">Demand Letter</div>
+                          <div class="tpl-meta"><span class="tpl-pill pi">PI</span><span class="tpl-pill ma">MA</span></div>
+                        </div>
+                        <div class="tpl-mini">
+                          <div class="tpl-name">Divorce Petition</div>
+                          <div class="tpl-meta"><span class="tpl-pill fam">Family</span><span class="tpl-pill ma">MA</span></div>
+                        </div>
+                        <div class="tpl-mini">
+                          <div class="tpl-name">Retainer Agreement</div>
+                          <div class="tpl-meta"><span class="tpl-pill pi">PI</span><span class="tpl-pill ma">MA</span></div>
+                        </div>
+                      </div>
+                      <a class="tile-footer-link">Browse all 27 templates <i class="ri-arrow-right-line"></i></a>
+                    </div>
+                  </div>
+
+                  <!-- Recent drafts preview -->
+                  <div class="dd-recent">
+                    <div class="dd-recent-header">
+                      <h6>Pick up where you left off</h6>
+                      <a href="#">View all drafts →</a>
+                    </div>
+                    <div class="dd-recent-grid">
+                      <div class="dd-recent-card">
+                        <div class="dr-type">Letter of Rep</div>
+                        <div class="dr-title">Smith v. Hartford Insurance</div>
+                        <div class="dr-date">Edited 2h ago · 85% complete</div>
+                      </div>
+                      <div class="dd-recent-card">
+                        <div class="dr-type">Demand Letter</div>
+                        <div class="dr-title">Johnson MVA — Allstate</div>
+                        <div class="dr-date">Edited yesterday · generated</div>
+                      </div>
+                      <div class="dd-recent-card">
+                        <div class="dr-type">Motion to Dismiss</div>
+                        <div class="dr-title">Wilson v. State</div>
+                        <div class="dr-date">Edited 3 days ago · draft</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </main>
+
+              <!-- RIGHT RAIL — not shown at arrival, explicit design decision -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ann info">
+    <strong>Why no right rail at arrival?</strong> Case Context is only useful once the user has committed to a draft path. At the dashboard, there's no draft in motion yet — showing an empty Case Context next to two big CTAs creates visual noise. Once the user clicks either tile, the right rail slides in with the linked case or a compact "Link a case" picker.
+  </div>
+</section>
+
+<!-- ========== 04 DRAFT DASHBOARD (detail) ========== -->
+<section id="arrival" class="sec">
+  <div class="sec-header">
+    <span class="sec-no">04</span>
+    <h2>Draft Dashboard · detail</h2>
+    <span class="tag new">refactor draft-empty-state</span>
+  </div>
+  <p class="sec-desc">The arrival state replaces the current single-card empty state. Two equal-weight tiles signal the two valid paths; a "pick up where you left off" recent-drafts strip below gives attorneys a third door for unfinished work.</p>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <h5>Primary tile — "Start a new draft"</h5>
+      <ul class="mb-3" style="font-size: 0.88rem; line-height: 1.65;">
+        <li>Gradient background (primary → primary-light) signals "this is the hero action"</li>
+        <li>Fraunces serif headline for editorial confidence (distinguishes from grid CTAs)</li>
+        <li>Two capability chips below description: <em>"Practice area first"</em> · <em>"Jurisdiction-aware"</em></li>
+        <li>Clicking morphs the center pane to the existing <code>DraftWizardComponent</code> inline</li>
+      </ul>
+
+      <h5 class="mt-3">Secondary tile — "Draft from a template"</h5>
+      <ul style="font-size: 0.88rem; line-height: 1.65;">
+        <li>Shows 4 most-recently-used templates as mini-cards (2×2 grid)</li>
+        <li>Mini-cards are clickable — clicking one skips the picker and jumps straight to Fill &amp; Generate with that template selected</li>
+        <li><em>"Browse all 27 templates →"</em> link at the bottom opens the inline template picker (section 06)</li>
+        <li>No modal opens, ever</li>
+      </ul>
+    </div>
+
+    <div class="col-lg-6">
+      <h5>Recent drafts strip</h5>
+      <ul style="font-size: 0.88rem; line-height: 1.65;">
+        <li>Three most-recently-edited drafts across both AI and template sources</li>
+        <li>Each card shows: document type eyebrow, case/title, edit timestamp, completion state</li>
+        <li>Click → reopens that draft in the editor directly (skips the whole flow)</li>
+        <li>"View all drafts →" link opens the left rail's full list view (or scrolls it open)</li>
+      </ul>
+
+      <div class="ann info mt-3">
+        <strong>Replaces:</strong> the current single-card <code>draft-empty-state</code> with its two buttons. That component becomes a thin wrapper around the new dashboard layout — same file, bigger canvas.
+      </div>
+
+      <h5 class="mt-3">Task-card row above dashboard</h5>
+      <ul style="font-size: 0.88rem; line-height: 1.65;">
+        <li>Compact version of the 4 task cards stays visible at the top of the draft pane</li>
+        <li>Active state shows which mode is selected</li>
+        <li>Clicking another task (e.g. Question) swaps the center pane to that task's arrival; the <em>left rail's content</em> also swaps to match (Recent Q&amp;A / Workflows / Uploads)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 05 AI PATH ========== -->
+<section id="ai-path" class="sec">
+  <div class="sec-header">
+    <span class="sec-no">05</span>
+    <h2>AI-draft path · inline wizard</h2>
+    <span class="tag keep">reuses DraftWizardComponent</span>
+  </div>
+  <p class="sec-desc">Clicking the primary tile morphs the center pane — same container, different content. The existing 4-step wizard renders inline with a back-bar at the top for escape. The right rail slides in with the Case Context panel.</p>
+
+  <div class="mockup">
+    <div class="mockup-chrome">
+      <div class="dot dot-r"></div><div class="dot dot-a"></div><div class="dot dot-g"></div>
+      <span class="title">legispace — AI Draft · Step 1/4</span>
+      <span class="url">/legal/ai-assistant/legispace</span>
+    </div>
+    <div class="mockup-body">
+      <div class="shell">
+        <aside class="shell-sidebar">
+          <div class="logo"><span class="dot-logo">L</span> Legience</div>
+          <div class="mlabel">Workspace</div><ul><li><i class="ri-dashboard-2-line"></i> Dashboard</li><li><i class="ri-briefcase-line"></i> Cases</li><li><i class="ri-user-3-line"></i> Clients</li></ul>
+          <div class="mlabel">Legi Tools</div><ul><li class="active"><i class="ri-magic-line"></i> LegiSpace</li><li><i class="ri-file-text-line"></i> Templates</li><li><i class="ri-stethoscope-line"></i> LegiPI</li></ul>
+        </aside>
+        <div class="shell-content">
+          <div class="shell-topbar"><span class="crumb">Legi Tools &rsaquo; <strong>LegiSpace</strong> &rsaquo; Draft &rsaquo; AI</span></div>
+          <div class="shell-main">
+            <div class="legispace">
+              <!-- Left sidebar is COLLAPSED during draft flow — the pane goes full width for the wizard. -->
+              <main class="legi-center">
+                <div class="inline-backbar">
+                  <span class="bb-back"><i class="ri-arrow-left-line"></i> Back to dashboard</span>
+                  <span class="bb-crumb">AI Draft · <strong>Choose practice area</strong></span>
+                  <span class="bb-step">1 / 4</span>
+                </div>
+                <div style="background: white; border: 1px solid var(--vz-border); border-radius: 12px; padding: 1.25rem; min-height: 400px;">
+                  <h5 style="margin: 0 0 0.25rem; font-weight: 600;">Practice area</h5>
+                  <p style="color: var(--vz-muted); font-size: 0.82rem; margin-bottom: 1rem;">Inherited from the linked case. Change if this draft is for a different matter.</p>
+                  <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem;">
+                    <div style="background: #f0fcf9; border: 2px solid var(--vz-success); border-radius: 8px; padding: 0.6rem 0.4rem; text-align: center; position: relative;">
+                      <div style="width: 30px; height: 30px; border-radius: 7px; background: var(--vz-success); color: white; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; margin-bottom: 0.3rem;"><i class="ri-stethoscope-line"></i></div>
+                      <div style="font-size: 0.65rem; font-weight: 600;">Personal Injury</div>
+                      <span style="position: absolute; top: 0.25rem; right: 0.25rem; background: var(--vz-success); color: white; font-size: 0.5rem; padding: 0.08rem 0.3rem; border-radius: 999px; font-weight: 700; letter-spacing: 0.04em;">CASE</span>
+                    </div>
+                    <div style="background: white; border: 1.5px solid var(--vz-border); border-radius: 8px; padding: 0.6rem 0.4rem; text-align: center;"><div style="width: 30px; height: 30px; border-radius: 7px; background: #f3f3f9; color: var(--vz-primary); display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; margin-bottom: 0.3rem;"><i class="ri-home-heart-line"></i></div><div style="font-size: 0.65rem; font-weight: 600;">Family Law</div></div>
+                    <div style="background: white; border: 1.5px solid var(--vz-border); border-radius: 8px; padding: 0.6rem 0.4rem; text-align: center;"><div style="width: 30px; height: 30px; border-radius: 7px; background: #f3f3f9; color: var(--vz-primary); display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; margin-bottom: 0.3rem;"><i class="ri-scales-3-line"></i></div><div style="font-size: 0.65rem; font-weight: 600;">Criminal</div></div>
+                    <div style="background: white; border: 1.5px solid var(--vz-border); border-radius: 8px; padding: 0.6rem 0.4rem; text-align: center;"><div style="width: 30px; height: 30px; border-radius: 7px; background: #f3f3f9; color: var(--vz-primary); display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; margin-bottom: 0.3rem;"><i class="ri-passport-line"></i></div><div style="font-size: 0.65rem; font-weight: 600;">Immigration</div></div>
+                    <div style="background: white; border: 1.5px solid var(--vz-border); border-radius: 8px; padding: 0.6rem 0.4rem; text-align: center;"><div style="width: 30px; height: 30px; border-radius: 7px; background: #f3f3f9; color: var(--vz-primary); display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; margin-bottom: 0.3rem;"><i class="ri-government-line"></i></div><div style="font-size: 0.65rem; font-weight: 600;">Civil Litigation</div></div>
+                  </div>
+                  <div style="margin-top: 0.85rem; font-size: 0.72rem; color: var(--vz-muted);">10 more practice areas available · <a href="#" style="color: var(--vz-primary);">Show all</a></div>
+                </div>
+              </main>
+
+              <aside class="legi-rightrail">
+                <div class="ctx-panel">
+                  <div class="ctx-section">
+                    <div class="ctx-title">Linked case</div>
+                    <div class="ctx-case-name">Smith v. Hartford Insurance</div>
+                    <div class="ctx-case-num">2026-PI-00341</div>
+                    <div class="ctx-badges"><span class="ctx-badge purple">Personal Injury</span><span class="ctx-badge info">Massachusetts</span></div>
+                  </div>
+                  <div class="ctx-divider"></div>
+                  <div class="ctx-section">
+                    <div class="ctx-title">Key dates</div>
+                    <div class="ctx-row"><span class="ctx-label">Incident</span><span class="ctx-value">Mar 12, 2025</span></div>
+                    <div class="ctx-row"><span class="ctx-label">Statute of lim.</span><span class="ctx-value">Mar 12, 2028</span></div>
+                  </div>
+                  <div class="ctx-divider"></div>
+                  <div class="ctx-section">
+                    <div class="ctx-title">Insurance</div>
+                    <div class="ctx-row"><span class="ctx-label">Defendant</span><span class="ctx-value">Hartford</span></div>
+                    <div class="ctx-row"><span class="ctx-label">Client</span><span class="ctx-value">State Farm</span></div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ann info">
+    <strong>Back-bar pattern.</strong> Every morphed state (wizard step, template picker, fill-and-generate, generating) shows the same back-bar at the top: a "Back to dashboard" link, a breadcrumb showing where the user is, and a step indicator. Replaces the abstract X-close button with semantic navigation.
+  </div>
+</section>
+
+<!-- ========== 06 TEMPLATE PATH ========== -->
+<section id="template-path" class="sec">
+  <div class="sec-header">
+    <span class="sec-no">06</span>
+    <h2>Template path · inline picker (no modal)</h2>
+    <span class="tag new">new inline picker</span>
+    <span class="tag cut">kills modal-on-modal</span>
+  </div>
+  <p class="sec-desc">Clicking "Draft from a template" (or a mini-card on the dashboard) morphs the center pane to an inline template picker. Filter chips at the top; 3-column grid below. Case-aware defaults pre-apply the practice area and jurisdiction filters. Picking a template advances to Fill &amp; Generate — no modal ever opens.</p>
+
+  <div class="mockup">
+    <div class="mockup-chrome">
+      <div class="dot dot-r"></div><div class="dot dot-a"></div><div class="dot dot-g"></div>
+      <span class="title">legispace — Template picker (inline)</span>
+      <span class="url">/legal/ai-assistant/legispace</span>
+    </div>
+    <div class="mockup-body">
+      <div class="shell">
+        <aside class="shell-sidebar">
+          <div class="logo"><span class="dot-logo">L</span> Legience</div>
+          <div class="mlabel">Workspace</div><ul><li><i class="ri-dashboard-2-line"></i> Dashboard</li><li><i class="ri-briefcase-line"></i> Cases</li></ul>
+          <div class="mlabel">Legi Tools</div><ul><li class="active"><i class="ri-magic-line"></i> LegiSpace</li><li><i class="ri-file-text-line"></i> Templates</li></ul>
+        </aside>
+        <div class="shell-content">
+          <div class="shell-topbar"><span class="crumb">Legi Tools &rsaquo; <strong>LegiSpace</strong> &rsaquo; Draft &rsaquo; Templates</span></div>
+          <div class="shell-main">
+            <div class="legispace">
+              <!-- Left sidebar is COLLAPSED during draft flow — picker uses the full width. -->
+              <main class="legi-center">
+                <div class="inline-backbar">
+                  <span class="bb-back"><i class="ri-arrow-left-line"></i> Back to dashboard</span>
+                  <span class="bb-crumb">Draft from template · <strong>Browse</strong></span>
+                  <span class="bb-step">Pick one to continue</span>
+                </div>
+
+                <div class="tpl-picker">
+                  <div class="tpl-picker-hero">
+                    <div>
+                      <h4>Your template library</h4>
+                      <div class="sub">27 templates · filtered by <strong>Personal Injury</strong> + <strong>Massachusetts</strong> (from linked case)</div>
+                    </div>
+                    <div class="hero-r">
+                      <input type="text" class="tpl-search" placeholder="Search templates...">
+                      <button class="btn-sm-outline"><i class="ri-upload-line"></i> Import</button>
+                    </div>
+                  </div>
+
+                  <div class="tpl-filter-chips">
+                    <span class="chip active"><i class="ri-filter-3-line me-1"></i>PI</span>
+                    <span class="chip active">Massachusetts</span>
+                    <span class="chip">Family</span>
+                    <span class="chip">Criminal</span>
+                    <span class="chip">Civil Lit</span>
+                    <span class="chip">All jurisdictions</span>
+                    <span style="flex: 1;"></span>
+                    <span class="chip"><i class="ri-sort-desc me-1"></i>Most used</span>
+                  </div>
+
+                  <div class="tpl-picker-grid">
+                    <div class="tpl-card suggested">
+                      <div class="tc-icn"><i class="ri-mail-send-line"></i></div>
+                      <div class="tc-title">MA PI Letter of Representation</div>
+                      <div class="tc-desc">Multi-recipient LOR with PIP/UIM/policy-limits blocks. Pre-filled from case.</div>
+                      <div class="tc-meta"><span class="tc-pill pa">PI</span><span class="tc-pill jur">MA</span><span class="tc-pill vars">6 vars</span></div>
+                    </div>
+                    <div class="tpl-card">
+                      <div class="tc-icn"><i class="ri-file-paper-line"></i></div>
+                      <div class="tc-title">MA PI Demand Letter</div>
+                      <div class="tc-desc">Pre-litigation demand covering liability, damages, settlement authority.</div>
+                      <div class="tc-meta"><span class="tc-pill pa">PI</span><span class="tc-pill jur">MA</span><span class="tc-pill vars">9 vars</span></div>
+                    </div>
+                    <div class="tpl-card">
+                      <div class="tc-icn"><i class="ri-hand-coin-line"></i></div>
+                      <div class="tc-title">Retainer Agreement — Contingency</div>
+                      <div class="tc-desc">Standard MA contingency retainer, 33⅓% on settlement / 40% at trial.</div>
+                      <div class="tc-meta"><span class="tc-pill pa">PI</span><span class="tc-pill jur">MA</span><span class="tc-pill vars">4 vars</span></div>
+                    </div>
+                    <div class="tpl-card">
+                      <div class="tc-icn"><i class="ri-scales-3-line"></i></div>
+                      <div class="tc-title">MA Complaint — Negligence</div>
+                      <div class="tc-desc">Mass. R. Civ. P. complaint skeleton with duty/breach/causation/damages.</div>
+                      <div class="tc-meta"><span class="tc-pill pa">PI</span><span class="tc-pill jur">MA</span><span class="tc-pill vars">11 vars</span></div>
+                    </div>
+                    <div class="tpl-card">
+                      <div class="tc-icn"><i class="ri-search-line"></i></div>
+                      <div class="tc-title">Interrogatories — Defendant</div>
+                      <div class="tc-desc">Rule 33 discovery set. 25 questions, customizable per case.</div>
+                      <div class="tc-meta"><span class="tc-pill pa">PI</span><span class="tc-pill jur">MA</span><span class="tc-pill vars">3 vars</span></div>
+                    </div>
+                    <div class="tpl-card">
+                      <div class="tc-icn"><i class="ri-error-warning-line"></i></div>
+                      <div class="tc-title">Motion to Dismiss — 12(b)(6)</div>
+                      <div class="tc-desc">Rule 12(b)(6) motion with procedural + substantive arguments.</div>
+                      <div class="tc-meta"><span class="tc-pill pa">PI</span><span class="tc-pill jur">MA</span><span class="tc-pill vars">5 vars</span></div>
+                    </div>
+                  </div>
+                </div>
+              </main>
+
+              <aside class="legi-rightrail">
+                <div class="ctx-panel">
+                  <div class="ctx-section"><div class="ctx-title">Linked case</div><div class="ctx-case-name">Smith v. Hartford Insurance</div><div class="ctx-case-num">2026-PI-00341</div><div class="ctx-badges"><span class="ctx-badge purple">Personal Injury</span><span class="ctx-badge info">Massachusetts</span></div></div>
+                  <div class="ctx-divider"></div>
+                  <div class="ctx-section" style="font-size: 0.74rem; color: var(--vz-muted); line-height: 1.45;">Filters are pre-applied to match this case's practice area and jurisdiction. <a href="#" style="color: var(--vz-primary); font-weight: 600;">Clear filters</a> to browse all templates.</div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ann succ">
+    <strong>What this replaces.</strong> The current NgbModal wrapping <code>TemplateLibraryComponent</code> (via <code>template-library-embedded-modal</code> windowClass in <code>ai-workspace.component.ts:5929-5944</code>) is deleted. The inline picker is a new focused component (<code>TemplatePickerInlineComponent</code>) that renders a lean subset of the template library UX — filters, grid, search — without the standalone-page chrome. The full <code>/legal/ai-assistant/templates</code> route keeps its standalone experience for admin/browse work.
+  </div>
+</section>
+
+<!-- ========== 07 CONVERGENCE — FILL & GENERATE ========== -->
+<section id="converge" class="sec">
+  <div class="sec-header">
+    <span class="sec-no">07</span>
+    <h2>Fill &amp; Generate · both paths converge</h2>
+    <span class="tag new">shared step</span>
+    <span class="tag keep">reuses Step 4 layout</span>
+  </div>
+  <p class="sec-desc">Whether the user came from the AI wizard (after Steps 1–3) or from picking a template, they land on the same single-page form. Auto-filled fields from case context are highlighted green; gaps are flagged. A right-column summary card shows the resolved template or AI request. The Generate button starts the SSE stream.</p>
+
+  <div class="mockup">
+    <div class="mockup-chrome">
+      <div class="dot dot-r"></div><div class="dot dot-a"></div><div class="dot dot-g"></div>
+      <span class="title">legispace — Fill &amp; Generate</span>
+      <span class="url">/legal/ai-assistant/legispace</span>
+    </div>
+    <div class="mockup-body">
+      <div class="shell">
+        <aside class="shell-sidebar">
+          <div class="logo"><span class="dot-logo">L</span> Legience</div>
+          <div class="mlabel">Legi Tools</div><ul><li class="active"><i class="ri-magic-line"></i> LegiSpace</li><li><i class="ri-file-text-line"></i> Templates</li></ul>
+        </aside>
+        <div class="shell-content">
+          <div class="shell-topbar"><span class="crumb">Legi Tools &rsaquo; <strong>LegiSpace</strong> &rsaquo; Draft &rsaquo; Fill</span></div>
+          <div class="shell-main">
+            <div class="legispace">
+              <!-- Left sidebar is COLLAPSED — Fill & Generate uses the full width for the 2-column form. -->
+              <main class="legi-center">
+                <div class="inline-backbar">
+                  <span class="bb-back"><i class="ri-arrow-left-line"></i> Back</span>
+                  <span class="bb-crumb">Draft from template · MA PI LOR · <strong>Fill &amp; Generate</strong></span>
+                  <span class="bb-step">Last step</span>
+                </div>
+
+                <div class="fg-shell">
+                  <div class="fg-header">
+                    <h4>Fill in the blanks</h4>
+                    <div class="fg-source">
+                      Source: <span class="fg-source-pill tpl">TEMPLATE</span> MA PI Letter of Representation · 6 variables · auto-filled from case where possible
+                    </div>
+                  </div>
+
+                  <div class="fg-cols">
+                    <div class="fg-main-col">
+                      <!-- Group: case variables -->
+                      <div class="fg-group">
+                        <h6>From the case</h6>
+                        <div class="fg-field auto-filled">
+                          <label>Client name <span class="auto-badge">AUTO</span></label>
+                          <input type="text" value="Jennifer Smith">
+                          <div class="field-hint">Populated from Smith v. Hartford Insurance · clientName</div>
+                        </div>
+                        <div class="fg-field auto-filled">
+                          <label>Defendant's insurer <span class="auto-badge">AUTO</span></label>
+                          <input type="text" value="Hartford Insurance Co.">
+                        </div>
+                        <div class="fg-field auto-filled">
+                          <label>Date of incident <span class="auto-badge">AUTO</span></label>
+                          <input type="text" value="March 12, 2025">
+                        </div>
+                      </div>
+
+                      <!-- Group: recipient + purpose (template-specific) -->
+                      <div class="fg-group">
+                        <h6>Letter settings</h6>
+                        <div class="fg-field">
+                          <label>Recipient <span class="req">*</span></label>
+                          <select>
+                            <option>Defendant's liability insurer · Hartford</option>
+                            <option>Client's own insurer · State Farm (PIP/UIM)</option>
+                            <option>Opposing counsel</option>
+                            <option>Other party/entity</option>
+                          </select>
+                        </div>
+                        <div class="fg-field">
+                          <label>Purposes <span class="req">*</span></label>
+                          <div style="font-size: 0.78rem; color: #212529; line-height: 1.6;">
+                            <div><input type="checkbox" checked disabled> Notice of representation <span style="background: var(--vz-primary); color: white; font-size: 0.5rem; padding: 0.08rem 0.35rem; border-radius: 999px; font-weight: 700; margin-left: 0.25rem;">ALWAYS</span></div>
+                            <div><input type="checkbox" checked> Policy limits disclosure request</div>
+                            <div><input type="checkbox"> Adjuster assignment request</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Group: free-form instructions -->
+                      <div class="fg-group">
+                        <h6>Extra instructions (optional)</h6>
+                        <div class="fg-field">
+                          <textarea placeholder="Mention the aggravating factor that the defendant has prior DUIs, and emphasize MA c.90 § 24 in the demand language..."></textarea>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="fg-sum-col">
+                      <div class="summary-card">
+                        <h6>Summary</h6>
+                        <div class="summary-row"><span class="sr-label">Source</span><span class="sr-value"><span class="pill tpl">TEMPLATE</span></span></div>
+                        <div class="summary-row"><span class="sr-label">Template</span><span class="sr-value">MA PI LOR</span></div>
+                        <div class="summary-row"><span class="sr-label">Practice area</span><span class="sr-value"><span class="pill pa">Personal Injury</span></span></div>
+                        <div class="summary-row"><span class="sr-label">Jurisdiction</span><span class="sr-value"><span class="pill jur">Massachusetts</span></span></div>
+                        <div class="summary-row"><span class="sr-label">Case</span><span class="sr-value">Smith v. Hartford</span></div>
+                        <div class="summary-row"><span class="sr-label">Recipient</span><span class="sr-value">Hartford (defendant)</span></div>
+                        <div class="summary-row"><span class="sr-label">Est. time</span><span class="sr-value" style="font-style: italic; color: var(--vz-muted);">~15–30s</span></div>
+                      </div>
+
+                      <button class="btn-sm-pri" style="padding: 0.65rem 1rem; font-size: 0.9rem; width: 100%;">
+                        <i class="ri-sparkling-2-line me-1"></i> Generate document
+                      </button>
+                      <div style="font-size: 0.7rem; color: var(--vz-muted); text-align: center; font-style: italic;">
+                        Uses Claude Sonnet · cited statutes preview before finalizing
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </main>
+
+              <!-- Right rail omitted to give Fill & Generate more room; Case Context is implicit in the Source strip -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ann info">
+    <strong>Convergence mechanics.</strong> The AI path arrives here with <code>source: AI</code>, all variables empty, and the user's selections from wizard steps 1–3 in the summary. The template path arrives with <code>source: TEMPLATE</code>, variables pre-populated from case context where possible, with template metadata in the summary. Same component, same form renderer, different input state.
+  </div>
+
+  <div class="ann">
+    <strong>Refactor target.</strong> The current <code>AutoFillWizardComponent</code> (4 steps) collapses to this single screen. Its "context type" selector is dead weight now that the dashboard owns path selection. Its "output format" choice moves into the post-generation editor toolbar (PDF/DOCX/copy). Variables + AI suggestions live here.
+  </div>
+</section>
+
+<!-- ========== 08 SIDEBAR CONTRACT ========== -->
+<section id="sidebar" class="sec">
+  <div class="sec-header">
+    <span class="sec-no">08</span>
+    <h2>The sidebar contract</h2>
+    <span class="tag keep">home shows · flow hides</span>
+  </div>
+  <p class="sec-desc">The legacy <code>.conversation-sidebar</code> is the shell. Its content swaps per active task, but the shell stays identical across every LegiSpace task. <strong>Within LegiDraft only</strong>, the sidebar hides once the user commits to a draft flow (AI wizard, template picker, fill &amp; generate, generating, editor) — giving the wizard / picker / editor the full horizontal width. For Question, Workflow, and Upload tasks the sidebar stays visible throughout.</p>
+
+  <h5 class="mt-2 mb-2">Rule 1 · Per-task content swap (shell stays identical at arrival)</h5>
+  <div class="row g-3">
+    <div class="col-md-3">
+      <div style="background: white; border: 1px solid var(--vz-border); border-radius: 10px; padding: 0.6rem; min-height: 140px;">
+        <div style="font-size: 0.7rem; font-weight: 700; color: var(--vz-muted); letter-spacing: 0.07em; text-transform: uppercase; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--vz-border);">Question tab</div>
+        <div style="padding: 0.35rem 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--vz-primary);">Recent Q&amp;A</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· MA statute limits?</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· When does PIP apply?</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· Draft deadlines for…</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div style="background: white; border: 2px solid var(--vz-primary); border-radius: 10px; padding: 0.6rem; position: relative; min-height: 140px;">
+        <span style="position: absolute; top: -10px; left: 0.75rem; background: var(--vz-primary); color: white; font-size: 0.55rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 700; letter-spacing: 0.07em;">ACTIVE · DASHBOARD ONLY</span>
+        <div style="font-size: 0.7rem; font-weight: 700; color: var(--vz-muted); letter-spacing: 0.07em; text-transform: uppercase; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--vz-border);">Draft tab</div>
+        <div style="padding: 0.35rem 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--vz-primary);">Recent Drafts</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· MA PI · Smith LOR</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· Johnson Demand Letter</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· Wilson v. State MTD</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div style="background: white; border: 1px solid var(--vz-border); border-radius: 10px; padding: 0.6rem; min-height: 140px;">
+        <div style="font-size: 0.7rem; font-weight: 700; color: var(--vz-muted); letter-spacing: 0.07em; text-transform: uppercase; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--vz-border);">Workflow tab</div>
+        <div style="padding: 0.35rem 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--vz-primary);">Recent Workflows</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· New matter intake</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· Discovery calendar</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· Settlement workflow</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div style="background: white; border: 1px solid var(--vz-border); border-radius: 10px; padding: 0.6rem; min-height: 140px;">
+        <div style="font-size: 0.7rem; font-weight: 700; color: var(--vz-muted); letter-spacing: 0.07em; text-transform: uppercase; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--vz-border);">Upload tab</div>
+        <div style="padding: 0.35rem 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--vz-primary);">Recent Uploads</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· police-report.pdf</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· medical-records.docx</div>
+        <div style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #212529;">· contract-draft.docx</div>
+      </div>
+    </div>
+  </div>
+
+  <h5 class="mt-4 mb-2">Rule 2 · Draft flow visibility states</h5>
+  <div style="background: white; border: 1px solid var(--vz-border); border-radius: 10px; padding: 1rem; overflow-x: auto;">
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; min-width: 720px;">
+
+      <!-- State: Dashboard -->
+      <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <div style="background: white; border: 1.5px solid var(--vz-success); border-radius: 8px; padding: 0.4rem; width: 100%; min-height: 70px; display: flex; gap: 3px;">
+          <div style="background: #405189; width: 25%; border-radius: 3px;"></div>
+          <div style="flex: 1; background: #f0f4fc; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: var(--vz-primary); font-weight: 700;">DASHBOARD</div>
+        </div>
+        <div style="font-size: 0.7rem; font-weight: 700; color: var(--vz-success); margin-top: 0.4rem;">Dashboard</div>
+        <div style="font-size: 0.6rem; color: var(--vz-muted); font-family: 'SF Mono', Monaco, monospace;">sidebar ✓</div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="display: flex; align-items: center; justify-content: center; color: var(--vz-muted); font-size: 1.5rem;">→</div>
+
+      <!-- State: AI Wizard -->
+      <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <div style="background: white; border: 1.5px solid var(--vz-primary); border-radius: 8px; padding: 0.4rem; width: 100%; min-height: 70px; display: flex; gap: 3px;">
+          <div style="flex: 1; background: #f0f4fc; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: var(--vz-primary); font-weight: 700;">AI WIZARD</div>
+          <div style="background: #e6f4fb; width: 22%; border-radius: 3px;"></div>
+        </div>
+        <div style="font-size: 0.7rem; font-weight: 700; color: var(--vz-primary); margin-top: 0.4rem;">AI Wizard</div>
+        <div style="font-size: 0.6rem; color: var(--vz-danger); font-family: 'SF Mono', Monaco, monospace;">sidebar ✗</div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="display: flex; align-items: center; justify-content: center; color: var(--vz-muted); font-size: 1.5rem;">→</div>
+
+      <!-- State: Fill & Generate -->
+      <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <div style="background: white; border: 1.5px solid var(--vz-primary); border-radius: 8px; padding: 0.4rem; width: 100%; min-height: 70px; display: flex; gap: 3px;">
+          <div style="flex: 1; background: #f0f4fc; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: var(--vz-primary); font-weight: 700;">FILL &amp; GEN</div>
+        </div>
+        <div style="font-size: 0.7rem; font-weight: 700; color: var(--vz-primary); margin-top: 0.4rem;">Fill &amp; Generate</div>
+        <div style="font-size: 0.6rem; color: var(--vz-danger); font-family: 'SF Mono', Monaco, monospace;">sidebar ✗</div>
+      </div>
+
+      <!-- State: Editor -->
+      <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <div style="background: white; border: 1.5px solid var(--vz-primary); border-radius: 8px; padding: 0.4rem; width: 100%; min-height: 70px; display: flex; gap: 3px;">
+          <div style="flex: 1; background: #fff4e6; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #7a5502; font-weight: 700;">EDITOR</div>
+        </div>
+        <div style="font-size: 0.7rem; font-weight: 700; color: var(--vz-primary); margin-top: 0.4rem;">Editor</div>
+        <div style="font-size: 0.6rem; color: var(--vz-danger); font-family: 'SF Mono', Monaco, monospace;">sidebar ✗</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--vz-border); font-size: 0.8rem; color: var(--vz-muted); line-height: 1.55;">
+      <strong style="color: var(--vz-ink);">Template path</strong> · Dashboard → <em>click "Draft from a template"</em> → Template Picker (sidebar ✗) → Fill &amp; Generate (sidebar ✗) → Editor (sidebar ✗). Same rule: sidebar visible only at Dashboard.
+      <br><br>
+      <strong style="color: var(--vz-ink);">Back-to-dashboard</strong> · Clicking "← Back to dashboard" in the inline back-bar at any state returns to the Dashboard; the sidebar slides back in.
+      <br><br>
+      <strong style="color: var(--vz-ink);">Switching tasks</strong> · The compact task-card row at the top of the center pane remains visible so the attorney can jump to Question / Workflow / Upload at any time; doing so returns the sidebar.
+    </div>
+  </div>
+
+  <div class="ann info mt-3">
+    <strong>Why hide the sidebar during the flow?</strong> The wizard's 5-column practice-area grid, the template picker's 3-column card grid, and the Fill &amp; Generate 2-column form all need horizontal room. Keeping the 280px sidebar visible compresses those grids to the point of feeling cramped. The Case Context right rail stays because that's the high-value reference during drafting — linked case info, dates, insurance. Asymmetric collapse (hide left, keep right) directs focus to the work AND to the case it's grounded in.
+  </div>
+
+  <div class="ann dang">
+    <strong>Reverting Sprint 4a-HF1 / deleting Sprint 4b rail.</strong> Sprint 4a-HF1 added <code>&amp;&amp; selectedTask !== 'draft'</code> to the legacy sidebar's <code>*ngIf</code> — that gets <strong>replaced</strong> with a more precise guard: sidebar stays visible when <code>selectedTask === 'draft' &amp;&amp; draftMode === 'dashboard'</code>, hides when <code>draftMode</code> is any non-dashboard state. The <code>DraftHistoryRailComponent</code> created in Sprint 4b is <strong>deleted</strong>; its job moves back into the legacy sidebar's draft-dashboard content branch. The <code>.legidraft-sidebar-left</code> CSS is deleted.
+  </div>
+</section>
+
+<!-- ========== 09 WHAT CHANGES ========== -->
+<section id="diff" class="sec">
+  <div class="sec-header">
+    <span class="sec-no">09</span>
+    <h2>What changes · what stays</h2>
+    <span class="tag context">scope diff</span>
+  </div>
+  <p class="sec-desc">Scope-control is explicit. This proposal only touches what's necessary to close the regressions and kill the modal-on-modal. The wizard internals, the case-context panel, the fill-and-generate form logic, the SSE stream, the editor — all keep their current shape.</p>
+
+  <table class="diff-table">
+    <thead>
+      <tr>
+        <th style="width: 25%;">Aspect</th>
+        <th style="width: 35%;">Current (Sprint 4a/4b)</th>
+        <th style="width: 35%;">Flow v2 (this proposal)</th>
+        <th style="width: 5%;">Tag</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="cell-aspect">Left sidebar in draft mode</td>
+        <td class="cell-strike"><code>DraftHistoryRailComponent</code> (new) + legacy <code>.conversation-sidebar</code> (<em>both render, duplicate bug</em>)</td>
+        <td class="cell-keep">Legacy <code>.conversation-sidebar</code> only; its draft-mode branch shows Recent Drafts</td>
+        <td><span class="tag cut">FIX</span></td>
+      </tr>
+      <tr>
+        <td class="cell-aspect">Arrival view after clicking LegiDraft</td>
+        <td class="cell-strike">Small centered empty-state card with two buttons</td>
+        <td class="cell-keep">Full Draft Dashboard: two tiles + recent-drafts strip + task-card row</td>
+        <td><span class="tag new">NEW</span></td>
+      </tr>
+      <tr>
+        <td class="cell-aspect">"Use Template" interaction</td>
+        <td class="cell-strike">Opens NgbModal <code>template-library-embedded-modal</code> &rarr; click template &rarr; opens <em>second</em> NgbModal with <code>AutoFillWizardComponent</code></td>
+        <td class="cell-keep">Morphs center pane to inline <code>TemplatePickerInlineComponent</code> &rarr; click template &rarr; morphs to Fill &amp; Generate</td>
+        <td><span class="tag cut">KILL MODALS</span></td>
+      </tr>
+      <tr>
+        <td class="cell-aspect">AI-draft wizard</td>
+        <td class="cell-strike">Opens inside <code>.legidraft-focused</code> center pane via view-mode switch</td>
+        <td class="cell-keep">Same — still <code>DraftWizardComponent</code> rendered in center pane, just with new back-bar on top</td>
+        <td><span class="tag keep">KEEP</span></td>
+      </tr>
+      <tr>
+        <td class="cell-aspect">Template filling step</td>
+        <td class="cell-strike">4-step <code>AutoFillWizardComponent</code> inside NgbModal</td>
+        <td class="cell-keep">Single-page Fill &amp; Generate form; reuses <code>AutoFillWizardComponent</code> content in a flattened view</td>
+        <td><span class="tag new">REFACTOR</span></td>
+      </tr>
+      <tr>
+        <td class="cell-aspect">Case Context right rail</td>
+        <td class="cell-strike">Visible during wizard &amp; empty-state; hidden during the two template modals</td>
+        <td class="cell-keep">Hidden at dashboard arrival; visible on all post-arrival states (wizard, template picker, fill &amp; generate, generating)</td>
+        <td><span class="tag keep">IMPROVE</span></td>
+      </tr>
+      <tr>
+        <td class="cell-aspect">"Link a case" empty-state action</td>
+        <td class="cell-keep">Progressive-reveal native select (from Sprint 4a-HF2)</td>
+        <td class="cell-keep">Same — keep as shipped</td>
+        <td><span class="tag keep">KEEP</span></td>
+      </tr>
+      <tr>
+        <td class="cell-aspect">Generate &amp; editor transition</td>
+        <td class="cell-keep">Spinner + 3-pill workflow, then CKEditor</td>
+        <td class="cell-keep">Same</td>
+        <td><span class="tag keep">KEEP</span></td>
+      </tr>
+      <tr>
+        <td class="cell-aspect">Backend</td>
+        <td class="cell-keep">No changes needed</td>
+        <td class="cell-keep">No changes needed</td>
+        <td><span class="tag keep">KEEP</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 class="mt-4 mb-2" style="font-size: 1.05rem;">Critical files</h4>
+  <table class="diff-table">
+    <thead>
+      <tr><th style="width: 48%;">File</th><th style="width: 42%;">Change</th><th style="width: 10%;">Verb</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>ai-workspace.component.html</code></td><td>Revert HF1 <code>selectedTask !== 'draft'</code> guard; restore DRAFT MODE CONTENT block (legacy sidebar); swap <code>.legidraft-sidebar-left</code> → deleted; replace <code>draft-empty-state</code> with new <code>draft-dashboard</code>; wire new inline picker + fill-and-generate view modes; remove <code>&lt;ng-template #templateLibraryModal&gt;</code></td><td><span class="tag new">EDIT</span></td></tr>
+      <tr><td><code>ai-workspace.component.ts</code></td><td>Add state: <code>draftMode: 'dashboard' \| 'ai-wizard' \| 'template-picker' \| 'fill' \| 'generating' \| 'editor'</code>; remove <code>openTemplateLibrary()</code> modal logic; route tile/card clicks to morph state; delete <code>templateLibraryModalRef</code> + <code>templateLibraryModal</code> <code>@ViewChild</code></td><td><span class="tag new">EDIT</span></td></tr>
+      <tr><td><code>draft-history-rail/</code></td><td>Entire folder deleted (rail moves back into legacy sidebar)</td><td><span class="tag cut">DELETE</span></td></tr>
+      <tr><td><code>draft-empty-state/</code></td><td>Refactor to <code>draft-dashboard/</code> — two tiles (primary + secondary with 4 recent templates) + recent-drafts strip</td><td><span class="tag new">REFACTOR</span></td></tr>
+      <tr><td><code>template-picker-inline/</code> (new folder)</td><td><strong>Create.</strong> Standalone component: filter chips + search + 3-col grid. Inputs: <code>presetPracticeArea</code>, <code>presetJurisdiction</code>. Output: <code>templatePicked: EventEmitter&lt;Template&gt;</code></td><td><span class="tag new">CREATE</span></td></tr>
+      <tr><td><code>fill-and-generate/</code> (new folder)</td><td><strong>Create.</strong> Single-page form with auto-filled fields, free-form instructions, right-column summary, Generate button. Inputs: <code>source: 'ai' \| 'template'</code>, <code>wizardData?</code>, <code>template?</code>, <code>case?</code></td><td><span class="tag new">CREATE</span></td></tr>
+      <tr><td><code>auto-fill-wizard/</code></td><td>Delete. Its variable-suggestions HTTP + template-variables fetching logic moves into <code>fill-and-generate</code></td><td><span class="tag cut">DELETE</span></td></tr>
+      <tr><td><code>case-context-panel/</code></td><td>Unchanged — keep as shipped in Sprint 4a-HF2</td><td><span class="tag keep">KEEP</span></td></tr>
+      <tr><td><code>draft-wizard/</code></td><td>Unchanged shell — just gets rendered inside the new view-mode</td><td><span class="tag keep">KEEP</span></td></tr>
+      <tr><td><code>ai-workspace.component.scss</code></td><td>Delete <code>.legidraft-sidebar-left</code>; change <code>.legidraft-focused</code> to <code>.legidraft-pane</code> with new flex layout; add <code>.draft-dashboard</code> + tile styles; add <code>.inline-backbar</code> styles</td><td><span class="tag new">EDIT</span></td></tr>
+      <tr><td><code>styles.scss</code></td><td>Delete <code>.modal.template-library-embedded-modal</code> block (no longer used)</td><td><span class="tag cut">DELETE</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========== 10 RISKS ========== -->
+<section id="risks" class="sec">
+  <div class="sec-header">
+    <span class="sec-no">10</span>
+    <h2>Risks, open questions, order of work</h2>
+    <span class="tag context">pre-implementation</span>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <h5>Risks</h5>
+      <div class="ann"><strong>R1.</strong> Deleting <code>AutoFillWizardComponent</code> affects <code>/legal/ai-assistant/templates</code> (standalone template library). That page calls <code>useTemplate()</code> which opens the auto-fill wizard modal there too. We need to either keep <code>AutoFillWizardComponent</code> alive for the standalone page, or port it to use <code>FillAndGenerateComponent</code> inline as well. Recommendation: port both paths to <code>FillAndGenerateComponent</code>, delete <code>AutoFillWizardComponent</code>.</div>
+      <div class="ann"><strong>R2.</strong> Variable auto-fill from case context needs the full case loaded before rendering. We need to guard the Fill &amp; Generate view until <code>case$</code> resolves (not just the id). Existing Sprint 3 fix #101 for <code>hydrateFromCase</code> is analogous.</div>
+      <div class="ann"><strong>R3.</strong> Inline template picker can't re-use <code>TemplateLibraryComponent</code> directly — its page-level chrome doesn't fit. The new picker is a leaner component. CRUD (create/edit/delete templates) stays at <code>/legal/ai-assistant/templates</code>.</div>
+    </div>
+
+    <div class="col-lg-6">
+      <h5>Open questions</h5>
+      <div class="ann info"><strong>Q1.</strong> Should the primary tile text be "Start a new draft" or "Draft with AI"? The latter is clearer about the mechanism; the former is more inviting. Leaning toward "Start a new draft" with the <em>AI · guided flow</em> eyebrow doing the disambiguation work.</div>
+      <div class="ann info"><strong>Q2.</strong> Should the secondary tile show 4 recent templates or 4 <em>case-matching</em> templates? Recent = familiar; case-matching = contextual. Recommend: case-matching when a case is linked; recent otherwise.</div>
+      <div class="ann info"><strong>Q3.</strong> On the template picker, should a template without enough variables to auto-fill still be suggested? Yes — surface with a warning chip ("2 of 6 vars autofilled") so the attorney knows they'll fill more manually.</div>
+      <div class="ann info"><strong>Q4.</strong> Where does "Save as template" live? Keep in editor toolbar post-generation — unchanged from Sprint 2.</div>
+    </div>
+  </div>
+
+  <h5 class="mt-4">Implementation order (post-approval)</h5>
+  <div style="background: white; border: 1px solid var(--vz-border); border-radius: 10px; padding: 1rem 1.2rem;">
+    <ol style="margin: 0; padding-left: 1.2rem; font-size: 0.88rem; line-height: 1.85;">
+      <li><strong>Revert Sprint 4a-HF1 sidebar guard.</strong> Remove <code>&amp;&amp; selectedTask !== 'draft'</code> from legacy sidebar's <code>*ngIf</code>. Restore DRAFT MODE CONTENT block with proper Recent Drafts shell.</li>
+      <li><strong>Delete <code>DraftHistoryRailComponent</code>.</strong> Remove folder, remove import, remove from <code>.legidraft-focused</code>.</li>
+      <li><strong>Refactor <code>draft-empty-state</code> → <code>draft-dashboard</code>.</strong> Two tiles + recent-drafts strip.</li>
+      <li><strong>Build <code>template-picker-inline</code>.</strong> Filters + grid + search. Leaner than <code>TemplateLibraryComponent</code>.</li>
+      <li><strong>Build <code>fill-and-generate</code>.</strong> Flattened single-page form. Ports AutoFillWizardComponent's variable logic.</li>
+      <li><strong>Add view-mode state to ai-workspace.</strong> <code>draftMode</code> enum drives which component renders in center.</li>
+      <li><strong>Wire inline back-bar.</strong> Shared across all morphed states.</li>
+      <li><strong>Delete <code>AutoFillWizardComponent</code> + port standalone template library's <code>useTemplate()</code></strong> to use the new inline components.</li>
+      <li><strong>Delete <code>ng-template #templateLibraryModal</code> + CSS.</strong> No more template modal.</li>
+      <li><strong>E2E verification.</strong> Both paths, on a real MA PI case, with and without linked case. Dark mode. Mobile/tablet.</li>
+    </ol>
+  </div>
+
+  <div class="ann succ mt-3">
+    <strong>Approval gate.</strong> Sprint 4c starts only after this preview is approved. The current Sprint 4a/4b work stays on <code>develop</code> untouched; the new work adds on top rather than replacing piecemeal.
+  </div>
+</section>
+
+<div style="height: 4rem;"></div>
+</div>
+
+<!-- ========== FOOTER ========== -->
+<footer style="background: var(--vz-ink); color: white; padding: 2.5rem 0; margin-top: 3rem;">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div>
+        <div style="font-family: 'Fraunces', serif; font-size: 1.25rem; font-weight: 600;">LegiDraft Flow v2</div>
+        <div style="color: #a7b5d9; font-size: 0.82rem; margin-top: 0.2rem;">Proposal · awaiting approval · 2026-04-18</div>
+      </div>
+      <div style="font-size: 0.75rem; color: #a7b5d9; text-align: right;">
+        <div>Preview file: <code style="background: rgba(255,255,255,0.08); color: #8fbfff;">design-previews/legidraft-flow-v2/preview.html</code></div>
+        <div style="margin-top: 0.2rem;">Approval gate before Sprint 4c implementation begins.</div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
