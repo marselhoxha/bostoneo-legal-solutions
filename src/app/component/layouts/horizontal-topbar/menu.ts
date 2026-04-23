@@ -235,7 +235,8 @@ export const SOLO_ATTORNEY_MENU: MenuItem[] = [
     link: '/legal/ai-assistant/legispace',
     subItems: [
       { id: 'solo-att-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'solo-att-ai-tools' },
-      { id: 'solo-att-ai-pi', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'solo-att-ai-tools' }
+      { id: 'solo-att-ai-pi', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'solo-att-ai-tools' },
+      { id: 'solo-att-ai-templates', label: 'Templates', icon: 'ri-file-text-line', link: '/legal/ai-assistant/templates', parentId: 'solo-att-ai-tools' }
     ]
   },
   {
@@ -322,7 +323,8 @@ export const SOLO_ADMIN_MENU: MenuItem[] = [
     link: '/legal/ai-assistant/legispace',
     subItems: [
       { id: 'solo-adm-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'solo-adm-ai-tools' },
-      { id: 'solo-adm-ai-pi', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'solo-adm-ai-tools' }
+      { id: 'solo-adm-ai-pi', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'solo-adm-ai-tools' },
+      { id: 'solo-adm-ai-templates', label: 'Templates', icon: 'ri-file-text-line', link: '/legal/ai-assistant/templates', parentId: 'solo-adm-ai-tools' }
     ]
   },
   {
@@ -413,7 +415,8 @@ export const ATTORNEY_MENU: MenuItem[] = [
     link: '/legal/ai-assistant/legispace',
     subItems: [
       { id: 'att-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'att-ai-tools' },
-      { id: 'att-ai-personal-injury', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'att-ai-tools' }
+      { id: 'att-ai-personal-injury', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'att-ai-tools' },
+      { id: 'att-ai-templates', label: 'Templates', icon: 'ri-file-text-line', link: '/legal/ai-assistant/templates', parentId: 'att-ai-tools' }
     ]
   },
   {
@@ -517,7 +520,8 @@ export const ADMIN_MENU: MenuItem[] = [
     link: '/legal/ai-assistant/legispace',
     subItems: [
       { id: 'admin-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'admin-ai-tools' },
-      { id: 'admin-ai-personal-injury', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'admin-ai-tools' }
+      { id: 'admin-ai-personal-injury', label: 'LegiPI', icon: 'ri-first-aid-kit-line', link: '/legal/ai-assistant/legipi', parentId: 'admin-ai-tools' },
+      { id: 'admin-ai-templates', label: 'Templates', icon: 'ri-file-text-line', link: '/legal/ai-assistant/templates', parentId: 'admin-ai-tools' }
     ]
   },
   {

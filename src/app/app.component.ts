@@ -18,6 +18,7 @@ import { UrlSerializer } from '@angular/router';
 import { UserService } from './service/user.service';
 import { RbacService } from './core/services/rbac.service';
 import { ReminderService } from './modules/legal/services/reminder.service';
+import { NavigationHistoryService } from './modules/legal/services/navigation-history.service';
 import { PushNotificationService } from './core/services/push-notification.service';
 import { WebSocketService } from './core/services/websocket.service';
 import { DeadlineAlertService } from './core/services/deadline-alert.service';
@@ -47,7 +48,11 @@ export class AppComponent implements OnInit, OnDestroy {
     private pushNotificationService: PushNotificationService,
     private webSocketService: WebSocketService,
     private deadlineAlertService: DeadlineAlertService,
-    private organizationService: OrganizationService
+    private organizationService: OrganizationService,
+    // Eagerly instantiate so it subscribes to router events from app bootstrap —
+    // this is how the draft-dashboard's linked-case chip knows where to send
+    // the user back to. Inject-and-forget; no calls needed from this component.
+    private _navigationHistoryService: NavigationHistoryService
   ) {
     this.preloaderService.showPreloader$.subscribe((show) => {
       this.showPreloader = show;

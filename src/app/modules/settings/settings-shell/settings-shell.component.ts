@@ -154,6 +154,9 @@ export class SettingsShellComponent implements OnInit, OnDestroy {
     if (this.canSeeStationery) {
       this.tabs.push({ key: 'stationery', label: 'Stationery', icon: 'ri-file-text-line', section: 'Workspace' });
     }
+    if (this.canSeeOrganization) {
+      this.tabs.push({ key: 'court-configurations', label: 'Court Configurations', icon: 'ri-scales-3-line', section: 'Workspace' });
+    }
   }
 
   navigateToTab(tab: string): void {

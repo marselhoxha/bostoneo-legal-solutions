@@ -1,0 +1,253 @@
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent border-bottom d-flex align-items-center justify-content-between">
+    <div>
+      <h6 class="mb-0 fw-semibold">
+        <i class="ri-scales-3-line me-2 text-primary"></i>Court Configurations
+      </h6>
+      <small class="text-muted">Manage state-specific court formatting rules used in document generation</small>
+    </div>
+    <button class="btn btn-primary btn-sm" (click)="openModal(configModal)">
+      <i class="ri-add-line me-1"></i>Add Configuration
+    </button>
+  </div>
+  <div class="card-body">
+    <!-- Loading -->
+    <div *ngIf="isLoading" class="text-center py-4">
+      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+      <span class="ms-2 text-muted">Loading configurations...</span>
+    </div>
+
+    <!-- State Filter -->
+    <div *ngIf="!isLoading && courtConfigs.length > 0" class="mb-3">
+      <div class="d-flex align-items-center gap-2">
+        <label class="form-label mb-0 fw-medium fs-13">Filter by State:</label>
+        <select class="form-select form-select-sm" style="width: 200px;"
+                [(ngModel)]="stateFilter"
+                (ngModelChange)="applyFilter()">
+          <option value="">All States ({{ courtConfigs.length }})</option>
+          <option *ngFor="let state of availableStates" [value]="state">{{ state }}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div *ngIf="!isLoading && filteredConfigs.length > 0" class="table-responsive">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="fs-13">State</th>
+            <th class="fs-13">Court Level</th>
+            <th class="fs-13">Display Name</th>
+            <th class="fs-13">Bar Prefix</th>
+            <th class="fs-13 text-center">Verified</th>
+            <th class="fs-13 text-center">Active</th>
+            <th class="fs-13 text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let config of filteredConfigs">
+            <td>
+              <span class="fw-medium">{{ config.stateCode }}</span>
+              <small class="text-muted d-block">{{ config.stateName }}</small>
+            </td>
+            <td class="fs-13">{{ config.courtLevel }}</td>
+            <td class="fs-13">{{ config.courtDisplayName }}</td>
+            <td class="fs-13">
+              <code *ngIf="config.barNumberPrefix">{{ config.barNumberPrefix }}</code>
+              <span *ngIf="!config.barNumberPrefix" class="text-muted">&mdash;</span>
+            </td>
+            <td class="text-center">
+              <span *ngIf="config.isVerified" class="badge bg-success-subtle text-success">
+                <i class="ri-checkbox-circle-line me-1"></i>Verified
+              </span>
+              <span *ngIf="!config.isVerified" class="badge bg-warning-subtle text-warning">
+                Unverified
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="badge" [ngClass]="config.isActive ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+                {{ config.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="text-end">
+              <div class="d-flex justify-content-end gap-1">
+                <button class="btn btn-soft-primary btn-sm" title="Edit"
+                        (click)="openModal(configModal, config)">
+                  <i class="ri-pencil-line"></i>
+                </button>
+                <button *ngIf="!config.isVerified" class="btn btn-soft-success btn-sm" title="Verify"
+                        (click)="verifyConfig(config)">
+                  <i class="ri-checkbox-circle-line"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty States -->
+    <div *ngIf="!isLoading && filteredConfigs.length === 0 && courtConfigs.length > 0" class="text-center py-4">
+      <i class="ri-filter-off-line fs-22 text-muted"></i>
+      <p class="text-muted mt-2 mb-0">No configurations match the selected filter.</p>
+    </div>
+    <div *ngIf="!isLoading && courtConfigs.length === 0" class="text-center py-4">
+      <i class="ri-scales-3-line fs-22 text-muted"></i>
+      <p class="text-muted mt-2 mb-0">No court configurations found.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Edit/Create Modal -->
+<ng-template #configModal let-modal>
+  <div class="modal-header border-0 pb-0">
+    <h5 class="modal-title fw-semibold">
+      <i class="ri-scales-3-line me-2 text-primary"></i>
+      {{ isCreating ? 'Add Court Configuration' : 'Edit Court Configuration' }}
+    </h5>
+    <button type="button" class="btn-close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body">
+    <div class="row g-3">
+      <!-- State Code & Name -->
+      <div class="col-md-4">
+        <label class="form-label fs-13 fw-medium">State Code</label>
+        <input type="text" class="form-control form-control-sm" maxlength="2"
+               [(ngModel)]="editingConfig.stateCode"
+               [readonly]="!isCreating"
+               placeholder="TX">
+      </div>
+      <div class="col-md-8">
+        <label class="form-label fs-13 fw-medium">State Name</label>
+        <input type="text" class="form-control form-control-sm"
+               [(ngModel)]="editingConfig.stateName"
+               placeholder="Texas">
+      </div>
+
+      <!-- Court Level & Display Name -->
+      <div class="col-md-4">
+        <label class="form-label fs-13 fw-medium">Court Level</label>
+        <input type="text" class="form-control form-control-sm"
+               [(ngModel)]="editingConfig.courtLevel"
+               [readonly]="!isCreating"
+               placeholder="DEFAULT">
+      </div>
+      <div class="col-md-8">
+        <label class="form-label fs-13 fw-medium">Court Display Name</label>
+        <input type="text" class="form-control form-control-sm"
+               [(ngModel)]="editingConfig.courtDisplayName"
+               placeholder="District Court of Harris County, Texas">
+      </div>
+
+      <!-- Bar Number Prefix & Cause Number Label -->
+      <div class="col-md-6">
+        <label class="form-label fs-13 fw-medium">Bar Number Prefix</label>
+        <input type="text" class="form-control form-control-sm"
+               [(ngModel)]="editingConfig.barNumberPrefix"
+               placeholder="Bar No.">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fs-13 fw-medium">Cause Number Label</label>
+        <input type="text" class="form-control form-control-sm"
+               [(ngModel)]="editingConfig.causeNumberLabel"
+               placeholder="Case No.">
+      </div>
+
+      <!-- Caption Separator & Party Label Style -->
+      <div class="col-md-4">
+        <label class="form-label fs-13 fw-medium">Caption Separator</label>
+        <input type="text" class="form-control form-control-sm"
+               [(ngModel)]="editingConfig.captionSeparator"
+               placeholder="v. or vs.">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fs-13 fw-medium">Party Label Style</label>
+        <select class="form-select form-select-sm" [(ngModel)]="editingConfig.partyLabelStyle">
+          <option value="STANDARD">Standard</option>
+          <option value="PETITIONER_RESPONDENT">Petitioner/Respondent</option>
+          <option value="COMMONWEALTH">Commonwealth</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fs-13 fw-medium">Commonwealth</label>
+        <div class="form-check form-switch mt-1">
+          <input class="form-check-input" type="checkbox" [(ngModel)]="editingConfig.isCommonwealth">
+          <label class="form-check-label fs-13">{{ editingConfig.isCommonwealth ? 'Yes' : 'No' }}</label>
+        </div>
+      </div>
+
+      <!-- Caption Preview -->
+      <div class="col-12">
+        <label class="form-label fs-13 fw-medium">Caption Preview</label>
+        <div class="border rounded p-3 bg-white caption-preview" [innerHTML]="getCaptionPreviewHtml()"></div>
+        <div class="d-flex align-items-center justify-content-between mt-2">
+          <small class="text-muted">Preview with sample party names and case number</small>
+          <a class="text-primary fs-13" style="cursor: pointer;" (click)="showRawHtml = !showRawHtml">
+            <i class="ri-code-line me-1"></i>{{ showRawHtml ? 'Hide HTML' : 'Edit HTML' }}
+          </a>
+        </div>
+        <div *ngIf="showRawHtml" class="mt-2">
+          <textarea class="form-control form-control-sm font-monospace" rows="5"
+                    [(ngModel)]="editingConfig.captionTemplateHtml"
+                    placeholder="<table>...</table>"></textarea>
+        </div>
+      </div>
+
+      <!-- Preamble, Comes Now, Prayer -->
+      <div class="col-12">
+        <label class="form-label fs-13 fw-medium">Preamble Text</label>
+        <textarea class="form-control form-control-sm" rows="2"
+                  [(ngModel)]="editingConfig.preambleText"></textarea>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fs-13 fw-medium">Comes Now Format</label>
+        <input type="text" class="form-control form-control-sm"
+               [(ngModel)]="editingConfig.comesNowFormat">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fs-13 fw-medium">Prayer Format</label>
+        <input type="text" class="form-control form-control-sm"
+               [(ngModel)]="editingConfig.prayerFormat">
+      </div>
+
+      <!-- Citation Reporters -->
+      <div class="col-12">
+        <label class="form-label fs-13 fw-medium">Citation Reporters</label>
+        <textarea class="form-control form-control-sm" rows="2"
+                  [(ngModel)]="editingConfig.citationReporters"
+                  placeholder='e.g., ["S.W.3d","Tex. App."]'></textarea>
+      </div>
+
+      <!-- Active & Notes -->
+      <div class="col-md-6">
+        <label class="form-label fs-13 fw-medium">Status</label>
+        <div class="form-check form-switch mt-1">
+          <input class="form-check-input" type="checkbox" [(ngModel)]="editingConfig.isActive">
+          <label class="form-check-label fs-13">{{ editingConfig.isActive ? 'Active' : 'Inactive' }}</label>
+        </div>
+      </div>
+      <div class="col-md-6" *ngIf="editingConfig.isVerified">
+        <label class="form-label fs-13 fw-medium">Verified</label>
+        <div>
+          <span class="badge bg-success-subtle text-success">
+            <i class="ri-checkbox-circle-line me-1"></i>Verified by {{ editingConfig.verifiedBy }}
+          </span>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label fs-13 fw-medium">Notes</label>
+        <textarea class="form-control form-control-sm" rows="2"
+                  [(ngModel)]="editingConfig.notes"
+                  placeholder="Internal notes about this configuration"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer border-0 pt-0">
+    <button type="button" class="btn btn-soft-secondary btn-sm" (click)="modal.dismiss()">Cancel</button>
+    <button type="button" class="btn btn-primary btn-sm" (click)="saveConfig()" [disabled]="isSaving">
+      <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+      {{ isSaving ? 'Saving...' : (isCreating ? 'Create' : 'Save Changes') }}
+    </button>
+  </div>
+</ng-template>

@@ -219,6 +219,11 @@
       <div *ngIf="activeTab === 'stationery'" class="stationery-wrapper">
         <app-stationery-settings></app-stationery-settings>
       </div>
+
+      <!-- Court Configurations Tab -->
+      <app-court-configurations-tab
+        *ngIf="activeTab === 'court-configurations'">
+      </app-court-configurations-tab>
     </div>
   </div>
 </div>

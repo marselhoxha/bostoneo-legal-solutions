@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Routes } from '@angular/router';
+import { NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
 
 // Shell
 import { SettingsShellComponent } from './settings-shell/settings-shell.component';
@@ -12,6 +13,7 @@ import { SecurityTabComponent } from './tabs/security-tab/security-tab.component
 import { NotificationsTabComponent } from './tabs/notifications-tab/notifications-tab.component';
 import { OrganizationTabComponent } from './tabs/organization-tab/organization-tab.component';
 import { IntegrationsTabComponent } from './tabs/integrations-tab/integrations-tab.component';
+import { CourtConfigurationsTabComponent } from './tabs/court-configurations-tab/court-configurations-tab.component';
 
 // Reused standalone components
 import { NotificationPreferencesComponent } from '../../component/profile/user/notification-preferences/notification-preferences.component';
@@ -34,13 +36,15 @@ const routes: Routes = [
     SecurityTabComponent,
     NotificationsTabComponent,
     OrganizationTabComponent,
-    IntegrationsTabComponent
+    IntegrationsTabComponent,
+    CourtConfigurationsTabComponent
   ],
   imports: [
     CommonModule,
     FormsModule,
     RouterModule.forChild(routes),
     SharedModule,
+    NgbModalModule,
     NotificationPreferencesComponent,
     StationerySettingsComponent,
     OrganizationTeamComponent,

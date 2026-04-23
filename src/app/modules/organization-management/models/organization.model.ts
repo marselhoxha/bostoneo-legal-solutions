@@ -132,6 +132,35 @@ export interface OrganizationInvitation {
 
 export type InvitationStatus = 'PENDING' | 'EXPIRED' | 'ACCEPTED';
 
+// State court configuration (global reference data, no org_id)
+export interface StateCourtConfig {
+  id: number;
+  stateCode: string;
+  stateName: string;
+  courtLevel: string;
+  courtDisplayName: string;
+  captionTemplateHtml: string;
+  captionSeparator?: string;
+  causeNumberLabel?: string;
+  isCommonwealth?: boolean;
+  partyLabelStyle?: string;
+  preambleText?: string;
+  comesNowFormat?: string;
+  prayerFormat?: string;
+  barNumberPrefix?: string;
+  citationReporters?: string;
+  proceduralRulesRef?: string;
+  constitutionalRefs?: string;
+  priorityRank?: number;
+  isActive?: boolean;
+  isVerified?: boolean;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export const ROLE_OPTIONS = [
   { value: 'ROLE_ATTORNEY', label: 'Attorney', description: 'Full case management, AI tools, billing, and document access' },
   { value: 'ROLE_PARALEGAL', label: 'Paralegal', description: 'Case support, document management, and research tools' },
