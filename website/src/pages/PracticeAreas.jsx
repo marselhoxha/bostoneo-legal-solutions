@@ -37,7 +37,7 @@ function Ic({c,s}){return c&&c.startsWith("ri-")?<Icon name={c} size={20} style=
 
 export default function PracticeAreas() {
   return <>
-    <PageHero badge="Practice Areas" title="Specialized Tools for" gradient="Every Practice Area." subtitle="Legience builds practice-specific workflows, AI tools, and case management features tailored to how your firm actually works — starting with Personal Injury." />
+    <PageHero badge="Practice Areas" title="Specialized Tools for" gradient="Every Practice Area." subtitle="Legience builds practice-specific workflows, AI tools, and case management features tailored to how your firm actually works — with deep specialization in Personal Injury and expanding to Family Law, Business Litigation, and more." />
 
     {/* Case Lifecycle with Mockup */}
     <section className="section"><div className="container">

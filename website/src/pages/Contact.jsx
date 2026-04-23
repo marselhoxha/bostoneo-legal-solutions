@@ -50,7 +50,7 @@ export default function Contact(){
   }
 
   return<>
-    <PageHero badge="Get Started" title="Apply for" gradient="Early Access." subtitle="We're onboarding a limited number of personal injury firms during our early access program. Apply now for priority onboarding, founding member pricing, and direct access to our development team."/>
+    <PageHero badge="Get Started" title="Apply for" gradient="Early Access." subtitle="We're onboarding a limited number of law firms during our early access program. Apply now for priority onboarding, founding member pricing, and direct access to our development team."/>
 
     <section className="section"><div className="container">
       <div className="fd-grid" style={{gap:48}}>
@@ -63,7 +63,7 @@ export default function Contact(){
         </div>
         :<form ref={formRef} onSubmit={handleSubmit} style={{background:"#fff",border:"1px solid var(--gray-100)",borderRadius:"var(--radius-xl)",padding:36,boxShadow:"0 8px 32px -8px rgba(0,0,0,0.06)"}}>
           <h2 style={{fontSize:"1.3rem",fontWeight:700,marginBottom:4}}>Apply for Early Access</h2>
-          <p style={{fontSize:"0.85rem",color:"var(--gray-400)",marginBottom:24}}>Limited spots available for PI firms across America. We review every application.</p>
+          <p style={{fontSize:"0.85rem",color:"var(--gray-400)",marginBottom:24}}>Limited spots available for law firms across America. We review every application.</p>
           {error && <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"10px 14px",marginBottom:16,fontSize:"0.85rem",color:"#dc2626"}}>{error}</div>}
           <div className="form-row-2col">
             <div className="form-group"><label className="form-label">First Name *</label><input name="firstName" placeholder="Jane" className="form-input" required/></div>

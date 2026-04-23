@@ -31,7 +31,7 @@ export const blogPosts = [
     publishDate: "2026-02-15",
     author: "Legience Team",
     description:
-      "A detailed breakdown of the 7 features that make Legience purpose-built for personal injury: AI demand letters at $0/case, medical records analysis, damage calculators, settlement tracking, and more.",
+      "A detailed breakdown of the 7 features that make Legience purpose-built for litigation-heavy practices: AI demand letters at $0/case, medical records analysis, damage calculators, settlement tracking, and more.",
     keywords:
       "Clio alternative, PI case management software, Clio vs Legience, personal injury law firm software, best legal software 2026",
     gradient: "linear-gradient(135deg, var(--accent-dark), var(--accent))",
@@ -630,7 +630,7 @@ export const blogPosts = [
     publishDate: "2026-01-10",
     author: "Legience Team",
     description:
-      "A solo PI attorney consolidated Clio, Westlaw, DocuSign, a standalone CRM, and a client portal into one Legience subscription. Here are the results after 90 days.",
+      "A solo attorney consolidated Clio, Westlaw, DocuSign, a standalone CRM, and a client portal into one Legience subscription. Here are the results after 90 days.",
     keywords:
       "law firm software consolidation, legal tech case study, Clio to Legience migration, solo PI attorney software",
     gradient: "linear-gradient(135deg, #059669, var(--accent))",
@@ -1211,7 +1211,7 @@ export const blogPosts = [
     publishDate: "2025-11-15",
     author: "Legience Team",
     description:
-      "EvenUp raised $150M at a $2B+ valuation. What does this mean for the personal injury AI market — and how does Legience compare?",
+      "EvenUp raised $150M at a $2B+ valuation. What does this mean for the legal AI market — and how does Legience compare?",
     keywords:
       "EvenUp valuation, legal AI market, legal tech funding 2025, EvenUp vs Legience, PI legal AI",
     gradient: "linear-gradient(135deg, #d97706, #dc2626)",

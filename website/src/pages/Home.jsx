@@ -73,7 +73,7 @@ export default function Home() {
     "@type":"Organization",
     name:"Legience",
     url:"https://legience.com",
-    logo:"https://legience.com/favicon.svg",
+    logo:"https://legience.com/legience-logo-blue.svg",
     description:"AI-powered legal practice management platform for modern law firms.",
     contactPoint:{"@type":"ContactPoint",email:"hello@legience.com",contactType:"sales"},
     sameAs:[]
@@ -95,7 +95,7 @@ export default function Home() {
       {"@type":"Question",name:"How much do AI demand letters cost with Legience?",acceptedAnswer:{"@type":"Answer",text:"$0 per case on Professional and Firm plans. LegiDraft generates demand letters, motions, briefs, and 30+ document types included in your subscription. EvenUp charges $500+ per demand letter for comparison."}},
       {"@type":"Question",name:"Is Legience secure enough for law firms?",acceptedAnswer:{"@type":"Answer",text:"Yes. Legience uses AES-256 encryption at rest, TLS in transit, security practices aligned with 201 CMR 17.00, AI processing through AWS Bedrock under BAA (no client data used for training), US-only hosting, and comprehensive audit logs."}},
       {"@type":"Question",name:"Does Legience offer a free trial?",acceptedAnswer:{"@type":"Answer",text:"Yes. Legience offers a 14-day free trial with no credit card required. You get full access to every feature and module during the trial period."}},
-      {"@type":"Question",name:"What practice areas does Legience support?",acceptedAnswer:{"@type":"Answer",text:"Legience supports personal injury, family law, business litigation, real estate, immigration, employment law, criminal defense, estate planning, and more. The PI Workspace includes specialized tools like AI demand letters, medical records analysis, damage calculators, and settlement tracking."}},
+      {"@type":"Question",name:"What practice areas does Legience support?",acceptedAnswer:{"@type":"Answer",text:"Legience supports personal injury, family law, business litigation, real estate, immigration, employment law, criminal defense, estate planning, and more. Core features like AI research, document drafting, case management, and billing work across every practice area. The PI Workspace adds specialized tools like demand letters, medical records analysis, and settlement tracking."}},
     ]
   }
   return <>
@@ -225,7 +225,7 @@ export default function Home() {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {[
-                        { time: "1:00 – 2:30 PM", title: "Client Consultation", sub: "New PI case intake", color: "#38b6ff", tag: "1.5h" },
+                        { time: "1:00 – 2:30 PM", title: "Client Consultation", sub: "New case intake", color: "#38b6ff", tag: "1.5h" },
                         { time: "3:00 PM", title: "Deposition Prep", sub: "Thompson v. Metro Transit", color: "#f7b84b", tag: "Review" },
                         { time: "5:00 PM", title: "Filing Deadline", sub: "Motion to compel — Morrison", color: "#f06548", tag: "Urgent" },
                       ].map((e, i) => (
@@ -391,7 +391,7 @@ export default function Home() {
         <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
           {[
             { cat: "Core Practice Management", color: "#38b6ff", items: [
-              ["ri-scales-3-line", "Case Management", "9-tab PI files, Kanban, insurance tracking, SOL alerts"],
+              ["ri-scales-3-line", "Case Management", "9-tab case files, Kanban, deadline tracking, SOL alerts"],
               ["ri-calendar-line", "Calendar & Deadlines", "Court dates, SOL calculators, team scheduling, reminders"],
               ["ri-checkbox-circle-line", "Task Management", "Kanban boards, workflow templates, due dates, assignments"],
               ["ri-folder-line", "Document Manager", "Centralized storage, full-text search, version control"],
@@ -449,7 +449,7 @@ export default function Home() {
         <div className="fd-grid" style={{ gap: 48, alignItems: "center" }}>
           <div>
             <span className="label" style={{ color: "var(--accent-light)", background: "rgba(56,182,255,0.08)", marginBottom: 16 }}>Early Access Program</span>
-            <h2 className="h2" style={{ marginTop: 16, color: "#fff" }}>Be Among the First PI Law Firms on Legience</h2>
+            <h2 className="h2" style={{ marginTop: 16, color: "#fff" }}>Be Among the First Law Firms on Legience</h2>
             <p className="sub" style={{ marginTop: 12, color: "rgba(255,255,255,0.65)" }}>We're onboarding a limited number of firms. Get priority setup, direct team access, and founding member pricing — for life.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
               {[["ri-focus-3-line", "Priority Onboarding", "White-glove setup — data migrated in days, not weeks"],["ri-chat-3-line", "Direct Team Access", "Shape the product. Your feedback goes to our dev team"],["ri-money-dollar-circle-line", "Founding Pricing", "Locked in for life. No price increases, ever"],["ri-lock-unlock-line", "No Lock-In", "No long-term contracts. Export data anytime. Cancel anytime"]].map(([icon, title, desc], i) => (

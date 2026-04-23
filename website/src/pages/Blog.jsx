@@ -11,7 +11,7 @@ const collectionPageSchema = {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
   name: "Legal Technology Blog — AI Research, Case Management & Firm Growth",
-  description: "Guides, comparisons & case studies on legal AI, practice management, personal injury software & firm growth. Written for attorneys by legal tech experts.",
+  description: "Guides, comparisons & case studies on legal AI, practice management & firm growth. Written for attorneys by legal tech experts.",
   url: "https://legience.com/blog",
   isPartOf: { "@type": "WebSite", name: "Legience", url: "https://legience.com" },
   publisher: {
@@ -54,7 +54,7 @@ export default function Blog() {
         badge="Resources"
         title="Insights for"
         gradient="Modern Law Firms."
-        subtitle="Expert guides, ROI analyses, case studies, and compliance advice for personal injury attorneys navigating AI, practice management, and firm growth."
+        subtitle="Expert guides, ROI analyses, case studies, and compliance advice for attorneys navigating AI, practice management, and firm growth."
       />
 
       {/* Featured article — only show when "All" tab */}

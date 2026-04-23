@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: #1a1a2e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 60px;
+    padding: 60px;
+  }
+
+  .label {
+    font-size: 10px; font-weight: 700;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase; letter-spacing: 3px;
+    margin-bottom: -40px;
+  }
+
+  .card {
+    width: 1050px;
+    height: 600px;
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  }
+
+  /* ═══ FRONT ═══ */
+  .front { background: #0e1123; }
+
+  .front .grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(56,182,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,182,255,0.025) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+  .front .orb { position: absolute; border-radius: 50%; filter: blur(60px); }
+  .front .orb1 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(30,86,182,0.3), transparent 70%); top: -140px; right: -80px; }
+  .front .orb2 { width: 350px; height: 350px; background: radial-gradient(circle, rgba(56,182,255,0.15), transparent 70%); bottom: -120px; left: -60px; }
+
+  .front .top-line {
+    position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #1e56b6, #38b6ff, #6dd5ff, #38b6ff, #1e56b6);
+  }
+
+  .front .content {
+    position: relative; z-index: 2;
+    padding: 56px 72px 56px 96px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .front .logo img { height: 32px; }
+
+  .front .name {
+    font-size: 54px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -2px;
+    line-height: 1;
+  }
+  .front .title-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 14px;
+  }
+  .front .title-line {
+    width: 32px; height: 2px;
+    background: #38b6ff;
+  }
+  .front .title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #38b6ff;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+  }
+
+  .front .divider {
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, rgba(56,182,255,0.3), rgba(56,182,255,0.08), transparent);
+  }
+
+  .front .contact {
+    display: flex;
+    gap: 40px;
+    margin-top: 18px;
+  }
+  .front .c-item {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .front .c-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: rgba(56,182,255,0.1);
+    border: 1px solid rgba(56,182,255,0.22);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .front .c-icon svg {
+    width: 17px; height: 17px;
+    stroke: #38b6ff; fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .front .c-val {
+    font-size: 17px; font-weight: 700;
+    color: rgba(255,255,255,0.9);
+  }
+
+
+  /* ═══ BACK ═══ */
+  .back { background: #0e1123; }
+
+  .back .grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(56,182,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,182,255,0.025) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+
+
+  .back .top-line {
+    position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #1e56b6, #38b6ff, #6dd5ff, #38b6ff, #1e56b6);
+  }
+
+  .back .back-content {
+    position: relative; z-index: 2;
+    height: 100%;
+    padding: 60px;
+    display: flex; flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  /* Spacer pushes logo group to center, pills to bottom */
+  .back .spacer-top { flex: 0.4; }
+  .back .spacer-bottom { flex: 1; display: flex; align-items: flex-end; }
+
+  .back .back-logo-stack { position: relative; z-index: 2; }
+  .back .back-logo-stack img { height: 180px; width: auto; }
+
+  .back .back-div {
+    width: 140px; height: 3px;
+    margin-top: -15px;
+    margin-bottom: 20px;
+    background: linear-gradient(90deg, transparent, #38b6ff 30%, #6dd5ff 50%, #38b6ff 70%, transparent);
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(56,182,255,0.2), 0 0 20px rgba(56,182,255,0.08);
+  }
+
+  .back .back-tag {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 24px; font-weight: 400;
+    color: rgba(255,255,255,0.95);
+    letter-spacing: 0.3px;
+    margin-top: 14px;
+  }
+
+  .back .pills {
+    display: flex; gap: 10px;
+  }
+  .back .pill {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px; font-weight: 600;
+    color: #38b6ff;
+    background: rgba(56,182,255,0.1);
+    border: 1px solid rgba(56,182,255,0.25);
+    padding: 9px 16px; border-radius: 8px;
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="label">Front</div>
+  <div class="card front">
+    <div class="top-line"></div>
+    <div class="grid"></div>
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+
+    <div class="content">
+      <div class="logo"><img src="white-logo-full.svg" alt="Legience"></div>
+
+      <div>
+        <div class="name">Marsel Hoxha</div>
+        <div class="title-row">
+          <div class="title-line"></div>
+          <div class="title">Founder & CEO</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="divider"></div>
+        <div class="contact">
+          <div class="c-item">
+            <div class="c-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+            <div class="c-val">(978) 473-3571</div>
+          </div>
+          <div class="c-item">
+            <div class="c-icon"><svg viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
+            <div class="c-val">hello@legience.com</div>
+          </div>
+          <div class="c-item">
+            <div class="c-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+            <div class="c-val">legience.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="label">Back</div>
+  <div class="card back">
+    <div class="top-line"></div>
+    <div class="grid"></div>
+    <div class="back-content">
+      <div class="spacer-top"></div>
+      <div class="back-logo-stack"><img src="legience-logo-blue-up.svg" alt="Legience"></div>
+      <div class="back-div"></div>
+      <div class="back-tag">All-in-One Platform Built for Modern Law Firms</div>
+      <div class="spacer-bottom">
+        <div class="pills">
+          <span class="pill">AI Legal Research</span>
+          <span class="pill">Document Drafting</span>
+          <span class="pill">Case Management</span>
+          <span class="pill">Billing & Invoicing</span>
+          <span class="pill">E-Signatures</span>
+          <span class="pill">Client Portal</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -22,8 +22,14 @@ RewriteRule ^(.+)/$ https://legience.com/$1 [R=301,L]
 RewriteRule ^robots\.txt$ - [L]
 RewriteRule ^sitemap\.xml$ - [L]
 RewriteRule ^llms\.txt$ - [L]
-RewriteRule ^favicon\.(ico|svg)$ - [L]
+RewriteRule ^favicon\.ico$ - [L]
+RewriteRule ^site\.webmanifest$ - [L]
 RewriteRule ^og-image\.png$ - [L]
+
+# Ensure .webmanifest is served with correct MIME type (Chrome requires JSON-compatible)
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+</IfModule>
 
 # If a directory exists with an index.html, serve it directly
 # (handles pre-rendered SEO pages from inject-seo.mjs)

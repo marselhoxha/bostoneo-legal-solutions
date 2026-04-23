@@ -36,21 +36,22 @@ for (const [route, data] of Object.entries(seo)) {
 }
 
 // ── Blog posts (build-time only, not needed at runtime) ──
+// Descriptions should be 150-160 chars for optimal Google snippet display.
 const blogPosts = [
-  { slug: 'why-pi-firms-switching-clio-to-legience-2026', title: 'Why PI Firms Are Switching from Clio to Legience in 2026', desc: 'A detailed comparison of Clio vs Legience for personal injury law firms.' },
-  { slug: 'ai-ethics-attorney-client-privilege', title: 'AI Ethics & Attorney-Client Privilege', desc: 'How AI legal tools handle confidentiality and ethical obligations.' },
-  { slug: 'true-cost-of-clio-2026', title: 'The True Cost of Clio in 2026', desc: 'Hidden costs and add-on fees that make Clio more expensive than advertised.' },
-  { slug: 'boston-pi-firm-replaced-5-tools', title: 'How a Boston PI Firm Replaced 5 Tools with Legience', desc: 'Case study: consolidating legal software into one platform.' },
-  { slug: 'ai-demand-letters-legidraft', title: 'AI Demand Letters with LegiDraft', desc: 'How LegiDraft generates demand letters at $0/case vs $500+ competitors.' },
-  { slug: '201-cmr-17-compliance-checklist', title: '201 CMR 17.00 Compliance Checklist for Law Firms', desc: 'Complete compliance checklist for Massachusetts data protection regulations.' },
-  { slug: 'evenup-2b-valuation-legal-ai', title: 'EvenUp $2B Valuation & The Legal AI Market', desc: 'Analysis of the legal AI market and what EvenUp\'s valuation means for law firms.' },
+  { slug: 'why-pi-firms-switching-clio-to-legience-2026', title: 'Why PI Firms Are Switching from Clio to Legience in 2026', desc: 'A detailed breakdown of the 7 features that make Legience purpose-built for personal injury: AI demand letters at $0/case, medical records analysis, and more.' },
+  { slug: 'ai-ethics-attorney-client-privilege', title: 'AI Ethics & Attorney-Client Privilege', desc: 'The #1 objection attorneys have about legal AI is data privacy. How to address ABA Formal Opinion 512, zero-knowledge architecture, and client confidentiality.' },
+  { slug: 'true-cost-of-clio-2026', title: 'The True Cost of Clio in 2026', desc: 'What a 5-attorney firm actually pays when you add Clio Manage + Grow + Duo + E-Sign + integrations. Spoiler: it\'s $347-750 per user per month.' },
+  { slug: 'boston-pi-firm-replaced-5-tools', title: 'How a Boston PI Firm Replaced 5 Tools with Legience', desc: 'A solo PI attorney consolidated Clio, Westlaw, DocuSign, a standalone CRM, and a client portal into one Legience subscription. Results after 90 days.' },
+  { slug: 'ai-demand-letters-legidraft', title: 'AI Demand Letters with LegiDraft', desc: 'EvenUp charges $500+ per demand letter. Precedent charges $275. The technology behind LegiDraft and why Legience includes AI demand letters free in every plan.' },
+  { slug: '201-cmr-17-compliance-checklist', title: '201 CMR 17.00 Compliance Checklist for Law Firms', desc: 'Law firms using AI must comply with 201 CMR 17.00 data protection standards. Your complete compliance checklist for using AI tools safely in legal practice.' },
+  { slug: 'evenup-2b-valuation-legal-ai', title: 'EvenUp $2B Valuation & The Legal AI Market', desc: 'EvenUp raised $150M at a $2B+ valuation. What does this mean for the personal injury AI market, the future of AI demand letters, and how does Legience compare?' },
   { slug: 'best-legal-practice-management-software-2026', title: 'Best Legal Practice Management Software in 2026: Complete Guide', desc: 'A comprehensive comparison of the best legal practice management software in 2026, including Clio, MyCase, PracticePanther, Smokeball, and Legience.' },
-  { slug: 'clio-alternatives-2026', title: 'Clio Alternatives 2026: 5 Platforms That Do More for Less', desc: 'Frustrated with Clio pricing or missing AI features? Here are 5 Clio alternatives in 2026 that deliver more value.' },
-  { slug: 'what-is-legal-practice-management-software', title: 'What Is Legal Practice Management Software? Everything Attorneys Need to Know', desc: 'The definitive guide to legal practice management software: what it is, why law firms need it, key features, and how to choose the right platform.' },
-  { slug: 'ai-legal-research-2026', title: 'How AI Is Transforming Legal Research in 2026', desc: 'A comprehensive look at AI legal research tools in 2026, covering Westlaw, CoCounsel, LegiSearch, benefits, limitations, and ethical obligations.' },
-  { slug: 'solo-attorney-software-guide', title: 'Solo Attorney Software: The Complete Guide to Running a Law Practice Alone', desc: 'The complete guide to software for solo attorneys covering case management, billing, AI research, document drafting, and client communication.' },
-  { slug: 'best-ai-legal-research-tools-2026', title: 'Best AI Legal Research Tools in 2026', desc: 'Compare the best AI legal research tools of 2026 including LegiSearch, CoCounsel, and Westlaw AI.' },
-  { slug: 'best-legal-document-automation-software-2026', title: 'Best Legal Document Automation Software in 2026', desc: 'Compare the top legal document automation platforms of 2026.' },
+  { slug: 'clio-alternatives-2026', title: 'Clio Alternatives 2026: 5 Platforms That Do More for Less', desc: 'Frustrated with Clio\'s pricing, add-on fees, or missing AI features? Here are 5 Clio alternatives in 2026 that deliver more value with side-by-side comparisons.' },
+  { slug: 'what-is-legal-practice-management-software', title: 'What Is Legal Practice Management Software? Everything Attorneys Need to Know', desc: 'The definitive guide to legal practice management software: what it is, why law firms need it, key features to evaluate, and how to choose the right platform.' },
+  { slug: 'ai-legal-research-2026', title: 'How AI Is Transforming Legal Research in 2026', desc: 'A comprehensive look at how AI is changing legal research in 2026. Covers Westlaw Edge, LexisNexis+, CoCounsel, and LegiSearch with ethical considerations.' },
+  { slug: 'solo-attorney-software-guide', title: 'Solo Attorney Software: The Complete Guide to Running a Law Practice Alone', desc: 'The complete guide to software for solo attorneys. Covers case management, billing, AI research, document drafting, and how to run a profitable solo practice.' },
+  { slug: 'best-ai-legal-research-tools-2026', title: 'Best AI Legal Research Tools in 2026', desc: 'Compare the best AI legal research tools of 2026: Westlaw Edge, Lexis+ AI, CoCounsel, LegiSearch, Harvey and Fastcase. Features, pricing and citations compared.' },
+  { slug: 'best-legal-document-automation-software-2026', title: 'Best Legal Document Automation Software in 2026', desc: 'Compare the best legal document automation and AI drafting tools of 2026: LegiDraft, EvenUp, Clio Draft, Gavel and Smokeball. Features, pricing and use cases.' },
 ]
 
 // ── Try to load SSR render function ──
