@@ -409,6 +409,12 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         if (dto.getInsuranceAdjusterContact() != null) c.setInsuranceAdjusterContact(dto.getInsuranceAdjusterContact());
         if (dto.getInsuranceAdjusterEmail() != null) c.setInsuranceAdjusterEmail(dto.getInsuranceAdjusterEmail());
         if (dto.getInsuranceAdjusterPhone() != null) c.setInsuranceAdjusterPhone(dto.getInsuranceAdjusterPhone());
+        // Client's own insurance (for PIP / UIM) — mirrors defendant block above
+        if (dto.getClientInsuranceCompany() != null) c.setClientInsuranceCompany(dto.getClientInsuranceCompany());
+        if (dto.getClientInsurancePolicyNumber() != null) c.setClientInsurancePolicyNumber(dto.getClientInsurancePolicyNumber());
+        if (dto.getClientInsuranceAdjusterName() != null) c.setClientInsuranceAdjusterName(dto.getClientInsuranceAdjusterName());
+        if (dto.getClientInsuranceAdjusterEmail() != null) c.setClientInsuranceAdjusterEmail(dto.getClientInsuranceAdjusterEmail());
+        if (dto.getClientInsuranceAdjusterPhone() != null) c.setClientInsuranceAdjusterPhone(dto.getClientInsuranceAdjusterPhone());
         if (dto.getEmployerName() != null) c.setEmployerName(dto.getEmployerName());
         if (dto.getEmployerEmail() != null) c.setEmployerEmail(dto.getEmployerEmail());
         if (dto.getEmployerPhone() != null) c.setEmployerPhone(dto.getEmployerPhone());
@@ -416,6 +422,22 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         if (dto.getDefendantName() != null) c.setDefendantName(dto.getDefendantName());
         if (dto.getDefendantAddress() != null) c.setDefendantAddress(dto.getDefendantAddress());
         if (dto.getPracticeArea() != null) c.setPracticeArea(dto.getPracticeArea());
+
+        // Court information
+        if (dto.getCountyName() != null) c.setCountyName(dto.getCountyName());
+        if (dto.getJudgeName() != null) c.setJudgeName(dto.getJudgeName());
+        if (dto.getCourtroom() != null) c.setCourtroom(dto.getCourtroom());
+        if (dto.getJurisdiction() != null) c.setJurisdiction(dto.getJurisdiction());
+
+        // Important dates
+        if (dto.getFilingDate() != null) c.setFilingDate(dto.getFilingDate());
+        if (dto.getNextHearing() != null) c.setNextHearing(dto.getNextHearing());
+        if (dto.getTrialDate() != null) c.setTrialDate(dto.getTrialDate());
+
+        // Billing
+        if (dto.getHourlyRate() != null) c.setHourlyRate(dto.getHourlyRate());
+        if (dto.getTotalHours() != null) c.setTotalHours(dto.getTotalHours());
+        if (dto.getTotalAmount() != null) c.setTotalAmount(dto.getTotalAmount());
 
         c = legalCaseRepository.save(c);
         return legalCaseDTOMapper.toDTO(c);

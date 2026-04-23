@@ -62,6 +62,7 @@ public class LegalCaseDTO {
     private String countyName;
     private String courtroom;
     private String judgeName;
+    private String jurisdiction;
     
     // Added to handle frontend nested structure
     private Map<String, Object> courtInfo;
@@ -132,7 +133,7 @@ public class LegalCaseDTO {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
     private Date settlementDate;
 
-    // Insurance Information
+    // Insurance Information (defendant's insurer — used for liability claims)
     private String insuranceCompany;
     private String insurancePolicyNumber;
     private BigDecimal insurancePolicyLimit;
@@ -140,6 +141,13 @@ public class LegalCaseDTO {
     private String insuranceAdjusterContact;
     private String insuranceAdjusterEmail;
     private String insuranceAdjusterPhone;
+
+    // Client Insurance (client's own insurer — used for PIP / UIM claims)
+    private String clientInsuranceCompany;
+    private String clientInsurancePolicyNumber;
+    private String clientInsuranceAdjusterName;
+    private String clientInsuranceAdjusterEmail;
+    private String clientInsuranceAdjusterPhone;
 
     // Employer Information
     private String employerName;

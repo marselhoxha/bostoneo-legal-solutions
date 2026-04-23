@@ -1,0 +1,45 @@
+{
+  "type": "complaint_pi_ma",
+  "aliases": [
+    "pi_complaint_ma",
+    "personal_injury_complaint_ma",
+    "mv_complaint_ma",
+    "slip_and_fall_complaint_ma"
+  ],
+  "displayName": "Civil Complaint (PI · Massachusetts)",
+  "category": "pleading",
+  "citationLevel": "COMPREHENSIVE",
+  "practiceArea": "pi",
+  "jurisdiction": "ma",
+  "template": "**DOCUMENT FORMAT — MASSACHUSETTS PERSONAL INJURY CIVIL COMPLAINT**:\nThis is a court-ready pleading for filing in the Massachusetts Superior Court, District Court, or Boston Municipal Court depending on the amount in controversy ($50,000 threshold — M.G.L. c. 212, § 3 for Superior Court; M.G.L. c. 218, § 19A for District Court).\n\n**CAPTION** (required exactly in this format — no text above it):\n\nCOMMONWEALTH OF MASSACHUSETTS\n[COUNTY], SS.                                                               [COURT NAME]\n                                                                            CIVIL ACTION NO.: _________\n\n[PLAINTIFF NAME],                                             )\n                       Plaintiff,                             )\n                                                              )\nv.                                                            )    COMPLAINT AND\n                                                              )    DEMAND FOR JURY TRIAL\n[DEFENDANT NAME],                                             )\n                       Defendant.                             )\n\n**STRUCTURE**:\n\n## COMPLAINT\n\n### I. PARTIES\n1. Plaintiff [Name] is a natural person residing at [address], [Town], [County] County, Massachusetts.\n2. Defendant [Name] is a natural person residing at [address], OR a [corporation/LLC] with a principal place of business at [address].\n\n### II. JURISDICTION AND VENUE\n3. This Court has jurisdiction pursuant to M.G.L. c. 212, § 3 [for Superior Court] or M.G.L. c. 218, § 19A [for District Court]. Venue is proper in [County] County pursuant to M.G.L. c. 223, § 1 because [the cause of action arose here / the defendant resides here].\n\n### III. FACTS COMMON TO ALL COUNTS\n4. On [date of incident], at approximately [time], Plaintiff was [describe activity — operating a vehicle northbound on Route X / lawfully on the premises at Y].\n5. [Fact paragraphs describing the incident with numbered factual allegations — keep each paragraph to one discrete fact.]\n6. As a direct and proximate result of Defendant's conduct, Plaintiff sustained [nature of injuries — e.g., 'serious bodily injuries including but not limited to cervical and lumbar strain, concussive head injury, and emotional distress'].\n7. Plaintiff has incurred medical expenses, lost wages, and will continue to incur such damages in the future.\n\n### IV. CAUSES OF ACTION\n\n**COUNT I — NEGLIGENCE**\n- Plead duty, breach, causation, damages with numbered paragraphs.\n- If motor-vehicle tort, reference M.G.L. c. 231, § 6D threshold and plead that medical expenses exceed $2,000 OR one of the other § 6D predicates (death, loss of body part, permanent disfigurement, loss of sight/hearing, fracture).\n\n**COUNT II — [e.g., GROSS NEGLIGENCE / NEGLIGENCE PER SE / PREMISES LIABILITY / UNSAFE WORKPLACE]** (include only if supported by facts)\n\n### V. PRAYER FOR RELIEF\nWHEREFORE, Plaintiff demands judgment against Defendant as follows:\n1. Compensatory damages in an amount to be determined by the jury;\n2. Reasonable attorney's fees and costs where authorized by statute or contract;\n3. Pre-judgment and post-judgment interest pursuant to M.G.L. c. 231, §§ 6B, 6C;\n4. Such other and further relief as this Court deems just.\n\n### VI. JURY DEMAND\nPlaintiff demands a trial by jury on all issues so triable.\n\n### SIGNATURE BLOCK\nRespectfully submitted,\n[Attorney Name], Esq.\nBBO #[number]\n[Firm Name]\n[Address]\n[Phone]\n[Email]\n\nATTORNEY FOR PLAINTIFF\n\n**CONSTRAINTS**:\n- Use BBO # (NOT 'Mass. Bar No.' or 'Bar #') — Massachusetts convention.\n- Cite MA statutes exactly as `M.G.L. c. X, § Y` — e.g., `M.G.L. c. 231, § 6D`. Do NOT use `G.L.`, `Mass. Gen. Laws`, or `Massachusetts General Laws Chapter 231`.\n- Pin cites are REQUIRED for every case citation — specific page after the volume & reporter. This Complaint is fact-driven and typically carries few citations, but any that appear MUST have pin cites.\n- For motor-vehicle cases, ALWAYS address the § 6D threshold.\n- Reference Mass. R. Civ. P. 8(a) only if relevant to a procedural objection — don't cite in the body.\n- If a Count is not supported by the facts, suppress it entirely — never emit a placeholder 'COUNT II — [e.g., ...]' heading with no body. Only plead Counts backed by pleadable allegations.\n- If firm stationery is applied, SUPPRESS the signature block after the JURY DEMAND — the stationery handles attorney identification.\n- Target length: 5–10 pages. Do NOT include a Table of Contents or Table of Authorities.",
+  "hints": "Massachusetts Personal Injury civil complaint. Court caption with COMMONWEALTH OF MASSACHUSETTS + COUNTY, SS. header. BBO # (not Mass. Bar No.). Plead M.G.L. c. 231, § 6D threshold for motor-vehicle tort. Pre/post-judgment interest under M.G.L. c. 231, §§ 6B, 6C. Jury demand. Numbered factual paragraphs. Short, court-ready; 5–10 pages.",
+  "subPractices": ["mva", "premises"],
+  "caseLifecyclePhase": "pleadings",
+  "deadlineSensitive": true,
+  "jurisdictionRequired": true,
+  "relatedTemplates": ["demand_letter_pi_ma", "motion_to_dismiss_pi_ma", "settlement_release_pi_ma"],
+  "schemaVersion": "1.0.0",
+  "templateVersion": "2026.04.23-draft",
+  "lastVerified": "2026-04-23",
+  "nextReviewDue": "2026-10-23",
+  "verificationSources": [
+    { "citation": "M.G.L. c. 212, § 3", "url": "https://malegislature.gov/Laws/GeneralLaws/PartIII/TitleI/Chapter212/Section3", "verifiedOn": "2026-04-23" },
+    { "citation": "M.G.L. c. 218, § 19A", "url": "https://malegislature.gov/Laws/GeneralLaws/PartIII/TitleI/Chapter218/Section19A", "verifiedOn": "2026-04-23" },
+    { "citation": "M.G.L. c. 223, § 1", "url": "https://malegislature.gov/Laws/GeneralLaws/PartIII/TitleI/Chapter223/Section1", "verifiedOn": "2026-04-23" },
+    { "citation": "M.G.L. c. 231, § 6D", "url": "https://malegislature.gov/Laws/GeneralLaws/PartIII/TitleII/Chapter231/Section6D", "verifiedOn": "2026-04-23" },
+    { "citation": "M.G.L. c. 231, § 6B", "url": "https://malegislature.gov/Laws/GeneralLaws/PartIII/TitleII/Chapter231/Section6B", "verifiedOn": "2026-04-23" },
+    { "citation": "M.G.L. c. 231, § 6C", "url": "https://malegislature.gov/Laws/GeneralLaws/PartIII/TitleII/Chapter231/Section6C", "verifiedOn": "2026-04-23" },
+    { "citation": "M.G.L. c. 260, § 2A (SOL: 3 years for PI)", "url": "https://malegislature.gov/Laws/GeneralLaws/PartIII/TitleV/Chapter260/Section2A", "verifiedOn": "2026-04-23" },
+    { "citation": "Mass. R. Civ. P. 8(a)", "url": "https://www.mass.gov/court-rules/massachusetts-rules-of-civil-procedure", "verifiedOn": "2026-04-23" }
+  ],
+  "reviewedBy": [],
+  "approvalStatus": "draft",
+  "disclaimer": "DRAFT — generated from a template. Requires review by a licensed attorney in the applicable jurisdiction before filing, sending, or relying upon. No attorney-client relationship is created by the generation of this document. Not legal advice.",
+  "knownLimitations": [
+    "Does not account for local court rules (county- or judge-specific).",
+    "Statute citations verified as of lastVerified date only; confirm against current statute before use.",
+    "Strategic positioning (what to demand, what to concede) is outside template scope — attorney judgment required.",
+    "Statute-of-limitations calculations (3-year PI / 2-year wrongful-death / MTCA 3-year) require attorney verification against actual accrual date before filing.",
+    "Does not cover medical-malpractice complaints (which require M.G.L. c. 231 § 60B tribunal offer of proof) — use the medmal-specific template."
+  ]
+}

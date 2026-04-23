@@ -387,7 +387,10 @@ public class AIPersonalInjuryController {
                 isDetailed ? "THOROUGH" : "FAST", // research mode
                 documentId,  // when provided, includes exhibits attached to this document
                 null, // stationeryTemplateId - PI controller doesn't pass stationery
-                null  // stationeryAttorneyId
+                null, // stationeryAttorneyId
+                null, // courtLevel - PI demand letters don't use court-level formatting
+                "pi", // practiceArea - PI demand letters are always personal injury
+                null  // documentOptions - demand letters don't use option branching
             );
 
             Map<String, Object> response = new HashMap<>();

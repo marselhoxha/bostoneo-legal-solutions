@@ -88,4 +88,29 @@ public interface AILegalTemplateRepository extends JpaRepository<AILegalTemplate
     // Search within accessible templates
     @Query("SELECT t FROM AILegalTemplate t WHERE (t.organizationId = :organizationId OR (t.isPublic = true AND t.isApproved = true)) AND (LOWER(t.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(t.category) LIKE LOWER(CONCAT('%', :query, '%')))")
     List<AILegalTemplate> searchAccessibleByOrganization(@Param("organizationId") Long organizationId, @Param("query") String query);
+
+    // ==================== Sprint 1.5: Privacy-Aware Accessibility ====================
+    // A private template is only visible to the user who imported it.
+    // Non-private templates follow the existing org/public rules.
+
+    @Query("SELECT t FROM AILegalTemplate t " +
+           "WHERE (t.organizationId = :organizationId OR (t.isPublic = true AND t.isApproved = true)) " +
+           "AND (t.isPrivate = false OR t.importedByUserId = :currentUserId) " +
+           "ORDER BY t.createdAt DESC")
+    List<AILegalTemplate> findAccessibleByOrganizationAndUser(@Param("organizationId") Long organizationId,
+                                                              @Param("currentUserId") Long currentUserId);
+
+    @Query("SELECT t FROM AILegalTemplate t " +
+           "WHERE t.id = :id " +
+           "AND (t.organizationId = :organizationId OR (t.isPublic = true AND t.isApproved = true)) " +
+           "AND (t.isPrivate = false OR t.importedByUserId = :currentUserId)")
+    java.util.Optional<AILegalTemplate> findByIdAndAccessibleByOrganizationAndUser(@Param("id") Long id,
+                                                                                   @Param("organizationId") Long organizationId,
+                                                                                   @Param("currentUserId") Long currentUserId);
+
+    // Dedup lookup: find templates in this org with the same extracted-body SHA-256
+    List<AILegalTemplate> findByOrganizationIdAndContentHash(Long organizationId, String contentHash);
+
+    // Import-batch grouping (for commit endpoint)
+    List<AILegalTemplate> findByImportBatchId(java.util.UUID importBatchId);
 }

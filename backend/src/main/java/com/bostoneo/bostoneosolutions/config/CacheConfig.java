@@ -43,13 +43,18 @@ public class CacheConfig {
             buildCache("statutes", 7, TimeUnit.DAYS, 500),
 
             // Recent case law searches - 48 hour TTL (more dynamic)
-            buildCache("case_searches", 48, TimeUnit.HOURS, 1000)
+            buildCache("case_searches", 48, TimeUnit.HOURS, 1000),
+
+            // Draft-wizard doc-type catalog - 1 day TTL. Registry is immutable at runtime
+            // so cache lives as long as the process; 1d bound is just a safety net.
+            buildCache("documentCatalog", 1, TimeUnit.DAYS, 256)
         ));
 
-        log.info("✅ Initialized Caffeine cache manager with 3 caches");
+        log.info("✅ Initialized Caffeine cache manager with 4 caches");
         log.info("   - constitution: 7 day TTL, max 500 entries");
         log.info("   - statutes: 7 day TTL, max 500 entries");
         log.info("   - case_searches: 48 hour TTL, max 1000 entries");
+        log.info("   - documentCatalog: 1 day TTL, max 256 entries");
 
         return cacheManager;
     }

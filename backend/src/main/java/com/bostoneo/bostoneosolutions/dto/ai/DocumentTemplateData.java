@@ -40,6 +40,11 @@ public class DocumentTemplateData {
     private String documentTitle;       // "DEFENDANT'S MOTION TO SUPPRESS EVIDENCE"
     private String documentBody;        // Rendered HTML from AI sections
 
+    // ── Dynamic Sections (resolved from state config + case data) ──
+    private String comesNowSection;     // Resolved from state config's comesNowFormat
+    private String prayerIntro;         // Resolved from state config's prayerFormat
+    private String filingPartyLabel;    // "Defendant" (criminal) or "Plaintiff" (civil) — the client's role
+
     // ── Attorney / Firm (from stationery or user profile) ──
     private String attorneyName;
     private String attorneyBarNumber;
@@ -51,6 +56,21 @@ public class DocumentTemplateData {
     // ── Dates ──
     private String filingDate;
     private String currentDate;
+
+    // ── Document-Type-Specific Sections ──
+    private String juryDemandSection;    // Complaint only: "DEMAND FOR JURY TRIAL" section HTML
+    private String conclusionText;       // Brief/memo only: prose conclusion paragraph
+
+    // ── Letter-Specific Fields ──
+    private String letterheadHtml;       // Rendered HTML from stationery letterhead, or generated from attorney/org data
+    private String recipientBlock;       // Formatted recipient name/title/address as HTML
+    private String reBlock;              // RE: line content as HTML
+    private String salutationLine;       // "Dear Ms. Krause," or "Dear Claims Adjuster:"
+    private String letterBody;           // AI-generated letter body as rendered HTML paragraphs
+    private String closingLine;          // "Very truly yours," or "Sincerely,"
+    private String signatureBlockHtml;   // Rendered HTML from stationery signature, or generated from attorney data
+    private String footerHtml;           // Rendered HTML from stationery footer (optional)
+    private String viaLine;              // "Via Certified Mail, Return Receipt Requested" or "Via Email to [email]"
 
     // ── Flags ──
     private boolean respectfullySubmitted;

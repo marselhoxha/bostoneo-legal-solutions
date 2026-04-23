@@ -43,6 +43,23 @@ public class AiDocumentResponse {
     /** Specific items of relief for the prayer (fills the WHEREFORE template slot) */
     private List<String> prayerItems;
 
+    // ── Letter-Specific Fields (optional, only populated for letter document types) ──
+
+    /** Formatted recipient address block (name, title, company, address — newline-separated) */
+    private String recipientBlock;
+
+    /** RE: line content (case reference — newline-separated for multi-line RE blocks) */
+    private String reBlock;
+
+    /** Salutation line, e.g. "Dear Ms. Krause," or "Dear Claims Adjuster:" */
+    private String salutation;
+
+    /** The letter body text (paragraphs separated by \n\n) */
+    private String letterBody;
+
+    /** Closing phrase, e.g. "Very truly yours," or "Sincerely," */
+    private String closing;
+
     @Data
     @Builder
     @NoArgsConstructor

@@ -7,6 +7,7 @@ import com.bostoneo.bostoneosolutions.model.*;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.*;
 import com.bostoneo.bostoneosolutions.service.ai.AIService;
+import com.bostoneo.bostoneosolutions.service.ai.importing.BinaryTemplateRenderer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,17 +42,30 @@ public class AITemplateService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private BinaryTemplateRenderer binaryTemplateRenderer;
+
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
                 .orElseThrow(() -> new RuntimeException("Organization context required"));
     }
 
     /**
-     * Get all templates accessible to the current organization (own + public approved)
+     * Current user id, or -1 when unauthenticated (no private templates will match).
+     * Kept non-throwing because some callers (scheduled jobs, system contexts) may not have a principal.
+     */
+    private Long getCurrentUserIdOrSentinel() {
+        return tenantService.getCurrentUserId().orElse(-1L);
+    }
+
+    /**
+     * Get all templates accessible to the current organization (own + public approved),
+     * with privacy scoping: private templates are only visible to the user who imported them.
      */
     public List<AILegalTemplate> getAllTemplates() {
         Long orgId = getRequiredOrganizationId();
-        return templateRepository.findAccessibleByOrganization(orgId);
+        Long userId = getCurrentUserIdOrSentinel();
+        return templateRepository.findAccessibleByOrganizationAndUser(orgId, userId);
     }
 
     public List<AILegalTemplate> getTemplatesByCategory(String category) {
@@ -68,8 +82,9 @@ public class AITemplateService {
 
     public AILegalTemplate getTemplateById(Long id) {
         Long orgId = getRequiredOrganizationId();
-        // SECURITY: Use tenant-filtered query (includes own + public approved)
-        return templateRepository.findByIdAndAccessibleByOrganization(id, orgId)
+        Long userId = getCurrentUserIdOrSentinel();
+        // SECURITY: Use tenant-filtered query (own + public approved), with privacy scoping for imported templates
+        return templateRepository.findByIdAndAccessibleByOrganizationAndUser(id, orgId, userId)
             .orElseThrow(() -> new RuntimeException("Template not found or access denied: " + id));
     }
 
@@ -157,19 +172,43 @@ public class AITemplateService {
 
     public String generateFromTemplate(Long templateId, Map<String, String> userInputs) {
         AILegalTemplate template = getTemplateById(templateId);
-        
+
         String content = fillTemplateContent(template.getTemplateContent(), userInputs);
-        
+
         if (template.getAiPromptStructure() != null && !template.getAiPromptStructure().isEmpty()) {
             content = enhanceWithAI(content, template.getAiPromptStructure(), userInputs);
         }
-        
+
         if (template.getStyleGuideId() != null) {
             content = applyStyleGuide(content, template.getStyleGuideId());
         }
-        
+
         return content;
     }
+
+    /**
+     * Binary-path counterpart to {@link #generateFromTemplate(Long, Map)}: when the template
+     * was imported with visual fidelity (Sprint 1.6), return the rendered DOCX/PDF bytes
+     * instead of an HTML string. The caller (controller) sets the appropriate Content-Type.
+     *
+     * <p>Tenant + privacy scoping is inherited from {@link #getTemplateById(Long)}.
+     */
+    public RenderedBinary renderBinaryTemplate(Long templateId, Map<String, String> values) {
+        AILegalTemplate template = getTemplateById(templateId);
+        if (!Boolean.TRUE.equals(template.getHasBinaryTemplate())) {
+            throw new IllegalStateException("Template has no binary copy: " + templateId);
+        }
+        byte[] bytes = template.getTemplateBinary();
+        if (bytes == null || bytes.length == 0) {
+            throw new IllegalStateException("Template binary is empty or not loaded: " + templateId);
+        }
+        String format = template.getTemplateBinaryFormat();
+        byte[] rendered = binaryTemplateRenderer.render(bytes, format, values);
+        return new RenderedBinary(rendered, format, template.getName());
+    }
+
+    /** Result of {@link #renderBinaryTemplate(Long, Map)} — carries enough to stream a download. */
+    public record RenderedBinary(byte[] bytes, String format, String templateName) {}
 
     public List<String> validateTemplate(Long templateId) {
         AILegalTemplate template = getTemplateById(templateId);
@@ -348,8 +387,9 @@ public class AITemplateService {
 
     public List<Map<String, Object>> searchTemplates(String query) {
         Long orgId = getRequiredOrganizationId();
-        // SECURITY: Use tenant-filtered query - only search accessible templates
-        List<AILegalTemplate> allTemplates = templateRepository.findAccessibleByOrganization(orgId);
+        Long userId = getCurrentUserIdOrSentinel();
+        // SECURITY: tenant + privacy filter — only org's + public-approved, minus other users' private imports
+        List<AILegalTemplate> allTemplates = templateRepository.findAccessibleByOrganizationAndUser(orgId, userId);
         List<Map<String, Object>> results = new ArrayList<>();
 
         String lowerQuery = query.toLowerCase();

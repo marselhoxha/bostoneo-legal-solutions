@@ -41,7 +41,8 @@ public class JurisdictionResolver {
             Map.entry("SC", "South Carolina"), Map.entry("SD", "South Dakota"), Map.entry("TN", "Tennessee"),
             Map.entry("TX", "Texas"), Map.entry("UT", "Utah"), Map.entry("VT", "Vermont"),
             Map.entry("VA", "Virginia"), Map.entry("WA", "Washington"), Map.entry("WV", "West Virginia"),
-            Map.entry("WI", "Wisconsin"), Map.entry("WY", "Wyoming"), Map.entry("DC", "District of Columbia")
+            Map.entry("WI", "Wisconsin"), Map.entry("WY", "Wyoming"), Map.entry("DC", "District of Columbia"),
+            Map.entry("US", "Federal")
     );
 
     /**
@@ -74,6 +75,9 @@ public class JurisdictionResolver {
      */
     public String getCourtLabel(String stateCode) {
         String code = (stateCode != null && !stateCode.isBlank()) ? stateCode.toUpperCase() : DEFAULT_STATE_CODE;
+        if ("US".equals(code)) {
+            return "UNITED STATES OF AMERICA";
+        }
         String label = COMMONWEALTH_STATES.contains(code) ? "COMMONWEALTH" : "STATE";
         return label + " OF " + getStateName(code).toUpperCase();
     }

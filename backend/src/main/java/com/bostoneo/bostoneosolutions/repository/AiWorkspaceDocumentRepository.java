@@ -145,4 +145,16 @@ public interface AiWorkspaceDocumentRepository extends JpaRepository<AiWorkspace
      * SECURITY: Count documents by case within organization
      */
     long countByCaseIdAndOrganizationIdAndDeletedAtIsNull(Long caseId, Long organizationId);
+
+    /**
+     * Get the jurisdiction of the most recently created document for a given case within an organization.
+     * Used to auto-populate jurisdiction and detect mismatches.
+     */
+    @Query(value = "SELECT jurisdiction FROM ai_workspace_documents " +
+           "WHERE case_id = :caseId AND organization_id = :organizationId AND deleted_at IS NULL " +
+           "AND jurisdiction IS NOT NULL AND jurisdiction != '' " +
+           "ORDER BY created_at DESC LIMIT 1",
+           nativeQuery = true)
+    Optional<String> findLastJurisdictionByCaseIdAndOrganizationId(
+        @Param("caseId") Long caseId, @Param("organizationId") Long organizationId);
 }

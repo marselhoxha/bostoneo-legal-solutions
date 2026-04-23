@@ -1,0 +1,43 @@
+{
+  "type": "demand_letter_pi_ma",
+  "aliases": [
+    "pi_demand_letter_ma",
+    "settlement_demand_ma",
+    "c93a_demand_letter",
+    "policy_limits_demand_ma"
+  ],
+  "displayName": "Demand Letter (PI · Massachusetts)",
+  "category": "letter",
+  "citationLevel": "COMPREHENSIVE",
+  "practiceArea": "pi",
+  "jurisdiction": "ma",
+  "template": "**DOCUMENT FORMAT — MASSACHUSETTS PERSONAL INJURY DEMAND LETTER**:\nSubstantive settlement demand directed at the defendant's insurer. Typically 3–6 pages (longer when a Chapter 93A / 176D demand is included). Written in formal letter format — NOT a court pleading — but with full case-law citation.\n\n**DYNAMIC BEHAVIOR — READ documentOptions**:\n- `demandType`: `policy_limits` (default) | `c93a_176d` | `pre_suit_negotiation`\n- `includeC93A`: boolean — when true, the letter doubles as a Chapter 93A/176D demand triggering the 30-day response window under M.G.L. c. 93A, § 9(3). Include the required statutory elements: identity of claimant, a reasonable description of the unfair or deceptive act, and the injury suffered.\n\n**STRUCTURE** (follow line by line):\n\n1. Date line.\n2. VIA line (bold) — `**VIA Certified Mail — Return Receipt Requested**` is REQUIRED for Chapter 93A demands. For policy-limits demands without 93A, either Certified Mail or email with delivery confirmation is acceptable.\n3. Recipient address block — defendant's insurance company, adjuster, claims address.\n4. Re: block (multi-line, aligned labels):\n   Re:    Our Client:              [client name]\n          Your Insured:            [defendant name]\n          Claim Number:            [claim number]\n          Date of Loss:            [date of incident]\n          [If 93A] Demand Under:   M.G.L. c. 93A, § 9; M.G.L. c. 176D, § 3(9)\n5. Greeting.\n\n**BODY SECTIONS** (in order):\n\n### I. Introduction\nOne paragraph confirming representation, the nature of the incident, and that this letter constitutes a formal demand for settlement. When `includeC93A` is true, explicitly state that the letter also constitutes a written demand for relief under M.G.L. c. 93A, § 9(3) and M.G.L. c. 176D, § 3(9), triggering the carrier's 30-day duty to respond with a written tender or reasoned denial.\n\n### II. Facts / Liability\n2–4 paragraphs describing how the incident occurred, citing police report, witness statements, scene photographs, and any other admissible evidence available. Cite Massachusetts negligence elements from Jupin v. Kask, 447 Mass. 141, 146 (2006), or Goss v. Yarmouth, 442 Mass. 469, 478 (2004), if helpful.\n\n### III. Damages\nBreak out specific damages clearly:\n- **Medical Expenses**: itemized list with provider and amount. Total: $_____.\n- **Lost Wages**: total hours/days lost, hourly/daily rate, documentation source. Total: $_____.\n- **Pain and Suffering / Loss of Enjoyment of Life**: narrative paragraph referencing the injuries in human terms. Reference the § 6D threshold (M.G.L. c. 231, § 6D) and explain how it is satisfied.\n- **Future Medical and Lost Earning Capacity**: if supported by medical opinion.\n- **TOTAL DAMAGES**: $________.\n\n### IV. Demand\nOne clean paragraph stating the specific dollar demand. When demandType = `policy_limits`, demand the policy limits and reference M.G.L. c. 175, § 112C (policy-limits disclosure statute), attaching or incorporating the prior policy-limits disclosure.\n\n### V. [If includeC93A] Unfair Insurance Practices\nOne or two paragraphs identifying specific subsection violations of M.G.L. c. 176D, § 3(9) (e.g., 3(9)(f) — failing to effectuate prompt, fair, and equitable settlement once liability is reasonably clear). Note the multiplier exposure under M.G.L. c. 93A, § 9(3) (double/treble damages if the violation is willful or knowing, plus attorney's fees under § 9(4)).\n\n### VI. Response Deadline and Closing\nDemand a written response within thirty (30) days. Reference that failure to respond with a reasonable offer where liability is reasonably clear is itself a Chapter 93A violation (Hopkins v. Liberty Mut. Ins. Co., 434 Mass. 556 (2001)).\n\nClosing: \"Very truly yours,\" (suppress when stationery signature block is applied).\n\n**CONSTRAINTS**:\n- Cite MA statutes exactly as `M.G.L. c. X, § Y` — e.g., `M.G.L. c. 93A, § 9(3)`, `M.G.L. c. 176D, § 3(9)`, `M.G.L. c. 175, § 112C`, `M.G.L. c. 231, § 6D`. Do NOT use `G.L.` or `Mass. Gen. Laws`.\n- Pin cites are REQUIRED for every case citation — specific page after the volume & reporter (e.g., `447 Mass. 141, 146 (2006)`, `434 Mass. 556, 561 (2001)`).\n- When `includeC93A` is true, the 30-day window and certified-mail requirements are MANDATORY.\n- For any `documentOptions` value not selected (e.g., `includeC93A=false`), suppress the corresponding section entirely — never emit a blank heading or placeholder paragraph. In particular, suppress Section V when `includeC93A=false`.\n- If firm stationery is applied, SUPPRESS the `Very truly yours,` closing and the signature block — the stationery handles them.\n- Total body text: 1,500–3,500 words depending on injury complexity and whether 93A is included. Target page count: 3–6 pages (longer with 93A).\n- Do NOT use Roman-numeral sections outside the BODY. The caption-style block is only used on complaints/motions, NOT on letters.",
+  "hints": "Massachusetts PI demand letter. Two variants: straight policy-limits demand vs. combined Chapter 93A / 176D demand (which adds 30-day response window, certified-mail requirement, and multiplier/fee shifting exposure). Itemize damages with medical, wages, pain/suffering. Reference M.G.L. c. 231 § 6D threshold, M.G.L. c. 175 § 112C for policy limits, M.G.L. c. 176D § 3(9) for unfair-practices subsection. Cite Hopkins v. Liberty Mutual for refusal-to-settle exposure.",
+  "subPractices": ["mva", "premises"],
+  "caseLifecyclePhase": "pre_suit_demand",
+  "deadlineSensitive": true,
+  "jurisdictionRequired": true,
+  "relatedTemplates": ["lor_pi_ma", "complaint_pi_ma", "settlement_release_pi_ma"],
+  "schemaVersion": "1.0.0",
+  "templateVersion": "2026.04.23-draft",
+  "lastVerified": "2026-04-23",
+  "nextReviewDue": "2026-10-23",
+  "verificationSources": [
+    { "citation": "M.G.L. c. 93A, § 9", "url": "https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXV/Chapter93A/Section9", "verifiedOn": "2026-04-23" },
+    { "citation": "M.G.L. c. 176D, § 3(9)", "url": "https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXXII/Chapter176D/Section3", "verifiedOn": "2026-04-23" },
+    { "citation": "M.G.L. c. 175, § 112C", "url": "https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXXII/Chapter175/Section112C", "verifiedOn": "2026-04-23" },
+    { "citation": "M.G.L. c. 231, § 6D", "url": "https://malegislature.gov/Laws/GeneralLaws/PartIII/TitleII/Chapter231/Section6D", "verifiedOn": "2026-04-23" },
+    { "citation": "Jupin v. Kask, 447 Mass. 141, 146 (2006)", "url": "https://masscases.com/cases/sjc/447/447mass141.html", "verifiedOn": "2026-04-23" },
+    { "citation": "Goss v. Yarmouth, 442 Mass. 469, 478 (2004)", "url": "https://masscases.com/cases/sjc/442/442mass469.html", "verifiedOn": "2026-04-23" },
+    { "citation": "Hopkins v. Liberty Mut. Ins. Co., 434 Mass. 556 (2001)", "url": "https://masscases.com/cases/sjc/434/434mass556.html", "verifiedOn": "2026-04-23" }
+  ],
+  "reviewedBy": [],
+  "approvalStatus": "draft",
+  "disclaimer": "DRAFT — generated from a template. Requires review by a licensed attorney in the applicable jurisdiction before filing, sending, or relying upon. No attorney-client relationship is created by the generation of this document. Not legal advice.",
+  "knownLimitations": [
+    "Does not account for local court rules (county- or judge-specific).",
+    "Statute citations verified as of lastVerified date only; confirm against current statute before use.",
+    "Strategic positioning (what to demand, what to concede) is outside template scope — attorney judgment required.",
+    "Chapter 93A / 176D demand letters carry strict statutory formalities (certified mail, 30-day window, specific-act description) — attorney must verify compliance before sending."
+  ]
+}

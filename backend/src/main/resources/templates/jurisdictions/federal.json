@@ -1,0 +1,26 @@
+{
+  "name": "Federal",
+  "stateCode": "federal",
+  "civilRules": "Fed. R. Civ. P.",
+  "criminalRules": "Fed. R. Crim. P.",
+  "evidenceRules": "Fed. R. Evid.",
+  "reporterAbbrev": "F.",
+  "commonCitations": {
+    "motion_to_dismiss": "Fed. R. Civ. P. 12(b)(6)",
+    "summary_judgment": "Fed. R. Civ. P. 56",
+    "failure_to_state_claim": "Fed. R. Civ. P. 12(b)(6)",
+    "personal_jurisdiction": "Fed. R. Civ. P. 12(b)(2)",
+    "venue": "Fed. R. Civ. P. 12(b)(3)",
+    "service_of_process": "Fed. R. Civ. P. 4",
+    "discovery_general": "Fed. R. Civ. P. 26",
+    "interrogatories": "Fed. R. Civ. P. 33",
+    "request_for_production": "Fed. R. Civ. P. 34",
+    "requests_for_admission": "Fed. R. Civ. P. 36",
+    "depositions": "Fed. R. Civ. P. 30",
+    "sanctions": "Fed. R. Civ. P. 11",
+    "class_action": "Fed. R. Civ. P. 23",
+    "ftca": "28 U.S.C. § 2671",
+    "diversity_jurisdiction": "28 U.S.C. § 1332",
+    "federal_question": "28 U.S.C. § 1331"
+  }
+}

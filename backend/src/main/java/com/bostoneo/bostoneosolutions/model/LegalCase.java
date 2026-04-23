@@ -235,6 +235,30 @@ public class LegalCase {
     @Column(name = "insurance_adjuster_phone", length = 50)
     private String insuranceAdjusterPhone;
 
+    // ============================================
+    // Client Insurance (PIP / UIM) — separate from defendant's insurer above
+    // ============================================
+    // clientInsuranceCompany is NOT encrypted so it can be used in SQL WHERE/LIKE queries
+    // (e.g., reporting on which insurers the firm most often PIPs against).
+    @Column(name = "client_insurance_company")
+    private String clientInsuranceCompany;
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "client_insurance_policy_number")
+    private String clientInsurancePolicyNumber;
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "client_insurance_adjuster_name")
+    private String clientInsuranceAdjusterName;
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "client_insurance_adjuster_email")
+    private String clientInsuranceAdjusterEmail;
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "client_insurance_adjuster_phone", length = 50)
+    private String clientInsuranceAdjusterPhone;
+
     // Employer Information (for wage documentation requests)
     @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "employer_name")

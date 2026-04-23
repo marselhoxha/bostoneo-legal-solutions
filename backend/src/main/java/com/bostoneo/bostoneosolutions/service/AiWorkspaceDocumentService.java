@@ -123,6 +123,7 @@ public class AiWorkspaceDocumentService {
     private final DocumentTypeTemplateRegistry templateRegistry;
     private final JurisdictionResolver jurisdictionResolver;
     private final DocumentTemplateEngine documentTemplateEngine;
+    private final JurisdictionPromptBuilder jurisdictionPromptBuilder;
 
     /** Holds system + user message for draft generation */
     record DraftPrompt(String systemMessage, String userMessage) {}
@@ -893,7 +894,10 @@ public class AiWorkspaceDocumentService {
         String researchMode,
         Long documentId,
         Long stationeryTemplateId,
-        Long stationeryAttorneyId
+        Long stationeryAttorneyId,
+        String courtLevel,
+        String practiceArea,
+        java.util.Map<String, Object> documentOptions
     ) {
         log.info("Generating draft with conversation: userId={}, caseId={}, type={}, conversationId={}, researchMode={}",
                  userId, caseId, documentType, conversationId, researchMode);
@@ -983,7 +987,12 @@ public class AiWorkspaceDocumentService {
         String stationeryContext = resolveStationeryContext(documentId, orgId, stationeryTemplateId, stationeryAttorneyId);
 
         // 5b. Build AI prompt with case context, exhibits, and stationery awareness
-        DraftPrompt draftPrompt = buildDraftPrompt(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode, exhibits, stationeryContext);
+        String effectiveCourtLevel = (courtLevel != null && !courtLevel.isBlank()) ? courtLevel : "DEFAULT";
+        // Resolve practice area: explicit param overrides, else fall back to the case's practice area
+        String effectivePracticeArea = (practiceArea != null && !practiceArea.isBlank())
+                ? practiceArea
+                : (legalCase != null ? legalCase.getPracticeArea() : null);
+        DraftPrompt draftPrompt = buildDraftPrompt(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode, exhibits, stationeryContext, effectiveCourtLevel, effectivePracticeArea, documentOptions);
 
         // 6. Check if generation has been cancelled
         if (cancellationService.isCancelled(conversation.getId())) {
@@ -1009,9 +1018,9 @@ public class AiWorkspaceDocumentService {
         }
 
         // TEMPLATE RENDERING: For supported document types, parse AI JSON and inject into HTML template
-        if (documentTemplateEngine.supportsTemplateGeneration(documentType) && legalCase != null) {
+        if (documentTemplateEngine.supportsTemplateGeneration(documentType)) {
             try {
-                content = renderWithTemplate(content, legalCase, jurisdiction, documentType, userId, orgId);
+                content = renderWithTemplate(content, legalCase, jurisdiction, documentType, userId, orgId, effectiveCourtLevel, stationeryTemplateId, stationeryAttorneyId);
                 log.info("✅ Template rendering complete — caption and structure from HTML template");
             } catch (Exception e) {
                 log.warn("⚠️ Template rendering failed, using raw AI content as fallback: {}", e.getMessage());
@@ -1181,7 +1190,10 @@ public class AiWorkspaceDocumentService {
             String researchMode,
             Long documentId,
             Long stationeryTemplateId,
-            Long stationeryAttorneyId
+            Long stationeryAttorneyId,
+            String courtLevel,
+            String practiceArea,
+            java.util.Map<String, Object> documentOptions
     ) {
         log.info("Starting streaming draft generation: userId={}, conversationId={}, type={}",
                 userId, conversationId, documentType);
@@ -1190,6 +1202,7 @@ public class AiWorkspaceDocumentService {
         TenantContext.setCurrentTenant(orgId);
 
         // Validate medical records and summary exist before generating demand letter
+        // (checked here because this method is called from both LegiDraft and LegiPI controllers)
         if (isDemandLetterType(documentType) && caseId != null) {
             List<PIMedicalRecordDTO> records = medicalRecordService.getRecordsByCaseId(caseId);
             if (records == null || records.isEmpty()) {
@@ -1249,7 +1262,12 @@ public class AiWorkspaceDocumentService {
         String stationeryContext = resolveStationeryContext(documentId, orgId, stationeryTemplateId, stationeryAttorneyId);
 
         // 2c. Build prompt with stationery awareness (system + user message split)
-        DraftPrompt draftPrompt = buildDraftPrompt(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode, exhibits, stationeryContext);
+        String effectiveCourtLevel = (courtLevel != null && !courtLevel.isBlank()) ? courtLevel : "DEFAULT";
+        // Resolve practice area: explicit param overrides, else fall back to the case's practice area
+        String effectivePracticeArea = (practiceArea != null && !practiceArea.isBlank())
+                ? practiceArea
+                : (legalCase != null ? legalCase.getPracticeArea() : null);
+        DraftPrompt draftPrompt = buildDraftPrompt(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode, exhibits, stationeryContext, effectiveCourtLevel, effectivePracticeArea, documentOptions);
 
         // 3. Check cancellation
         if (cancellationService.isCancelled(conversationId)) {
@@ -1286,17 +1304,26 @@ public class AiWorkspaceDocumentService {
                         String content = accumulated.toString();
 
                         // Template rendering: for supported types, parse JSON and inject into HTML template
-                        if (documentTemplateEngine.supportsTemplateGeneration(documentType) && finalCase != null) {
+                        if (documentTemplateEngine.supportsTemplateGeneration(documentType)) {
                             try {
-                                content = renderWithTemplate(content, finalCase, jurisdiction, documentType, userId, orgId);
+                                content = renderWithTemplate(content, finalCase, jurisdiction, documentType, userId, orgId, effectiveCourtLevel, stationeryTemplateId, stationeryAttorneyId);
                                 log.info("✅ Template rendering complete (streaming path)");
                             } catch (Exception e) {
                                 log.warn("⚠️ Template rendering failed (streaming), using raw content: {}", e.getMessage());
                             }
                         }
 
-                        // Post-processing: skip for template HTML (regex would corrupt it)
-                        if (!content.startsWith("<!-- HTML_TEMPLATE -->")) {
+                        // Post-processing: for template HTML, only run URL injection (safe for HTML)
+                        // Skip full AI citation verification which could corrupt HTML structure
+                        if (content.startsWith("<!-- HTML_TEMPLATE -->")) {
+                            try {
+                                draftStreamingPublisher.sendPostProcessing(conversationId, "Injecting citation URLs...");
+                                content = citationUrlInjector.inject(content);
+                                log.info("URL injection complete for template HTML");
+                            } catch (Exception e) {
+                                log.warn("URL injection failed for template HTML: {}", e.getMessage());
+                            }
+                        } else {
                             content = postProcessDraftContent(content, documentType, conversationId);
                         }
 
@@ -1314,14 +1341,18 @@ public class AiWorkspaceDocumentService {
 
                         // Send complete event with metadata
                         Map<String, Object> completePayload = new HashMap<>();
-                        completePayload.put("documentId", savedDoc.get("documentId"));
+                        if (savedDoc != null) {
+                            completePayload.put("documentId", savedDoc.get("documentId"));
+                            completePayload.put("wordCount", savedDoc.get("wordCount"));
+                            completePayload.put("tokensUsed", savedDoc.get("tokensUsed"));
+                            completePayload.put("costEstimate", savedDoc.get("costEstimate"));
+                        } else {
+                            log.error("Failed to save draft document for conversation {}", conversationId);
+                        }
                         completePayload.put("conversationId", conversationId);
                         completePayload.put("title", sessionName);
                         completePayload.put("content", content);
-                        completePayload.put("wordCount", savedDoc.get("wordCount"));
                         completePayload.put("version", 1);
-                        completePayload.put("tokensUsed", savedDoc.get("tokensUsed"));
-                        completePayload.put("costEstimate", savedDoc.get("costEstimate"));
 
                         draftStreamingPublisher.sendComplete(conversationId, completePayload);
 
@@ -1635,6 +1666,16 @@ public class AiWorkspaceDocumentService {
     }
 
     /**
+     * Get the last jurisdiction used for documents linked to a specific case.
+     * Used to auto-populate the jurisdiction dropdown and detect mismatches.
+     */
+    public String getLastUsedJurisdiction(Long caseId) {
+        return documentRepository.findLastJurisdictionByCaseIdAndOrganizationId(
+            caseId, getRequiredOrganizationId()
+        ).orElse(null);
+    }
+
+    /**
      * Find a completed document by conversation (session) ID.
      * Used by the frontend polling fallback when SSE drops mid-stream.
      */
@@ -1667,29 +1708,37 @@ public class AiWorkspaceDocumentService {
      * Build case context string for AI prompt
      */
     private String buildCaseContext(LegalCase legalCase) {
-        return String.format("""
+        StringBuilder ctx = new StringBuilder("\nCASE CONTEXT:\n");
+        ctx.append("Case Number: ").append(safeStr(legalCase.getCaseNumber())).append("\n");
+        ctx.append("Case Title: ").append(safeStr(legalCase.getTitle())).append("\n");
+        ctx.append("Case Type: ").append(safeStr(legalCase.getEffectivePracticeArea())).append("\n");
+        ctx.append("Court: ").append(safeStr(legalCase.getCourtroom())).append("\n");
+        ctx.append("County: ").append(safeStr(legalCase.getCountyName())).append("\n");
+        ctx.append("Status: ").append(safeStr(legalCase.getStatus())).append("\n");
+        ctx.append("Client: ").append(safeStr(legalCase.getClientName())).append("\n");
+        if (legalCase.getDefendantName() != null && !legalCase.getDefendantName().isBlank()) {
+            ctx.append("Opposing Party: ").append(legalCase.getDefendantName()).append("\n");
+        }
+        if (legalCase.getJudgeName() != null && !legalCase.getJudgeName().isBlank()) {
+            ctx.append("Judge: ").append(legalCase.getJudgeName()).append("\n");
+        }
+        if (legalCase.getPrimaryCharge() != null && !legalCase.getPrimaryCharge().isBlank()) {
+            ctx.append("Primary Charge: ").append(legalCase.getPrimaryCharge()).append("\n");
+        }
+        if (legalCase.getChargeLevel() != null && !legalCase.getChargeLevel().isBlank()) {
+            ctx.append("Charge Level: ").append(legalCase.getChargeLevel()).append("\n");
+        }
+        if (legalCase.getFilingDate() != null) {
+            ctx.append("Filing Date: ").append(legalCase.getFilingDate()).append("\n");
+        }
+        if (legalCase.getDescription() != null && !legalCase.getDescription().isBlank()) {
+            ctx.append("\nCase Description:\n").append(legalCase.getDescription()).append("\n");
+        }
+        return ctx.toString();
+    }
 
-            CASE CONTEXT:
-            Case Number: %s
-            Case Title: %s
-            Case Type: %s
-            Court: %s
-            Status: %s
-            Client: %s
-            Filing Date: %s
-
-            Case Description:
-            %s
-            """,
-            legalCase.getCaseNumber(),
-            legalCase.getTitle(),
-            legalCase.getEffectivePracticeArea(),
-            legalCase.getCountyName(),
-            legalCase.getStatus(),
-            legalCase.getClientName(),
-            legalCase.getFilingDate(),
-            legalCase.getDescription()
-        );
+    private static String safeStr(Object value) {
+        return value != null ? value.toString() : "";
     }
 
     private static final java.text.NumberFormat CURRENCY_FORMAT = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.US);
@@ -1716,29 +1765,63 @@ public class AiWorkspaceDocumentService {
                 if (caseDto.getDefendantAddress() != null && !caseDto.getDefendantAddress().isEmpty()) {
                     sb.append(String.format("Defendant Address: %s\n", caseDto.getDefendantAddress()));
                 }
-                if (caseDto.getInsuranceCompany() != null && !caseDto.getInsuranceCompany().isEmpty()) {
-                    sb.append(String.format("Insurance Company: %s\n", caseDto.getInsuranceCompany()));
+                // DEFENDANT'S (AT-FAULT PARTY'S) INSURANCE — use for letters to the defendant's insurer (e.g., policy-limits request)
+                boolean hasDefendantInsurance =
+                    (caseDto.getInsuranceCompany() != null && !caseDto.getInsuranceCompany().isEmpty()) ||
+                    (caseDto.getInsuranceAdjusterName() != null && !caseDto.getInsuranceAdjusterName().isEmpty()) ||
+                    (caseDto.getInsurancePolicyNumber() != null && !caseDto.getInsurancePolicyNumber().isEmpty()) ||
+                    (caseDto.getInsurancePolicyLimit() != null);
+                if (hasDefendantInsurance) {
+                    sb.append("\nDEFENDANT'S INSURANCE (at-fault party):\n");
+                    if (caseDto.getInsuranceCompany() != null && !caseDto.getInsuranceCompany().isEmpty()) {
+                        sb.append(String.format("  Defendant's Insurance Company: %s\n", caseDto.getInsuranceCompany()));
+                    }
+                    if (caseDto.getInsuranceAdjusterName() != null && !caseDto.getInsuranceAdjusterName().isEmpty()) {
+                        sb.append(String.format("  Defendant's Adjuster Name: %s\n", caseDto.getInsuranceAdjusterName()));
+                    }
+                    if (caseDto.getInsuranceAdjusterContact() != null && !caseDto.getInsuranceAdjusterContact().isEmpty()) {
+                        sb.append(String.format("  Defendant's Adjuster Contact: %s\n", caseDto.getInsuranceAdjusterContact()));
+                    }
+                    if (caseDto.getInsuranceAdjusterEmail() != null && !caseDto.getInsuranceAdjusterEmail().isEmpty()) {
+                        sb.append(String.format("  Defendant's Adjuster Email: %s\n", caseDto.getInsuranceAdjusterEmail()));
+                    }
+                    if (caseDto.getInsuranceAdjusterPhone() != null && !caseDto.getInsuranceAdjusterPhone().isEmpty()) {
+                        sb.append(String.format("  Defendant's Adjuster Phone: %s\n", caseDto.getInsuranceAdjusterPhone()));
+                    }
+                    if (caseDto.getInsurancePolicyNumber() != null && !caseDto.getInsurancePolicyNumber().isEmpty()) {
+                        sb.append(String.format("  Defendant's Policy/Claim Number: %s\n", caseDto.getInsurancePolicyNumber()));
+                    }
+                    if (caseDto.getInsurancePolicyLimit() != null) {
+                        sb.append(String.format("  Defendant's Policy Limit: %s\n", CURRENCY_FORMAT.format(caseDto.getInsurancePolicyLimit())));
+                    }
                 }
-                if (caseDto.getInsuranceAdjusterName() != null && !caseDto.getInsuranceAdjusterName().isEmpty()) {
-                    sb.append(String.format("Adjuster Name: %s\n", caseDto.getInsuranceAdjusterName()));
+
+                // CLIENT'S (OUR CLIENT'S OWN) INSURANCE — use for PIP applications, UIM notices, and letters to the client's own insurer
+                boolean hasClientInsurance =
+                    (caseDto.getClientInsuranceCompany() != null && !caseDto.getClientInsuranceCompany().isEmpty()) ||
+                    (caseDto.getClientInsuranceAdjusterName() != null && !caseDto.getClientInsuranceAdjusterName().isEmpty()) ||
+                    (caseDto.getClientInsurancePolicyNumber() != null && !caseDto.getClientInsurancePolicyNumber().isEmpty());
+                if (hasClientInsurance) {
+                    sb.append("\nCLIENT'S INSURANCE (our client's own carrier — for PIP / UIM):\n");
+                    if (caseDto.getClientInsuranceCompany() != null && !caseDto.getClientInsuranceCompany().isEmpty()) {
+                        sb.append(String.format("  Client's Insurance Company: %s\n", caseDto.getClientInsuranceCompany()));
+                    }
+                    if (caseDto.getClientInsuranceAdjusterName() != null && !caseDto.getClientInsuranceAdjusterName().isEmpty()) {
+                        sb.append(String.format("  Client's Adjuster Name: %s\n", caseDto.getClientInsuranceAdjusterName()));
+                    }
+                    if (caseDto.getClientInsuranceAdjusterEmail() != null && !caseDto.getClientInsuranceAdjusterEmail().isEmpty()) {
+                        sb.append(String.format("  Client's Adjuster Email: %s\n", caseDto.getClientInsuranceAdjusterEmail()));
+                    }
+                    if (caseDto.getClientInsuranceAdjusterPhone() != null && !caseDto.getClientInsuranceAdjusterPhone().isEmpty()) {
+                        sb.append(String.format("  Client's Adjuster Phone: %s\n", caseDto.getClientInsuranceAdjusterPhone()));
+                    }
+                    if (caseDto.getClientInsurancePolicyNumber() != null && !caseDto.getClientInsurancePolicyNumber().isEmpty()) {
+                        sb.append(String.format("  Client's Policy Number: %s\n", caseDto.getClientInsurancePolicyNumber()));
+                    }
                 }
-                if (caseDto.getInsuranceAdjusterContact() != null && !caseDto.getInsuranceAdjusterContact().isEmpty()) {
-                    sb.append(String.format("Adjuster Contact: %s\n", caseDto.getInsuranceAdjusterContact()));
-                }
-                if (caseDto.getInsuranceAdjusterEmail() != null && !caseDto.getInsuranceAdjusterEmail().isEmpty()) {
-                    sb.append(String.format("Adjuster Email: %s\n", caseDto.getInsuranceAdjusterEmail()));
-                }
-                if (caseDto.getInsuranceAdjusterPhone() != null && !caseDto.getInsuranceAdjusterPhone().isEmpty()) {
-                    sb.append(String.format("Adjuster Phone: %s\n", caseDto.getInsuranceAdjusterPhone()));
-                }
-                if (caseDto.getInsurancePolicyNumber() != null && !caseDto.getInsurancePolicyNumber().isEmpty()) {
-                    sb.append(String.format("Policy/Claim Number: %s\n", caseDto.getInsurancePolicyNumber()));
-                }
-                if (caseDto.getInsurancePolicyLimit() != null) {
-                    sb.append(String.format("Policy Limit: %s\n", CURRENCY_FORMAT.format(caseDto.getInsurancePolicyLimit())));
-                }
+
                 if (caseDto.getInjuryDate() != null) {
-                    sb.append(String.format("Date of Incident: %s\n", caseDto.getInjuryDate()));
+                    sb.append(String.format("\nDate of Incident: %s\n", caseDto.getInjuryDate()));
                 }
 
                 sb.append(String.format("\nCase Number: %s\n", caseDto.getCaseNumber()));
@@ -2155,9 +2238,13 @@ public class AiWorkspaceDocumentService {
      * Produces a 6-section demand package: Salutation, Facts & Liability, Injuries & Treatments,
      * Damages (per diem analysis), Bad Faith Notice, Exhibit List.
      */
-    private String buildDemandLetterPrompt(LegalCaseDTO caseDto, PIDamageCalculationDTO damages, String caseDataSection, boolean isDetailed) {
+    private String buildDemandLetterPrompt(LegalCaseDTO caseDto, PIDamageCalculationDTO damages, String caseDataSection, boolean isDetailed, String jurisdiction) {
         String letterDate = LocalDate.now().format(DL_LETTER_DATE_FORMATTER);
-        String stateName = jurisdictionResolver.resolveStateName(getRequiredOrganizationId());
+        // Prefer the user-selected jurisdiction (supports both "tx" codes and "Texas" names);
+        // fall back to the organization's configured state only when no explicit jurisdiction was provided.
+        String stateName = (jurisdiction != null && !jurisdiction.isBlank())
+            ? jurisdictionResolver.getStateName(jurisdiction)
+            : jurisdictionResolver.resolveStateName(getRequiredOrganizationId());
 
         // Safely extract values from DTO
         String clientName = caseDto.getClientName() != null ? caseDto.getClientName() : "Unknown Client";
@@ -2443,8 +2530,21 @@ public class AiWorkspaceDocumentService {
         LegalCase legalCase,
         String researchMode,
         List<AiWorkspaceDocumentExhibit> exhibits,
-        String stationeryContext
+        String stationeryContext,
+        String courtLevel,
+        String practiceArea,
+        java.util.Map<String, Object> documentOptions
     ) {
+        // Guard against null jurisdiction — default to case's jurisdiction or "Massachusetts"
+        if (jurisdiction == null || jurisdiction.isBlank()) {
+            if (legalCase != null && legalCase.getJurisdiction() != null && !legalCase.getJurisdiction().isBlank()) {
+                jurisdiction = legalCase.getJurisdiction();
+            } else {
+                jurisdiction = "Massachusetts";
+            }
+            log.warn("Jurisdiction was null/blank, defaulted to: {}", jurisdiction);
+        }
+
         // ── SYSTEM MESSAGE (static instructions loaded once at startup) ──
         String systemMessage = templateRegistry.getSystemPrompt();
 
@@ -2496,40 +2596,121 @@ public class AiWorkspaceDocumentService {
                 PIDamageCalculationDTO dmg = null;
                 try { dmg = damageCalculationService.getDamageCalculation(legalCase.getId()); } catch (Exception ignored) {}
                 boolean isDetailed = "THOROUGH".equalsIgnoreCase(researchMode);
-                String demandPrompt = buildDemandLetterPrompt(caseDto, dmg, caseContext, isDetailed);
+                String demandPrompt = buildDemandLetterPrompt(caseDto, dmg, caseContext, isDetailed, jurisdiction);
                 prompt.append(demandPrompt).append("\n\n");
                 log.info("Using EvenUp-style demand letter prompt for type: {}", documentType);
             } catch (Exception e) {
                 log.warn("Failed to build demand letter prompt, falling back to generic template: {}", e.getMessage());
                 // Fall through to generic path below
-                appendGenericDocumentPrompt(prompt, documentType, jurisdiction);
+                appendGenericDocumentPrompt(prompt, documentType, practiceArea, jurisdiction);
             }
-        } else if (documentTemplateEngine.supportsTemplateGeneration(documentType) && legalCase != null) {
+        } else if (documentTemplateEngine.supportsTemplateGeneration(documentType)) {
             // Template-generated docs: provide content/legal guidance WITHOUT formatting/caption instructions
-            // (those conflict with the JSON schema that follows). Focus on Texas legal substance.
-            prompt.append("Generate SUBSTANTIVE LEGAL CONTENT for a ").append(jurisdiction).append(" court filing.\n");
-            prompt.append("The court caption, title, and signature block are handled by the template — do NOT generate them.\n\n");
+            // (those conflict with the JSON schema that follows).
+            prompt.append("Generate SUBSTANTIVE LEGAL CONTENT for a ").append(jurisdiction);
+            if (documentType != null && !documentType.isBlank()) {
+                String readableType = documentType.replace("-", " ").replace("_", " ");
+                prompt.append(" ").append(readableType);
+            }
+            prompt.append(".\n");
+            String introTemplateKey = documentTemplateEngine.resolveDocumentTemplateKey(documentType);
+            if ("letter".equals(introTemplateKey)) {
+                prompt.append("The letterhead, date, signature block, and footer are handled by the template — do NOT generate them.\n\n");
+            } else if ("contract".equals(introTemplateKey)) {
+                prompt.append("The centered title and dual signature blocks are handled by the template — do NOT generate them.\n\n");
+            } else {
+                prompt.append("The court caption, title, and signature block are handled by the template — do NOT generate them.\n\n");
+            }
 
-            prompt.append("**LEGAL WRITING CONVENTIONS (").append(jurisdiction).append(")**:\n");
-            prompt.append("- Opening: 'COMES NOW the Defendant, [NAME], by and through undersigned counsel, and respectfully moves this Honorable Court to [relief]...'\n");
-            prompt.append("- Prayer: 'WHEREFORE, PREMISES CONSIDERED, the Defendant respectfully moves that this Honorable Court: 1. [specific relief] 2. [specific relief] 3. Grant such other and further relief as the Court deems just.'\n");
-            prompt.append("- Preamble: 'TO THE HONORABLE JUDGE OF SAID COURT:'\n");
-            prompt.append("- Use formal third-person court filing tone throughout\n");
-            prompt.append("- Cite Texas cases from S.W.2d/S.W.3d reporters (Tex. Crim. App., Tex. App.)\n");
-            prompt.append("- Cite Texas statutes: Tex. Code Crim. Proc., Tex. Transp. Code, Tex. Penal Code\n");
-            prompt.append("- Reference constitutions: Tex. Const. art. I, § 9 and U.S. Const. amend. IV\n");
-            prompt.append("- Cite 1-2 controlling cases per legal point — quality over quantity\n\n");
+            // Practice area context — different guidance for criminal vs civil
+            boolean isCriminal = legalCase != null && documentTemplateEngine.isCriminalCase(legalCase);
+            if (isCriminal) {
+                prompt.append("**PRACTICE AREA: CRIMINAL LAW**\n");
+                prompt.append("This is a CRIMINAL case. The attorney represents the DEFENDANT (the accused).\n");
+                prompt.append("- Focus on constitutional protections (4th, 5th, 6th, 14th Amendments)\n");
+                prompt.append("- Reference the state's criminal procedure rules, not civil rules\n");
+                prompt.append("- Use criminal law standards (beyond reasonable doubt, suppression, Brady obligations)\n");
+                prompt.append("- The opposing party is the State/Prosecution, not a private plaintiff\n\n");
+            } else {
+                prompt.append("**PRACTICE AREA: CIVIL LAW**\n");
+                prompt.append("This is a CIVIL case. The attorney represents the filing party.\n");
+                prompt.append("- Focus on the applicable civil standard (preponderance, plausibility for 12(b)(6), etc.)\n");
+                prompt.append("- Reference the state's civil procedure rules\n");
+                prompt.append("- Address the specific claims and causes of action\n\n");
+            }
 
-            prompt.append("**REQUIRED SECTIONS** (use these exact section names):\n");
-            prompt.append("- I. STATEMENT OF FACTS — Narrative of what happened, using case data provided\n");
-            prompt.append("- II. APPLICABLE LEGAL STANDARDS — governing statutes and constitutional provisions (1-2 paragraphs)\n");
-            prompt.append("- III. ARGUMENT — subsections A, B, C for each ground. Apply law to facts.\n");
-            prompt.append("- The 'prayer' JSON field handles the WHEREFORE — always include specific relief\n\n");
+            // Jurisdiction-specific legal writing conventions (data-driven from state_court_configurations DB table)
+            prompt.append(jurisdictionPromptBuilder.buildJurisdictionPromptSection(jurisdiction, documentType));
+
+            // For letter and contract types, inject the type-specific content guidance from the JSON template
+            // (e.g., letter-of-representation.json has strict 3-paragraph, 150-word rules that the AI MUST follow)
+            String templateKey = documentTemplateEngine.resolveDocumentTemplateKey(documentType);
+            if ("letter".equals(templateKey) || "contract".equals(templateKey)) {
+                String typeSpecificTemplate = templateRegistry.getTemplateText(documentType, practiceArea, jurisdiction);
+                if (typeSpecificTemplate != null && !typeSpecificTemplate.isEmpty()) {
+                    prompt.append("**DOCUMENT-SPECIFIC CONTENT RULES — FOLLOW EXACTLY**:\n");
+                    prompt.append(typeSpecificTemplate).append("\n\n");
+                }
+            }
+
+            // Type-specific section guidance — different document types need different sections
+            switch (templateKey) {
+                case "complaint":
+                    prompt.append("**REQUIRED SECTIONS FOR COMPLAINT** (use these exact JSON fields):\n");
+                    prompt.append("- 'facts': FACTUAL ALLEGATIONS — write as individual numbered factual statements separated by \\n\\n. Each should be one concise factual allegation (e.g., '1. On December 14, 2025, Defendant operated a motor vehicle...'). Number every paragraph.\n");
+                    prompt.append("- 'legalStandard': JURISDICTION AND VENUE — why this court has subject matter jurisdiction and personal jurisdiction, and why venue is proper\n");
+                    prompt.append("- 'arguments': CAUSES OF ACTION — each argument is one COUNT. The 'heading' should be the cause of action name (e.g., 'Negligence', 'Breach of Contract'). The 'body' should incorporate prior allegations by reference and state the legal elements.\n");
+                    prompt.append("- 'prayerItems': specific relief items for the WHEREFORE prayer\n");
+                    prompt.append("- 'reliefSought': general description for the COMES NOW intro (e.g., 'files this Complaint for damages arising from...')\n\n");
+                    break;
+                case "discovery":
+                    prompt.append("**REQUIRED SECTIONS FOR DISCOVERY** (use these exact JSON fields):\n");
+                    prompt.append("- 'facts': INSTRUCTIONS AND DEFINITIONS — define key terms ('document', 'identify', 'describe', 'you/your', 'communication'), reference applicable procedural rules, state production format requirements, include continuing duty to supplement answers\n");
+                    prompt.append("- 'legalStandard': Brief reference to the applicable procedural rule (e.g., 'Pursuant to Federal Rule of Civil Procedure 34' or 'Mass. R. Civ. P. 34' or state equivalent). 1-2 sentences only.\n");
+                    prompt.append("- 'arguments': Each argument is one NUMBERED REQUEST or INTERROGATORY. The 'heading' should be the topic (e.g., 'Communications Between Parties', 'Insurance Coverage'). The 'body' should contain the specific discovery request text, using precise legal language.\n");
+                    prompt.append("- 'prayerItems': not used for discovery — leave as empty array []\n");
+                    prompt.append("- 'reliefSought': not used for discovery — leave as empty string\n\n");
+                    break;
+                case "contract":
+                    prompt.append("**REQUIRED SECTIONS FOR CONTRACT/AGREEMENT** (use these exact JSON fields):\n");
+                    prompt.append("- 'title': ALL CAPS document title (e.g., 'NON-DISCLOSURE AGREEMENT', 'SERVICE AGREEMENT', 'SETTLEMENT AGREEMENT AND GENERAL RELEASE')\n");
+                    prompt.append("- 'facts': PREAMBLE — opening paragraph with effective date, full legal names and addresses of both parties, and recitals (WHEREAS clauses explaining the purpose/background of the agreement)\n");
+                    prompt.append("- 'arguments': Each argument is one NUMBERED SECTION of the contract. The 'heading' should be the section title (e.g., 'DEFINITIONS', 'OBLIGATIONS', 'TERM AND TERMINATION'). The 'body' should contain the full section text with subsections as needed.\n");
+                    prompt.append("- 'legalStandard': not used for contracts — leave as empty string\n");
+                    prompt.append("- 'prayerItems': not used for contracts — leave as empty array []\n");
+                    prompt.append("- 'reliefSought': not used for contracts — leave as empty string\n\n");
+                    break;
+                case "letter":
+                    prompt.append("**REQUIRED FIELDS FOR LETTER** (use these exact JSON fields):\n");
+                    prompt.append("- 'title': The VIA line if applicable (e.g., 'Via Certified Mail, Return Receipt Requested' or 'Via Email to mikrause@hanover.com'). Leave empty string if no via line needed.\n");
+                    prompt.append("- 'recipientBlock': ONLY the mailing address — each line separated by \\n. Include: company/organization name, contact name and title, street address, city/state/zip. Do NOT include 'Re:' lines, insured references, or claim numbers here — those go in reBlock.\n");
+                    prompt.append("- 'reBlock': The RE: reference lines — each line separated by \\n. Use label: value format (e.g., 'Our Client(s): John Doe\\nClaim Number: LM-2025-12345\\nDate of Incident: March 15, 2025'). Do NOT prefix with 'Re:' — the template adds that.\n");
+                    prompt.append("- 'salutation': Greeting line (e.g., 'Dear Ms. Krause,' or 'Dear Claims Adjuster:')\n");
+                    prompt.append("- 'letterBody': The letter body paragraphs ONLY. Use \\n\\n to separate paragraphs. Follow the DOCUMENT-SPECIFIC CONTENT RULES above for paragraph count and length. Do NOT include date, recipient, RE block, salutation, or closing — those are in separate fields.\n");
+                    prompt.append("- 'closing': The closing phrase only (e.g., 'Very truly yours,' or 'Sincerely,'). Do NOT include attorney name or signature — the template handles that.\n");
+                    prompt.append("- All other fields (facts, legalStandard, arguments, prayerItems, reliefSought): leave empty or omit.\n\n");
+                    break;
+                case "brief":
+                    prompt.append("**REQUIRED SECTIONS FOR BRIEF/MEMORANDUM** (use these exact JSON fields):\n");
+                    prompt.append("- 'facts': STATEMENT OF FACTS — objective factual narrative relevant to the legal issues\n");
+                    prompt.append("- 'legalStandard': LEGAL STANDARD — the applicable standard of review or governing legal framework (1-2 paragraphs)\n");
+                    prompt.append("- 'arguments': ARGUMENT sections — each is a major argument point. Use the 'heading' for the argument title. Apply law to facts in each 'body'.\n");
+                    prompt.append("- 'prayerItems': CONCLUSION points — these will be rendered as a prose conclusion paragraph (NOT a numbered prayer). Write each item as a specific conclusion or requested action.\n");
+                    prompt.append("- 'reliefSought': brief description of what the memorandum supports (e.g., 'in support of Defendant\\'s Motion to Dismiss')\n\n");
+                    break;
+                default: // motion, petition, pleading
+                    prompt.append("**REQUIRED SECTIONS** (use these exact section names):\n");
+                    prompt.append("- I. STATEMENT OF FACTS — Narrative of what happened, using case data provided\n");
+                    prompt.append("- II. APPLICABLE LEGAL STANDARDS — governing statutes and constitutional provisions (1-2 paragraphs)\n");
+                    prompt.append("- III. ARGUMENT — subsections A, B, C for each ground. Apply law to facts.\n");
+                    prompt.append("- The 'prayer' JSON field handles the WHEREFORE — always include specific relief\n\n");
+                    break;
+            }
         } else {
             if (isDemandLetterType(documentType)) {
                 log.warn("Demand letter type '{}' requested but no case linked — using generic prompt", documentType);
             }
-            appendGenericDocumentPrompt(prompt, documentType, jurisdiction);
+            appendGenericDocumentPrompt(prompt, documentType, practiceArea, jurisdiction);
         }
 
         // Indicate research mode for token allocation and citation behavior
@@ -2539,7 +2720,58 @@ public class AiWorkspaceDocumentService {
         }
 
         prompt.append("JURISDICTION: ").append(jurisdiction).append("\n");
+        if (practiceArea != null && !practiceArea.isBlank()) {
+            prompt.append("PRACTICE AREA: ").append(practiceArea).append("\n");
+        }
+        if (courtLevel != null && !"DEFAULT".equals(courtLevel)) {
+            prompt.append("COURT LEVEL: ").append(courtLevel).append("\n");
+        }
         prompt.append("Use ").append(jurisdiction).append(" rules of procedure, ").append(jurisdiction).append(" case law, and the applicable federal circuit's precedent. Format the court caption and signature block according to ").append(jurisdiction).append(" court conventions.\n\n");
+
+        // JURISDICTION CONTEXT — citation pack with rule labels and common statute numbers so the AI uses the right state's law.
+        com.bostoneo.bostoneosolutions.dto.ai.JurisdictionPack jurisdictionPack = templateRegistry.getJurisdictionPack(jurisdiction);
+        if (jurisdictionPack != null) {
+            prompt.append("**JURISDICTION CONTEXT — AUTHORITATIVE FOR THIS DOCUMENT**:\n");
+            prompt.append("Name: ").append(jurisdictionPack.getName()).append("\n");
+            if (jurisdictionPack.getCivilRules() != null) {
+                prompt.append("Civil Procedure Rules: ").append(jurisdictionPack.getCivilRules()).append("\n");
+            }
+            if (jurisdictionPack.getCriminalRules() != null) {
+                prompt.append("Criminal Procedure Rules: ").append(jurisdictionPack.getCriminalRules()).append("\n");
+            }
+            if (jurisdictionPack.getEvidenceRules() != null) {
+                prompt.append("Evidence Rules: ").append(jurisdictionPack.getEvidenceRules()).append("\n");
+            }
+            if (jurisdictionPack.getReporterAbbrev() != null) {
+                prompt.append("Reporter Abbreviation: ").append(jurisdictionPack.getReporterAbbrev()).append("\n");
+            }
+            if (jurisdictionPack.getCommonCitations() != null && !jurisdictionPack.getCommonCitations().isEmpty()) {
+                prompt.append("Common Citations (use these exact values when the topic applies):\n");
+                jurisdictionPack.getCommonCitations().forEach((key, value) ->
+                    prompt.append("  - ").append(key).append(": ").append(value).append("\n"));
+            }
+            prompt.append("Use ONLY these jurisdiction-specific rules and citations. If you need a citation not listed here, write it as `[STATE STATUTE CITATION]` rather than inventing a number.\n\n");
+        } else if (jurisdiction != null && !jurisdiction.isBlank() && !jurisdiction.equalsIgnoreCase("Massachusetts")) {
+            prompt.append("**JURISDICTION CONTEXT — NOT LOADED**:\n");
+            prompt.append("No citation pack is available for ").append(jurisdiction).append(". Do NOT default to Massachusetts law. ");
+            prompt.append("Where a jurisdiction-specific citation is required, write `[STATE STATUTE CITATION]` and flag the gap rather than inventing a statute number.\n\n");
+        }
+
+        // DOCUMENT OPTIONS — per-request flags the template may branch on (e.g., LOR recipient + purposes).
+        if (documentOptions != null && !documentOptions.isEmpty()) {
+            prompt.append("**DOCUMENT OPTIONS (drives conditional branches in the template)**:\n");
+            documentOptions.forEach((key, value) -> {
+                prompt.append("- ").append(key).append(": ");
+                if (value instanceof java.util.Collection<?>) {
+                    java.util.Collection<?> col = (java.util.Collection<?>) value;
+                    prompt.append(col.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(", ")));
+                } else {
+                    prompt.append(String.valueOf(value));
+                }
+                prompt.append("\n");
+            });
+            prompt.append("Apply these options strictly as specified in the document-specific content rules above.\n\n");
+        }
 
         if (caseContext != null && !caseContext.isEmpty()) {
             prompt.append(caseContext).append("\n");
@@ -2586,9 +2818,10 @@ public class AiWorkspaceDocumentService {
             prompt.append("7. Address the specific issues in this case\n");
         }
 
-        // DETERMINE CITATION POLICY based on document type (and jurisdiction-specific override if available)
-        CitationLevel citationLevel = templateRegistry.getCitationLevel(documentType, jurisdiction);
-        log.info("Document type '{}' (jurisdiction: {}) has citation level: {}", documentType, jurisdiction, citationLevel);
+        // DETERMINE CITATION POLICY based on document type (and practice-area / jurisdiction-specific override if available)
+        CitationLevel citationLevel = templateRegistry.getCitationLevel(documentType, practiceArea, jurisdiction);
+        log.info("Document type '{}' (practiceArea: {}, jurisdiction: {}) has citation level: {}",
+                documentType, practiceArea, jurisdiction, citationLevel);
 
         // CONDITIONAL CITATION POLICY based on research mode AND document type
         if ("THOROUGH".equalsIgnoreCase(researchMode)) {
@@ -2660,41 +2893,175 @@ public class AiWorkspaceDocumentService {
 
         // FORMATTING: Template-based JSON vs letter vs markdown
         prompt.append("\nFORMATTING REQUIREMENTS:\n");
-        if (documentTemplateEngine.supportsTemplateGeneration(documentType) && legalCase != null) {
+        if (documentTemplateEngine.supportsTemplateGeneration(documentType)) {
             // Template-based: AI returns ONLY variable content as JSON.
-            // The template handles: caption, preamble, COMES NOW intro, WHEREFORE prayer, signature, certificate.
+            // Resolve template key first to tailor intro for letter vs court filing
+            String jsonTemplateKey = documentTemplateEngine.resolveDocumentTemplateKey(documentType);
+
             prompt.append("**CRITICAL: Return your response as a JSON object** (no markdown, no code fences).\n");
-            prompt.append("The template handles caption, preamble, introduction, prayer, signature, and certificate of service.\n");
-            prompt.append("You ONLY generate: title, relief description, facts, legal standard, and argument subsections.\n");
+            if ("letter".equals(jsonTemplateKey)) {
+                prompt.append("The template handles letterhead, date, signature block, and footer.\n");
+                prompt.append("You generate: recipient address, RE block, salutation, letter body, and closing phrase.\n");
+            } else if ("contract".equals(jsonTemplateKey)) {
+                prompt.append("The template handles the centered title, dual signature blocks, and IN WITNESS WHEREOF clause.\n");
+                prompt.append("You generate: title, preamble with party identification, and numbered contract sections.\n");
+            } else {
+                prompt.append("The template handles caption, preamble, introduction, prayer/conclusion, signature, and certificate of service.\n");
+                prompt.append("You ONLY generate: title, relief description, facts, legal standard, and argument subsections.\n");
+            }
             prompt.append("DO NOT wrap in ```json``` fences. Return ONLY the raw JSON object.\n\n");
-            prompt.append("JSON SCHEMA:\n");
-            prompt.append("{\n");
-            prompt.append("  \"title\": \"MOTION TO SUPPRESS BLOOD ALCOHOL EVIDENCE\",\n");
-            prompt.append("  \"reliefSought\": \"suppress all blood alcohol evidence obtained on December 14, 2025, including the blood sample, BAC results of 0.11%, and all derivative evidence\",\n");
-            prompt.append("  \"facts\": \"On December 14, 2025... (full factual narrative, use \\n\\n between paragraphs)\",\n");
-            prompt.append("  \"legalStandard\": \"The Fourth Amendment... Article 38.23(a)... (governing law, 1-2 paragraphs)\",\n");
-            prompt.append("  \"arguments\": [\n");
-            prompt.append("    { \"letter\": \"A\", \"heading\": \"The Traffic Stop Lacked Reasonable Suspicion\", \"body\": \"A traffic stop constitutes a seizure...\" },\n");
-            prompt.append("    { \"letter\": \"B\", \"heading\": \"The Blood Draw Violated Section 724.017\", \"body\": \"...\" }\n");
-            prompt.append("  ],\n");
-            prompt.append("  \"prayerItems\": [\n");
-            prompt.append("    \"Suppress the blood sample and all BAC evidence\",\n");
-            prompt.append("    \"Suppress all evidence derived from the unlawful traffic stop\",\n");
-            prompt.append("    \"Set this Motion for an evidentiary hearing\"\n");
-            prompt.append("  ]\n");
-            prompt.append("}\n\n");
-            prompt.append("RULES:\n");
-            prompt.append("- 'title': ALL CAPS, short (e.g., 'MOTION TO SUPPRESS BLOOD ALCOHOL EVIDENCE')\n");
-            prompt.append("- 'reliefSought': completes the sentence 'moves this Honorable Court to [reliefSought]' — lowercase, specific\n");
-            prompt.append("- 'facts': factual narrative only. Use case data provided. Use \\n\\n between paragraphs.\n");
-            prompt.append("- 'legalStandard': governing statutes and constitutional provisions. 1-2 paragraphs MAX.\n");
-            prompt.append("- 'arguments': each is a separate GROUND for the motion. 2-4 arguments. Each has letter, heading, body.\n");
-            prompt.append("- 'prayerItems': specific relief items (the template adds 'grant other relief' automatically)\n");
+
+            // Type-specific JSON schema example
+            if ("discovery".equals(jsonTemplateKey)) {
+                prompt.append("JSON SCHEMA (DISCOVERY):\n");
+                prompt.append("{\n");
+                prompt.append("  \"title\": \"PLAINTIFF'S FIRST REQUEST FOR PRODUCTION OF DOCUMENTS\",\n");
+                prompt.append("  \"reliefSought\": \"\",\n");
+                prompt.append("  \"facts\": \"As used herein, the term 'document' shall mean any writing...\\n\\nThe term 'identify' when used with respect to a person...\\n\\nPursuant to the applicable rules, you are required to produce...\",\n");
+                prompt.append("  \"legalStandard\": \"These requests are propounded pursuant to Federal Rule of Civil Procedure 34.\",\n");
+                prompt.append("  \"arguments\": [\n");
+                prompt.append("    { \"letter\": \"1\", \"heading\": \"Communications Between Parties\", \"body\": \"All documents and communications between Plaintiff and Defendant relating to the subject matter of this litigation, from January 1, 2024 to the present.\" },\n");
+                prompt.append("    { \"letter\": \"2\", \"heading\": \"Contracts and Agreements\", \"body\": \"All contracts, agreements, memoranda of understanding, or other written agreements between the parties.\" },\n");
+                prompt.append("    { \"letter\": \"3\", \"heading\": \"Insurance Policies\", \"body\": \"Complete copies of all liability insurance policies that may provide coverage for the claims asserted in this action.\" }\n");
+                prompt.append("  ],\n");
+                prompt.append("  \"prayerItems\": []\n");
+                prompt.append("}\n\n");
+                prompt.append("RULES:\n");
+                prompt.append("- 'title': ALL CAPS, include party designation (e.g., 'PLAINTIFF'S FIRST SET OF INTERROGATORIES' or 'DEFENDANT'S FIRST REQUEST FOR PRODUCTION')\n");
+                prompt.append("- 'facts': Definitions and instructions section. Define key terms precisely. Reference applicable procedural rules.\n");
+                prompt.append("- 'legalStandard': Brief rule reference only (1-2 sentences). Use jurisdiction-specific rule.\n");
+                prompt.append("- 'arguments': Each is one numbered discovery request. 'heading' = topic name. 'body' = the actual request text with precise scope and time period.\n");
+                prompt.append("- Generate 10-25 requests covering relevant categories for the case type.\n");
+                prompt.append("- Observe jurisdiction's interrogatory limit if applicable (e.g., 30 including subparts in Massachusetts).\n");
+            } else if ("complaint".equals(jsonTemplateKey)) {
+                prompt.append("JSON SCHEMA (COMPLAINT):\n");
+                prompt.append("{\n");
+                prompt.append("  \"title\": \"COMPLAINT AND DEMAND FOR JURY TRIAL\",\n");
+                prompt.append("  \"reliefSought\": \"files this Complaint for damages arising from Defendant's negligence\",\n");
+                prompt.append("  \"facts\": \"1. On December 14, 2025, Plaintiff was traveling...\\n\\n2. Defendant ran a red light...\\n\\n3. As a direct result...\",\n");
+                prompt.append("  \"legalStandard\": \"This Court has jurisdiction pursuant to... Venue is proper because...\",\n");
+                prompt.append("  \"arguments\": [\n");
+                prompt.append("    { \"letter\": \"I\", \"heading\": \"Negligence\", \"body\": \"Plaintiff incorporates paragraphs 1 through 5 above. Defendant owed a duty...\" },\n");
+                prompt.append("    { \"letter\": \"II\", \"heading\": \"Negligence Per Se\", \"body\": \"Plaintiff incorporates paragraphs 1 through 5 above. Defendant violated...\" }\n");
+                prompt.append("  ],\n");
+                prompt.append("  \"prayerItems\": [\n");
+                prompt.append("    \"Award compensatory damages in an amount to be determined at trial\",\n");
+                prompt.append("    \"Award costs of suit and reasonable attorney's fees\"\n");
+                prompt.append("  ]\n");
+                prompt.append("}\n\n");
+                prompt.append("RULES:\n");
+                prompt.append("- 'title': ALL CAPS (e.g., 'COMPLAINT AND DEMAND FOR JURY TRIAL')\n");
+                prompt.append("- 'reliefSought': completes the sentence 'files this Complaint to [reliefSought]'\n");
+                prompt.append("- 'facts': numbered factual allegations separated by \\n\\n. Number every paragraph.\n");
+                prompt.append("- 'legalStandard': jurisdiction and venue basis. Explain why this court has authority.\n");
+                prompt.append("- 'arguments': each is a CAUSE OF ACTION (count). Heading = cause name, body = elements + incorporation by reference.\n");
+                prompt.append("- 'prayerItems': specific relief items (the template adds 'grant other relief' automatically)\n");
+            } else if ("brief".equals(jsonTemplateKey)) {
+                prompt.append("JSON SCHEMA (BRIEF/MEMORANDUM):\n");
+                prompt.append("{\n");
+                prompt.append("  \"title\": \"MEMORANDUM OF LAW IN SUPPORT OF MOTION TO DISMISS\",\n");
+                prompt.append("  \"reliefSought\": \"in support of Defendant's Motion to Dismiss\",\n");
+                prompt.append("  \"facts\": \"On December 14, 2025... (factual narrative, use \\n\\n between paragraphs)\",\n");
+                prompt.append("  \"legalStandard\": \"Under Federal Rule of Civil Procedure 12(b)(6), a court must dismiss...\",\n");
+                prompt.append("  \"arguments\": [\n");
+                prompt.append("    { \"letter\": \"A\", \"heading\": \"Plaintiff Fails to State a Claim\", \"body\": \"The Complaint fails to allege...\" },\n");
+                prompt.append("    { \"letter\": \"B\", \"heading\": \"The Claims Are Time-Barred\", \"body\": \"Even if adequately pled...\" }\n");
+                prompt.append("  ],\n");
+                prompt.append("  \"prayerItems\": [\n");
+                prompt.append("    \"Dismiss the Complaint in its entirety with prejudice\",\n");
+                prompt.append("    \"Award Defendant its costs and reasonable attorney's fees\"\n");
+                prompt.append("  ]\n");
+                prompt.append("}\n\n");
+                prompt.append("RULES:\n");
+                prompt.append("- 'title': ALL CAPS (e.g., 'MEMORANDUM OF LAW IN SUPPORT OF MOTION TO DISMISS')\n");
+                prompt.append("- 'reliefSought': describes what the memorandum supports (e.g., 'in support of Defendant\\'s Motion to Dismiss')\n");
+                prompt.append("- 'facts': objective factual narrative. Use \\n\\n between paragraphs.\n");
+                prompt.append("- 'legalStandard': applicable standard of review. 1-2 paragraphs.\n");
+                prompt.append("- 'arguments': each is a major argument point. Apply law to facts.\n");
+                prompt.append("- 'prayerItems': conclusion points — rendered as prose CONCLUSION, NOT a numbered list\n");
+            } else if ("contract".equals(jsonTemplateKey)) {
+                prompt.append("JSON SCHEMA (CONTRACT/AGREEMENT):\n");
+                prompt.append("{\n");
+                prompt.append("  \"title\": \"NON-DISCLOSURE AGREEMENT\",\n");
+                prompt.append("  \"facts\": \"This Non-Disclosure Agreement (this \\\"Agreement\\\") is entered into as of [Date], by and between:\\n\\nABC Corporation, a Delaware corporation, with its principal place of business at 123 Main Street, Boston, MA 02101 (\\\"Disclosing Party\\\"); and\\n\\nXYZ Inc., a Massachusetts corporation, with its principal place of business at 456 Oak Avenue, Cambridge, MA 02139 (\\\"Receiving Party\\\").\\n\\nWHEREAS, the Disclosing Party possesses certain confidential and proprietary information relating to its business operations; and\\n\\nWHEREAS, the Receiving Party desires to receive such information for the purpose of evaluating a potential business relationship;\\n\\nNOW, THEREFORE, in consideration of the mutual covenants and agreements set forth herein, the parties agree as follows:\",\n");
+                prompt.append("  \"arguments\": [\n");
+                prompt.append("    { \"letter\": \"1\", \"heading\": \"Definitions\", \"body\": \"\\\"Confidential Information\\\" shall mean all non-public information...\" },\n");
+                prompt.append("    { \"letter\": \"2\", \"heading\": \"Obligations of Receiving Party\", \"body\": \"The Receiving Party shall: (a) hold all Confidential Information in strict confidence...\" },\n");
+                prompt.append("    { \"letter\": \"3\", \"heading\": \"Exclusions\", \"body\": \"Confidential Information shall not include information that: (a) is or becomes publicly available...\" },\n");
+                prompt.append("    { \"letter\": \"4\", \"heading\": \"Term and Termination\", \"body\": \"This Agreement shall remain in effect for a period of two (2) years...\" },\n");
+                prompt.append("    { \"letter\": \"5\", \"heading\": \"Governing Law\", \"body\": \"This Agreement shall be governed by and construed in accordance with the laws of the Commonwealth of Massachusetts...\" }\n");
+                prompt.append("  ],\n");
+                prompt.append("  \"legalStandard\": \"\",\n");
+                prompt.append("  \"prayerItems\": [],\n");
+                prompt.append("  \"reliefSought\": \"\"\n");
+                prompt.append("}\n\n");
+                prompt.append("RULES:\n");
+                prompt.append("- 'title': ALL CAPS document title matching the agreement type\n");
+                prompt.append("- 'facts': PREAMBLE — effective date, full party identification with addresses, WHEREAS recitals, NOW THEREFORE clause. Use \\n\\n between paragraphs.\n");
+                prompt.append("- 'arguments': Each is one NUMBERED SECTION. 'heading' = section title (e.g., 'DEFINITIONS'). 'body' = full section text with subsections using (a), (b), (c) format.\n");
+                prompt.append("- Generate 7-12 sections covering all essential contract provisions for the agreement type.\n");
+                prompt.append("- Use formal contract drafting language. Every obligation must be precisely defined.\n");
+                prompt.append("- Include governing law, entire agreement, severability, and amendment provisions.\n");
+            } else if ("letter".equals(jsonTemplateKey)) {
+                prompt.append("JSON SCHEMA (LETTER):\n");
+                prompt.append("{\n");
+                prompt.append("  \"title\": \"Via Certified Mail, Return Receipt Requested\",\n");
+                prompt.append("  \"recipientBlock\": \"Liberty Mutual Insurance\\nAttn: Jane Krause, Claims Adjuster\\n175 Berkeley Street\\nBoston, MA 02116\",\n");
+                prompt.append("  \"reBlock\": \"Our Client: John Doe\\nClaim Number: LM-2025-12345\\nDate of Incident: March 15, 2025\",\n");
+                prompt.append("  \"salutation\": \"Dear Ms. Krause:\",\n");
+                prompt.append("  \"letterBody\": \"Please be advised that this firm has been retained to represent John Doe in connection with injuries sustained in a motor vehicle accident on March 15, 2025.\\n\\nMr. Doe was traveling westbound on Main Street when your insured ran a red light at the intersection of Main and Elm Streets, striking his vehicle on the driver's side.\\n\\nPlease direct all future communications regarding this matter to our office. Do not contact Mr. Doe directly.\",\n");
+                prompt.append("  \"closing\": \"Very truly yours,\"\n");
+                prompt.append("}\n\n");
+                prompt.append("RULES:\n");
+                prompt.append("- 'title': The VIA line if applicable (e.g., 'Via Certified Mail, Return Receipt Requested' or 'Via Email to mikrause@hanover.com'). Use empty string \"\" if no via line needed.\n");
+                prompt.append("- 'recipientBlock': ONLY the mailing address. Each line separated by \\n. Include ONLY: company name, contact name/title, street address, city/state/zip. Do NOT put 'Re:' lines, insured names, or claim references here.\n");
+                prompt.append("- 'reBlock': Case reference lines in label: value format, each separated by \\n. Include Our Client(s), Claim Number, Date of Incident as applicable. Do NOT prefix with 'Re:' — the template adds that.\n");
+                prompt.append("- 'salutation': Professional greeting (e.g., 'Dear Ms. Krause,' or 'Dear Claims Adjuster:')\n");
+                prompt.append("- 'letterBody': The letter body paragraphs ONLY. Follow the DOCUMENT-SPECIFIC CONTENT RULES above for exact paragraph count and content. Do NOT include date, address, RE block, salutation, or closing.\n");
+                prompt.append("- 'closing': Only the closing phrase (e.g., 'Very truly yours,'). Do NOT include attorney name.\n");
+                prompt.append("- All other fields (facts, legalStandard, arguments, prayerItems, reliefSought): omit or leave empty.\n");
+            } else {
+                prompt.append("JSON SCHEMA:\n");
+                prompt.append("{\n");
+                prompt.append("  \"title\": \"MOTION TO SUPPRESS BLOOD ALCOHOL EVIDENCE\",\n");
+                prompt.append("  \"reliefSought\": \"suppress all blood alcohol evidence obtained on December 14, 2025, including the blood sample, BAC results of 0.11%, and all derivative evidence\",\n");
+                prompt.append("  \"facts\": \"On December 14, 2025... (full factual narrative, use \\n\\n between paragraphs)\",\n");
+                prompt.append("  \"legalStandard\": \"The Fourth Amendment... Article 38.23(a)... (governing law, 1-2 paragraphs)\",\n");
+                prompt.append("  \"arguments\": [\n");
+                prompt.append("    { \"letter\": \"A\", \"heading\": \"The Traffic Stop Lacked Reasonable Suspicion\", \"body\": \"A traffic stop constitutes a seizure...\" },\n");
+                prompt.append("    { \"letter\": \"B\", \"heading\": \"The Blood Draw Violated Section 724.017\", \"body\": \"...\" }\n");
+                prompt.append("  ],\n");
+                prompt.append("  \"prayerItems\": [\n");
+                prompt.append("    \"Suppress the blood sample and all BAC evidence\",\n");
+                prompt.append("    \"Suppress all evidence derived from the unlawful traffic stop\",\n");
+                prompt.append("    \"Set this Motion for an evidentiary hearing\"\n");
+                prompt.append("  ]\n");
+                prompt.append("}\n\n");
+                prompt.append("RULES:\n");
+                prompt.append("- 'title': ALL CAPS, short (e.g., 'MOTION TO SUPPRESS BLOOD ALCOHOL EVIDENCE')\n");
+                prompt.append("- 'reliefSought': completes the sentence 'moves this Honorable Court to [reliefSought]' — lowercase, specific\n");
+                prompt.append("- 'facts': factual narrative only. Use case data provided. Use \\n\\n between paragraphs.\n");
+                prompt.append("- 'legalStandard': governing statutes and constitutional provisions. 1-2 paragraphs MAX.\n");
+                prompt.append("- 'arguments': each is a separate GROUND for the motion. 2-4 arguments. Each has letter, heading, body.\n");
+                prompt.append("- 'prayerItems': specific relief items (the template adds 'grant other relief' automatically)\n");
+            }
             prompt.append("- Use plain text in all fields. Do NOT use markdown ** or # formatting.\n");
-            prompt.append("- Do NOT use [ATTORNEY TO INSERT: ...] placeholders. Write substantive content or omit.\n");
-            prompt.append("- Cite 1-2 controlling cases per argument. Do NOT string-cite 5+ cases.\n");
-            prompt.append("- MAXIMUM 1000-1500 words total across all fields. Be CONCISE.\n");
-            prompt.append("- Write like a practicing attorney, not a law professor.\n");
+            if ("letter".equals(jsonTemplateKey)) {
+                prompt.append("- Write professional legal correspondence. Be clear, concise, and specific.\n");
+                prompt.append("- Follow the DOCUMENT-SPECIFIC CONTENT RULES above for exact paragraph count and word limit.\n");
+                prompt.append("- Do NOT include date, recipient address, RE block, or closing in the letterBody field.\n");
+                prompt.append("- Do NOT add paragraphs about medical records, evidence preservation, attorney liens, or insurance coverage details unless the DOCUMENT-SPECIFIC CONTENT RULES explicitly require them.\n");
+            } else if ("contract".equals(jsonTemplateKey)) {
+                prompt.append("- Use formal contract drafting language. Every term and obligation must be precisely defined.\n");
+                prompt.append("- Use (a), (b), (c) subsections within sections for detailed provisions.\n");
+                prompt.append("- MAXIMUM 2000-3000 words total across all fields. Contracts need detail.\n");
+                prompt.append("- Do NOT include signature blocks — the template handles those.\n");
+            } else {
+                prompt.append("- Do NOT use [ATTORNEY TO INSERT: ...] placeholders. Write substantive content or omit.\n");
+                prompt.append("- Cite 1-2 controlling cases per argument. Do NOT string-cite 5+ cases.\n");
+                prompt.append("- MAXIMUM 1000-1500 words total across all fields. Be CONCISE.\n");
+                prompt.append("- Write like a practicing attorney, not a law professor.\n");
+            }
         } else if (isLetterType(documentType) && !isDemandLetterType(documentType)) {
             prompt.append("- This is a LETTER — do NOT use markdown headers (#, ##, ###) in the body\n");
             prompt.append("- Write as flowing prose paragraphs, not sections with headers\n");
@@ -2759,39 +3126,102 @@ public class AiWorkspaceDocumentService {
      * Parse AI response as structured JSON and render through HTML template.
      * Falls back by throwing an exception if JSON parsing fails (caller catches and uses raw content).
      */
-    private String renderWithTemplate(String aiContent, LegalCase legalCase, String jurisdiction, String documentType, Long userId, Long orgId) {
+    private String renderWithTemplate(String aiContent, LegalCase legalCase, String jurisdiction, String documentType,
+                                       Long userId, Long orgId, String courtLevel,
+                                       Long stationeryTemplateId, Long stationeryAttorneyId) {
         // Strip markdown code fences if the AI wrapped JSON in ```json ... ```
+        // Also handle cases where AI prefixes with prose before the fence
         String jsonStr = aiContent.trim();
         if (jsonStr.startsWith("```")) {
             jsonStr = jsonStr.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "").trim();
+        } else if (jsonStr.contains("```")) {
+            // AI may have prefixed with prose: "Here is the JSON:\n```json\n{...}\n```"
+            int fenceStart = jsonStr.indexOf("```");
+            jsonStr = jsonStr.substring(fenceStart);
+            jsonStr = jsonStr.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "").trim();
+        }
+        // Final fallback: if it still doesn't start with {, try to find the JSON object
+        if (!jsonStr.startsWith("{") && jsonStr.contains("{")) {
+            jsonStr = jsonStr.substring(jsonStr.indexOf("{"));
+            // Find matching closing brace
+            int lastBrace = jsonStr.lastIndexOf("}");
+            if (lastBrace > 0) {
+                jsonStr = jsonStr.substring(0, lastBrace + 1);
+            }
         }
 
         // Parse JSON into AiDocumentResponse
-        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
         com.bostoneo.bostoneosolutions.dto.ai.AiDocumentResponse aiResponse;
         try {
-            aiResponse = mapper.readValue(jsonStr, com.bostoneo.bostoneosolutions.dto.ai.AiDocumentResponse.class);
+            aiResponse = objectMapper.readValue(jsonStr, com.bostoneo.bostoneosolutions.dto.ai.AiDocumentResponse.class);
         } catch (Exception e) {
             throw new RuntimeException("AI did not return valid JSON: " + e.getMessage());
         }
 
-        // Validate minimum fields
+        // Route to letter template, contract template, or caption template
+        if (documentTemplateEngine.isLetterDocumentType(documentType)) {
+            // Letter validation: need letterBody at minimum
+            if (aiResponse.getLetterBody() == null || aiResponse.getLetterBody().isBlank()) {
+                throw new RuntimeException("AI JSON missing required letter field (letterBody)");
+            }
+
+            // Resolve stationery HTML (letterhead, signature, footer) if IDs are available
+            DocumentTemplateEngine.StationeryHtmlParts stationeryHtml = resolveStationeryHtml(stationeryTemplateId, stationeryAttorneyId, orgId);
+
+            return documentTemplateEngine.renderLetterDocument(aiResponse, userId, orgId, stationeryHtml);
+        }
+
+        if (documentTemplateEngine.isContractDocumentType(documentType)) {
+            // Contract validation: need title and sections
+            if (aiResponse.getTitle() == null || aiResponse.getTitle().isBlank()) {
+                log.warn("AI JSON missing 'title' for contract — using default");
+            }
+            if (aiResponse.getArguments() == null || aiResponse.getArguments().isEmpty()) {
+                log.warn("AI JSON missing 'arguments' (contract sections) — document will have no body sections");
+            }
+
+            return documentTemplateEngine.renderContractDocument(aiResponse, legalCase);
+        }
+
+        // Caption document validation
         if (aiResponse.getTitle() == null || aiResponse.getFacts() == null || aiResponse.getFacts().isBlank()) {
             throw new RuntimeException("AI JSON missing required fields (title, facts)");
         }
+        if (aiResponse.getArguments() == null || aiResponse.getArguments().isEmpty()) {
+            log.warn("AI JSON missing 'arguments' section — document will have no legal argument");
+        }
 
-        // Render through template engine
-        return documentTemplateEngine.renderDocument(aiResponse, legalCase, jurisdiction, documentType, userId, orgId);
+        // Render through template engine (caption types: motion, complaint, brief, discovery)
+        return documentTemplateEngine.renderDocument(aiResponse, legalCase, jurisdiction, documentType, userId, orgId, courtLevel);
+    }
+
+    /**
+     * Resolve stationery HTML parts from template and attorney IDs.
+     * Returns null if stationery is not configured.
+     */
+    private DocumentTemplateEngine.StationeryHtmlParts resolveStationeryHtml(Long templateId, Long attorneyId, Long orgId) {
+        if (templateId == null || attorneyId == null) return null;
+        try {
+            var rendered = stationeryService.renderStationery(templateId, attorneyId, orgId);
+            return new DocumentTemplateEngine.StationeryHtmlParts(
+                    rendered.getLetterheadHtml(),
+                    rendered.getSignatureBlockHtml(),
+                    rendered.getFooterHtml()
+            );
+        } catch (Exception e) {
+            log.warn("Could not render stationery for letter template: {}", e.getMessage());
+            return null;
+        }
     }
 
     /** Generic document prompt (non-demand-letter types) */
-    private void appendGenericDocumentPrompt(StringBuilder prompt, String documentType, String jurisdiction) {
+    private void appendGenericDocumentPrompt(StringBuilder prompt, String documentType, String practiceArea, String jurisdiction) {
         prompt.append("Generate a professional legal ").append(documentType).append(" document.\n\n");
-        String documentTemplate = templateRegistry.getTemplateText(documentType, jurisdiction);
+        String documentTemplate = templateRegistry.getTemplateText(documentType, practiceArea, jurisdiction);
         if (!documentTemplate.isEmpty()) {
             prompt.append(documentTemplate).append("\n");
         } else {
-            String hints = templateRegistry.getHints(documentType, jurisdiction);
+            String hints = templateRegistry.getHints(documentType, practiceArea, jurisdiction);
             if (hints != null && !hints.isEmpty()) {
                 prompt.append("**DOCUMENT STRUCTURE GUIDANCE**:\n");
                 prompt.append(hints).append("\n\n");
@@ -4196,8 +4626,12 @@ public class AiWorkspaceDocumentService {
              // Page-break rules: keep headings with their following content
              + "h1, h2, h3, h4, h5, h6 { page-break-after: avoid; }"
              + "p { orphans: 3; widows: 3; }"
+             // Caption headers & document titles: iText's Div object ignores text-align entirely.
+             // preprocessForPdf() converts centered <div> to <p class="tc"> — Paragraph supports alignment.
+             + ".tc { text-align: center !important; line-height: 1.3; margin: 0 0 8px 0; }"
              // Caption tables: borderless, single-spaced, 12pt (override body double-spacing)
-             + "table[border=\"0\"] { border: none !important; width: 100% !important; margin: 0 !important; font-size: 12pt !important; line-height: 1.3 !important; }"
+             // Do NOT override width or margin — caption templates use width="85%" + margin:auto for centering
+             + "table[border=\"0\"] { border: none !important; font-size: 12pt !important; line-height: 1.3 !important; }"
              + "table[border=\"0\"] td, table[border=\"0\"] th { border: none !important; padding: 2px 4px; font-size: 12pt !important; text-indent: 0 !important; }"
              + "table { page-break-inside: avoid; }" // iText treats as hint — oversized tables will still break
              + "ul, ol { page-break-inside: avoid; }"
@@ -4205,8 +4639,44 @@ public class AiWorkspaceDocumentService {
              + "blockquote { page-break-inside: avoid; }"
              + "</style>"
              + "</head><body>"
-             + bodyHtml
+             + preprocessForPdf(bodyHtml)
              + "</body></html>";
+    }
+
+    /**
+     * Preprocess HTML body for iText PDF rendering.
+     * iText's {@code Div} layout object does not support text-align at all — not via
+     * inline styles, HTML align attribute, or CSS class rules. Only {@code Paragraph}
+     * (mapped from {@code <p>}) and heading elements handle text-align correctly.
+     * Convert centered {@code <div>} to {@code <p>} so iText renders the alignment.
+     */
+    private String preprocessForPdf(String html) {
+        // CKEditor strips ALL alignment styles from both <div> and <p> elements.
+        // Re-add centering based on document structure:
+        // 1. Everything before <figure> = caption header (court name, case number) → center
+        // 2. First <p> after </figure> containing <strong><u> = document title → center
+        int captionEnd = html.indexOf("<figure>");
+        if (captionEnd == -1) captionEnd = html.indexOf("<table");
+        if (captionEnd > 0) {
+            String captionArea = html.substring(0, captionEnd);
+            String rest = html.substring(captionEnd);
+
+            // Center all block elements in caption area (could be <p> or <div>)
+            captionArea = captionArea
+                    .replace("<p>", "<p style=\"text-align:center; line-height:1.3; margin:0 0 4px 0;\">")
+                    .replace("<div>", "<p style=\"text-align:center; line-height:1.3; margin:0 0 4px 0;\">")
+                    .replace("</div>", "</p>");
+
+            html = captionArea + rest;
+        }
+
+        // Document title: <p><strong><u>TITLE</u></strong></p> right after </figure>
+        html = html.replace(
+                "<p><strong><u>",
+                "<p style=\"text-align:center; margin:20px 0 16px 0;\"><strong><u>"
+        );
+
+        return html;
     }
 
     /**

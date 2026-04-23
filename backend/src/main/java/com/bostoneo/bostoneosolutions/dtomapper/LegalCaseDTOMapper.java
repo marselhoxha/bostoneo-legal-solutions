@@ -29,6 +29,7 @@ public class LegalCaseDTOMapper {
             .countyName(entity.getCountyName())
             .courtroom(entity.getCourtroom())
             .judgeName(entity.getJudgeName())
+            .jurisdiction(entity.getJurisdiction())
             .filingDate(entity.getFilingDate())
             .nextHearing(entity.getNextHearing())
             .trialDate(entity.getTrialDate())
@@ -63,6 +64,11 @@ public class LegalCaseDTOMapper {
             .insuranceAdjusterContact(entity.getInsuranceAdjusterContact())
             .insuranceAdjusterEmail(entity.getInsuranceAdjusterEmail())
             .insuranceAdjusterPhone(entity.getInsuranceAdjusterPhone())
+            .clientInsuranceCompany(entity.getClientInsuranceCompany())
+            .clientInsurancePolicyNumber(entity.getClientInsurancePolicyNumber())
+            .clientInsuranceAdjusterName(entity.getClientInsuranceAdjusterName())
+            .clientInsuranceAdjusterEmail(entity.getClientInsuranceAdjusterEmail())
+            .clientInsuranceAdjusterPhone(entity.getClientInsuranceAdjusterPhone())
             .employerName(entity.getEmployerName())
             .employerEmail(entity.getEmployerEmail())
             .employerPhone(entity.getEmployerPhone())
@@ -128,6 +134,7 @@ public class LegalCaseDTOMapper {
         entity.setDescription(dto.getDescription());
         entity.setCountyName(dto.getCountyName());
         entity.setJudgeName(dto.getJudgeName());
+        entity.setJurisdiction(dto.getJurisdiction());
         entity.setCourtroom(dto.getCourtroom());
         entity.setFilingDate(dto.getFilingDate());
         entity.setNextHearing(dto.getNextHearing());
@@ -161,6 +168,11 @@ public class LegalCaseDTOMapper {
         entity.setInsuranceAdjusterContact(dto.getInsuranceAdjusterContact());
         entity.setInsuranceAdjusterEmail(dto.getInsuranceAdjusterEmail());
         entity.setInsuranceAdjusterPhone(dto.getInsuranceAdjusterPhone());
+        entity.setClientInsuranceCompany(dto.getClientInsuranceCompany());
+        entity.setClientInsurancePolicyNumber(dto.getClientInsurancePolicyNumber());
+        entity.setClientInsuranceAdjusterName(dto.getClientInsuranceAdjusterName());
+        entity.setClientInsuranceAdjusterEmail(dto.getClientInsuranceAdjusterEmail());
+        entity.setClientInsuranceAdjusterPhone(dto.getClientInsuranceAdjusterPhone());
         entity.setEmployerName(dto.getEmployerName());
         entity.setEmployerEmail(dto.getEmployerEmail());
         entity.setEmployerPhone(dto.getEmployerPhone());

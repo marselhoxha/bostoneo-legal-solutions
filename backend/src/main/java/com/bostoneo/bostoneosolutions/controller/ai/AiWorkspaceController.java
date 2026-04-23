@@ -330,7 +330,10 @@ public class AiWorkspaceController {
                         request.getResearchMode(),
                         request.getDocumentId(),
                         request.getStationeryTemplateId(),
-                        request.getStationeryAttorneyId()
+                        request.getStationeryAttorneyId(),
+                        request.getCourtLevel(),
+                        request.getPracticeArea(),
+                        request.getDocumentOptions()
                 );
             });
 
@@ -616,7 +619,10 @@ public class AiWorkspaceController {
                 request.getResearchMode(),
                 request.getDocumentId(),
                 request.getStationeryTemplateId(),
-                request.getStationeryAttorneyId()
+                request.getStationeryAttorneyId(),
+                request.getCourtLevel(),
+                request.getPracticeArea(),
+                request.getDocumentOptions()
             );
 
             return ResponseEntity.ok(response);
@@ -1178,5 +1184,15 @@ public class AiWorkspaceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
         }
+    }
+
+    /**
+     * Get the last jurisdiction used for documents linked to a specific case.
+     * Used to auto-populate jurisdiction dropdown and detect mismatches.
+     */
+    @GetMapping("/cases/{caseId}/last-jurisdiction")
+    public ResponseEntity<Map<String, String>> getLastJurisdiction(@PathVariable Long caseId) {
+        String lastJurisdiction = documentService.getLastUsedJurisdiction(caseId);
+        return ResponseEntity.ok(Map.of("jurisdiction", lastJurisdiction != null ? lastJurisdiction : ""));
     }
 }

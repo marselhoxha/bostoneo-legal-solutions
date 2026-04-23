@@ -10,9 +10,13 @@ import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AITemplateVariableRepository;
 import com.bostoneo.bostoneosolutions.service.AITemplateService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -173,7 +177,12 @@ public class AITemplateController {
     }
 
     /**
-     * POST /api/ai/templates/{id}/generate - Generate document from template (legacy endpoint)
+     * POST /api/ai/templates/{id}/generate - Generate document from template (legacy text path).
+     *
+     * <p><b>HYBRID templates:</b> if {@code template.hasBinaryTemplate == true} the attorney
+     * almost certainly wants {@link #renderBinary(Long, Map)} instead — this endpoint still
+     * works and returns the extracted text as HTML, but it silently loses the visual fidelity
+     * of the uploaded DOCX/PDF. Prefer {@code /render-binary} for imported templates.
      */
     @PostMapping("/{id}/generate")
     public ResponseEntity<Map<String, Object>> generateFromTemplate(
@@ -194,6 +203,67 @@ public class AITemplateController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    /**
+     * POST /api/ai/templates/{id}/render-binary - Sprint 1.6 visual-fidelity render path.
+     *
+     * <p>Swaps every {@code {{key}}} token in the cached DOCX/PDF binary for the attorney's
+     * value and streams the resulting bytes back with the correct Content-Type so the browser
+     * can download the file or hand it to {@code docx-preview}/PDF.js for in-browser preview.
+     *
+     * <p>Response codes:
+     * <ul>
+     *   <li>200 — bytes streamed; {@code Content-Type} is DOCX or PDF; {@code Content-Disposition}
+     *       is {@code attachment} with a filename derived from the template name.</li>
+     *   <li>404 — template not found, access denied, or tenant mismatch.</li>
+     *   <li>422 — template is text-only ({@code hasBinaryTemplate=false}); caller should use
+     *       {@code /generate} instead.</li>
+     *   <li>500 — render pipeline failed (corrupt binary, iText/POI error).</li>
+     * </ul>
+     */
+    @PostMapping("/{id}/render-binary")
+    public ResponseEntity<byte[]> renderBinary(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> values) {
+        try {
+            AITemplateService.RenderedBinary rendered =
+                templateService.renderBinaryTemplate(id, values == null ? Map.of() : values);
+
+            MediaType mediaType = "DOCX".equalsIgnoreCase(rendered.format())
+                ? MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                : MediaType.APPLICATION_PDF;
+
+            String extension = "DOCX".equalsIgnoreCase(rendered.format()) ? ".docx" : ".pdf";
+            String filename = encodeContentDispositionName(rendered.templateName() + extension);
+
+            return ResponseEntity.ok()
+                .contentType(mediaType)
+                .header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+                .header("Pragma", "no-cache")
+                .header("Expires", "0")
+                .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                .body(rendered.bytes());
+        } catch (IllegalStateException e) {
+            // Template exists but has no binary copy — caller should use /generate instead.
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).build();
+        } catch (RuntimeException e) {
+            // Covers "not found / access denied" thrown from getTemplateById.
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * RFC 5987-safe filename encoding so a template named "Letter — résumé" doesn't break the
+     * Content-Disposition header. Strips quotes + CR/LF (header-injection vectors), then
+     * URL-encodes the result using UTF-8 with space → %20.
+     */
+    private String encodeContentDispositionName(String raw) {
+        String safe = raw == null ? "template" : raw;
+        safe = safe.replace("\"", "").replace("\r", "").replace("\n", "");
+        return URLEncoder.encode(safe, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     /**
@@ -392,15 +462,22 @@ public class AITemplateController {
      * Helper method to convert template to search result format
      */
     private Map<String, Object> convertToSearchResult(AILegalTemplate template) {
-        return Map.of(
-            "id", template.getId(),
-            "name", template.getName(),
-            "category", template.getCategory(),
-            "practiceArea", template.getPracticeArea() != null ? template.getPracticeArea() : "",
-            "jurisdiction", template.getJurisdiction() != null ? template.getJurisdiction() : "",
-            "description", template.getDescription() != null ? template.getDescription() : "",
-            "usageCount", template.getUsageCount() != null ? template.getUsageCount() : 0,
-            "isApproved", template.getIsApproved() != null ? template.getIsApproved() : false
+        // Map.of() caps at 10 entries — use ofEntries to include Sprint 1.5 import metadata
+        // plus Sprint 1.6 binary signal (so the library "VISUAL" chip renders on search hits too).
+        return Map.ofEntries(
+            Map.entry("id", template.getId()),
+            Map.entry("name", template.getName()),
+            Map.entry("category", template.getCategory()),
+            Map.entry("practiceArea", template.getPracticeArea() != null ? template.getPracticeArea() : ""),
+            Map.entry("jurisdiction", template.getJurisdiction() != null ? template.getJurisdiction() : ""),
+            Map.entry("description", template.getDescription() != null ? template.getDescription() : ""),
+            Map.entry("usageCount", template.getUsageCount() != null ? template.getUsageCount() : 0),
+            Map.entry("isApproved", template.getIsApproved() != null ? template.getIsApproved() : false),
+            Map.entry("sourceType", template.getSourceType() != null ? template.getSourceType() : "MANUAL"),
+            Map.entry("sourceFilename", template.getSourceFilename() != null ? template.getSourceFilename() : ""),
+            Map.entry("isPrivate", Boolean.TRUE.equals(template.getIsPrivate())),
+            Map.entry("hasBinaryTemplate", Boolean.TRUE.equals(template.getHasBinaryTemplate())),
+            Map.entry("templateBinaryFormat", template.getTemplateBinaryFormat() != null ? template.getTemplateBinaryFormat() : "")
         );
     }
 }

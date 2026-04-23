@@ -1,14 +1,18 @@
 package com.bostoneo.bostoneosolutions.model;
 
 import com.bostoneo.bostoneosolutions.enumeration.TemplateCategory;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT;
 
@@ -117,4 +121,53 @@ public class AILegalTemplate {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // ==================== Sprint 1.5: Import Metadata ====================
+
+    @Column(name = "source_type", length = 20)
+    @Builder.Default
+    private String sourceType = "MANUAL"; // MANUAL | IMPORTED_DOCX | IMPORTED_PDF | IMPORTED_PDF_OCR | IMPORTED_DOC
+
+    @Column(name = "source_filename", length = 512)
+    private String sourceFilename;
+
+    @Column(name = "import_batch_id", columnDefinition = "uuid")
+    private UUID importBatchId;
+
+    @Column(name = "import_confidence", precision = 3, scale = 2)
+    private BigDecimal importConfidence;
+
+    @Builder.Default
+    @Column(name = "is_private", nullable = false)
+    private Boolean isPrivate = false;
+
+    @Column(name = "imported_by_user_id")
+    private Long importedByUserId;
+
+    @Column(name = "imported_at")
+    private LocalDateTime importedAt;
+
+    @Column(name = "content_hash", length = 64)
+    private String contentHash;
+
+    // ==================== Sprint 1.6: Binary (visual-fidelity) template ====================
+
+    @JdbcTypeCode(SqlTypes.VARBINARY)
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "template_binary", columnDefinition = "bytea")
+    @JsonIgnore // prevent Jackson from pulling multi-MB bytes into every JSON response
+    private byte[] templateBinary;
+
+    @Column(name = "template_binary_format", length = 10)
+    private String templateBinaryFormat; // DOCX | PDF
+
+    @Builder.Default
+    @Column(name = "has_binary_template", nullable = false)
+    private Boolean hasBinaryTemplate = false;
+
+    @Column(name = "binary_sha256", length = 64)
+    private String binarySha256;
+
+    @Column(name = "binary_size_bytes")
+    private Integer binarySizeBytes;
 }
