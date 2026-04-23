@@ -74,6 +74,18 @@ const routes: Routes = [
     data: { title: 'Template Library' }
   },
   {
+    path: 'templates/new',
+    loadComponent: () => import('./templates/template-editor/template-editor.component').then(m => m.TemplateEditorComponent),
+    canActivate: [AuthenticationGuard],
+    data: { title: 'New Template' }
+  },
+  {
+    path: 'templates/edit/:id',
+    loadComponent: () => import('./templates/template-editor/template-editor.component').then(m => m.TemplateEditorComponent),
+    canActivate: [AuthenticationGuard],
+    data: { title: 'Edit Template' }
+  },
+  {
     path: 'analytics',
     loadComponent: () => import('./analytics/usage-analytics.component').then(m => m.UsageAnalyticsComponent),
     canActivate: [AuthenticationGuard],

@@ -1,0 +1,537 @@
+// Sprint 4c — Inline Template Picker
+// Tokens sourced from Velzon (--vz-*) so light + dark themes flip cleanly.
+// Every color must go through a var; no hardcoded hex except the preview pill
+// swatches that live inside :host-context([data-bs-theme]) branches.
+
+:host {
+  display: block;
+}
+
+.tpl-picker-shell {
+  // Fluid — let the shell fill whatever horizontal space the parent
+  // `.legidraft-center` gives us. Per-breakpoint widening happens below.
+  width: 100%;
+  margin: 0 auto;
+}
+
+// ========== Inline back-bar (shared primitive) ==========
+.inline-backbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.85rem;
+  background: var(--vz-secondary-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 8px;
+  margin-bottom: 0.7rem;
+  font-size: 0.82rem;
+
+  .bb-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--vz-primary);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.25rem 0.55rem;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    transition: background-color 0.14s ease;
+
+    &:hover {
+      background: var(--vz-primary-bg-subtle);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--vz-primary);
+      outline-offset: 1px;
+    }
+  }
+
+  .bb-crumb {
+    color: var(--vz-secondary-color);
+    strong { color: var(--vz-heading-color); font-weight: 600; }
+  }
+
+  .bb-step {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: var(--vz-secondary-color);
+    font-family: 'SF Mono', Monaco, monospace;
+  }
+}
+
+// ========== Picker card ==========
+.tpl-picker {
+  background: var(--vz-secondary-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+}
+
+// Hero row
+.tpl-picker-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+
+  .hero-l {
+    h4 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--vz-heading-color);
+      letter-spacing: -0.01em;
+    }
+    .sub {
+      font-size: 0.78rem;
+      color: var(--vz-secondary-color);
+      margin-top: 0.2rem;
+    }
+  }
+
+  .hero-r {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .tpl-search-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+
+    .tpl-search-icon {
+      position: absolute;
+      left: 0.65rem;
+      color: var(--vz-secondary-color);
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    .tpl-search {
+      padding: 0.45rem 0.8rem 0.45rem 2.1rem;
+      border: 1px solid var(--vz-border-color);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      width: 260px;
+      background: var(--vz-secondary-bg);
+      color: var(--vz-body-color);
+      transition: border-color 0.14s ease, box-shadow 0.14s ease;
+
+      &::placeholder { color: var(--vz-secondary-color); }
+      &:focus {
+        outline: none;
+        border-color: var(--vz-primary);
+        box-shadow: 0 0 0 3px var(--vz-primary-bg-subtle);
+      }
+    }
+  }
+
+  .btn-sm-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.42rem 0.85rem;
+    background: transparent;
+    border: 1px solid var(--vz-border-color);
+    border-radius: 8px;
+    color: var(--vz-body-color);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.14s ease;
+
+    i { font-size: 0.95rem; }
+
+    &:hover {
+      background: var(--vz-primary-bg-subtle);
+      border-color: var(--vz-primary);
+      color: var(--vz-primary);
+    }
+  }
+}
+
+// Filter chip row
+.tpl-filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.7rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 1px solid var(--vz-border-color);
+
+  .chip {
+    appearance: none;                 // strip native button chrome
+    background: var(--vz-card-bg);
+    border: 1px solid var(--vz-border-color);
+    border-radius: 999px;
+    padding: 0.22rem 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--vz-body-color);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.14s ease;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.4;
+
+    &:hover {
+      background: var(--vz-primary-bg-subtle);
+      border-color: var(--vz-primary);
+      color: var(--vz-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--vz-primary);
+      outline-offset: 1px;
+    }
+
+    &.active {
+      background: var(--vz-primary);
+      border-color: var(--vz-primary);
+      color: #fff;
+
+      i { color: #fff; }
+    }
+
+    &.jur {
+      cursor: pointer;
+      .ri-close-line { opacity: 0.7; }
+      &:hover .ri-close-line { opacity: 1; }
+    }
+  }
+
+  .tpl-chip-spacer {
+    flex: 1;
+  }
+
+  .chip-clear {
+    background: transparent;
+    border: none;
+    padding: 0.22rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--vz-secondary-color);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 6px;
+    transition: color 0.14s ease, background-color 0.14s ease;
+
+    &:hover {
+      color: var(--vz-danger);
+      background: var(--vz-danger-bg-subtle);
+    }
+  }
+}
+
+// ========== Grid ==========
+.tpl-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.tpl-card {
+  position: relative;
+  background: var(--vz-card-bg);
+  border: 1.5px solid var(--vz-border-color);
+  border-radius: 10px;
+  padding: 0.95rem 1rem;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
+
+  &:hover {
+    border-color: var(--vz-primary);
+    box-shadow: 0 6px 18px rgba(64, 81, 137, 0.1);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--vz-primary);
+    outline-offset: 2px;
+  }
+
+  &.suggested {
+    border-color: var(--vz-success);
+    background: var(--vz-success-bg-subtle);
+
+    &::after {
+      content: 'SUGGESTED';
+      position: absolute;
+      top: 0.55rem;
+      right: 0.55rem;
+      background: var(--vz-success);
+      color: #fff;
+      font-size: 0.54rem;
+      letter-spacing: 0.08em;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+    .tc-icn {
+      background: var(--vz-success);
+      color: #fff;
+    }
+  }
+
+  .tc-icn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: var(--vz-primary-bg-subtle);
+    color: var(--vz-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .tc-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--vz-heading-color);
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    padding-right: 3.5rem; // reserve space for SUGGESTED badge
+  }
+
+  .tc-desc {
+    font-size: 0.72rem;
+    color: var(--vz-secondary-color);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .tc-meta {
+    margin-top: auto;
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    padding-top: 0.35rem;
+  }
+
+  .tc-pill {
+    font-size: 0.68rem;
+    padding: 0.18rem 0.6rem;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    white-space: nowrap;
+    text-transform: none;
+
+    &.pa {
+      background: #f0f4fc;
+      color: var(--vz-primary);
+    }
+    &.jur {
+      background: #e6f4fb;
+      color: #0f5a73;
+    }
+    &.vars {
+      background: #fff4e6;
+      color: #7a5502;
+    }
+    &.imp {
+      background: var(--vz-info-bg-subtle);
+      color: var(--vz-info-text-emphasis);
+      i { font-size: 0.7rem; }
+    }
+  }
+
+  // ===== Skeleton state (first load) =====
+  &.skeleton {
+    pointer-events: none;
+    cursor: default;
+
+    @keyframes sk-pulse {
+      0% { opacity: 0.55; }
+      50% { opacity: 0.85; }
+      100% { opacity: 0.55; }
+    }
+
+    .sk-icn, .sk-title, .sk-desc, .sk-pill {
+      background: var(--vz-secondary-bg);
+      border-radius: 6px;
+      animation: sk-pulse 1.4s ease-in-out infinite;
+    }
+    .sk-icn { width: 34px; height: 34px; }
+    .sk-title { width: 75%; height: 12px; }
+    .sk-desc { width: 100%; height: 9px; }
+    .sk-desc.short { width: 60%; }
+    .sk-pills { display: flex; gap: 0.3rem; margin-top: 0.2rem; }
+    .sk-pill { width: 34px; height: 14px; border-radius: 999px; }
+  }
+}
+
+// ========== Empty + error + loadmore ==========
+.tpl-empty {
+  text-align: center;
+  padding: 2.2rem 1rem;
+  color: var(--vz-secondary-color);
+
+  i {
+    font-size: 2.25rem;
+    color: var(--vz-border-color);
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+  h6 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--vz-heading-color);
+    margin: 0 0 0.35rem;
+  }
+  p {
+    font-size: 0.82rem;
+    margin: 0 0 1rem;
+    max-width: 380px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .tpl-empty-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    .btn i { margin-right: 0.3rem; }
+  }
+}
+
+.tpl-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  background: var(--vz-danger-bg-subtle);
+  border: 1px solid var(--vz-danger);
+  border-radius: 8px;
+  color: var(--vz-danger-text-emphasis);
+  font-size: 0.82rem;
+
+  i { font-size: 1.1rem; }
+  .btn-link {
+    color: var(--vz-danger);
+    font-weight: 600;
+    text-decoration: underline;
+    padding: 0;
+    margin-left: auto;
+  }
+}
+
+.tpl-loadmore {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--vz-secondary-color);
+
+  @keyframes ri-spin {
+    to { transform: rotate(360deg); }
+  }
+  .spin {
+    animation: ri-spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 0.4rem;
+  }
+
+  .btn i { margin-right: 0.3rem; }
+}
+
+// ========== Dark mode overrides ==========
+// Preview pill swatches are light pastel — the dark theme needs softer tints
+// to stay on the Velzon token system.
+:host-context([data-bs-theme='dark']) {
+  .tpl-card {
+    .tc-pill {
+      &.pa {
+        background: rgba(64, 81, 137, 0.25);
+        color: #a9baff;
+      }
+      &.jur {
+        background: rgba(41, 156, 219, 0.2);
+        color: #7fd4f0;
+      }
+      &.vars {
+        background: rgba(247, 184, 75, 0.18);
+        color: #f1c27d;
+      }
+    }
+
+    &.suggested {
+      background: rgba(10, 179, 156, 0.1);
+    }
+
+    &.skeleton .sk-icn,
+    &.skeleton .sk-title,
+    &.skeleton .sk-desc,
+    &.skeleton .sk-pill {
+      background: rgba(255, 255, 255, 0.06);
+    }
+  }
+}
+
+// ========== Responsive ==========
+// Shell is fluid (no max-width) — breakpoints only adjust the column count
+// so the extra horizontal space becomes more cards per row, not wider cards.
+@media (min-width: 1440px) {
+  .tpl-picker-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+}
+
+@media (min-width: 1800px) {
+  .tpl-picker-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1199.98px) {
+  .tpl-picker-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tpl-picker-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    .hero-r { width: 100%; justify-content: space-between; }
+    .tpl-search-wrap .tpl-search { width: 100%; }
+  }
+}
+
+@media (max-width: 767.98px) {
+  .tpl-picker {
+    padding: 0.85rem 0.9rem;
+  }
+  .tpl-picker-grid {
+    grid-template-columns: 1fr;
+  }
+  .tpl-filter-chips {
+    .chip-clear { margin-left: 0; }
+  }
+  .inline-backbar {
+    .bb-crumb { display: none; }
+  }
+}

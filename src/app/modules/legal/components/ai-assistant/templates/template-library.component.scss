@@ -19,8 +19,8 @@
 
 // Badge styles
 .badge-soft-primary {
-  color: #405189;
-  background-color: rgba(64, 81, 137, 0.18);
+  color: var(--tmpl-primary);
+  background-color: rgba(134, 92, 226, 0.18);
 }
 
 .badge-soft-success {
@@ -118,7 +118,7 @@
 }
 
 .bg-soft-primary {
-  background-color: rgba(64, 81, 137, 0.1) !important;
+  background-color: rgba(134, 92, 226, 0.1) !important;
 }
 
 .bg-soft-success {
@@ -163,7 +163,7 @@
     padding: 0.375rem 0.75rem;
 
     &:hover {
-      color: #405189;
+      color: var(--tmpl-primary);
       background-color: #e9ecef;
       border-color: #dee2e6;
     }
@@ -172,8 +172,8 @@
   .page-item {
     &.active .page-link {
       color: #fff;
-      background-color: #405189;
-      border-color: #405189;
+      background-color: var(--tmpl-primary);
+      border-color: var(--tmpl-primary);
     }
 
     &.disabled .page-link {
@@ -184,11 +184,93 @@
   }
 }
 
-// View mode toggle
-.btn-check:checked + .btn-outline-secondary {
-  color: #fff;
-  background-color: #74788d;
-  border-color: #74788d;
+/* ============================================================
+   View mode toggle — refined segmented pill.
+
+   Radio-button pattern: the <input type="radio" class="btn-check">
+   sits hidden before each label. `.btn-check:checked + .view-mode-btn`
+   is the selected state — filled with primary color, soft shadow.
+   Un-checked labels are transparent with muted text that lifts
+   to primary on hover. The outer track is a subtle pill that sits
+   on top of the panel surface without shouting.
+   ============================================================ */
+.view-mode-toggle {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 3px;
+  background: var(--vz-tertiary-bg, #f3f6f9);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-radius: 8px;
+  gap: 2px;
+  height: 36px;
+
+  .btn-check {
+    position: absolute;
+    clip: rect(0, 0, 0, 0);
+    pointer-events: none;
+  }
+
+  .view-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0 0.75rem;
+    min-width: 56px;
+    height: 100%;
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--vz-body-color-muted, #74788d);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      color 0.18s ease,
+      background 0.18s ease,
+      box-shadow 0.2s ease,
+      transform 0.08s ease;
+    margin: 0;
+
+    i {
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+
+    .view-mode-label {
+      font-variation-settings: "wght" 500;
+    }
+
+    &:hover {
+      color: var(--tmpl-primary, #865ce2);
+    }
+
+    &:active {
+      transform: translateY(1px);
+    }
+  }
+
+  .btn-check:checked + .view-mode-btn {
+    background: var(--tmpl-primary, #865ce2);
+    color: var(--tmpl-primary-fg, #fff);
+    box-shadow: 0 2px 6px rgba(134, 92, 226, 0.2);
+
+    &:hover {
+      color: var(--tmpl-primary-fg, #fff);
+    }
+  }
+
+  .btn-check:focus-visible + .view-mode-btn {
+    outline: 2px solid var(--tmpl-primary, #865ce2);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 575px) {
+    .view-mode-label { display: none; }
+    .view-mode-btn { min-width: 44px; padding: 0 0.6rem; }
+  }
 }
 
 // Responsive adjustments
@@ -236,4 +318,1014 @@
       background: #555;
     }
   }
+}
+
+/* ============================================================
+   Template Library — Compact Page Header (redesign §1)
+   ============================================================ */
+.tmpl-library-page {
+  .tmpl-page-title {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    padding: 1.25rem 0 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--vz-border-color, #e9ebec);
+
+    .tmpl-page-title-left {
+      flex: 1 1 auto;
+      min-width: 0;
+
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        margin: 0 0 0.35rem;
+        font-size: 1.35rem;
+        font-weight: 600;
+        color: var(--vz-heading-color, #495057);
+
+        i {
+          color: var(--tmpl-primary);
+          font-size: 1.5rem;
+          line-height: 1;
+        }
+      }
+
+      .count-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.15rem 0.6rem;
+        background: var(--vz-light, #f3f3f9);
+        color: var(--vz-body-color, #495057);
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-left: 0.35rem;
+      }
+
+      .tagline {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--vz-body-color-muted, #74788d);
+        line-height: 1.5;
+
+        code {
+          background: var(--vz-tertiary-bg);
+          color: var(--tmpl-primary);
+          padding: 0.05rem 0.35rem;
+          border-radius: 4px;
+          font-size: 0.8em;
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+      }
+    }
+
+    .tmpl-page-title-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+  }
+
+  .btn-page-primary,
+  .btn-page-outline,
+  .btn-page-ghost,
+  .btn-page-success {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.95rem;
+    border-radius: 6px;
+    font-size: 0.825rem;
+    font-weight: 500;
+    line-height: 1.2;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+
+    i { font-size: 1rem; line-height: 1; }
+
+    &:hover { transform: translateY(-1px); }
+  }
+
+  .btn-page-primary {
+    background: linear-gradient(135deg, var(--tmpl-primary) 0%, var(--tmpl-primary-hover) 100%);
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(134, 92, 226, 0.25);
+
+    &:hover { box-shadow: 0 4px 12px rgba(134, 92, 226, 0.3); }
+  }
+
+  .btn-page-outline {
+    background: #fff;
+    color: var(--tmpl-primary);
+    border-color: var(--tmpl-primary);
+
+    &:hover { background: rgba(134, 92, 226, 0.06); }
+  }
+
+  .btn-page-ghost {
+    background: transparent;
+    color: var(--vz-body-color-muted, #74788d);
+    padding: 0.5rem 0.6rem;
+
+    &:hover {
+      background: var(--vz-light, #f3f3f9);
+      color: var(--vz-heading-color, #495057);
+    }
+  }
+
+  .btn-page-success {
+    background: #0ab39c;
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(10, 179, 156, 0.25);
+
+    &:hover { background: #099e8a; box-shadow: 0 4px 12px rgba(10, 179, 156, 0.3); }
+  }
+}
+
+/* ============================================================
+   Template Library — Grid Cards with Category Accent (redesign §4)
+
+   Practice-area palette mirrors the mockup tokens. We expose them
+   as CSS custom props on the page root so the dropdown menus + any
+   later components can reuse them.
+   ============================================================ */
+.tmpl-library-page {
+  /* ── Page-scoped primary. Light mode: Velzon `$purple` — distinctive vs. app-wide navy. Dark mode override below. ── */
+  --tmpl-primary:      #865ce2;
+  --tmpl-primary-hover:#6f47c4;
+  --tmpl-primary-soft: rgba(134, 92, 226, 0.08);
+  --tmpl-primary-ghost:rgba(134, 92, 226, 0.05);
+  --tmpl-primary-fg:   #ffffff;
+
+  --pa-pi: #f06548;          --pa-pi-soft: #feeae6;
+  --pa-family: #845adf;      --pa-family-soft: #f0e8ff;
+  --pa-immigration: #0ab39c; --pa-immigration-soft: #dcf7f1;
+  --pa-criminal: #e59819;    --pa-criminal-soft: #fdf1dc;
+  --pa-civil: #5b6b8d;       --pa-civil-soft: #e8ecf3;
+  --pa-estate: #299cdb;      --pa-estate-soft: #dcf0fa;
+  --pa-realestate: #16a394;  --pa-realestate-soft: #d7f3ef;
+
+  /* ── Shared action buttons — apply in BOTH grid (.tmpl-actions) and list (.list-actions) ── */
+  .btn-use-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.32rem 0.7rem;
+    border-radius: 5px;
+    background: var(--tmpl-primary);
+    color: var(--tmpl-primary-fg);
+    border: none;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s ease, transform 0.08s ease;
+    white-space: nowrap;
+
+    i { font-size: 0.85rem; line-height: 1; }
+
+    &:hover  { background: var(--tmpl-primary-hover); }
+    &:active { transform: translateY(1px); }
+    &:focus-visible {
+      outline: 2px solid var(--tmpl-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  .iconbtn {
+    width: 28px;
+    height: 28px;
+    border-radius: 5px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--vz-body-color-muted, #74788d);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+    flex-shrink: 0;
+
+    &:hover,
+    &[aria-expanded="true"] {
+      background: var(--tmpl-primary-soft);
+      color: var(--tmpl-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--tmpl-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  .tmpl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+    gap: 1rem;
+    padding: 1rem 0 0;
+  }
+
+  .tmpl-card {
+    background: var(--vz-secondary-bg);
+    border: 1px solid var(--vz-border-color, #e9ebec);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 1px 2px rgba(20, 30, 55, 0.04);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(20, 30, 55, 0.10);
+    }
+
+    /* Accent variables keyed by data-cat. Defaults to civil slate. */
+    --cat-color: var(--pa-civil);
+    --cat-bg:    var(--pa-civil-soft);
+
+    &[data-cat="pi"]          { --cat-color: var(--pa-pi);          --cat-bg: var(--pa-pi-soft); }
+    &[data-cat="family"]      { --cat-color: var(--pa-family);      --cat-bg: var(--pa-family-soft); }
+    &[data-cat="criminal"]    { --cat-color: var(--pa-criminal);    --cat-bg: var(--pa-criminal-soft); }
+    &[data-cat="immigration"] { --cat-color: var(--pa-immigration); --cat-bg: var(--pa-immigration-soft); }
+    &[data-cat="civil"]       { --cat-color: var(--pa-civil);       --cat-bg: var(--pa-civil-soft); }
+    &[data-cat="estate"]      { --cat-color: var(--pa-estate);      --cat-bg: var(--pa-estate-soft); }
+    &[data-cat="realestate"]  { --cat-color: var(--pa-realestate);  --cat-bg: var(--pa-realestate-soft); }
+
+    .cat-band {
+      height: 3px;
+      background: var(--cat-color);
+    }
+
+    .tmpl-body {
+      padding: 1rem 1.1rem 0.875rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.625rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .tmpl-icon-wrap {
+      width: 40px;
+      height: 40px;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      background: var(--cat-bg);
+      color: var(--cat-color);
+    }
+
+    .tmpl-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--vz-heading-color, #212529);
+      line-height: 1.35;
+      margin: 0 0 0.25rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .tmpl-desc {
+      font-size: 0.78rem;
+      color: var(--vz-body-color-muted, #74788d);
+      line-height: 1.4;
+      margin: 0 0 0.8rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 2.28em;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      background: var(--cat-bg);
+      color: var(--cat-color);
+
+      i { font-size: 0.78rem; line-height: 1; }
+
+      &.ghost {
+        background: var(--vz-light, #f3f3f9);
+        color: var(--vz-body-color-muted, #74788d);
+        font-weight: 500;
+      }
+    }
+
+    .tmpl-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-top: auto;
+      padding-top: 0.625rem;
+      border-top: 1px solid var(--vz-light, #f3f3f9);
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.7rem;
+      color: var(--vz-body-color-muted, #74788d);
+    }
+
+    .dot-sep {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #bdc4d1;
+    }
+
+    .tmpl-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+  }
+
+  .own-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.22rem 0.48rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    white-space: nowrap;
+
+    &.yours    { background: var(--pa-immigration-soft); color: #066a5e; }
+    &.imported { background: var(--pa-family-soft);      color: #4b2d9a; }
+    &.private  { background: var(--pa-criminal-soft);    color: #946200; }
+    &.org      { background: #f0f4fc;                    color: var(--tmpl-primary); }
+  }
+
+  // Sprint 1.6 — "VISUAL" chip shown when the row has cached DOCX/PDF bytes. Mirrors the geometry
+  // of `.own-tag` so it stacks cleanly next to it; the palette is info-teal so the two chips read
+  // as orthogonal signals (ownership vs. fidelity) rather than a variant of each other.
+  .visual-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.22rem 0.48rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    white-space: nowrap;
+    background: rgba(var(--vz-info-rgb, 41, 156, 219), 0.12);
+    color: var(--vz-info, #299cdb);
+
+    i {
+      font-size: 0.72rem;
+      line-height: 1;
+    }
+  }
+
+  // Grid-card top row — let the two chips share the right edge with a small gap.
+  .tmpl-card .top-row .top-row-tags {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: auto;
+  }
+
+  /* ============================================================
+     Empty states (redesign §9) + Loading skeleton (§10)
+     ============================================================ */
+  .empty-card {
+    background: var(--vz-secondary-bg);
+    border: 1px solid var(--vz-border-color, #e9ebec);
+    border-radius: 10px;
+    padding: 2.75rem 1.5rem;
+    text-align: center;
+    margin: 1rem 0;
+
+    h3 {
+      font-size: 1.15rem;
+      margin-bottom: 0.375rem;
+      color: var(--vz-heading-color, #212529);
+    }
+
+    p {
+      color: var(--vz-body-color-muted, #74788d);
+      max-width: 440px;
+      margin: 0 auto 1.25rem;
+      font-size: 0.9rem;
+      line-height: 1.5;
+
+      code {
+        background: var(--vz-light, #f3f3f9);
+        color: var(--tmpl-primary);
+        padding: 0.1em 0.4em;
+        border-radius: 3px;
+        font-size: 0.85em;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      a { color: var(--tmpl-primary); text-decoration: underline; }
+    }
+  }
+
+  .empty-illo {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 0.875rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f0f4fc 0%, var(--pa-immigration-soft) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--tmpl-primary);
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      border: 2px dashed rgba(134, 92, 226, 0.2);
+      animation: tmpl-illo-spin 24s linear infinite;
+    }
+
+    &.muted {
+      background: var(--vz-light, #f3f3f9);
+      color: var(--vz-body-color-muted, #74788d);
+
+      &::after { border-color: rgba(116, 120, 141, 0.25); }
+    }
+  }
+
+  @keyframes tmpl-illo-spin {
+    from { transform: rotate(0); }
+    to   { transform: rotate(360deg); }
+  }
+
+  .empty-ctas {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* Skeleton */
+  .skel-grid { padding-top: 0; }
+
+  .skel-card {
+    background: var(--vz-secondary-bg);
+    border: 1px solid var(--vz-border-color, #e9ebec);
+    border-radius: 8px;
+    padding: 1rem;
+
+    .skel-row1 {
+      display: flex;
+      gap: 0.6rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .skel-sq {
+      width: 40px;
+      height: 40px;
+      border-radius: 9px;
+      flex-shrink: 0;
+    }
+
+    .skel-lines {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      justify-content: center;
+    }
+
+    .skel-ln1  { height: 11px; width: 75%; }
+    .skel-ln2  { height: 9px;  width: 55%; }
+    .skel-full { height: 9px;  margin-bottom: 0.3rem; }
+    .skel-short{ height: 9px;  width: 60%; margin-bottom: 0.65rem; }
+
+    .skel-pills {
+      display: flex;
+      gap: 0.2rem;
+
+      span {
+        height: 15px;
+        width: 48px;
+        border-radius: 999px;
+      }
+    }
+  }
+
+  .skel {
+    background: var(--vz-light, #f3f3f9);
+    border-radius: 6px;
+  }
+
+  .skel-a {
+    background: linear-gradient(90deg,
+      var(--vz-light, #f3f3f9) 0%,
+      var(--vz-border-color, #e9ebec) 50%,
+      var(--vz-light, #f3f3f9) 100%);
+    background-size: 200% 100%;
+    animation: tmpl-shimmer 1.6s ease-in-out infinite;
+  }
+
+  @keyframes tmpl-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  // ── Redesign §3 — Jurisdiction select with first-load "NEW" ring ──────
+  .jur-wrap {
+    position: relative;
+    display: block;
+
+    select.form-control.jur-new {
+      border: 2px solid var(--vz-info, #299cdb);
+      background-color: rgba(41, 156, 219, 0.06);
+      box-shadow: 0 0 0 3px rgba(41, 156, 219, 0.15);
+      animation: tmpl-jur-pulse 2.4s ease-in-out infinite;
+    }
+
+    .new-mini-badge {
+      position: absolute;
+      top: -6px;
+      right: -4px;
+      display: inline-block;
+      background: var(--vz-info, #299cdb);
+      color: #fff;
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 0.12rem 0.4rem;
+      border-radius: 999px;
+      line-height: 1;
+      box-shadow: 0 2px 6px rgba(41, 156, 219, 0.35);
+      pointer-events: none;
+    }
+  }
+
+  @keyframes tmpl-jur-pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(41, 156, 219, 0.15); }
+    50%      { box-shadow: 0 0 0 6px rgba(41, 156, 219, 0.08); }
+  }
+
+  // ── Redesign §5 — List view polish ────────────────────────────────────
+  .tmpl-list {
+    border: 1px solid var(--vz-border-color, #e9ebec);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--vz-secondary-bg);
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin: 0;
+    }
+
+    thead th {
+      padding: 0.65rem 1rem;
+      background: var(--vz-light, #f8f9fa);
+      color: var(--vz-body-color-muted, #74788d);
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: left;
+      border-bottom: 1px solid var(--vz-border-color, #e9ebec);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid var(--vz-light, #f3f3f9);
+      vertical-align: middle;
+      color: var(--vz-heading-color, #212529);
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(134, 92, 226, 0.025); }
+
+    .col-check    { width: 40px; }
+    .col-name     { width: 40%; }
+    .col-pa       { width: 160px; }
+    .col-jur      { width: 120px; }
+    .col-updated  { width: 110px; white-space: nowrap; }
+    .col-actions  { width: 150px; text-align: right; }
+
+    .list-name-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+
+      .tmpl-icon-wrap {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+        border-radius: 7px;
+        flex-shrink: 0;
+      }
+
+      .nm {
+        font-weight: 500;
+        line-height: 1.25;
+        min-width: 0;
+      }
+
+      .sub {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        font-size: 0.72rem;
+        color: var(--vz-body-color-muted, #74788d);
+        font-weight: 400;
+        margin-top: 2px;
+
+        .own-tag {
+          padding: 0.08rem 0.35rem;
+          font-size: 0.58rem;
+        }
+      }
+    }
+
+    // Practice-area pill inherits data-cat from the row via [attr.data-cat]
+    .col-pa .tag-pill {
+      max-width: 100%;
+    }
+
+    .list-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      justify-content: flex-end;
+    }
+  }
+
+  /* ============================================================
+     Stat cards — honest, accent-rail, tabular numbers (redesign §2)
+     ============================================================ */
+  .tmpl-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.1rem;
+
+    @media (max-width: 1199px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    @media (max-width: 575px)  { grid-template-columns: 1fr; }
+  }
+
+  .tmpl-stat-card {
+    --accent: var(--tmpl-primary);
+    --accent-soft: rgba(134, 92, 226, 0.08);
+
+    position: relative;
+    background: var(--vz-secondary-bg);
+    border: 1px solid var(--vz-border-color, #e9ebec);
+    border-radius: 10px;
+    padding: 0.95rem 1.1rem 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 112px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(20, 30, 55, 0.04);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    opacity: 0;
+    transform: translateY(6px);
+    animation: tmpl-stat-rise 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+
+    &[data-accent="primary"] { --accent: var(--tmpl-primary); --accent-soft: rgba(134, 92, 226, 0.10); }
+    &[data-accent="success"] { --accent: #0ab39c; --accent-soft: rgba(10, 179, 156, 0.10); }
+    &[data-accent="warning"] { --accent: #f7b84b; --accent-soft: rgba(247, 184, 75, 0.14); }
+    &[data-accent="info"]    { --accent: #299cdb; --accent-soft: rgba(41, 156, 219, 0.10); }
+
+    &:nth-child(1) { animation-delay: 0ms; }
+    &:nth-child(2) { animation-delay: 60ms; }
+    &:nth-child(3) { animation-delay: 120ms; }
+    &:nth-child(4) { animation-delay: 180ms; }
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(20, 30, 55, 0.08);
+      border-color: color-mix(in srgb, var(--accent) 32%, var(--vz-border-color, #e9ebec));
+    }
+
+    .stat-rail {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 3px;
+      background: var(--accent);
+      border-radius: 10px 0 0 10px;
+    }
+
+    .stat-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .stat-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--vz-body-color-muted, #878a99);
+    }
+
+    .stat-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      background: var(--accent-soft);
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .stat-value {
+      font-size: 1.9rem;
+      font-weight: 600;
+      line-height: 1.05;
+      color: var(--vz-heading-color, #212529);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.3rem;
+    }
+
+    .stat-sub {
+      font-size: 0.74rem;
+      color: var(--vz-body-color-muted, #878a99);
+      line-height: 1.35;
+      margin-top: auto;
+    }
+  }
+
+  @keyframes tmpl-stat-rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ============================================================
+     Bulk action toolbar — slides in when rows are selected (§3)
+     ============================================================ */
+  .bulk-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+    padding: 0.65rem 0.9rem 0.65rem 1rem;
+    margin: 0 0 1rem;
+    border-radius: 10px;
+    background:
+      linear-gradient(90deg, rgba(134, 92, 226, 0.06) 0%, rgba(134, 92, 226, 0.02) 100%),
+      var(--vz-secondary-bg);
+    border: 1px solid color-mix(in srgb, var(--tmpl-primary) 22%, var(--vz-border-color, #e9ebec));
+    box-shadow: 0 4px 14px rgba(134, 92, 226, 0.08);
+    animation: tmpl-toolbar-in 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+
+    .bulk-left {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      min-width: 0;
+    }
+
+    .bulk-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      padding: 0 0.45rem;
+      border-radius: 13px;
+      background: var(--tmpl-primary);
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .bulk-text {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--vz-heading-color, #212529);
+    }
+
+    .bulk-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .bulk-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.42rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid var(--vz-border-color, #e9ebec);
+      background: var(--vz-secondary-bg);
+      color: var(--vz-heading-color, #212529);
+      cursor: pointer;
+      transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+
+      i { font-size: 0.9rem; line-height: 1; }
+
+      &:hover {
+        border-color: color-mix(in srgb, var(--tmpl-primary) 35%, var(--vz-border-color, #e9ebec));
+        background: var(--tmpl-primary-ghost);
+      }
+
+      &:active { transform: translateY(1px); }
+    }
+
+    .bulk-btn-generate:hover { color: var(--tmpl-primary); border-color: var(--tmpl-primary); background: var(--tmpl-primary-soft); }
+    .bulk-btn-export:hover   { color: #299cdb; border-color: #299cdb; background: rgba(41, 156, 219, 0.08); }
+
+    .bulk-btn-danger {
+      color: #f06548;
+      border-color: color-mix(in srgb, #f06548 35%, var(--vz-border-color, #e9ebec));
+
+      &:hover {
+        color: #fff;
+        background: #f06548;
+        border-color: #f06548;
+      }
+    }
+
+    .bulk-btn-clear {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin-left: 0.2rem;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--vz-body-color-muted, #878a99);
+      cursor: pointer;
+      transition: background 0.12s ease, color 0.12s ease;
+      font-size: 1rem;
+      line-height: 1;
+
+      &:hover {
+        background: rgba(20, 30, 55, 0.06);
+        color: var(--vz-heading-color, #212529);
+      }
+    }
+  }
+
+  @keyframes tmpl-toolbar-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ============================================================
+     Quick-delete icon button — muted by default, danger on hover
+     Lives inside .list-actions and .tmpl-actions (§3)
+     ============================================================ */
+  .iconbtn.iconbtn-danger {
+    color: var(--vz-body-color-muted, #878a99);
+
+    &:hover,
+    &:focus-visible {
+      background: rgba(240, 101, 72, 0.12);
+      color: #f06548;
+      outline: none;
+    }
+
+    &:active {
+      background: rgba(240, 101, 72, 0.2);
+    }
+  }
+}
+
+/* Dark mode — base rules use global Velzon tokens (`--vz-secondary-bg`,
+   `--vz-border-color`, `--vz-tertiary-bg`) that flip automatically under
+   `[data-bs-theme="dark"]`. Overrides below only handle (a) WCAG contrast
+   lift on the navy primary and (b) shadow depth a token swap can't express. */
+[data-bs-theme="dark"] .tmpl-library-page {
+  --tmpl-primary:       #a78bed;
+  --tmpl-primary-hover: #bca3f2;
+  --tmpl-primary-soft:  rgba(167, 139, 237, 0.14);
+  --tmpl-primary-ghost: rgba(167, 139, 237, 0.08);
+  --tmpl-primary-fg:    #0c0e1a;
+
+  .tmpl-stat-card {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+
+    &:hover {
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  .tmpl-list tbody tr:hover {
+    background: rgba(var(--vz-primary-rgb), 0.06);
+  }
+
+  .bulk-toolbar {
+    background:
+      linear-gradient(90deg, rgba(var(--vz-primary-rgb), 0.10) 0%, rgba(var(--vz-primary-rgb), 0.04) 100%),
+      var(--vz-secondary-bg);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  }
+
+  .btn-page-outline {
+    background: transparent;
+  }
+
+  .own-tag.org {
+    background: rgba(var(--vz-primary-rgb), 0.12);
+    color: var(--tmpl-primary);
+  }
+
+  .tagline code {
+    background: rgba(var(--vz-primary-rgb), 0.16);
+    color: var(--tmpl-primary);
+    border: 1px solid rgba(var(--vz-primary-rgb), 0.26);
+    padding: 0.08rem 0.4rem;
+  }
+
+  .view-mode-toggle {
+    background: var(--vz-tertiary-bg);
+    border-color: var(--vz-border-color);
+
+    .view-mode-btn {
+      color: var(--vz-body-secondary-color);
+
+      &:hover { color: var(--tmpl-primary); }
+    }
+
+    .btn-check:checked + .view-mode-btn {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  --pa-pi-soft:          rgba(240, 101, 72, 0.14);
+  --pa-family-soft:      rgba(132, 90, 223, 0.16);
+  --pa-immigration-soft: rgba(10, 179, 156, 0.14);
+  --pa-criminal-soft:    rgba(229, 152, 25, 0.14);
+  --pa-civil-soft:       rgba(136, 160, 211, 0.14);
+  --pa-estate-soft:      rgba(41, 156, 219, 0.14);
+  --pa-realestate-soft:  rgba(22, 163, 148, 0.14);
+}
+
+/* ============================================================
+   Kebab menu (ng-bootstrap ngbDropdown with container="body").
+   The menu teleports OUT of .tmpl-library-page, so ensure the
+   container/trigger wrapper stays compact and doesn't steal flex
+   space inside .list-actions / .tmpl-actions.
+   ============================================================ */
+.tmpl-kebab {
+  display: inline-flex;
+  position: relative;
 }

@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { map, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { PRACTICE_AREAS, JURISDICTIONS } from '../shared/legal-constants';
 
 export interface Template {
   id?: number;
@@ -33,6 +34,17 @@ export interface Template {
   createdAt?: string;
   updatedAt?: string;
   selected?: boolean;
+  // Sprint 1.5 — template import metadata (populated only for imported templates)
+  sourceType?: string;        // 'MANUAL' | 'IMPORTED_DOCX' | 'IMPORTED_PDF' | 'IMPORTED_DOC'
+  sourceFilename?: string;
+  isPrivate?: boolean;
+  importedAt?: string;
+  importConfidence?: number;
+  // Sprint 1.6 — true when the row has cached DOCX/PDF bytes that render with visual fidelity.
+  // Omitted by backend (`@JsonInclude(NON_DEFAULT)`) when false, so downstream consumers must
+  // truthy-check rather than compare against true.
+  hasBinaryTemplate?: boolean;
+  templateBinaryFormat?: 'DOCX' | 'PDF' | string;
 }
 
 export interface TemplateVariable {
@@ -57,6 +69,14 @@ export interface TemplateSearchResult {
   usageCount: number;
   isApproved: boolean;
   relevanceScore?: number;
+  // Sprint 1.5 — populated by backend AITemplateController#convertToSearchResult
+  sourceType?: string;        // 'MANUAL' | 'IMPORTED_DOCX' | 'IMPORTED_PDF' | 'IMPORTED_DOC'
+  sourceFilename?: string;
+  isPrivate?: boolean;
+  // Sprint 1.6 — same visual-fidelity signal as Template; surfaced through convertToSearchResult
+  // so the "VISUAL" chip lights up on search hits as well.
+  hasBinaryTemplate?: boolean;
+  templateBinaryFormat?: 'DOCX' | 'PDF' | string;
 }
 
 export interface TemplateGenerationRequest {
@@ -301,34 +321,14 @@ export class TemplateService {
     );
   }
 
-  // Helper method to get practice areas
+  // Single source of truth — see src/app/modules/legal/shared/legal-constants.ts
   getPracticeAreas(): string[] {
-    return [
-      'Immigration Law',
-      'Family Law',
-      'Criminal Defense',
-      'Real Estate',
-      'Intellectual Property',
-      'Corporate Law',
-      'Personal Injury',
-      'Employment Law',
-      'Estate Planning',
-      'Tax Law'
-    ];
+    return PRACTICE_AREAS.map(p => p.name);
   }
 
-  // Helper method to get jurisdictions
+  // Single source of truth — see src/app/modules/legal/shared/legal-constants.ts
   getJurisdictions(): string[] {
-    return [
-      'Massachusetts',
-      'Federal',
-      'New York',
-      'Connecticut',
-      'Rhode Island',
-      'New Hampshire',
-      'Vermont',
-      'Maine'
-    ];
+    return JURISDICTIONS.map(j => j.name);
   }
 
   // Error handler

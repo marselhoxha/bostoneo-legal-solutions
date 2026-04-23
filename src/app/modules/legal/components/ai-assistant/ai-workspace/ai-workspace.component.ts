@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Subject, lastValueFrom, merge, forkJoin, Observable } from 'rxjs';
-import { takeUntil, switchMap, finalize } from 'rxjs/operators';
+import { takeUntil, switchMap, finalize, distinctUntilChanged, skip, filter } from 'rxjs/operators';
 import { LegalResearchService } from '../../../services/legal-research.service';
 import { DocumentGenerationService } from '../../../services/document-generation.service';
 import { LegalCaseService } from '../../../services/legal-case.service';
@@ -11,7 +11,6 @@ import { MarkdownConverterService } from '../../../services/markdown-converter.s
 import { FileManagerService } from '../../../../file-manager/services/file-manager.service';
 import { DocumentAnalyzerService } from '../../../services/document-analyzer.service';
 import { DocumentCollectionService, DocumentCollection } from '../../../services/document-collection.service';
-import { DocumentTypeConfig } from '../../../models/document-type-config';
 import { MarkdownToHtmlPipe } from '../../../pipes/markdown-to-html.pipe';
 import { ApexChartDirective } from '../../../directives/apex-chart.directive';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
@@ -55,12 +54,19 @@ import {
   Base64UploadAdapter,
   type EditorConfig
 } from 'ckeditor5';
-import { NgbDropdown, NgbDropdownToggle, NgbDropdownMenu, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { NgbDropdown, NgbDropdownToggle, NgbDropdownMenu, NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 
 // NEW: Refactored child components
 import { WorkflowStepsComponent } from './workflow-steps/workflow-steps.component';
 import { TransformationPreviewComponent } from './transformation-preview/transformation-preview.component';
 import { DocumentEditorComponent } from './document-editor/document-editor.component';
+import { TemplateLibraryComponent } from '../templates/template-library.component';
+import { DraftWizardComponent, DraftWizardResult } from './draft-wizard/draft-wizard.component';
+import { DraftDashboardComponent } from './draft-dashboard/draft-dashboard.component';
+import { TemplatePickerInlineComponent } from './template-picker-inline/template-picker-inline.component';
+import { FillAndGenerateComponent, FillAndGenerateResult } from './fill-and-generate/fill-and-generate.component';
+import { TemplateImportWizardComponent } from '../templates/template-import-wizard/template-import-wizard.component';
+import { ImportCommitResponse } from '../../../services/template-import.service';
 import { ConversationListComponent } from './conversation-list/conversation-list.component';
 import { VersionHistoryComponent } from './version-history/version-history.component';
 import { ActionItemsListComponent } from '../action-items-list/action-items-list.component';
@@ -75,7 +81,7 @@ import { NgxExtendedPdfViewerModule } from 'ngx-extended-pdf-viewer';
 import { NotificationService } from '../../../services/notification.service';
 import { CKEditorService } from '../../../services/ckeditor.service';
 import { QuillHtmlMigrator } from '../../../utils/quill-html-migrator';
-import { AiWorkspaceStateService, AnalyzedDocument } from '../../../services/ai-workspace-state.service';
+import { AiWorkspaceStateService, AnalyzedDocument, DraftMode } from '../../../services/ai-workspace-state.service';
 import { ConversationOrchestrationService } from '../../../services/conversation-orchestration.service';
 import { DocumentTransformationService } from '../../../services/document-transformation.service';
 import { CaseWorkflowService, WorkflowTemplate, WorkflowRecommendation, WorkflowUrgency } from '../../../services/case-workflow.service';
@@ -83,6 +89,9 @@ import { BackgroundTaskService, BackgroundTask } from '../../../services/backgro
 import { ExhibitPanelService, Exhibit } from '../../../services/exhibit-panel.service';
 import { StationeryService, StationeryTemplate, AttorneyInfo, StationeryRenderResponse } from '../../../services/stationery.service';
 import { CaseDocumentsService } from '../../../services/case-documents.service';
+import { TemplateService, Template } from '../../../services/template.service';
+import { NavigationHistoryService } from '../../../services/navigation-history.service';
+import { PRACTICE_AREAS } from '../../../shared/legal-constants';
 
 // NEW: Models and enums
 import { Conversation, Message } from '../../../models/conversation.model';
@@ -117,7 +126,13 @@ import { DocumentState } from '../../../models/document.model';
     CollectionViewerComponent,
     BackgroundTasksIndicatorComponent,
     AiDisclaimerComponent,
-    NgxExtendedPdfViewerModule
+    NgxExtendedPdfViewerModule,
+    TemplateLibraryComponent,
+    DraftWizardComponent,
+    DraftDashboardComponent,
+    TemplatePickerInlineComponent,
+    FillAndGenerateComponent,
+    TemplateImportWizardComponent
   ],
   templateUrl: './ai-workspace.component.html',
   styleUrls: ['./ai-workspace.component.scss']
@@ -144,6 +159,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   isGenerating$ = this.stateService.isGenerating$;
   draftingMode$ = this.stateService.draftingMode$;
   showVersionHistory$ = this.stateService.showVersionHistory$;
+
+  // Sprint 4c — LegiDraft Flow v2 view-mode machine. Drives the morphed UI
+  // (dashboard / ai-wizard / template-picker / fill / generating / editor).
+  draftMode$ = this.stateService.draftMode$;
 
   // Document Analysis Viewer state
   analyzedDocuments$ = this.stateService.analyzedDocuments$;
@@ -199,6 +218,24 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Legacy properties for backwards compatibility (will be removed progressively)
   currentStep = 1;
   selectedDocumentType: 'interrogatories' | 'motion' | 'brief' | '' = '';
+
+  // Sprint 3 — DraftWizard-sourced values. Populated when the wizard submits; merged into
+  // DraftGenerationRequest by generateDocumentFlow() and cleared on reset.
+  // wizardDocumentType holds the BACKEND slug (e.g. 'lor'), while selectedDocTypePill holds
+  // the UI catalog id (e.g. 'letter-of-representation') so the display-name getter keeps working.
+  private wizardPracticeArea: string | null = null;
+  private wizardDocumentType: string | null = null;
+  private wizardDocumentOptions: Record<string, any> | null = null;
+  private wizardCourtLevel: string | null = null;
+
+  // Sprint 4c — `showDraftWizard` is now a derived getter backed by the
+  // `draftMode$` state machine in AiWorkspaceStateService. Any code that
+  // previously wrote `this.showDraftWizard = true/false` must now call
+  // `stateService.setDraftMode('ai-wizard' | 'dashboard' | ...)`.
+  get showDraftWizard(): boolean {
+    return this.stateService.getDraftMode() === 'ai-wizard';
+  }
+  @ViewChild('draftWizardRef') private draftWizardRef?: DraftWizardComponent;
 
   // Workflow steps (migrated to observable from StateService)
   workflowSteps$ = this.stateService.workflowSteps$;
@@ -273,6 +310,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Reactive filtered conversations arrays (updated via subscription)
   questionConversations: Conversation[] = [];
   draftConversations: Conversation[] = [];
+
+  // Sprint 4c — Dashboard feed. `recentTemplates` are surfaced as mini-cards in
+  // the secondary tile; `totalTemplatesCount` populates the "Browse all N"
+  // link. Loaded lazily on first draft-mode entry and refreshed when the user
+  // returns to the dashboard. `selectedTemplateForFill` is set when a mini-card
+  // click jumps straight to fill mode (Phase 4 consumes it).
+  recentTemplates: Template[] = [];
+  totalTemplatesCount = 0;
+  selectedTemplateForFill: Template | null = null;
+  private dashboardTemplatesLoaded = false;
 
   // Search query for filtering conversations
   conversationSearchQuery = '';
@@ -422,10 +469,21 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Follow-up questions (migrated to observable from StateService)
   followUpQuestions$ = this.stateService.followUpQuestions$;
 
-  // Jurisdiction — only states with working direct citation links + Federal
+  // Jurisdiction — all 50 US states + DC + Federal
   selectedJurisdiction = 'Massachusetts'; // will be overridden from org state on init
   jurisdictions = [
-    'Federal', 'Florida', 'Massachusetts', 'New York', 'Texas'
+    'Federal',
+    'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California',
+    'Colorado', 'Connecticut', 'Delaware', 'District of Columbia',
+    'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois',
+    'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana',
+    'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota',
+    'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada',
+    'New Hampshire', 'New Jersey', 'New Mexico', 'New York',
+    'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon',
+    'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
+    'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia',
+    'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
   ];
 
   // Research Mode — unified mode, always THOROUGH
@@ -538,6 +596,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Case selection for draft generation
   selectedCaseId: number | null = null;
   userCases: any[] = [];
+
+  // Jurisdiction mismatch tracking
+  private caseJurisdictionHistory: Map<number, string> = new Map();
+  private lastDocJurisdiction: Map<number, string> = new Map();
 
   // Add Exhibit Modal state
   showAddExhibitModal = false;
@@ -784,7 +846,18 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   @ViewChild('transformationPreviewModal') transformationPreviewModal!: TemplateRef<any>;
   @ViewChild('howItWorksModal') howItWorksModal!: TemplateRef<any>;
   @ViewChild('promptTipsModal') promptTipsModal!: TemplateRef<any>;
+  @ViewChild('templateImportModal') templateImportModal!: TemplateRef<any>;
   @ViewChild('fileInput') fileInputRef!: ElementRef<HTMLInputElement>;
+
+  // Sprint 4c Phase 3 — Template import modal (launched from inline picker's
+  // "Import" button). Rendered in-place as a <ng-template> at the bottom of
+  // the workspace HTML; opened via NgbModal so the user stays inside the
+  // focused LegiDraft flow instead of being routed to /templates.
+  showTemplateImportWizard = false;
+  private templateImportModalRef?: NgbModalRef;
+  // Incremented after a successful import so the inline picker's ngOnChanges
+  // sees a fresh reference and re-queries its results grid.
+  pickerRefreshToken = 0;
 
   // UI Controls
   editorTextSize: number = 14; // Default font size in px
@@ -810,378 +883,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // Mobile sidebar state (migrated to observable from StateService)
   sidebarOpen$ = this.stateService.sidebarOpen$;
 
-  // Practice areas for filtering
-  practiceAreas = [
-    { id: 'all', name: 'All Practice Areas', icon: 'ri-layout-grid-line' },
-    { id: 'civil', name: 'Civil Litigation', icon: 'ri-scales-3-line' },
-    { id: 'criminal', name: 'Criminal Defense', icon: 'ri-shield-star-line' },
-    { id: 'family', name: 'Family Law', icon: 'ri-team-line' },
-    { id: 'corporate', name: 'Corporate', icon: 'ri-building-line' },
-    { id: 'real-estate', name: 'Real Estate', icon: 'ri-home-4-line' },
-    { id: 'employment', name: 'Employment', icon: 'ri-briefcase-line' }
-  ];
-
-  selectedPracticeArea = 'all';
-  showTemplateFilters = false;
-
-  // Document types - Enhanced with field configurations
-  documentTypes: DocumentTypeConfig[] = [
-    // Discovery Documents
-    {
-      id: 'interrogatories',
-      name: 'Interrogatories',
-      description: 'Generate discovery interrogatories with AI assistance',
-      icon: 'ri-question-line',
-      color: 'primary',
-      category: 'Discovery',
-      practiceAreas: ['civil', 'criminal', 'employment'],
-      popular: true,
-      jurisdictionRequired: true,
-      estimatedTime: '3-5 minutes',
-      complexity: 'moderate',
-      templateId: 1,
-      requiredFields: [
-        {
-          id: 'case_name',
-          label: 'Case Name',
-          type: 'text',
-          placeholder: 'e.g., Smith v. Johnson',
-          validation: { required: true, minLength: 3 }
-        },
-        {
-          id: 'case_number',
-          label: 'Case Number',
-          type: 'text',
-          placeholder: 'e.g., CV-2024-12345',
-          validation: { required: true }
-        },
-        {
-          id: 'party_type',
-          label: 'Propounding Party',
-          type: 'select',
-          options: ['Plaintiff', 'Defendant', 'Cross-Complainant', 'Third-Party Defendant'],
-          validation: { required: true }
-        },
-        {
-          id: 'case_facts',
-          label: 'Brief Case Summary',
-          type: 'textarea',
-          placeholder: 'Summarize the key facts and issues in this case...',
-          rows: 4,
-          helperText: 'Provide context to generate relevant interrogatories',
-          validation: { required: true, minLength: 100, maxLength: 2000 }
-        },
-        {
-          id: 'discovery_focus',
-          label: 'Discovery Focus Areas',
-          type: 'multiselect',
-          options: ['Liability', 'Damages', 'Causation', 'Affirmative Defenses', 'Expert Witnesses', 'Document Production'],
-          validation: { required: true }
-        }
-      ],
-      optionalFields: [
-        {
-          id: 'number_of_interrogatories',
-          label: 'Number of Interrogatories',
-          type: 'number',
-          defaultValue: 25,
-          helperText: 'Maximum allowed by jurisdiction',
-          validation: { required: false, min: 1, max: 50 }
-        },
-        {
-          id: 'specific_issues',
-          label: 'Specific Issues to Address',
-          type: 'textarea',
-          placeholder: 'Any specific topics or questions you want included...',
-          rows: 3
-        }
-      ]
-    },
-    {
-      id: 'requests-production',
-      name: 'Requests for Production',
-      description: 'Draft document production requests',
-      icon: 'ri-file-list-3-line',
-      color: 'primary',
-      category: 'Discovery',
-      practiceAreas: ['civil', 'employment'],
-      popular: false,
-      jurisdictionRequired: true,
-      estimatedTime: '2-4 minutes',
-      complexity: 'simple',
-      requiredFields: [],
-      optionalFields: []
-    },
-    {
-      id: 'requests-admission',
-      name: 'Requests for Admission',
-      description: 'Create requests for admission of facts',
-      icon: 'ri-checkbox-multiple-line',
-      color: 'primary',
-      category: 'Discovery',
-      practiceAreas: ['civil'],
-      popular: false,
-      jurisdictionRequired: true,
-      estimatedTime: '2-4 minutes',
-      complexity: 'simple',
-      requiredFields: [],
-      optionalFields: []
-    },
-    // Motions
-    {
-      id: 'motion-dismiss',
-      name: 'Motion to Dismiss',
-      description: 'Draft motions with legal research and precedents',
-      icon: 'ri-file-text-line',
-      color: 'success',
-      category: 'Motions',
-      practiceAreas: ['civil', 'criminal'],
-      popular: true,
-      jurisdictionRequired: true,
-      estimatedTime: '5-8 minutes',
-      complexity: 'complex',
-      templateId: 2,
-      requiredFields: [
-        {
-          id: 'case_name',
-          label: 'Case Name',
-          type: 'text',
-          placeholder: 'e.g., Smith v. Johnson',
-          validation: { required: true }
-        },
-        {
-          id: 'case_number',
-          label: 'Case Number',
-          type: 'text',
-          placeholder: 'e.g., CV-2024-12345',
-          validation: { required: true }
-        },
-        {
-          id: 'court',
-          label: 'Court',
-          type: 'text',
-          placeholder: 'e.g., United States District Court for the Southern District of New York',
-          validation: { required: true }
-        },
-        {
-          id: 'grounds',
-          label: 'Grounds for Dismissal',
-          type: 'multiselect',
-          options: [
-            'Lack of subject matter jurisdiction',
-            'Lack of personal jurisdiction',
-            'Improper venue',
-            'Failure to state a claim',
-            'Failure to join required party',
-            'Insufficient service of process'
-          ],
-          validation: { required: true }
-        },
-        {
-          id: 'facts',
-          label: 'Relevant Facts',
-          type: 'textarea',
-          placeholder: 'Describe the factual basis for the motion...',
-          rows: 5,
-          validation: { required: true, minLength: 200 }
-        },
-        {
-          id: 'legal_argument',
-          label: 'Legal Argument Summary',
-          type: 'textarea',
-          placeholder: 'Outline the key legal arguments supporting dismissal...',
-          rows: 5,
-          helperText: 'The AI will expand this with case law and statutory references',
-          validation: { required: true, minLength: 150 }
-        }
-      ],
-      optionalFields: [
-        {
-          id: 'key_precedents',
-          label: 'Key Precedent Cases (optional)',
-          type: 'textarea',
-          placeholder: 'List any specific cases you want cited...',
-          rows: 3
-        },
-        {
-          id: 'hearing_requested',
-          label: 'Request Oral Argument?',
-          type: 'select',
-          options: ['Yes', 'No'],
-          defaultValue: 'Yes'
-        }
-      ]
-    },
-    {
-      id: 'motion-summary-judgment',
-      name: 'Motion for Summary Judgment',
-      description: 'Prepare summary judgment motions',
-      icon: 'ri-gavel-line',
-      color: 'success',
-      category: 'Motions',
-      practiceAreas: ['civil'],
-      popular: true,
-      jurisdictionRequired: true,
-      estimatedTime: '6-10 minutes',
-      complexity: 'complex',
-      requiredFields: [],
-      optionalFields: []
-    },
-    {
-      id: 'motion-suppress',
-      name: 'Motion to Suppress',
-      description: 'Draft motions to suppress evidence',
-      icon: 'ri-file-shield-line',
-      color: 'success',
-      category: 'Motions',
-      practiceAreas: ['criminal'],
-      popular: false,
-      jurisdictionRequired: true,
-      estimatedTime: '5-8 minutes',
-      complexity: 'complex',
-      requiredFields: [],
-      optionalFields: []
-    },
-    // Pleadings
-    {
-      id: 'complaint',
-      name: 'Complaint',
-      description: 'Draft civil complaints with causes of action',
-      icon: 'ri-file-edit-line',
-      color: 'warning',
-      category: 'Pleadings',
-      practiceAreas: ['civil', 'employment'],
-      popular: true,
-      jurisdictionRequired: true,
-      estimatedTime: '7-12 minutes',
-      complexity: 'complex',
-      requiredFields: [],
-      optionalFields: []
-    },
-    {
-      id: 'answer',
-      name: 'Answer',
-      description: 'Prepare answers to complaints',
-      icon: 'ri-file-copy-2-line',
-      color: 'warning',
-      category: 'Pleadings',
-      practiceAreas: ['civil'],
-      popular: false,
-      jurisdictionRequired: true,
-      estimatedTime: '5-8 minutes',
-      complexity: 'moderate',
-      requiredFields: [],
-      optionalFields: []
-    },
-    // Briefs
-    {
-      id: 'legal-brief',
-      name: 'Legal Brief',
-      description: 'Create comprehensive briefs with citations',
-      icon: 'ri-book-open-line',
-      color: 'info',
-      category: 'Briefs',
-      practiceAreas: ['civil', 'criminal'],
-      popular: true,
-      jurisdictionRequired: true,
-      estimatedTime: '8-15 minutes',
-      complexity: 'complex',
-      requiredFields: [],
-      optionalFields: []
-    },
-    {
-      id: 'appellate-brief',
-      name: 'Appellate Brief',
-      description: 'Draft appellate briefs for appeals',
-      icon: 'ri-booklet-line',
-      color: 'info',
-      category: 'Briefs',
-      practiceAreas: ['civil', 'criminal'],
-      popular: false,
-      jurisdictionRequired: true,
-      estimatedTime: '10-20 minutes',
-      complexity: 'complex',
-      requiredFields: [],
-      optionalFields: []
-    },
-    // Contracts
-    {
-      id: 'employment-agreement',
-      name: 'Employment Agreement',
-      description: 'Create employment contracts',
-      icon: 'ri-file-user-line',
-      color: 'purple',
-      category: 'Contracts',
-      practiceAreas: ['employment', 'corporate'],
-      popular: true,
-      jurisdictionRequired: true,
-      estimatedTime: '4-7 minutes',
-      complexity: 'moderate',
-      requiredFields: [],
-      optionalFields: []
-    },
-    {
-      id: 'nda',
-      name: 'Non-Disclosure Agreement',
-      description: 'Draft confidentiality agreements',
-      icon: 'ri-file-lock-line',
-      color: 'purple',
-      category: 'Contracts',
-      practiceAreas: ['corporate'],
-      popular: true,
-      jurisdictionRequired: true,
-      estimatedTime: '3-5 minutes',
-      complexity: 'simple',
-      requiredFields: [],
-      optionalFields: []
-    },
-    {
-      id: 'purchase-agreement',
-      name: 'Purchase Agreement',
-      description: 'Create sale and purchase agreements',
-      icon: 'ri-shopping-bag-line',
-      color: 'purple',
-      category: 'Contracts',
-      practiceAreas: ['corporate', 'real-estate'],
-      popular: false,
-      jurisdictionRequired: true,
-      estimatedTime: '5-8 minutes',
-      complexity: 'moderate',
-      requiredFields: [],
-      optionalFields: []
-    },
-    // Family Law
-    {
-      id: 'divorce-petition',
-      name: 'Divorce Petition',
-      description: 'Draft divorce/dissolution petitions',
-      icon: 'ri-parent-line',
-      color: 'danger',
-      category: 'Family Law',
-      practiceAreas: ['family'],
-      popular: true,
-      jurisdictionRequired: true,
-      estimatedTime: '6-10 minutes',
-      complexity: 'complex',
-      requiredFields: [],
-      optionalFields: []
-    },
-    {
-      id: 'custody-agreement',
-      name: 'Custody Agreement',
-      description: 'Create child custody agreements',
-      icon: 'ri-user-heart-line',
-      color: 'danger',
-      category: 'Family Law',
-      practiceAreas: ['family'],
-      popular: false,
-      jurisdictionRequired: true,
-      estimatedTime: '5-8 minutes',
-      complexity: 'moderate',
-      requiredFields: [],
-      optionalFields: []
-    }
-  ];
 
   constructor(
     private legalResearchService: LegalResearchService,
@@ -1208,7 +909,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     public exhibitPanelService: ExhibitPanelService,
     private caseDocumentsService: CaseDocumentsService,
     private stationeryService: StationeryService,
-    private organizationService: OrganizationService
+    private organizationService: OrganizationService,
+    private templateService: TemplateService,
+    private navigationHistory: NavigationHistoryService
   ) {}
 
   /**
@@ -1222,19 +925,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.openSaveVersionModal();
     }
   }
-
-  /**
-   * Close dropdown when clicking outside
-   */
-  @HostListener('document:click', ['$event'])
-  handleClickOutside(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    const dropdown = document.querySelector('.custom-dropdown-wrapper');
-    if (dropdown && !dropdown.contains(target)) {
-      this.showDocTypeDropdown = false;
-    }
-  }
-
 
   // State code → full name mapping for org state resolution
   private stateCodeToName: Record<string, string> = {
@@ -1322,6 +1012,43 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Restore selectedTask based on current state mode
     // This ensures sidebar shows correct content when navigating back to workspace
     this.syncSelectedTaskWithState();
+
+    // ===== LEGIDRAFT DASHBOARD DATA LOAD =====
+    // `draftMode$` is a BehaviorSubject on the root singleton state service, so the
+    // mode persists across component destroy/re-mount. On re-entry into LegiDraft,
+    // `syncSelectedTaskWithState()` restores the task but does NOT re-invoke
+    // `enterDashboardMode()`, so the template mini-cards never loaded. Subscribing
+    // here fires immediately with the replayed value — that's the missing trigger.
+    // Idempotent via `dashboardTemplatesLoaded`.
+    this.draftMode$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(mode => {
+        if (mode === 'dashboard' && !this.dashboardTemplatesLoaded) {
+          this.loadDashboardTemplates();
+        }
+      });
+
+    // ===== SCROLL-TO-TOP ON EVERY LEGIDRAFT MODE TRANSITION =====
+    // Wizard → generate stream, picker → fill, dashboard → wizard, etc. all
+    // render new pane content at the same scroll position the user left behind,
+    // which puts headers and progress bars below the fold. Reactive subscriptions
+    // here scroll to top on *any* transition, no matter which entry point fired
+    // (button click, query param, background task result, SSE completion).
+    //
+    // `draftMode$`: `distinctUntilChanged` before `skip(1)` drops the initial
+    // replayed value so we don't scroll on mount.
+    // `isGenerating$` / `draftingMode$`: BehaviorSubjects start at `false`, so
+    // `filter(v => v === true)` naturally skips the initial emission and only
+    // fires on the false → true transition.
+    this.draftMode$
+      .pipe(distinctUntilChanged(), skip(1), takeUntil(this.destroy$))
+      .subscribe(() => this.scrollPageToTop());
+    this.isGenerating$
+      .pipe(distinctUntilChanged(), filter(v => v === true), takeUntil(this.destroy$))
+      .subscribe(() => this.scrollPageToTop());
+    this.draftingMode$
+      .pipe(distinctUntilChanged(), filter(v => v === true), takeUntil(this.destroy$))
+      .subscribe(() => this.scrollPageToTop());
 
     // Subscribe to UserService userData$ observable for reactive updates
     this.userService.userData$
@@ -1686,17 +1413,109 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.legalCaseService.getAllCases(0, 100)
+    // 500 keeps the dropdown / resolveCaseLabel lookup reliable even for power
+    // users with long case histories; the payload is ~100KB per 100 cases so
+    // this is still comfortably under typical Angular in-memory budgets.
+    this.legalCaseService.getAllCases(0, 500)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response: any) => {
           this.userCases = response.data?.cases || response.cases || response.content || [];
+          // Conversations may have loaded first — re-derive their caseLabel chips
+          // now that the case list is available.
+          this.reenrichConversationCaseLabels();
+          // If a case was pre-selected via query params, auto-populate jurisdiction
+          if (this.selectedCaseId) {
+            const preselected = this.userCases.find((c: any) => c.id === this.selectedCaseId);
+            if (preselected?.jurisdiction) {
+              this.selectedJurisdiction = preselected.jurisdiction;
+              this.cdr.markForCheck();
+            }
+            // Also fetch last-used jurisdiction from existing documents
+            this.documentGenerationService.getLastJurisdiction(this.selectedCaseId)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: res => {
+                  if (res?.jurisdiction) {
+                    this.lastDocJurisdiction.set(this.selectedCaseId!, res.jurisdiction);
+                    if (!preselected?.jurisdiction) {
+                      this.selectedJurisdiction = res.jurisdiction;
+                      this.cdr.markForCheck();
+                    }
+                  }
+                },
+                error: () => { /* non-critical — mismatch detection degrades gracefully */ }
+              });
+          }
         },
         error: () => {
           // Error handled silently
           this.userCases = [];
         }
       });
+  }
+
+  /**
+   * Called when the case selector dropdown changes.
+   * Auto-populates jurisdiction from the selected case or last-used document jurisdiction.
+   */
+  onCaseSelected(caseId: number | null): void {
+    this.selectedCaseId = caseId;
+    if (caseId) {
+      const selectedCase = this.userCases.find((c: any) => c.id === caseId);
+      // Auto-populate from case.jurisdiction if available
+      if (selectedCase?.jurisdiction) {
+        this.selectedJurisdiction = selectedCase.jurisdiction;
+        this.cdr.markForCheck();
+      }
+      // Also check last used jurisdiction from existing documents
+      this.documentGenerationService.getLastJurisdiction(caseId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: res => {
+            if (res?.jurisdiction) {
+              this.lastDocJurisdiction.set(caseId, res.jurisdiction);
+              // Auto-populate if case has no jurisdiction but documents exist
+              if (!selectedCase?.jurisdiction) {
+                this.selectedJurisdiction = res.jurisdiction;
+                this.cdr.markForCheck();
+              }
+            }
+          },
+          error: () => { /* non-critical — mismatch detection degrades gracefully */ }
+        });
+    }
+  }
+
+  /**
+   * Sprint 4d — Draft-dashboard linked-case chip × clear. Wipes the
+   * component-local `selectedCaseId` (lives at line 596 of this file, NOT
+   * in the state service) and the jurisdiction fields that `onCaseSelected`
+   * auto-populated from the case. Without clearing jurisdiction too, the
+   * wizard would still default to the old case's state on the next draft.
+   */
+  onClearLinkedCase(): void {
+    this.selectedCaseId = null;
+    this.selectedJurisdiction = '';
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Sprint 4d — Linked-case chip body click. Routes back to the page the
+   * attorney came from (tracked by the app-bootstrapped NavigationHistoryService)
+   * so the chip behaves like a contextual "back" button. If no referrer was
+   * captured (direct URL, hard refresh, came from another ai-assistant view),
+   * falls back to the case detail page so the click always lands somewhere
+   * useful.
+   */
+  onOpenLinkedCase(caseId: number): void {
+    if (caseId == null) return;
+    const prev = this.navigationHistory.lastNonWorkspaceUrl;
+    if (prev) {
+      this.router.navigateByUrl(prev);
+      return;
+    }
+    this.router.navigate(['/legal/cases', caseId]);
   }
 
   /**
@@ -3267,6 +3086,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               documentId: conv.documentId,
               relatedDraftId: conv.relatedDraftId,
               documentType: conv.documentType,
+              caseId: conv.caseId, // Associated legal case (drafts only — backend returns it for GENERATE_DRAFT)
+              caseLabel: this.resolveCaseLabel(conv.caseId), // Pre-resolved display label
               workflowExecutionId: conv.workflowExecutionId // For workflow-created drafts
             }));
 
@@ -3295,6 +3116,153 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   // REMOVED: groupConversationsByDate() - now handled by StateService automatically
+
+  /**
+   * Scrolls the viewport to the top. Used by reactive subscriptions in ngOnInit
+   * to reset scroll whenever the LegiDraft workspace transitions to a new mode
+   * (wizard → stream, picker → fill, etc.). `setTimeout(…, 0)` lets the new
+   * template subtree render before we scroll — scrolling inside the same tick
+   * as the transition gets reverted by layout shifts (e.g., the drafting-mode
+   * body class change collapses the app shell).
+   *
+   * `behavior: 'auto'` is intentional — a hard snap reads as "new page" to the
+   * user. A smooth scroll would look like a drift and confuse the spatial model.
+   */
+  private scrollPageToTop(): void {
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }, 0);
+  }
+
+  /**
+   * Primary display line for a Recent-Drafts sidebar row — the document
+   * identity ("Demand Letter", "Motion to Dismiss", etc.).
+   *
+   * Prefers the explicit `documentType` column on the conversation, since that
+   * was captured at draft-creation time and is authoritative. Falls back to
+   * parsing the saved title, which tends to follow the pattern
+   * "{DocType} - {ClientName}" — we split on common separators and take the
+   * leading segment.
+   */
+  draftPrimaryLabel(conv: Conversation): string {
+    const docType = (conv?.documentType || '').trim();
+    if (docType) return this.toTitleCase(docType);
+    const title = (conv?.title || '').trim();
+    if (!title) return 'Untitled Draft';
+    const firstSegment = title.split(/[—\-·|]/)[0].trim();
+    const capped = firstSegment.length > 40 ? firstSegment.substring(0, 30) : firstSegment;
+    return this.toTitleCase(capped);
+  }
+
+  /**
+   * Secondary "context" line — the matter the draft belongs to. Composes
+   * "{Case Title} · {Practice Area}" from the attorney's case list. Shows
+   * "No linked case" when either no caseId was ever set or the case isn't
+   * reachable (deleted, reassigned, or beyond the userCases window).
+   *
+   * Note: prefers `title` over `caseNumber` — attorneys think in matter names
+   * ("Smith v. Hanover"), not case numbers. CaseNumber acts as a fallback
+   * only when the title is empty.
+   */
+  draftSecondaryLabel(conv: Conversation): string {
+    const caseId = conv?.caseId;
+    if (!caseId) return 'No linked case';
+    const match = this.userCases.find((c: any) => c.id === caseId);
+    if (!match) return 'No linked case';
+    const title = (match.title || match.caseNumber || '').trim();
+    const pa = this.prettifyPracticeArea(match.practiceArea || match.type);
+    if (!title && !pa) return 'Linked case';
+    return pa ? `${title || 'Linked case'} · ${pa}` : title;
+  }
+
+  /**
+   * Whether a draft has a resolvable case link. Used by the template to
+   * toggle the briefcase icon and the muted "no case" styling.
+   */
+  hasResolvableCaseLink(conv: Conversation): boolean {
+    const caseId = conv?.caseId;
+    if (!caseId) return false;
+    return this.userCases.some((c: any) => c.id === caseId);
+  }
+
+  /**
+   * Normalize practice-area slugs/codes to human-readable labels. Keeps the
+   * sidebar feeling like a product, not a database dump ("pi" → "Personal
+   * Injury"). Unknown values are passed through with title-case.
+   */
+  private prettifyPracticeArea(pa: string | null | undefined): string {
+    const raw = (pa || '').toString().trim();
+    if (!raw) return '';
+    const lower = raw.toLowerCase();
+    const map: Record<string, string> = {
+      pi: 'Personal Injury',
+      'personal injury': 'Personal Injury',
+      'personal-injury': 'Personal Injury',
+      family: 'Family Law',
+      'family law': 'Family Law',
+      'family-law': 'Family Law',
+      criminal: 'Criminal',
+      'criminal defense': 'Criminal',
+      immigration: 'Immigration',
+      civil: 'Civil',
+      'civil litigation': 'Civil Litigation',
+      'real estate': 'Real Estate',
+      'real-estate': 'Real Estate',
+      ip: 'IP',
+      'intellectual property': 'IP',
+      'intellectual-property': 'IP',
+      corporate: 'Corporate',
+      employment: 'Employment',
+      bankruptcy: 'Bankruptcy'
+    };
+    return map[lower] || this.toTitleCase(raw);
+  }
+
+  private toTitleCase(s: string): string {
+    return (s || '')
+      .toLowerCase()
+      .split(/\s+/)
+      .map(w => (w ? w.charAt(0).toUpperCase() + w.slice(1) : ''))
+      .join(' ');
+  }
+
+  /**
+   * Re-derives caseLabel on every conversation once userCases finishes loading.
+   * Handles the race where conversations arrived before cases — without this,
+   * the sidebar would stay at the "No linked case" fallback forever even
+   * though the caseId is valid.
+   *
+   * This still updates caseLabel for any legacy consumers (e.g. the unused
+   * `conversation-list` component, workflow dashboards) that read it
+   * directly, but the draft-sidebar template now resolves per-render via
+   * `draftSecondaryLabel` so it's immune to this race in the first place.
+   */
+  private reenrichConversationCaseLabels(): void {
+    const existing = this.stateService.getConversations();
+    if (!existing?.length) return;
+    const updated = existing.map(c =>
+      c.caseId ? { ...c, caseLabel: this.resolveLegacyCaseLabel(c.caseId) } : c
+    );
+    this.stateService.setConversations(updated);
+  }
+
+  /**
+   * Legacy label used only to keep `conv.caseLabel` populated for any
+   * downstream consumer that reads it directly. New code should use
+   * `draftSecondaryLabel` which composes a richer context line.
+   */
+  private resolveLegacyCaseLabel(caseId: number | null | undefined): string | undefined {
+    if (!caseId) return undefined;
+    const match = this.userCases.find((c: any) => c.id === caseId);
+    if (!match) return undefined;
+    return (match.title || match.caseNumber || '').trim() || undefined;
+  }
+
+  private resolveCaseLabel(caseId: number | null | undefined): string | undefined {
+    return this.resolveLegacyCaseLabel(caseId);
+  }
 
   // Map backend task type to frontend type
   private mapBackendTaskTypeToFrontend(taskType: string): ConversationType {
@@ -3978,16 +3946,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   // ========================================
 
 
-  // Toggle template filters
-  toggleFilters(): void {
-    this.showTemplateFilters = !this.showTemplateFilters;
-  }
-
-  // Select practice area
-  selectPracticeArea(areaId: string): void {
-    this.selectedPracticeArea = areaId;
-  }
-
   // Select task (Protégé-style) - Default to Question (Legal Research)
   selectedTask: ConversationType = ConversationType.Question;
   activeTask: ConversationType = ConversationType.Question;
@@ -4009,6 +3967,12 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   selectTask(task: ConversationType): void {
+    // Sprint 4c — Always land on the LegiDraft dashboard when the user enters draft mode.
+    // Prevents a half-filled wizard from the previous visit surprising the user.
+    if (task === 'draft' && this.selectedTask !== 'draft') {
+      this.enterDashboardMode();
+    }
+
     this.selectedTask = task;
     this.activeTask = task;
 
@@ -5844,296 +5808,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     }, 500);
   }
 
-  // Protégé-style document type pills
-  // Categorized document types with icons
-  documentTypeCategories = [
-    {
-      id: 'pleadings',
-      name: 'Pleadings',
-      icon: '📋',
-      expanded: true,
-      types: [
-        {
-          id: 'complaint',
-          name: 'Complaint',
-          placeholderExample: 'Draft a complaint for breach of contract against ABC Corp for failing to deliver goods...'
-        },
-        {
-          id: 'answer',
-          name: 'Answer',
-          placeholderExample: 'Draft an answer to the plaintiff\'s complaint denying liability and asserting affirmative defenses...'
-        },
-        {
-          id: 'counterclaim',
-          name: 'Counterclaim',
-          placeholderExample: 'Draft a counterclaim alleging fraudulent misrepresentation by the plaintiff...'
-        }
-      ]
-    },
-    {
-      id: 'motions',
-      name: 'Motions',
-      icon: '⚖️',
-      expanded: true,
-      types: [
-        {
-          id: 'motion-dismiss',
-          name: 'Motion to Dismiss',
-          placeholderExample: 'Draft a Motion to Dismiss the complaint for failure to state a claim under Rule 12(b)(6)...'
-        },
-        {
-          id: 'motion-summary-judgment',
-          name: 'Summary Judgment',
-          placeholderExample: 'Draft a Motion for Summary Judgment arguing there are no genuine disputes of material fact...'
-        },
-        {
-          id: 'motion-compel',
-          name: 'Motion to Compel',
-          placeholderExample: 'Draft a Motion to Compel discovery responses that were not provided within the deadline...'
-        },
-        {
-          id: 'motion-suppress',
-          name: 'Motion to Suppress',
-          placeholderExample: 'Draft a Motion to Suppress evidence obtained during an unlawful search...'
-        },
-        {
-          id: 'motion-protective-order',
-          name: 'Protective Order',
-          placeholderExample: 'Draft a Motion for Protective Order to prevent disclosure of confidential business information...'
-        }
-      ]
-    },
-    {
-      id: 'discovery',
-      name: 'Discovery',
-      icon: '🔍',
-      expanded: false,
-      types: [
-        {
-          id: 'interrogatories',
-          name: 'Interrogatories',
-          placeholderExample: 'Draft interrogatories seeking information about the defendant\'s employment history and income...'
-        },
-        {
-          id: 'rfp',
-          name: 'Request for Production',
-          placeholderExample: 'Draft requests for production seeking all contracts and correspondence related to the transaction...'
-        },
-        {
-          id: 'rfa',
-          name: 'Request for Admission',
-          placeholderExample: 'Draft requests for admission regarding the authenticity of documents and basic facts of the case...'
-        },
-        {
-          id: 'deposition-notice',
-          name: 'Deposition Notice',
-          placeholderExample: 'Draft a notice of deposition for the plaintiff\'s key witness scheduled for next month...'
-        },
-        {
-          id: 'subpoena',
-          name: 'Subpoena',
-          placeholderExample: 'Draft a subpoena duces tecum for medical records from ABC Hospital...'
-        }
-      ]
-    },
-    {
-      id: 'correspondence',
-      name: 'Correspondence',
-      icon: '📝',
-      expanded: false,
-      types: [
-        {
-          id: 'letter-of-representation',
-          name: 'Letter of Representation',
-          placeholderExample: 'Draft a letter of representation to the insurance company notifying them of our representation of the client...'
-        },
-        {
-          id: 'demand-letter',
-          name: 'Demand Letter',
-          placeholderExample: 'Draft a demand letter seeking $50,000 in damages for personal injuries sustained in a car accident...'
-        },
-        {
-          id: 'settlement-letter',
-          name: 'Settlement Letter',
-          placeholderExample: 'Draft a settlement proposal offering resolution of all claims for $75,000 with a 30-day response deadline...'
-        },
-        {
-          id: 'settlement-offer',
-          name: 'Settlement Offer',
-          placeholderExample: 'Draft a settlement offer proposing resolution of all claims for $75,000...'
-        },
-        {
-          id: 'opinion-letter',
-          name: 'Opinion Letter',
-          placeholderExample: 'Draft an opinion letter advising the client on the legal risks of their proposed business transaction...'
-        },
-        {
-          id: 'client-email',
-          name: 'Client Email',
-          placeholderExample: 'Draft an email to the client explaining the discovery process and next steps in litigation...'
-        },
-        {
-          id: 'opposing-counsel-letter',
-          name: 'Letter to Counsel',
-          placeholderExample: 'Draft a letter to opposing counsel proposing a schedule for completing discovery...'
-        }
-      ]
-    },
-    {
-      id: 'contracts',
-      name: 'Contracts',
-      icon: '📄',
-      expanded: false,
-      types: [
-        {
-          id: 'contract-employment',
-          name: 'Employment Agreement',
-          placeholderExample: 'Draft an employment agreement for a senior executive with salary, benefits, and non-compete terms...'
-        },
-        {
-          id: 'contract-nda',
-          name: 'NDA',
-          placeholderExample: 'Draft a mutual non-disclosure agreement for discussions about a potential merger...'
-        },
-        {
-          id: 'contract-sale',
-          name: 'Purchase Agreement',
-          placeholderExample: 'Draft a purchase agreement for the sale of commercial property including inspection contingencies...'
-        },
-        {
-          id: 'contract-service',
-          name: 'Service Agreement',
-          placeholderExample: 'Draft a consulting services agreement with payment terms and deliverable milestones...'
-        },
-        {
-          id: 'amendment',
-          name: 'Contract Amendment',
-          placeholderExample: 'Draft an amendment to extend the contract term and modify the payment schedule...'
-        },
-        {
-          id: 'clause',
-          name: 'Contract Clause',
-          placeholderExample: 'Draft an arbitration clause for a commercial services agreement...'
-        }
-      ]
-    },
-    {
-      id: 'appellate',
-      name: 'Appellate',
-      icon: '🏛️',
-      expanded: false,
-      types: [
-        {
-          id: 'appellate-brief',
-          name: 'Appellate Brief',
-          placeholderExample: 'Draft an appellate brief arguing the trial court erred in granting summary judgment...'
-        },
-        {
-          id: 'reply-brief',
-          name: 'Reply Brief',
-          placeholderExample: 'Draft a reply brief responding to appellee\'s arguments on the standard of review...'
-        }
-      ]
-    },
-    {
-      id: 'other',
-      name: 'Other',
-      icon: '📑',
-      expanded: false,
-      types: [
-        {
-          id: 'legal-memo',
-          name: 'Legal Memo',
-          placeholderExample: 'Draft a legal memorandum analyzing the liability issues in a slip and fall case...'
-        },
-        {
-          id: 'legal-argument',
-          name: 'Legal Argument',
-          placeholderExample: 'Draft a legal argument addressing the admissibility of hearsay evidence in this case...'
-        },
-        {
-          id: 'affidavit',
-          name: 'Affidavit',
-          placeholderExample: 'Draft an affidavit for a witness describing what they observed at the accident scene...'
-        },
-        {
-          id: 'settlement-agreement',
-          name: 'Settlement Agreement',
-          placeholderExample: 'Draft a settlement agreement resolving all claims with mutual releases and confidentiality terms...'
-        },
-        {
-          id: 'stipulation',
-          name: 'Stipulation',
-          placeholderExample: 'Draft a stipulation agreeing to extend discovery deadlines by 60 days...'
-        },
-        {
-          id: 'notice',
-          name: 'Notice',
-          placeholderExample: 'Draft a notice to the court requesting a continuance of the hearing date...'
-        }
-      ]
-    }
-  ];
-
-  documentTypeSearchText: string = '';
+  // Sprint 5 — the legacy 33-item `documentTypeCategories` tree, `selectedDocTypeName` getter,
+  // `toggleCategory`, `filteredDocumentTypes`, `showDocTypeDropdown`, and the dropdown search field
+  // were all removed. The DraftWizard now fetches its catalog from `/api/ai/document-types`
+  // (see `DocumentCatalogService`). The two fields below survive because they are still populated
+  // programmatically by `onDraftWizardSubmit` and read by generation / warning code paths.
   selectedDocTypePill: string | null = null;
   showDocTypeWarning: boolean = false;
-  showDocTypeDropdown: boolean = false;
-
-  selectDocTypePill(pillId: string): void {
-    this.selectedDocTypePill = pillId;
-    this.showDocTypeWarning = false; // Hide warning once type is selected
-    this.showDocTypeDropdown = false; // Close dropdown after selection
-
-  }
-
-  toggleDocTypeDropdown(): void {
-    this.showDocTypeDropdown = !this.showDocTypeDropdown;
-  }
-
-  get selectedDocTypeName(): string {
-    if (!this.selectedDocTypePill) {
-      return 'Select document type...';
-    }
-
-    for (const category of this.documentTypeCategories) {
-      const selectedType = category.types.find(t => t.id === this.selectedDocTypePill);
-      if (selectedType) {
-        return selectedType.name;
-      }
-    }
-
-    return 'Select document type...';
-  }
-
-  toggleCategory(categoryId: string): void {
-    const category = this.documentTypeCategories.find(c => c.id === categoryId);
-    if (category) {
-      category.expanded = !category.expanded;
-    }
-  }
-
-  /**
-   * Get flat list of filtered document types (for search quick pills)
-   */
-  get filteredDocumentTypes() {
-    if (!this.documentTypeSearchText.trim()) {
-      return [];
-    }
-
-    const search = this.documentTypeSearchText.toLowerCase();
-    const allTypes: any[] = [];
-
-    this.documentTypeCategories.forEach(cat => {
-      cat.types.forEach(type => {
-        if (type.name.toLowerCase().includes(search) || type.id.toLowerCase().includes(search)) {
-          allTypes.push(type);
-        }
-      });
-    });
-
-    return allTypes;
-  }
+  /** Display name from the wizard result — used in case-aware conversation titles. */
+  wizardDocumentTypeName: string | null = null;
 
   /**
    * Show warning when user focuses on prompt without selecting type
@@ -6196,6 +5879,189 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       centered: true,
       windowClass: 'prompt-tips-modal'
     });
+  }
+
+  /** Sprint 2.5 — resolve preset filter values for the embedded Template Library from the current case. */
+  protected get currentCasePracticeArea(): string | undefined {
+    return this.userCases?.find((c: any) => c.id === this.selectedCaseId)?.practiceArea || undefined;
+  }
+
+  /** Sprint 2.5 — resolve preset filter values for the embedded Template Library from the current case. */
+  protected get currentCaseJurisdiction(): string | undefined {
+    return this.userCases?.find((c: any) => c.id === this.selectedCaseId)?.jurisdiction || undefined;
+  }
+
+  /** Sprint 2 — receive generated-doc payload from the embedded library, load it into the editor.
+   *  Sprint 4c — no longer closes a modal; the inline template picker emits this event. */
+  onTemplateFromLibrary(event: any): void {
+    const content = event?.content;
+    if (!content) return;
+
+    this.currentDocumentId = null;
+    this.activeDocumentTitle = event.templateName || this.extractTitleFromMarkdown(content) || 'Untitled Document';
+    this.currentDocumentWordCount = this.countWords(content);
+    this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+    this.documentMetadata = {
+      tokensUsed: 0,
+      costEstimate: 0,
+      generatedAt: new Date(),
+      version: 1
+    };
+    this.pendingDocumentContent = content;
+
+    this.showEditor = false;
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      this.editorInstance = null;
+      this.stateService.setDraftingMode(true);
+      this.stateService.setShowChat(false);
+      this.stateService.setShowBottomSearchBar(false);
+      this.cdr.detectChanges();
+      this.showEditor = true;
+      this.setModeForDrafting();
+      this.cdr.detectChanges();
+    }, 0);
+  }
+
+  /** Sprint 2 — save the current editor content as a reusable template in the Template Library. */
+  async openSaveAsTemplate(): Promise<void> {
+    if (this.saveAsTemplateOpen) return;
+
+    const html = this.editorInstance?.getData() || '';
+    const plainText = this.editorInstance ? this.ckEditorService.getPlainText(this.editorInstance).trim() : '';
+    const Swal = (await import('sweetalert2')).default;
+    if (!plainText) {
+      Swal.fire({ icon: 'info', title: 'Nothing to save', text: 'Create or generate a document first.' });
+      return;
+    }
+
+    // Detect {{variable_name}} placeholders in the current editor body so the save-as modal can
+    // surface them to the attorney before they commit to a template name.
+    const varMatches = html.match(/\{\{[a-z_][a-z0-9_]*\}\}/gi) || [];
+    const detectedVars = Array.from(new Set(varMatches.map(v => v.toLowerCase())));
+
+    const selectedCase = this.userCases?.find((c: any) => c.id === this.selectedCaseId);
+    const defaultName = this.activeDocumentTitle || 'Untitled Template';
+    const defaultArea = selectedCase?.practiceArea || '';
+    const defaultJurisdiction = selectedCase?.jurisdiction || '';
+    const areaOptions = PRACTICE_AREAS
+      .map(p => `<option value="${p.slug}"${p.slug === defaultArea ? ' selected' : ''}>${p.name}</option>`)
+      .join('');
+    // Document categories — must match the enum used by Template Library filters and badges.
+    const DOC_CATEGORIES: ReadonlyArray<{ code: string; name: string }> = [
+      { code: 'MOTION', name: 'Motion' },
+      { code: 'BRIEF', name: 'Brief' },
+      { code: 'CONTRACT', name: 'Contract' },
+      { code: 'CORRESPONDENCE', name: 'Correspondence / Letter' },
+      { code: 'IMMIGRATION_FORM', name: 'Immigration Form' },
+      { code: 'FAMILY_LAW_FORM', name: 'Family Law Form' },
+      { code: 'CRIMINAL_MOTION', name: 'Criminal Motion' },
+      { code: 'REAL_ESTATE_DOC', name: 'Real Estate Document' },
+      { code: 'PATENT_APPLICATION', name: 'Patent Application' },
+      { code: 'OTHER', name: 'Other' }
+    ];
+    const categoryOptions = DOC_CATEGORIES
+      .map(c => `<option value="${c.code}">${c.name}</option>`)
+      .join('');
+
+    // Variable-detection banner — only rendered when the current body actually contains {{placeholders}}.
+    // Inline styles are used because Swal modals live outside this component's scoped SCSS.
+    const varBanner = detectedVars.length > 0
+      ? `
+        <div style="display:flex;gap:0.65rem;align-items:flex-start;padding:0.75rem 0.85rem;margin-bottom:0.85rem;background:rgba(41,156,219,0.08);border:1px solid rgba(41,156,219,0.3);border-radius:8px;">
+          <i class="ri-magic-line" style="font-size:1.1rem;color:#299cdb;flex-shrink:0;margin-top:1px;"></i>
+          <div style="font-size:0.82rem;color:var(--vz-heading-color,#212529);line-height:1.4;">
+            <strong>${detectedVars.length} variable${detectedVars.length === 1 ? '' : 's'} detected</strong> in the current document — they'll be carried into the template.
+            <div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.45rem;">
+              ${detectedVars.map(v => `<span style="display:inline-block;padding:0.15rem 0.5rem;background:#fff;border:1px solid rgba(41,156,219,0.35);border-radius:999px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.7rem;color:#1566a0;">${this.escapeHtmlAttr(v)}</span>`).join('')}
+            </div>
+          </div>
+        </div>
+      `
+      : '';
+
+    this.saveAsTemplateOpen = true;
+    try {
+      const result = await Swal.fire({
+        title: 'Save as Template',
+        html: `
+          <div class="text-start">
+            ${varBanner}
+            <label class="form-label fw-semibold mb-1">Template Name <span class="text-danger">*</span></label>
+            <input id="sat-name" class="form-control mb-2" value="${this.escapeHtmlAttr(defaultName)}" placeholder="e.g., MA PI Demand Letter" />
+            <label class="form-label fw-semibold mb-1">Category <span class="text-danger">*</span></label>
+            <select id="sat-category" class="form-select mb-2"><option value="">— Select category —</option>${categoryOptions}</select>
+            <label class="form-label fw-semibold mb-1">Description</label>
+            <textarea id="sat-desc" class="form-control mb-2" rows="2" placeholder="Optional description..."></textarea>
+            <label class="form-label fw-semibold mb-1">Practice Area</label>
+            <select id="sat-area" class="form-select mb-2"><option value="">— None —</option>${areaOptions}</select>
+            <small class="text-muted d-block">Tip: use <code>{{variable_name}}</code> in your document to mark variables.</small>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="ri-save-line me-1"></i> Save Template',
+        cancelButtonText: 'Cancel',
+        focusConfirm: false,
+        preConfirm: () => {
+          const name = (document.getElementById('sat-name') as HTMLInputElement)?.value?.trim();
+          const category = (document.getElementById('sat-category') as HTMLSelectElement)?.value;
+          const description = (document.getElementById('sat-desc') as HTMLTextAreaElement)?.value?.trim();
+          const practiceArea = (document.getElementById('sat-area') as HTMLSelectElement)?.value;
+          if (!name) {
+            Swal.showValidationMessage('Template name is required');
+            return false;
+          }
+          if (!category) {
+            Swal.showValidationMessage('Category is required');
+            return false;
+          }
+          return { name, category, description, practiceArea };
+        }
+      });
+
+      if (!result.isConfirmed || !result.value) return;
+
+      const form = result.value as { name: string; category: string; description: string; practiceArea: string };
+      const template: Template = {
+        name: form.name,
+        description: form.description || undefined,
+        category: form.category,
+        practiceArea: form.practiceArea || undefined,
+        jurisdiction: defaultJurisdiction || undefined,
+        templateContent: html,
+        templateType: 'HTML',
+        isPublic: false
+      };
+
+      this.templateService.createTemplate(template)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (saved) => {
+            Swal.fire({
+              icon: 'success',
+              title: 'Template saved',
+              text: `"${saved.name}" is now available in the Template Library.`,
+              timer: 2500,
+              showConfirmButton: false
+            });
+          },
+          error: (err) => {
+            Swal.fire({
+              icon: 'error',
+              title: 'Failed to save template',
+              text: err?.error?.message || err?.message || 'Please try again.'
+            });
+          }
+        });
+    } finally {
+      this.saveAsTemplateOpen = false;
+    }
+  }
+
+  private saveAsTemplateOpen = false;
+
+  private escapeHtmlAttr(s: string): string {
+    return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   /**
@@ -6291,15 +6157,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // For 'draft' task
     if (this.selectedTask === 'draft') {
-      if (this.selectedDocTypePill) {
-        // Find selected pill across all categories
-        for (const category of this.documentTypeCategories) {
-          const selectedPill = category.types.find(p => p.id === this.selectedDocTypePill);
-          if (selectedPill) {
-            return selectedPill.placeholderExample || 'Describe the document you want to draft...';
-          }
-        }
-      }
       return 'Describe the document you want to draft...';
     }
 
@@ -6357,25 +6214,6 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       return this.currentUser.firstName.trim();
     }
     return 'User';
-  }
-
-  // Start drafting with selected document type
-  startDrafting(documentTypeId: string): void {
-    this.selectedDocumentType = documentTypeId as any;
-    const type = this.documentTypes.find(t => t.id === documentTypeId);
-
-    if (type) {
-      // Add user message
-      this.stateService.addConversationMessage({
-        role: 'user',
-        content: `I want to draft a ${type.name}`,
-        timestamp: new Date()
-      });
-
-      // Show chat and start generating
-      this.stateService.setShowChat(true);
-      this.stateService.setShowBottomSearchBar(false);
-    }
   }
 
   // Start custom draft with user's own prompt - REAL BACKEND CALL
@@ -6531,6 +6369,288 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Sprint 3 — DraftWizard submit handler. Maps the wizard's typed result onto the existing
+   * generation state (selectedDocTypePill, selectedJurisdiction, selectedCaseId, customPrompt)
+   * plus wizard-only extras (practiceArea, documentOptions, courtLevel) that generateDocumentFlow()
+   * merges into the request, then triggers startCustomDraft() to reuse the unchanged SSE flow.
+   */
+  onDraftWizardSubmit(result: DraftWizardResult): void {
+    // selectedDocTypePill drives the display-name getter, which looks up by UI catalog id.
+    // The backend slug (for registry cascade) is kept separately in wizardDocumentType.
+    this.selectedDocTypePill = result.documentTypeUiId;
+    this.wizardDocumentTypeName = result.documentTypeName || null;
+    this.selectedJurisdiction = result.jurisdiction || this.selectedJurisdiction;
+    this.selectedCaseId = result.caseId;
+
+    this.wizardPracticeArea = result.practiceArea || null;
+    this.wizardDocumentType = result.documentType || null;
+    this.wizardDocumentOptions = (result.documentOptions && Object.keys(result.documentOptions).length > 0)
+      ? result.documentOptions : null;
+    this.wizardCourtLevel = result.courtLevel && result.courtLevel !== 'DEFAULT' ? result.courtLevel : null;
+
+    // Default prompt when Step 4 left blank — keeps startCustomDraft()'s guard from blocking us.
+    this.customPrompt = result.prompt?.trim()
+      || `Draft a ${result.documentTypeName} for ${result.practiceAreaName} in ${result.jurisdiction}.`;
+
+    this.startCustomDraft();
+  }
+
+  // ====== Sprint 4c — Draft view-mode helpers ======
+  // Thin wrappers over stateService.setDraftMode() so consumers (templates,
+  // child components, router callbacks) use a single vocabulary.
+
+  enterDashboardMode(): void {
+    this.stateService.setDraftMode('dashboard');
+    // Load recent templates the first time the dashboard is visible; subsequent
+    // visits reuse the cached list to avoid redundant requests.
+    if (!this.dashboardTemplatesLoaded) {
+      this.loadDashboardTemplates();
+    }
+  }
+
+  enterAiWizardMode(): void {
+    this.stateService.setDraftMode('ai-wizard');
+  }
+
+  enterTemplatePickerMode(): void {
+    this.stateService.setDraftMode('template-picker');
+  }
+
+  enterFillMode(): void {
+    this.stateService.setDraftMode('fill');
+  }
+
+  onDraftWizardCancel(): void {
+    // Sprint 4c — Cancel inside the wizard returns to the dashboard BUT keeps the
+    // user in draft mode. To fully leave draft, the user clicks the × (exitDraftMode).
+    this.clearWizardExtras();
+    this.selectedDocTypePill = null;
+    this.customPrompt = '';
+    this.enterDashboardMode();
+  }
+
+  /** Resolves the LegalCase object for the right-rail Case Context panel. */
+  get selectedCaseForDraft(): any | null {
+    if (!this.selectedCaseId || !this.userCases?.length) return null;
+    return this.userCases.find((c: any) => c.id === this.selectedCaseId) || null;
+  }
+
+  /** Dashboard primary CTA — reset wizard state and mount the AI wizard. */
+  startNewDraft(): void {
+    this.clearWizardExtras();
+    this.selectedDocTypePill = null;
+    this.customPrompt = '';
+    this.enterAiWizardMode();
+    // If the wizard is already mounted (e.g. user cancelled then clicked again),
+    // force it back to step 1 with all selections cleared.
+    setTimeout(() => this.draftWizardRef?.reset(), 0);
+  }
+
+  /** Dashboard "Browse all" CTA — open the inline template picker. */
+  openTemplateLibraryFromEmptyState(): void {
+    this.enterTemplatePickerMode();
+  }
+
+  /**
+   * Sprint 4c — Dashboard mini-card click. Skips the picker and jumps straight
+   * to fill mode with the selected template pre-set. Phase 4 will read
+   * `selectedTemplateForFill` and render the fill form; today we just transition
+   * and the placeholder fill view will pick it up.
+   */
+  onDashboardPickTemplate(template: Template): void {
+    if (!template) return;
+    this.selectedTemplateForFill = template;
+    this.enterFillMode();
+  }
+
+  /**
+   * Sprint 4c — Inline picker card click. Same fill-mode transition as the
+   * dashboard mini-card, but sourced from the broader filtered list. The
+   * TemplateSearchResult shape is a subset of Template; Phase 4's fill form
+   * will re-fetch the full template record via `templateService.getTemplate(id)`
+   * when variables and body content are needed.
+   */
+  /**
+   * Sprint 4c Phase 4 — FillAndGenerate submit handler. Bridges the AILegalTemplate
+   * path into the existing SSE draft flow:
+   *   - `wizardDocumentType` picks the right DocumentTypeTemplate JSON via the
+   *     4-way cascade (documentType × practiceArea × jurisdiction).
+   *   - `customPrompt` carries the template body verbatim under a `TEMPLATE BODY:`
+   *     section so the AI honors the saved template's exact wording.
+   *   - `wizardDocumentOptions` passes the filled variable values so the backend's
+   *     buildDraftPrompt() surfaces them under its "DOCUMENT OPTIONS" section.
+   */
+  onFillAndGenerateSubmit(result: FillAndGenerateResult): void {
+    if (!result) return;
+
+    this.selectedCaseId = result.caseId;
+    if (result.templateJurisdiction) {
+      this.selectedJurisdiction = result.templateJurisdiction;
+    }
+    this.wizardPracticeArea = result.templatePracticeArea || null;
+    this.wizardDocumentType = result.templateDocumentType || null;
+
+    this.wizardDocumentOptions = {
+      templateId: result.templateId,
+      templateName: result.templateName,
+      templateVariables: result.variableValues
+    };
+
+    const parts: string[] = [
+      `Use the "${result.templateName}" template to produce a finished document. ` +
+      `Honor its structure and wording; weave the provided field values into the document naturally.`
+    ];
+    if (result.templateContent && result.templateContent.trim()) {
+      parts.push(`TEMPLATE BODY:\n${result.templateContent.trim()}`);
+    }
+    if (result.additionalInstructions && result.additionalInstructions.trim()) {
+      parts.push(`Extra instructions: ${result.additionalInstructions.trim()}`);
+    }
+    this.customPrompt = parts.join('\n\n');
+
+    this.startCustomDraft();
+  }
+
+  onInlineTemplatePicked(result: any): void {
+    if (!result) return;
+    this.selectedTemplateForFill = {
+      id: result.id,
+      name: result.name,
+      description: result.description,
+      category: result.category,
+      practiceArea: result.practiceArea,
+      jurisdiction: result.jurisdiction
+    } as Template;
+    this.enterFillMode();
+  }
+
+  /**
+   * Sprint 4c — Inline picker's "Import" button opens the Template Import
+   * Wizard (PDF/DOCX/DOC upload + AI-classified variable detection) as an
+   * NgbModal so the user never leaves the LegiDraft flow. On successful
+   * commit, `onTemplateImportCompleted()` bumps `pickerRefreshToken` which
+   * triggers the picker's ngOnChanges to re-fetch and surface the new
+   * templates without a page reload.
+   */
+  onBrowseFullLibrary(): void {
+    // Guard against double-clicks opening multiple modal instances.
+    if (this.templateImportModalRef) return;
+    if (!this.templateImportModal) return;
+    this.showTemplateImportWizard = true;
+    this.templateImportModalRef = this.modalService.open(this.templateImportModal, {
+      size: 'xl',
+      centered: true,
+      backdrop: 'static',
+      keyboard: false,
+      windowClass: 'template-import-embedded-modal'
+    });
+    // Clear the ref on any close path (explicit close, backdrop, ESC).
+    this.templateImportModalRef.result.finally(() => {
+      this.templateImportModalRef = undefined;
+      this.showTemplateImportWizard = false;
+    });
+  }
+
+  /**
+   * Fired when the embedded Template Import Wizard finishes a commit. Bumps
+   * the picker's refresh token so its ngOnChanges re-queries and the freshly
+   * imported templates appear in the grid. Does NOT close the modal — the
+   * wizard shows its own post-commit summary + SweetAlert and then emits
+   * `closed`, which is where we dismiss (see onTemplateImportClosed).
+   */
+  onTemplateImportCompleted(_result: ImportCommitResponse): void {
+    this.pickerRefreshToken += 1;
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Fired when the wizard emits `closed` (user clicks its own close button).
+   */
+  onTemplateImportClosed(): void {
+    this.showTemplateImportWizard = false;
+    if (this.templateImportModalRef) {
+      this.templateImportModalRef.close();
+      this.templateImportModalRef = undefined;
+    }
+  }
+
+  /**
+   * Sprint 4c — Load recent templates + total count for the secondary dashboard
+   * tile. Tenant-scoped via TemplateService. Failures degrade silently — the
+   * tile shows its empty-state block and the "Browse all" link still works.
+   *
+   * Why `size: 100` (not 4): the backend's `/search` endpoint returns a bare
+   * `List<>` with no `totalElements` wrapper (see `AITemplateController#searchTemplates`).
+   * The controller materializes the full org template list via `getAllTemplates()`
+   * then slices in memory, so page size doesn't change the DB cost. Fetching a
+   * generous page gives us both the mini-card slice (first 4) AND an accurate
+   * count for the "Browse all N" link in a single request. If an org ever
+   * crosses 100 templates, add a dedicated `/count` endpoint — a second
+   * round-trip is cheaper than a broken count on the hero CTA.
+   *
+   * `cdr.markForCheck()` is mandatory: the consumer `app-draft-dashboard` is
+   * `ChangeDetectionStrategy.OnPush`, and we've seen the subscribe callback
+   * complete without the child repainting until an unrelated event forced CD.
+   * The explicit mark guarantees the new `recentTemplates`/`totalTemplatesCount`
+   * references propagate on the very next tick.
+   */
+  private loadDashboardTemplates(): void {
+    this.dashboardTemplatesLoaded = true;
+    this.templateService.searchTemplates({ page: 0, size: 100 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (results: any[]) => {
+          const all = (results || []).map(r => ({
+            id: r.id,
+            name: r.name,
+            description: r.description,
+            category: r.category,
+            practiceArea: r.practiceArea,
+            jurisdiction: r.jurisdiction
+          }));
+          this.totalTemplatesCount = all.length;
+          // Mini-card tile shows up to 4 (2 visible on medium, 4 at ≥1440px).
+          // Trim here so parent state stays lean; the component also defensively
+          // slices and the CSS hides positions 3+ below the big-screen breakpoint.
+          this.recentTemplates = all.slice(0, 4);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.recentTemplates = [];
+          this.totalTemplatesCount = 0;
+          // Reset the "already loaded" flag on error so re-entering the
+          // dashboard (e.g., after a transient network blip) retries the fetch
+          // instead of leaving the user stuck in empty-state until page reload.
+          this.dashboardTemplatesLoaded = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  /** × button — fully exit draft mode back to the 4-card welcome. */
+  exitDraftMode(): void {
+    this.enterDashboardMode();
+    this.clearWizardExtras();
+    this.selectedDocTypePill = null;
+    this.customPrompt = '';
+    this.switchToTaskType('question');
+  }
+
+  /** Wizard emits the selected case id; keep selectedCaseId in sync so the right rail updates. */
+  onWizardCaseChange(caseObj: any | null): void {
+    this.selectedCaseId = caseObj?.id ?? null;
+  }
+
+  /** Clear wizard extras after the request has been dispatched so the next draft starts clean. */
+  private clearWizardExtras(): void {
+    this.wizardPracticeArea = null;
+    this.wizardDocumentType = null;
+    this.wizardDocumentTypeName = null;
+    this.wizardDocumentOptions = null;
+    this.wizardCourtLevel = null;
+  }
+
   startCustomDraft(): void {
     // UPLOAD MODE: Use automated document analysis workflow
     if (this.selectedTask === 'upload') {
@@ -6577,7 +6697,10 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     if (this.selectedTask === 'draft') {
       // Draft: drive steps from real SSE events, not timer animation
       this.stateService.updateWorkflowStep(1, { status: 'active' as any });
-      this.generateDocumentFlow(userPrompt);
+      this.generateDocumentFlow(userPrompt).catch(err => {
+        console.error('Document generation flow error:', err);
+        this.stateService.setIsGenerating(false);
+      });
     } else {
       // Q&A: SSE progress will be connected once session ID is available in generateConversationFlow
       this.generateConversationFlow(userPrompt);
@@ -6585,22 +6708,54 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   // Document generation flow for 'draft' task
-  private generateDocumentFlow(userPrompt: string): void {
-    // Determine document type: use selected pill OR auto-detect from prompt
+  private async generateDocumentFlow(userPrompt: string): Promise<void> {
+    // Determine document type: wizard's backend slug wins (e.g. 'lor'); else selected pill
+    // (UI id — backend has aliases registered), else auto-detect from prompt.
     let documentType: string;
-    if (this.selectedDocTypePill) {
+    if (this.wizardDocumentType) {
+      documentType = this.wizardDocumentType;
+    } else if (this.selectedDocTypePill) {
       documentType = this.selectedDocTypePill;
     } else {
       documentType = this.detectDocumentTypeFromPrompt(userPrompt);
     }
 
-    // Build case-aware title: "Demand Letter - Marsel Hoxha vs Hanover Insurance"
+    // Check for jurisdiction mismatch if case is linked (multi-source check)
+    if (this.selectedCaseId) {
+      const linkedCase = this.userCases.find((c: any) => c.id === this.selectedCaseId);
+      const knownJurisdiction = linkedCase?.jurisdiction
+        || this.lastDocJurisdiction.get(this.selectedCaseId)
+        || this.caseJurisdictionHistory.get(this.selectedCaseId);
+
+      if (knownJurisdiction && knownJurisdiction !== this.selectedJurisdiction) {
+        const Swal = (await import('sweetalert2')).default;
+        const result = await Swal.fire({
+          title: 'Jurisdiction Mismatch',
+          html: `The selected case (<b>${linkedCase?.title || linkedCase?.caseNumber || 'Case'}</b>) was previously associated with <b>${knownJurisdiction}</b>, but you selected <b>${this.selectedJurisdiction}</b>.<br><br>Which jurisdiction should be used?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: `Use ${knownJurisdiction}`,
+          cancelButtonText: `Use ${this.selectedJurisdiction}`,
+          confirmButtonColor: '#556ee6',
+          allowEscapeKey: false,
+          allowOutsideClick: false,
+        });
+        if (result.isConfirmed) {
+          this.selectedJurisdiction = knownJurisdiction;
+        }
+      }
+    }
+
+    // Build case-aware title: "Letter of Representation - Marsel Hoxha vs Hanover Insurance"
+    // Prefer the wizard's display name — the backend slug alone gives ugly titles like
+    // "Lor" / "Nda" / "Rfp" when raw-cased.
     let title: string;
     if (this.selectedCaseId && documentType) {
       const selectedCase = this.userCases.find((c: any) => c.id === this.selectedCaseId);
       const caseName = selectedCase?.title || selectedCase?.caseNumber || '';
-      const docTypeName = documentType.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
-      title = caseName ? `${docTypeName} - ${caseName}` : docTypeName;
+      const uiName = this.wizardDocumentTypeName
+        || documentType.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+      title = caseName ? `${uiName} - ${caseName}` : uiName;
     } else {
       title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
     }
@@ -6633,8 +6788,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       documentType: documentType,
       jurisdiction: this.selectedJurisdiction,
       sessionName: title,
-      researchMode: this.selectedResearchMode  // Pass selected research mode (FAST or THOROUGH)
+      researchMode: this.selectedResearchMode,  // Pass selected research mode (FAST or THOROUGH)
+      courtLevel: this.wizardCourtLevel ?? 'DEFAULT'
     };
+
+    // Sprint 3 — wizard-sourced fields feed the backend's 4-way template cascade + per-type options
+    if (this.wizardPracticeArea) draftRequest.practiceArea = this.wizardPracticeArea;
+    if (this.wizardDocumentOptions) draftRequest.documentOptions = this.wizardDocumentOptions;
+
+    // One-shot: clear so a subsequent free-text draft doesn't inherit stale wizard state
+    this.clearWizardExtras();
 
     // Include documentId when available so backend can inject attached exhibits
     if (this.currentDocumentId && typeof this.currentDocumentId === 'number') {
@@ -6760,6 +6923,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               };
 
               this.loadVersionHistory();
+
+              // Record jurisdiction used for this case (for mismatch detection)
+              if (this.selectedCaseId) {
+                this.caseJurisdictionHistory.set(this.selectedCaseId, this.selectedJurisdiction);
+              }
 
               // Poll for exhibits — async attach may still be in progress
               if (data.documentId) {
@@ -7061,6 +7229,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           };
 
           this.loadVersionHistory();
+
+          // Record jurisdiction used for this case (for mismatch detection)
+          if (this.selectedCaseId) {
+            this.caseJurisdictionHistory.set(this.selectedCaseId, this.selectedJurisdiction);
+          }
 
           if (data.documentId) {
             this.exhibitPanelService.setExhibitsLoading(true);
@@ -10930,7 +11103,7 @@ You can:
     if (!docId) return;
 
     // If exhibit already has data loaded, open directly
-    if (exhibit.pdfData || (exhibit.fileUrl && exhibit.fileUrl.startsWith('blob:'))) {
+    if (exhibit.pdfBlob || (exhibit.fileUrl && exhibit.fileUrl.startsWith('blob:'))) {
       this.exhibitPanelService.openExhibit(exhibit);
       return;
     }
@@ -10939,11 +11112,11 @@ You can:
     this.exhibitPanelService.getExhibitFileBlob(Number(docId), Number(exhibit.id))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: async (blob) => {
+        next: (blob: Blob) => {
           if (this.isPdfExhibit(exhibit)) {
-            // Pass raw bytes to PDF viewer (avoids blob URL worker access issues on production)
-            const arrayBuffer = await blob.arrayBuffer();
-            exhibit.pdfData = new Uint8Array(arrayBuffer);
+            // Cache the Blob itself — pdf-viewer re-derives a fresh Uint8Array
+            // on each load, so PDF.js's ArrayBuffer transfer can't strand us.
+            exhibit.pdfBlob = blob;
           } else {
             // For images and other types, blob URL works fine
             exhibit.fileUrl = URL.createObjectURL(blob);

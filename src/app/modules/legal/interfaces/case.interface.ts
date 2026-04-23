@@ -132,8 +132,17 @@ export interface LegalCase {
   insurancePolicyLimit?: number;
   insuranceAdjusterName?: string;
   insuranceAdjusterContact?: string;
+  insuranceAdjusterEmail?: string;
+  insuranceAdjusterPhone?: string;
   defendantName?: string;
   defendantAddress?: string;
+
+  // Client's Own Insurance (for PIP / UIM claims) — added Sprint 1 of LegiDraft redesign
+  clientInsuranceCompany?: string;
+  clientInsurancePolicyNumber?: string;
+  clientInsuranceAdjusterName?: string;
+  clientInsuranceAdjusterEmail?: string;
+  clientInsuranceAdjusterPhone?: string;
 
   // Practice Area Identifier
   practiceArea?: string;

@@ -1,0 +1,130 @@
+<div class="draft-dashboard">
+  <!-- Linked-case chip — the attorney's context anchor. Clicking the body
+       jumps to the case detail page; clicking × clears the linked case and
+       the auto-populated jurisdiction. Split into two buttons so each
+       action has its own hit target, keyboard focus, and hover state. -->
+  <div class="linked-case-chip" *ngIf="linkedCase" [attr.data-accent]="caseChipAccent()">
+    <button
+      type="button"
+      class="lc-body"
+      (click)="onOpenCase()"
+      [attr.aria-label]="'Go back to previous page (working on ' + caseChipLabel() + ')'">
+      <span class="lc-icon" aria-hidden="true"><i class="ri-briefcase-4-line"></i></span>
+      <span class="lc-label">
+        <span class="lc-eyebrow">Working on case</span>
+        <span class="lc-title">{{ caseChipLabel() }}</span>
+        <span class="lc-subtitle" *ngIf="caseChipSubtitle()">{{ caseChipSubtitle() }}</span>
+      </span>
+      <span class="lc-meta">
+        <span class="lc-jur" *ngIf="caseChipJurisdiction()">{{ caseChipJurisdiction() }}</span>
+        <span class="lc-go" aria-hidden="true" title="Return to previous page">
+          <i class="ri-corner-up-left-line"></i>
+        </span>
+      </span>
+    </button>
+    <span class="lc-divider" aria-hidden="true"></span>
+    <button
+      type="button"
+      class="lc-clear"
+      (click)="onClearCase($event)"
+      aria-label="Clear linked case"
+      title="Clear linked case">
+      <i class="ri-close-line"></i>
+    </button>
+  </div>
+
+  <!-- Welcome row — serif headline sets the editorial tone -->
+  <div class="welcome-row">
+    <h3 class="welcome-title">
+      <ng-container *ngIf="userName; else genericHello">Hello {{ userName }} — what are you drafting today?</ng-container>
+      <ng-template #genericHello>What are you drafting today?</ng-template>
+    </h3>
+    <p class="welcome-lead">Start from scratch with AI, or grab one of your saved templates.</p>
+  </div>
+
+  <!-- Two tiles: AI path (primary gradient) + Template path (secondary with 4 recent mini-cards) -->
+  <div class="dd-tiles">
+    <button type="button" class="tile-primary" (click)="onTileNewDraft()">
+      <div class="tile-eyebrow">
+        <i class="ri-sparkling-2-line"></i>
+        <span>AI · guided flow</span>
+      </div>
+      <div class="tile-title">Start a new draft</div>
+      <div class="tile-desc">
+        Pick a practice area and document type, configure the specifics, then Legience writes the first draft.
+      </div>
+      <div class="tile-hints">
+        <span class="chip">Practice area first</span>
+        <span class="chip">Jurisdiction-aware</span>
+      </div>
+      <span class="tile-action">
+        Begin <i class="ri-arrow-right-line"></i>
+      </span>
+    </button>
+
+    <div class="tile-secondary">
+      <div class="tile-eyebrow">
+        <i class="ri-file-text-line"></i>
+        <span>Saved · your library</span>
+      </div>
+      <div class="tile-title">Draft from a template</div>
+      <div class="tile-desc">Fill the blanks on a saved template. Variables auto-fill from the case you pick.</div>
+
+      <div class="tile-templates" *ngIf="recentTemplates?.length; else emptyTemplatesBlock">
+        <button
+          type="button"
+          class="tpl-mini"
+          *ngFor="let tpl of recentTemplates.slice(0, 4); trackBy: trackByTemplateId"
+          (click)="onPickTemplate(tpl)"
+          [attr.aria-label]="'Use template ' + tpl.name">
+          <div class="tpl-name">{{ tpl.name }}</div>
+          <div class="tpl-meta">
+            <span class="tpl-pill" [ngClass]="paPillClass(tpl)">{{ paLabel(tpl) }}</span>
+            <span class="tpl-pill state" *ngIf="stateLabel(tpl)">{{ stateLabel(tpl) }}</span>
+          </div>
+        </button>
+      </div>
+
+      <ng-template #emptyTemplatesBlock>
+        <div class="tile-templates-empty">
+          <i class="ri-inbox-line"></i>
+          <span>No templates yet — browse the library to get started.</span>
+        </div>
+      </ng-template>
+
+      <button type="button" class="tile-footer-link" (click)="onBrowseAll()">
+        <ng-container *ngIf="templatesCount > 0; else browseAllGeneric">
+          Browse all {{ templatesCount }} templates
+        </ng-container>
+        <ng-template #browseAllGeneric>Browse all templates</ng-template>
+        <i class="ri-arrow-right-line"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Recent drafts strip — pick up where you left off -->
+  <div class="dd-recent" *ngIf="recentDrafts?.length">
+    <div class="dd-recent-header">
+      <h6>Pick up where you left off</h6>
+      <!-- The left rail already lists drafts; this link focuses the search input there. -->
+    </div>
+    <div class="dd-recent-grid">
+      <button
+        type="button"
+        class="dd-recent-card"
+        *ngFor="let conv of recentDrafts.slice(0, 4); trackBy: trackByConversationId"
+        (click)="onOpenDraft(conv)"
+        [attr.aria-label]="'Open draft: ' + (conv.title || 'Untitled')">
+        <div class="dr-type">{{ draftEyebrow(conv) }}</div>
+        <div class="dr-title">{{ draftTitle(conv) }}</div>
+        <div class="dr-date">Edited {{ relativeTime(conv.date) || 'recently' }}</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Contextual tip when there's no linked case — stays faithful to Sprint 4a UX. -->
+  <div class="tip-footer" *ngIf="!hasLinkedCase">
+    <i class="ri-lightbulb-flash-line"></i>
+    Tip: Link a case for better-grounded results
+  </div>
+</div>

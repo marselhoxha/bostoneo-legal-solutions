@@ -1,0 +1,114 @@
+<!-- Empty state — no case linked -->
+<div class="case-context-panel empty" *ngIf="!case">
+  <div class="ctx-icon">
+    <i class="ri-folder-3-line"></i>
+  </div>
+  <h6>No case linked</h6>
+  <p>Drafts still work, but results are stronger when grounded in a case.</p>
+
+  <!-- Closed: primary CTA -->
+  <button *ngIf="!pickerOpen"
+          type="button"
+          class="btn btn-sm btn-outline-primary ctx-link-btn"
+          (click)="openPicker()">
+    <i class="ri-link"></i> Link a case
+  </button>
+
+  <!-- Open: inline picker -->
+  <div *ngIf="pickerOpen" class="ctx-picker">
+    <select class="form-select form-select-sm"
+            [(ngModel)]="selectedPickerId"
+            (ngModelChange)="onPick($event)"
+            aria-label="Select a case to link">
+      <option [ngValue]="null" disabled>Choose a case…</option>
+      <option *ngFor="let c of availableCases" [ngValue]="c.id">
+        {{ c.title || c.caseName || c.caseNumber || ('Case #' + c.id) }}
+      </option>
+    </select>
+
+    <button type="button" class="btn btn-link btn-sm ctx-picker-cancel" (click)="cancelPicker()">
+      Cancel
+    </button>
+
+    <div *ngIf="!availableCases?.length" class="ctx-picker-empty">
+      No cases available. <a routerLink="/legal/cases/create">Create one →</a>
+    </div>
+  </div>
+</div>
+
+<!-- Populated state — case summary -->
+<div class="case-context-panel" *ngIf="case">
+  <!-- Header: title + case number -->
+  <div class="ctx-section">
+    <div class="ctx-title">Case</div>
+    <div class="ctx-case-name">{{ caseTitle }}</div>
+    <div class="ctx-case-num" *ngIf="case.caseNumber">{{ case.caseNumber }}</div>
+
+    <div class="ctx-badges">
+      <span class="ctx-badge purple" *ngIf="case.practiceArea">{{ case.practiceArea }}</span>
+      <span class="ctx-badge info" *ngIf="case.jurisdiction">{{ case.jurisdiction }}</span>
+    </div>
+  </div>
+
+  <!-- Key dates -->
+  <ng-container *ngIf="incidentDate || filingDate || case.importantDates?.trialDate || case.importantDates?.nextHearing">
+    <div class="ctx-divider"></div>
+    <div class="ctx-section">
+      <div class="ctx-title">Key Dates</div>
+      <div class="ctx-row" *ngIf="incidentDate">
+        <span class="ctx-label">Incident</span>
+        <span class="ctx-value">{{ incidentDate | date:'mediumDate' }}</span>
+      </div>
+      <div class="ctx-row" *ngIf="filingDate">
+        <span class="ctx-label">Filing</span>
+        <span class="ctx-value">{{ filingDate | date:'mediumDate' }}</span>
+      </div>
+      <div class="ctx-row" *ngIf="case.importantDates?.nextHearing">
+        <span class="ctx-label">Next hearing</span>
+        <span class="ctx-value">{{ case.importantDates.nextHearing | date:'mediumDate' }}</span>
+      </div>
+      <div class="ctx-row" *ngIf="case.importantDates?.trialDate">
+        <span class="ctx-label">Trial</span>
+        <span class="ctx-value">{{ case.importantDates.trialDate | date:'mediumDate' }}</span>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Parties -->
+  <ng-container *ngIf="clientFullName || case.defendantName">
+    <div class="ctx-divider"></div>
+    <div class="ctx-section">
+      <div class="ctx-title">Parties</div>
+      <div class="ctx-row" *ngIf="clientFullName">
+        <span class="ctx-label">Plaintiff</span>
+        <span class="ctx-value">{{ clientFullName }}</span>
+      </div>
+      <div class="ctx-row" *ngIf="case.defendantName">
+        <span class="ctx-label">Defendant</span>
+        <span class="ctx-value">{{ case.defendantName }}</span>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Insurance -->
+  <ng-container *ngIf="hasDefendantInsurance || hasClientInsurance">
+    <div class="ctx-divider"></div>
+    <div class="ctx-section">
+      <div class="ctx-title">Insurance</div>
+      <div class="ctx-row" *ngIf="hasDefendantInsurance">
+        <span class="ctx-label">Defendant</span>
+        <span class="ctx-value">{{ case.insuranceCompany }}</span>
+      </div>
+      <div class="ctx-row" *ngIf="hasClientInsurance">
+        <span class="ctx-label">Client</span>
+        <span class="ctx-value">{{ case.clientInsuranceCompany }}</span>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Footer link -->
+  <div class="ctx-divider"></div>
+  <a class="ctx-footer-link" (click)="openCase()" role="button">
+    Open full case <i class="ri-arrow-right-line"></i>
+  </a>
+</div>

@@ -12,7 +12,8 @@ import { UserService } from '../../../../../service/user.service';
 import { OrganizationService } from '../../../../../core/services/organization.service';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
-import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField } from '../../../shared/practice-area-fields.config';
+import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField, groupPracticeAreaSections } from '../../../shared/practice-area-fields.config';
+import { PRACTICE_AREAS, JURISDICTIONS } from '../../../shared/legal-constants';
 import Swal from 'sweetalert2';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../../environments/environment';
@@ -63,15 +64,17 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   CasePriority = CasePriority;
   PaymentStatus = PaymentStatus;
 
-  practiceAreas = [
-    'Personal Injury', 'Criminal Defense', 'Family Law', 'Immigration Law',
-    'Real Estate Law', 'Intellectual Property', 'Business Law', 'Estate Planning',
-    'Employment Law', 'Bankruptcy', 'Civil Litigation', 'Other'
-  ];
+  // Single source of truth — see src/app/modules/legal/shared/legal-constants.ts
+  practiceAreas = PRACTICE_AREAS.map(p => p.name);
 
   currentPracticeAreaSections: PracticeAreaSection[] = [];
   practiceAreaFieldsConfig = PRACTICE_AREA_FIELDS;
   private practiceAreaDatePickers: any[] = [];
+
+  // Rows of paired sections — pairGroup-tagged sections render side-by-side in a Bootstrap row.
+  get practiceAreaSectionRows(): PracticeAreaSection[][] {
+    return groupPracticeAreaSections(this.currentPracticeAreaSections);
+  }
 
   billingTypes = [
     { value: 'HOURLY', label: 'Hourly' },
@@ -81,16 +84,8 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
     { value: 'HYBRID', label: 'Hybrid' }
   ];
 
-  usJurisdictions = [
-    'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut',
-    'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois',
-    'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts',
-    'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada',
-    'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota',
-    'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
-    'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia',
-    'Wisconsin', 'Wyoming', 'Federal'
-  ];
+  // Single source of truth — see src/app/modules/legal/shared/legal-constants.ts
+  usJurisdictions = JURISDICTIONS.map(j => j.name);
 
   private stateCodeToName: Record<string, string> = {
     'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',

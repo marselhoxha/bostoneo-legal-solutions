@@ -1,0 +1,348 @@
+// Mockup §8 — full-page template editor layout.
+// 2-column grid on desktop (editor + 340px sidebar), stacked on narrow screens.
+// All colors use Velzon tokens (var(--vz-*)) so dark mode flips cleanly.
+
+:host {
+  display: block;
+}
+
+.template-editor-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1.25rem 2rem;
+  min-height: calc(100vh - 70px);
+}
+
+// ------- Top breadcrumb / actions bar -------
+
+.editor-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--vz-secondary-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 10px;
+  flex-wrap: wrap;
+
+  .crumb {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+    color: var(--vz-body-color);
+
+    .crumb-link {
+      color: var(--vz-body-color-muted, #878a99);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: color 0.12s ease;
+      &:hover { color: var(--vz-primary); }
+    }
+
+    .crumb-sep { font-size: 1rem; color: var(--vz-body-color-muted, #878a99); }
+    strong { color: var(--vz-heading-color); font-weight: 600; }
+  }
+
+  .topbar-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+// ------- Loading banner (edit mode only, while template fetches) -------
+
+.editor-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 0.9rem;
+  background: var(--vz-secondary-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 10px;
+  color: var(--vz-body-color-muted, #878a99);
+  font-size: 0.85rem;
+}
+
+// ------- 2-column shell -------
+
+.editor-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-rows: 1fr auto;
+  gap: 1rem;
+  align-items: stretch;
+  min-height: 0;
+}
+
+// ------- LEFT column — editor body -------
+
+.editor-main {
+  grid-column: 1;
+  grid-row: 1;
+  background: var(--vz-secondary-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 10px;
+  padding: 0.5rem;
+  min-height: 560px;
+  display: flex;
+  flex-direction: column;
+
+  // Let the embedded CKEditor fill the available grid cell on both axes.
+  // Width: 100% protects against intrinsic-width collapse when the editor
+  // is a flex-column child.
+  ::ng-deep app-document-editor,
+  ::ng-deep .document-editor-wrapper,
+  ::ng-deep .ck-editor {
+    width: 100%;
+    height: 100%;
+    min-height: 560px;
+  }
+
+  ::ng-deep .ck-editor__main,
+  ::ng-deep .ck-editor__editable {
+    width: 100%;
+    min-height: 480px;
+  }
+}
+
+// ------- RIGHT column — sidebar -------
+
+.editor-side {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.side-section {
+  background: var(--vz-secondary-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+
+  .ss-head {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--vz-body-color-muted, #878a99);
+    margin-bottom: 0.7rem;
+
+    i { font-size: 1rem; color: var(--vz-primary); }
+
+    .count-badge {
+      margin-left: auto;
+      background: rgba(var(--vz-primary-rgb), 0.12);
+      color: var(--vz-primary);
+      border-radius: 999px;
+      padding: 0.1rem 0.55rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: none;
+      min-width: 1.5rem;
+      text-align: center;
+    }
+  }
+
+  .side-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 0.7rem;
+
+    &:last-child { margin-bottom: 0; }
+
+    label {
+      font-size: 0.78rem;
+      color: var(--vz-body-color);
+      font-weight: 500;
+      margin: 0;
+
+      .req { color: var(--vz-danger, #dc3545); margin-left: 0.15rem; }
+    }
+  }
+
+  .side-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+
+    .side-field { margin-bottom: 0; }
+  }
+
+  .side-toggle {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    .form-check-label {
+      font-size: 0.85rem;
+      color: var(--vz-heading-color);
+      font-weight: 500;
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: var(--vz-body-color-muted, #878a99);
+    }
+  }
+}
+
+// ------- Detected variables list -------
+
+.detected-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 260px;
+  overflow-y: auto;
+
+  .det-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.35rem 0.55rem;
+    background: rgba(var(--vz-info-rgb, 41, 156, 219), 0.08);
+    border: 1px solid rgba(var(--vz-info-rgb, 41, 156, 219), 0.22);
+    border-radius: 6px;
+
+    .det-name {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.74rem;
+      color: var(--vz-info, #299cdb);
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .det-count {
+      font-size: 0.7rem;
+      color: var(--vz-body-color-muted, #878a99);
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+  }
+}
+
+.det-empty {
+  text-align: center;
+  padding: 0.75rem 0.4rem;
+  color: var(--vz-body-color-muted, #878a99);
+
+  i {
+    font-size: 1.6rem;
+    color: var(--vz-info, #299cdb);
+    opacity: 0.55;
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.35;
+
+    code {
+      background: var(--vz-tertiary-bg);
+      color: var(--vz-heading-color);
+      padding: 0.05rem 0.3rem;
+      border-radius: 3px;
+      font-size: 0.72rem;
+    }
+  }
+}
+
+// ------- Footer bar (spans both columns) -------
+
+.editor-footer-bar {
+  grid-column: 1 / span 2;
+  grid-row: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--vz-secondary-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 10px;
+  flex-wrap: wrap;
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--vz-body-color-muted, #878a99);
+
+    i { font-size: 1rem; }
+
+    &.unsaved {
+      color: var(--vz-warning, #f7b84b);
+    }
+  }
+
+  .topbar-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+// ------- Responsive: stack below 992px -------
+
+@media (max-width: 991.98px) {
+  .editor-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+  .editor-main   { grid-column: 1; grid-row: 1; }
+  .editor-side   { grid-column: 1; grid-row: 2; }
+  .editor-footer-bar { grid-column: 1; grid-row: 3; }
+}
+
+// ------- Dark-mode overrides for embedded CKEditor -------
+// CKEditor 5 ships with its own hardcoded light surfaces; these force the content
+// area, toolbar, and sticky panel to use Velzon tokens so the editor flips cleanly
+// when [data-bs-theme="dark"] is set on <html>.
+
+:host-context([data-bs-theme="dark"]) {
+  .editor-main {
+    ::ng-deep .ck.ck-editor__main > .ck-editor__editable,
+    ::ng-deep .ck.ck-editor__main > .ck-editor__editable.ck-focused,
+    ::ng-deep .ck-content {
+      background: var(--vz-secondary-bg) !important;
+      color: var(--vz-body-color) !important;
+      border-color: var(--vz-border-color) !important;
+    }
+
+    ::ng-deep .ck.ck-toolbar,
+    ::ng-deep .ck.ck-toolbar__items,
+    ::ng-deep .ck.ck-sticky-panel__content {
+      background: var(--vz-tertiary-bg) !important;
+      border-color: var(--vz-border-color) !important;
+    }
+
+    ::ng-deep .ck.ck-button {
+      color: var(--vz-body-color) !important;
+      &:hover:not(.ck-disabled) {
+        background: rgba(var(--vz-primary-rgb), 0.12) !important;
+      }
+      &.ck-on {
+        background: rgba(var(--vz-primary-rgb), 0.18) !important;
+        color: var(--vz-primary) !important;
+      }
+    }
+  }
+}

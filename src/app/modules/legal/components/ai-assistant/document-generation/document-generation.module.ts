@@ -16,11 +16,6 @@ const routes: Routes = [
     path: 'editor/:templateId',
     loadComponent: () => import('./document-editor/document-editor.component').then(m => m.DocumentEditorComponent),
     data: { title: 'Document Editor' }
-  },
-  {
-    path: 'wizard/:templateId',
-    loadComponent: () => import('./auto-fill-wizard/auto-fill-wizard.component').then(m => m.AutoFillWizardComponent),
-    data: { title: 'Auto-Fill Wizard' }
   }
 ];
 

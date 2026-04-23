@@ -1,0 +1,145 @@
+<!-- Mockup §8 — full-page template editor: CKEditor on the left, metadata + live variables on the right. -->
+<div class="template-editor-page">
+
+  <!-- Top breadcrumb / action bar -->
+  <div class="editor-topbar">
+    <div class="crumb">
+      <a class="crumb-link" routerLink="/legal/ai-assistant/templates" aria-label="Back to template library">
+        <i class="ri-arrow-left-line"></i>
+      </a>
+      <a class="crumb-link" routerLink="/legal/ai-assistant/templates">Templates</a>
+      <i class="ri-arrow-right-s-line crumb-sep"></i>
+      <strong>{{ isEditMode ? (name || 'Edit template') : 'New template' }}</strong>
+    </div>
+    <div class="topbar-actions">
+      <button type="button" class="btn btn-light btn-sm" (click)="cancel()" [disabled]="saving || loading">
+        Cancel
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" (click)="save()" [disabled]="saving || loading">
+        <i class="ri-save-3-line me-1" *ngIf="!saving"></i>
+        <span class="spinner-border spinner-border-sm me-1" *ngIf="saving" role="status" aria-hidden="true"></span>
+        {{ saving ? (isEditMode ? 'Updating…' : 'Saving…') : (isEditMode ? 'Update template' : 'Save template') }}
+      </button>
+    </div>
+  </div>
+
+  <div class="editor-loading" *ngIf="loading">
+    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+    Loading template…
+  </div>
+
+  <div class="editor-shell">
+
+    <!-- LEFT — CKEditor body (reuses DocumentEditorComponent) -->
+    <div class="editor-main">
+      <app-document-editor
+        [content]="editorContent"
+        [placeholder]="'Start writing your template. Use {{variable_name}} anywhere you want a placeholder.'"
+        (contentChange)="onEditorContentChange($event)">
+      </app-document-editor>
+    </div>
+
+    <!-- RIGHT — metadata + detected-variables sidebar -->
+    <aside class="editor-side">
+
+      <section class="side-section">
+        <div class="ss-head"><i class="ri-file-text-line"></i> Details</div>
+        <div class="side-field">
+          <label for="tpl-name">Template name <span class="req">*</span></label>
+          <input id="tpl-name" type="text" class="form-control form-control-sm"
+                 [(ngModel)]="name"
+                 placeholder="e.g., MA LOR — Client Insurer (PIP + UIM)" />
+        </div>
+        <div class="side-field">
+          <label for="tpl-desc">Description</label>
+          <textarea id="tpl-desc" class="form-control form-control-sm" rows="3"
+                    [(ngModel)]="description"
+                    placeholder="Optional — one line describing when to use this template."></textarea>
+        </div>
+      </section>
+
+      <section class="side-section">
+        <div class="ss-head"><i class="ri-briefcase-line"></i> Classification</div>
+        <div class="side-field">
+          <label for="tpl-practice">Practice area</label>
+          <select id="tpl-practice" class="form-select form-select-sm" [(ngModel)]="practiceArea">
+            <option value="">— None —</option>
+            <option *ngFor="let p of practiceAreas" [value]="p.slug">{{ p.name }}</option>
+          </select>
+        </div>
+        <div class="side-field">
+          <label for="tpl-doc-type">Document type</label>
+          <input id="tpl-doc-type" type="text" class="form-control form-control-sm"
+                 [(ngModel)]="documentType"
+                 placeholder="e.g., Letter of Representation" />
+        </div>
+        <div class="side-field-row">
+          <div class="side-field">
+            <label for="tpl-juris">Jurisdiction</label>
+            <select id="tpl-juris" class="form-select form-select-sm" [(ngModel)]="jurisdiction">
+              <option value="">— None —</option>
+              <option *ngFor="let j of jurisdictions" [value]="j.name">{{ j.name }}</option>
+            </select>
+          </div>
+          <div class="side-field">
+            <label for="tpl-cat">Category <span class="req">*</span></label>
+            <select id="tpl-cat" class="form-select form-select-sm" [(ngModel)]="category">
+              <option value="">— Select —</option>
+              <option *ngFor="let c of categories" [value]="c.code">{{ c.name }}</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="side-section">
+        <div class="ss-head">
+          <i class="ri-code-line"></i> Detected variables
+          <span class="count-badge">{{ detectedVariables.length }}</span>
+        </div>
+        <div class="detected-list" *ngIf="detectedVariables.length > 0; else noVarsTpl">
+          <div class="det-item" *ngFor="let v of detectedVariables">
+            <span class="det-name">{{ '{{' }}{{ v.name }}{{ '}}' }}</span>
+            <span class="det-count">{{ v.count }}×</span>
+          </div>
+        </div>
+        <ng-template #noVarsTpl>
+          <div class="det-empty">
+            <i class="ri-magic-line"></i>
+            <p>Type <code ngNonBindable>{{variable_name}}</code> anywhere in the body and it'll appear here.</p>
+          </div>
+        </ng-template>
+      </section>
+
+      <section class="side-section">
+        <div class="ss-head"><i class="ri-shield-line"></i> Sharing</div>
+        <div class="side-toggle">
+          <div class="form-check form-switch m-0">
+            <input id="tpl-share" type="checkbox" class="form-check-input" role="switch"
+                   [(ngModel)]="shareWithOrg" />
+            <label for="tpl-share" class="form-check-label">Share with organization</label>
+          </div>
+          <span class="hint">{{ shareWithOrg ? 'Visible to everyone in your org.' : 'Private — only you will see it.' }}</span>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Footer bar spans both columns -->
+    <div class="editor-footer-bar">
+      <span class="status" *ngIf="!dirty">
+        <i class="ri-edit-line"></i> Draft · {{ detectedVariables.length }} variable{{ detectedVariables.length === 1 ? '' : 's' }} detected
+      </span>
+      <span class="status unsaved" *ngIf="dirty">
+        <i class="ri-error-warning-line"></i> Unsaved changes · {{ detectedVariables.length }} variable{{ detectedVariables.length === 1 ? '' : 's' }} detected
+      </span>
+      <div class="topbar-actions">
+        <button type="button" class="btn btn-light btn-sm" (click)="cancel()" [disabled]="saving || loading">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" (click)="save()" [disabled]="saving || loading">
+          <i class="ri-save-3-line me-1" *ngIf="!saving"></i>
+          <span class="spinner-border spinner-border-sm me-1" *ngIf="saving" role="status" aria-hidden="true"></span>
+          {{ saving ? (isEditMode ? 'Updating…' : 'Saving…') : (isEditMode ? 'Update template' : 'Save template') }}
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>

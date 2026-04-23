@@ -8,7 +8,10 @@ export interface Exhibit {
   label: string;       // e.g. "Exhibit A", "Exhibit B"
   fileName: string;    // e.g. "police_report.pdf"
   fileUrl: string;     // API URL or blob URL for images
-  pdfData?: Uint8Array; // Raw PDF bytes for the viewer (avoids blob URL worker issues)
+  // Cache the raw Blob (not a Uint8Array): PDF.js's worker transfers the
+  // ArrayBuffer on first render, which would leave a cached Uint8Array
+  // detached and blank on the next open. Blob.arrayBuffer() is idempotent.
+  pdfBlob?: Blob;
   pageCount?: number;
   mimeType?: string;   // e.g. "application/pdf", "image/jpeg"
 }

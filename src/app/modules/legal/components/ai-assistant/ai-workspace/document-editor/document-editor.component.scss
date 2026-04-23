@@ -45,7 +45,15 @@
   }
 
   // Typography
-  p, ol, ul {
+  // Zero paragraph margins so Enter produces a true new line instead of a
+  // "skipped line". `line-height: 1.8` above already gives enough vertical
+  // breathing room between consecutive <p> blocks. Lists keep a bottom margin
+  // because they are structural and benefit from separation from surrounding prose.
+  p {
+    margin: 0;
+  }
+
+  ol, ul {
     margin-bottom: 1rem;
   }
 

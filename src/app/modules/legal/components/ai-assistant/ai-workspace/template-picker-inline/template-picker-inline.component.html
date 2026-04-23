@@ -1,0 +1,155 @@
+<div class="tpl-picker-shell">
+  <!-- Inline back-bar — consistent affordance across all non-dashboard morphed states -->
+  <div class="inline-backbar">
+    <button type="button" class="bb-back" (click)="onBack()">
+      <i class="ri-arrow-left-line"></i> Back to dashboard
+    </button>
+    <span class="bb-crumb">Draft from template · <strong>Browse</strong></span>
+    <span class="bb-step">Pick one to continue</span>
+  </div>
+
+  <div class="tpl-picker">
+    <!-- Hero: title + filter summary on the left, search + Import on the right -->
+    <div class="tpl-picker-hero">
+      <div class="hero-l">
+        <h4>Your template library</h4>
+        <div class="sub">
+          <ng-container *ngIf="!loading; else countLoading">
+            <ng-container *ngIf="templates.length > 0; else emptyHint">
+              {{ templates.length }} template{{ templates.length === 1 ? '' : 's' }} · {{ filterSummary() }}
+            </ng-container>
+            <ng-template #emptyHint>No matches · {{ filterSummary() }}</ng-template>
+          </ng-container>
+          <ng-template #countLoading>Loading templates…</ng-template>
+        </div>
+      </div>
+      <div class="hero-r">
+        <div class="tpl-search-wrap">
+          <i class="ri-search-line tpl-search-icon"></i>
+          <input
+            type="text"
+            class="tpl-search"
+            placeholder="Search templates..."
+            [ngModel]="searchQuery"
+            (ngModelChange)="onSearchChange($event)"
+            aria-label="Search templates">
+        </div>
+        <button type="button" class="btn-sm-outline" (click)="onImport()">
+          <i class="ri-upload-line"></i> Import
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter chip row: PA chips (clickable toggles) + current jurisdiction + Clear -->
+    <div class="tpl-filter-chips">
+      <button
+        type="button"
+        *ngFor="let slug of practiceAreaChips"
+        class="chip"
+        [class.active]="isChipActive(slug)"
+        [attr.aria-pressed]="isChipActive(slug)"
+        (click)="togglePracticeAreaChip(slug)">
+        <i *ngIf="isChipActive(slug)" class="ri-filter-3-line me-1"></i>{{ chipLabel(slug) }}
+      </button>
+
+      <button
+        type="button"
+        *ngIf="activeJurisdiction"
+        class="chip active jur"
+        (click)="toggleJurisdictionChip()"
+        [attr.aria-label]="'Clear jurisdiction filter ' + activeJurisdiction"
+        title="Click to clear jurisdiction filter">
+        <i class="ri-map-pin-line me-1"></i>{{ activeJurisdiction }}
+        <i class="ri-close-line ms-1"></i>
+      </button>
+
+      <span class="tpl-chip-spacer" aria-hidden="true"></span>
+
+      <button
+        type="button"
+        class="chip-clear"
+        *ngIf="activePracticeArea || activeJurisdiction || searchQuery"
+        (click)="clearFilters()">
+        <i class="ri-close-circle-line me-1"></i>Clear filters
+      </button>
+    </div>
+
+    <!-- Skeleton loading row for the first fetch -->
+    <div class="tpl-picker-grid" *ngIf="loading && templates.length === 0">
+      <div class="tpl-card skeleton" *ngFor="let i of [1,2,3,4,5,6]">
+        <div class="sk-icn"></div>
+        <div class="sk-title"></div>
+        <div class="sk-desc"></div>
+        <div class="sk-desc short"></div>
+        <div class="sk-pills">
+          <span class="sk-pill"></span>
+          <span class="sk-pill"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results grid -->
+    <div class="tpl-picker-grid" *ngIf="!loading || templates.length > 0">
+      <button
+        type="button"
+        class="tpl-card"
+        [class.suggested]="tpl.id === suggestedId"
+        *ngFor="let tpl of templates; trackBy: trackById"
+        (click)="onPick(tpl)"
+        [attr.aria-label]="'Use template ' + tpl.name">
+        <div class="tc-icn"><i [class]="iconFor(tpl)"></i></div>
+        <div class="tc-title">{{ tpl.name }}</div>
+        <div class="tc-desc" *ngIf="tpl.description">{{ tpl.description }}</div>
+        <div class="tc-desc" *ngIf="!tpl.description">
+          <ng-container *ngIf="tpl.isPrivate">Private to you · </ng-container>{{ tpl.category || 'Template' }}
+        </div>
+        <div class="tc-meta">
+          <span class="tc-pill pa" *ngIf="tpl.practiceArea">{{ paLabel(tpl) }}</span>
+          <span class="tc-pill jur" *ngIf="tpl.jurisdiction">{{ jurisdictionLabel(tpl) }}</span>
+          <span class="tc-pill vars" *ngIf="tpl.usageCount">{{ tpl.usageCount }} used</span>
+          <span class="tc-pill imp" *ngIf="tpl.sourceType && tpl.sourceType !== 'MANUAL'">
+            <i class="ri-upload-2-line"></i> Imported
+          </span>
+        </div>
+      </button>
+    </div>
+
+    <!-- Empty state -->
+    <div class="tpl-empty" *ngIf="!loading && templates.length === 0 && !error">
+      <i class="ri-inbox-line"></i>
+      <h6>No templates match these filters</h6>
+      <p>Try broadening your search, clearing a filter, or importing an existing template.</p>
+      <div class="tpl-empty-actions">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-primary"
+          *ngIf="activePracticeArea || activeJurisdiction || searchQuery"
+          (click)="clearFilters()">
+          <i class="ri-filter-off-line"></i> Clear filters
+        </button>
+        <button type="button" class="btn btn-sm btn-primary" (click)="onImport()">
+          <i class="ri-upload-line"></i> Import from Word / PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Error state -->
+    <div class="tpl-error" *ngIf="error">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ error }}</span>
+      <button type="button" class="btn btn-sm btn-link" (click)="clearFilters()">Retry</button>
+    </div>
+
+    <!-- Load more -->
+    <div class="tpl-loadmore" *ngIf="hasMore && !loading">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="loadMore()">
+        <i class="ri-arrow-down-s-line"></i> Load more
+      </button>
+    </div>
+
+    <!-- Pagination spinner -->
+    <div class="tpl-loadmore" *ngIf="loading && templates.length > 0">
+      <i class="ri-loader-4-line spin"></i> Loading more…
+    </div>
+  </div>
+</div>

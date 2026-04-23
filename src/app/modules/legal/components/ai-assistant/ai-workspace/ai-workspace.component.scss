@@ -353,6 +353,53 @@ $main-content-flex: 1;
         flex-shrink: 0;
       }
     }
+
+    // Two-line editorial row for Recent Drafts. The primary line (document
+    // type) anchors identity; the subtitle surfaces the matter so attorneys
+    // can scan the rail by case without opening drafts. Dropped the date —
+    // sort order already conveys recency and the text was noise.
+    .item-subtitle {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 3px;
+      font-size: 11.5px;
+      line-height: 1.3;
+      color: var(--vz-info, #299cdb);
+      white-space: nowrap;
+      overflow: hidden;
+      min-width: 0;
+
+      .subtitle-icon {
+        font-size: 12px;
+        flex-shrink: 0;
+        opacity: 0.85;
+      }
+
+      .subtitle-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+        font-weight: 500;
+      }
+
+      // Unlinked drafts — muted italic, feels like metadata absence rather
+      // than a real value. Keeps the row height identical so the list never
+      // jitters as cases load in.
+      &.no-case {
+        color: var(--sidebar-text-muted, #8a94ad);
+        font-style: italic;
+
+        .subtitle-text {
+          font-weight: 400;
+        }
+
+        .subtitle-icon {
+          opacity: 0.5;
+        }
+      }
+    }
   }
 
   // Action buttons container
@@ -2448,14 +2495,17 @@ button.filter-chip,
   }
 }
 
-// When drafting mode is active, take over the full viewport
+// When drafting mode is active, take over the full viewport.
+// NOTE: z-index is intentionally 1040 — below Bootstrap modal backdrop (1050)
+// and modal (1055), so modals opened from inside LegiSpace (e.g., "Use Template")
+// render above the drafting container. Sits above Bootstrap fixed elements (1030).
 .drafting-container.drafting-active {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1050; // Above the app shell
+  z-index: 1040;
   background: var(--vz-body-bg, #f3f3f9);
 
   .main-content-area {
@@ -3060,692 +3110,143 @@ button.filter-chip,
     }
   }
 
-  // Document Type Selector - Compact Dropdown
-  .document-type-selector {
+  // Sprint 4a — Legacy `.draft-wizard-container` removed; LegiDraft now uses
+  // the top-level `.legidraft-focused` layout defined below.
+}
+
+// ===========================
+// Sprint 4a — LegiDraft Focused Layout
+// ===========================
+// Single-column layout activated only when the user enters the "Draft" task.
+// The Case Context right rail is gone — case awareness now lives inside the
+// wizard as an inline Case Strip. The × button returns to the welcome chrome.
+.legidraft-focused {
+  position: relative;
+  min-height: calc(100vh - 180px);
+  padding: 1.25rem 1.5rem 2rem;
+
+  .legidraft-center {
+    min-width: 0;
+    // The wizard + dashboard + picker each self-contain their own max-width.
+    // No need for a second max-width here; let children breathe to the page edge.
+  }
+
+  .legidraft-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--vz-border-color, #e9ebec);
+    background: var(--vz-card-bg, #fff);
+    color: var(--vz-secondary-color, #74788d);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    z-index: 5;
+
+    i { font-size: 1.1rem; line-height: 1; }
+
+    &:hover {
+      color: var(--vz-danger, #f06548);
+      border-color: var(--vz-danger, #f06548);
+      transform: rotate(90deg);
+    }
+  }
+
+  // Generation-in-progress view (SSE streaming state)
+  .legidraft-generating {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
-    padding: 1rem 1.25rem;
-    background: var(--vz-card-bg);
-    border: 1px solid var(--vz-border-color);
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
+    align-items: center;
+    text-align: center;
+    padding: 3rem 2rem;
+    max-width: 640px;
+    margin: 2rem auto 0;
+    background: var(--vz-card-bg, #fff);
+    border: 1px solid var(--vz-border-color, #e9ebec);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(56, 65, 74, 0.04);
 
-    &:hover {
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-    }
-
-    // Header with dropdown, search, and tips
-    .selector-header {
-      display: flex;
+    .gen-spinner {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(64, 81, 137, 0.08), rgba(41, 156, 219, 0.12));
+      display: inline-flex;
       align-items: center;
-      gap: 0.75rem;
-      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 1.25rem;
 
-      .selector-label {
-        font-weight: 600;
-        color: var(--vz-body-color);
-        font-size: 0.875rem;
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
-
-      // Custom Dropdown
-      .custom-dropdown-wrapper {
-        position: relative;
-        flex: 0 0 auto;
-        min-width: 250px;
-        max-width: 350px;
-
-        .custom-dropdown-toggle {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: var(--vz-card-bg);
-          border: 1px solid var(--vz-border-color);
-          border-radius: 0.375rem;
-          padding: 0.5rem 0.75rem;
-          font-size: 0.8125rem;
-          color: var(--vz-body-color);
-          cursor: pointer;
-          transition: all 0.2s ease;
-
-          &:hover {
-            border-color: var(--vz-primary);
-          }
-
-          &.active {
-            border-color: var(--vz-primary);
-            box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
-          }
-
-          .dropdown-text {
-            flex: 1;
-            text-align: left;
-            color: var(--vz-body-color);
-          }
-
-          .dropdown-arrow {
-            transition: transform 0.2s ease;
-            color: var(--vz-secondary);
-
-            &.rotated {
-              transform: rotate(180deg);
-            }
-          }
-        }
-
-        .custom-dropdown-menu {
-          position: absolute;
-          top: calc(100% + 0.25rem);
-          left: 0;
-          right: 0;
-          background: #ffffff;
-          border: 1px solid #e9ecef;
-          border-radius: 0.375rem;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          z-index: 1000;
-          max-height: 400px;
-          overflow-y: auto;
-          animation: slideDown 0.2s ease;
-
-          .dropdown-content {
-            padding: 0.5rem 0;
-          }
-
-          .dropdown-category {
-            .category-header {
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
-              padding: 0.625rem 1rem;
-              background: #f3f6f9;
-              border-bottom: 1px solid #e9ecef;
-              cursor: pointer;
-              transition: background 0.2s ease;
-              font-weight: 600;
-              color: #212529;
-              font-size: 0.8125rem;
-
-              &:hover {
-                background: #e3e8ef;
-              }
-
-              .category-icon {
-                font-size: 1rem;
-              }
-
-              .category-name {
-                flex: 1;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-              }
-
-              .toggle-icon {
-                transition: transform 0.2s ease;
-                color: #6c757d;
-
-                &.rotated {
-                  transform: rotate(180deg);
-                }
-              }
-            }
-
-            .category-items {
-              background: #ffffff;
-
-              .dropdown-item {
-                width: 100%;
-                display: block;
-                text-align: left;
-                background: transparent;
-                border: none;
-                padding: 0.5rem 1rem 0.5rem 2.5rem;
-                font-size: 0.8125rem;
-                color: #212529;
-                cursor: pointer;
-                transition: all 0.2s ease;
-
-                &:hover {
-                  background: #e8f0fe;
-                  color: #405189;
-                }
-
-                &.selected {
-                  background: #405189;
-                  color: white;
-                  font-weight: 600;
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Dark mode overrides for custom dropdown
-      [data-bs-theme="dark"] & {
-        .custom-dropdown-wrapper {
-          .custom-dropdown-toggle {
-            background: #212529;
-            border-color: #32383e;
-            color: #adb5bd;
-
-            &:hover {
-              border-color: #5e81ff;
-            }
-
-            &.active {
-              border-color: #5e81ff;
-              box-shadow: 0 0 0 0.2rem rgba(94, 129, 255, 0.25);
-            }
-
-            .dropdown-text {
-              color: #adb5bd;
-            }
-
-            .dropdown-arrow {
-              color: #6c757d;
-            }
-          }
-
-          .custom-dropdown-menu {
-            background: #212529;
-            border-color: #32383e;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-
-            .dropdown-category {
-              .category-header {
-                background: #2a2f34;
-                border-bottom-color: #32383e;
-                color: #adb5bd;
-
-                &:hover {
-                  background: #343a40;
-                }
-
-                .toggle-icon {
-                  color: #6c757d;
-                }
-              }
-
-              .category-items {
-                background: #212529;
-
-                .dropdown-item {
-                  color: #adb5bd;
-
-                  &:hover {
-                    background: #2c3136;
-                    color: #5e81ff;
-                  }
-
-                  &.selected {
-                    background: #5e81ff;
-                    color: white;
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Search input wrapper
-      .doc-type-search-wrapper {
-        position: relative;
-        display: flex;
-        align-items: center;
-        flex: 1;
-        min-width: 200px;
-        max-width: 300px;
-
-        .search-icon {
-          position: absolute;
-          left: 0.75rem;
-          color: var(--vz-secondary);
-          pointer-events: none;
-          font-size: 0.875rem;
-        }
-
-        .doc-type-search {
-          padding-left: 2.25rem;
-          border-radius: 2rem;
-          border: 1px solid var(--vz-border-color);
-          font-size: 0.8125rem;
-          width: 100%;
-
-          &:focus {
-            border-color: var(--vz-primary);
-            box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
-          }
-        }
-      }
-
-      // Prompt tips link
-      .prompt-tips-link {
-        color: var(--vz-primary);
-        text-decoration: none;
-        font-size: 0.75rem;
-        display: flex;
-        align-items: center;
-        gap: 0.375rem;
-        font-weight: 500;
-        padding: 0.375rem 0.75rem;
-        background: rgba(var(--vz-primary-rgb), 0.1);
-        border-radius: 2rem;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-        flex-shrink: 0;
-
-        i {
-          font-size: 0.875rem;
-        }
-
-        &:hover {
-          background: rgba(var(--vz-primary-rgb), 0.15);
-          transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(var(--vz-primary-rgb), 0.2);
-        }
+      i {
+        font-size: 2.25rem;
+        color: var(--vz-primary, #405189);
+        animation: legidraft-spin 1.2s linear infinite;
       }
     }
 
-    // Quick access pills (shown when searching)
-    .quick-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      padding-top: 0.5rem;
-      border-top: 1px solid var(--vz-border-color);
-      animation: slideDown 0.2s ease;
-
-      .pill-btn {
-        background: var(--vz-card-bg);
-        border: 1px solid var(--vz-border-color);
-        border-radius: 2rem;
-        padding: 0.375rem 0.875rem;
-        font-size: 0.75rem;
-        font-weight: 500;
-        color: var(--vz-body-color);
-        cursor: pointer;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-
-        &:hover {
-          background: rgba(var(--vz-primary-rgb), 0.1);
-          border-color: var(--vz-primary);
-          color: var(--vz-primary);
-          transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        &.active {
-          background: var(--vz-primary);
-          border-color: var(--vz-primary);
-          color: white;
-          font-weight: 600;
-          box-shadow: 0 2px 6px rgba(var(--vz-primary-rgb), 0.3);
-        }
-      }
-    }
-  }
-
-  // Warning message styling
-  .doc-type-warning {
-    margin: 1rem 1.5rem 1rem !important; // Bottom margin added for spacing
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-    border-radius: 0.375rem;
-    animation: fadeIn 0.3s ease;
-
-    i {
-      color: #f7b84b; // Velzon warning color
-    }
-  }
-
-
-  // Animations
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      max-height: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      max-height: 500px;
-      transform: translateY(0);
-    }
-  }
-
-  // Examples Section - Velzon Card Style
-  .examples-section {
-    background: var(--vz-card-bg);
-    border: 1px solid var(--vz-border-color);
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
-
-    &:hover {
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-    }
-
-    .card-body {
-      padding: 1.5rem;
-    }
-
-    h6 {
-      color: var(--vz-heading-color);
+    .gen-title {
       font-weight: 600;
-      font-size: 0.9375rem;
-    }
-  }
-
-  // Workflow Tips Section - Velzon Card Style
-  .workflow-tips-section {
-    background: var(--vz-card-bg);
-    border: 1px solid var(--vz-border-color);
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-
-    .card-body {
-      padding: 1.5rem;
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+      color: var(--vz-heading-color, #212529);
     }
 
-    h6 {
-      color: var(--vz-heading-color);
-      font-weight: 600;
-      font-size: 0.9375rem;
-      display: flex;
+    .gen-subtitle {
+      color: var(--vz-secondary-color, #74788d);
+      font-size: 0.9rem;
+      max-width: 440px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    .gen-steps {
+      width: 100%;
+      max-width: 520px;
+      margin: 1.75rem 0 1rem;
+    }
+
+    .gen-stop {
+      margin-top: 0.5rem;
+      display: inline-flex;
       align-items: center;
-    }
+      gap: 0.35rem;
+      font-weight: 500;
 
-    .workflow-tips-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-
-      .tip-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.75rem;
-
-        .tip-icon {
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: rgba(10, 179, 156, 0.1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-
-          i {
-            font-size: 0.75rem;
-            color: #0ab39c;
-            font-weight: 600;
-          }
-        }
-
-        .tip-text {
-          font-size: 0.875rem;
-          color: var(--vz-body-color);
-          line-height: 1.5;
-          padding-top: 2px;
-        }
-      }
-    }
-
-    .workflow-benefits {
-      padding-top: 0.75rem;
-      border-top: 1px solid var(--vz-border-color);
-
-      p {
-        font-size: 0.8125rem;
-      }
+      i { font-size: 1rem; line-height: 1; }
     }
   }
 
-  // Re-open examples-section for remaining styles
-  .examples-section {
-    .example-list {
-      p {
-        color: var(--vz-body-color);
-        font-size: 0.875rem;
-        line-height: 1.6;
-        padding-left: 0.5rem;
-        opacity: 0.85;
-      }
-    }
+  @media (max-width: 992px) {
+    padding: 1rem;
+  }
+}
 
-    // Includes tags inside examples section
-    .includes-section {
-      display: flex;
-      gap: 0.625rem;
-      align-items: center;
-      padding: 0.75rem 1rem;
-      font-size: 0.8125rem;
-      background: rgba(var(--vz-info-rgb), 0.05);
-      border-left: 3px solid var(--vz-info);
-      border-radius: 0.375rem;
-      flex-wrap: wrap;
+@keyframes legidraft-spin {
+  to { transform: rotate(360deg); }
+}
 
-      span:first-child {
-        font-weight: 600;
-        color: var(--vz-info);
-        margin-right: 0.25rem;
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
-
-      span:not(:first-child) {
-        padding: 0.25rem 0.625rem;
-        background: var(--vz-card-bg);
-        color: var(--vz-body-color);
-        border-radius: 0.25rem;
-        font-weight: 500;
-        font-size: 0.75rem;
-        border: 1px solid var(--vz-border-color);
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
-    }
+// ── LegiDraft focused-mode dark surfaces ───────────────────────────────
+// Velzon's --vz-card-bg is empty in dark mode and makes `var(--vz-card-bg, #fff)`
+// resolve to invalid → transparent. Explicit hexes lift the close button and
+// generation card above the body so they read as chrome.
+:host-context([data-bs-theme="dark"]) .legidraft-focused {
+  .legidraft-close {
+    background: #262a2f;
+    border-color: #3a4048;
+    color: #ced4da;
   }
 
-  // Main Prompt Area - Velzon Card Style
-  .main-prompt-area {
-    max-width: 100%;
-    margin: 0 auto;
-    width: 100%;
+  .legidraft-generating {
+    background: #1f2327;
+    border-color: #3a4048;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
 
-    .prompt-form {
-      background: var(--vz-card-bg);
-      border: 1px solid var(--vz-border-color);
-      border-radius: 0.5rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      transition: all 0.2s ease;
-
-      &:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-      }
-
-      &:focus-within {
-        border-color: var(--vz-primary);
-        box-shadow: 0 4px 16px rgba(var(--vz-primary-rgb), 0.15);
-      }
-
-      .card-body {
-        padding: 1.5rem;
-      }
-
-      .prompt-textarea {
-        border: none;
-        background: transparent;
-        resize: vertical;
-        font-size: 0.9375rem;
-        color: var(--vz-body-color);
-        margin-bottom: 1rem;
-        line-height: 1.6;
-        font-weight: 400;
-        width: 100%;
-        padding: 0;
-
-        &:focus {
-          box-shadow: none;
-          outline: none;
-        }
-
-        &::placeholder {
-          color: var(--vz-body-color);
-          opacity: 0.5;
-        }
-      }
-
-      .enhance-prompt-section {
-        margin-top: 0.5rem;
-        margin-bottom: 0.5rem;
-
-        .enhance-prompt-row {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-        }
-
-        .btn-enhance-prompt {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.375rem;
-          padding: 0.375rem 0.875rem;
-          font-size: 0.8125rem;
-          font-weight: 500;
-          color: var(--vz-primary);
-          background: transparent;
-          border: 1px solid var(--vz-primary);
-          border-radius: 50rem;
-          cursor: pointer;
-          transition: all 0.2s ease;
-
-          i {
-            font-size: 0.875rem;
-          }
-
-          &:hover {
-            background: rgba(var(--vz-primary-rgb), 0.08);
-          }
-        }
-
-        .enhance-success-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.25rem;
-          font-size: 0.75rem;
-          color: var(--vz-success);
-          font-weight: 500;
-        }
-
-        .enhance-loading {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          font-size: 0.8125rem;
-          color: var(--vz-body-color);
-          opacity: 0.7;
-
-          .spinner-border-sm {
-            width: 0.875rem;
-            height: 0.875rem;
-            border-width: 0.15em;
-            color: var(--vz-primary);
-          }
-        }
-      }
-
-      .prompt-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--vz-border-color);
-
-        .jurisdiction-selector {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-
-          label {
-            font-size: 0.8125rem;
-            color: var(--vz-body-color);
-            font-weight: 500;
-            margin: 0;
-            white-space: nowrap;
-          }
-
-          .form-select {
-            min-width: 160px;
-            font-size: 0.875rem;
-            border: 1px solid var(--vz-border-color);
-            border-radius: 0.375rem;
-            padding: 0.5rem 0.75rem;
-            background: var(--vz-card-bg);
-            color: var(--vz-body-color);
-            font-weight: 400;
-            transition: all 0.2s ease;
-
-            &:focus {
-              border-color: var(--vz-primary);
-              box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.1);
-              outline: none;
-            }
-          }
-        }
-
-        .btn-submit {
-          padding: 0.625rem 1.25rem;
-          border-radius: 0.375rem;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          background: var(--vz-primary);
-          color: white;
-          font-weight: 500;
-          font-size: 0.875rem;
-          transition: all 0.2s ease;
-          border: none;
-          cursor: pointer;
-
-          i {
-            font-size: 1rem;
-          }
-
-          &:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(var(--vz-primary-rgb), 0.25);
-          }
-
-          &:active {
-            transform: translateY(0);
-          }
-
-          // Sky blue variant for Analyze Documents
-          &.btn-analyze {
-            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-
-            &:hover:not(:disabled) {
-              background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-              box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
-            }
-
-            &:disabled {
-              opacity: 0.6;
-              cursor: not-allowed;
-            }
-          }
-        }
-      }
+    .gen-spinner {
+      background: linear-gradient(135deg, rgba(102, 145, 231, 0.12), rgba(80, 195, 230, 0.15));
     }
   }
 }

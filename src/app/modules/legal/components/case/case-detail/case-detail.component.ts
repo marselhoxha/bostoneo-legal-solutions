@@ -1,7 +1,7 @@
-import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ElementRef, ViewChildren, ViewChild, QueryList, OnDestroy } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ViewChild, OnDestroy } from '@angular/core';
 import DOMPurify from 'dompurify';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { LegalCase, CaseStatus, CasePriority, PaymentStatus } from '../../../interfaces/case.interface';
 import { CaseService } from '../../../services/case.service';
@@ -40,7 +40,7 @@ import { NotificationService } from '../../../../../service/notification.service
 import { AuditLogService } from '../../../../../core/services/audit-log.service';
 import { PushNotificationService } from '../../../../../core/services/push-notification.service';
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../../core/services/notification-manager.service';
-import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField, TYPE_TO_PRACTICE_AREA } from '../../../shared/practice-area-fields.config';
+import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField, TYPE_TO_PRACTICE_AREA, groupPracticeAreaSections } from '../../../shared/practice-area-fields.config';
 import { ImageUrlPipe } from '../../../../../pipes/image-url.pipe';
 
 @Component({
@@ -68,23 +68,17 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   caseId: string | null = null;
   isLoading = false;
   error: string | null = null;
-  isEditing = false;
-  editForm: FormGroup;
-  caseForm: FormGroup;
-  
+
   // Events related properties
   caseEvents: CalendarEvent[] = [];
   isLoadingEvents = false;
 
-  @ViewChildren('filingDate, nextHearing, trialDate') dateInputs: QueryList<ElementRef>;
   @ViewChild(CaseNotesComponent) caseNotesComponent?: CaseNotesComponent;
 
   // Status and priority values for dropdowns
   caseStatuses = Object.values(CaseStatus);
   casePriorities = Object.values(CasePriority);
   paymentStatuses = Object.values(PaymentStatus);
-
-  private flatpickrInstances: any[] = [];
 
   // Add role checking properties
   isClient = false;
@@ -117,6 +111,69 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   practiceAreaFieldsConfig = PRACTICE_AREA_FIELDS;
   private practiceAreaDatePickers: any[] = [];
 
+  // Memoized rows — MUST be a stable reference across change-detection ticks.
+  // A getter that returns a fresh array every tick causes *ngFor to tear down and
+  // rebuild every form/input on every keystroke (breaking edit mode). Cache it.
+  practiceAreaSectionRows: PracticeAreaSection[][] = [];
+
+  // Per-section inline edit state — keyed by section.title
+  editingSections: { [title: string]: boolean } = {};
+  sectionEditForms: { [title: string]: FormGroup } = {};
+  savingSections: { [title: string]: boolean } = {};
+  sectionErrors: { [title: string]: string } = {};
+  private sectionFlatpickrInstances: { [title: string]: any[] } = {};
+
+  // trackBy helpers to keep *ngFor DOM stable (prevents input remount during edit)
+  trackByRowKey = (i: number, row: PracticeAreaSection[]) => row.map(s => s.title).join('|');
+  trackBySectionTitle = (_: number, section: PracticeAreaSection) => section.title;
+  trackByFieldName = (_: number, field: PracticeAreaField) => field.name;
+
+  // Core (non-practice-area) sections — reuse the PracticeAreaSection shape so
+  // the same saveSection/enterSectionEdit pipeline can drive them. Keyed by title.
+  readonly CLIENT_INFO_SECTION: PracticeAreaSection = {
+    title: 'Client Information',
+    icon: 'ri-user-3-line',
+    fields: [
+      { name: 'clientName', label: 'Client Name', type: 'text', colSize: 'col-md-6', placeholder: 'Full name' },
+      { name: 'clientEmail', label: 'Email', type: 'text', colSize: 'col-md-6', placeholder: 'name@example.com' },
+      { name: 'clientPhone', label: 'Phone', type: 'text', colSize: 'col-md-6', placeholder: '(555) 555-5555' },
+      { name: 'clientAddress', label: 'Address', type: 'textarea', colSize: 'col-12', placeholder: 'Street, city, state, ZIP' }
+    ]
+  };
+
+  readonly COURT_INFO_SECTION: PracticeAreaSection = {
+    title: 'Court Information',
+    icon: 'ri-building-2-line',
+    fields: [
+      { name: 'countyName', label: 'County / Court', type: 'text', colSize: 'col-md-6', placeholder: 'e.g. Suffolk County Superior Court' },
+      { name: 'judgeName', label: 'Presiding Judge', type: 'text', colSize: 'col-md-6', placeholder: 'Judge name' },
+      { name: 'courtroom', label: 'Courtroom', type: 'text', colSize: 'col-md-6', placeholder: 'Courtroom / session' },
+      { name: 'jurisdiction', label: 'Jurisdiction', type: 'text', colSize: 'col-md-6', placeholder: 'State / federal' }
+    ]
+  };
+
+  readonly DATES_SECTION: PracticeAreaSection = {
+    title: 'Important Dates',
+    icon: 'ri-calendar-event-line',
+    fields: [
+      { name: 'filingDate', label: 'Case Filed', type: 'date', colSize: 'col-md-4' },
+      { name: 'nextHearing', label: 'Next Hearing', type: 'date', colSize: 'col-md-4' },
+      { name: 'trialDate', label: 'Trial Date', type: 'date', colSize: 'col-md-4' }
+    ]
+  };
+
+  // Client + Court paired (col-lg-6 each). Dates standalone (col-12 full row).
+  coreCaseRows: PracticeAreaSection[][] = [
+    [this.CLIENT_INFO_SECTION, this.COURT_INFO_SECTION],
+    [this.DATES_SECTION]
+  ];
+
+  // Combined stream rendered by the single unified *ngFor in the template.
+  allSectionRows: PracticeAreaSection[][] = [...this.coreCaseRows];
+
+  // Tracks which section just saved — used by the flash animation (Phase 5 polish).
+  justSavedSections: { [title: string]: boolean } = {};
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -137,42 +194,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     private auditLogService: AuditLogService,
     private pushNotificationService: PushNotificationService,
     private notificationManager: NotificationManagerService
-  ) {
-    this.editForm = this.fb.group({
-      caseNumber: ['', Validators.required],
-      title: ['', Validators.required],
-      clientName: ['', Validators.required],
-      clientEmail: [''],
-      clientPhone: [''],
-      clientAddress: [''],
-      status: [CaseStatus.OPEN, Validators.required],
-      priority: [CasePriority.MEDIUM, Validators.required],
-      type: [''],
-      description: ['', Validators.required],
-      countyName: [''],
-      judgeName: [''],
-      courtroom: [''],
-      filingDate: [null],
-      nextHearing: [null],
-      trialDate: [null],
-      hourlyRate: [0],
-      totalHours: [0],
-      totalAmount: [0],
-      paymentStatus: [PaymentStatus.PENDING]
-    });
-
-    this.caseForm = this.fb.group({
-      caseNumber: [''],
-      status: [''],
-      filingDate: [''],
-      nextHearing: [''],
-      trialDate: [''],
-      judge: [''],
-      court: [''],
-      jurisdiction: [''],
-      description: ['']
-    });
-  }
+  ) {}
 
   ngOnInit(): void {
     // Set up role-based permissions
@@ -200,6 +222,11 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.destroyPracticeAreaDatePickers();
+    // Also tear down any per-section flatpickr instances created by inline edit mode
+    Object.values(this.sectionFlatpickrInstances).forEach(list => {
+      (list || []).forEach((p: any) => p && typeof p.destroy === 'function' && p.destroy());
+    });
+    this.sectionFlatpickrInstances = {};
   }
   
   private setupRoleBasedPermissions(): void {
@@ -520,165 +547,7 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    // Initialize flatpickr when in edit mode
-    if (this.dateInputs && this.dateInputs.length > 0) {
-      this.dateInputs.forEach(input => {
-        this.initDatePicker(null, input.nativeElement.id);
-      });
-    }
-  }
-
-  // Method to initialize a single date picker
-  initDatePicker(event: Event, controlName: string): void {
-    const input = event.target as HTMLInputElement;
-    if (input) {
-      // Destroy any existing instance for this input
-      const existingInstance = this.flatpickrInstances.find(instance => 
-        instance.input === input
-      );
-      
-      if (existingInstance) {
-        existingInstance.destroy();
-        this.flatpickrInstances = this.flatpickrInstances.filter(instance => 
-          instance !== existingInstance
-        );
-      }
-      
-      // Create a new instance
-      const instance = flatpickr(input, {
-        dateFormat: 'Y-m-d',
-        altInput: true,
-        altFormat: 'F j, Y',
-        allowInput: true,
-        defaultDate: this.editForm.get(controlName)?.value || new Date(),
-        onChange: (selectedDates, dateStr) => {
-          if (selectedDates.length > 0) {
-            this.editForm.get(controlName)?.setValue(dateStr || null);
-          }
-        }
-      });
-      
-      this.flatpickrInstances.push(instance);
-      
-      // Open the calendar immediately
-      instance.open();
-    }
-  }
-
-  private initializeFlatpickr(): void {
-    // Destroy any existing instances first
-    this.destroyFlatpickrInstances();
-    
-    // Wait for the DOM to be ready
-    setTimeout(() => {
-      // Initialize new instances
-      this.dateInputs.forEach(input => {
-        const controlName = input.nativeElement.id;
-        const formControl = this.editForm.get(controlName);
-        
-        if (formControl) {
-          // Get current value — pass strings directly to flatpickr to avoid timezone shifts
-          const currentValue = formControl.value;
-          const defaultDate = currentValue || null;
-          
-          // Create a new flatpickr instance
-          const instance = flatpickr(input.nativeElement, {
-            dateFormat: 'Y-m-d',
-            altInput: true,
-            altFormat: 'F j, Y',
-            allowInput: true,
-            defaultDate: defaultDate,
-            onChange: (selectedDates, dateStr) => {
-              formControl.setValue(dateStr || null);
-            }
-          });
-          
-          this.flatpickrInstances.push(instance);
-        }
-      });
-    }, 100); // Short delay to ensure DOM is ready
-  }
-
-  private destroyFlatpickrInstances(): void {
-    this.flatpickrInstances.forEach(instance => {
-      if (instance && typeof instance.destroy === 'function') {
-        instance.destroy();
-      }
-    });
-    this.flatpickrInstances = [];
-  }
-
-  toggleEdit(): void {
-    this.isEditing = !this.isEditing;
-    if (this.isEditing) {
-      this.updateFormWithCaseData();
-      // Add practice area form controls
-      this.addPracticeAreaFormControls();
-      // Force change detection to update the view
-      this.cdr.detectChanges();
-      // Initialize Flatpickr after view updates with a longer timeout
-      setTimeout(() => {
-        this.initializeFlatpickr();
-        this.initPracticeAreaDatePickers();
-      }, 500);
-    } else {
-      // Clean up flatpickr instances when exiting edit mode
-      this.destroyFlatpickrInstances();
-      this.destroyPracticeAreaDatePickers();
-    }
-  }
-
-  updateFormWithCaseData(): void {
-    if (this.case) {
-      // Extract values with proper null checks
-      const filingDate = this.case.importantDates?.filingDate || (this.case as any).filingDate;
-      const nextHearing = this.case.importantDates?.nextHearing || (this.case as any).nextHearing;
-      const trialDate = this.case.importantDates?.trialDate || (this.case as any).trialDate;
-      
-      const countyName = this.case.courtInfo?.countyName || (this.case as any).countyName;
-      const judgeName = this.case.courtInfo?.judgeName || (this.case as any).judgeName;
-      const courtroom = this.case.courtInfo?.courtroom || (this.case as any).courtroom;
-      
-      const hourlyRate = this.case.billingInfo?.hourlyRate || (this.case as any).hourlyRate || 0;
-      const totalHours = this.case.billingInfo?.totalHours || (this.case as any).totalHours || 0;
-      const totalAmount = this.case.billingInfo?.totalAmount || (this.case as any).totalAmount || 0;
-      const paymentStatus = this.case.billingInfo?.paymentStatus || (this.case as any).paymentStatus || 'PENDING';
-
-      this.editForm.patchValue({
-        caseNumber: this.case.caseNumber,
-        title: this.case.title,
-        clientName: this.case.clientName,
-        clientEmail: this.case.clientEmail,
-        clientPhone: this.case.clientPhone,
-        clientAddress: this.case.clientAddress,
-        status: this.case.status,
-        priority: this.case.priority,
-        type: this.case.type,
-        description: this.case.description,
-        countyName,
-        judgeName,
-        courtroom,
-        filingDate: filingDate || null,
-        nextHearing: nextHearing || null,
-        trialDate: trialDate || null,
-        hourlyRate,
-        totalHours,
-        totalAmount,
-        paymentStatus
-      });
-
-      this.caseForm.patchValue({
-        caseNumber: this.case.caseNumber,
-        status: this.case.status,
-        filingDate: filingDate || null,
-        nextHearing: nextHearing || null,
-        trialDate: trialDate || null,
-        judge: judgeName,
-        court: countyName,
-        jurisdiction: courtroom,
-        description: this.case.description
-      });
-    }
+    // Per-section date pickers are created inside enterSectionEdit(); nothing to wire here.
   }
 
   loadCase(id: string): void {
@@ -1215,176 +1084,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  saveCase(): void {
-    // Check form validity first
-    if (!this.editForm.valid) {
-      // Mark all fields as touched to show validation errors
-      Object.keys(this.editForm.controls).forEach(key => {
-        const control = this.editForm.get(key);
-        control?.markAsTouched();
-      });
-      
-      // Create error message based on invalid fields
-      const invalidFields = Object.keys(this.editForm.controls)
-        .filter(key => this.editForm.get(key)?.invalid)
-        .join(', ');
-      
-      this.error = `Please correct the following fields: ${invalidFields}`;
-      this.showNotification('Please fill all required fields correctly', 'error');
-      
-      return;
-    }
-    
-    if (this.case) {
-      this.isLoading = true;
-      this.error = null;
-      this.cdr.detectChanges();
-      
-      // Extract form values
-      const formValues = this.editForm.value;
-      
-      try {
-        // Parse numeric values safely
-        const hourlyRate = formValues.hourlyRate ? parseFloat(formValues.hourlyRate) : 0;
-        const totalHours = formValues.totalHours ? parseFloat(formValues.totalHours) : 0;
-        const totalAmount = formValues.totalAmount ? parseFloat(formValues.totalAmount) : 0;
-        
-        if (isNaN(hourlyRate) || isNaN(totalHours) || isNaN(totalAmount)) {
-          throw new Error('Billing values must be valid numbers');
-        }
-        
-        // Format dates as YYYY-MM-DD strings to avoid timezone drift
-        const formatDate = (date: any): string | null => {
-          if (!date) return null;
-          if (typeof date === 'string') {
-            // Already a YYYY-MM-DD string — pass through
-            if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
-            // Other string format — parse carefully
-            const d = new Date(date);
-            if (isNaN(d.getTime())) return null;
-            return d.toISOString().split('T')[0];
-          }
-          if (date instanceof Date) {
-            // Date object from flatpickr — use local date parts (what the user selected)
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-          }
-          return null;
-        };
-        
-        // Create properly formatted update data (dates sent as YYYY-MM-DD strings to avoid timezone drift)
-        const updateData: any = {
-          id: this.case.id,
-          caseNumber: formValues.caseNumber,
-          title: formValues.title,
-          clientName: formValues.clientName,
-          clientEmail: formValues.clientEmail,
-          clientPhone: formValues.clientPhone,
-          clientAddress: formValues.clientAddress,
-          status: formValues.status,
-          priority: formValues.priority,
-          practiceArea: (this.case as any).practiceArea || null,
-          description: formValues.description,
-          
-          // Include both nested and flat fields for maximum compatibility
-          courtInfo: {
-            countyName: formValues.countyName || '',
-            judgeName: formValues.judgeName || '',
-            courtroom: formValues.courtroom || ''
-          },
-          countyName: formValues.countyName || '',
-          judgeName: formValues.judgeName || '',
-          courtroom: formValues.courtroom || '',
-          
-          importantDates: {
-            filingDate: formatDate(formValues.filingDate),
-            nextHearing: formatDate(formValues.nextHearing),
-            trialDate: formatDate(formValues.trialDate)
-          },
-          filingDate: formatDate(formValues.filingDate),
-          nextHearing: formatDate(formValues.nextHearing),
-          trialDate: formatDate(formValues.trialDate),
-          
-          billingInfo: {
-            hourlyRate: hourlyRate,
-            totalHours: totalHours,
-            totalAmount: totalAmount,
-            paymentStatus: formValues.paymentStatus
-          },
-          hourlyRate: hourlyRate,
-          totalHours: totalHours,
-          totalAmount: totalAmount,
-          paymentStatus: formValues.paymentStatus
-        };
-
-        // Add practice area specific fields to update data
-        // Include ALL fields (even empty ones) so the backend can clear values
-        this.currentPracticeAreaSections.forEach(section => {
-          section.fields.forEach(field => {
-            const value = formValues[field.name];
-            if (value !== null && value !== undefined && value !== '') {
-              if (field.type === 'date' && value) {
-                (updateData as any)[field.name] = formatDate(value);
-              } else if (field.type === 'currency' || field.type === 'number') {
-                (updateData as any)[field.name] = value ? parseFloat(value) : null;
-              } else {
-                (updateData as any)[field.name] = value;
-              }
-            } else {
-              // Send null/empty values so backend can clear them
-              if (field.type === 'currency' || field.type === 'number') {
-                (updateData as any)[field.name] = null;
-              } else if (field.type === 'checkbox') {
-                (updateData as any)[field.name] = value ?? false;
-              } else {
-                (updateData as any)[field.name] = '';
-              }
-            }
-          });
-        });
-
-        // Call the API to update the case
-        this.caseService.updateCase(this.case.id, updateData).subscribe({
-          next: (response) => {
-            // Reload the case data after update
-            this.loadCase(this.case!.id);
-            this.isEditing = false;
-            this.snackBar.open('Case updated successfully', 'Close', { duration: 3000 });
-          },
-          error: (error) => {
-            console.error('Error updating case:', error);
-            this.error = 'Failed to update case: ' + (error.error?.reason || error.error?.message || 'Please try again later.');
-            this.isLoading = false;
-            this.cdr.detectChanges();
-            
-            // Show more detailed error message
-            this.showNotification(
-              `Update failed: ${error.error?.message || error.message || 'Unknown error'}`,
-              'error'
-            );
-          },
-          complete: () => {
-            this.isLoading = false;
-            this.cdr.detectChanges();
-          }
-        });
-      } catch (e) {
-        const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred';
-        this.error = errorMessage;
-        this.isLoading = false;
-        this.showNotification(errorMessage, 'error');
-        this.cdr.detectChanges();
-      }
-    }
-  }
-
-  onCancel(): void {
-    this.isEditing = false;
-    this.cdr.detectChanges();
-  }
-
   deleteCase(): void {
     if (this.case) {
       Swal.fire({
@@ -1540,15 +1239,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       return { label: 'Scheduled', class: 'bg-info-subtle text-info', icon: 'ri-calendar-check-line' };
     }
-  }
-
-  startEdit(): void {
-    this.isEditing = true;
-  }
-
-  cancelEdit(): void {
-    this.isEditing = false;
-    this.updateFormWithCaseData();
   }
 
   // Get only the deadline events from caseEvents
@@ -2961,11 +2651,10 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Get the practice area configuration
     this.currentPracticeAreaSections = practiceArea ? (this.practiceAreaFieldsConfig[practiceArea] || []) : [];
-
-    // Add form controls for practice area fields when in edit mode
-    if (this.isEditing && this.currentPracticeAreaSections.length > 0) {
-      this.addPracticeAreaFormControls();
-    }
+    // Memoize the grouped rows once per sections change — critical for stable *ngFor identity
+    this.practiceAreaSectionRows = groupPracticeAreaSections(this.currentPracticeAreaSections);
+    // Core sections first, then practice-area sections, unified stream for one render block
+    this.allSectionRows = [...this.coreCaseRows, ...this.practiceAreaSectionRows];
   }
 
   /**
@@ -2991,22 +2680,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * Add form controls for practice area specific fields
-   */
-  private addPracticeAreaFormControls(): void {
-    this.currentPracticeAreaSections.forEach(section => {
-      section.fields.forEach(field => {
-        if (!this.editForm.contains(field.name)) {
-          const value = this.getFieldValue(field.name);
-          this.editForm.addControl(field.name, this.fb.control(value));
-        } else {
-          this.editForm.get(field.name)?.setValue(this.getFieldValue(field.name));
-        }
-      });
-    });
-  }
-
-  /**
    * Get the value of a practice area field from the case object
    */
   getFieldValue(fieldName: string): any {
@@ -3021,41 +2694,6 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!field.options || !value) return value || '';
     const option = field.options.find(o => o.value === value);
     return option ? option.label : value;
-  }
-
-  /**
-   * Initialize date pickers for practice area date fields
-   */
-  private initPracticeAreaDatePickers(): void {
-    // Destroy existing pickers
-    this.destroyPracticeAreaDatePickers();
-
-    // Wait for DOM to be ready
-    setTimeout(() => {
-      this.currentPracticeAreaSections.forEach(section => {
-        section.fields.forEach(field => {
-          if (field.type === 'date') {
-            const element = document.getElementById(`pa_edit_${field.name}`);
-            if (element) {
-              const currentValue = this.editForm.get(field.name)?.value;
-              const defaultDate = currentValue || null;
-
-              const picker = flatpickr(element, {
-                dateFormat: 'Y-m-d',
-                altInput: true,
-                altFormat: 'F j, Y',
-                allowInput: true,
-                defaultDate: defaultDate,
-                onChange: (selectedDates, dateStr) => {
-                  this.editForm.get(field.name)?.setValue(dateStr || null);
-                }
-              });
-              this.practiceAreaDatePickers.push(picker);
-            }
-          }
-        });
-      });
-    }, 100);
   }
 
   /**
@@ -3085,5 +2723,182 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       });
     });
     return fieldNames;
+  }
+
+  // ======================================================================
+  // Inline per-section editing (Phase 1a of case-detail redesign)
+  // ======================================================================
+
+  /** True if at least one field in this section has a non-empty value on the case. */
+  sectionHasAnyData(section: PracticeAreaSection): boolean {
+    return section.fields.some(f => !this.isFieldEmpty(f.name));
+  }
+
+  /** True if this case has no usable value for the given field (null/undefined/empty string). */
+  isFieldEmpty(fieldName: string): boolean {
+    const v = this.getFieldValue(fieldName);
+    return v === null || v === undefined || v === '';
+  }
+
+  /** Number of populated fields in the section (for the "3 of 6 filled" hint). */
+  sectionFilledCount(section: PracticeAreaSection): number {
+    return section.fields.filter(f => !this.isFieldEmpty(f.name)).length;
+  }
+
+  /** Open this section for editing. Builds a fresh FormGroup seeded with current values. */
+  enterSectionEdit(section: PracticeAreaSection): void {
+    const controls: { [name: string]: any } = {};
+    section.fields.forEach(f => {
+      controls[f.name] = [this.getFieldValue(f.name) ?? this.defaultForFieldType(f.type)];
+    });
+    this.sectionEditForms[section.title] = this.fb.group(controls);
+    this.editingSections[section.title] = true;
+    this.sectionErrors[section.title] = '';
+    this.initSectionDatePickers(section);
+  }
+
+  /** Close edit mode for this section. If the form is dirty, confirm discard. */
+  cancelSectionEdit(section: PracticeAreaSection): void {
+    const form = this.sectionEditForms[section.title];
+    const doCancel = () => {
+      this.destroySectionDatePickers(section);
+      this.editingSections[section.title] = false;
+      this.sectionErrors[section.title] = '';
+      delete this.sectionEditForms[section.title];
+    };
+
+    if (form && form.dirty) {
+      Swal.fire({
+        title: 'Discard changes?',
+        text: 'You have unsaved edits in this section.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Discard',
+        cancelButtonText: 'Keep editing',
+        confirmButtonColor: '#d33'
+      }).then(result => {
+        if (result.isConfirmed) doCancel();
+      });
+    } else {
+      doCancel();
+    }
+  }
+
+  /** PATCH only the dirty fields for this section. */
+  saveSection(section: PracticeAreaSection): void {
+    if (!this.caseId) return;
+    const form = this.sectionEditForms[section.title];
+    if (!form) return;
+    if (form.invalid) {
+      this.sectionErrors[section.title] = 'Please fix the errors in this section.';
+      return;
+    }
+    if (!form.dirty) {
+      // nothing to save — just close
+      this.destroySectionDatePickers(section);
+      this.editingSections[section.title] = false;
+      delete this.sectionEditForms[section.title];
+      return;
+    }
+
+    const payload: { [k: string]: any } = {};
+    section.fields.forEach(f => {
+      const ctrl = form.get(f.name);
+      if (ctrl && ctrl.dirty) {
+        payload[f.name] = this.coerceFieldValue(f, ctrl.value);
+      }
+    });
+
+    this.savingSections[section.title] = true;
+    this.sectionErrors[section.title] = '';
+
+    this.caseService.patchCase(this.caseId, payload as any).subscribe({
+      next: (resp: any) => {
+        const updated = resp?.data?.case ?? resp?.data ?? resp;
+        this.mergePatchedIntoCase(updated || payload);
+        this.destroySectionDatePickers(section);
+        this.editingSections[section.title] = false;
+        this.savingSections[section.title] = false;
+        this.sectionErrors[section.title] = '';
+        // FormGroup is intentionally retained — enterSectionEdit overwrites on next edit.
+        this.justSavedSections[section.title] = true;
+        setTimeout(() => {
+          this.justSavedSections[section.title] = false;
+          this.cdr.detectChanges();
+        }, 1500);
+        this.cdr.detectChanges();
+        this.snackBar.open(`${section.title} updated.`, 'Dismiss', { duration: 2500 });
+      },
+      error: (err: any) => {
+        this.savingSections[section.title] = false;
+        this.sectionErrors[section.title] = err?.error?.message || 'Failed to save. Please try again.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /** Init flatpickr for each date field in the section. Called right after form build. */
+  private initSectionDatePickers(section: PracticeAreaSection): void {
+    this.destroySectionDatePickers(section);
+    setTimeout(() => {
+      const instances: any[] = [];
+      section.fields.forEach(f => {
+        if (f.type !== 'date') return;
+        const el = document.getElementById(this.sectionFieldId(section, f));
+        if (!el) return;
+        const ctrl = this.sectionEditForms[section.title]?.get(f.name);
+        const picker = flatpickr(el, {
+          dateFormat: 'Y-m-d',
+          altInput: true,
+          altFormat: 'F j, Y',
+          allowInput: true,
+          defaultDate: ctrl?.value || null,
+          onChange: (_d, dateStr) => {
+            ctrl?.setValue(dateStr || null);
+            ctrl?.markAsDirty();
+          }
+        });
+        instances.push(picker);
+      });
+      this.sectionFlatpickrInstances[section.title] = instances;
+    }, 50);
+  }
+
+  private destroySectionDatePickers(section: PracticeAreaSection): void {
+    const list = this.sectionFlatpickrInstances[section.title] || [];
+    list.forEach(p => p && typeof p.destroy === 'function' && p.destroy());
+    this.sectionFlatpickrInstances[section.title] = [];
+  }
+
+  /** Stable DOM id for a field input inside a section (used by flatpickr). */
+  sectionFieldId(section: PracticeAreaSection, field: PracticeAreaField): string {
+    const slug = section.title.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    return `sec_${slug}_${field.name}`;
+  }
+
+  /** Default value by type — used when no current value exists. */
+  private defaultForFieldType(t: PracticeAreaField['type']): any {
+    switch (t) {
+      case 'number':
+      case 'currency': return null;
+      case 'checkbox': return false;
+      default: return '';
+    }
+  }
+
+  /** Coerce raw form values to the types the API expects (empty → null, etc.). */
+  private coerceFieldValue(f: PracticeAreaField, value: any): any {
+    if (value === '' || value === undefined) return null;
+    if (f.type === 'number' || f.type === 'currency') {
+      const n = typeof value === 'number' ? value : parseFloat(value);
+      return isNaN(n) ? null : n;
+    }
+    return value;
+  }
+
+  /** Merge server-patched values into the local case object without losing unrelated fields. */
+  private mergePatchedIntoCase(patched: any): void {
+    if (!this.case || !patched) return;
+    this.case = { ...this.case, ...patched };
   }
 }

@@ -1,111 +1,83 @@
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-12">
-      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <h4 class="mb-sm-0">Template Library</h4>
-        <div class="page-title-right">
-          <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a href="javascript: void(0);">Legal</a></li>
-            <li class="breadcrumb-item"><a href="javascript: void(0);">AI Assistant</a></li>
-            <li class="breadcrumb-item active">Template Library</li>
-          </ol>
-        </div>
-      </div>
+<div class="container-fluid tmpl-library-page">
+  <!-- Compact page header (redesign §1) -->
+  <div class="tmpl-page-title">
+    <div class="tmpl-page-title-left">
+      <h2>
+        <i class="ri-folder-3-line"></i>
+        Template Library
+        <span class="count-pill">{{ totalTemplatesCount }} templates</span>
+      </h2>
+      <p class="tagline">
+        Reusable legal documents with <code ngNonBindable>{{variables}}</code> &mdash; pre-fill to draft a motion, letter, or petition in seconds.
+      </p>
+    </div>
+    <div class="tmpl-page-title-right">
+      <button class="btn-page-primary" (click)="importTemplate()">
+        <i class="ri-upload-cloud-2-line"></i> Import templates
+      </button>
+      <button class="btn-page-outline" (click)="createNewTemplate()">
+        <i class="ri-add-line"></i> New template
+      </button>
+      <button class="btn-page-ghost" title="Template library help" aria-label="Help">
+        <i class="ri-question-line"></i>
+      </button>
     </div>
   </div>
 
-  <!-- Statistics Cards -->
-  <div class="row">
-    <div class="col-xl-3 col-sm-6">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex">
-            <div class="flex-grow-1">
-              <p class="text-truncate font-size-14 mb-2">Total Templates</p>
-              <h4 class="mb-2">{{totalTemplatesCount}}</h4>
-              <p class="text-muted mb-0">
-                <span class="text-success fw-bold font-size-12 me-2">
-                  <i class="ri-arrow-right-up-line me-1 align-middle"></i>+12%
-                </span>from previous month
-              </p>
-            </div>
-            <div class="avatar-sm">
-              <span class="avatar-title bg-light text-primary rounded-3">
-                <i class="ri-file-text-line font-size-24"></i>
-              </span>
-            </div>
-          </div>
-        </div>
+  <!-- Statistics Cards (redesign §2 — honest sub-context, no fake deltas) -->
+  <div class="tmpl-stats">
+    <div class="tmpl-stat-card" data-accent="primary">
+      <span class="stat-rail" aria-hidden="true"></span>
+      <div class="stat-head">
+        <span class="stat-label">Total templates</span>
+        <i class="stat-icon ri-file-text-line" aria-hidden="true"></i>
+      </div>
+      <div class="stat-value">{{ totalTemplatesCount }}</div>
+      <div class="stat-sub">
+        <ng-container *ngIf="totalTemplatesCount === 0; else totalFilled">
+          Import or build one to get started
+        </ng-container>
+        <ng-template #totalFilled>
+          Across {{ categories.length }} categor{{ categories.length === 1 ? 'y' : 'ies' }}
+        </ng-template>
       </div>
     </div>
 
-    <div class="col-xl-3 col-sm-6">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex">
-            <div class="flex-grow-1">
-              <p class="text-truncate font-size-14 mb-2">Active Categories</p>
-              <h4 class="mb-2">{{categories.length}}</h4>
-              <p class="text-muted mb-0">
-                <span class="text-success fw-bold font-size-12 me-2">
-                  <i class="ri-arrow-right-up-line me-1 align-middle"></i>+2
-                </span>new this week
-              </p>
-            </div>
-            <div class="avatar-sm">
-              <span class="avatar-title bg-light text-success rounded-3">
-                <i class="ri-folder-3-line font-size-24"></i>
-              </span>
-            </div>
-          </div>
-        </div>
+    <div class="tmpl-stat-card" data-accent="success">
+      <span class="stat-rail" aria-hidden="true"></span>
+      <div class="stat-head">
+        <span class="stat-label">Practice areas</span>
+        <i class="stat-icon ri-scales-3-line" aria-hidden="true"></i>
+      </div>
+      <div class="stat-value">{{ practiceAreas.length }}</div>
+      <div class="stat-sub">
+        <ng-container *ngIf="practiceAreas.length === 0; else paFilled">
+          Tag a template to organize by area
+        </ng-container>
+        <ng-template #paFilled>
+          {{ jurisdictions.length }} jurisdiction{{ jurisdictions.length === 1 ? '' : 's' }} represented
+        </ng-template>
       </div>
     </div>
 
-    <div class="col-xl-3 col-sm-6">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex">
-            <div class="flex-grow-1">
-              <p class="text-truncate font-size-14 mb-2">Recently Used</p>
-              <h4 class="mb-2">{{recentlyUsedCount}}</h4>
-              <p class="text-muted mb-0">
-                <span class="text-muted fw-bold font-size-12 me-2">
-                  <i class="ri-time-line me-1 align-middle"></i>
-                </span>Last 7 days
-              </p>
-            </div>
-            <div class="avatar-sm">
-              <span class="avatar-title bg-light text-warning rounded-3">
-                <i class="ri-history-line font-size-24"></i>
-              </span>
-            </div>
-          </div>
-        </div>
+    <div class="tmpl-stat-card" data-accent="warning">
+      <span class="stat-rail" aria-hidden="true"></span>
+      <div class="stat-head">
+        <span class="stat-label">Recently used</span>
+        <i class="stat-icon ri-history-line" aria-hidden="true"></i>
       </div>
+      <div class="stat-value">{{ recentlyUsedCount }}</div>
+      <div class="stat-sub">In the last 7 days</div>
     </div>
 
-    <div class="col-xl-3 col-sm-6">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex">
-            <div class="flex-grow-1">
-              <p class="text-truncate font-size-14 mb-2">Custom Templates</p>
-              <h4 class="mb-2">{{customTemplatesCount}}</h4>
-              <p class="text-muted mb-0">
-                <span class="text-info fw-bold font-size-12 me-2">
-                  <i class="ri-user-3-line me-1 align-middle"></i>
-                </span>User created
-              </p>
-            </div>
-            <div class="avatar-sm">
-              <span class="avatar-title bg-light text-info rounded-3">
-                <i class="ri-file-add-line font-size-24"></i>
-              </span>
-            </div>
-          </div>
-        </div>
+    <div class="tmpl-stat-card" data-accent="info">
+      <span class="stat-rail" aria-hidden="true"></span>
+      <div class="stat-head">
+        <span class="stat-label">Your templates</span>
+        <i class="stat-icon ri-quill-pen-line" aria-hidden="true"></i>
       </div>
+      <div class="stat-value">{{ customTemplatesCount }}</div>
+      <div class="stat-sub">Built or imported by your firm</div>
     </div>
   </div>
 
@@ -113,30 +85,6 @@
   <div class="row">
     <div class="col-lg-12">
       <div class="card">
-        <div class="card-header">
-          <div class="row align-items-center">
-            <div class="col">
-              <h5 class="card-title mb-0">Legal Document Templates</h5>
-            </div>
-            <div class="col-auto">
-              <div class="d-flex gap-2">
-                <button class="btn btn-success btn-sm" *ngIf="hasSelectedTemplates()" (click)="generateFromSelected()">
-                  <i class="ri-file-add-line align-bottom me-1"></i> Generate Document
-                </button>
-                <button class="btn btn-soft-secondary btn-sm" (click)="importTemplate()">
-                  <i class="ri-upload-2-line align-bottom me-1"></i> Import
-                </button>
-                <button class="btn btn-soft-secondary btn-sm" (click)="exportTemplates()">
-                  <i class="ri-download-2-line align-bottom me-1"></i> Export
-                </button>
-                <button class="btn btn-primary btn-sm" (click)="createNewTemplate()">
-                  <i class="ri-add-line align-bottom me-1"></i> Create Template
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div class="card-header border-bottom border-bottom-dashed">
           <div class="row g-3">
             <div class="col-xxl-3 col-lg-4">
@@ -158,6 +106,28 @@
                 <option *ngFor="let area of practiceAreas" [value]="area">{{area}}</option>
               </select>
             </div>
+            <div class="col-xxl-2 col-lg-3">
+              <div class="jur-wrap">
+                <select class="form-control"
+                        [class.jur-new]="showJurisdictionNewRing"
+                        [(ngModel)]="selectedJurisdiction"
+                        (ngModelChange)="filterTemplates()"
+                        (click)="dismissJurisdictionNewRing()"
+                        (change)="dismissJurisdictionNewRing()">
+                  <option value="">All Jurisdictions</option>
+                  <option *ngFor="let j of jurisdictions" [value]="j">{{j}}</option>
+                </select>
+                <span class="new-mini-badge" *ngIf="showJurisdictionNewRing" aria-hidden="true">NEW</span>
+              </div>
+            </div>
+            <div class="col-xxl-2 col-lg-3">
+              <select class="form-control" [(ngModel)]="selectedSource" (ngModelChange)="filterTemplates()">
+                <option value="">All Sources</option>
+                <option value="MANUAL">Manual</option>
+                <option value="IMPORTED">Imported</option>
+                <option value="PRIVATE">My Private Templates</option>
+              </select>
+            </div>
             <div class="col-xxl-2 col-lg-2">
               <select class="form-control" [(ngModel)]="sortBy" (ngModelChange)="sortTemplates()">
                 <option value="name">Sort by Name</option>
@@ -166,17 +136,19 @@
                 <option value="rating">Sort by Rating</option>
               </select>
             </div>
-            <div class="col-xxl-3 col-lg-12">
-              <div class="btn-group" role="group">
+            <div class="col-xxl-1 col-lg-12">
+              <div class="view-mode-toggle" role="group" aria-label="View mode">
                 <input type="radio" class="btn-check" name="viewMode" id="listView"
                        [(ngModel)]="viewMode" value="list">
-                <label class="btn btn-outline-secondary" for="listView">
-                  <i class="ri-list-unordered"></i> List
+                <label class="view-mode-btn" for="listView" title="List view" aria-label="List view">
+                  <i class="ri-list-unordered"></i>
+                  <span class="view-mode-label">List</span>
                 </label>
                 <input type="radio" class="btn-check" name="viewMode" id="gridView"
                        [(ngModel)]="viewMode" value="grid">
-                <label class="btn btn-outline-secondary" for="gridView">
-                  <i class="ri-grid-fill"></i> Grid
+                <label class="view-mode-btn" for="gridView" title="Grid view" aria-label="Grid view">
+                  <i class="ri-grid-fill"></i>
+                  <span class="view-mode-label">Grid</span>
                 </label>
               </div>
             </div>
@@ -184,97 +156,185 @@
         </div>
 
         <div class="card-body">
-          <!-- List View -->
-          <div class="table-responsive" *ngIf="viewMode === 'list'">
-            <table class="table align-middle table-nowrap">
-              <thead class="table-light">
+          <!-- Bulk action toolbar — shown only when rows are selected (redesign §3) -->
+          <div class="bulk-toolbar" *ngIf="selectedCount > 0">
+            <div class="bulk-left">
+              <span class="bulk-chip">{{ selectedCount }}</span>
+              <span class="bulk-text">
+                {{ selectedCount === 1 ? 'template' : 'templates' }} selected
+              </span>
+            </div>
+            <div class="bulk-actions">
+              <button type="button" class="bulk-btn bulk-btn-generate"
+                      *ngIf="selectedCount === 1"
+                      (click)="generateFromSelected()">
+                <i class="ri-magic-line"></i> Generate
+              </button>
+              <button type="button" class="bulk-btn bulk-btn-danger"
+                      (click)="bulkDeleteSelected()">
+                <i class="ri-delete-bin-6-line"></i>
+                Delete {{ selectedCount === 1 ? '' : selectedCount }}
+              </button>
+              <button type="button" class="bulk-btn-clear"
+                      (click)="clearSelection()"
+                      aria-label="Clear selection">
+                <i class="ri-close-line"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Loading skeleton (redesign §10) -->
+          <div class="tmpl-grid skel-grid" *ngIf="isLoading">
+            <div class="skel-card" *ngFor="let i of [1,2,3,4,5,6,7,8]">
+              <div class="skel-row1">
+                <div class="skel skel-a skel-sq"></div>
+                <div class="skel-lines">
+                  <div class="skel skel-a skel-ln1"></div>
+                  <div class="skel skel-a skel-ln2"></div>
+                </div>
+              </div>
+              <div class="skel skel-a skel-full"></div>
+              <div class="skel skel-a skel-short"></div>
+              <div class="skel-pills">
+                <span class="skel skel-a"></span>
+                <span class="skel skel-a"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- First-time empty (redesign §9) -->
+          <div class="empty-card first-time"
+               *ngIf="!isLoading && totalTemplatesCount === 0 && !errorMessage">
+            <div class="empty-illo"><i class="ri-folder-3-line"></i></div>
+            <h3>Your template library is empty</h3>
+            <p>
+              Templates are reusable legal documents with
+              <code ngNonBindable>{{variables}}</code>.
+              The fastest way to get started is to import the documents your firm already uses.
+            </p>
+            <div class="empty-ctas">
+              <button type="button" class="btn-page-primary" (click)="importTemplate()">
+                <i class="ri-upload-cloud-2-line"></i> Import existing templates
+              </button>
+              <button type="button" class="btn-page-outline" (click)="createNewTemplate()">
+                <i class="ri-quill-pen-line"></i> Or build one from scratch
+              </button>
+            </div>
+          </div>
+
+          <!-- Filtered empty (redesign §9) -->
+          <div class="empty-card filtered"
+               *ngIf="!isLoading && totalTemplatesCount > 0 && filteredTemplates.length === 0">
+            <div class="empty-illo muted"><i class="ri-search-line"></i></div>
+            <h3>No templates match your filters</h3>
+            <p>
+              Try removing a filter, or
+              <a href="javascript:void(0)" (click)="importTemplate()">import a new template</a>
+              that fits.
+            </p>
+            <div class="empty-ctas">
+              <button type="button" class="btn-page-ghost" (click)="clearAllFilters()">
+                <i class="ri-close-circle-line"></i> Clear filters
+              </button>
+            </div>
+          </div>
+
+          <!-- List View (redesign §5) -->
+          <div class="tmpl-list"
+               *ngIf="!isLoading && filteredTemplates.length > 0 && viewMode === 'list'">
+            <table>
+              <thead>
                 <tr>
-                  <th scope="col" style="width: 50px;">
-                    <div class="form-check">
+                  <th class="col-check">
+                    <div class="form-check m-0">
                       <input class="form-check-input" type="checkbox" [(ngModel)]="selectAll"
-                             (change)="toggleSelectAll()">
+                             (change)="toggleSelectAll()" aria-label="Select all">
                     </div>
                   </th>
-                  <th scope="col">Template Name</th>
-                  <th scope="col">Category</th>
-                  <th scope="col">Practice Area</th>
-                  <th scope="col">Last Modified</th>
-                  <th scope="col">Usage</th>
-                  <th scope="col">Rating</th>
-                  <th scope="col">Actions</th>
+                  <th class="col-name">Name</th>
+                  <th class="col-pa">Practice area</th>
+                  <th class="col-jur">Jurisdiction</th>
+                  <th class="col-updated">Updated</th>
+                  <th class="col-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let template of paginatedTemplates">
-                  <td>
-                    <div class="form-check">
+                <tr *ngFor="let template of paginatedTemplates; trackBy: trackByTemplateId"
+                    [attr.data-cat]="getCategoryColorSlug(template)">
+                  <td class="col-check">
+                    <div class="form-check m-0">
                       <input class="form-check-input" type="checkbox"
-                             [(ngModel)]="template.selected">
+                             [(ngModel)]="template.selected" aria-label="Select template">
                     </div>
                   </td>
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <div class="avatar-xs me-3">
-                        <span class="avatar-title bg-soft-primary text-primary rounded-circle">
-                          <i class="ri-file-text-line"></i>
+                  <td class="col-name">
+                    <div class="list-name-cell">
+                      <div class="tmpl-icon-wrap">
+                        <i [ngClass]="getCategoryIcon(template)"></i>
+                      </div>
+                      <div class="nm">
+                        {{ template.name }}
+                        <span class="sub">
+                          {{ formatCategoryName(template.category) || 'Template' }}
+                          <ng-container *ngIf="getVariableCount(template) as vc">
+                            <span *ngIf="vc > 0"> · {{ vc }} variables</span>
+                          </ng-container>
+                          <span class="own-tag ms-1"
+                                *ngIf="getOwnershipTag(template) as own"
+                                [ngClass]="own.tag">
+                            {{ own.label }}
+                          </span>
+                          <span class="visual-tag ms-1"
+                                *ngIf="getBinaryBadge(template) as vb"
+                                [attr.title]="vb.tooltip">
+                            <i class="ri-image-2-line"></i>{{ vb.label }}
+                          </span>
                         </span>
                       </div>
-                      <div>
-                        <h5 class="font-size-14 mb-1">
-                          <a href="javascript:void(0)" class="text-dark">{{template.name}}</a>
-                        </h5>
-                        <p class="text-muted mb-0">{{template.description}}</p>
-                      </div>
                     </div>
                   </td>
-                  <td>
-                    <span class="badge badge-soft-secondary">{{template.category}}</span>
+                  <td class="col-pa">
+                    <span class="tag-pill" *ngIf="template.practiceArea">
+                      {{ displayPracticeArea(template) }}
+                    </span>
+                    <span class="text-muted" *ngIf="!template.practiceArea">&mdash;</span>
                   </td>
-                  <td>
-                    <span class="badge badge-soft-primary">{{template.practiceArea}}</span>
+                  <td class="col-jur">
+                    <span *ngIf="template.jurisdiction">{{ displayJurisdiction(template) }}</span>
+                    <span class="text-muted" *ngIf="!template.jurisdiction">&mdash;</span>
                   </td>
-                  <td>{{template.lastModified | date:'MMM d, y'}}</td>
-                  <td>
-                    <span class="text-muted">{{template.usageCount}} uses</span>
-                  </td>
-                  <td>
-                    <div class="text-warning">
-                      <i class="ri-star-fill" *ngFor="let star of [1,2,3,4,5]"
-                         [class.text-muted]="star > template.rating"></i>
-                    </div>
-                  </td>
-                  <td>
-                    <div class="dropdown">
-                      <a href="javascript:void(0)" class="dropdown-toggle arrow-none"
-                         data-bs-toggle="dropdown">
-                        <i class="ri-more-2-fill"></i>
-                      </a>
-                      <div class="dropdown-menu dropdown-menu-end">
-                        <h6 class="dropdown-header">Generate Document</h6>
-                        <a class="dropdown-item" (click)="quickGenerate(template)">
-                          <i class="ri-magic-line me-2 align-middle text-primary"></i>Quick Generate
-                        </a>
-                        <a class="dropdown-item" (click)="openDocumentEditor(template)">
-                          <i class="ri-edit-box-line me-2 align-middle text-info"></i>Advanced Editor
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <h6 class="dropdown-header">Template Actions</h6>
-                        <a class="dropdown-item" (click)="editTemplate(template)">
-                          <i class="ri-pencil-line me-2 align-middle"></i>Edit Template
-                        </a>
-                        <a class="dropdown-item" (click)="duplicateTemplate(template)">
-                          <i class="ri-file-copy-line me-2 align-middle"></i>Duplicate
-                        </a>
-                        <a class="dropdown-item" (click)="previewTemplate(template)">
-                          <i class="ri-eye-line me-2 align-middle"></i>Preview
-                        </a>
-                        <a class="dropdown-item" (click)="shareTemplate(template)">
-                          <i class="ri-share-line me-2 align-middle"></i>Share
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item text-danger" (click)="deleteTemplate(template)">
-                          <i class="ri-delete-bin-line me-2 align-middle"></i>Delete
-                        </a>
+                  <td class="col-updated text-muted">{{ getCardFooterTime(template) }}</td>
+                  <td class="col-actions">
+                    <div class="list-actions">
+                      <button type="button" class="btn-use-sm" (click)="quickGenerate(template)">
+                        Use<i class="ri-arrow-right-line"></i>
+                      </button>
+                      <button type="button" class="iconbtn iconbtn-danger"
+                              (click)="deleteTemplate(template)"
+                              title="Delete template"
+                              aria-label="Delete template">
+                        <i class="ri-delete-bin-6-line"></i>
+                      </button>
+                      <div ngbDropdown container="body" placement="bottom-end" class="tmpl-kebab">
+                        <button type="button" class="iconbtn" ngbDropdownToggle
+                                aria-label="More actions">
+                          <i class="ri-more-2-fill"></i>
+                        </button>
+                        <div ngbDropdownMenu class="tmpl-kebab-menu">
+                          <button type="button" ngbDropdownItem (click)="previewTemplate(template)">
+                            <i class="ri-eye-line me-2"></i>Preview
+                          </button>
+                          <button type="button" ngbDropdownItem (click)="editTemplate(template)">
+                            <i class="ri-pencil-line me-2"></i>Edit
+                          </button>
+                          <button type="button" ngbDropdownItem (click)="duplicateTemplate(template)">
+                            <i class="ri-file-copy-line me-2"></i>Duplicate
+                          </button>
+                          <div class="dropdown-divider"></div>
+                          <button type="button" ngbDropdownItem class="text-danger" (click)="deleteTemplate(template)">
+                            <i class="ri-delete-bin-line me-2"></i>Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -283,80 +343,82 @@
             </table>
           </div>
 
-          <!-- Grid View -->
-          <div class="row" *ngIf="viewMode === 'grid'">
-            <div class="col-xxl-3 col-lg-4 col-md-6" *ngFor="let template of paginatedTemplates">
-              <div class="card border">
-                <div class="card-body">
-                  <div class="d-flex align-items-start">
-                    <div class="flex-grow-1">
-                      <div class="avatar-sm mb-3">
-                        <span class="avatar-title bg-light text-primary rounded">
-                          <i class="ri-file-text-line font-size-20"></i>
-                        </span>
-                      </div>
-                    </div>
-                    <div class="flex-shrink-0">
-                      <div class="dropdown">
-                        <a href="javascript:void(0)" class="dropdown-toggle arrow-none"
-                           data-bs-toggle="dropdown">
-                          <i class="ri-more-2-fill"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end">
-                          <h6 class="dropdown-header">Generate Document</h6>
-                          <a class="dropdown-item" (click)="quickGenerate(template)">
-                            <i class="ri-magic-line me-2"></i>Quick Generate
-                          </a>
-                          <a class="dropdown-item" (click)="openDocumentEditor(template)">
-                            <i class="ri-edit-box-line me-2"></i>Advanced Editor
-                          </a>
-                          <div class="dropdown-divider"></div>
-                          <a class="dropdown-item" (click)="editTemplate(template)">Edit Template</a>
-                          <a class="dropdown-item" (click)="duplicateTemplate(template)">Duplicate</a>
-                          <a class="dropdown-item" (click)="previewTemplate(template)">Preview</a>
-                          <a class="dropdown-item text-danger" (click)="deleteTemplate(template)">Delete</a>
-                        </div>
-                      </div>
-                    </div>
+          <!-- Grid View (redesign §4) -->
+          <div class="tmpl-grid"
+               *ngIf="!isLoading && filteredTemplates.length > 0 && viewMode === 'grid'">
+            <div class="tmpl-card"
+                 *ngFor="let template of paginatedTemplates; trackBy: trackByTemplateId"
+                 [attr.data-cat]="getCategoryColorSlug(template)">
+              <div class="cat-band"></div>
+              <div class="tmpl-body">
+                <div class="top-row">
+                  <div class="tmpl-icon-wrap">
+                    <i [ngClass]="getCategoryIcon(template)"></i>
                   </div>
-
-                  <h5 class="font-size-15 mb-1">{{template.name}}</h5>
-                  <p class="text-muted mb-3">{{template.description}}</p>
-
-                  <div class="d-flex flex-wrap gap-2 mb-3">
-                    <span class="badge badge-soft-secondary">{{template.category}}</span>
-                    <span class="badge badge-soft-primary">{{template.practiceArea}}</span>
+                  <div class="top-row-tags">
+                    <span class="visual-tag"
+                          *ngIf="getBinaryBadge(template) as vb"
+                          [attr.title]="vb.tooltip">
+                      <i class="ri-image-2-line"></i>{{ vb.label }}
+                    </span>
+                    <span class="own-tag"
+                          *ngIf="getOwnershipTag(template) as own"
+                          [ngClass]="own.tag">
+                      {{ own.label }}
+                    </span>
                   </div>
+                </div>
 
-                  <div class="d-flex align-items-center mb-3">
-                    <div class="text-warning me-3">
-                      <i class="ri-star-fill" *ngFor="let star of [1,2,3,4,5]"
-                         [class.text-muted]="star > template.rating"></i>
-                    </div>
-                    <span class="text-muted">{{template.usageCount}} uses</span>
+                <h4 class="tmpl-title">{{ template.name }}</h4>
+                <p class="tmpl-desc">{{ template.description || 'No description' }}</p>
+
+                <div class="tag-row">
+                  <span class="tag-pill" *ngIf="template.practiceArea">
+                    <i class="ri-price-tag-3-line"></i>{{ displayPracticeArea(template) }}
+                  </span>
+                  <span class="tag-pill ghost" *ngIf="template.jurisdiction">
+                    <i class="ri-map-pin-line"></i>{{ displayJurisdiction(template) }}
+                  </span>
+                </div>
+
+                <div class="tmpl-foot">
+                  <div class="meta">
+                    <span class="meta-time">{{ getCardFooterTime(template) }}</span>
+                    <span class="dot-sep"></span>
+                    <span class="meta-uses">{{ template.usageCount || 0 }} uses</span>
                   </div>
-
-                  <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-primary flex-grow-1" (click)="quickGenerate(template)">
-                      <i class="ri-magic-line me-1"></i>Quick Generate
+                  <div class="tmpl-actions">
+                    <button type="button" class="btn-use-sm" (click)="quickGenerate(template)">
+                      Use<i class="ri-arrow-right-line"></i>
                     </button>
-                    <div class="dropdown">
-                      <button type="button" class="btn btn-sm btn-light dropdown-toggle"
-                              data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="ri-more-2-line"></i>
+                    <button type="button" class="iconbtn iconbtn-danger"
+                            (click)="deleteTemplate(template)"
+                            title="Delete template"
+                            aria-label="Delete template">
+                      <i class="ri-delete-bin-6-line"></i>
+                    </button>
+                    <div ngbDropdown container="body" placement="bottom-end" class="tmpl-kebab">
+                      <button type="button"
+                              class="iconbtn"
+                              ngbDropdownToggle
+                              aria-label="More actions">
+                        <i class="ri-more-2-fill"></i>
                       </button>
-                      <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="openDocumentEditor(template)">
-                          <i class="ri-edit-box-line me-2"></i>Advanced Editor
-                        </a></li>
-                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="openDocumentWizard(template)">
-                          <i class="ri-file-list-3-line me-2"></i>Step-by-Step Wizard
-                        </a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="previewTemplate(template)">
-                          <i class="ri-eye-line me-2"></i>Preview Template
-                        </a></li>
-                      </ul>
+                      <div ngbDropdownMenu class="tmpl-kebab-menu">
+                        <button type="button" ngbDropdownItem (click)="previewTemplate(template)">
+                          <i class="ri-eye-line me-2"></i>Preview
+                        </button>
+                        <button type="button" ngbDropdownItem (click)="editTemplate(template)">
+                          <i class="ri-pencil-line me-2"></i>Edit
+                        </button>
+                        <button type="button" ngbDropdownItem (click)="duplicateTemplate(template)">
+                          <i class="ri-file-copy-line me-2"></i>Duplicate
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button type="button" ngbDropdownItem class="text-danger" (click)="deleteTemplate(template)">
+                          <i class="ri-delete-bin-line me-2"></i>Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -365,7 +427,7 @@
           </div>
 
           <!-- Pagination -->
-          <div class="row mt-4">
+          <div class="row mt-4" *ngIf="!isLoading && filteredTemplates.length > 0">
             <div class="col-sm">
               <div class="text-muted">
                 Showing <span class="fw-semibold">{{getPaginationStart()}}</span> to
@@ -419,11 +481,11 @@
           </div>
           <div class="col-md-4">
             <small class="text-muted">Practice Area:</small>
-            <div>{{selectedPreviewTemplate.practiceArea || 'N/A'}}</div>
+            <div>{{displayPracticeArea(selectedPreviewTemplate) || 'N/A'}}</div>
           </div>
           <div class="col-md-4">
             <small class="text-muted">Jurisdiction:</small>
-            <div>{{selectedPreviewTemplate.jurisdiction || 'N/A'}}</div>
+            <div>{{displayJurisdiction(selectedPreviewTemplate) || 'N/A'}}</div>
           </div>
         </div>
 
@@ -448,7 +510,7 @@
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-light" (click)="closePreview()">Close</button>
-      <button type="button" class="btn btn-primary" (click)="useTemplate(selectedPreviewTemplate!); closePreview()" [disabled]="!selectedPreviewTemplate">
+      <button type="button" class="btn btn-primary" (click)="useTemplateFromPreview()" [disabled]="!selectedPreviewTemplate">
         <i class="ri-file-edit-line me-1"></i> Use Template
       </button>
     </div>
@@ -463,5 +525,14 @@
       (documentGenerated)="onDocumentGenerated($event)"
       (closed)="onAutoFillWizardClosed()">
     </app-auto-fill-wizard>
+  </ng-template>
+
+  <!-- Template Import Wizard Modal (Sprint 1.5) -->
+  <ng-template #importModal>
+    <app-template-import-wizard
+      *ngIf="showImportWizard"
+      (importCompleted)="onImportCompleted($event)"
+      (closed)="onImportWizardClosed()">
+    </app-template-import-wizard>
   </ng-template>
 </div>

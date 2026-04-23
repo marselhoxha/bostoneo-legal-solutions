@@ -1,0 +1,564 @@
+<div class="draft-wizard">
+  <!-- ─── Inline Case Strip ────────────────────────────────────────────── -->
+  <!-- Replaces the Sprint 4a right-rail Case Context panel. Two visual states:
+       • Empty — dashed outline, muted folder icon, "Link a case" CTA that
+         reveals an inline <select> picker over the same strip.
+       • Linked — solid elevated strip with success-tinted icon, case title,
+         practice-area + jurisdiction pills, "Change" and "View" affordances. -->
+  <div class="case-strip empty"
+       *ngIf="!selectedCaseObject && !caseStripPickerOpen">
+    <span class="case-strip-ico"><i class="ri-folder-3-line"></i></span>
+    <span class="case-strip-text">
+      Not linked to a case — results are stronger when grounded in a case.
+    </span>
+    <button type="button"
+            class="case-strip-cta"
+            (click)="openCaseStripPicker()"
+            [disabled]="!availableCases?.length">
+      <i class="ri-link"></i> Link a case
+    </button>
+  </div>
+
+  <div class="case-strip picker"
+       *ngIf="caseStripPickerOpen">
+    <span class="case-strip-ico picker-ico"><i class="ri-search-line"></i></span>
+    <select class="form-select form-select-sm case-strip-select"
+            [(ngModel)]="caseStripPickerId"
+            (ngModelChange)="onCaseStripPick($event)"
+            aria-label="Select a case to link">
+      <option [ngValue]="null" disabled>Choose a case…</option>
+      <option *ngFor="let c of availableCases" [ngValue]="c.id">
+        {{ c.title || c.caseName || c.caseNumber || ('Case #' + c.id) }}
+      </option>
+    </select>
+    <button type="button"
+            class="case-strip-link"
+            (click)="cancelCaseStripPicker()">
+      Cancel
+    </button>
+  </div>
+
+  <div class="case-strip linked"
+       *ngIf="selectedCaseObject && !caseStripPickerOpen">
+    <span class="case-strip-ico linked-ico"><i class="ri-folder-check-line"></i></span>
+    <span class="case-strip-text">
+      <strong>{{ caseStripTitle }}</strong>
+      <span class="case-strip-pills">
+        <span class="case-strip-pill pa" *ngIf="selectedPracticeArea?.name">{{ selectedPracticeArea?.name }}</span>
+        <span class="case-strip-pill jur" *ngIf="selectedJurisdiction">{{ selectedJurisdiction }}</span>
+      </span>
+    </span>
+    <button type="button"
+            class="case-strip-link"
+            (click)="openCaseStripPicker()">
+      Change
+    </button>
+    <button type="button"
+            class="case-strip-cta"
+            (click)="openLinkedCase()">
+      <i class="ri-external-link-line"></i> View
+    </button>
+  </div>
+
+  <!-- ─── Connected 40px progress bar stepper ──────────────────────────── -->
+  <div class="wizard-progress">
+    <div class="wizard-connector">
+      <div class="wizard-connector-fill" [style.width.%]="connectorFillPct"></div>
+    </div>
+    <button
+      type="button"
+      class="wizard-step"
+      *ngFor="let s of visibleSteps"
+      [class.active]="currentStep === s.num"
+      [class.completed]="currentStep > s.num"
+      [disabled]="s.num > currentStep && !((s.num === 2 && canAdvanceFrom1()) || (s.num === 3 && canAdvanceFrom1() && canAdvanceFrom2()) || (s.num === 4 && canAdvanceFrom1() && canAdvanceFrom2() && canAdvanceFrom3()))"
+      (click)="goTo(s.num)">
+      <span class="wizard-step-circle">
+        <i *ngIf="currentStep > s.num" class="ri-check-line"></i>
+        <span *ngIf="currentStep <= s.num">{{ s.num }}</span>
+      </span>
+      <span class="wizard-step-label">{{ s.label }}</span>
+    </button>
+  </div>
+
+  <!-- ═════════════════════════════ STEP 1 ═════════════════════════════ -->
+  <div class="wizard-body" *ngIf="currentStep === 1">
+    <div class="step-header text-center">
+      <h4 class="h6 mb-1">What practice area is this document for?</h4>
+      <p class="text-muted small mb-0">Practice area + jurisdiction determines which template the AI uses and which statutes it cites.</p>
+    </div>
+
+    <div
+      class="inherited-notice"
+      *ngIf="inheritedPracticeAreaSlug && selectedPracticeArea?.slug === inheritedPracticeAreaSlug">
+      <i class="ri-information-line"></i>
+      <div>
+        Pre-selected <strong>{{ selectedPracticeArea?.name }}</strong> from the open case.
+        Click any other card to override.
+      </div>
+    </div>
+
+    <div class="practice-area-grid">
+      <button
+        type="button"
+        class="pa-card"
+        *ngFor="let pa of practiceAreas"
+        [class.selected]="selectedPracticeArea?.slug === pa.slug"
+        [class.inherited]="inheritedPracticeAreaSlug === pa.slug && selectedPracticeArea?.slug === pa.slug"
+        (click)="selectPracticeArea(pa)">
+        <div class="pa-icon"><i [class]="pa.icon"></i></div>
+        <div class="pa-name">{{ pa.name }}</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═════════════════════════════ STEP 2 ═════════════════════════════ -->
+  <div class="wizard-body" *ngIf="currentStep === 2">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <h4 class="h6 mb-0">Which {{ selectedPracticeArea?.name }} document do you need?</h4>
+      <div class="d-flex gap-2 align-items-center">
+        <span class="small text-muted">Practice Area:</span>
+        <span class="pa-pill">{{ selectedPracticeArea?.name }}</span>
+        <button type="button" class="btn btn-link p-0 small change-link" (click)="changePracticeArea()">change</button>
+      </div>
+    </div>
+
+    <input
+      type="text"
+      class="form-control form-control-sm mb-3 doctype-search"
+      placeholder="Search documents…"
+      [(ngModel)]="docTypeSearch"
+      [disabled]="!catalog?.hasCoverage">
+
+    <!-- Loading -->
+    <div class="catalog-loading" *ngIf="catalogLoading">
+      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+      <span>Loading {{ selectedPracticeArea?.name }} documents…</span>
+    </div>
+
+    <!-- Load error -->
+    <div class="catalog-error" *ngIf="catalogError && !catalogLoading">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ catalogError }}</span>
+      <button type="button" class="btn btn-link btn-sm" (click)="selectedPracticeArea && selectPracticeArea(selectedPracticeArea)">Retry</button>
+    </div>
+
+    <!-- Empty-state: practice area has zero template coverage -->
+    <div class="empty-pa-catalog" *ngIf="!catalogLoading && !catalogError && catalog && !catalog.hasCoverage">
+      <div class="empty-pa-icon"><i class="ri-magic-line"></i></div>
+      <h5>{{ catalog.practiceAreaName }} templates are coming soon</h5>
+      <p>{{ catalog.emptyStateMessage || 'We have not yet tailored document templates for this practice area. You can still browse your organization’s custom templates or start from a blank document.' }}</p>
+      <div class="empty-pa-actions">
+        <button type="button" class="btn btn-outline-primary btn-sm" (click)="openTemplateLibrary()">
+          <i class="ri-folder-open-line"></i> Explore the Template Library
+        </button>
+        <button type="button" class="btn btn-link btn-sm" (click)="useBlankDocument()">
+          Start from a blank document
+        </button>
+      </div>
+    </div>
+
+    <!-- Tier 1 / Tier 2 / Tier 3 -->
+    <ng-container *ngIf="!catalogLoading && !catalogError && catalog?.hasCoverage">
+      <section
+        class="catalog-tier"
+        *ngFor="let tier of catalog!.tiers"
+        [class.tier-collapsed]="tier.tierRank > 1 && !isTierExpanded(tier.tierRank)">
+        <header
+          class="tier-header"
+          [class.tier-clickable]="tier.tierRank > 1"
+          (click)="toggleTier(tier.tierRank)">
+          <span class="tier-label">
+            <span class="tier-rank-dot rank-{{ tier.tierRank }}">{{ tier.tierRank }}</span>
+            {{ tier.tierName }}
+          </span>
+          <span class="tier-hint" *ngIf="tier.tierRank === 1">Most attorneys use these daily</span>
+          <span class="tier-count">{{ tier.types.length }}</span>
+          <i class="ri-arrow-down-s-line tier-chevron" *ngIf="tier.tierRank > 1"></i>
+        </header>
+        <div class="tier-body" *ngIf="isTierExpanded(tier.tierRank)">
+          <div class="doctype-grid">
+            <button
+              type="button"
+              class="doctype-card"
+              *ngFor="let t of filterTierEntries(tier)"
+              [class.selected]="selectedEntry?.documentTypeUiId === t.documentTypeUiId"
+              (click)="selectCatalogEntry(t)">
+              <div class="icon-wrap-sm"><i [class]="entryIcon(t)"></i></div>
+              <div class="doctype-body">
+                <div class="doctype-name">
+                  {{ t.displayName }}
+                  <span
+                    class="generic-badge"
+                    *ngIf="!t.hasSpecificTemplate"
+                    ngbTooltip="Generic template — not yet tailored for this practice area + jurisdiction. The AI will still draft from it, but citations may be generic placeholders."
+                    container="body"
+                    [openDelay]="300">Generic</span>
+                  <span class="requires-config-badge" *ngIf="needsConfig(t)">REQUIRES CONFIG</span>
+                </div>
+                <div class="doctype-desc" *ngIf="entryDesc(t)">{{ entryDesc(t) }}</div>
+              </div>
+            </button>
+          </div>
+          <div class="tier-empty-match" *ngIf="docTypeSearch.trim() && !tierHasMatches(tier)">
+            No {{ tier.tierName | lowercase }} documents match.
+          </div>
+        </div>
+      </section>
+
+      <!-- Search yielded zero results across every tier -->
+      <div class="empty-search-state" *ngIf="!hasAnyDocTypeMatches">
+        <i class="ri-search-line"></i>
+        <div class="mt-2">No documents match "<strong>{{ docTypeSearch }}</strong>"</div>
+        <button type="button" class="btn btn-link btn-sm mt-1" (click)="docTypeSearch = ''">Clear search</button>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- ═════════════════════════════ STEP 3 ═════════════════════════════ -->
+  <div class="wizard-body" *ngIf="currentStep === 3">
+    <!-- Jurisdiction selector (matrix driver) -->
+    <div class="jur-selector">
+      <div class="jur-label">
+        <i class="ri-map-pin-line"></i> Jurisdiction
+        <i class="ri-question-line jur-tip"
+           ngbTooltip="Drives which state citation pack and template the AI resolves. Pick the court that will receive the document."
+           container="body"
+           [openDelay]="300"
+           aria-label="Why jurisdiction matters"></i>
+      </div>
+      <select
+        [ngModel]="selectedJurisdiction"
+        (ngModelChange)="onJurisdictionChange($event)">
+        <option value="" disabled>Select jurisdiction…</option>
+        <option *ngFor="let j of jurisdictions" [ngValue]="j.name">{{ j.name }}</option>
+      </select>
+    </div>
+    <div class="small text-muted mb-3 jur-hint">
+      <i class="ri-information-line"></i>
+      Jurisdiction determines the citation pack and which template the cascade resolves.
+    </div>
+
+    <!-- Court level (shown for court filings only — always visible for simplicity) -->
+    <div class="mb-3">
+      <label class="form-label">
+        Court Level
+        <i class="ri-question-line jur-tip"
+           ngbTooltip="Used for caption formatting and citation style. Leave on Default for most state-court filings."
+           container="body"
+           [openDelay]="300"
+           aria-label="About court level"></i>
+      </label>
+      <select class="form-select form-select-sm" [(ngModel)]="selectedCourtLevel">
+        <option *ngFor="let cl of courtLevels" [ngValue]="cl.code">{{ cl.name }}</option>
+      </select>
+    </div>
+
+    <!-- LOR-specific config -->
+    <div class="config-section" *ngIf="selectedDocType?.id === 'letter-of-representation'">
+      <h4 class="h6 mb-3">Configure your Letter of Representation</h4>
+      <div class="row g-4">
+        <div class="col-md-5">
+          <div class="lor-section-title">Who is this letter to?</div>
+          <label
+            class="lor-recipient-option"
+            *ngFor="let r of lorRecipients"
+            [class.selected]="lorRecipient === r.value"
+            [ngbTooltip]="r.tooltip"
+            placement="right"
+            container="body"
+            [openDelay]="400">
+            <input
+              type="radio"
+              name="lor-recipient"
+              class="form-check-input"
+              [value]="r.value"
+              [checked]="lorRecipient === r.value"
+              (change)="onRecipientChange(r.value)">
+            <div>
+              <div class="label-main">
+                {{ r.label }}
+                <i class="ri-check-line text-success ms-1" *ngIf="lorRecipient === r.value"></i>
+              </div>
+              <div class="label-sub">{{ r.hint }}</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="col-md-7">
+          <div class="lor-section-title">
+            What are you requesting?
+            <span class="text-muted fw-normal small">(select all that apply)</span>
+          </div>
+
+          <div
+            class="lor-purpose-item"
+            *ngFor="let p of allPurposesWithState"
+            [class.required]="p.required"
+            [class.disabled]="!p.enabled && !p.required"
+            [ngbTooltip]="p.tooltip"
+            placement="left"
+            container="body"
+            [openDelay]="400">
+            <input
+              type="checkbox"
+              class="form-check-input mt-1"
+              [checked]="p.required || lorPurposes.indexOf(p.value) >= 0"
+              [disabled]="!p.enabled || p.required"
+              (change)="togglePurpose(p.value)">
+            <div class="flex-grow-1">
+              <strong>{{ p.label }}</strong>
+              <span class="required-badge" *ngIf="p.required">ALWAYS INCLUDED</span>
+              <div class="purpose-hint" *ngIf="p.lockHint">
+                <i class="ri-lock-line"></i> {{ p.lockHint }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info preview: ~3 paragraphs + which insurance block will be used -->
+      <div class="wizard-info-alert mt-3">
+        <i class="ri-information-line"></i>
+        <div>
+          <strong>Preview:</strong>
+          This letter will have ~3 paragraphs (notice +
+          <span *ngIf="lorPurposes.length > 1; else singlePurposeTpl">{{ lorPurposes.length - 1 }} request{{ lorPurposes.length - 1 > 1 ? 's' : '' }}</span>
+          <ng-template #singlePurposeTpl>representation only</ng-template>
+          + contact).
+          <ng-container [ngSwitch]="lorRecipient">
+            <ng-container *ngSwitchCase="'defendant_insurer'">Defendant's insurance info from the case will be used.</ng-container>
+            <ng-container *ngSwitchCase="'client_insurer'">Client's insurance info from the case will be used.</ng-container>
+            <ng-container *ngSwitchCase="'defendant_counsel'">Opposing counsel contact info from the case will be used.</ng-container>
+            <ng-container *ngSwitchCase="'other_party'">Recipient details should be added in the instructions below.</ng-container>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- Warning: client insurance missing on the linked case -->
+      <div class="wizard-warning-alert mt-2" *ngIf="clientInsuranceMissing">
+        <i class="ri-error-warning-line"></i>
+        <div>
+          <strong>Heads up:</strong>
+          Your client's insurance fields on this case are empty. Without them the letter will have placeholders.
+          <a (click)="cancel()" class="update-case-link">Update case →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Motion to Dismiss-specific config -->
+    <div class="config-section" *ngIf="selectedDocType?.id === 'motion-dismiss'">
+      <h4 class="h6 mb-3">Grounds for dismissal <span class="text-muted fw-normal small">(select all that apply)</span></h4>
+      <div class="checkbox-chips">
+        <label
+          class="chip"
+          *ngFor="let g of mtdGrounds"
+          [class.selected]="mtdSelectedGrounds.indexOf(g) >= 0">
+          <input
+            type="checkbox"
+            [checked]="mtdSelectedGrounds.indexOf(g) >= 0"
+            (change)="toggleGround(g)">
+          <span>{{ g }}</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Interrogatories-specific config -->
+    <div class="config-section" *ngIf="selectedDocType?.id === 'interrogatories'">
+      <h4 class="h6 mb-3">Interrogatory scope</h4>
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label class="form-label">Number of questions</label>
+          <input
+            type="number"
+            class="form-control form-control-sm"
+            min="1" max="50"
+            [(ngModel)]="interrogCount">
+        </div>
+      </div>
+      <label class="form-label">Focus areas <span class="text-muted fw-normal small">(select all that apply)</span></label>
+      <div class="checkbox-chips">
+        <label
+          class="chip"
+          *ngFor="let t of interrogTopics"
+          [class.selected]="interrogSelectedTopics.indexOf(t) >= 0">
+          <input
+            type="checkbox"
+            [checked]="interrogSelectedTopics.indexOf(t) >= 0"
+            (change)="toggleTopic(t)">
+          <span>{{ t }}</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Demand letter uses jurisdiction only; no extra config -->
+  </div>
+
+  <!-- ═════════════════════════════ STEP 4 ═════════════════════════════ -->
+  <div class="wizard-body" *ngIf="currentStep === 4">
+    <div class="step-header">
+      <h4 class="h6 mb-1">Review & generate</h4>
+      <p class="text-muted small mb-0">Attach a case, add any specific instructions, and generate the draft.</p>
+    </div>
+
+    <div class="row g-4">
+      <!-- LEFT: inputs + template resolution -->
+      <div class="col-md-7">
+        <!-- Case selector -->
+        <div class="mb-3" *ngIf="availableCases?.length">
+          <label class="form-label">Case</label>
+          <select
+            class="form-select form-select-sm"
+            [ngModel]="selectedCaseId"
+            (ngModelChange)="onCaseChange($event)">
+            <option [ngValue]="null">— No case attached —</option>
+            <option *ngFor="let c of availableCases" [ngValue]="c.id">
+              {{ c.title || c.caseNumber || ('Case #' + c.id) }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Prompt -->
+        <div class="mb-3">
+          <label class="form-label">Additional instructions <span class="text-muted fw-normal small">(optional)</span></label>
+          <textarea
+            class="form-control"
+            rows="4"
+            [ngModel]="prompt"
+            (ngModelChange)="onPromptInput($event)"
+            placeholder="Any specific facts, tone, length, or emphasis the AI should follow"></textarea>
+        </div>
+
+        <!-- Template resolution card -->
+        <div class="template-resolution-card">
+          <h6><i class="ri-magic-line"></i> Template resolution</h6>
+          <div class="template-resolution-row">
+            <span class="label">Document</span>
+            <span class="value">{{ selectedDocType?.name }}</span>
+            <i class="ri-check-line check"></i>
+          </div>
+          <div class="template-resolution-row">
+            <span class="label">Practice Area</span>
+            <span class="value">{{ selectedPracticeArea?.name }}</span>
+            <i class="ri-check-line check"></i>
+          </div>
+          <div class="template-resolution-row">
+            <span class="label">Jurisdiction</span>
+            <span class="value">{{ selectedJurisdiction || '—' }}</span>
+            <i class="ri-check-line check" *ngIf="selectedJurisdiction"></i>
+          </div>
+          <div class="template-resolution-row" *ngIf="selectedCourtLevel && selectedCourtLevel !== 'DEFAULT'">
+            <span class="label">Court Level</span>
+            <span class="value">{{ selectedCourtLevel }}</span>
+          </div>
+          <div class="template-resolution-row">
+            <span class="label">Resolved template</span>
+            <span class="value template-target">{{ resolvedTemplatePreview }}</span>
+            <i class="ri-check-line check"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: sticky summary -->
+      <div class="col-md-5">
+        <div class="summary-card">
+          <h6>Summary</h6>
+
+          <div class="summary-row">
+            <span class="summary-label">Practice Area</span>
+            <span class="summary-value">
+              <span class="pill purple" *ngIf="selectedPracticeArea">{{ selectedPracticeArea.name }}</span>
+              <span class="text-muted" *ngIf="!selectedPracticeArea">—</span>
+            </span>
+          </div>
+
+          <div class="summary-row">
+            <span class="summary-label">Jurisdiction</span>
+            <span class="summary-value">
+              <span class="pill info" *ngIf="selectedJurisdiction">{{ selectedJurisdiction }}</span>
+              <span class="text-muted" *ngIf="!selectedJurisdiction">—</span>
+            </span>
+          </div>
+
+          <div class="summary-row">
+            <span class="summary-label">Document</span>
+            <span class="summary-value fw-semibold">{{ selectedDocType?.name || '—' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="selectedDocType?.id === 'letter-of-representation'">
+            <span class="summary-label">Recipient</span>
+            <span class="summary-value">{{ selectedRecipientLabel || '—' }}</span>
+          </div>
+
+          <div class="summary-row" *ngIf="selectedDocType?.id === 'letter-of-representation' && selectedPurposeLabels.length">
+            <span class="summary-label">Purposes</span>
+            <span class="summary-value purposes-col">
+              <span class="purpose-line" *ngFor="let l of selectedPurposeLabels">
+                <i class="ri-check-line"></i>{{ l }}
+              </span>
+            </span>
+          </div>
+
+          <div class="summary-row" *ngIf="selectedDocType?.id === 'motion-dismiss' && mtdSelectedGrounds.length">
+            <span class="summary-label">Grounds</span>
+            <span class="summary-value">{{ mtdSelectedGrounds.length }} selected</span>
+          </div>
+
+          <div class="summary-row" *ngIf="selectedDocType?.id === 'interrogatories'">
+            <span class="summary-label">Scope</span>
+            <span class="summary-value">{{ interrogCount }} · {{ interrogSelectedTopics.length }} topics</span>
+          </div>
+
+          <div class="summary-row">
+            <span class="summary-label">Case</span>
+            <span class="summary-value" *ngIf="selectedCaseObject; else noCaseTpl">
+              {{ selectedCaseObject.title || selectedCaseObject.caseNumber || ('Case #' + selectedCaseObject.id) }}
+            </span>
+            <ng-template #noCaseTpl><span class="text-muted">— not linked —</span></ng-template>
+          </div>
+
+          <div class="summary-row">
+            <span class="summary-label">Est. time</span>
+            <span class="summary-value text-muted fst-italic">~20–45s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════════════════════════ Nav bar ═════════════════════════════ -->
+  <div class="wizard-nav">
+    <button
+      type="button"
+      class="btn btn-sm btn-soft-secondary"
+      (click)="cancel()">
+      Cancel
+    </button>
+    <div class="flex-grow-1"></div>
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-secondary"
+      *ngIf="currentStep > 1"
+      (click)="prev()">
+      <i class="ri-arrow-left-line"></i> Back
+    </button>
+    <button
+      type="button"
+      class="btn btn-sm btn-primary"
+      *ngIf="currentStep < 4"
+      [disabled]="(currentStep === 1 && !canAdvanceFrom1()) || (currentStep === 2 && !canAdvanceFrom2()) || (currentStep === 3 && !canAdvanceFrom3())"
+      (click)="next()">
+      <ng-container *ngIf="currentStep === 1">Next: Choose Document Type</ng-container>
+      <ng-container *ngIf="currentStep === 2">Next: Configure Options</ng-container>
+      <ng-container *ngIf="currentStep === 3">Next: Review</ng-container>
+      <i class="ri-arrow-right-line"></i>
+    </button>
+    <button
+      type="button"
+      class="btn btn-sm btn-success"
+      *ngIf="currentStep === 4"
+      (click)="submit()">
+      <i class="ri-sparkling-2-line"></i> Generate Draft
+    </button>
+  </div>
+</div>

@@ -219,7 +219,9 @@
 
                 <!-- Practice Area Specific Fields -->
                 <div *ngIf="currentPracticeAreaSections.length > 0" class="mt-4">
-                  <div *ngFor="let section of currentPracticeAreaSections" class="pa-section">
+                  <div *ngFor="let row of practiceAreaSectionRows" class="row g-3 mb-2">
+                    <div [class]="row.length > 1 ? 'col-lg-6' : 'col-12'" *ngFor="let section of row">
+                    <div class="pa-section h-100">
                     <div class="pa-section-header">
                       <h6><i [class]="section.icon + ' me-1'" *ngIf="section.icon"></i>{{ section.title }}</h6>
                     </div>
@@ -278,8 +280,10 @@
                         </ng-container>
                       </div>
                     </div>
-                  </div>
-                </div>
+                    </div><!-- /.pa-section -->
+                    </div><!-- /.col-lg-6 or .col-12 -->
+                  </div><!-- /.row (paired sections) -->
+                </div><!-- /.mt-4 wrapper -->
 
                 <!-- Billing -->
                 <div class="mt-4">

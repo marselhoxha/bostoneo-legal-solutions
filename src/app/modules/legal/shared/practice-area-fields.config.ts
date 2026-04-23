@@ -12,6 +12,9 @@ export interface PracticeAreaSection {
   title: string;
   icon?: string;
   fields: PracticeAreaField[];
+  // Adjacent sections sharing the same pairGroup render side-by-side (col-lg-6 each) on desktop
+  // and stack vertically on mobile. Used e.g. to compare Defendant vs Client insurance for PIP/UIM.
+  pairGroup?: string;
 }
 
 export const PRACTICE_AREA_FIELDS: { [key: string]: PracticeAreaSection[] } = {
@@ -45,12 +48,29 @@ export const PRACTICE_AREA_FIELDS: { [key: string]: PracticeAreaSection[] } = {
       ]
     },
     {
-      title: 'Insurance Information',
+      title: "Defendant's Insurance (at-fault party)",
       icon: 'ri-shield-check-line',
+      pairGroup: 'pi-insurance',
       fields: [
-        { name: 'insuranceCompany', label: 'Insurance Company', type: 'text', colSize: 'col-md-4', placeholder: 'Enter insurance company' },
-        { name: 'insurancePolicyNumber', label: 'Policy Number', type: 'text', colSize: 'col-md-4', placeholder: 'Enter policy number' },
-        { name: 'insurancePolicyLimit', label: 'Policy Limit', type: 'currency', colSize: 'col-md-4', placeholder: '0.00' }
+        // col-md-6 inside a col-lg-6 parent = 2 per row on desktop, full width on narrow screens
+        { name: 'insuranceCompany', label: 'Insurance Company', type: 'text', colSize: 'col-md-6', placeholder: 'Enter defendant insurance company' },
+        { name: 'insurancePolicyNumber', label: 'Policy Number', type: 'text', colSize: 'col-md-6', placeholder: 'Enter policy number' },
+        { name: 'insurancePolicyLimit', label: 'Policy Limit', type: 'currency', colSize: 'col-md-6', placeholder: '0.00' },
+        { name: 'insuranceAdjusterName', label: 'Adjuster Name', type: 'text', colSize: 'col-md-6', placeholder: 'Enter adjuster name' },
+        { name: 'insuranceAdjusterEmail', label: 'Adjuster Email', type: 'text', colSize: 'col-md-6', placeholder: 'adjuster@example.com' },
+        { name: 'insuranceAdjusterPhone', label: 'Adjuster Phone', type: 'text', colSize: 'col-md-6', placeholder: '(555) 555-5555' }
+      ]
+    },
+    {
+      title: "Client's Insurance (for PIP / UIM)",
+      icon: 'ri-shield-user-line',
+      pairGroup: 'pi-insurance',
+      fields: [
+        { name: 'clientInsuranceCompany', label: 'Client Insurance Company', type: 'text', colSize: 'col-md-6', placeholder: "Enter client's insurer" },
+        { name: 'clientInsurancePolicyNumber', label: 'Client Policy Number', type: 'text', colSize: 'col-md-6', placeholder: 'Enter policy number' },
+        { name: 'clientInsuranceAdjusterName', label: 'Client Adjuster Name', type: 'text', colSize: 'col-md-6', placeholder: 'Enter adjuster name' },
+        { name: 'clientInsuranceAdjusterEmail', label: 'Client Adjuster Email', type: 'text', colSize: 'col-md-6', placeholder: 'adjuster@example.com' },
+        { name: 'clientInsuranceAdjusterPhone', label: 'Client Adjuster Phone', type: 'text', colSize: 'col-md-6', placeholder: '(555) 555-5555' }
       ]
     },
     {
@@ -148,7 +168,7 @@ export const PRACTICE_AREA_FIELDS: { [key: string]: PracticeAreaSection[] } = {
     }
   ],
 
-  'Immigration Law': [
+  'Immigration': [
     {
       title: 'Case Information',
       icon: 'ri-global-line',
@@ -179,7 +199,7 @@ export const PRACTICE_AREA_FIELDS: { [key: string]: PracticeAreaSection[] } = {
     }
   ],
 
-  'Real Estate Law': [
+  'Real Estate': [
     {
       title: 'Transaction Details',
       icon: 'ri-home-4-line',
@@ -245,16 +265,18 @@ export const TYPE_TO_PRACTICE_AREA: { [key: string]: string } = {
   'CIVIL': 'Personal Injury',
   'CRIMINAL': 'Criminal Defense',
   'FAMILY': 'Family Law',
-  'IMMIGRATION': 'Immigration Law',
-  'REAL_ESTATE': 'Real Estate Law',
+  'IMMIGRATION': 'Immigration',
+  'REAL_ESTATE': 'Real Estate',
   'INTELLECTUAL_PROPERTY': 'Intellectual Property',
 
   // Direct type name mappings (when type matches practice area name)
   'Personal Injury': 'Personal Injury',
   'Criminal Defense': 'Criminal Defense',
   'Family Law': 'Family Law',
-  'Immigration Law': 'Immigration Law',
-  'Real Estate Law': 'Real Estate Law',
+  'Immigration': 'Immigration',
+  'Immigration Law': 'Immigration',
+  'Real Estate': 'Real Estate',
+  'Real Estate Law': 'Real Estate',
   'Intellectual Property': 'Intellectual Property',
 
   // Related case types that map to practice areas
@@ -265,3 +287,30 @@ export const TYPE_TO_PRACTICE_AREA: { [key: string]: string } = {
   'Slip and Fall': 'Personal Injury',
   'Product Liability': 'Personal Injury'
 };
+
+/**
+ * Collapse a flat section list into an array of rows.
+ * Adjacent sections with the same `pairGroup` become a single row (rendered col-lg-6 each);
+ * every other section becomes a row of one (col-12). Order is preserved.
+ */
+export function groupPracticeAreaSections(sections: PracticeAreaSection[]): PracticeAreaSection[][] {
+  const rows: PracticeAreaSection[][] = [];
+  let i = 0;
+  while (i < sections.length) {
+    const s = sections[i];
+    if (s.pairGroup) {
+      const group: PracticeAreaSection[] = [s];
+      let j = i + 1;
+      while (j < sections.length && sections[j].pairGroup === s.pairGroup) {
+        group.push(sections[j]);
+        j++;
+      }
+      rows.push(group);
+      i = j;
+    } else {
+      rows.push([s]);
+      i++;
+    }
+  }
+  return rows;
+}

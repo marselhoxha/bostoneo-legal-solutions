@@ -1,11 +1,11 @@
 <!-- Page Title & Breadcrumb -->
 <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-  <h4 class="mb-sm-0">{{ isEditing ? 'Edit Case' : 'Case Details' }}</h4>
+  <h4 class="mb-sm-0">Case Details</h4>
   <div class="page-title-right">
     <ol class="breadcrumb m-0">
       <li class="breadcrumb-item"><a routerLink="/">Home</a></li>
       <li class="breadcrumb-item"><a routerLink="/legal/cases">Cases</a></li>
-      <li class="breadcrumb-item active">{{ isEditing ? 'Edit Case' : 'Case Details' }}</li>
+      <li class="breadcrumb-item active">Case Details</li>
     </ol>
   </div>
 </div>
@@ -97,10 +97,6 @@
         <!-- Right: Action Buttons -->
         <div class="col-lg-3 d-flex justify-content-end align-items-start case-header-actions-col">
           <div class="d-flex gap-2 case-header-buttons" style="flex-direction: row !important; flex-wrap: nowrap !important;">
-            <button class="btn btn-soft-primary d-flex align-items-center gap-2 px-3" (click)="toggleEdit()" style="flex: 1 1 auto;">
-              <i [class]="isEditing ? 'ri-close-line' : 'ri-pencil-line'"></i>
-              <span>{{ isEditing ? 'Cancel' : 'Edit Case' }}</span>
-            </button>
             <button class="btn btn-soft-danger d-flex align-items-center justify-content-center"
                     style="width: 38px; height: 38px; padding: 0; flex: 0 0 38px;"
                     (click)="deleteCase()">
@@ -224,8 +220,8 @@
         <div class="tab-pane fade show active" id="case-details-tab" role="tabpanel">
           <div class="case-details-view">
 
-            <!-- View Mode: Premium Case Information Layout -->
-            <div *ngIf="!isEditing" class="case-details-content">
+            <!-- Case Information Layout (inline per-section editing) -->
+            <div class="case-details-content">
 
               <!-- Case Overview Section -->
               <div class="details-section">
@@ -297,524 +293,197 @@
                 </div>
               </div>
 
-              <!-- Client & Court Information - Combined Card -->
-              <div class="details-section mt-4">
-                <div class="row g-0">
-                  <!-- Left Column: Client Information -->
-                  <div class="col-lg-6 combined-section-col">
-                    <div class="combined-section-inner">
-                      <div class="section-header-inline">
-                        <div class="section-icon section-icon-sm bg-success-subtle">
-                          <i class="ri-user-3-line text-success"></i>
+              <!-- Unified Sections (core + practice-area) — each editable inline -->
+              <ng-container>
+                <div class="row g-4 mt-4" *ngFor="let row of allSectionRows; trackBy: trackByRowKey">
+                  <div [class]="row.length > 1 ? 'col-lg-6' : 'col-12'" *ngFor="let section of row; trackBy: trackBySectionTitle">
+                    <div class="details-section h-100"
+                         [class.section-editing]="editingSections[section.title]"
+                         [class.section-paired]="row.length > 1"
+                         [class.section-empty]="!editingSections[section.title] && !sectionHasAnyData(section)"
+                         [class.section-just-saved]="justSavedSections[section.title]">
+
+                      <!-- Section header with inline Edit / Save / Cancel controls -->
+                      <div class="section-header">
+                        <div class="section-icon bg-primary-subtle">
+                          <i [class]="section.icon ? section.icon + ' text-primary' : 'ri-file-list-3-line text-primary'"></i>
                         </div>
                         <div class="section-title">
-                          <h6>Client Information</h6>
-                          <span class="section-subtitle">Contact details</span>
-                        </div>
-                      </div>
-
-                      <div class="client-profile">
-                        <div class="client-avatar">
-                          <span class="avatar-initials">{{ case.clientName?.charAt(0) || 'C' }}</span>
-                        </div>
-                        <div class="client-info">
-                          <h5 class="client-name">{{ case.clientName }}</h5>
-                          <span class="client-label">Primary Client</span>
-                        </div>
-                      </div>
-
-                      <div class="contact-list">
-                        <a href="mailto:{{ case.clientEmail }}" class="contact-item" *ngIf="case.clientEmail">
-                          <div class="contact-icon bg-primary-subtle">
-                            <i class="ri-mail-line text-primary"></i>
-                          </div>
-                          <div class="contact-details">
-                            <span class="contact-label">Email</span>
-                            <span class="contact-value">{{ case.clientEmail }}</span>
-                          </div>
-                          <i class="ri-arrow-right-s-line contact-arrow"></i>
-                        </a>
-
-                        <a href="tel:{{ case.clientPhone }}" class="contact-item" *ngIf="case.clientPhone">
-                          <div class="contact-icon bg-success-subtle">
-                            <i class="ri-phone-line text-success"></i>
-                          </div>
-                          <div class="contact-details">
-                            <span class="contact-label">Phone</span>
-                            <span class="contact-value">{{ case.clientPhone }}</span>
-                          </div>
-                          <i class="ri-arrow-right-s-line contact-arrow"></i>
-                        </a>
-
-                        <div class="contact-item empty-state" *ngIf="!case.clientEmail && !case.clientPhone">
-                          <i class="ri-information-line text-muted"></i>
-                          <span class="text-muted">No contact information available</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Right Column: Court Information -->
-                  <div class="col-lg-6 combined-section-col">
-                    <div class="combined-section-inner">
-                      <div class="section-header-inline">
-                        <div class="section-icon section-icon-sm bg-warning-subtle">
-                          <i class="ri-building-2-line text-warning"></i>
-                        </div>
-                        <div class="section-title">
-                          <h6>Court Information</h6>
-                          <span class="section-subtitle">Venue details</span>
-                        </div>
-                      </div>
-
-                      <div class="court-details">
-                        <div class="court-main" *ngIf="case?.courtInfo?.countyName">
-                          <div class="court-icon">
-                            <i class="ri-scales-3-line"></i>
-                          </div>
-                          <div class="court-info">
-                            <span class="court-label">County</span>
-                            <h5 class="court-name">{{ case.courtInfo.countyName }}</h5>
-                          </div>
-                        </div>
-
-                        <div class="court-meta">
-                          <div class="meta-item-detail" *ngIf="case?.courtInfo?.judgeName && !isClient">
-                            <i class="ri-user-star-line"></i>
-                            <div>
-                              <span class="meta-label">Presiding Judge</span>
-                              <span class="meta-value">{{ case.courtInfo.judgeName || 'N/A' }}</span>
-                            </div>
-                          </div>
-
-                          <div class="meta-item-detail">
-                            <i class="ri-door-open-line"></i>
-                            <div>
-                              <span class="meta-label">Courtroom</span>
-                              <span class="meta-value">{{ case?.courtInfo?.courtroom || 'N/A' }}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div class="empty-court" *ngIf="!case?.courtInfo?.countyName && !case?.courtInfo?.judgeName && !case?.courtInfo?.courtroom">
-                          <div class="empty-court-icon">
-                            <i class="ri-building-2-line"></i>
-                          </div>
-                          <span>No court assigned</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Important Dates Section -->
-              <div class="details-section mt-4">
-                <div class="section-header">
-                  <div class="section-icon bg-danger-subtle">
-                    <i class="ri-calendar-event-line text-danger"></i>
-                  </div>
-                  <div class="section-title">
-                    <h6>Important Dates</h6>
-                    <span class="section-subtitle">Key deadlines and hearings</span>
-                  </div>
-                </div>
-
-                <div class="dates-timeline">
-                  <div class="date-card date-filed">
-                    <div class="date-indicator">
-                      <div class="indicator-dot bg-info"></div>
-                      <div class="indicator-line"></div>
-                    </div>
-                    <div class="date-content">
-                      <div class="date-icon bg-info-subtle">
-                        <i class="ri-calendar-check-line text-info"></i>
-                      </div>
-                      <div class="date-info">
-                        <span class="date-label">Case Filed</span>
-                        <span class="date-value" *ngIf="case.filingDate">{{ case.filingDate | date:'EEEE, MMMM d, y':'UTC' }}</span>
-                        <span class="date-value text-muted" *ngIf="!case.filingDate">Not set</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="date-card date-hearing">
-                    <div class="date-indicator">
-                      <div class="indicator-dot bg-warning"></div>
-                      <div class="indicator-line"></div>
-                    </div>
-                    <div class="date-content">
-                      <div class="date-icon bg-warning-subtle">
-                        <i class="ri-calendar-2-line text-warning"></i>
-                      </div>
-                      <div class="date-info">
-                        <span class="date-label">Next Hearing</span>
-                        <span class="date-value" *ngIf="case.nextHearing">{{ case.nextHearing | date:'EEEE, MMMM d, y':'UTC' }}</span>
-                        <span class="date-value text-muted" *ngIf="!case.nextHearing">Not scheduled</span>
-                      </div>
-                      <span class="date-badge" [ngClass]="getHearingStatus(case.nextHearing).class" *ngIf="case.nextHearing">
-                        <i [class]="getHearingStatus(case.nextHearing).icon + ' me-1'"></i>{{ getHearingStatus(case.nextHearing).label }}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div class="date-card date-trial">
-                    <div class="date-indicator">
-                      <div class="indicator-dot bg-danger"></div>
-                    </div>
-                    <div class="date-content">
-                      <div class="date-icon bg-danger-subtle">
-                        <i class="ri-hammer-line text-danger"></i>
-                      </div>
-                      <div class="date-info">
-                        <span class="date-label">Trial Date</span>
-                        <span class="date-value" *ngIf="case.trialDate">{{ case.trialDate | date:'EEEE, MMMM d, y':'UTC' }}</span>
-                        <span class="date-value text-muted" *ngIf="!case.trialDate">Not scheduled</span>
-                      </div>
-                      <span class="date-badge" [ngClass]="getTrialStatus(case.trialDate).class" *ngIf="case.trialDate">
-                        <i [class]="getTrialStatus(case.trialDate).icon + ' me-1'"></i>{{ getTrialStatus(case.trialDate).label }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Practice Area Specific Information (View Mode) -->
-              <ng-container *ngIf="currentPracticeAreaSections.length > 0">
-                <div class="details-section mt-4" *ngFor="let section of currentPracticeAreaSections">
-                  <div class="section-header">
-                    <div class="section-icon bg-primary-subtle">
-                      <i [class]="section.icon ? section.icon + ' text-primary' : 'ri-file-list-3-line text-primary'"></i>
-                    </div>
-                    <div class="section-title">
-                      <h6>{{ section.title }}</h6>
-                      <span class="section-subtitle">Practice area specific details</span>
-                    </div>
-                  </div>
-
-                  <div class="info-grid">
-                    <ng-container *ngFor="let field of section.fields">
-                      <div class="info-item" *ngIf="getFieldValue(field.name) !== null && getFieldValue(field.name) !== undefined && getFieldValue(field.name) !== ''">
-                        <div class="info-icon-sm">
-                          <ng-container [ngSwitch]="field.type">
-                            <i *ngSwitchCase="'date'" class="ri-calendar-line"></i>
-                            <i *ngSwitchCase="'currency'" class="ri-money-dollar-circle-line"></i>
-                            <i *ngSwitchCase="'number'" class="ri-hashtag"></i>
-                            <i *ngSwitchCase="'checkbox'" class="ri-checkbox-circle-line"></i>
-                            <i *ngSwitchDefault class="ri-file-text-line"></i>
-                          </ng-container>
-                        </div>
-                        <div class="info-details">
-                          <span class="info-label">{{ field.label }}</span>
-                          <span class="info-value">
-                            <ng-container [ngSwitch]="field.type">
-                              <ng-container *ngSwitchCase="'currency'">
-                                ${{ getFieldValue(field.name) | number:'1.2-2' }}
-                              </ng-container>
-                              <ng-container *ngSwitchCase="'date'">
-                                {{ getFieldValue(field.name) | date:'mediumDate':'UTC' }}
-                              </ng-container>
-                              <ng-container *ngSwitchCase="'checkbox'">
-                                {{ getFieldValue(field.name) ? 'Yes' : 'No' }}
-                              </ng-container>
-                              <ng-container *ngSwitchCase="'select'">
-                                {{ getLabelForSelectValue(field, getFieldValue(field.name)) }}
-                              </ng-container>
-                              <ng-container *ngSwitchDefault>
-                                {{ getFieldValue(field.name) }}
-                              </ng-container>
+                          <h6>{{ section.title }}</h6>
+                          <span class="section-subtitle" *ngIf="!editingSections[section.title]">
+                            <ng-container *ngIf="sectionHasAnyData(section); else notFilledLabel">
+                              {{ sectionFilledCount(section) }} of {{ section.fields.length }} filled
                             </ng-container>
+                            <ng-template #notFilledLabel>Not yet filled</ng-template>
+                          </span>
+                          <span class="section-subtitle text-primary" *ngIf="editingSections[section.title]">
+                            Editing
                           </span>
                         </div>
+                        <div class="ms-auto d-flex align-items-center gap-2">
+                          <button *ngIf="!editingSections[section.title]"
+                                  type="button"
+                                  class="btn btn-sm btn-ghost-primary section-edit-btn"
+                                  (click)="enterSectionEdit(section)"
+                                  [attr.aria-label]="'Edit ' + section.title"
+                                  title="Edit section">
+                            <i class="ri-pencil-line"></i>
+                          </button>
+                          <ng-container *ngIf="editingSections[section.title]">
+                            <button type="button"
+                                    class="btn btn-sm btn-light"
+                                    [disabled]="savingSections[section.title]"
+                                    (click)="cancelSectionEdit(section)">
+                              Cancel
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-primary"
+                                    [disabled]="savingSections[section.title] || sectionEditForms[section.title]?.invalid"
+                                    (click)="saveSection(section)">
+                              <span *ngIf="savingSections[section.title]" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                              Save
+                            </button>
+                          </ng-container>
+                        </div>
                       </div>
-                    </ng-container>
+
+                      <!-- EDIT MODE: inline form matching section field config -->
+                      <form *ngIf="editingSections[section.title]"
+                            [formGroup]="sectionEditForms[section.title]"
+                            (ngSubmit)="saveSection(section)"
+                            class="section-edit-form">
+                        <div class="row g-3">
+                          <div *ngFor="let field of section.fields" [class]="field.colSize || 'col-md-6'">
+                            <label class="form-label fw-semibold small mb-1">
+                              {{ field.label }}<span class="text-danger" *ngIf="field.required"> *</span>
+                            </label>
+                            <ng-container [ngSwitch]="field.type">
+                              <input *ngSwitchCase="'text'"
+                                     type="text"
+                                     class="form-control form-control-sm"
+                                     [formControlName]="field.name"
+                                     [placeholder]="field.placeholder || ''">
+                              <textarea *ngSwitchCase="'textarea'"
+                                        class="form-control form-control-sm"
+                                        rows="3"
+                                        [formControlName]="field.name"
+                                        [placeholder]="field.placeholder || ''"></textarea>
+                              <div *ngSwitchCase="'currency'" class="input-group input-group-sm">
+                                <span class="input-group-text">$</span>
+                                <input type="number"
+                                       step="0.01"
+                                       class="form-control"
+                                       [formControlName]="field.name"
+                                       [placeholder]="field.placeholder || '0.00'">
+                              </div>
+                              <input *ngSwitchCase="'number'"
+                                     type="number"
+                                     class="form-control form-control-sm"
+                                     [formControlName]="field.name"
+                                     [placeholder]="field.placeholder || ''">
+                              <input *ngSwitchCase="'date'"
+                                     type="text"
+                                     class="form-control form-control-sm"
+                                     [id]="sectionFieldId(section, field)"
+                                     [placeholder]="field.placeholder || 'Select date'">
+                              <select *ngSwitchCase="'select'"
+                                      class="form-select form-select-sm"
+                                      [formControlName]="field.name">
+                                <option value="">-- Select --</option>
+                                <option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</option>
+                              </select>
+                              <div *ngSwitchCase="'checkbox'" class="form-check mt-1">
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       [id]="sectionFieldId(section, field)"
+                                       [formControlName]="field.name">
+                                <label class="form-check-label small" [for]="sectionFieldId(section, field)">
+                                  {{ field.placeholder || 'Yes' }}
+                                </label>
+                              </div>
+                            </ng-container>
+                          </div>
+                        </div>
+                        <div *ngIf="sectionErrors[section.title]" class="alert alert-danger py-2 px-3 mt-3 mb-0 small">
+                          <i class="ri-error-warning-line me-1"></i>{{ sectionErrors[section.title] }}
+                        </div>
+                      </form>
+
+                      <!-- VIEW MODE: at least one field populated -->
+                      <!-- Paired sections use a compact definition-list (label + value per row) so -->
+                      <!-- side-by-side cards stay readable; standalone sections keep the tile grid. -->
+                      <ng-container *ngIf="!editingSections[section.title] && sectionHasAnyData(section)">
+
+                        <!-- Compact list for PAIRED sections (col-lg-6 parent) -->
+                        <dl class="section-kv-list mb-0" *ngIf="row.length > 1">
+                          <ng-container *ngFor="let field of section.fields; trackBy: trackByFieldName">
+                            <div class="kv-row" [class.kv-row-empty]="isFieldEmpty(field.name)">
+                              <dt class="kv-label">{{ field.label }}</dt>
+                              <dd class="kv-value">
+                                <ng-container *ngIf="!isFieldEmpty(field.name); else emptyDash" [ngSwitch]="field.type">
+                                  <ng-container *ngSwitchCase="'currency'">${{ getFieldValue(field.name) | number:'1.2-2' }}</ng-container>
+                                  <ng-container *ngSwitchCase="'date'">{{ getFieldValue(field.name) | date:'mediumDate':'UTC' }}</ng-container>
+                                  <ng-container *ngSwitchCase="'checkbox'">{{ getFieldValue(field.name) ? 'Yes' : 'No' }}</ng-container>
+                                  <ng-container *ngSwitchCase="'select'">{{ getLabelForSelectValue(field, getFieldValue(field.name)) }}</ng-container>
+                                  <ng-container *ngSwitchDefault>{{ getFieldValue(field.name) }}</ng-container>
+                                </ng-container>
+                                <ng-template #emptyDash><span class="text-muted">—</span></ng-template>
+                              </dd>
+                            </div>
+                          </ng-container>
+                        </dl>
+
+                        <!-- Tile grid for FULL-WIDTH sections -->
+                        <div class="info-grid" *ngIf="row.length === 1">
+                          <ng-container *ngFor="let field of section.fields; trackBy: trackByFieldName">
+                            <div class="info-item" *ngIf="!isFieldEmpty(field.name)">
+                              <div class="info-icon-sm">
+                                <ng-container [ngSwitch]="field.type">
+                                  <i *ngSwitchCase="'date'" class="ri-calendar-line"></i>
+                                  <i *ngSwitchCase="'currency'" class="ri-money-dollar-circle-line"></i>
+                                  <i *ngSwitchCase="'number'" class="ri-hashtag"></i>
+                                  <i *ngSwitchCase="'checkbox'" class="ri-checkbox-circle-line"></i>
+                                  <i *ngSwitchDefault class="ri-file-text-line"></i>
+                                </ng-container>
+                              </div>
+                              <div class="info-details">
+                                <span class="info-label">{{ field.label }}</span>
+                                <span class="info-value">
+                                  <ng-container [ngSwitch]="field.type">
+                                    <ng-container *ngSwitchCase="'currency'">${{ getFieldValue(field.name) | number:'1.2-2' }}</ng-container>
+                                    <ng-container *ngSwitchCase="'date'">{{ getFieldValue(field.name) | date:'mediumDate':'UTC' }}</ng-container>
+                                    <ng-container *ngSwitchCase="'checkbox'">{{ getFieldValue(field.name) ? 'Yes' : 'No' }}</ng-container>
+                                    <ng-container *ngSwitchCase="'select'">{{ getLabelForSelectValue(field, getFieldValue(field.name)) }}</ng-container>
+                                    <ng-container *ngSwitchDefault>{{ getFieldValue(field.name) }}</ng-container>
+                                  </ng-container>
+                                </span>
+                              </div>
+                            </div>
+                          </ng-container>
+                        </div>
+
+                      </ng-container>
+
+                      <!-- EMPTY MODE: compact placeholder with + Add CTA -->
+                      <div *ngIf="!editingSections[section.title] && !sectionHasAnyData(section)"
+                           class="section-empty-state text-center py-3">
+                        <div class="text-muted small mb-2">
+                          <i class="ri-information-line me-1"></i>
+                          No details captured yet.
+                        </div>
+                        <button type="button"
+                                class="btn btn-sm btn-soft-primary"
+                                (click)="enterSectionEdit(section)">
+                          <i class="ri-add-line me-1"></i>Add details
+                        </button>
+                      </div>
+
+                    </div>
                   </div>
                 </div>
               </ng-container>
 
             </div>
-
-          <!-- Edit Mode -->
-          <form [formGroup]="editForm" (ngSubmit)="saveCase()" *ngIf="isEditing" class="case-details-edit">
-            <div class="row g-4">
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold text-white-dark">Case Number</label>
-                  <input type="text" class="form-control" formControlName="caseNumber" placeholder="Enter case number">
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold text-white-dark">Status</label>
-                  <select class="form-select" formControlName="status">
-                    <option *ngFor="let status of caseStatuses" [ngValue]="status">{{ status }}</option>
-                  </select>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold text-white-dark">Title</label>
-                  <input type="text" class="form-control" formControlName="title" placeholder="Enter case title">
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold text-white-dark">Client</label>
-                  <input type="text" class="form-control" formControlName="clientName" placeholder="Enter client name">
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold text-white-dark">Client Email</label>
-                  <input type="email" class="form-control" formControlName="clientEmail" placeholder="Enter client email">
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold text-white-dark">Client Phone</label>
-                  <input type="text" class="form-control" formControlName="clientPhone" placeholder="Enter client phone">
-                </div>
-              </div>
-              <div class="col-12">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold text-white-dark">Client Address</label>
-                  <textarea class="form-control" rows="2" formControlName="clientAddress" placeholder="Enter client address"></textarea>
-                </div>
-              </div>
-              <div class="col-12">
-                <div class="mb-3">
-                  <label class="form-label fw-semibold text-white-dark">Description</label>
-                  <textarea class="form-control" rows="3" formControlName="description" placeholder="Enter case description"></textarea>
-                </div>
-              </div>
-            </div>
-            
-            <div class="row mt-4">
-              <div class="col-12">
-                <div class="card border shadow-none">
-                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
-                    <h5 class="card-title mb-0 text-white-dark">
-                      <i class="ri-building-2-line align-middle me-2 text-primary"></i>
-                      Court Information
-                    </h5>
-                  </div>
-                  <div class="card-body">
-                    <div class="row g-3">
-                      <div class="col-md-6">
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">County Name</label>
-                          <input type="text" class="form-control" formControlName="countyName" placeholder="Enter county name">
-                        </div>
-                      </div>
-                      <div class="col-md-6">
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">Judge</label>
-                          <input type="text" class="form-control" formControlName="judgeName" placeholder="Enter judge name">
-                        </div>
-                      </div>
-                      <div class="col-md-6">
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">Courtroom</label>
-                          <input type="text" class="form-control" formControlName="courtroom" placeholder="Enter courtroom">
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="row mt-4">
-              <div class="col-12">
-                <div class="card border shadow-none">
-                  <div class="card-header bg-light-subtle border-bottom-dashed py-3">
-                    <h5 class="card-title mb-0 text-white-dark">
-                      <i class="ri-calendar-event-line align-middle me-2 text-primary"></i>
-                      Important Dates
-                    </h5>
-                  </div>
-                  <div class="card-body">
-                    <div class="row g-3">
-                      <div class="col-md-4">
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">Filing Date</label>
-                          <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0">
-                              <i class="ri-calendar-line align-middle"></i>
-                            </span>
-                            <input type="text" class="form-control border-start-0 flatpickr-input" 
-                                  id="filingDate" 
-                                  formControlName="filingDate"
-                                  placeholder="Select filing date"
-                                  #filingDate>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-md-4">
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">Next Hearing Date</label>
-                          <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0">
-                              <i class="ri-calendar-line align-middle"></i>
-                            </span>
-                            <input type="text" class="form-control border-start-0 flatpickr-input" 
-                                  id="nextHearing" 
-                                  formControlName="nextHearing"
-                                  placeholder="Select next hearing date"
-                                  #nextHearing>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-md-4">
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold text-white-dark">Trial Date</label>
-                          <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0">
-                              <i class="ri-calendar-line align-middle"></i>
-                            </span>
-                            <input type="text" class="form-control border-start-0 flatpickr-input" 
-                                  id="trialDate" 
-                                  formControlName="trialDate"
-                                  placeholder="Select trial date"
-                                  #trialDate>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Practice Area Specific Fields (Edit Mode) -->
-            <ng-container *ngIf="currentPracticeAreaSections.length > 0">
-              <div class="row mt-4" *ngFor="let section of currentPracticeAreaSections">
-                <div class="col-12">
-                  <div class="card border shadow-none">
-                    <div class="card-header bg-soft-primary">
-                      <h5 class="card-title mb-0">
-                        <i [class]="section.icon ? section.icon + ' align-middle me-2' : 'ri-file-list-3-line align-middle me-2'"></i>
-                        {{ section.title }}
-                      </h5>
-                    </div>
-                    <div class="card-body">
-                      <div class="row g-3">
-                        <ng-container *ngFor="let field of section.fields">
-                          <div [class]="field.colSize || 'col-md-6'">
-                            <div class="mb-3">
-                              <!-- Text Input -->
-                              <ng-container *ngIf="field.type === 'text'">
-                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <input type="text" class="form-control" [id]="'pa_edit_' + field.name"
-                                  [formControlName]="field.name"
-                                  [placeholder]="field.placeholder || ''">
-                              </ng-container>
-
-                              <!-- Textarea -->
-                              <ng-container *ngIf="field.type === 'textarea'">
-                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <textarea class="form-control" [id]="'pa_edit_' + field.name" rows="3"
-                                  [formControlName]="field.name"
-                                  [placeholder]="field.placeholder || ''"></textarea>
-                              </ng-container>
-
-                              <!-- Select -->
-                              <ng-container *ngIf="field.type === 'select'">
-                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <select class="form-select" [id]="'pa_edit_' + field.name" [formControlName]="field.name">
-                                  <option value="">Select {{ field.label }}</option>
-                                  <option *ngFor="let option of field.options" [value]="option.value">
-                                    {{ option.label }}
-                                  </option>
-                                </select>
-                              </ng-container>
-
-                              <!-- Date -->
-                              <ng-container *ngIf="field.type === 'date'">
-                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <div class="input-group">
-                                  <span class="input-group-text bg-light border-end-0">
-                                    <i class="ri-calendar-line align-middle"></i>
-                                  </span>
-                                  <input type="text" class="form-control border-start-0 flatpickr-input"
-                                    [id]="'pa_edit_' + field.name"
-                                    [formControlName]="field.name"
-                                    [placeholder]="field.placeholder || 'Select date'">
-                                </div>
-                              </ng-container>
-
-                              <!-- Currency -->
-                              <ng-container *ngIf="field.type === 'currency'">
-                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <div class="input-group">
-                                  <span class="input-group-text bg-light border-end-0">$</span>
-                                  <input type="number" class="form-control border-start-0" [id]="'pa_edit_' + field.name"
-                                    [formControlName]="field.name"
-                                    [placeholder]="field.placeholder || '0.00'"
-                                    step="0.01" min="0">
-                                </div>
-                              </ng-container>
-
-                              <!-- Number -->
-                              <ng-container *ngIf="field.type === 'number'">
-                                <label [for]="'pa_edit_' + field.name" class="form-label fw-semibold text-white-dark">
-                                  {{ field.label }}
-                                  <span class="text-danger" *ngIf="field.required">*</span>
-                                </label>
-                                <input type="number" class="form-control" [id]="'pa_edit_' + field.name"
-                                  [formControlName]="field.name"
-                                  [placeholder]="field.placeholder || '0'">
-                              </ng-container>
-
-                              <!-- Checkbox -->
-                              <ng-container *ngIf="field.type === 'checkbox'">
-                                <div class="form-check mt-4">
-                                  <input class="form-check-input" type="checkbox" [id]="'pa_edit_' + field.name"
-                                    [formControlName]="field.name">
-                                  <label class="form-check-label fw-semibold text-white-dark" [for]="'pa_edit_' + field.name">
-                                    {{ field.label }}
-                                    <span class="text-danger" *ngIf="field.required">*</span>
-                                  </label>
-                                </div>
-                              </ng-container>
-                            </div>
-                          </div>
-                        </ng-container>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </ng-container>
-
-            <div class="text-end mt-4">
-              <div class="d-flex justify-content-end gap-2">
-                <button type="button" class="btn btn-soft-danger btn-animation waves-effect waves-light" (click)="onCancel()">
-                  <i class="ri-close-line align-bottom me-1"></i>
-                  Cancel
-                </button>
-                <button type="submit" class="btn btn-soft-primary btn-animation waves-effect waves-light" [disabled]="!editForm.valid">
-                  <i class="ri-save-line align-bottom me-1"></i>
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          </form>
         </div>
       </div>
       <!-- End of Case Details Tab -->

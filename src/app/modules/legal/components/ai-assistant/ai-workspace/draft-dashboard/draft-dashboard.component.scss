@@ -1,0 +1,865 @@
+// LegiDraft dashboard (arrival state).
+// Typography matches the LegiSpace welcome screen (ai-workspace.component.scss
+// `.welcome-title` / `.action-card`) so users crossing from welcome → LegiDraft
+// see the same type system: light-weight display sans-serif, -apple-system/Inter
+// stack, tight tracking. All colors use var(--vz-*) tokens with hex fallback so
+// [data-bs-theme='dark'] flips cleanly.
+
+$legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+                       Roboto, "Helvetica Neue", Arial, sans-serif;
+
+:host { display: block; }
+
+.draft-dashboard {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0.5rem 0 1.5rem;
+  font-family: $legidraft-font-stack;
+}
+
+// ── Linked-case chip ──────────────────────────────────────────────────────
+// Sits above the welcome row so the attorney can't miss which matter a draft
+// is grounded in. Split into two tap-targets: `.lc-body` navigates to the
+// case detail page (it's the *context anchor*, not just a label), and
+// `.lc-clear` wipes the link. Practice-area accent on the left rail keys the
+// chip to the same color family as the template mini-cards.
+.linked-case-chip {
+  // PA accent colors — driven by [data-accent] on the wrapper.
+  --lc-accent: var(--vz-primary, #405189);
+  --lc-accent-soft: rgba(64, 81, 137, 0.1);
+
+  &[data-accent="pi"]   { --lc-accent: #c026d3; --lc-accent-soft: rgba(192, 38, 211, 0.1); }
+  &[data-accent="fam"]  { --lc-accent: #f59e0b; --lc-accent-soft: rgba(245, 158, 11, 0.12); }
+  &[data-accent="crim"] { --lc-accent: #ef4444; --lc-accent-soft: rgba(239, 68, 68, 0.1); }
+  &[data-accent="civ"]  { --lc-accent: #3b82f6; --lc-accent-soft: rgba(59, 130, 246, 0.1); }
+  &[data-accent="imm"]  { --lc-accent: #14b8a6; --lc-accent-soft: rgba(20, 184, 166, 0.1); }
+
+  display: inline-flex;
+  align-items: stretch;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  background: linear-gradient(180deg,
+    var(--vz-card-bg, #ffffff) 0%,
+    var(--vz-light, #f8f9fb) 100%);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-radius: 0.65rem;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 0 0 1px rgba(15, 23, 42, 0.02);
+  max-width: 100%;
+  min-width: 0;
+  animation: lcFadeIn 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: $legidraft-font-stack;
+  overflow: hidden;
+  position: relative;
+
+  // Thicker PA-keyed left rail — the chip's identity marker.
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--lc-accent);
+  }
+
+  // ── Clickable body (navigates to case) ──
+  .lc-body {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.7rem 0.95rem 0.7rem 1.1rem;  // extra left to clear the rail
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    min-width: 0;
+    flex: 1 1 auto;
+    transition: background 160ms ease;
+    font-family: inherit;
+    color: inherit;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--lc-accent-soft);
+      outline: none;
+
+      .lc-go {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      .lc-go-text { opacity: 1; }
+    }
+
+    &:active { background: var(--lc-accent-soft); filter: brightness(0.98); }
+  }
+
+  .lc-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 0.5rem;
+    background: var(--lc-accent-soft);
+    color: var(--lc-accent);
+    flex-shrink: 0;
+
+    i { font-size: 1.05rem; line-height: 1; }
+  }
+
+  .lc-label {
+    display: inline-flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+
+    .lc-eyebrow {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--lc-accent);
+      line-height: 1;
+    }
+    .lc-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--vz-heading-color, #212529);
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 44ch;
+      letter-spacing: -0.005em;
+    }
+    .lc-subtitle {
+      font-size: 0.72rem;
+      font-weight: 400;
+      color: var(--vz-secondary-color, #878a99);
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 44ch;
+    }
+  }
+
+  .lc-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    padding-left: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .lc-jur {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: var(--lc-accent-soft);
+    color: var(--lc-accent);
+    white-space: nowrap;
+  }
+
+  // Return-icon hint. Hidden-ish by default, fades in on hover of .lc-body.
+  // ri-corner-up-left is the universal "return" glyph — signals "go back to
+  // where I came from" without needing a label.
+  .lc-go {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 0.3rem;
+    color: var(--lc-accent);
+    background: var(--lc-accent-soft);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 180ms ease, transform 180ms ease;
+
+    i { font-size: 0.95rem; line-height: 1; }
+  }
+
+  // ── Divider between body and × ──
+  .lc-divider {
+    width: 1px;
+    background: var(--vz-border-color, #e9ebec);
+    align-self: stretch;
+    margin: 0.35rem 0;
+  }
+
+  // ── Clear button ──
+  .lc-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    border: none;
+    background: transparent;
+    color: var(--vz-secondary-color, #878a99);
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
+    padding: 0;
+    flex-shrink: 0;
+
+    i { font-size: 1rem; line-height: 1; }
+
+    &:hover,
+    &:focus-visible {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      outline: none;
+    }
+  }
+}
+
+@keyframes lcFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// Narrow screens — drop the subtitle line.
+@media (max-width: 640px) {
+  .linked-case-chip {
+    .lc-label .lc-subtitle { display: none; }
+  }
+}
+
+// ── Welcome row ───────────────────────────────────────────────────────────
+// Mirrors `.welcome-title` from ai-workspace: light weight, tight letter-
+// spacing, Inter/system stack. Gives the arrival moment the same airy feel
+// as the LegiTool picker one click earlier.
+.welcome-row {
+  margin-bottom: 1.5rem;
+
+  .welcome-title {
+    font-family: $legidraft-font-stack;
+    font-size: 2rem;
+    font-weight: 300;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--vz-heading-color, #212529);
+    margin: 0 0 0.45rem;
+  }
+
+  .welcome-lead {
+    font-family: $legidraft-font-stack;
+    color: var(--vz-body-color, #74788d);
+    font-size: 1rem;
+    font-weight: 300;
+    line-height: 1.6;
+    margin: 0;
+    max-width: 62ch;
+    opacity: 0.75;
+  }
+}
+
+// ── Tile grid ─────────────────────────────────────────────────────────────
+// `minmax(0, Nfr)` forces tracks to honor their fraction by overriding the
+// default `min-width: auto` of grid items. Without it, a `<button>` child's
+// min-content can collapse its track on wide layouts — which is what caused
+// the "Start a new draft" headline to wrap letter-by-letter on big screens.
+.dd-tiles {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+  gap: 1.1rem;
+}
+
+// Primary tile — gradient AI CTA.
+// `width: 100%` + `min-width: 0` guarantees the <button> stretches across its
+// `minmax(0, 5fr)` grid track instead of collapsing to min-content.
+.tile-primary {
+  background: linear-gradient(135deg, var(--vz-primary, #405189) 0%, #5d6ea6 60%, #8fbfff 110%);
+  border-radius: 0.75rem;
+  padding: 1.75rem 1.6rem;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  border: none;
+  text-align: left;
+  font-family: $legidraft-font-stack;
+  width: 100%;
+  min-width: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 6px 20px rgba(64, 81, 137, 0.18);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 16px 36px rgba(64, 81, 137, 0.32);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 3px;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 62%);
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-position: -11px -11px;
+    mask-image: linear-gradient(135deg, transparent 0%, transparent 30%, #000 60%, #000 100%);
+    -webkit-mask-image: linear-gradient(135deg, transparent 0%, transparent 30%, #000 60%, #000 100%);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  > * { position: relative; z-index: 1; }
+
+  .tile-eyebrow {
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #dbe3f4;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+  }
+
+  // Matches `.welcome-title` proportions (light weight, tight tracking) but
+  // scaled for a hero CTA and set against the gradient. Weight 400 keeps the
+  // lightness without disappearing on colored glass.
+  .tile-title {
+    font-family: $legidraft-font-stack;
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1.1;
+    margin-bottom: 0.6rem;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+  }
+
+  .tile-desc {
+    color: #dbe3f4;
+    font-size: 0.9rem;
+    font-weight: 300;
+    line-height: 1.55;
+    margin-bottom: auto;
+    max-width: 44ch;
+    opacity: 0.9;
+  }
+
+  .tile-hints {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+
+    .chip {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      padding: 0.18rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.625rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+  }
+
+  .tile-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    background: #ffffff;
+    color: var(--vz-primary, #405189);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    align-self: flex-start;
+    margin-top: 0.75rem;
+    letter-spacing: 0.01em;
+  }
+}
+
+// Secondary tile — saved templates mini-grid.
+// `width: 100%` + `min-width: 0` mirror the primary tile so the 5fr/4fr ratio
+// is actually respected in the grid (see note on .dd-tiles).
+.tile-secondary {
+  background: var(--vz-card-bg, #ffffff);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-radius: 0.75rem;
+  padding: 1.55rem 1.35rem;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  font-family: $legidraft-font-stack;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    border-color: rgba(var(--vz-primary-rgb, 64, 81, 137), 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
+
+  .tile-eyebrow {
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--vz-secondary-color, #74788d);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.65rem;
+  }
+
+  // Matches `.welcome-title` language at ~60% size: light weight sans-serif
+  // for a quiet section header rather than a display-serif flourish.
+  .tile-title {
+    font-family: $legidraft-font-stack;
+    font-size: 1.4rem;
+    font-weight: 400;
+    line-height: 1.2;
+    margin-bottom: 0.4rem;
+    color: var(--vz-heading-color, #212529);
+    letter-spacing: -0.02em;
+  }
+
+  .tile-desc {
+    color: var(--vz-secondary-color, #74788d);
+    font-size: 0.85rem;
+    font-weight: 400;
+    line-height: 1.55;
+    margin-bottom: 0.85rem;
+  }
+
+  .tile-templates {
+    display: grid;
+    // `minmax(0, 1fr)` caps each column at the fraction — without it,
+    // `white-space: nowrap` on `.tpl-name` forces the inner grid to widen to
+    // each template name's full length, which would push the whole
+    // `.tile-secondary` out in the outer grid.
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin-bottom: 0.6rem;
+
+    // Parent feeds up to 4 templates. On medium screens only 2 fit without
+    // cramping the secondary tile; positions 3–4 are revealed at ≥1440px.
+    > .tpl-mini:nth-child(n + 3) { display: none; }
+  }
+
+  .tpl-mini {
+    background: var(--vz-light, #fafbfd);
+    border: 1px solid var(--vz-border-color, #e9ebec);
+    border-radius: 7px;
+    padding: 0.45rem 0.55rem;
+    transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    // Critical: `<button>` defaults to `min-width: auto`, which in a grid item
+    // means "never shrink below my min-content". Combined with `.tpl-name`'s
+    // `white-space: nowrap`, that min-content is the full untruncated template
+    // name — which was overflowing the card (see screenshot 2026-04-20 21:03).
+    // `min-width: 0` releases the button to honor its `minmax(0, 1fr)` track,
+    // and `overflow: hidden` + `max-width: 100%` make sure the ellipsis on
+    // `.tpl-name` can actually kick in instead of just visually clipping past
+    // the container border.
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+
+    &:hover {
+      background: var(--vz-primary-bg-subtle, #f0f4fc);
+      border-color: var(--vz-primary, #405189);
+      transform: translateY(-1px);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--vz-primary, #405189);
+      outline-offset: 2px;
+    }
+
+    .tpl-name {
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: var(--vz-heading-color, #212529);
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .tpl-meta {
+      font-size: 0.6rem;
+      color: var(--vz-secondary-color, #74788d);
+      margin-top: 0.2rem;
+      display: flex;
+      gap: 0.3rem;
+    }
+
+    .tpl-pill {
+      font-size: 0.62rem;
+      padding: 0.12rem 0.5rem;
+      border-radius: 999px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      text-transform: none;
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      // Practice-area variants (light-mode swatches; dark-mode inherits via token blend)
+      &.pi   { background: #f0f4fc; color: var(--vz-primary, #405189); }
+      &.fam  { background: #fdecf3; color: #8b3760; }
+      &.crim { background: #fff1e6; color: #b3521d; }
+      &.imm  { background: #e8f5e9; color: #2e7d32; }
+      &.civ  { background: #ede7f6; color: #5e35b1; }
+
+      &.state { background: #e6f4fb; color: #0f5a73; }
+    }
+  }
+
+  .tile-templates-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 1rem;
+    border: 1px dashed var(--vz-border-color, #e9ebec);
+    border-radius: 8px;
+    color: var(--vz-secondary-color, #74788d);
+    font-size: 0.78rem;
+    text-align: center;
+    margin-bottom: 0.6rem;
+
+    i { font-size: 1.1rem; opacity: 0.6; }
+  }
+
+  .tile-footer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--vz-primary, #405189);
+    font-weight: 600;
+    font-size: 0.78rem;
+    margin-top: auto;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    align-self: flex-start;
+
+    &:hover { text-decoration: underline; }
+
+    &:focus-visible {
+      outline: 2px solid var(--vz-primary, #405189);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+}
+
+// ── Recent drafts strip ──────────────────────────────────────────────────
+.dd-recent {
+  margin-top: 1.1rem;
+  background: var(--vz-card-bg, #ffffff);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-radius: 0.75rem;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  font-family: $legidraft-font-stack;
+}
+
+.dd-recent-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+
+  h6 {
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--vz-secondary-color, #74788d);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+}
+
+.dd-recent-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.55rem;
+}
+
+.dd-recent-card {
+  background: var(--vz-light, #fafbfd);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+  text-align: left;
+  font-family: inherit;
+
+  &:hover {
+    background: var(--vz-primary-bg-subtle, #f0f4fc);
+    border-color: var(--vz-primary, #405189);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--vz-primary, #405189);
+    outline-offset: 2px;
+  }
+
+  .dr-type {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--vz-primary, #405189);
+    margin-bottom: 0.18rem;
+  }
+
+  .dr-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--vz-heading-color, #212529);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .dr-date {
+    font-size: 0.65rem;
+    color: var(--vz-secondary-color, #74788d);
+    margin-top: 0.2rem;
+  }
+}
+
+// ── Tip footer ───────────────────────────────────────────────────────────
+.tip-footer {
+  margin-top: 1rem;
+  color: var(--vz-secondary-color, #74788d);
+  font-size: 0.83rem;
+  font-style: italic;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  i {
+    font-size: 1rem;
+    color: var(--vz-warning, #f7b84b);
+    font-style: normal;
+  }
+}
+
+// ── Dark-mode tuning ─────────────────────────────────────────────────────
+// Velzon's dark tokens collapse: --vz-card-bg is empty and --vz-light sits
+// only ~6% above body (#1a1d21 → #282b2e). Cards and mini-tiles built on
+// those tokens render as transparent or near-body. Explicit hex surfaces
+// paint a legible elevation stack: #1f2327 base → #262a2f nested →
+// #2c3036 hover. Hand-picked pill swatches keep chroma dimmed for dark.
+:host-context([data-bs-theme='dark']) {
+  // Linked-case chip — the default gradient uses --vz-card-bg/--vz-light
+  // which collapse in dark Velzon. Paint explicit surfaces and brighten the
+  // PA accents so chroma survives against the darker body.
+  .linked-case-chip {
+    background: #1f2327;
+    border-color: #3a4048;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.02);
+
+    .lc-body:hover,
+    .lc-body:focus-visible {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .lc-divider { background: #3a4048; }
+
+    // Brighter swatches so the accent rail, icon fill, pill, and eyebrow
+    // survive the 8% alpha drop on #1f2327. Alpha bumped to ~18%.
+    &[data-accent="pi"]   { --lc-accent: #e879f9; --lc-accent-soft: rgba(232, 121, 249, 0.18); }
+    &[data-accent="fam"]  { --lc-accent: #fbbf24; --lc-accent-soft: rgba(251, 191, 36, 0.18); }
+    &[data-accent="crim"] { --lc-accent: #f87171; --lc-accent-soft: rgba(248, 113, 113, 0.18); }
+    &[data-accent="civ"]  { --lc-accent: #60a5fa; --lc-accent-soft: rgba(96, 165, 250, 0.18); }
+    &[data-accent="imm"]  { --lc-accent: #2dd4bf; --lc-accent-soft: rgba(45, 212, 191, 0.18); }
+
+    .lc-clear {
+      color: #a8abb3;
+
+      &:hover,
+      &:focus-visible {
+        background: rgba(248, 113, 113, 0.18);
+        color: #f87171;
+      }
+    }
+  }
+
+  .tile-secondary {
+    background: #1f2327;
+    border-color: #3a4048;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  }
+
+  .tile-secondary:hover {
+    border-color: #85a7ec;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  }
+
+  .tile-secondary .tpl-mini {
+    background: #262a2f;
+    border-color: #3a4048;
+  }
+
+  .tile-secondary .tpl-mini:hover {
+    background: #2c3036;
+    border-color: #85a7ec;
+  }
+
+  .tile-secondary .tile-templates-empty {
+    border-color: #3a4048;
+  }
+
+  .tile-secondary .tpl-mini .tpl-pill {
+    &.pi    { background: rgba(102, 145, 231, 0.2); color: #c9d4f0; }
+    &.fam   { background: rgba(232, 117, 164, 0.2); color: #f3c5d5; }
+    &.crim  { background: rgba(232, 145, 82, 0.2); color: #ffd6bf; }
+    &.imm   { background: rgba(82, 196, 91, 0.2); color: #c8e6c9; }
+    &.civ   { background: rgba(170, 141, 226, 0.2); color: #d1c4e9; }
+    &.state { background: rgba(80, 195, 230, 0.2); color: #b6e0f0; }
+  }
+
+  .dd-recent {
+    background: #1f2327;
+    border-color: #3a4048;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  }
+
+  .dd-recent-card {
+    background: #262a2f;
+    border-color: #3a4048;
+  }
+
+  .dd-recent-card:hover {
+    background: #2c3036;
+    border-color: #85a7ec;
+  }
+
+  .tile-primary {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  }
+
+  .tile-primary:hover {
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+  }
+
+  .tile-primary .tile-action {
+    background: #262a2f;
+    color: #85a7ec;
+  }
+}
+
+// ── Responsive ───────────────────────────────────────────────────────────
+
+// Big-screens refinement (≥1440px). At these widths there's real room to
+// breathe, so bump the headline, widen the primary tile (7fr:5fr), open up
+// padding, and push the recent-drafts strip to 4 columns. The mini-templates
+// grid also goes 3-up so the secondary tile balances the enlarged primary.
+@media (min-width: 1440px) {
+  .draft-dashboard { padding: 0.75rem 0 2rem; }
+
+  .welcome-row {
+    margin-bottom: 1.75rem;
+
+    .welcome-title { font-size: 2.5rem; letter-spacing: -0.025em; }
+    .welcome-lead  { font-size: 1.05rem; }
+  }
+
+  .dd-tiles {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 1.4rem;
+  }
+
+  .tile-primary {
+    padding: 2.25rem 2rem;
+    min-height: 280px;
+
+    .tile-title { font-size: 2.5rem; letter-spacing: -0.025em; }
+    .tile-desc  { font-size: 0.95rem; max-width: 48ch; }
+  }
+
+  .tile-secondary {
+    padding: 1.75rem 1.6rem;
+    min-height: 280px;
+
+    .tile-title     { font-size: 1.65rem; letter-spacing: -0.022em; }
+    .tile-templates {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.55rem;
+      // Reveal hidden positions (3–4) — 2×2 grid on big screens keeps cards
+      // wide enough to show full template names instead of truncating.
+      > .tpl-mini:nth-child(n + 3) { display: block; }
+    }
+  }
+
+  .dd-recent { padding: 1.25rem 1.4rem; }
+}
+
+@media (max-width: 991.98px) {
+  .dd-tiles { grid-template-columns: 1fr; }
+  .tile-primary { min-height: 180px; }
+  .tile-secondary { min-height: 200px; }
+  .welcome-row .welcome-title    { font-size: 1.7rem; }
+  .tile-primary .tile-title      { font-size: 1.65rem; }
+  .tile-secondary .tile-title    { font-size: 1.25rem; }
+}
+
+@media (max-width: 575.98px) {
+  .draft-dashboard { padding: 0 0.25rem 1rem; }
+  .dd-recent-grid  { grid-template-columns: 1fr; }
+  .welcome-row .welcome-title { font-size: 1.4rem; }
+  .tile-primary {
+    padding: 1.25rem 1.1rem;
+    .tile-title { font-size: 1.35rem; }
+    .tile-desc  { font-size: 0.82rem; }
+  }
+  .tile-secondary {
+    padding: 1.1rem 1rem;
+    .tile-title { font-size: 1.15rem; }
+  }
+}

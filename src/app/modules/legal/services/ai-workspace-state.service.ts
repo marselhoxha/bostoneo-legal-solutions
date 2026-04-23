@@ -6,6 +6,19 @@ import { WorkflowStep } from '../models/workflow.model';
 import { ConversationType } from '../models/enums/conversation-type.enum';
 import { WorkflowStepStatus } from '../models/enums/workflow-step-status.enum';
 
+/**
+ * LegiDraft view-mode state machine (Sprint 4c).
+ * Controls which surface renders in the draft pane and whether the legacy
+ * left sidebar is visible. Only `dashboard` shows the sidebar.
+ */
+export type DraftMode =
+  | 'dashboard'
+  | 'ai-wizard'
+  | 'template-picker'
+  | 'fill'
+  | 'generating'
+  | 'editor';
+
 // Interface for analyzed documents
 export interface AnalyzedDocument {
   id: string;
@@ -78,6 +91,7 @@ export class AiWorkspaceStateService {
   private showVersionHistorySubject = new BehaviorSubject<boolean>(false);
   private sidebarOpenSubject = new BehaviorSubject<boolean>(false);
   private viewerSidebarCollapsedSubject = new BehaviorSubject<boolean>(false);
+  private draftModeSubject = new BehaviorSubject<DraftMode>('dashboard');
 
   public showChat$ = this.showChatSubject.asObservable();
   public showBottomSearchBar$ = this.showBottomSearchBarSubject.asObservable();
@@ -87,6 +101,7 @@ export class AiWorkspaceStateService {
   public showVersionHistory$ = this.showVersionHistorySubject.asObservable();
   public sidebarOpen$ = this.sidebarOpenSubject.asObservable();
   public viewerSidebarCollapsed$ = this.viewerSidebarCollapsedSubject.asObservable();
+  public draftMode$ = this.draftModeSubject.asObservable();
 
   // ===== WORKFLOW STATE =====
   private workflowStepsSubject = new BehaviorSubject<WorkflowStep[]>([]);
@@ -282,6 +297,14 @@ export class AiWorkspaceStateService {
 
   getShowVersionHistory(): boolean {
     return this.showVersionHistorySubject.value;
+  }
+
+  setDraftMode(mode: DraftMode): void {
+    this.draftModeSubject.next(mode);
+  }
+
+  getDraftMode(): DraftMode {
+    return this.draftModeSubject.value;
   }
 
   // ===== WORKFLOW METHODS =====

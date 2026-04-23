@@ -1,0 +1,1199 @@
+:host { display: block; }
+
+.draft-wizard {
+  display: flex;
+  flex-direction: column;
+  background: var(--vz-card-bg, #fff);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+/* ─── Connected 40px progress bar stepper ────────────────────────────── */
+/* Mockup (design-previews/legidraft-redesign/preview.html) has NO background
+   and NO border on the progress container — the stepper floats directly on
+   the white card body. Do not reintroduce a gray header strip. */
+.wizard-progress {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  padding: 1.5rem 2rem 2rem;
+
+  .wizard-connector {
+    position: absolute;
+    top: calc(1.5rem + 19px); /* 1.5rem top padding + 19px centers the 2px line on the 40px circle */
+    /* Span step 1's circle center → step 4's circle center so connectorFillPct
+       ((step-1)/3 × 100) lands exactly on each circle. Each flex:1 step column
+       is 25% of inner width; its circle sits at the column center (12.5% in).
+       Inner-start = 2rem padding; step 1 center = 2rem + 12.5% × (parent − 4rem)
+       = 1.5rem + 12.5% × parent. Absolute % resolves against the padded parent. */
+    left: calc(1.5rem + 12.5%);
+    right: calc(1.5rem + 12.5%);
+    height: 2px;
+    background: var(--vz-border-color, #e9ebec);
+    z-index: 1;
+  }
+
+  .wizard-connector-fill {
+    height: 100%;
+    background: var(--vz-success, #0ab39c);
+    transition: width 0.3s ease;
+  }
+
+  .wizard-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+    z-index: 2;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+
+    &:disabled { cursor: not-allowed; }
+
+    .wizard-step-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--vz-white, #fff);
+      border: 2px solid var(--vz-border-color, #e9ebec);
+      color: var(--vz-secondary-color, #74788d);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.875rem;
+      line-height: 1;
+      transition: all 0.2s ease;
+    }
+
+    .wizard-step-label {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--vz-secondary-color, #74788d);
+      text-align: center;
+      max-width: 120px;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    &.active {
+      .wizard-step-circle {
+        background: var(--vz-primary, #405189);
+        border-color: var(--vz-primary, #405189);
+        color: #fff;
+        box-shadow: 0 0 0 4px rgba(var(--vz-primary-rgb, 64, 81, 137), 0.15);
+      }
+      .wizard-step-label {
+        color: var(--vz-primary, #405189);
+        font-weight: 600;
+      }
+    }
+
+    &.completed {
+      .wizard-step-circle {
+        background: var(--vz-success, #0ab39c);
+        border-color: var(--vz-success, #0ab39c);
+        color: #fff;
+      }
+      .wizard-step-label {
+        color: var(--vz-success, #0ab39c);
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+/* ─── Body ───────────────────────────────────────────────────────────── */
+.wizard-body {
+  padding: 1.5rem 1.75rem;
+  max-height: 62vh;
+  overflow-y: auto;
+}
+
+.step-header {
+  margin-bottom: 1.25rem;
+
+  h4, h6 {
+    font-weight: 600;
+  }
+}
+
+/* ─── Step 1 — Inherited-from-case notice ───────────────────────────── */
+.inherited-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--vz-success-bg-subtle, #e6f6f3);
+  border-left: 4px solid var(--vz-success, #0ab39c);
+  color: var(--vz-body-color, #212529);
+  padding: 0.625rem 1rem;
+  border-radius: 0.25rem;
+  font-size: 0.8125rem;
+  margin-bottom: 1rem;
+
+  i { color: var(--vz-success, #0ab39c); font-size: 1.1rem; }
+  strong { color: var(--vz-success-text-emphasis, #066a5e); }
+}
+
+/* ─── Step 1 — Practice Area grid ───────────────────────────────────── */
+.practice-area-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+
+  @media (max-width: 992px) { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 768px) { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 480px) { grid-template-columns: repeat(2, 1fr); }
+
+  .pa-card {
+    position: relative;
+    background: var(--vz-card-bg, #fff);
+    border: 2px solid var(--vz-border-color, #e9ebec);
+    border-radius: 0.625rem;
+    padding: 1rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+
+    &:hover {
+      border-color: var(--vz-primary, #405189);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(var(--vz-primary-rgb, 64, 81, 137), 0.1);
+    }
+
+    &.selected {
+      border-color: var(--vz-primary, #405189);
+      background: var(--vz-primary-bg-subtle, #f0f4fc);
+      box-shadow: 0 4px 10px rgba(var(--vz-primary-rgb, 64, 81, 137), 0.15);
+
+      .pa-icon {
+        background: var(--vz-primary, #405189);
+        color: #fff;
+      }
+    }
+
+    &.inherited {
+      border-color: var(--vz-success, #0ab39c);
+      background: var(--vz-success-bg-subtle, #f0fcf9);
+
+      .pa-icon {
+        background: var(--vz-success, #0ab39c);
+        color: #fff;
+      }
+
+      &::after {
+        content: 'CASE';
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: var(--vz-success, #0ab39c);
+        color: #fff;
+        font-size: 0.55rem;
+        padding: 0.15rem 0.4rem;
+        border-radius: 999px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+      }
+    }
+
+    .pa-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      background: var(--vz-light, #f3f3f9);
+      color: var(--vz-primary, #405189);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
+      margin-bottom: 0.5rem;
+      transition: all 0.15s ease;
+    }
+
+    .pa-name {
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: var(--vz-body-color, #212529);
+      line-height: 1.25;
+    }
+  }
+}
+
+/* ─── Step 2 — PA pill + "change" link ──────────────────────────────── */
+.pa-pill {
+  display: inline-block;
+  background: var(--vz-info-bg-subtle, #e6f4fb);
+  color: var(--vz-info, #299cdb);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+.change-link {
+  color: var(--vz-primary, #405189);
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
+
+.doctype-search {
+  max-width: 100%;
+}
+
+/* ─── Step 2 — Category label + doctype-card grid ───────────────────── */
+.type-category-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--vz-secondary-color, #74788d);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 1rem 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  i { color: var(--vz-primary, #405189); font-size: 0.875rem; }
+}
+
+.doctype-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
+}
+
+.doctype-card {
+  background: var(--vz-card-bg, #fff);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  transition: all 0.2s ease;
+  text-align: left;
+
+  &:hover {
+    border-color: var(--vz-primary, #405189);
+    background: var(--vz-primary-bg-subtle, #f8fbff);
+  }
+
+  &.selected {
+    border-color: var(--vz-primary, #405189);
+    background: var(--vz-primary-bg-subtle, #f0f4fc);
+    box-shadow: 0 4px 10px rgba(var(--vz-primary-rgb, 64, 81, 137), 0.15);
+
+    .icon-wrap-sm {
+      background: var(--vz-primary, #405189);
+      color: #fff;
+    }
+  }
+
+  .icon-wrap-sm {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--vz-light, #f3f3f9);
+    color: var(--vz-primary, #405189);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+  }
+
+  .doctype-body { min-width: 0; flex: 1; }
+
+  .doctype-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--vz-body-color, #212529);
+    margin-bottom: 0.125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+  }
+
+  .doctype-desc {
+    font-size: 0.75rem;
+    color: var(--vz-secondary-color, #74788d);
+    line-height: 1.35;
+  }
+
+  .requires-config-badge {
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    background: var(--vz-warning, #f7b84b);
+    color: #212529;
+    border-radius: 999px;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+}
+
+/* ─── Step 2 — empty search state ─────────────────────────────────────── */
+.empty-search-state {
+  text-align: center;
+  color: var(--vz-secondary-color, #74788d);
+  padding: 2rem 1rem;
+  background: var(--vz-light, #f3f6f9);
+  border: 1px dashed var(--vz-border-color, #e9ebec);
+  border-radius: 0.5rem;
+
+  i { font-size: 1.75rem; opacity: 0.65; }
+  strong { color: var(--vz-body-color, #212529); }
+}
+
+/* ─── Step 2 — Sprint 5 registry-driven catalog (3 tiers) ────────────── */
+
+/* Loading + error shells — sit where the catalog grid would render. */
+.catalog-loading,
+.catalog-error {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 1.25rem 1rem;
+  font-size: 0.85rem;
+  color: var(--vz-secondary-color, #74788d);
+  background: var(--vz-light, #f8f9fa);
+  border: 1px dashed var(--vz-border-color, #e9ebec);
+  border-radius: 0.5rem;
+}
+.catalog-error {
+  color: var(--vz-danger, #f06548);
+  background: var(--vz-danger-bg-subtle, #fdeceb);
+  border-color: var(--vz-danger-border-subtle, #f8c9c0);
+
+  i { font-size: 1rem; }
+  .btn-link { padding: 0 0.25rem; }
+}
+
+/* PA has zero template coverage — honest "coming soon" card. */
+.empty-pa-catalog {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+
+  border: 1px dashed var(--vz-border-color, #e9ebec);
+  border-radius: 0.75rem;
+  color: var(--vz-secondary-color, #74788d);
+
+  .empty-pa-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    background: var(--vz-primary-bg-subtle, #f0f4fc);
+    color: var(--vz-primary, #405189);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+  }
+
+  h5 {
+    color: var(--vz-body-color, #212529);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    font-size: 0.85rem;
+    max-width: 480px;
+    margin: 0 auto 1.25rem;
+    line-height: 1.5;
+  }
+
+  .empty-pa-actions {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+
+    .btn-link { color: var(--vz-secondary-color, #74788d); }
+  }
+}
+
+/* Tier section — one per Essential / Common / Occasional. */
+.catalog-tier {
+  margin-top: 1.25rem;
+
+  &:first-of-type { margin-top: 0.5rem; }
+
+  &.tier-collapsed .tier-chevron { transform: rotate(0); }
+}
+
+.tier-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid var(--vz-border-color, #e9ebec);
+  user-select: none;
+
+  &.tier-clickable {
+    cursor: pointer;
+    transition: background 0.15s ease;
+    &:hover { background: var(--vz-light, #f8f9fa); }
+  }
+
+  .tier-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--vz-body-color, #212529);
+  }
+
+  .tier-rank-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #fff;
+
+    &.rank-1 { background: var(--vz-primary, #405189); }
+    &.rank-2 { background: var(--vz-info, #299cdb); }
+    &.rank-3 { background: var(--vz-secondary-color, #74788d); }
+  }
+
+  .tier-hint {
+    font-size: 0.7rem;
+    color: var(--vz-secondary-color, #74788d);
+    font-style: italic;
+    margin-left: 0.25rem;
+  }
+
+  .tier-count {
+    margin-left: auto;
+    padding: 0.15rem 0.5rem;
+    background: var(--vz-light, #f3f3f9);
+    color: var(--vz-secondary-color, #74788d);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .tier-chevron {
+    font-size: 1.1rem;
+    color: var(--vz-secondary-color, #74788d);
+    transition: transform 0.2s ease;
+  }
+}
+
+.catalog-tier:not(.tier-collapsed) .tier-chevron { transform: rotate(180deg); }
+
+.tier-body {
+  padding-top: 0.75rem;
+}
+
+.tier-empty-match {
+  padding: 0.75rem;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--vz-secondary-color, #74788d);
+  text-align: center;
+}
+
+/* "Generic" chip on doctype cards where hasSpecificTemplate === false. */
+.generic-badge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  background: var(--vz-warning-bg-subtle, #fff3d9);
+  color: var(--vz-warning-text-emphasis, #8a5b00);
+  border: 1px solid var(--vz-warning-border-subtle, #fce1a4);
+  border-radius: 999px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  text-transform: uppercase;
+  cursor: help;
+}
+
+// Tooltip-hint glyph — shared across Step 3 fields (jurisdiction, court level).
+// Small, unobtrusive question mark with a soft hover tint.
+.jur-tip {
+  color: var(--vz-gray-500, #adb5bd);
+  font-size: 0.8rem;
+  cursor: help;
+  margin-left: 0.3rem;
+  transition: color 0.15s ease;
+  &:hover { color: var(--vz-info, #299cdb); }
+}
+
+/* ─── Step 3 — Jurisdiction selector (matrix driver) ─────────────────── */
+/* Label uses info-text-emphasis, select uses primary-bg-subtle (both Velzon
+   subtle tokens, auto-flip dark). Padding 0.9rem 1rem is more breathable than
+   Bootstrap defaults. */
+.jur-selector {
+  background: var(--vz-card-bg, #fff);
+  border: 2px solid var(--vz-info, #299cdb);
+  border-radius: 0.625rem;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 2px 6px rgba(var(--vz-info-rgb, 41, 156, 219), 0.08);
+
+  .jur-label {
+    font-weight: 600;
+    color: var(--vz-info-text-emphasis, #0f5a73);
+    font-size: 0.85rem;
+    min-width: 130px;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+
+    .jur-tip {
+      color: var(--vz-gray-500, #adb5bd);
+      font-size: 0.8rem;
+      cursor: help;
+      transition: color 0.15s ease;
+      &:hover { color: var(--vz-info, #299cdb); }
+    }
+  }
+
+  select {
+    border: 1px solid var(--vz-border-color, #e9ebec);
+    border-radius: 0.3125rem;
+    padding: 0.35rem 0.625rem;
+    background: var(--vz-primary-bg-subtle, #f8fbff);
+    flex: 1;
+    font-size: 0.85rem;
+    color: var(--vz-body-color, #212529);
+    font-weight: 500;
+  }
+}
+.jur-hint {
+  padding-left: 0.25rem;
+  i { color: var(--vz-info, #299cdb); }
+}
+
+/* ─── Step 3 — LOR / MTD / Interrog config sections ─────────────────── */
+.config-section {
+  border-top: 1px solid var(--vz-border-color, #e9ebec);
+  padding-top: 1.25rem;
+  margin-top: 1rem;
+}
+
+.lor-section-title {
+  font-weight: 600;
+  color: var(--vz-primary, #405189);
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.lor-recipient-option {
+  padding: 0.875rem 1rem;
+  background: var(--vz-card-bg, #fff);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.15s ease;
+
+  &:hover { border-color: var(--vz-primary, #405189); }
+
+  &.selected {
+    border-color: var(--vz-primary, #405189);
+    background: var(--vz-primary-bg-subtle, #f0f4fc);
+  }
+
+  input[type=radio] { margin: 0; flex-shrink: 0; }
+  .label-main { font-weight: 500; font-size: 0.875rem; color: var(--vz-body-color, #212529); }
+  .label-sub  { font-size: 0.75rem; color: var(--vz-secondary-color, #74788d); margin-top: 0.125rem; }
+}
+
+.lor-purpose-item {
+  padding: 0.875rem 1rem;
+  background: var(--vz-card-bg, #fff);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  transition: all 0.15s ease;
+
+  &.required {
+    background: var(--vz-primary-bg-subtle, #f0f4fc);
+    border-color: var(--vz-primary, #405189);
+    .purpose-hint { color: var(--vz-primary, #405189); font-weight: 500; }
+  }
+
+  &.disabled {
+    opacity: 0.45;
+    background: var(--vz-light, #fafafa);
+    cursor: not-allowed;
+  }
+
+  strong {
+    font-size: 0.875rem;
+    color: var(--vz-body-color, #212529);
+    font-weight: 600;
+  }
+
+  .required-badge {
+    display: inline-block;
+    background: var(--vz-primary, #405189);
+    color: #fff;
+    font-size: 0.55rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    margin-left: 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    vertical-align: middle;
+  }
+
+  .purpose-hint {
+    font-size: 0.75rem;
+    color: var(--vz-secondary-color, #74788d);
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+}
+
+/* ─── Step 3 — MTD grounds + Interrog chips ──────────────────────────── */
+.checkbox-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.875rem;
+    border: 1.5px solid var(--vz-border-color, #e9ebec);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    transition: all 0.15s ease;
+    background: var(--vz-card-bg, #fff);
+
+    &:hover { border-color: var(--vz-primary, #405189); }
+
+    &.selected {
+      background: var(--vz-primary-bg-subtle, #f0f4fc);
+      border-color: var(--vz-primary, #405189);
+      color: var(--vz-primary, #405189);
+      font-weight: 600;
+    }
+
+    input[type=checkbox] { display: none; }
+  }
+}
+
+/* ─── Step 4 — Template resolution card ──────────────────────────────── */
+/* Gradient uses success-bg-subtle → primary-bg-subtle (both Velzon subtle
+   tokens, auto-flip dark). Don't swap to rgba(var, 0.06) tints — they render
+   nearly invisible over white. */
+.template-resolution-card {
+  background: linear-gradient(135deg, var(--vz-success-bg-subtle, #f0fcf9) 0%, var(--vz-primary-bg-subtle, #f0f4fc) 100%);
+  border: 2px solid var(--vz-success, #0ab39c);
+  border-radius: 0.625rem;
+  padding: 1.25rem;
+  margin: 1rem 0 0.25rem;
+
+  h6 {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--vz-success-text-emphasis, #066a5e);
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    i { color: var(--vz-success, #0ab39c); }
+  }
+
+  .template-resolution-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px dashed rgba(var(--vz-success-rgb, 10, 179, 156), 0.25);
+    font-size: 0.8125rem;
+
+    &:last-child { border-bottom: none; }
+
+    .label {
+      font-weight: 500;
+      color: var(--vz-secondary-color, #74788d);
+      min-width: 140px;
+      font-size: 0.75rem;
+    }
+
+    .value {
+      color: var(--vz-success-text-emphasis, #066a5e);
+      font-weight: 600;
+      flex: 1;
+      word-break: break-word;
+    }
+
+    .template-target {
+      font-family: var(--vz-font-family-monospace, 'SFMono-Regular', Menlo, monospace);
+      font-size: 0.75rem;
+    }
+
+    .check {
+      color: var(--vz-success, #0ab39c);
+      font-size: 1rem;
+    }
+  }
+}
+
+/* ─── Step 3 — Info + Warning alerts (LOR preview + client-insurance gap) ── */
+/* Soft left-accent bars mirror `.inherited-notice` — the wizard's existing
+   grammar for "advisory context." Info = primary blue, Warning = amber. */
+.wizard-info-alert,
+.wizard-warning-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.4375rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+
+  i { font-size: 1.05rem; margin-top: 0.125rem; flex-shrink: 0; }
+  strong { font-weight: 600; }
+}
+
+.wizard-info-alert {
+  background: var(--vz-primary-bg-subtle, #eef4fc);
+  border-left: 3px solid var(--vz-primary, #405189);
+  color: var(--vz-body-color, #212529);
+
+  i { color: var(--vz-primary, #405189); }
+}
+
+.wizard-warning-alert {
+  background: var(--vz-warning-bg-subtle, #fff7e6);
+  border-left: 3px solid var(--vz-warning, #f7b84b);
+  color: var(--vz-warning-text-emphasis, #7a5e1a);
+
+  i { color: var(--vz-warning, #f7b84b); }
+
+  .update-case-link {
+    color: var(--vz-primary, #405189);
+    font-weight: 600;
+    text-decoration: none;
+    margin-left: 0.25rem;
+    cursor: pointer;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+/* ─── Step 4 — Right-rail sticky Summary card ────────────────────────── */
+/* Muted gray card sits opposite the celebratory mint/lavender resolution card —
+   intentional tonal contrast: "resolved" vs. "at a glance." */
+.summary-card {
+  background: var(--vz-light, #f8f9fa);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  position: sticky;
+  top: 1rem;
+
+  h6 {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--vz-secondary-color, #74788d);
+    margin-bottom: 0.875rem;
+    padding-bottom: 0.625rem;
+    border-bottom: 1px solid var(--vz-border-color, #e9ebec);
+  }
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  font-size: 0.8125rem;
+
+  & + .summary-row {
+    border-top: 1px dashed var(--vz-border-color, #e9ebec);
+  }
+
+  .summary-label {
+    color: var(--vz-secondary-color, #74788d);
+    font-weight: 500;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+  }
+
+  .summary-value {
+    color: var(--vz-body-color, #212529);
+    text-align: right;
+    word-break: break-word;
+    font-weight: 500;
+  }
+
+  .purposes-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.2rem;
+  }
+
+  .purpose-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    color: var(--vz-body-color, #212529);
+
+    i { color: var(--vz-success, #0ab39c); font-size: 0.85rem; }
+  }
+}
+
+.pill {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  color: #fff;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+
+  &.purple { background: var(--vz-purple, #6f42c1); }
+  &.info   { background: var(--vz-info, #299cdb); }
+}
+
+/* ─── Nav bar ────────────────────────────────────────────────────────── */
+.wizard-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--vz-light, #f8f9fa);
+  border-top: 1px solid var(--vz-border-color, #e9ebec);
+
+  .btn {
+    font-size: 0.8125rem;
+    padding: 0.375rem 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    i { font-size: 0.9375rem; line-height: 1; }
+  }
+}
+
+/* ─── Inline Case Strip (Option A) ───────────────────────────────────── */
+/* Sits inside the wizard card directly above the 4-step stepper. Three
+   states (empty / picker / linked) share the same 48px slab geometry so
+   toggling between them does not shift the stepper below. Never renders
+   outside the wizard — the old right-rail panel is removed entirely. */
+.case-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  margin: 1rem 1.5rem 0;
+  background: var(--vz-light, #f3f3f9);
+  border: 1px solid var(--vz-border-color, #e9ebec);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  min-height: 44px;
+}
+
+.case-strip.empty {
+  background: transparent;
+  border: 1px dashed var(--vz-border-color, #e9ebec);
+  color: var(--vz-secondary-color, #74788d);
+}
+
+.case-strip-ico {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--vz-light, #f3f3f9);
+  color: var(--vz-secondary-color, #74788d);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i { font-size: 0.95rem; line-height: 1; }
+}
+
+.case-strip.linked .case-strip-ico.linked-ico {
+  background: rgba(10, 179, 156, 0.15);
+  color: #0ab39c;
+}
+
+.case-strip-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vz-body-color, #495057);
+
+  strong {
+    color: var(--vz-heading-color, #212529);
+    font-weight: 600;
+    margin-right: 0.15rem;
+  }
+}
+
+.case-strip-pills {
+  display: inline-flex;
+  gap: 0.35rem;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.case-strip-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  color: #ffffff;
+  white-space: nowrap;
+
+  &.pa  { background: #6f42c1; }
+  &.jur { background: var(--vz-info, #299cdb); }
+}
+
+.case-strip-cta {
+  background: transparent;
+  border: 1px solid var(--vz-primary, #405189);
+  color: var(--vz-primary, #405189);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  transition: background 0.12s ease, color 0.12s ease;
+
+  i { font-size: 0.9rem; line-height: 1; }
+
+  &:hover:not(:disabled) {
+    background: var(--vz-primary, #405189);
+    color: #ffffff;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.case-strip-link {
+  background: transparent;
+  border: 0;
+  color: var(--vz-primary, #405189);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.25rem 0.45rem;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s ease;
+
+  &:hover { background: rgba(var(--vz-primary-rgb, 64, 81, 137), 0.08); }
+}
+
+.case-strip.picker .case-strip-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.82rem;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+
+/* ─── Dark-mode surface elevation ────────────────────────────────────── */
+/* Velzon's dark tokens are too flat: --vz-card-bg is undefined in dark and
+   --vz-light sits only 6% above body. Without this block cards render as
+   transparent or near-body and the whole wizard looks like a single matte
+   slab. Explicit hexes paint real elevation so surfaces, borders and hover
+   states are distinguishable at the ~11% body lightness Velzon uses. */
+:host-context([data-bs-theme='dark']) {
+  .draft-wizard {
+    background: #1f2327;
+    border-color: #3a4048;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  }
+
+  .wizard-progress .wizard-connector { background: #3a4048; }
+  .wizard-progress .wizard-step .wizard-step-circle {
+    background: #262a2f;
+    border-color: #3a4048;
+    color: #ced4da;
+  }
+
+  .pa-card,
+  .doctype-card,
+  .lor-recipient-option,
+  .lor-purpose-item,
+  .jur-selector {
+    background: #262a2f;
+    border-color: #3a4048;
+  }
+
+  .pa-card:hover,
+  .doctype-card:hover,
+  .lor-recipient-option:hover {
+    background: #2c3036;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  }
+
+  /* Dark-mode selected state. `--vz-primary-bg-subtle` resolves to a dim navy
+     that's nearly indistinguishable from the card surface (#262a2f), so we
+     override with a stronger rgba tint + primary border + outer ring.
+     Specificity `.pa-card.selected` under :host-context = (0,4,0), which beats
+     the generic dark rule at (0,3,0) above. Light mode is untouched because
+     this block is scoped to [data-bs-theme='dark']. */
+  .pa-card.selected,
+  .doctype-card.selected,
+  .lor-recipient-option.selected {
+    background: rgba(var(--vz-primary-rgb, 133, 167, 236), 0.22);
+    border-color: var(--vz-primary, #85a7ec);
+    box-shadow:
+      0 0 0 1px rgba(var(--vz-primary-rgb, 133, 167, 236), 0.4),
+      0 6px 16px rgba(0, 0, 0, 0.55);
+  }
+
+  .pa-card.selected .pa-icon,
+  .doctype-card.selected .icon-wrap-sm {
+    background: var(--vz-primary, #85a7ec);
+    color: #fff;
+  }
+
+  .pa-card .pa-icon,
+  .doctype-card .icon-wrap-sm {
+    background: #2c3036;
+    color: #85a7ec;
+  }
+
+  .checkbox-chips .chip {
+    background: #262a2f;
+    border-color: #3a4048;
+  }
+
+  .lor-purpose-item.disabled { background: #22262b; }
+
+  .empty-search-state {
+    background: #22262b;
+    border-color: #3a4048;
+  }
+
+  .other-toggle { border-top-color: #3a4048; }
+  .other-toggle .toggle-count { background: #2c3036; }
+
+  .summary-card {
+    background: #262a2f;
+    border-color: #3a4048;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+
+    h6 { border-bottom-color: #3a4048; }
+  }
+
+  .summary-row + .summary-row { border-top-color: rgba(255, 255, 255, 0.08); }
+
+  .wizard-nav {
+    background: #1b1e22;
+    border-top-color: #3a4048;
+  }
+
+  .template-resolution-card {
+    background: linear-gradient(135deg, rgba(19, 197, 107, 0.12) 0%, rgba(102, 145, 231, 0.12) 100%);
+    border-color: #42d189;
+  }
+
+  /* Case Strip — lift the linked strip to #262a2f, keep empty state as a
+     dashed ghost on body; pills mirror the right-rail panel tokens. */
+  .case-strip {
+    background: #262a2f;
+    border-color: #3a4048;
+
+    &.empty {
+      background: transparent;
+      border-color: #3a4048;
+      color: #adb5bd;
+    }
+
+    .case-strip-ico {
+      background: #2c3036;
+      color: #ced4da;
+    }
+
+    &.linked .case-strip-ico.linked-ico {
+      background: rgba(66, 209, 137, 0.2);
+      color: #42d189;
+    }
+
+    .case-strip-text { color: #ced4da; }
+    .case-strip-text strong { color: #f3f6f9; }
+
+    .case-strip-pill {
+      &.pa  { background: rgba(111, 66, 193, 0.35); color: #d6c6f0; }
+      &.jur { background: rgba(41, 156, 219, 0.3); color: #b6e0f0; }
+    }
+
+    .case-strip-cta {
+      border-color: #85a7ec;
+      color: #85a7ec;
+
+      &:hover:not(:disabled) {
+        background: #85a7ec;
+        color: #1a1d21;
+      }
+    }
+
+    .case-strip-link {
+      color: #85a7ec;
+      &:hover { background: rgba(133, 167, 236, 0.12); }
+    }
+
+    .case-strip-select {
+      background: #1f2327;
+      border-color: #3a4048;
+      color: #ced4da;
+    }
+  }
+}

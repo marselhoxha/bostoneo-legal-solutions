@@ -1,0 +1,492 @@
+<div class="template-import-wizard">
+  <!-- Header -->
+  <div class="modal-header">
+    <h5 class="modal-title">
+      <i class="ri-upload-cloud-2-line me-2 text-primary"></i>
+      Import Templates
+    </h5>
+    <button type="button" class="btn-close" (click)="close()" aria-label="Close"></button>
+  </div>
+
+  <div class="modal-body p-0">
+    <div class="wizard">
+      <!-- Stepper -->
+      <div class="stepper-header">
+        <ol>
+          <li [class.active]="currentStep === 1" [class.completed]="currentStep > 1">
+            <span class="number">{{ currentStep > 1 ? '✓' : '1' }}</span>
+            Upload
+          </li>
+          <li [class.active]="currentStep === 2" [class.completed]="currentStep > 2">
+            <span class="number">{{ currentStep > 2 ? '✓' : '2' }}</span>
+            Processing
+          </li>
+          <li [class.active]="currentStep === 3" [class.completed]="currentStep > 3">
+            <span class="number">{{ currentStep > 3 ? '✓' : '3' }}</span>
+            Review
+          </li>
+          <li [class.active]="currentStep === 4" [class.completed]="currentStep > 4">
+            <span class="number">{{ currentStep > 4 ? '✓' : '4' }}</span>
+            Commit
+          </li>
+        </ol>
+      </div>
+
+      <!-- ====================================================== -->
+      <!--                  STEP 1 — UPLOAD                       -->
+      <!-- ====================================================== -->
+      <div class="content p-4" *ngIf="currentStep === 1">
+        <div class="body">
+          <h5 class="mb-1">Upload Templates</h5>
+          <p class="text-muted mb-3">
+            Drag-drop PDF, DOCX, DOC, or ZIP files. AI will classify them and detect variables.
+          </p>
+
+          <!-- Drag-drop zone -->
+          <label class="dropzone"
+               [class.drag-over]="isDragOver"
+               (dragover)="onDragOver($event)"
+               (dragleave)="onDragLeave($event)"
+               (drop)="onDrop($event)">
+            <div class="dz-icon"><i class="ri-upload-cloud-2-line"></i></div>
+            <h6 class="dz-title mb-1">Drop your templates here</h6>
+            <p class="text-muted mb-2 fs-13">or click to browse</p>
+            <div class="dz-chips">
+              <code class="dz-chip pdf">.pdf</code>
+              <code class="dz-chip docx">.docx</code>
+              <code class="dz-chip doc">.doc</code>
+              <code class="dz-chip zip">.zip</code>
+            </div>
+            <p class="text-muted mt-3 mb-0 fs-13">
+              Up to 50 files · 10 MB each · 100 MB total
+            </p>
+            <input type="file" multiple hidden accept=".pdf,.docx,.doc,.zip" (change)="onFileInput($event)">
+          </label>
+
+          <!-- Error -->
+          <div class="alert alert-danger mt-3 mb-0" *ngIf="uploadError">
+            <i class="ri-error-warning-line me-1"></i>{{ uploadError }}
+          </div>
+
+          <!-- Queued file list -->
+          <div class="mt-4" *ngIf="queuedFiles.length">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h6 class="mb-0">
+                {{ queuedFiles.length }} file<span *ngIf="queuedFiles.length > 1">s</span>
+                <span class="text-muted fw-normal">· {{ queuedTotalMB }} MB total</span>
+              </h6>
+            </div>
+            <ul class="file-list list-unstyled mb-0">
+              <li *ngFor="let f of queuedFiles; let i = index" class="file-row"
+                  [attr.data-ft]="fileTypeSlug(f.name)">
+                <span class="fi-icon"><i [class]="fileTypeIcon(f.name)"></i></span>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="fw-medium text-truncate">{{ f.name }}</div>
+                  <div class="text-muted fs-13">{{ (f.size / 1024).toFixed(0) }} KB</div>
+                </div>
+                <button class="btn btn-sm btn-soft-danger" (click)="removeQueuedFile(i)" type="button">
+                  <i class="ri-close-line"></i>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Privacy hint (mockup §7 left-note) -->
+          <div class="privacy-hint mt-3">
+            <i class="ri-shield-check-line"></i>
+            Private to you unless you toggle <strong>Share</strong> per template in the Review step.
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!--                  STEP 2 — PROCESSING                   -->
+      <!-- ====================================================== -->
+      <div class="content p-4" *ngIf="currentStep === 2">
+        <div class="body">
+          <h5 class="mb-1">Analyzing Files</h5>
+          <p class="text-muted mb-3">
+            Extracting text and classifying with AI. You can continue once any file is ready.
+          </p>
+
+          <!-- Processing summary head (mockup §7 .proc-head) -->
+          <div class="proc-head" [class.finalized]="allFinalized">
+            <i [class]="(allFinalized ? 'ri-checkbox-circle-fill' : 'ri-loader-4-line spin')"></i>
+            <span>{{ processingSummary }}</span>
+            <span class="proc-head-meta" *ngIf="!allFinalized">ETA ~2 min</span>
+          </div>
+
+          <div class="alert alert-warning mb-3" *ngIf="isSessionExpired">
+            <i class="ri-error-warning-line me-1"></i>
+            This session has expired. Please close and restart the import.
+          </div>
+
+          <!-- Per-file status -->
+          <ul class="file-list list-unstyled mb-0">
+            <li *ngFor="let f of sessionFiles" class="file-row status-row"
+                [attr.data-ft]="fileTypeSlug(f.filename)"
+                [attr.data-st]="f.status.toLowerCase()">
+              <span class="st-icon">
+                <i [class]="statusIcon(f.status)"></i>
+              </span>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-medium text-truncate">{{ f.filename }}</div>
+                <div class="text-muted fs-13">
+                  <ng-container *ngIf="f.status !== 'READY'">{{ statusLabel(f.status) }}</ng-container>
+                  <span *ngIf="f.status === 'ERROR' && f.errorMessage" class="text-danger">{{ f.errorMessage }}</span>
+                  <span *ngIf="f.status === 'DUPLICATE' && f.duplicateOfTemplateName">
+                    matches <strong>{{ f.duplicateOfTemplateName }}</strong>
+                  </span>
+                  <span *ngIf="f.status === 'READY' && f.analysis?.classification as c">
+                    <strong>{{ c.documentType || 'Unknown' }}</strong>
+                    <span *ngIf="c.practiceArea"> · {{ c.practiceArea }}</span>
+                    <span *ngIf="c.jurisdiction"> · {{ c.jurisdiction }}</span>
+                    <span *ngIf="c.confidence != null"> — {{ confidencePct(c.confidence) }}% confident</span>
+                  </span>
+                </div>
+              </div>
+              <span class="st-pill" [attr.data-st]="f.status.toLowerCase()">
+                {{ statusLabel(f.status) }}
+              </span>
+            </li>
+          </ul>
+
+          <div class="proc-note mt-3" *ngIf="!allFinalized">
+            <i class="ri-information-line me-1"></i>
+            You can start reviewing ready files without waiting for the rest.
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!--                  STEP 3 — REVIEW                       -->
+      <!-- ====================================================== -->
+      <div class="content p-4" *ngIf="currentStep === 3 && currentReviewFile as f">
+        <div class="body">
+          <!-- File header -->
+          <div class="mb-3">
+            <h5 class="mb-0">{{ f.filename }}</h5>
+            <span class="fs-13 text-body-secondary">
+              File {{ reviewIndex + 1 }} of {{ reviewableFiles.length }}
+            </span>
+          </div>
+
+          <!-- Duplicate banner -->
+          <div class="alert alert-warning d-flex align-items-start"
+               *ngIf="f.status === 'DUPLICATE' && currentReviewState as st">
+            <i class="ri-file-copy-2-line fs-4 me-2"></i>
+            <div class="flex-grow-1">
+              <div class="fw-medium">Duplicate of existing template</div>
+              <div class="fs-13 mb-2">
+                This content already exists as <strong>{{ f.duplicateOfTemplateName }}</strong>.
+              </div>
+              <div class="btn-group btn-group-sm" role="group">
+                <input type="radio" class="btn-check" name="dupAction" id="dup-skip"
+                       [checked]="st.action === 'SKIP'" (change)="setAction('SKIP')">
+                <label class="btn btn-outline-secondary" for="dup-skip">Skip</label>
+                <input type="radio" class="btn-check" name="dupAction" id="dup-overwrite"
+                       [checked]="st.action === 'OVERWRITE'" (change)="setAction('OVERWRITE')">
+                <label class="btn btn-outline-primary" for="dup-overwrite">Overwrite existing</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Classification banner -->
+          <ng-container *ngIf="f.analysis?.classification as c">
+            <div class="classification-banner">
+              <i class="ri-ai-generate fs-3 me-2 text-primary"></i>
+              <div class="flex-grow-1">
+                <div class="fw-medium">
+                  AI Classification
+                  <span class="badge bg-soft-primary ms-2">{{ confidencePct(c.confidence) }}% confident</span>
+                </div>
+                <div class="fs-13 text-body">
+                  <strong>{{ c.documentType || '—' }}</strong>
+                  <span *ngIf="c.practiceArea"> · {{ c.practiceArea }}</span>
+                  <span *ngIf="c.jurisdiction"> · {{ c.jurisdiction }}</span>
+                </div>
+                <div class="fs-13 text-body mt-1" *ngIf="c.evidence">
+                  <i class="ri-double-quotes-l"></i> {{ c.evidence }}
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Warnings -->
+          <ng-container *ngIf="f.analysis?.warnings?.length">
+            <div *ngFor="let w of f.analysis?.warnings"
+                 class="alert d-flex align-items-center mt-2 mb-2"
+                 [ngClass]="severityClass(w.severity)">
+              <i class="ri-alert-line me-2"></i>
+              <div class="flex-grow-1 fs-13">{{ w.message }}</div>
+            </div>
+          </ng-container>
+
+          <!-- Editable fields -->
+          <div class="row g-3 mt-2" *ngIf="currentReviewState as st">
+            <div class="col-md-8">
+              <label class="form-label">Template Name</label>
+              <input type="text" class="form-control" [(ngModel)]="st.name" name="name-{{ f.fileId }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Category</label>
+              <select class="form-select" [(ngModel)]="st.category" name="cat-{{ f.fileId }}">
+                <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" rows="2"
+                        [(ngModel)]="st.description" name="desc-{{ f.fileId }}"></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Practice Area</label>
+              <select class="form-select" [(ngModel)]="st.practiceArea" name="pa-{{ f.fileId }}">
+                <option value="">— Select —</option>
+                <option *ngFor="let p of practiceAreas" [value]="p.slug">{{ p.name }}</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Jurisdiction</label>
+              <select class="form-select" [(ngModel)]="st.jurisdiction" name="jur-{{ f.fileId }}">
+                <option value="">— Select —</option>
+                <option *ngFor="let j of jurisdictions" [value]="j.code">{{ j.name }}</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="priv-{{ f.fileId }}"
+                       [checked]="st.isPrivate"
+                       (change)="setPrivacy($any($event.target).checked)">
+                <label class="form-check-label" for="priv-{{ f.fileId }}">
+                  <i class="ri-lock-line me-1"></i>
+                  Private to me (hidden from other attorneys in my organization)
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detected variables -->
+          <div class="mt-4" *ngIf="f.analysis?.detectedVariables?.length">
+            <h6 class="mb-2">Detected Variables ({{ f.analysis?.detectedVariables?.length }})</h6>
+            <p class="fs-13 text-body mb-2">
+              Click a variable to reject it; click rename to change its key.
+            </p>
+            <div class="variable-list">
+              <div *ngFor="let v of f.analysis?.detectedVariables"
+                   class="variable-chip"
+                   [class.rejected]="isRejected(v.suggestedKey)">
+                <div class="variable-main" (click)="toggleVariable(v.suggestedKey)">
+                  <code class="variable-key">{{ effectiveKey(v.suggestedKey) }}</code>
+                  <span class="variable-label">{{ v.suggestedLabel }}</span>
+                  <span class="badge bg-light text-dark fs-11 ms-1">{{ v.dataType }}</span>
+                  <span class="badge bg-info-subtle text-info fs-11" *ngIf="v.occurrences > 1">×{{ v.occurrences }}</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-muted p-0 ms-2"
+                        (click)="promptRename(v.suggestedKey)" title="Rename">
+                  <i class="ri-edit-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body preview.
+               Sprint 1.6 — source is now the backend's tokenized binary bytes, NOT the attorney's
+               original upload. PDF renders in an iframe (toolbar suppressed via #fragment); DOCX
+               renders via docx-preview into the container div below. When no binary template exists
+               (scanned PDF → OCR-only, legacy .doc → no PDF cache), fall back to the AI's
+               reconstructed text body with {{placeholder}} tokens. -->
+          <div class="mt-4" *ngIf="currentHasBinaryPreview || f.analysis?.suggestedBodyWithPlaceholders">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h6 class="mb-0">
+                Preview
+                <span class="badge bg-info-subtle text-info fs-11 ms-2"
+                      *ngIf="currentHasBinaryPreview">Tokenized</span>
+              </h6>
+              <span class="fs-13 text-muted" *ngIf="isRetokenizing">
+                <i class="ri-loader-4-line spin me-1"></i> Re-tokenizing…
+              </span>
+            </div>
+
+            <!-- OCR / no-binary-cache fallback banner -->
+            <div class="alert alert-info d-flex align-items-start fs-13 py-2 mb-2"
+                 *ngIf="!currentHasBinaryPreview && f.analysis?.suggestedBodyWithPlaceholders">
+              <i class="ri-image-line fs-4 me-2"></i>
+              <div>
+                <div class="fw-medium">Text-only preview</div>
+                The original file was a scanned PDF or legacy <code>.doc</code> — we couldn't produce
+                a visual template. The AI-reconstructed body is shown below; it will still import
+                with the variables you approve.
+              </div>
+            </div>
+
+            <!-- Binary fetch states -->
+            <div class="preview-loading" *ngIf="previewLoading">
+              <i class="ri-loader-4-line spin me-2"></i> Loading preview…
+            </div>
+            <div class="alert alert-warning fs-13 mb-2" *ngIf="previewError">
+              <i class="ri-error-warning-line me-1"></i> {{ previewError }}
+            </div>
+
+            <!-- PDF: iframe at cached object-url -->
+            <iframe *ngIf="isCurrentFilePdf && currentPdfSafeUrl as url"
+                    class="pdf-preview"
+                    [src]="url"
+                    title="Tokenized PDF preview"></iframe>
+
+            <!-- DOCX: docx-preview paints into this container imperatively -->
+            <div *ngIf="isCurrentFileDocx"
+                 #docxContainer
+                 class="docx-preview-container"
+                 [class.is-empty]="!currentDocxRendered"></div>
+
+            <!-- Text fallback (no binary cached) -->
+            <pre *ngIf="!currentHasBinaryPreview && f.analysis?.suggestedBodyWithPlaceholders"
+                 class="body-preview">{{ f.analysis?.suggestedBodyWithPlaceholders }}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!--                  STEP 4 — COMMIT                       -->
+      <!-- ====================================================== -->
+      <div class="content p-4" *ngIf="currentStep === 4">
+        <div class="body">
+          <!-- Pre-commit hero summary -->
+          <ng-container *ngIf="!commitResult">
+            <div class="commit-hero">
+              <div class="ch-icon">
+                <i class="ri-checkbox-circle-line"></i>
+              </div>
+              <h4 class="ch-title">Ready to import</h4>
+              <p class="ch-sub">
+                You've reviewed {{ reviewableFiles.length }} file<span *ngIf="reviewableFiles.length !== 1">s</span>.
+                Here's what happens when you click <strong>Import</strong>:
+              </p>
+
+              <div class="row g-3 mt-2 mb-0 justify-content-center">
+                <div class="col-md-4">
+                  <div class="stat-card stat-success">
+                    <div class="stat-num">{{ decisionCounts.import }}</div>
+                    <div class="stat-label">Will create</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="stat-card stat-warn">
+                    <div class="stat-num">{{ decisionCounts.overwrite }}</div>
+                    <div class="stat-label">Overwrite</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="stat-card stat-muted">
+                    <div class="stat-num">{{ decisionCounts.skip }}</div>
+                    <div class="stat-label">Skipped</div>
+                  </div>
+                </div>
+              </div>
+
+              <p class="ch-timing">
+                <i class="ri-time-line"></i>
+                Usually takes 3–5 seconds · templates will appear in the library immediately
+              </p>
+            </div>
+
+            <h6 class="mt-4 mb-2 fs-14 text-muted">File-by-file breakdown</h6>
+            <ul class="file-list list-unstyled mb-0">
+              <li *ngFor="let f of reviewableFiles" class="file-row">
+                <i [class]="'ri-file-line fs-4 me-2 ' + (reviewState[f.fileId].action === 'SKIP' ? 'text-muted' : 'text-primary')"></i>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="fw-medium text-truncate">{{ reviewState[f.fileId].name }}</div>
+                  <div class="text-muted fs-13">
+                    {{ reviewState[f.fileId].category }}
+                    <span *ngIf="reviewState[f.fileId].practiceArea"> · {{ reviewState[f.fileId].practiceArea }}</span>
+                    <span *ngIf="reviewState[f.fileId].jurisdiction"> · {{ reviewState[f.fileId].jurisdiction }}</span>
+                    <span *ngIf="reviewState[f.fileId].isPrivate"> · <i class="ri-lock-line"></i> private</span>
+                  </div>
+                </div>
+                <span class="badge"
+                      [ngClass]="{
+                        'bg-success-subtle text-success': reviewState[f.fileId].action === 'IMPORT',
+                        'bg-primary-subtle text-primary': reviewState[f.fileId].action === 'OVERWRITE',
+                        'bg-secondary-subtle text-secondary': reviewState[f.fileId].action === 'SKIP'
+                      }">
+                  {{ reviewState[f.fileId].action }}
+                </span>
+              </li>
+            </ul>
+          </ng-container>
+
+          <!-- Post-commit result -->
+          <ng-container *ngIf="commitResult">
+            <div class="alert alert-success d-flex align-items-start">
+              <i class="ri-checkbox-circle-fill fs-3 me-2"></i>
+              <div>
+                <div class="fw-medium">Imported successfully</div>
+                <div class="fs-13">
+                  {{ commitResult.created }} created,
+                  {{ commitResult.overwritten }} overwritten,
+                  {{ commitResult.skipped }} skipped<span *ngIf="commitResult.failed">, {{ commitResult.failed }} failed</span>.
+                </div>
+              </div>
+            </div>
+            <div class="alert alert-danger" *ngIf="commitResult.failures?.length">
+              <div class="fw-medium mb-1">Failures:</div>
+              <ul class="mb-0 fs-13">
+                <li *ngFor="let msg of commitResult.failures">{{ msg }}</li>
+              </ul>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer nav -->
+  <div class="modal-footer">
+    <button type="button" class="btn btn-light" (click)="close()">
+      {{ commitResult ? 'Close' : 'Cancel' }}
+    </button>
+
+    <!-- Step 1 -->
+    <button type="button" class="btn btn-primary"
+            *ngIf="currentStep === 1"
+            [disabled]="!canAnalyze()"
+            (click)="analyze()">
+      <span *ngIf="isUploading" class="spinner-border spinner-border-sm me-1"></span>
+      <i class="ri-magic-line me-1" *ngIf="!isUploading"></i>
+      {{ isUploading ? 'Uploading…' : 'Analyze Files' }}
+    </button>
+
+    <!-- Step 2 -->
+    <button type="button" class="btn btn-primary"
+            *ngIf="currentStep === 2"
+            [disabled]="!canContinueToReview()"
+            (click)="goToReview()">
+      Review <i class="ri-arrow-right-line ms-1"></i>
+    </button>
+
+    <!-- Step 3 -->
+    <button type="button" class="btn btn-light" *ngIf="currentStep === 3" (click)="currentStep = 2">
+      <i class="ri-arrow-left-line me-1"></i> Back
+    </button>
+    <button type="button" class="btn btn-primary" *ngIf="currentStep === 3" (click)="goToSummary()">
+      Summary <i class="ri-arrow-right-line ms-1"></i>
+    </button>
+
+    <!-- Step 4 -->
+    <button type="button" class="btn btn-light"
+            *ngIf="currentStep === 4 && !commitResult"
+            (click)="backToReview()">
+      <i class="ri-arrow-left-line me-1"></i> Back
+    </button>
+    <button type="button" class="btn btn-success"
+            *ngIf="currentStep === 4 && !commitResult"
+            [disabled]="isCommitting"
+            (click)="commit()">
+      <span *ngIf="isCommitting" class="spinner-border spinner-border-sm me-1"></span>
+      <i class="ri-check-double-line me-1" *ngIf="!isCommitting"></i>
+      {{ isCommitting ? 'Importing…' : 'Import' }}
+    </button>
+  </div>
+</div>

@@ -23,8 +23,10 @@ export interface DocumentGenerationRequest {
   templateId?: number;
   documentType: string;
   jurisdiction: string;
+  practiceArea?: string;  // Slug from PRACTICE_AREAS (e.g. 'pi', 'family') — drives 4-way template cascade
   variables: { [key: string]: any };
   prompt?: string;
+  documentOptions?: { [key: string]: any };  // Doc-specific config (e.g. LOR recipientType + purposes)
 }
 
 export interface GeneratedDocument {
@@ -117,8 +119,11 @@ export interface DraftGenerationRequest {
   prompt: string;
   documentType: string;
   jurisdiction: string;
+  practiceArea?: string;  // Slug from PRACTICE_AREAS (e.g. 'pi', 'family') — drives 4-way template cascade
   sessionName: string;
   researchMode: string;  // Research mode: FAST or THOROUGH
+  courtLevel?: string;   // Court level: DEFAULT, DISTRICT_COURT, etc.
+  documentOptions?: { [key: string]: any };  // Doc-specific config (e.g. LOR recipientType + purposes)
 }
 
 export interface DraftGenerationResponse {
@@ -743,6 +748,16 @@ export class DocumentGenerationService {
     return this.http.patch(
       `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/stationery`,
       { stationeryTemplateId, stationeryAttorneyId }
+    );
+  }
+
+  /**
+   * Get the last jurisdiction used for documents linked to a specific case.
+   * Used to auto-populate jurisdiction and detect mismatches.
+   */
+  getLastJurisdiction(caseId: number): Observable<{ jurisdiction: string }> {
+    return this.http.get<{ jurisdiction: string }>(
+      `${environment.apiUrl}/api/legal/ai-workspace/cases/${caseId}/last-jurisdiction`
     );
   }
 

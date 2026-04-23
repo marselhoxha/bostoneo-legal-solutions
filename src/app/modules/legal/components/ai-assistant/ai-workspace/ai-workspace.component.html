@@ -164,15 +164,15 @@
   <!-- LEFT SIDEBAR: Non-Upload Modes (Question, Draft, Workflow) -->
   <!-- ========================================== -->
   <aside class="card conversation-sidebar" [class.open]="sidebarOpen$ | async"
-         *ngIf="!(draftingMode$ | async) && !(showChat$ | async) && !(isGenerating$ | async) && selectedTask !== 'upload' && !((documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async))">
+         *ngIf="!(draftingMode$ | async) && !(showChat$ | async) && !(isGenerating$ | async) && selectedTask !== 'upload' && (selectedTask !== 'draft' || (draftMode$ | async) === 'dashboard') && !((documentViewerMode$ | async) && (viewerSidebarCollapsed$ | async))">
 
     <!-- Search Bar -->
     <div class="sidebar-search-box">
       <div class="search-input-wrapper">
         <i class="ri-search-line"></i>
         <input [hidden]="selectedTask !== 'question'" type="text" placeholder="Search questions..." [(ngModel)]="conversationSearchQuery">
-        <input [hidden]="selectedTask !== 'draft'" type="text" placeholder="Search drafts..." [(ngModel)]="conversationSearchQuery">
         <input [hidden]="selectedTask !== 'workflow'" type="text" placeholder="Search workflows..." [(ngModel)]="workflowSearchQuery">
+        <input [hidden]="selectedTask !== 'draft'" type="text" placeholder="Search drafts..." [(ngModel)]="conversationSearchQuery">
       </div>
     </div>
 
@@ -231,49 +231,6 @@
               </div>
             </div>
             <button class="item-delete-btn" (click)="deleteConversation(conv.id); $event.stopPropagation()" title="Delete conversation">
-              <i class="ri-delete-bin-line"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ====== DRAFT MODE CONTENT ====== -->
-      <div [hidden]="selectedTask !== 'draft'" class="px-1">
-        <div class="sidebar-section-header">
-          <span class="section-title">Recent Drafts</span>
-          <span class="section-action action-primary" (click)="deleteAllConversations()">Clear all</span>
-        </div>
-
-        <!-- Loading State -->
-        <div class="sidebar-empty-state" *ngIf="loadingDrafts">
-          <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-          <p class="empty-desc mt-2">Loading...</p>
-        </div>
-
-        <!-- Empty State -->
-        <div class="sidebar-empty-state" *ngIf="!loadingDrafts && filteredDraftConversations.length === 0">
-          <div class="empty-icon"><i class="ri-file-edit-line"></i></div>
-          <p class="empty-title">No drafts yet</p>
-          <p class="empty-desc">Generate a draft to get started</p>
-        </div>
-
-        <!-- Drafts List -->
-        <div *ngIf="!loadingDrafts && filteredDraftConversations.length > 0">
-          <div *ngFor="let conv of filteredDraftConversations"
-               class="sidebar-list-item"
-               [class.active]="(activeConversationId$ | async) === conv.id"
-               (click)="switchConversation(conv.id)">
-            <div class="item-icon icon-draft">
-              <i class="ri-file-text-line"></i>
-            </div>
-            <div class="item-content">
-              <div class="item-title">{{ (conv.title || 'Untitled Draft') | slice:0:30 }}{{ (conv.title || '').length > 30 ? '...' : '' }}</div>
-              <div class="item-meta">
-                <span class="sidebar-badge" [ngClass]="getDraftStatusClass(conv)">{{ getDraftStatus(conv) }}</span>
-                <span class="item-date">{{ conv.date | date:'MMM d' }}</span>
-              </div>
-            </div>
-            <button class="item-delete-btn" (click)="deleteConversation(conv.id); $event.stopPropagation()" title="Delete draft">
               <i class="ri-delete-bin-line"></i>
             </button>
           </div>
@@ -342,6 +299,53 @@
               <span class="steps-info">{{ getCompletedStepsCount(workflow) }} of {{ workflow.totalSteps || 0 }} steps complete</span>
               <span class="due-date" *ngIf="workflow.dueDate">Due {{ workflow.dueDate | date:'MMM d':'UTC' }}</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== DRAFT MODE CONTENT (Sprint 4c Flow v2) ====== -->
+      <!-- Recent Drafts list — matches QUESTION MODE styling so the left rail feels consistent. -->
+      <div [hidden]="selectedTask !== 'draft'" class="px-3">
+        <div class="sidebar-section-header">
+          <span class="section-title">Recent Drafts</span>
+          <span class="section-action action-primary" *ngIf="filteredDraftConversations.length > 0" (click)="deleteAllConversations()">Clear all</span>
+        </div>
+
+        <!-- Loading State -->
+        <div class="sidebar-empty-state" *ngIf="loadingDrafts">
+          <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+          <p class="empty-desc mt-2">Loading drafts…</p>
+        </div>
+
+        <!-- Empty State -->
+        <div class="sidebar-empty-state" *ngIf="!loadingDrafts && filteredDraftConversations.length === 0">
+          <div class="empty-icon"><i class="ri-file-text-line"></i></div>
+          <p class="empty-title">No drafts yet</p>
+          <p class="empty-desc">Click "New Draft" to create your first document</p>
+        </div>
+
+        <!-- Drafts List — editorial two-line row: document type on top, matter context below. -->
+        <div *ngIf="!loadingDrafts && filteredDraftConversations.length > 0">
+          <div *ngFor="let conv of filteredDraftConversations"
+               class="sidebar-list-item draft-item"
+               [class.active]="(activeConversationId$ | async) === conv.id"
+               [class.has-case]="hasResolvableCaseLink(conv)"
+               (click)="switchConversation(conv.id)"
+               [title]="draftPrimaryLabel(conv) + ' — ' + draftSecondaryLabel(conv)">
+            <div class="item-icon icon-conversation">
+              <i class="ri-file-text-line"></i>
+            </div>
+            <div class="item-content">
+              <div class="item-title">{{ draftPrimaryLabel(conv) }}</div>
+              <div class="item-subtitle" [class.no-case]="!hasResolvableCaseLink(conv)">
+                <i class="ri-briefcase-4-line subtitle-icon" *ngIf="hasResolvableCaseLink(conv)"></i>
+                <i class="ri-link-unlink-m subtitle-icon" *ngIf="!hasResolvableCaseLink(conv)"></i>
+                <span class="subtitle-text">{{ draftSecondaryLabel(conv) }}</span>
+              </div>
+            </div>
+            <button class="item-delete-btn" (click)="deleteConversation(conv.id); $event.stopPropagation()" title="Delete draft">
+              <i class="ri-delete-bin-line"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -640,8 +644,8 @@
       (uploadToCollection)="startUploadToCollection($event)">
     </app-collection-viewer>
 
-    <!-- Welcome Screen (No active conversation) -->
-    <div class="welcome-screen" *ngIf="!showWorkflowDetailsPage && !(documentViewerMode$ | async) && !isViewingCollection && !(showChat$ | async) && !(isGenerating$ | async) && !(draftingMode$ | async)">
+    <!-- Welcome Screen (No active conversation) — hidden in LegiDraft focused mode (Sprint 4a) -->
+    <div class="welcome-screen" *ngIf="!showWorkflowDetailsPage && !(documentViewerMode$ | async) && !isViewingCollection && !(showChat$ | async) && !(isGenerating$ | async) && !(draftingMode$ | async) && selectedTask !== 'draft'">
       <div class="welcome-header">
         <h2 class="welcome-title mb-0">Welcome, {{ getUserDisplayName() }}</h2>
         <p class="welcome-subtitle" *ngIf="!selectedTask || selectedTask === 'question'">Ask any legal question — get AI-powered answers with cited case law and statutes.</p>
@@ -876,7 +880,7 @@
                   <i class="ri-briefcase-line me-1 text-primary"></i>
                   Link to a case (optional)
                 </h6>
-                <select class="form-select form-select-sm" [(ngModel)]="selectedCaseId" name="selectedCaseId">
+                <select class="form-select form-select-sm" [(ngModel)]="selectedCaseId" (ngModelChange)="onCaseSelected($event)" name="selectedCaseId">
                   <option [ngValue]="null">-- No case selected --</option>
                   <option *ngFor="let case of userCases" [ngValue]="case.id">
                     {{ case.caseNumber ? case.caseNumber + ' - ' : '' }}{{ case.title }}
@@ -904,82 +908,7 @@
         </div>
       </div>
 
-      <!-- Document Type Selector - Custom Dropdown (when Generate a draft is selected) -->
-      <div class="document-type-selector" *ngIf="selectedTask === 'draft'">
-        <div class="selector-header">
-          <div class="selector-label">Draft:</div>
-
-          <!-- Custom Dropdown Button -->
-          <div class="custom-dropdown-wrapper">
-            <button
-              type="button"
-              class="custom-dropdown-toggle"
-              (click)="toggleDocTypeDropdown()"
-              [class.active]="showDocTypeDropdown">
-              <span class="dropdown-text">{{selectedDocTypeName}}</span>
-              <i class="ri-arrow-down-s-line dropdown-arrow" [class.rotated]="showDocTypeDropdown"></i>
-            </button>
-
-            <!-- Dropdown Menu -->
-            <div class="custom-dropdown-menu" *ngIf="showDocTypeDropdown">
-              <div class="dropdown-content">
-                <div class="dropdown-category" *ngFor="let category of documentTypeCategories">
-                  <div class="category-header" (click)="toggleCategory(category.id)">
-                    <span class="category-icon">{{category.icon}}</span>
-                    <span class="category-name">{{category.name}}</span>
-                    <i class="ri-arrow-down-s-line toggle-icon" [class.rotated]="category.expanded"></i>
-                  </div>
-
-                  <div class="category-items" *ngIf="category.expanded">
-                    <button
-                      type="button"
-                      class="dropdown-item"
-                      *ngFor="let type of category.types"
-                      [class.selected]="selectedDocTypePill === type.id"
-                      (click)="selectDocTypePill(type.id)">
-                      {{type.name}}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Search input (optional filter) -->
-          <div class="doc-type-search-wrapper">
-            <i class="ri-search-line search-icon"></i>
-            <input
-              type="text"
-              class="form-control form-control-sm doc-type-search"
-              [(ngModel)]="documentTypeSearchText"
-              placeholder="Or search types..."
-              name="docTypeSearch">
-          </div>
-
-          <a (click)="showPromptTips()" class="prompt-tips-link">
-            <i class="ri-lightbulb-line"></i>
-            Prompt Tips
-          </a>
-        </div>
-
-        <!-- Quick access pills (filtered by search if active) -->
-        <div class="quick-pills" *ngIf="documentTypeSearchText && filteredDocumentTypes.length > 0">
-          <button
-            class="pill-btn"
-            *ngFor="let type of filteredDocumentTypes"
-            [class.active]="selectedDocTypePill === type.id"
-            (click)="selectDocTypePill(type.id)">
-            {{type.name}}
-          </button>
-        </div>
-      </div>
-
-      <!-- Warning: Document Type Required (only show when user focuses prompt) -->
-      <div class="alert alert-warning doc-type-warning"
-           *ngIf="selectedTask === 'draft' && showDocTypeWarning && !selectedDocTypePill">
-        <i class="ri-alert-line me-1"></i>
-        <strong>Please select a document type above</strong> to ensure proper citation formatting
-      </div>
+      <!-- Sprint 4a — LegiDraft moved to dedicated focused layout outside welcome-screen -->
 
       <!-- Case Workflow Section (shown when Case Workflow task is selected) -->
       <div class="case-workflow-section mb-4" *ngIf="selectedTask === 'workflow'">
@@ -1120,8 +1049,8 @@
         </div>
       </div>
 
-      <!-- Main Prompt Input (hidden for upload, summarize, and workflow modes) -->
-      <div class="main-prompt-area" *ngIf="selectedTask !== 'upload' && selectedTask !== 'summarize' && selectedTask !== 'workflow'">
+      <!-- Main Prompt Input (hidden for upload, summarize, workflow, and draft — draft has its own wizard with prompt) -->
+      <div class="main-prompt-area" *ngIf="selectedTask !== 'upload' && selectedTask !== 'summarize' && selectedTask !== 'workflow' && selectedTask !== 'draft'">
         <form (ngSubmit)="startCustomDraft()" class="prompt-form card">
           <div class="card-body">
             <!-- Upload mode: Hide textarea, analysis is automatic -->
@@ -1133,44 +1062,6 @@
               name="customPrompt"
               [placeholder]="promptPlaceholder"
               rows="3"></textarea>
-
-            <!-- Enhance Prompt (Draft mode only, when textarea has content, not for demand letters) -->
-            <div class="enhance-prompt-section" *ngIf="selectedTask === 'draft' && customPrompt && customPrompt.trim().length > 0 && selectedDocTypePill !== 'demand-letter'">
-              <div class="enhance-prompt-row" *ngIf="!isEnhancingPrompt">
-                <button type="button" class="btn btn-enhance-prompt" (click)="enhanceCurrentPrompt()">
-                  <i class="ri-magic-line"></i> Enhance Prompt
-                </button>
-                <span class="enhance-success-badge" *ngIf="promptWasEnhanced">
-                  <i class="ri-check-line"></i> Enhanced
-                </span>
-              </div>
-              <div class="enhance-loading" *ngIf="isEnhancingPrompt">
-                <span class="spinner-border spinner-border-sm"></span>
-                <span>Structuring your prompt...</span>
-              </div>
-            </div>
-            <!-- Demand letters use a specialized EvenUp-style prompt — enhancement not needed -->
-            <div class="enhance-prompt-section" *ngIf="selectedTask === 'draft' && customPrompt && customPrompt.trim().length > 0 && selectedDocTypePill === 'demand-letter'">
-              <span class="text-muted small"><i class="ri-information-line me-1"></i>Demand letters use a specialized format with your case data — no enhancement needed</span>
-            </div>
-
-            <!-- Case Selector (Draft task only) -->
-            <div class="case-selector-section" *ngIf="selectedTask === 'draft'" style="margin-top: 1rem; margin-bottom: 1rem;">
-              <label class="form-label" style="font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem;">
-                <i class="ri-briefcase-line me-1"></i>
-                Link to Case (Optional):
-              </label>
-              <select [(ngModel)]="selectedCaseId" class="form-select" name="caseSelector" style="margin-bottom: 0.5rem;">
-                <option [ngValue]="null">None - General Draft</option>
-                <option *ngFor="let case of userCases" [ngValue]="case.id">
-                  {{case.caseNumber}} - {{case.title}}
-                </option>
-              </select>
-              <small class="text-muted" style="font-size: 0.75rem;">
-                <i class="ri-information-line"></i>
-                Select a case to include case context in the draft
-              </small>
-            </div>
 
             <div class="prompt-footer">
               <!-- Hide jurisdiction and mode selectors for upload mode -->
@@ -1195,6 +1086,96 @@
           </div>
         </form>
       </div>
+    </div>
+
+    <!-- Sprint 4a — LegiDraft focused view: empty-state / wizard / generating in center + Case Context on right.
+         Visible during generation (isGenerating) so the wizard → spinner → editor transition stays in-frame.
+         Hides on draftingMode so the split-view editor takes over cleanly. -->
+    <div class="legidraft-focused"
+         *ngIf="selectedTask === 'draft' && !showWorkflowDetailsPage && !(documentViewerMode$ | async) && !isViewingCollection && !(draftingMode$ | async)">
+
+      <button type="button" class="legidraft-close" (click)="exitDraftMode()" aria-label="Exit LegiDraft" *ngIf="!(isGenerating$ | async)">
+        <i class="ri-close-line"></i>
+      </button>
+
+      <div class="legidraft-center">
+        <!-- Generation in progress — takes over when user clicks "Generate Draft" -->
+        <div class="legidraft-generating" *ngIf="isGenerating$ | async">
+          <div class="gen-spinner">
+            <i class="ri-loader-4-line"></i>
+          </div>
+          <h4 class="gen-title">Generating your document…</h4>
+          <p class="gen-subtitle">This usually takes 20–45 seconds. You'll be dropped into the editor the moment it's ready.</p>
+
+          <div class="gen-steps">
+            <app-workflow-steps
+              [steps]="workflowSteps$ | async"
+              [isGenerating]="isGenerating$ | async">
+            </app-workflow-steps>
+          </div>
+
+          <button type="button" class="btn btn-sm btn-soft-danger gen-stop" (click)="stopGeneration()">
+            <i class="ri-stop-circle-line"></i> Stop
+          </button>
+        </div>
+
+        <!-- Sprint 4c — Arrival dashboard: two tiles (AI + Template) + recent drafts strip. -->
+        <app-draft-dashboard
+          *ngIf="(draftMode$ | async) === 'dashboard' && !(isGenerating$ | async)"
+          [hasLinkedCase]="!!selectedCaseForDraft"
+          [linkedCase]="selectedCaseForDraft"
+          [userName]="currentUser?.firstName"
+          [recentDrafts]="filteredDraftConversations"
+          [recentTemplates]="recentTemplates"
+          [templatesCount]="totalTemplatesCount"
+          (newDraft)="startNewDraft()"
+          (pickTemplate)="onDashboardPickTemplate($event)"
+          (browseTemplates)="enterTemplatePickerMode()"
+          (openDraft)="switchConversation($event)"
+          (clearCase)="onClearLinkedCase()"
+          (openCase)="onOpenLinkedCase($event)">
+        </app-draft-dashboard>
+
+        <!-- Inline template picker: replaces the old NgbModal-wrapped library. -->
+        <app-template-picker-inline
+          *ngIf="(draftMode$ | async) === 'template-picker' && !(isGenerating$ | async)"
+          [presetPracticeArea]="selectedCaseForDraft?.practiceArea || null"
+          [presetJurisdiction]="selectedCaseForDraft?.jurisdiction || null"
+          [linkedCase]="selectedCaseForDraft"
+          [refreshToken]="pickerRefreshToken"
+          (templatePicked)="onInlineTemplatePicked($event)"
+          (backToDashboard)="enterDashboardMode()"
+          (browseFullLibrary)="onBrowseFullLibrary()">
+        </app-template-picker-inline>
+
+        <!-- Fill & generate: attorney reviews auto-filled variables, then triggers SSE draft. -->
+        <app-fill-and-generate
+          *ngIf="(draftMode$ | async) === 'fill' && !(isGenerating$ | async)"
+          [template]="selectedTemplateForFill"
+          [linkedCase]="selectedCaseForDraft"
+          [availableCases]="userCases"
+          (submit)="onFillAndGenerateSubmit($event)"
+          (backToDashboard)="enterDashboardMode()"
+          (changeTemplate)="enterTemplatePickerMode()">
+        </app-fill-and-generate>
+
+        <!-- AI wizard: multi-step guided draft. -->
+        <app-draft-wizard
+          #draftWizardRef
+          *ngIf="(draftMode$ | async) === 'ai-wizard' && !(isGenerating$ | async)"
+          [availableCases]="userCases"
+          [initialCaseId]="selectedCaseId"
+          [initialPrompt]="customPrompt"
+          (wizardSubmit)="onDraftWizardSubmit($event)"
+          (wizardCancel)="onDraftWizardCancel()"
+          (promptChange)="customPrompt = $event"
+          (caseSelectionChange)="onWizardCaseChange($event)">
+        </app-draft-wizard>
+      </div>
+
+      <!-- Option A — the former right-rail Case Context panel is now an inline
+           strip inside <app-draft-wizard> (shown above the stepper). The mobile
+           drawer + FAB + scrim were removed along with the right rail. -->
     </div>
 
     <!-- Split View Container (when document is generated) — Full Page Drafting -->
@@ -1519,6 +1500,9 @@
                 <a class="dropdown-item" (click)="saveToFileManager()">
                   <i class="ri-folder-upload-line me-2"></i> Save to File Manager
                 </a>
+                <a class="dropdown-item" (click)="openSaveAsTemplate()">
+                  <i class="ri-file-copy-line me-2"></i> Save as Template
+                </a>
               </div>
             </div>
           </div>
@@ -1724,7 +1708,7 @@
             <!-- PDF exhibits -->
             <ngx-extended-pdf-viewer
               *ngIf="isPdfExhibit(exhibit)"
-              [src]="exhibit.pdfData || exhibit.fileUrl"
+              [src]="exhibit.pdfBlob || exhibit.fileUrl"
               [zoom]="'page-width'"
               [showToolbar]="false"
               [showSidebarButton]="false"
@@ -2024,7 +2008,7 @@
     </div>
 
     <!-- Chat Container (Active conversation - full width when not in drafting mode, hidden when document viewer is open) -->
-    <div class="chat-container-main" *ngIf="((showChat$ | async) || (isGenerating$ | async)) && !(draftingMode$ | async) && !(documentViewerMode$ | async)">
+    <div class="chat-container-main" *ngIf="((showChat$ | async) || (isGenerating$ | async)) && !(draftingMode$ | async) && !(documentViewerMode$ | async) && selectedTask !== 'draft'">
       <!-- Full-page navigation bar (back to LegiSpace) -->
       <div class="legisearch-nav-bar">
         <button class="btn-back btn-back-legispace" (click)="goBackToTaskSelection()" aria-label="Back to LegiSpace">
@@ -2282,6 +2266,15 @@
   <!-- Document Editor Modal -->
 
 </div>
+
+<!-- Sprint 4c — Template Import Wizard Modal (launched from inline picker's "Import" button) -->
+<ng-template #templateImportModal>
+  <app-template-import-wizard
+    *ngIf="showTemplateImportWizard"
+    (importCompleted)="onTemplateImportCompleted($event)"
+    (closed)="onTemplateImportClosed()">
+  </app-template-import-wizard>
+</ng-template>
 
 <!-- How It Works Modal -->
 <ng-template #howItWorksModal let-modal>
@@ -2654,7 +2647,7 @@
         <!-- Associated Case -->
         <div class="config-field">
           <label class="field-label">Associated Case</label>
-          <select class="form-select field-input" [(ngModel)]="selectedCaseId">
+          <select class="form-select field-input" [(ngModel)]="selectedCaseId" (ngModelChange)="onCaseSelected($event)">
             <option [ngValue]="null">None - General Draft</option>
             <option *ngFor="let c of userCases" [ngValue]="c.id">
               {{ c.caseNumber }} - {{ c.title }}
@@ -2868,3 +2861,6 @@
     </div>
   </div>
 </div>
+
+<!-- Sprint 4c — Template Library modal removed. The inline template picker
+     (Phase 3) replaces this flow as one of the DraftMode states. -->
