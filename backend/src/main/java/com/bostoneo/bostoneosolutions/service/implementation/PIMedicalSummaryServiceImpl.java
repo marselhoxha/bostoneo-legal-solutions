@@ -409,6 +409,13 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
             }
             LocalDate currDate = records.get(i).getTreatmentDate();
 
+            // Skip records where the AI couldn't extract a date — ChronoUnit.DAYS.between
+            // throws NullPointerException: temporal on a null arg, which would abort the
+            // entire medical summary generation.
+            if (prevDate == null || currDate == null) {
+                continue;
+            }
+
             long daysBetween = ChronoUnit.DAYS.between(prevDate, currDate);
             if (daysBetween > 30) { // Flag gaps > 30 days
                 Map<String, Object> gap = new HashMap<>();

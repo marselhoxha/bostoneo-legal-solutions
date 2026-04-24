@@ -470,6 +470,17 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         int totalFiles = pdfFiles.size();
         log.info("Found {} scannable files (PDFs + images) to scan for case {}", totalFiles, caseId);
 
+        // If the case has zero medical records, the scan-tracking table is stale (or the prior
+        // scan legitimately found nothing). Either way, user clicking Scan with an empty record
+        // list wants a fresh attempt — bypass the "already processed" fast path and reset tracking
+        // so every document is re-analyzed.
+        long existingRecordCount = repository.countByCaseIdAndOrganizationId(caseId, orgId);
+        boolean forceRescan = existingRecordCount == 0;
+        if (forceRescan) {
+            scannedDocumentRepository.deleteByCaseIdAndOrganizationId(caseId, orgId);
+            log.info("Case {} has 0 medical records — cleared scan tracking and forcing full re-scan", caseId);
+        }
+
         // Send initial progress (0/total)
         sendProgress(onProgress, caseId, 0, totalFiles, "Starting scan...");
 
@@ -483,8 +494,10 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 fileResult.put("fileId", file.getId());
                 fileResult.put("fileName", file.getOriginalName());
 
-                // Check if this document was already processed (using tracking table, not medical records)
-                boolean alreadyProcessed = scannedDocumentRepository.existsByDocumentIdAndOrganizationId(file.getId(), orgId);
+                // Check if this document was already processed (using tracking table, not medical records).
+                // Skipped entirely on forceRescan — tracking was just cleared above.
+                boolean alreadyProcessed = !forceRescan
+                        && scannedDocumentRepository.existsByDocumentIdAndOrganizationId(file.getId(), orgId);
                 if (alreadyProcessed) {
                     fileResult.put("status", "skipped");
                     fileResult.put("reason", "Already processed");

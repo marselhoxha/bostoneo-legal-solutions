@@ -68,16 +68,6 @@ function Ic({c,s}){return c&&c.startsWith("ri-")?<Icon name={c} size={20} style=
 export default function Home() {
   const [activeTab, setActiveTab] = useState(0)
 
-  const orgSchema={
-    "@context":"https://schema.org",
-    "@type":"Organization",
-    name:"Legience",
-    url:"https://legience.com",
-    logo:"https://legience.com/legience-logo-blue.svg",
-    description:"AI-powered legal practice management platform for modern law firms.",
-    contactPoint:{"@type":"ContactPoint",email:"hello@legience.com",contactType:"sales"},
-    sameAs:[]
-  }
   const softwareSchema={
     "@context":"https://schema.org",
     "@type":"SoftwareApplication",
@@ -100,7 +90,6 @@ export default function Home() {
   }
   return <>
     <Helmet>
-      <script type="application/ld+json">{JSON.stringify(orgSchema)}</script>
       <script type="application/ld+json">{JSON.stringify(softwareSchema)}</script>
       <script type="application/ld+json">{JSON.stringify(homeFaqSchema)}</script>
     </Helmet>
