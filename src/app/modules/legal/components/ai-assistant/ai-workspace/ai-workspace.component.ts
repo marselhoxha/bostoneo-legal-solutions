@@ -74,6 +74,8 @@ import { TimelineViewComponent } from '../timeline-view/timeline-view.component'
 import { DocumentAnalysisViewerComponent, AnalyzedDocumentData } from '../document-analysis-viewer/document-analysis-viewer.component';
 import { CollectionViewerComponent } from '../collection-viewer/collection-viewer.component';
 import { BackgroundTasksIndicatorComponent } from './background-tasks-indicator/background-tasks-indicator.component';
+import { DocumentReviewToolbarComponent } from './document-review-toolbar/document-review-toolbar.component';
+import { DocumentReviewState } from '../../../services/document-generation.service';
 import { AiDisclaimerComponent } from '../../../../../shared/components/ai-disclaimer/ai-disclaimer.component';
 import { NgxExtendedPdfViewerModule } from 'ngx-extended-pdf-viewer';
 
@@ -125,6 +127,7 @@ import { DocumentState } from '../../../models/document.model';
     DocumentAnalysisViewerComponent,
     CollectionViewerComponent,
     BackgroundTasksIndicatorComponent,
+    DocumentReviewToolbarComponent,
     AiDisclaimerComponent,
     NgxExtendedPdfViewerModule,
     TemplateLibraryComponent,
@@ -510,6 +513,21 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   activeDocumentContent = '';
   currentDocumentWordCount = 0;
   currentDocumentPageCount = 0;
+
+  // §6.1 gating — drives the diagonal DRAFT watermark on .document-preview-content.
+  // Null means legacy/untracked (no watermark); anything other than 'approved' renders the stamp.
+  currentApprovalStatus: string | null = null;
+
+  // §6.1 attorney review metadata — passed to the review toolbar.
+  currentReviewedAt: string | null = null;
+  currentReviewNotes: string | null = null;
+  currentReviewRequestedAt: string | null = null;
+  currentReviewerName: string | null = null;
+
+  // §6.1 — tracks which doc has already had the "editing reverts approval" warning shown
+  // this session. Prevents re-prompting on every keystroke while keeping the prompt
+  // one-time per attorney_reviewed load.
+  private reviewEditWarningShownForDocId: string | number | null = null;
 
   // Pending document content - stores markdown content before editor is ready
   // This eliminates placeholder delay by loading content immediately in onEditorCreated()
@@ -2368,6 +2386,79 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * §6.1 review state — mirror the freshly loaded/updated document's review metadata into
+   * the local fields the review toolbar reads from. Keeping this in one place means every
+   * load/regen/restore path stays consistent.
+   */
+  private applyReviewMetadata(source: any): void {
+    this.currentApprovalStatus = source?.approvalStatus ?? null;
+    this.currentReviewedAt = source?.reviewedAt ?? null;
+    this.currentReviewNotes = source?.reviewNotes ?? null;
+    this.currentReviewRequestedAt = source?.reviewRequestedAt ?? null;
+    this.currentReviewerName = source?.reviewerName ?? null;
+    // Reset one-time edit warning when approval state changes — a doc that moves back
+    // to attorney_reviewed via API should prompt again next edit.
+    this.reviewEditWarningShownForDocId = null;
+  }
+
+  /**
+   * §6.1 review state — blank the toolbar inputs (used on new/cleared documents so the
+   * chip falls back to DRAFT and no stale notes linger from a previous doc).
+   */
+  private clearReviewMetadata(): void {
+    this.currentApprovalStatus = null;
+    this.currentReviewedAt = null;
+    this.currentReviewNotes = null;
+    this.currentReviewRequestedAt = null;
+    this.currentReviewerName = null;
+    this.reviewEditWarningShownForDocId = null;
+  }
+
+  /**
+   * §6.1 review state — handler for the review toolbar's `stateChange` output. Fires after
+   * every successful approve / request-changes / revert API call so the watermark driven
+   * by `currentApprovalStatus` flips without requiring a full document reload.
+   */
+  onReviewStateChange(state: DocumentReviewState): void {
+    this.applyReviewMetadata(state);
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * §6.1 review state — shown once on the first content edit of a document that is currently
+   * in the `attorney_reviewed` state. Makes the consequence explicit so the user isn't
+   * surprised when they return and the DRAFT watermark is back. Backend also auto-reverts
+   * on the next save, so this prompt is pure UX; dismissing it does not bypass gating.
+   */
+  private async warnIfEditingApprovedDocument(): Promise<void> {
+    // Only show for approved docs with a valid id we haven't warned for this session.
+    if (this.currentApprovalStatus !== 'attorney_reviewed') return;
+    if (!this.currentDocumentId) return;
+    if (this.reviewEditWarningShownForDocId === this.currentDocumentId) return;
+
+    // Mark BEFORE awaiting the dialog — otherwise fast typing fires N dialogs before the
+    // first one resolves.
+    this.reviewEditWarningShownForDocId = this.currentDocumentId;
+
+    const Swal = (await import('sweetalert2')).default;
+    const reviewerLabel = this.currentReviewerName || 'an attorney';
+    const reviewedAtLabel = this.currentReviewedAt
+      ? new Date(this.currentReviewedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+      : null;
+    const when = reviewedAtLabel ? ` on ${reviewedAtLabel}` : '';
+
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Editing will revert this document to draft',
+      html: `This document was approved by <strong>${reviewerLabel}</strong>${when}.<br><br>
+             Any further edits demote it to <strong>DRAFT</strong> and it will need to be re-reviewed before the watermark clears again.`,
+      confirmButtonText: 'OK, continue editing',
+      confirmButtonColor: '#f7b84b',
+      showCancelButton: false,
+    });
+  }
+
+  /**
    * Clear selected workflow template and return to template selection
    */
   clearWorkflowTemplate(): void {
@@ -3356,6 +3447,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
               // Populate document state
               this.currentDocumentId = null; // No GeneratedDocument for workflow drafts
+              this.clearReviewMetadata();
               this.activeDocumentTitle = conv.title || this.extractTitleFromMarkdown(draftContent) || 'Untitled Document';
               this.currentDocumentWordCount = this.countWords(draftContent);
               this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
@@ -3430,6 +3522,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   this.activeDocumentTitle = conv.title || this.extractTitleFromMarkdown(document.content) || 'Untitled Document';
                   this.currentDocumentWordCount = document.wordCount || this.countWords(document.content);
                   this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+                  this.applyReviewMetadata(document);
                   this.documentMetadata = {
                     tokensUsed: document.tokensUsed,
                     costEstimate: document.costEstimate,
@@ -3648,6 +3741,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.activeDocumentContent = '';
     this.activeDocumentTitle = 'Generated Document';
     this.currentDocumentId = null;
+    this.clearReviewMetadata();
     this.originalTemplateHtml = null;
     this.originalTemplateDocId = null;
     this.documentMetadata = {};
@@ -3791,7 +3885,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Pass document type so backend applies appropriate heading styles (e.g., letters = left-aligned)
     const activeConv = this.stateService.getConversations().find(c => c.id === this.stateService.getActiveConversationId());
     const docType = activeConv?.documentType || undefined;
-    this.documentGenerationService.exportContentToPDF(exportHtml, this.activeDocumentTitle, docType)
+    this.documentGenerationService.exportContentToPDF(exportHtml, this.activeDocumentTitle, docType, this.currentApprovalStatus)
       .subscribe({
         next: (response) => this.handleExportResponse(response, 'pdf'),
         error: (error) => {
@@ -3821,8 +3915,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       exportHtml = this.wrapContentWithStationery(cleanBody);
     }
 
-    // Use content export — backend converts HTML to Word
-    this.documentGenerationService.exportContentToWord(exportHtml, this.activeDocumentTitle)
+    // Use content export — backend converts HTML to Word.
+    // Pass approvalStatus so the DOCX watermark matches the in-editor state.
+    this.documentGenerationService.exportContentToWord(exportHtml, this.activeDocumentTitle, this.currentApprovalStatus)
       .subscribe({
         next: (response) => this.handleExportResponse(response, 'docx'),
         error: (error) => {
@@ -5898,6 +5993,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     if (!content) return;
 
     this.currentDocumentId = null;
+    this.clearReviewMetadata();
     this.activeDocumentTitle = event.templateName || this.extractTitleFromMarkdown(content) || 'Untitled Document';
     this.currentDocumentWordCount = this.countWords(content);
     this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
@@ -6915,6 +7011,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
               this.activeDocumentTitle = title || this.extractTitleFromMarkdown(data.content) || 'Untitled Document';
               this.currentDocumentWordCount = data.wordCount || 0;
               this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(data.wordCount || 0);
+              this.applyReviewMetadata(data);
               this.documentMetadata = {
                 tokensUsed: data.tokensUsed,
                 costEstimate: data.costEstimate,
@@ -7221,6 +7318,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
           this.activeDocumentTitle = title || this.extractTitleFromMarkdown(data.content) || 'Untitled Document';
           this.currentDocumentWordCount = data.wordCount || 0;
           this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(data.wordCount || 0);
+          this.applyReviewMetadata(data);
           this.documentMetadata = {
             tokensUsed: data.tokensUsed,
             costEstimate: data.costEstimate,
@@ -8711,6 +8809,24 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         }
       };
       document.addEventListener('mousedown', this.documentMousedownHandler);
+
+      // §6.1 — first-edit-after-approval gate. Uses view.document keydown (not model
+      // change:data) because change:data fires for ANY model mutation — including
+      // programmatic loads (setCKEditorContentFromMarkdown, version restore, SSE writes).
+      // Keydown only fires on real user keystrokes, which is the signal we actually want.
+      // Skip pure-modifier keys and navigation keys — those don't produce edits.
+      editor.editing.view.document.on('keydown', (_evt: any, data: any) => {
+        // Skip keyboard shortcuts (Ctrl+S, Ctrl+C, Cmd+A, etc.) — they don't edit content.
+        if (data?.ctrlKey || data?.metaKey) return;
+        const kc = data?.keyCode;
+        if (kc == null) return;
+        const isModifier = kc === 16 || kc === 17 || kc === 18 || kc === 91 || kc === 93; // Shift, Ctrl, Alt, Meta L/R
+        const isNavigation = (kc >= 33 && kc <= 40); // PageUp, PageDown, End, Home, Arrows
+        const isFunctionKey = kc >= 112 && kc <= 123; // F1–F12
+        const isEscape = kc === 27;
+        if (isModifier || isNavigation || isFunctionKey || isEscape) return;
+        this.warnIfEditingApprovedDocument();
+      });
 
       // Detect CKEditor native undo/redo while pendingChanges is active
       editor.model.document.on('change:data', () => {
@@ -11002,7 +11118,13 @@ You can:
     const cleanBody = this.documentGenerationService.cleanHtmlForExport(htmlContent);
     const exportHtml = this.wrapContentWithStationery(cleanBody);
 
-    this.documentGenerationService.exportContentToPDF(exportHtml, this.activeDocumentTitle)
+    // Thread the per-document approval status into the PDF so the preview watermark
+    // matches the in-editor stamp (clean paper once the attorney approved, DRAFT otherwise).
+    // Also pass documentType so backend skips court-caption centering for letters
+    // (Demand Letter, Settlement Offer, Response to Insurer, Fee Agreement, etc.).
+    const activeConv = this.stateService.getConversations().find(c => c.id === this.stateService.getActiveConversationId());
+    const docType = activeConv?.documentType || undefined;
+    this.documentGenerationService.exportContentToPDF(exportHtml, this.activeDocumentTitle, docType, this.currentApprovalStatus)
       .subscribe({
         next: (response) => {
           const blob = response.body;
@@ -11765,7 +11887,7 @@ You can:
       // Clean HTML for proper Word generation
       const cleanHtml = this.documentGenerationService.cleanHtmlForExport(htmlContent);
       const response = await lastValueFrom(
-        this.documentGenerationService.exportContentToWord(cleanHtml, this.activeDocumentTitle)
+        this.documentGenerationService.exportContentToWord(cleanHtml, this.activeDocumentTitle, this.currentApprovalStatus)
       );
 
       // Extract blob from response

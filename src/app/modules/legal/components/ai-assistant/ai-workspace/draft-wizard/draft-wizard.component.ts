@@ -183,6 +183,10 @@ const DOC_TYPE_META: Record<string, { icon: string; desc: string }> = {
   'medical-records-request':  { icon: 'ri-hospital-line',        desc: 'HIPAA-compliant records request for treating providers' },
   // PI-specific
   'settlement-release':       { icon: 'ri-check-line',           desc: 'Final release + indemnity on paid settlement' },
+  'intake-questionnaire':     { icon: 'ri-clipboard-line',       desc: 'Initial intake · incident details · injuries · treatment providers' },
+  'engagement-letter':        { icon: 'ri-quill-pen-line',       desc: 'Terms of representation · scope · client / firm duties' },
+  'contingency-fee-agreement':{ icon: 'ri-money-dollar-circle-line', desc: 'Fee terms · costs handling · lien · settlement authority' },
+  'hipaa-authorization':      { icon: 'ri-shield-user-line',     desc: 'PHI release for medical records · federally compliant' },
   // Family
   'divorce-petition':         { icon: 'ri-user-unfollow-line',   desc: 'Complaint for divorce with grounds + requested relief' },
   'custody-motion':           { icon: 'ri-parent-line',          desc: 'Motion for legal/physical custody determination' },

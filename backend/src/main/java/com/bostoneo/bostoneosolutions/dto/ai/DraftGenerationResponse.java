@@ -32,6 +32,14 @@ public class DraftGenerationResponse {
         private Integer tokensUsed;
         private BigDecimal costEstimate;
         private LocalDateTime generatedAt;
+
+        // §6.1 gating metadata — surfaced to the UI so it can render
+        // badges/chips, route to "needs review" queues, or suppress
+        // production-only actions (e.g. e-file button) for draft templates.
+        private String approvalStatus;            // "draft" | "in_review" | "attorney_reviewed" | "production_ready" | null
+        private Boolean isVerificationOverdue;    // true when today > nextReviewDue
+        private String templateVersion;           // e.g. "2026.04.23-draft"
+        private String lastVerified;              // ISO date string (source of truth: JSON file)
     }
 
     @Data

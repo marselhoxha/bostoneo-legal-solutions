@@ -73,6 +73,14 @@ public class PracticeAreaCatalogService {
         // ─── Personal Injury ────────────────────────────────────────────────────
         map.put("pi", List.of(
                 tier("Essential", 1, List.of(
+                        c("intake_questionnaire", "intake-questionnaire", "Client Intake Questionnaire", "other",
+                                "Initial intake \u00b7 incident details \u00b7 injuries \u00b7 treatment providers"),
+                        c("engagement_letter", "engagement-letter", "Engagement Letter", "letter",
+                                "Terms of representation \u00b7 scope \u00b7 client / firm duties"),
+                        c("contingency_fee_agreement", "contingency-fee-agreement", "Contingency Fee Agreement", "contract",
+                                "Fee terms \u00b7 costs handling \u00b7 lien \u00b7 settlement authority"),
+                        c("hipaa_authorization", "hipaa-authorization", "HIPAA Authorization", "contract",
+                                "PHI release for medical records \u00b7 federally compliant"),
                         c("lor", "letter-of-representation", "Letter of Representation", "letter",
                                 "Notice of representation \u00b7 policy limits \u00b7 PIP \u00b7 UIM \u00b7 multi-purpose"),
                         c("demand_letter", "demand-letter", "Demand Letter", "letter",

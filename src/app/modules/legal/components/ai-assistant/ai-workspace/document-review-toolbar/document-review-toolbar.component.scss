@@ -1,0 +1,79 @@
+// §6.1 Attorney Review Toolbar — sits in the document-preview-panel header strip.
+// Aims for calm, legal-professional polish: small chip, subdued palette, tight
+// button sizing to read as a utility strip (not a primary CTA area).
+
+:host {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.review-toolbar {
+  line-height: 1;
+}
+
+.review-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  border: 1px solid;
+
+  i {
+    font-size: 0.9rem;
+  }
+}
+
+.review-action {
+  padding: 0.35rem 0.85rem;
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  border-radius: 6px;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  i {
+    font-size: 0.95rem;
+    vertical-align: -1px;
+  }
+}
+
+.review-notes-btn {
+  padding: 0.35rem 0.65rem;
+  font-weight: 500;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
+
+.review-action-menu {
+  font-size: 0.82rem;
+  min-width: 220px;
+
+  .dropdown-item {
+    padding: 0.55rem 0.9rem;
+    display: flex;
+    align-items: center;
+
+    &:hover {
+      background-color: rgba(var(--vz-primary-rgb, 64, 81, 137), 0.06);
+    }
+  }
+}
+
+.review-notes-panel {
+  max-width: 680px;
+
+  .review-notes-body {
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+}

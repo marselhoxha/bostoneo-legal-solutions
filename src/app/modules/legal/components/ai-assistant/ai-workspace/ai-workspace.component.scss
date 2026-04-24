@@ -6460,6 +6460,50 @@ button.filter-chip,
     }
   }
 
+  // §6.1 gating — tiled diagonal stamps stamped onto the editor's paper.
+  // SVG data URIs render as repeating background-images so every scroll
+  // position (and every page of a long document) shows a watermark. Slate
+  // grey for DRAFT, amber for IN REVIEW — neutral, professional, legal-industry
+  // convention. Clears the moment currentApprovalStatus hits attorney_reviewed.
+  //
+  // `::ng-deep` is required because Angular view-encapsulation scopes component
+  // styles to its own elements, but CKEditor renders `.ck.ck-editor__editable_inline`
+  // from its own JS-injected DOM, outside the component's attribute selectors.
+  .document-preview-content.has-draft-watermark {
+    ::ng-deep .ck.ck-editor__editable_inline {
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='560' height='400'><text x='280' y='200' text-anchor='middle' dominant-baseline='middle' transform='rotate(-28 280 200)' font-family='Georgia,serif' font-weight='900' font-style='italic' font-size='92' letter-spacing='14' fill='%23475569' fill-opacity='0.07'>DRAFT</text></svg>") !important;
+      background-repeat: repeat !important;
+      background-position: 0 0 !important;
+    }
+  }
+
+  .document-preview-content.has-review-watermark {
+    ::ng-deep .ck.ck-editor__editable_inline {
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='400'><text x='320' y='200' text-anchor='middle' dominant-baseline='middle' transform='rotate(-28 320 200)' font-family='Georgia,serif' font-weight='900' font-style='italic' font-size='76' letter-spacing='10' fill='%23b45309' fill-opacity='0.08'>IN REVIEW</text></svg>") !important;
+      background-repeat: repeat !important;
+      background-position: 0 0 !important;
+    }
+  }
+
+  // Dark-mode watermark overrides — slate-600 at 7% vanishes on the dark (#1c2128) paper,
+  // so swap to a near-white slate (slate-300 #cbd5e1) at higher opacity. Amber stays warm
+  // but brightens to amber-300 (#fcd34d) so it reads against dark backgrounds without
+  // screaming.
+  :host-context([data-layout-mode="dark"]) &,
+  :host-context([data-bs-theme="dark"]) & {
+    .document-preview-content.has-draft-watermark {
+      ::ng-deep .ck.ck-editor__editable_inline {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='560' height='400'><text x='280' y='200' text-anchor='middle' dominant-baseline='middle' transform='rotate(-28 280 200)' font-family='Georgia,serif' font-weight='900' font-style='italic' font-size='92' letter-spacing='14' fill='%23cbd5e1' fill-opacity='0.10'>DRAFT</text></svg>") !important;
+      }
+    }
+
+    .document-preview-content.has-review-watermark {
+      ::ng-deep .ck.ck-editor__editable_inline {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='400'><text x='320' y='200' text-anchor='middle' dominant-baseline='middle' transform='rotate(-28 320 200)' font-family='Georgia,serif' font-weight='900' font-style='italic' font-size='76' letter-spacing='10' fill='%23fcd34d' fill-opacity='0.11'>IN REVIEW</text></svg>") !important;
+      }
+    }
+  }
+
   // When exhibit panel is open, reduce the document page width so exhibit gets more space
   &.exhibit-open .document-preview-content {
     ::ng-deep .ck.ck-editor__main {

@@ -129,3 +129,323 @@
 .swal2-validation-message{
   background-color: transparent;
 }
+
+// ===========================================================================
+// Legience Review Modal — §6.1 attorney review actions
+// Replaces SweetAlert's default icon with a color-themed badge + refined
+// typography. Applied via `customClass.popup: 'legience-review-modal'` plus
+// a modifier class (`lrm-success`, `lrm-warning`, `lrm-danger`, `lrm-info`).
+// ===========================================================================
+
+.swal2-popup.legience-review-modal {
+  padding: 0 0 28px;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px -20px rgba(15, 23, 42, 0.25), 0 10px 32px -12px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+  min-width: 460px;
+  max-width: 520px;
+
+  // Masthead — gradient band that holds the icon + title + subtitle
+  .lrm-masthead {
+    position: relative;
+    padding: 28px 32px 20px;
+    background: linear-gradient(135deg, rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.14) 0%, rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.04) 100%);
+    border-bottom: 1px solid rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.18);
+    text-align: left;
+
+    // Decorative corner glyph — subtle, adds visual weight
+    &::after {
+      content: '';
+      position: absolute;
+      right: -40px;
+      top: -40px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.18), transparent 65%);
+      pointer-events: none;
+    }
+
+    .lrm-icon-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.16);
+      color: rgb(var(--lrm-accent-rgb, 10, 179, 156));
+      margin-bottom: 14px;
+
+      i {
+        font-size: 26px;
+        line-height: 1;
+      }
+    }
+
+    .lrm-title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--#{$prefix}heading-color);
+      margin: 0 0 6px;
+      line-height: 1.25;
+    }
+
+    .lrm-subtitle {
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: var(--#{$prefix}body-color);
+      opacity: 0.78;
+      margin: 0;
+      max-width: 420px;
+    }
+  }
+
+  // SwAl's default title is kept in-DOM for screen readers (aria-labelledby
+  // points at it) but visually hidden since we render our own title in the
+  // masthead. Icon is suppressed — we draw a custom one.
+  .swal2-title {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+  .swal2-icon { display: none !important; }
+
+  .swal2-html-container {
+    padding: 0;
+    margin: 0;
+    font-size: 14px;
+    text-align: left;
+  }
+
+  // Body — any inline callouts + input live here
+  .lrm-body {
+    padding: 18px 32px 4px;
+  }
+
+  .lrm-callout {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.06);
+    border: 1px solid rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.18);
+    border-left: 3px solid rgb(var(--lrm-accent-rgb, 10, 179, 156));
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--#{$prefix}body-color);
+
+    i {
+      color: rgb(var(--lrm-accent-rgb, 10, 179, 156));
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    strong { color: var(--#{$prefix}heading-color); }
+  }
+
+  .lrm-field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--#{$prefix}secondary-color);
+    margin: 16px 0 6px;
+  }
+
+  .lrm-field-hint {
+    font-size: 12px;
+    color: var(--#{$prefix}secondary-color);
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  // SwAl's injected input/textarea — inherits .form-control feel
+  .swal2-textarea,
+  .swal2-input {
+    margin: 10px 32px 4px;
+    width: calc(100% - 64px);
+    max-width: none;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--#{$prefix}border-color);
+    background: var(--#{$prefix}body-bg);
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:focus {
+      border-color: rgb(var(--lrm-accent-rgb, 10, 179, 156));
+      box-shadow: 0 0 0 3px rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.15);
+    }
+  }
+
+  .swal2-textarea { min-height: 92px; resize: vertical; }
+
+  // Action row — tighter spacing, button polish
+  .swal2-actions {
+    padding: 20px 32px 0;
+    margin: 0;
+    gap: 8px;
+    justify-content: flex-end;
+
+    .swal2-styled {
+      padding: 9px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 8px;
+      box-shadow: none;
+      transition: transform 0.1s ease, box-shadow 0.15s ease;
+
+      &:hover { transform: translateY(-1px); }
+      &.swal2-confirm {
+        background: rgb(var(--lrm-accent-rgb, 10, 179, 156)) !important;
+        &:hover { box-shadow: 0 6px 16px -4px rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.4); }
+      }
+      &.swal2-cancel {
+        background: transparent !important;
+        color: var(--#{$prefix}secondary-color) !important;
+        border: 1px solid var(--#{$prefix}border-color);
+        &:hover { background: var(--#{$prefix}tertiary-bg) !important; }
+      }
+    }
+  }
+
+  // Color modifiers — remap the accent-rgb variable
+  &.lrm-success   { --lrm-accent-rgb: 10, 179, 156; }   // teal-green = approve
+  &.lrm-warning   { --lrm-accent-rgb: 247, 184, 75; }   // amber = revert/caution
+  &.lrm-danger    { --lrm-accent-rgb: 240, 101, 72; }   // coral-red = request-changes
+  &.lrm-info      { --lrm-accent-rgb: 41, 156, 219; }   // sky-blue = request-review
+}
+
+// ===========================================================================
+// Legience Toast — post-action notifications
+// Compact accent-borded card that echoes the review-modal visual language.
+// Applied via `customClass.popup: 'legience-toast'` + modifier class.
+// ===========================================================================
+
+.swal2-popup.swal2-toast.legience-toast {
+  padding: 0 !important;
+  border-radius: 12px;
+  background: var(--#{$prefix}secondary-bg);
+  border: 1px solid var(--#{$prefix}border-color);
+  border-left: 3px solid rgb(var(--lrm-accent-rgb, 10, 179, 156));
+  box-shadow:
+    0 12px 32px -12px rgba(15, 23, 42, 0.22),
+    0 4px 12px -4px rgba(15, 23, 42, 0.12);
+  min-width: 340px;
+  max-width: 420px;
+  overflow: hidden;
+
+  // Stock SwAl title/icon slots are unused — all content rendered inside .ltoast
+  .swal2-title,
+  .swal2-icon { display: none !important; }
+
+  .swal2-html-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: inherit;
+    color: inherit;
+    text-align: left;
+    overflow: visible;
+  }
+
+  .ltoast {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    align-items: start;
+    gap: 2px 12px;
+    padding: 14px 16px 14px 14px;
+  }
+
+  .ltoast-icon {
+    grid-row: 1 / span 2;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.14);
+    color: rgb(var(--lrm-accent-rgb, 10, 179, 156));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+      font-size: 18px;
+      line-height: 1;
+    }
+  }
+
+  .ltoast-title {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--#{$prefix}heading-color);
+    line-height: 1.35;
+    letter-spacing: -0.005em;
+  }
+
+  .ltoast-text {
+    grid-column: 2;
+    grid-row: 2;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--#{$prefix}body-color);
+    opacity: 0.72;
+    margin-top: 2px;
+  }
+
+  .swal2-timer-progress-bar-container {
+    height: 2px;
+    background: transparent;
+  }
+  .swal2-timer-progress-bar {
+    background: rgb(var(--lrm-accent-rgb, 10, 179, 156));
+    opacity: 0.85;
+  }
+
+  &.lrm-success { --lrm-accent-rgb: 10, 179, 156; }
+  &.lrm-warning { --lrm-accent-rgb: 247, 184, 75; }
+  &.lrm-danger  { --lrm-accent-rgb: 240, 101, 72; }
+  &.lrm-info    { --lrm-accent-rgb: 41, 156, 219; }
+}
+
+// Dark-mode refinements — tone down the gradient so the masthead stays readable
+[data-layout-mode="dark"],
+[data-bs-theme="dark"] {
+  .swal2-popup.legience-review-modal {
+    box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.5), 0 10px 32px -12px rgba(0, 0, 0, 0.35);
+
+    .lrm-masthead {
+      background: linear-gradient(135deg, rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.22) 0%, rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.06) 100%);
+    }
+
+    .swal2-textarea,
+    .swal2-input {
+      box-shadow: none;
+    }
+  }
+
+  .swal2-popup.swal2-toast.legience-toast {
+    background: var(--#{$prefix}secondary-bg);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 12px 32px -12px rgba(0, 0, 0, 0.5),
+      0 4px 12px -4px rgba(0, 0, 0, 0.35);
+
+    .ltoast-icon {
+      background: rgba(var(--lrm-accent-rgb, 10, 179, 156), 0.18);
+    }
+  }
+}

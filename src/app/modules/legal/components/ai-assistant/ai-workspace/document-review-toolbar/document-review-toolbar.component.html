@@ -1,0 +1,116 @@
+<!-- §6.1 Attorney Review Toolbar — chip + contextual action -->
+<div class="review-toolbar d-inline-flex align-items-center gap-2" *ngIf="documentId">
+  <!-- Status chip -->
+  <span class="badge review-chip border {{ chipClass }}"
+        [title]="chipTooltip || ''"
+        [attr.aria-label]="'Document status: ' + chipLabel">
+    <i class="{{ chipIcon }} me-1"></i>{{ chipLabel }}
+  </span>
+
+  <!-- Change-requested notes toggle -->
+  <button *ngIf="normalizedStatus === 'changes_requested' && reviewNotes"
+          type="button"
+          class="btn btn-sm btn-soft-danger review-notes-btn"
+          (click)="toggleNotes()"
+          [attr.aria-expanded]="showNotesExpanded">
+    <i class="ri-message-2-line me-1"></i>
+    <span>{{ showNotesExpanded ? 'Hide notes' : 'View feedback' }}</span>
+  </button>
+
+  <!-- Contextual primary action -->
+  <ng-container [ngSwitch]="normalizedStatus">
+    <!-- DRAFT: role-aware primary action.
+         Attorney drafting their own doc → self-approve (ABA 512: the lawyer IS the reviewer).
+         Non-attorney → delegate to an attorney via `in_review`. -->
+    <ng-container *ngSwitchCase="'draft'">
+      <button *ngIf="canApprove"
+              type="button"
+              class="btn btn-sm btn-success review-action"
+              [disabled]="pending"
+              (click)="approveAsAuthor()">
+        <i class="ri-shield-check-line me-1"></i>
+        <span *ngIf="!pending">Approve &amp; Finalize</span>
+        <span *ngIf="pending">Approving…</span>
+      </button>
+      <button *ngIf="!canApprove"
+              type="button"
+              class="btn btn-sm btn-primary review-action"
+              [disabled]="pending"
+              (click)="requestReview()">
+        <i class="ri-send-plane-line me-1"></i>
+        <span *ngIf="!pending">Request Attorney Review</span>
+        <span *ngIf="pending">Sending…</span>
+      </button>
+    </ng-container>
+
+    <!-- IN REVIEW: attorney → approve/request-changes dropdown; others → disabled badge -->
+    <ng-container *ngSwitchCase="'in_review'">
+      <div ngbDropdown *ngIf="canApprove" class="d-inline-block">
+        <button type="button"
+                ngbDropdownToggle
+                class="btn btn-sm btn-success review-action dropdown-toggle"
+                [disabled]="pending">
+          <i class="ri-shield-check-line me-1"></i>
+          <span>Attorney Actions</span>
+        </button>
+        <div ngbDropdownMenu class="review-action-menu">
+          <button type="button" ngbDropdownItem (click)="approve()">
+            <i class="ri-checkbox-circle-line text-success me-2"></i>Approve document
+          </button>
+          <button type="button" ngbDropdownItem (click)="requestChanges()">
+            <i class="ri-error-warning-line text-danger me-2"></i>Request changes…
+          </button>
+        </div>
+      </div>
+      <span *ngIf="!canApprove"
+            class="text-muted small ps-1 fst-italic">
+        Awaiting attorney review
+      </span>
+    </ng-container>
+
+    <!-- APPROVED: owner can revert; others see read-only state -->
+    <button *ngSwitchCase="'attorney_reviewed'"
+            type="button"
+            class="btn btn-sm btn-soft-secondary review-action"
+            [disabled]="pending || !isDocOwner"
+            (click)="revertToDraft()">
+      <i class="ri-refresh-line me-1"></i>
+      <span>Revert to Draft</span>
+    </button>
+
+    <!-- CHANGES REQUESTED: attorney owners fast-path to approve after addressing feedback;
+         non-attorneys resubmit for another peer-review cycle. -->
+    <ng-container *ngSwitchCase="'changes_requested'">
+      <button *ngIf="canApprove"
+              type="button"
+              class="btn btn-sm btn-success review-action"
+              [disabled]="pending"
+              (click)="approveAsAuthor()">
+        <i class="ri-shield-check-line me-1"></i>
+        <span *ngIf="!pending">Approve &amp; Finalize</span>
+        <span *ngIf="pending">Approving…</span>
+      </button>
+      <button *ngIf="!canApprove"
+              type="button"
+              class="btn btn-sm btn-primary review-action"
+              [disabled]="pending"
+              (click)="requestReview()">
+        <i class="ri-send-plane-line me-1"></i>
+        <span *ngIf="!pending">Resubmit for Review</span>
+        <span *ngIf="pending">Sending…</span>
+      </button>
+    </ng-container>
+  </ng-container>
+</div>
+
+<!-- Expanded attorney notes readout -->
+<div *ngIf="showNotesExpanded && reviewNotes"
+     class="review-notes-panel border border-danger-subtle rounded bg-danger-subtle p-3 mt-2">
+  <div class="d-flex align-items-start gap-2">
+    <i class="ri-quill-pen-line text-danger fs-5"></i>
+    <div class="flex-grow-1">
+      <div class="fw-semibold text-danger small mb-1">Attorney feedback</div>
+      <div class="review-notes-body small text-dark">{{ reviewNotes }}</div>
+    </div>
+  </div>
+</div>

@@ -5,7 +5,10 @@ import com.bostoneo.bostoneosolutions.dto.LegalCaseDTO;
 import com.bostoneo.bostoneosolutions.dto.PIDamageCalculationDTO;
 import com.bostoneo.bostoneosolutions.dto.PIMedicalRecordDTO;
 import com.bostoneo.bostoneosolutions.dto.PIMedicalSummaryDTO;
+import com.bostoneo.bostoneosolutions.dto.ai.DocumentTypeTemplate;
 import com.bostoneo.bostoneosolutions.dto.ai.DraftGenerationResponse;
+import com.bostoneo.bostoneosolutions.dto.ai.GatingContext;
+import com.bostoneo.bostoneosolutions.service.ai.DocumentGatingService;
 import com.bostoneo.bostoneosolutions.model.AiConversationSession;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocument;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocumentExhibit;
@@ -70,6 +73,7 @@ import com.itextpdf.kernel.events.IEventHandler;
 import com.itextpdf.kernel.events.PdfDocumentEvent;
 import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
+import com.itextpdf.kernel.pdf.extgstate.PdfExtGState;
 import com.itextpdf.layout.element.LineSeparator;
 import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
 import com.itextpdf.html2pdf.HtmlConverter;
@@ -124,6 +128,8 @@ public class AiWorkspaceDocumentService {
     private final JurisdictionResolver jurisdictionResolver;
     private final DocumentTemplateEngine documentTemplateEngine;
     private final JurisdictionPromptBuilder jurisdictionPromptBuilder;
+    private final DocumentGatingService documentGatingService;
+    private final AiAuditLogService aiAuditLogService;
 
     /** Holds system + user message for draft generation */
     record DraftPrompt(String systemMessage, String userMessage) {}
@@ -411,7 +417,10 @@ public class AiWorkspaceDocumentService {
     }
 
     /**
-     * Save manual edit as new version with optional note
+     * Save manual edit as new version with optional note.
+     * §6.1 gating — if the document was previously `attorney_reviewed`, editing auto-reverts
+     * it to `draft` so the watermark returns and a fresh review cycle is required. Reviewer
+     * columns are preserved (audit history lives in ai_audit_logs, not the doc row).
      */
     @Transactional
     public AiWorkspaceDocumentVersion saveManualEdit(
@@ -422,8 +431,13 @@ public class AiWorkspaceDocumentService {
     ) {
         log.info("Saving manual edit for document id={} with note: {}", documentId, versionNote);
 
-        AiWorkspaceDocument document = documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
+        Long orgId = getRequiredOrganizationId();
+        AiWorkspaceDocument document = documentRepository.findByIdAndUserIdAndOrganizationId(documentId, userId, orgId)
             .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
+
+        // Capture pre-edit approval state so we can audit any auto-revert below.
+        String priorApproval = document.getApprovalStatus();
+        Long priorReviewerId = document.getReviewedByUserId();
 
         int newVersionNumber = document.getCurrentVersion() + 1;
         AiWorkspaceDocumentVersion newVersion = AiWorkspaceDocumentVersion.builder()
@@ -442,11 +456,42 @@ public class AiWorkspaceDocumentService {
 
         newVersion = versionRepository.save(newVersion);
 
+        // §6.1 gating: if this was an approved document, editing demotes it back to draft.
+        if ("attorney_reviewed".equalsIgnoreCase(priorApproval)) {
+            document.setApprovalStatus("draft");
+            logAutoRevertOnEdit(documentId, userId, orgId, priorReviewerId);
+        }
+
         document.setCurrentVersion(newVersionNumber);
         document.setUpdatedAt(LocalDateTime.now());
         documentRepository.save(document);
 
         return newVersion;
+    }
+
+    /**
+     * Emit an audit log entry when an approved document is automatically reverted to
+     * draft because the owner edited the content. Fire-and-forget — an audit failure
+     * must never block the user's save.
+     */
+    private void logAutoRevertOnEdit(Long documentId, Long editorUserId, Long orgId, Long priorReviewerId) {
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("documentId", documentId);
+            payload.put("editorUserId", editorUserId);
+            payload.put("priorApproval", "attorney_reviewed");
+            payload.put("newApproval", "draft");
+            payload.put("priorReviewerUserId", priorReviewerId);
+            aiAuditLogService.logGenerationEvent(
+                    editorUserId, null, null, orgId, "AUTO_REVERT_ON_EDIT",
+                    "workspace_document", documentId,
+                    payload,
+                    String.format("Document auto-reverted to draft after edit (prior reviewer user=%s)", priorReviewerId),
+                    true, null);
+        } catch (Exception e) {
+            // Audit logging must never break a save.
+            log.warn("Failed to enqueue auto-revert audit event: {}", e.getMessage());
+        }
     }
 
     /**
@@ -994,6 +1039,16 @@ public class AiWorkspaceDocumentService {
                 : (legalCase != null ? legalCase.getPracticeArea() : null);
         DraftPrompt draftPrompt = buildDraftPrompt(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode, exhibits, stationeryContext, effectiveCourtLevel, effectivePracticeArea, documentOptions);
 
+        // 5c. Resolve the same cascaded template the prompt used, then compute §6.1 gating state once.
+        // Used downstream for watermark banner, disclaimer footer, overdue warning, and audit logging.
+        com.bostoneo.bostoneosolutions.dto.ai.DocumentTypeTemplate resolvedTemplate =
+                templateRegistry.getResolvedTemplate(documentType, effectivePracticeArea, jurisdiction);
+        GatingContext gating = documentGatingService.computeGating(resolvedTemplate);
+        if (gating.isOverdue()) {
+            log.warn("⚠️ Template {} (v{}) verification is OVERDUE — nextReviewDue={}, today={}",
+                    gating.templateType(), gating.templateVersion(), gating.nextReviewDue(), LocalDate.now());
+        }
+
         // 6. Check if generation has been cancelled
         if (cancellationService.isCancelled(conversation.getId())) {
             log.warn("🛑 Generation cancelled for conversation {} before AI call", conversation.getId());
@@ -1078,6 +1133,11 @@ public class AiWorkspaceDocumentService {
         }
         } // end if (!content.startsWith("<!-- HTML_TEMPLATE -->"))
 
+        // 5d. Apply §6.1 gating: watermark banner (draft/in_review), overdue note, disclaimer footer.
+        // Runs AFTER citation processing so URL injection/verification sees the original AI content
+        // without gating markup (which would confuse regex-based citation detectors).
+        content = documentGatingService.applyContentGating(content, gating);
+
         // 6. Validate content completeness (monitoring only - non-blocking)
         String validationWarning = validateDocumentCompleteness(content);
         if (validationWarning != null) {
@@ -1144,7 +1204,11 @@ public class AiWorkspaceDocumentService {
             ". You can view it in the document preview panel.";
         conversationService.addMessage(conversation.getId(), userId, "assistant", aiResponse, null);
 
-        // 11. Build response
+        // 11b. Audit-log the generation event with gating metadata. Async — never blocks the response.
+        logGenerationAuditEvent(userId, orgId, documentType, jurisdiction, effectivePracticeArea,
+                document.getId(), gating, "DRAFT_GENERATION");
+
+        // 12. Build response
         return DraftGenerationResponse.builder()
             .conversationId(conversation.getId())
             .documentId(document.getId())
@@ -1158,6 +1222,10 @@ public class AiWorkspaceDocumentService {
                 .tokensUsed(tokensUsed)
                 .costEstimate(cost)
                 .generatedAt(document.getCreatedAt())
+                .approvalStatus(effectiveApprovalStatus(document, gating))
+                .isVerificationOverdue(gating.isOverdue())
+                .templateVersion(gating.templateVersion())
+                .lastVerified(gating.lastVerified())
                 .build())
             .conversation(DraftGenerationResponse.ConversationDTO.builder()
                 .id(conversation.getId())
@@ -1168,6 +1236,43 @@ public class AiWorkspaceDocumentService {
                 .createdAt(conversation.getCreatedAt())
                 .build())
             .build();
+    }
+
+    /**
+     * Build a structured audit payload for a gating-aware generation event and emit asynchronously.
+     * The payload stays small and flat (strings/booleans only) so JSONB queries remain efficient.
+     */
+    private void logGenerationAuditEvent(Long userId, Long orgId, String documentType,
+                                         String jurisdiction, String practiceArea,
+                                         Long documentId, GatingContext gating, String action) {
+        try {
+            java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
+            payload.put("documentType", documentType);
+            payload.put("practiceArea", practiceArea);
+            payload.put("jurisdiction", jurisdiction);
+            payload.put("resolvedTemplateType", gating.templateType());
+            payload.put("templateVersion", gating.templateVersion());
+            payload.put("approvalStatus", gating.approvalStatus());
+            payload.put("watermarked", gating.requiresWatermark());
+            payload.put("overdue", gating.isOverdue());
+            payload.put("hasDisclaimer", gating.hasDisclaimer());
+            payload.put("lastVerified", gating.lastVerified());
+            payload.put("nextReviewDue", gating.nextReviewDue());
+
+            String summary = String.format("Generated %s (approval=%s, overdue=%s, watermarked=%s)",
+                    documentType,
+                    gating.approvalStatus() != null ? gating.approvalStatus() : "none",
+                    gating.isOverdue(),
+                    gating.requiresWatermark());
+
+            aiAuditLogService.logGenerationEvent(
+                    userId, null, null, orgId, action,
+                    "workspace_document", documentId,
+                    payload, summary, true, null);
+        } catch (Exception e) {
+            // Audit logging must never break generation
+            log.warn("Failed to enqueue gating audit event: {}", e.getMessage());
+        }
     }
 
     /**
@@ -1269,6 +1374,17 @@ public class AiWorkspaceDocumentService {
                 : (legalCase != null ? legalCase.getPracticeArea() : null);
         DraftPrompt draftPrompt = buildDraftPrompt(prompt, documentType, jurisdiction, caseContext, legalCase, researchMode, exhibits, stationeryContext, effectiveCourtLevel, effectivePracticeArea, documentOptions);
 
+        // 2d. Resolve template + gating ONCE before streaming starts — the same context is applied
+        // post-stream inside the onComplete callback. Captured in an effectively-final variable so
+        // the lambda can see it without additional synchronization.
+        com.bostoneo.bostoneosolutions.dto.ai.DocumentTypeTemplate streamResolvedTemplate =
+                templateRegistry.getResolvedTemplate(documentType, effectivePracticeArea, jurisdiction);
+        final GatingContext streamGating = documentGatingService.computeGating(streamResolvedTemplate);
+        if (streamGating.isOverdue()) {
+            log.warn("⚠️ (streaming) Template {} (v{}) verification is OVERDUE — nextReviewDue={}",
+                    streamGating.templateType(), streamGating.templateVersion(), streamGating.nextReviewDue());
+        }
+
         // 3. Check cancellation
         if (cancellationService.isCancelled(conversationId)) {
             log.warn("Streaming generation cancelled before API call for conversation {}", conversationId);
@@ -1327,6 +1443,10 @@ public class AiWorkspaceDocumentService {
                             content = postProcessDraftContent(content, documentType, conversationId);
                         }
 
+                        // §6.1 gating: stamp banner/disclaimer after citation processing so regex-based
+                        // URL injection does not see the gating markup.
+                        content = documentGatingService.applyContentGating(content, streamGating);
+
                         // Validate completeness (monitoring only)
                         String validationWarning = validateDocumentCompleteness(content);
                         if (validationWarning != null) {
@@ -1338,6 +1458,12 @@ public class AiWorkspaceDocumentService {
                                 userId, orgId, caseId, conversationId, sessionName,
                                 documentType, jurisdiction, content, finalCase
                         );
+
+                        // Audit-log the streaming generation event with gating metadata
+                        Long savedDocId = (savedDoc != null && savedDoc.get("documentId") != null)
+                                ? ((Number) savedDoc.get("documentId")).longValue() : null;
+                        logGenerationAuditEvent(userId, orgId, documentType, jurisdiction,
+                                effectivePracticeArea, savedDocId, streamGating, "DRAFT_GENERATION_STREAMING");
 
                         // Send complete event with metadata
                         Map<String, Object> completePayload = new HashMap<>();
@@ -1353,6 +1479,16 @@ public class AiWorkspaceDocumentService {
                         completePayload.put("title", sessionName);
                         completePayload.put("content", content);
                         completePayload.put("version", 1);
+                        // §6.1 gating metadata for the client UI.
+                        // Per-doc approval_status wins over template default so freshly-saved
+                        // drafts always start watermarked as 'draft' regardless of template state.
+                        AiWorkspaceDocument savedDocEntity = savedDocId != null
+                                ? documentRepository.findById(savedDocId).orElse(null)
+                                : null;
+                        completePayload.put("approvalStatus", effectiveApprovalStatus(savedDocEntity, streamGating));
+                        completePayload.put("isVerificationOverdue", streamGating.isOverdue());
+                        completePayload.put("templateVersion", streamGating.templateVersion());
+                        completePayload.put("lastVerified", streamGating.lastVerified());
 
                         draftStreamingPublisher.sendComplete(conversationId, completePayload);
 
@@ -1661,8 +1797,177 @@ public class AiWorkspaceDocumentService {
                 result.put("generatedAt", latestVersion.getCreatedAt());
                 result.put("stationeryTemplateId", doc.getStationeryTemplateId());
                 result.put("stationeryAttorneyId", doc.getStationeryAttorneyId());
+
+                // §6.1 gating metadata — re-derived from the template registry so
+                // re-opened documents keep rendering the DRAFT watermark. Legacy
+                // documents store the BASE type (e.g. "demand_letter") while the
+                // registry keys include the practice-area suffix (e.g.
+                // "demand_letter_pi_ma"), so we infer the practice area from the
+                // linked case to let the 4-way cascade actually reach those keys.
+                String practiceArea = resolvePracticeAreaForDoc(doc);
+                DocumentTypeTemplate resolved = templateRegistry.getResolvedTemplate(
+                        doc.getDocumentType(), practiceArea, doc.getJurisdiction());
+                GatingContext gating = documentGatingService.computeGating(resolved);
+                result.put("approvalStatus", effectiveApprovalStatus(doc, gating));
+                result.put("isVerificationOverdue", gating.isOverdue());
+                result.put("templateVersion", gating.templateVersion());
+                result.put("lastVerified", gating.lastVerified());
+                result.put("reviewedAt", doc.getReviewedAt());
+                result.put("reviewNotes", doc.getReviewNotes());
+                result.put("reviewRequestedAt", doc.getReviewRequestedAt());
+                result.put("reviewedByUserId", doc.getReviewedByUserId());
+                result.put("reviewRequestedByUserId", doc.getReviewRequestedByUserId());
                 return result;
             });
+    }
+
+    /**
+     * Look up the practice area for a document's linked case so §6.1 gating can
+     * find templates keyed on the {type}_{pa} / {type}_{pa}_{state} cascade
+     * branches. Returns null (safe for cascade) when the document has no case or
+     * the case has no practice_area set.
+     */
+    private String resolvePracticeAreaForDoc(AiWorkspaceDocument doc) {
+        if (doc.getCaseId() == null) return null;
+        return caseRepository.findByIdAndOrganizationId(doc.getCaseId(), getRequiredOrganizationId())
+                .map(LegalCase::getEffectivePracticeArea)
+                .orElse(null);
+    }
+
+    /**
+     * §6.1 review-state priority: if the doc has an attorney-driven approval_status
+     * (set via the review endpoints), that wins over the template default. Falls
+     * back to the template-level gating value for legacy docs where the column is
+     * still NULL (shouldn't happen after V51 backfill, but safe).
+     */
+    private String effectiveApprovalStatus(AiWorkspaceDocument doc, GatingContext gating) {
+        if (doc != null && doc.getApprovalStatus() != null && !doc.getApprovalStatus().isBlank()) {
+            return doc.getApprovalStatus();
+        }
+        return gating != null ? gating.approvalStatus() : null;
+    }
+
+    // ==========================================================================
+    // §6.1 Attorney Review State Machine (ABA Opinion 512 compliance)
+    // ==========================================================================
+
+    /**
+     * Transition a document into 'in_review' so an attorney can formally review.
+     * Any doc owner can request review. Allowed from: draft, changes_requested,
+     * attorney_reviewed (for re-review after edits).
+     */
+    @Transactional
+    public Map<String, Object> requestAttorneyReview(Long documentId, Long userId, String message) {
+        AiWorkspaceDocument doc = documentRepository
+                .findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
+                .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
+
+        String current = normalizedApprovalStatus(doc);
+        if (!Set.of("draft", "changes_requested", "attorney_reviewed").contains(current)) {
+            throw new IllegalStateException("Cannot request review from state: " + current);
+        }
+
+        doc.setApprovalStatus("in_review");
+        doc.setReviewRequestedByUserId(userId);
+        doc.setReviewRequestedAt(LocalDateTime.now());
+        // Clear prior review notes when starting a new review cycle so stale
+        // feedback doesn't show alongside the new submission.
+        if (!"changes_requested".equals(current)) {
+            doc.setReviewNotes(message);
+        } else if (message != null && !message.isBlank()) {
+            doc.setReviewNotes(message);
+        }
+        documentRepository.save(doc);
+
+        return buildReviewStateMap(doc);
+    }
+
+    /**
+     * Attorney approves a document. Scoped by organization only (reviewer is
+     * typically not the doc owner). Role gating is enforced at the controller.
+     */
+    @Transactional
+    public Map<String, Object> approveDocument(Long documentId, Long reviewerUserId, String notes) {
+        AiWorkspaceDocument doc = documentRepository
+                .findByIdAndOrganizationId(documentId, getRequiredOrganizationId())
+                .orElseThrow(() -> new IllegalArgumentException("Document not found"));
+
+        String current = normalizedApprovalStatus(doc);
+        if (!Set.of("draft", "in_review", "changes_requested").contains(current)) {
+            throw new IllegalStateException("Cannot approve from state: " + current);
+        }
+
+        doc.setApprovalStatus("attorney_reviewed");
+        doc.setReviewedByUserId(reviewerUserId);
+        doc.setReviewedAt(LocalDateTime.now());
+        if (notes != null && !notes.isBlank()) {
+            doc.setReviewNotes(notes);
+        }
+        documentRepository.save(doc);
+
+        return buildReviewStateMap(doc);
+    }
+
+    /**
+     * Attorney rejects the document with change requests. Notes are required —
+     * without them the doc owner has nothing to act on. Role gating is enforced
+     * at the controller.
+     */
+    @Transactional
+    public Map<String, Object> requestChanges(Long documentId, Long reviewerUserId, String notes) {
+        if (notes == null || notes.isBlank()) {
+            throw new IllegalArgumentException("Review notes are required when requesting changes");
+        }
+
+        AiWorkspaceDocument doc = documentRepository
+                .findByIdAndOrganizationId(documentId, getRequiredOrganizationId())
+                .orElseThrow(() -> new IllegalArgumentException("Document not found"));
+
+        String current = normalizedApprovalStatus(doc);
+        if (!Set.of("in_review", "draft").contains(current)) {
+            throw new IllegalStateException("Cannot request changes from state: " + current);
+        }
+
+        doc.setApprovalStatus("changes_requested");
+        doc.setReviewedByUserId(reviewerUserId);
+        doc.setReviewedAt(LocalDateTime.now());
+        doc.setReviewNotes(notes);
+        documentRepository.save(doc);
+
+        return buildReviewStateMap(doc);
+    }
+
+    /**
+     * Doc owner reverts an approved/rejected doc back to draft (e.g. to make
+     * further edits). Preserves reviewer columns so the audit trail remains
+     * in the document snapshot — the audit log retains the full history.
+     */
+    @Transactional
+    public Map<String, Object> revertToDraft(Long documentId, Long userId) {
+        AiWorkspaceDocument doc = documentRepository
+                .findByIdAndUserIdAndOrganizationId(documentId, userId, getRequiredOrganizationId())
+                .orElseThrow(() -> new IllegalArgumentException("Document not found or access denied"));
+
+        doc.setApprovalStatus("draft");
+        documentRepository.save(doc);
+
+        return buildReviewStateMap(doc);
+    }
+
+    private String normalizedApprovalStatus(AiWorkspaceDocument doc) {
+        return doc.getApprovalStatus() != null ? doc.getApprovalStatus() : "draft";
+    }
+
+    private Map<String, Object> buildReviewStateMap(AiWorkspaceDocument doc) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("documentId", doc.getId());
+        result.put("approvalStatus", doc.getApprovalStatus());
+        result.put("reviewedByUserId", doc.getReviewedByUserId());
+        result.put("reviewedAt", doc.getReviewedAt());
+        result.put("reviewNotes", doc.getReviewNotes());
+        result.put("reviewRequestedByUserId", doc.getReviewRequestedByUserId());
+        result.put("reviewRequestedAt", doc.getReviewRequestedAt());
+        return result;
     }
 
     /**
@@ -1700,6 +2005,25 @@ public class AiWorkspaceDocumentService {
                 result.put("version", latestVersion.getVersionNumber());
                 result.put("tokensUsed", latestVersion.getTokensUsed());
                 result.put("costEstimate", latestVersion.getCostEstimate());
+
+                // §6.1 gating metadata — ensures SSE-drop polling fallback still
+                // flips the DRAFT watermark on when the client eventually receives
+                // the completed payload via HTTP polling rather than the stream.
+                // Practice area inferred from the linked case so the cascade can
+                // reach {type}_{pa} / {type}_{pa}_{state} template keys.
+                String practiceArea = resolvePracticeAreaForDoc(doc);
+                DocumentTypeTemplate resolved = templateRegistry.getResolvedTemplate(
+                        doc.getDocumentType(), practiceArea, doc.getJurisdiction());
+                GatingContext gating = documentGatingService.computeGating(resolved);
+                result.put("approvalStatus", effectiveApprovalStatus(doc, gating));
+                result.put("isVerificationOverdue", gating.isOverdue());
+                result.put("templateVersion", gating.templateVersion());
+                result.put("lastVerified", gating.lastVerified());
+                result.put("reviewedAt", doc.getReviewedAt());
+                result.put("reviewNotes", doc.getReviewNotes());
+                result.put("reviewRequestedAt", doc.getReviewRequestedAt());
+                result.put("reviewedByUserId", doc.getReviewedByUserId());
+                result.put("reviewRequestedByUserId", doc.getReviewRequestedByUserId());
                 return Optional.of(result);
             });
     }
@@ -3422,10 +3746,14 @@ public class AiWorkspaceDocumentService {
         Map<String, Object> data = docData.get();
         String content = (String) data.get("content");
         String title = (String) data.get("title");
+        String approvalStatus = (String) data.get("approvalStatus");
 
         try {
             // Create Word document
             XWPFDocument document = new XWPFDocument();
+
+            // §6.1 gating — stamp every page via VML text-path in default header (Word renders diagonally).
+            addDocxWatermark(document, resolveWatermarkText(approvalStatus));
 
             // Only add title if content doesn't already have a markdown title
             // This prevents user prompt from appearing in the document
@@ -3514,7 +3842,11 @@ public class AiWorkspaceDocumentService {
             }
 
             withPlaceholders.append(processedHtml, searchFrom, actualStart);
-            withPlaceholders.append("__TABLE_PLACEHOLDER_").append(tableHtmlBlocks.size()).append("__");
+            // Wrap the placeholder in newlines so it lands on its own line after HTML tag
+            // stripping — otherwise CKEditor's unbroken `<p>…</p><figure><table>…</table></figure><p>…</p>`
+            // sequence merges the placeholder with trailing paragraph text, and the line-level
+            // `trimmed.matches("__TABLE_PLACEHOLDER_\\d+__")` check fails, leaking the raw token.
+            withPlaceholders.append("\n__TABLE_PLACEHOLDER_").append(tableHtmlBlocks.size()).append("__\n");
             tableHtmlBlocks.add(processedHtml.substring(tableStart, tableEnd));
             searchFrom = actualEnd;
         }
@@ -4354,6 +4686,7 @@ public class AiWorkspaceDocumentService {
         String content = (String) data.get("content");
         String title = (String) data.get("title");
         String documentType = (String) data.get("documentType");
+        String approvalStatus = (String) data.get("approvalStatus");
 
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -4369,6 +4702,12 @@ public class AiWorkspaceDocumentService {
 
             // Add page numbers to every page
             addPageNumberHandler(pdfDoc);
+
+            // §6.1 gating — stamp every page unless attorney has approved.
+            String watermark = resolveWatermarkText(approvalStatus);
+            if (watermark != null) {
+                addDraftWatermarkHandler(pdfDoc, watermark);
+            }
 
             // Always inject the title — the first H1 in markdown will be skipped
             Paragraph titleParagraph = new Paragraph(title)
@@ -4405,12 +4744,16 @@ public class AiWorkspaceDocumentService {
         }
     }
 
-    /**
-     * Generate Word document from raw content (no document ID required)
-     * Used for workflow drafts that haven't been saved to GeneratedDocuments table
-     */
     public byte[] generateWordDocumentFromContent(String content, String title) {
-        log.info("Generating Word document from content, title={}", title);
+        return generateWordDocumentFromContent(content, title, null);
+    }
+
+    /**
+     * Generate Word document from raw content (no document ID required).
+     * §6.1 gating — `approvalStatus` drives the DOCX watermark; null defaults to DRAFT.
+     */
+    public byte[] generateWordDocumentFromContent(String content, String title, String approvalStatus) {
+        log.info("Generating Word document from content, title={}, status={}", title, approvalStatus);
 
         if (content == null || content.isEmpty()) {
             throw new IllegalArgumentException("Content cannot be empty");
@@ -4423,6 +4766,9 @@ public class AiWorkspaceDocumentService {
 
         try {
             XWPFDocument document = new XWPFDocument();
+
+            // §6.1 gating — VML text-path in default header stamps every page in Word.
+            addDocxWatermark(document, resolveWatermarkText(approvalStatus));
 
             if (isHtml) {
                 log.info("Detected HTML content — using direct HTML-to-Word conversion");
@@ -4462,15 +4808,26 @@ public class AiWorkspaceDocumentService {
      * Falls back to markdown pipeline for non-HTML content.
      */
     public byte[] generatePdfDocumentFromContent(String content, String title) {
-        return generatePdfDocumentFromContent(content, title, null);
+        return generatePdfDocumentFromContent(content, title, null, null);
     }
 
     public byte[] generatePdfDocumentFromContent(String content, String title, String documentType) {
-        log.info("Generating PDF document from content, title={}, type={}", title, documentType);
+        return generatePdfDocumentFromContent(content, title, documentType, null);
+    }
+
+    /**
+     * §6.1 gating — `approvalStatus` drives the export watermark. Pass null and the
+     * default "draft" stamp applies (safer default for workflow drafts that bypass the
+     * document-ID lookup). Pass "attorney_reviewed" to export clean paper.
+     */
+    public byte[] generatePdfDocumentFromContent(String content, String title, String documentType, String approvalStatus) {
+        log.info("Generating PDF document from content, title={}, type={}, status={}", title, documentType, approvalStatus);
 
         if (content == null || content.isEmpty()) {
             throw new IllegalArgumentException("Content cannot be empty");
         }
+
+        String watermark = resolveWatermarkText(approvalStatus);
 
         // If content is HTML, use HtmlConverter for WYSIWYG PDF matching the preview
         boolean isHtml = content.contains("<p") || content.contains("<div") ||
@@ -4478,22 +4835,26 @@ public class AiWorkspaceDocumentService {
                          content.contains("<h2") || content.contains("<table");
 
         if (isHtml) {
-            return generateStyledHtmlPdf(content, title, documentType);
+            return generateStyledHtmlPdf(content, title, documentType, watermark);
         }
 
         // Fallback: markdown pipeline for plain text content
-        return generateMarkdownPdf(content, title);
+        return generateMarkdownPdf(content, title, watermark);
     }
 
     private byte[] generateStyledHtmlPdf(String htmlContent, String title) {
-        return generateStyledHtmlPdf(htmlContent, title, null);
+        return generateStyledHtmlPdf(htmlContent, title, null, resolveWatermarkText(null));
+    }
+
+    private byte[] generateStyledHtmlPdf(String htmlContent, String title, String documentType) {
+        return generateStyledHtmlPdf(htmlContent, title, documentType, resolveWatermarkText(null));
     }
 
     /**
      * Generate PDF from HTML content using iText HtmlConverter.
      * Wraps the editor HTML in a styled HTML document that matches the frontend preview.
      */
-    private byte[] generateStyledHtmlPdf(String htmlContent, String title, String documentType) {
+    private byte[] generateStyledHtmlPdf(String htmlContent, String title, String documentType, String watermarkText) {
         try {
             // Extract footer from HTML — it will be drawn at absolute page bottom via PdfCanvas
             String footerText = null;
@@ -4514,6 +4875,11 @@ public class AiWorkspaceDocumentService {
 
             // Add page numbers
             addPageNumberHandler(pdfDoc);
+
+            // §6.1 gating — diagonal DRAFT/IN REVIEW stamp on every page
+            if (watermarkText != null) {
+                addDraftWatermarkHandler(pdfDoc, watermarkText);
+            }
 
             // Preprocess: wrap heading+content groups in keep-together divs for page breaks
             htmlContent = wrapSectionsForPageBreaks(htmlContent);
@@ -4539,7 +4905,7 @@ public class AiWorkspaceDocumentService {
         } catch (Exception e) {
             log.error("Error generating styled HTML PDF, falling back to markdown pipeline", e);
             // Fallback to markdown pipeline if HtmlConverter fails
-            return generateMarkdownPdf(htmlContent, title);
+            return generateMarkdownPdf(htmlContent, title, watermarkText);
         }
     }
 
@@ -4577,8 +4943,12 @@ public class AiWorkspaceDocumentService {
              + "h4 { font-size: 12pt; font-weight: 600; margin: 14px 0 6px; color: #212529; text-indent: 0; }"
              // Paragraphs: no global indent — body paragraph indent applied via inline style in template
              + "p { margin: 0 0 0; }"
-             // Tables: dark header matching CKEditor preview, clean body rows
-             + "table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 11pt; }"
+             // Tables: dark header matching CKEditor preview, clean body rows.
+             // Bottom margin is a full double-spaced line (~36px at 12pt/line-height 2.0) so the
+             // paragraph that follows a table has an unambiguous visual gap — body `p` margin is 0,
+             // so the figure alone carries the break. 24px is below one line-height and reads as
+             // "butting up against" rather than "separated".
+             + "table { width: 100%; border-collapse: collapse; margin: 16px 0 36px 0; font-size: 11pt; }"
              + "th, td { border: 1px solid #dee2e6; padding: 10px 12px; text-align: left; vertical-align: top; }"
              + "th { background-color: #2d2d2d; font-weight: 700; color: #ffffff; text-transform: uppercase; }"
              + "tr:nth-child(even) td { background-color: #ffffff; }"
@@ -4594,9 +4964,10 @@ public class AiWorkspaceDocumentService {
              + "a { color: #405189; text-decoration: underline; }"
              // Horizontal rule
              + "hr { border: none; border-top: 1px solid #dee2e6; margin: 24px 0; }"
-             // CKEditor figure/table wrapper
-             + "figure.table { margin: 16px 0; display: block; }"
-             + "figure { margin: 16px 0; }"
+             // CKEditor figure/table wrapper. Extra bottom margin ensures a clear gap between the table and the
+             // next paragraph (body `p` has zero margin, so the figure alone carries the visual break).
+             + "figure.table { margin: 16px 0 36px 0; display: block; }"
+             + "figure { margin: 16px 0 36px 0; }"
              // Legal document specific
              + ".exhibit-ref { color: #405189; text-decoration: underline; text-decoration-style: dotted; }"
              // Stationery frames: borderless tables, serif font (must match CKEditor frame CSS)
@@ -4625,7 +4996,7 @@ public class AiWorkspaceDocumentService {
              + "text-align: center !important; }"
              // Page-break rules: keep headings with their following content
              + "h1, h2, h3, h4, h5, h6 { page-break-after: avoid; }"
-             + "p { orphans: 3; widows: 3; }"
+             + "p { orphans: 2; widows: 2; }"
              // Caption headers & document titles: iText's Div object ignores text-align entirely.
              // preprocessForPdf() converts centered <div> to <p class="tc"> — Paragraph supports alignment.
              + ".tc { text-align: center !important; line-height: 1.3; margin: 0 0 8px 0; }"
@@ -4633,13 +5004,21 @@ public class AiWorkspaceDocumentService {
              // Do NOT override width or margin — caption templates use width="85%" + margin:auto for centering
              + "table[border=\"0\"] { border: none !important; font-size: 12pt !important; line-height: 1.3 !important; }"
              + "table[border=\"0\"] td, table[border=\"0\"] th { border: none !important; padding: 2px 4px; font-size: 12pt !important; text-indent: 0 !important; }"
-             + "table { page-break-inside: avoid; }" // iText treats as hint — oversized tables will still break
+             // Table pagination — row-level rigidity only.
+             //   - `tr { page-break-inside: avoid }` keeps each row intact.
+             //   - `tr:last-child { page-break-before: avoid }` pulls the last row (typically the
+             //     bold "Total" row in summary tables) to its predecessor, preventing the Total
+             //     from being orphaned alone at the top of the next page.
+             // Do NOT add `table { page-break-inside: avoid }` — stacked rigidity causes iText
+             // to strand paragraphs/headings on blank pages when a table can't fit.
+             + "tr { page-break-inside: avoid; }"
+             + "tr:last-child { page-break-before: avoid; }"
              + "ul, ol { page-break-inside: avoid; }"
              + "li { page-break-inside: avoid; }"
              + "blockquote { page-break-inside: avoid; }"
              + "</style>"
              + "</head><body>"
-             + preprocessForPdf(bodyHtml)
+             + preprocessForPdf(bodyHtml, isLetter)
              + "</body></html>";
     }
 
@@ -4649,8 +5028,13 @@ public class AiWorkspaceDocumentService {
      * inline styles, HTML align attribute, or CSS class rules. Only {@code Paragraph}
      * (mapped from {@code <p>}) and heading elements handle text-align correctly.
      * Convert centered {@code <div>} to {@code <p>} so iText renders the alignment.
+     *
+     * Letters (demand/settlement/general correspondence) skip the court-caption centering
+     * entirely — their date, address block, RE: line, and salutation are left-aligned.
      */
-    private String preprocessForPdf(String html) {
+    private String preprocessForPdf(String html, boolean isLetter) {
+        if (isLetter) return html;
+
         // CKEditor strips ALL alignment styles from both <div> and <p> elements.
         // Re-add centering based on document structure:
         // 1. Everything before <figure> = caption header (court name, case number) → center
@@ -4680,17 +5064,24 @@ public class AiWorkspaceDocumentService {
     }
 
     /**
-     * Preprocess HTML to prevent page-break orphans.
-     * Wraps each heading + its first following block element in a keep-together div.
-     * iText html2pdf reliably respects page-break-inside:avoid on container divs,
-     * whereas page-break-after:avoid on individual heading elements is only a weak hint.
-     * Also injects inline page-break-after:avoid on each heading as a belt-and-suspenders approach.
+     * Preprocess HTML to prevent page-break orphans on headings.
+     * Wraps each heading + its first following SMALL block (p/ul/ol/blockquote) in a
+     * keep-together div. iText html2pdf reliably respects page-break-inside:avoid on
+     * container divs for small elements, whereas page-break-after:avoid on individual
+     * heading elements is only a weak hint. Also injects inline page-break-after:avoid
+     * on each heading for redundancy.
      *
-     * Note: three layers of defense exist (CSS stylesheet, wrapper divs, inline styles)
-     * because iText's paged-media CSS support is inconsistent — do not remove any layer.
+     * Tables/figures are intentionally excluded from the wrapper — see HEADING_BLOCK_PAIR
+     * comment for why rigid wrappers around potentially-oversized blocks cause regressions.
      */
+    // Intentionally EXCLUDES table/figure/div: wrapping a heading with a potentially-oversized block
+    // in page-break-inside:avoid causes iText to strand the heading on its own page whenever the
+    // inner block cannot fit (the wrapper fails, iText falls back to breaking between children, and
+    // the heading ends up alone). For heading→table cases we rely instead on the inline
+    // page-break-after:avoid injected by Step 2 below, plus tr{page-break-inside:avoid} in the CSS,
+    // which together keep the heading with the first row while allowing large tables to flow.
     private static final java.util.regex.Pattern HEADING_BLOCK_PAIR = java.util.regex.Pattern.compile(
-        "(<h[1-6][^>]*>.*?</h[1-6]>)(\\s*)(<(p|ul|ol|table|figure|blockquote)[^>]*>.*?</\\4>)",
+        "(<h[1-6][^>]*>.*?</h[1-6]>)(\\s*)(<(p|ul|ol|blockquote)[^>]*>.*?</\\4>)",
         java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL
     );
     private static final java.util.regex.Pattern HEADING_WITH_STYLE = java.util.regex.Pattern.compile(
@@ -4703,9 +5094,9 @@ public class AiWorkspaceDocumentService {
     private String wrapSectionsForPageBreaks(String html) {
         if (html == null || html.isBlank()) return html;
 
-        // Step 1: Wrap each heading + first following block element in a keep-together div.
-        // Uses backreference \4 so the closing tag matches the opening tag name.
-        // Covers heading+paragraph, heading+table, heading+list, heading+blockquote, heading+figure.
+        // Step 1: Wrap each heading + first following SMALL block in a keep-together div.
+        // See HEADING_BLOCK_PAIR for why table/figure/div are excluded here — those rely on
+        // Step 2's inline page-break-after:avoid plus CSS tr{page-break-inside:avoid} instead.
         html = HEADING_BLOCK_PAIR.matcher(html).replaceAll(
             "<div style=\"page-break-inside:avoid;\">$1$2$3</div>"
         );
@@ -4724,10 +5115,14 @@ public class AiWorkspaceDocumentService {
         return html;
     }
 
+    private byte[] generateMarkdownPdf(String content, String title) {
+        return generateMarkdownPdf(content, title, resolveWatermarkText(null));
+    }
+
     /**
      * Fallback: Generate PDF from markdown/plain-text content using the manual iText pipeline.
      */
-    private byte[] generateMarkdownPdf(String content, String title) {
+    private byte[] generateMarkdownPdf(String content, String title, String watermarkText) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfWriter writer = new PdfWriter(baos);
@@ -4740,6 +5135,11 @@ public class AiWorkspaceDocumentService {
             PdfFont normalFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
 
             addPageNumberHandler(pdfDoc);
+
+            // §6.1 gating — stamp every page when the caller flagged it as unapproved.
+            if (watermarkText != null) {
+                addDraftWatermarkHandler(pdfDoc, watermarkText);
+            }
 
             Paragraph titleParagraph = new Paragraph(title)
                     .setFont(titleFont)
@@ -5081,6 +5481,159 @@ public class AiWorkspaceDocumentService {
                 }
             }
         });
+    }
+
+    /**
+     * §6.1 gating — resolve the watermark text that should appear on exported pages
+     * for a given approval status. Returns null for statuses that should render clean.
+     *
+     * <p>Mirrors the in-app tiled SVG stamp on the CKEditor surface so what-you-see is
+     * what-you-export: DRAFT (slate) for unreviewed states, IN REVIEW (amber) while an
+     * attorney is looking at it, and no stamp once approved.
+     */
+    private String resolveWatermarkText(String approvalStatus) {
+        if ("attorney_reviewed".equalsIgnoreCase(approvalStatus)) {
+            return null; // clean paper once approved
+        }
+        if ("in_review".equalsIgnoreCase(approvalStatus)) {
+            return "IN REVIEW";
+        }
+        return "DRAFT"; // draft, changes_requested, null, legacy — all watermark
+    }
+
+    /**
+     * §6.1 gating — attach an iText page-event handler that stamps a rotated, faded
+     * watermark diagonally across every page. Colors pair with the in-app CSS:
+     * slate-600 (#475569) for DRAFT, amber-700 (#b45309) for IN REVIEW.
+     *
+     * <p>We intentionally use the body page-canvas (not the header/footer) so the stamp
+     * sits behind text at roughly 10% opacity — still readable but unmistakable.
+     */
+    private void addDraftWatermarkHandler(PdfDocument pdfDoc, String watermarkText) {
+        final DeviceRgb color = "IN REVIEW".equals(watermarkText)
+                ? new DeviceRgb(180, 83, 9)    // amber-700 — draws eye to "under active review"
+                : new DeviceRgb(71, 85, 105);  // slate-600 — calm, legal-professional DRAFT
+        pdfDoc.addEventHandler(PdfDocumentEvent.END_PAGE, new IEventHandler() {
+            @Override
+            public void handleEvent(Event event) {
+                PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
+                PdfPage page = docEvent.getPage();
+                Rectangle pageSize = page.getPageSize();
+                try {
+                    PdfFont font = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
+                    PdfCanvas canvas = new PdfCanvas(page);
+
+                    float fontSize = 128f;
+                    float textWidth = font.getWidth(watermarkText, fontSize);
+                    float cx = pageSize.getWidth() / 2f;
+                    float cy = pageSize.getHeight() / 2f;
+                    double angle = Math.toRadians(-30);
+                    float cos = (float) Math.cos(angle);
+                    float sin = (float) Math.sin(angle);
+
+                    PdfExtGState gState = new PdfExtGState().setFillOpacity(0.10f);
+                    canvas.saveState()
+                            .setExtGState(gState)
+                            .setFillColor(color)
+                            .beginText()
+                            .setFontAndSize(font, fontSize)
+                            .setTextMatrix(
+                                    cos, sin, -sin, cos,
+                                    cx - (textWidth / 2f) * cos + (fontSize / 3f) * sin,
+                                    cy - (textWidth / 2f) * sin - (fontSize / 3f) * cos
+                            )
+                            .showText(watermarkText)
+                            .endText()
+                            .restoreState();
+                    canvas.release();
+                } catch (IOException e) {
+                    log.error("Error adding watermark to PDF page", e);
+                }
+            }
+        });
+    }
+
+    /**
+     * §6.1 gating — DOCX companion to {@link #addDraftWatermarkHandler}.
+     * Injects a VML text-path watermark shape into the default section header so Microsoft
+     * Word renders a true diagonal stamp at the center of every page (identical mechanism
+     * Word's own Design → Watermark uses). Falls back to a simple faded header paragraph
+     * if the VML injection fails for any reason — never let watermarking break an export.
+     */
+    private void addDocxWatermark(XWPFDocument document, String watermarkText) {
+        if (watermarkText == null || watermarkText.isBlank()) return;
+        String fillHex = "IN REVIEW".equals(watermarkText) ? "B45309" : "475569";
+        try {
+            org.apache.poi.xwpf.usermodel.XWPFHeader header = document.createHeader(
+                    org.apache.poi.wp.usermodel.HeaderFooterType.DEFAULT);
+            // Ensure a paragraph exists to hang the pict on.
+            org.apache.poi.xwpf.usermodel.XWPFParagraph para = header.getParagraphArray(0);
+            if (para == null) {
+                para = header.createParagraph();
+            }
+
+            String pictXml = ""
+                + "<w:r xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" "
+                +     "xmlns:v=\"urn:schemas-microsoft-com:vml\" "
+                +     "xmlns:o=\"urn:schemas-microsoft-com:office:office\">"
+                +   "<w:rPr><w:noProof/></w:rPr>"
+                +   "<w:pict>"
+                +     "<v:shapetype id=\"_x0000_t136\" coordsize=\"21600,21600\" o:spt=\"136\" adj=\"10800\" "
+                +                    "path=\"m@7,l@8,m@5,21600l@6,21600e\">"
+                +       "<v:formulas>"
+                +         "<v:f eqn=\"sum #0 0 10800\"/><v:f eqn=\"prod #0 2 1\"/>"
+                +         "<v:f eqn=\"sum 21600 0 @1\"/><v:f eqn=\"sum 0 0 @2\"/>"
+                +         "<v:f eqn=\"sum 21600 0 @3\"/><v:f eqn=\"if @0 @3 0\"/>"
+                +         "<v:f eqn=\"if @0 21600 @1\"/><v:f eqn=\"if @0 0 @2\"/>"
+                +         "<v:f eqn=\"if @0 @4 21600\"/><v:f eqn=\"mid @5 @6\"/>"
+                +         "<v:f eqn=\"mid @8 @5\"/><v:f eqn=\"mid @7 @8\"/>"
+                +         "<v:f eqn=\"mid @6 @7\"/><v:f eqn=\"sum @6 0 @5\"/>"
+                +       "</v:formulas>"
+                +       "<v:path o:extrusionok=\"f\" gradientshapeok=\"t\" o:connecttype=\"custom\" "
+                +              "o:connectlocs=\"@9,0;@10,10800;@11,21600;@12,10800\" "
+                +              "o:connectangles=\"270,180,90,0\" textpathok=\"t\"/>"
+                +       "<v:textpath on=\"t\" fitshape=\"t\"/>"
+                +     "</v:shapetype>"
+                +     "<v:shape id=\"LegienceDraftWatermark\" type=\"#_x0000_t136\" "
+                +            "style=\"position:absolute;margin-left:0;margin-top:0;"
+                +                    "width:468pt;height:234pt;z-index:-251658240;"
+                +                    "mso-position-horizontal:center;mso-position-horizontal-relative:margin;"
+                +                    "mso-position-vertical:center;mso-position-vertical-relative:margin;"
+                +                    "rotation:-30\" "
+                +            "fillcolor=\"#" + fillHex + "\" stroked=\"f\">"
+                +       "<v:fill opacity=\".14\"/>"
+                +       "<v:textpath style=\"font-family:&amp;quot;Georgia&amp;quot;;font-weight:bold;"
+                +                         "font-style:italic;v-text-kern:t\" "
+                +                   "string=\"" + watermarkText + "\"/>"
+                +     "</v:shape>"
+                +   "</w:pict>"
+                + "</w:r>";
+
+            org.apache.xmlbeans.XmlObject xml = org.apache.xmlbeans.XmlObject.Factory.parse(pictXml);
+            para.getCTP().set(
+                    org.openxmlformats.schemas.wordprocessingml.x2006.main.CTP.Factory.parse(
+                            para.getCTP().xmlText().replace("</w:p>",
+                                    xml.xmlText() + "</w:p>")));
+        } catch (Exception e) {
+            // Fallback: ensure we still mark the doc even if VML parsing fails.
+            log.warn("VML watermark injection failed, falling back to faded header text", e);
+            try {
+                org.apache.poi.xwpf.usermodel.XWPFHeader header = document.createHeader(
+                        org.apache.poi.wp.usermodel.HeaderFooterType.DEFAULT);
+                org.apache.poi.xwpf.usermodel.XWPFParagraph para = header.getParagraphArray(0);
+                if (para == null) para = header.createParagraph();
+                para.setAlignment(ParagraphAlignment.CENTER);
+                XWPFRun run = para.createRun();
+                run.setText(watermarkText);
+                run.setBold(true);
+                run.setItalic(true);
+                run.setFontSize(48);
+                run.setColor("IN REVIEW".equals(watermarkText) ? "FDE68A" : "CBD5E1");
+                run.setFontFamily("Georgia");
+            } catch (Exception inner) {
+                log.error("DOCX watermark fallback also failed", inner);
+            }
+        }
     }
 
     /**

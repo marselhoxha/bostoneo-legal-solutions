@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -72,6 +74,46 @@ public class AiAuditLogService {
     }
 
     /**
+     * Log a document-generation gating event (watermarked draft, overdue template, disclaimer injection).
+     * Unlike {@link #logAiCall}, this emits a structured JSONB payload (no {@code {"summary":...}} wrapper)
+     * so ai_audit_logs rows remain queryable by specific fields (templateType, approvalStatus, etc.).
+     */
+    public void logGenerationEvent(Long userId, String userEmail, String userRole,
+                                   Long organizationId, String action,
+                                   String resourceType, Long resourceId,
+                                   Map<String, Object> structuredPayload,
+                                   String responseSummary,
+                                   boolean wasSuccessful, String errorDetails) {
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                AiAuditLog auditLog = AiAuditLog.builder()
+                        .userId(userId)
+                        .userEmail(userEmail)
+                        .userRole(userRole)
+                        .organizationId(organizationId)
+                        .action(action)
+                        .resourceType(resourceType)
+                        .resourceId(resourceId)
+                        .requestPayload(toJson(structuredPayload))
+                        .responseSummary(truncate(responseSummary, MAX_RESPONSE_LENGTH))
+                        .wasSuccessful(wasSuccessful)
+                        .errorDetails(errorDetails)
+                        .containsPii(false)
+                        .dataClassification("internal")
+                        .createdAt(LocalDateTime.now())
+                        .build();
+
+                aiAuditLogRepository.save(auditLog);
+                log.debug("AI generation event logged: action={}, user={}, resource={}", action, userEmail, resourceId);
+
+            } catch (Exception e) {
+                log.error("Failed to log generation event: {}", e.getMessage());
+            }
+        });
+    }
+
+    /**
      * Log a data retention deletion event.
      */
     public void logRetentionDeletion(String tableName, int deletedCount, int retentionDays) {
@@ -117,5 +159,43 @@ public class AiAuditLogService {
         truncated = truncated.replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
         return "{\"summary\":\"" + truncated + "\"}";
+    }
+
+    /**
+     * Minimal JSON serializer for structured audit payloads. Enough for flat
+     * gating events (string/number/boolean scalars). Not a general JSON writer.
+     */
+    private String toJson(Map<String, Object> payload) {
+        if (payload == null || payload.isEmpty()) return "{}";
+        Map<String, Object> ordered = new LinkedHashMap<>(payload);
+        StringBuilder sb = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : ordered.entrySet()) {
+            if (!first) sb.append(",");
+            first = false;
+            sb.append("\"").append(escapeJson(entry.getKey())).append("\":");
+            appendJsonValue(sb, entry.getValue());
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+
+    private void appendJsonValue(StringBuilder sb, Object value) {
+        if (value == null) {
+            sb.append("null");
+        } else if (value instanceof Number || value instanceof Boolean) {
+            sb.append(value.toString());
+        } else {
+            sb.append("\"").append(escapeJson(value.toString())).append("\"");
+        }
+    }
+
+    private String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 }

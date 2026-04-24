@@ -1377,6 +1377,17 @@
               <span><i class="ri-pages-line"></i> {{currentDocumentPageCount}} pages</span>
               <span><i class="ri-time-line"></i> {{lastSavedTime ? 'Saved ' + lastSavedTime : 'Not saved'}}</span>
             </div>
+            <!-- §6.1 Attorney review toolbar (ABA Opinion 512) -->
+            <app-document-review-toolbar
+              *ngIf="currentDocumentId"
+              [documentId]="currentDocumentId"
+              [status]="currentApprovalStatus"
+              [reviewedAt]="currentReviewedAt"
+              [reviewNotes]="currentReviewNotes"
+              [reviewRequestedAt]="currentReviewRequestedAt"
+              [reviewerName]="currentReviewerName"
+              (stateChange)="onReviewStateChange($event)">
+            </app-document-review-toolbar>
           </div>
           <div class="toolbar-right">
             <button class="toolbar-btn" (click)="toggleVersionHistory()" title="Version history" [class.active]="showVersionHistory$ | async"><i class="ri-history-line"></i></button>
@@ -1520,7 +1531,9 @@
 
         <div class="document-preview-content"
              [class.suppress-native-selection]="floatingToolbarState === 'prompt_editing' || floatingToolbarState === 'loading' || floatingToolbarState === 'preview'"
-             [class.editor-locked]="isGenerating$ | async">
+             [class.editor-locked]="isGenerating$ | async"
+             [class.has-draft-watermark]="currentApprovalStatus === 'draft' || currentApprovalStatus === 'changes_requested'"
+             [class.has-review-watermark]="currentApprovalStatus === 'in_review'">
 
           <!-- Rich Text Editor (CKEditor 5) -->
           <!-- Stationery frames are injected via DOM into .ck-editor__main after editor init -->

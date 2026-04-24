@@ -44,6 +44,32 @@ export interface GeneratedDocument {
   version?: number;
   stationeryTemplateId?: number | null;
   stationeryAttorneyId?: number | null;
+  // §6.1 gating metadata — drives the DRAFT watermark overlay in the UI.
+  // When approvalStatus transitions from 'draft' to 'approved' the watermark disappears.
+  approvalStatus?: string | null;
+  isVerificationOverdue?: boolean | null;
+  templateVersion?: string | null;
+  lastVerified?: string | null;
+  // §6.1 attorney review metadata — drives the review chip + banner.
+  reviewedAt?: string | null;
+  reviewNotes?: string | null;
+  reviewRequestedAt?: string | null;
+  reviewedByUserId?: number | null;
+  reviewRequestedByUserId?: number | null;
+}
+
+/**
+ * §6.1 attorney review response — sparse snapshot after any review transition.
+ * Same shape the backend returns from request-review/approve/request-changes/revert.
+ */
+export interface DocumentReviewState {
+  documentId: number;
+  approvalStatus: string;
+  reviewedByUserId?: number | null;
+  reviewedAt?: string | null;
+  reviewNotes?: string | null;
+  reviewRequestedByUserId?: number | null;
+  reviewRequestedAt?: string | null;
 }
 
 export interface DocumentRevisionRequest {
@@ -139,6 +165,12 @@ export interface DraftGenerationResponse {
     tokensUsed: number;
     costEstimate: number;
     generatedAt: string;
+    // §6.1 gating metadata — drives the DRAFT watermark overlay in the UI.
+    // When approvalStatus transitions from 'draft' to 'approved' the watermark disappears.
+    approvalStatus?: string | null;
+    isVerificationOverdue?: boolean | null;
+    templateVersion?: string | null;
+    lastVerified?: string | null;
   };
   conversation: {
     id: number;
@@ -277,6 +309,50 @@ export class DocumentGenerationService {
    */
   reviseDocument(request: DocumentRevisionRequest): Observable<GeneratedDocument> {
     return this.http.post<GeneratedDocument>(`${this.apiUrl}/revise`, request);
+  }
+
+  // ========================================================================
+  // §6.1 Attorney Review State Machine (ABA Opinion 512)
+  // ========================================================================
+
+  /**
+   * Flip a draft into 'in_review' so an attorney can review it.
+   */
+  requestAttorneyReview(documentId: number, message?: string): Observable<DocumentReviewState> {
+    return this.http.post<DocumentReviewState>(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/request-review`,
+      { message: message ?? null }
+    );
+  }
+
+  /**
+   * Attorney/admin approves a document. Clears the watermark.
+   */
+  approveDocument(documentId: number, notes?: string): Observable<DocumentReviewState> {
+    return this.http.post<DocumentReviewState>(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/approve`,
+      { notes: notes ?? null }
+    );
+  }
+
+  /**
+   * Attorney/admin rejects with change notes. Notes are required — backend will 400 without them.
+   */
+  requestChanges(documentId: number, notes: string): Observable<DocumentReviewState> {
+    return this.http.post<DocumentReviewState>(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/request-changes`,
+      { notes }
+    );
+  }
+
+  /**
+   * Doc owner reverts an approved/rejected doc back to 'draft' (e.g. to make further edits).
+   */
+  revertDocumentToDraft(documentId: number): Observable<DocumentReviewState> {
+    return this.http.post<DocumentReviewState>(
+      `${environment.apiUrl}/api/legal/ai-workspace/documents/${documentId}/revert-to-draft`,
+      {}
+    );
   }
 
   /**
@@ -697,10 +773,12 @@ export class DocumentGenerationService {
    * Export content to Word (DOCX) - no document ID required
    * Used for workflow drafts that haven't been saved to database
    */
-  exportContentToWord(content: string, title: string): Observable<HttpResponse<Blob>> {
+  exportContentToWord(content: string, title: string, approvalStatus?: string | null): Observable<HttpResponse<Blob>> {
+    const body: any = { content, title };
+    if (approvalStatus) body.approvalStatus = approvalStatus;
     return this.http.post(
       `${environment.apiUrl}/api/legal/ai-workspace/export/content/word`,
-      { content, title },
+      body,
       {
         responseType: 'blob',
         observe: 'response'
@@ -710,11 +788,19 @@ export class DocumentGenerationService {
 
   /**
    * Export content to PDF - no document ID required
-   * Used for workflow drafts that haven't been saved to database
+   * Used for workflow drafts that haven't been saved to database.
+   * `approvalStatus` drives the watermark: "attorney_reviewed" → clean paper,
+   * "in_review" → IN REVIEW stamp, anything else (draft/changes_requested/null) → DRAFT.
    */
-  exportContentToPDF(content: string, title: string, documentType?: string): Observable<HttpResponse<Blob>> {
+  exportContentToPDF(
+    content: string,
+    title: string,
+    documentType?: string,
+    approvalStatus?: string | null,
+  ): Observable<HttpResponse<Blob>> {
     const body: any = { content, title };
     if (documentType) body.documentType = documentType;
+    if (approvalStatus) body.approvalStatus = approvalStatus;
     return this.http.post(
       `${environment.apiUrl}/api/legal/ai-workspace/export/content/pdf`,
       body,

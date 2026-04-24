@@ -709,6 +709,17 @@ public class AiWorkspaceController {
                     response.put("generatedAt", result.get("generatedAt"));
                     response.put("status", "COMPLETED");
                     response.put("processingTimeMs", 0);
+                    // §6.1 gating metadata — drives the DRAFT watermark overlay.
+                    response.put("approvalStatus", result.get("approvalStatus"));
+                    response.put("isVerificationOverdue", result.get("isVerificationOverdue"));
+                    response.put("templateVersion", result.get("templateVersion"));
+                    response.put("lastVerified", result.get("lastVerified"));
+                    // §6.1 attorney review metadata — drives the review toolbar chip + banner.
+                    response.put("reviewedAt", result.get("reviewedAt"));
+                    response.put("reviewNotes", result.get("reviewNotes"));
+                    response.put("reviewRequestedAt", result.get("reviewRequestedAt"));
+                    response.put("reviewedByUserId", result.get("reviewedByUserId"));
+                    response.put("reviewRequestedByUserId", result.get("reviewRequestedByUserId"));
                     return ResponseEntity.ok(response);
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -1078,15 +1089,15 @@ public class AiWorkspaceController {
         try {
             String content = request.get("content");
             String title = request.getOrDefault("title", "Document");
+            String approvalStatus = request.get("approvalStatus");
 
             if (content == null || content.isEmpty()) {
                 return ResponseEntity.badRequest().build();
             }
 
-            log.info("Exporting content to Word, title={}", title);
+            log.info("Exporting content to Word, title={}, approvalStatus={}", title, approvalStatus);
 
-            // Generate Word document from content
-            byte[] wordDoc = documentService.generateWordDocumentFromContent(content, title);
+            byte[] wordDoc = documentService.generateWordDocumentFromContent(content, title, approvalStatus);
 
             // Sanitize filename — use document service for consistent naming
             String filename = documentService.sanitizeFilenamePublic(title) + ".docx";
@@ -1122,15 +1133,15 @@ public class AiWorkspaceController {
             String content = request.get("content");
             String title = request.getOrDefault("title", "Document");
             String documentType = request.get("documentType");
+            String approvalStatus = request.get("approvalStatus");
 
             if (content == null || content.isEmpty()) {
                 return ResponseEntity.badRequest().build();
             }
 
-            log.info("Exporting content to PDF, title={}, documentType={}", title, documentType);
+            log.info("Exporting content to PDF, title={}, documentType={}, approvalStatus={}", title, documentType, approvalStatus);
 
-            // Generate PDF document from content
-            byte[] pdfDoc = documentService.generatePdfDocumentFromContent(content, title, documentType);
+            byte[] pdfDoc = documentService.generatePdfDocumentFromContent(content, title, documentType, approvalStatus);
 
             // Sanitize filename — use document service for consistent naming
             String filename = documentService.sanitizeFilenamePublic(title) + ".pdf";
@@ -1194,5 +1205,126 @@ public class AiWorkspaceController {
     public ResponseEntity<Map<String, String>> getLastJurisdiction(@PathVariable Long caseId) {
         String lastJurisdiction = documentService.getLastUsedJurisdiction(caseId);
         return ResponseEntity.ok(Map.of("jurisdiction", lastJurisdiction != null ? lastJurisdiction : ""));
+    }
+
+    // ==========================================================================
+    // §6.1 Attorney Review State Machine
+    // ABA Opinion 512 — attorneys must verify AI-generated output before use.
+    // Each doc tracks its own review state so watermarks clear on a per-document
+    // basis when a specific attorney signs off.
+    // ==========================================================================
+
+    /**
+     * POST /api/legal/ai-workspace/documents/{documentId}/request-review
+     * Any doc owner flips a draft into 'in_review' so an attorney can review it.
+     */
+    @PostMapping("/documents/{documentId}/request-review")
+    @AuditLog(action = "OTHER", entityType = "AI_WORKSPACE", description = "Requested attorney review")
+    public ResponseEntity<Map<String, Object>> requestAttorneyReview(
+            @PathVariable Long documentId,
+            @RequestBody(required = false) Map<String, String> body,
+            @AuthenticationPrincipal UserDTO user,
+            @RequestParam(required = false) Long userId) {
+        try {
+            Long effectiveUserId = (user != null) ? user.getId() : userId;
+            if (effectiveUserId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            String message = body != null ? body.get("message") : null;
+            Map<String, Object> result = documentService.requestAttorneyReview(documentId, effectiveUserId, message);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error requesting attorney review for doc {}: {}", documentId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * POST /api/legal/ai-workspace/documents/{documentId}/approve
+     * Attorney or admin approves a document — clears watermarks, stamps reviewer.
+     */
+    @PostMapping("/documents/{documentId}/approve")
+    @PreAuthorize("hasAnyRole('ROLE_ATTORNEY', 'ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER')")
+    @AuditLog(action = "APPROVE", entityType = "AI_WORKSPACE", description = "Approved AI-generated document")
+    public ResponseEntity<Map<String, Object>> approveDocument(
+            @PathVariable Long documentId,
+            @RequestBody(required = false) Map<String, String> body,
+            @AuthenticationPrincipal UserDTO user,
+            @RequestParam(required = false) Long userId) {
+        try {
+            Long effectiveUserId = (user != null) ? user.getId() : userId;
+            if (effectiveUserId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            String notes = body != null ? body.get("notes") : null;
+            Map<String, Object> result = documentService.approveDocument(documentId, effectiveUserId, notes);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error approving doc {}: {}", documentId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * POST /api/legal/ai-workspace/documents/{documentId}/request-changes
+     * Attorney or admin rejects with required change notes.
+     */
+    @PostMapping("/documents/{documentId}/request-changes")
+    @PreAuthorize("hasAnyRole('ROLE_ATTORNEY', 'ROLE_ADMIN', 'ROLE_SYSADMIN', 'ROLE_MANAGING_PARTNER')")
+    @AuditLog(action = "REJECT", entityType = "AI_WORKSPACE", description = "Requested changes on AI-generated document")
+    public ResponseEntity<Map<String, Object>> requestChanges(
+            @PathVariable Long documentId,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDTO user,
+            @RequestParam(required = false) Long userId) {
+        try {
+            Long effectiveUserId = (user != null) ? user.getId() : userId;
+            if (effectiveUserId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            String notes = body != null ? body.get("notes") : null;
+            Map<String, Object> result = documentService.requestChanges(documentId, effectiveUserId, notes);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error requesting changes on doc {}: {}", documentId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * POST /api/legal/ai-workspace/documents/{documentId}/revert-to-draft
+     * Doc owner reverts back to 'draft' (e.g. to make further edits after approval).
+     */
+    @PostMapping("/documents/{documentId}/revert-to-draft")
+    @AuditLog(action = "OTHER", entityType = "AI_WORKSPACE", description = "Reverted document to draft state")
+    public ResponseEntity<Map<String, Object>> revertToDraft(
+            @PathVariable Long documentId,
+            @AuthenticationPrincipal UserDTO user,
+            @RequestParam(required = false) Long userId) {
+        try {
+            Long effectiveUserId = (user != null) ? user.getId() : userId;
+            if (effectiveUserId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            Map<String, Object> result = documentService.revertToDraft(documentId, effectiveUserId);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error reverting doc {} to draft: {}", documentId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

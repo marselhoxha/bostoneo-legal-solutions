@@ -67,6 +67,27 @@ public class AiWorkspaceDocument {
     @Column(name = "stationery_attorney_id")
     private Long stationeryAttorneyId;
 
+    // §6.1 attorney review state (per-document override of template approvalStatus).
+    // Values: 'draft' | 'in_review' | 'attorney_reviewed' | 'changes_requested'.
+    @Column(name = "approval_status", length = 30)
+    @Builder.Default
+    private String approvalStatus = "draft";
+
+    @Column(name = "reviewed_by_user_id")
+    private Long reviewedByUserId;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
+    @Column(name = "review_notes", columnDefinition = "TEXT")
+    private String reviewNotes;
+
+    @Column(name = "review_requested_by_user_id")
+    private Long reviewRequestedByUserId;
+
+    @Column(name = "review_requested_at")
+    private LocalDateTime reviewRequestedAt;
+
     // Relationships
     @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

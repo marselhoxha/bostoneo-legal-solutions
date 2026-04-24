@@ -167,6 +167,16 @@ public class DocumentTypeTemplateRegistry {
     }
 
     /**
+     * Cascade-aware template resolution. Same 4-way cascade as {@link #cascade(String, String, String, java.util.function.Function)}:
+     * {type}_{pa}_{state} → {type}_{state} → {type}_{pa} → {type}.
+     * Used by the gating layer so it sees the same jurisdiction-specific metadata
+     * (approvalStatus, nextReviewDue, disclaimer) that drove the prompt selection.
+     */
+    public DocumentTypeTemplate getResolvedTemplate(String documentType, String practiceArea, String jurisdiction) {
+        return cascade(documentType, practiceArea, jurisdiction, java.util.function.Function.identity());
+    }
+
+    /**
      * Keys of every loaded template (filename-derived, aliases included).
      * Used by {@link PracticeAreaCatalogService} to check 4-way cascade coverage without
      * re-running {@link #cascade} for every candidate doc type.
