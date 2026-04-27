@@ -182,7 +182,11 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
 
   // AI Briefing
   aiBriefing: string | null = null;
-  aiBriefingLoading = false;
+  // Default true so the skeleton shows from first paint instead of the
+  // fallback "You have N events..." string (line 15 of the template). The
+  // briefing only fires after schedule+urgent finish loading (~T+1s), and
+  // before that we'd render the fallback as if it were the real briefing.
+  aiBriefingLoading = true;
   // Flags to track when data sources are loaded for AI briefing
   private scheduleEventsLoaded = false;
   private urgentItemsLoaded = false;

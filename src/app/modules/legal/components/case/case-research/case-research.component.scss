@@ -511,28 +511,16 @@
   }
 
   // Chat Conversation Area
+  // No max-width — match the .compact-search-header above (also unconstrained).
+  // User reported the conversation looked narrower than the input bar; aligning
+  // both to the case-detail tab's container width fixes it without touching
+  // the input bar.
   .chat-conversation {
     background: var(--vz-body-bg);
     padding: 0.75rem;
-    max-width: 1200px; // Default for laptop
-    margin: 0 auto;
     width: 100%;
+    max-width: 100%;
     overflow-x: hidden;
-
-    // Large desktop - more width for better readability
-    @media (min-width: 1920px) {
-      max-width: 1600px;
-    }
-
-    // Desktop - expanded width
-    @media (min-width: 1400px) and (max-width: 1919px) {
-      max-width: 1400px;
-    }
-
-    // Laptop - default width
-    @media (min-width: 992px) and (max-width: 1399px) {
-      max-width: 1200px;
-    }
   }
 
   // Chat Messages
@@ -596,7 +584,11 @@
 
     .user-chat-content {
       flex: 1;
-      max-width: 45%;
+      // Bumped from 45% so user-side bubbles don't look cramped now that
+      // the parent .chat-conversation runs full width. 75% leaves enough
+      // right-side gutter for the bubble alignment to read as "from user"
+      // without becoming full-width.
+      max-width: 75%;
       min-width: 0;
       overflow-wrap: break-word;
       word-wrap: break-word;

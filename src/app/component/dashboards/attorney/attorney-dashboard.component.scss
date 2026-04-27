@@ -1132,6 +1132,36 @@
       }
     }
   }
+
+  // Loading skeleton variant — same outer card geometry as the real case
+  // card so the skeleton-to-data transition doesn't shift layout. Children
+  // are silvery placeholders that pulse via the existing `loading` keyframes.
+  &.case-card-skeleton {
+    cursor: default;
+    pointer-events: none;
+
+    .skeleton-circle,
+    .skeleton-arrow,
+    .skeleton-line,
+    .skeleton-pill {
+      background: linear-gradient(
+        90deg,
+        rgba(var(--vz-secondary-rgb), 0.08) 0%,
+        rgba(var(--vz-secondary-rgb), 0.16) 50%,
+        rgba(var(--vz-secondary-rgb), 0.08) 100%
+      );
+      background-size: 200% 100%;
+      animation: loading 1.4s ease-in-out infinite;
+      border-radius: 4px;
+    }
+    .skeleton-circle  { width: 40px; height: 40px; border-radius: 50%; }
+    .skeleton-arrow   { width: 24px; height: 24px; border-radius: 50%; opacity: 0.6; }
+    .skeleton-line    { height: 12px; width: 100%; }
+    .skeleton-line-lg { height: 16px; width: 70%; }
+    .skeleton-line-md { height: 12px; width: 90%; }
+    .skeleton-pill    { height: 22px; width: 64px; border-radius: 11px; }
+    .skeleton-pill-sm { width: 84px; }
+  }
 }
 
 // Case Badges (pill style) - Velzon Theme
