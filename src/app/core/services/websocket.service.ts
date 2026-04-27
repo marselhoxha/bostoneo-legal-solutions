@@ -1,10 +1,16 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { Observable, BehaviorSubject, Subject, EMPTY, timer } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
-import { retryWhen, delay, takeUntil, tap, catchError, filter } from 'rxjs/operators';
+import { takeUntil, catchError, filter } from 'rxjs/operators';
 import { Key } from '../../enum/key.enum';
 import { environment } from '../../../environments/environment';
 import { decodeJwtPayload } from '../utils/jwt.util';
+
+const WS_CLOSE_NORMAL = 1000;
+const WS_CLOSE_AUTH_FAILED = 1003;     // Spring's CloseStatus.NOT_ACCEPTABLE — bad/revoked token
+const WS_CLOSE_SERVER_OVERLOAD = 1013; // Spring's CloseStatus.SERVICE_OVERLOAD — too many sessions
+const OVERLOAD_BACKOFF_MS = 60_000;
+const RECONNECT_HARD_CAP_MS = 60_000;
 
 export interface WebSocketMessage {
   type: string;
@@ -51,7 +57,12 @@ export class WebSocketService implements OnDestroy {
   private readonly wsUrl = environment.wsUrl;
   private readonly reconnectInterval = 5000;
   private readonly maxReconnectAttempts = 3;
-  
+
+  // Gate that prevents any code path (closeObserver, scheduleReconnection,
+  // 30s health-check timer) from opening a new socket before this timestamp.
+  // Set to Number.MAX_SAFE_INTEGER on terminal failures (auth) to stop forever.
+  private nextAllowedConnectAt = 0;
+
   // Current subscriptions
   private currentCaseId: number | null = null;
   private currentUserId: number | null = null;
@@ -91,6 +102,9 @@ export class WebSocketService implements OnDestroy {
       window.addEventListener('storage', (event) => {
         if (event.key === Key.TOKEN) {
           if (event.newValue) {
+            // Fresh token — reset the cooldown gate so a prior auth/overload
+            // failure doesn't permanently block this new session
+            this.nextAllowedConnectAt = 0;
             this.connect();
           } else {
             this.disconnect();
@@ -99,8 +113,9 @@ export class WebSocketService implements OnDestroy {
       });
     }
 
-    // Check for token changes periodically
-    timer(0, 30000) // Check every 30 seconds
+    // Periodic health check — but the gate (nextAllowedConnectAt) prevents
+    // this from hammering the backend when we're in a backoff window
+    timer(0, 30000)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         const token = localStorage.getItem(Key.TOKEN);
@@ -134,6 +149,13 @@ export class WebSocketService implements OnDestroy {
    */
   connect(): void {
     if (this.socket$ && !this.socket$.closed) {
+      return;
+    }
+
+    // Honor the cooldown gate — prevents storm when backend rejected us
+    // with overload/auth-failure. Multiple code paths may call connect();
+    // this is the single chokepoint that decides whether to actually open.
+    if (Date.now() < this.nextAllowedConnectAt) {
       return;
     }
 
@@ -181,10 +203,26 @@ export class WebSocketService implements OnDestroy {
               error: event
             });
 
-            // Only attempt reconnection if it wasn't a deliberate close
-            if (event.code !== 1000) {
-              this.scheduleReconnection();
+            // Auth failure — token is bad/revoked. No retry will help until
+            // the user logs back in (which calls connect() explicitly).
+            if (event.code === WS_CLOSE_AUTH_FAILED) {
+              this.nextAllowedConnectAt = Number.MAX_SAFE_INTEGER;
+              return;
             }
+
+            // Server overload — backend told us to back off. Don't hammer it.
+            if (event.code === WS_CLOSE_SERVER_OVERLOAD) {
+              this.nextAllowedConnectAt = Date.now() + OVERLOAD_BACKOFF_MS;
+              return;
+            }
+
+            // Clean close — explicit disconnect, do nothing.
+            if (event.code === WS_CLOSE_NORMAL) {
+              return;
+            }
+
+            // Unexpected close — schedule a backoff retry.
+            this.scheduleReconnection();
           }
         },
         serializer: (msg) => JSON.stringify(msg),
@@ -197,7 +235,10 @@ export class WebSocketService implements OnDestroy {
         }
       });
 
-      // Subscribe to incoming messages
+      // Single subscription drives the message stream; closeObserver above
+      // owns the reconnect decision. Errors complete the stream — no
+      // retryWhen here (that was the storm-driver — it spawned a parallel
+      // WebSocket on every error with no cap).
       this.socket$
         .pipe(
           takeUntil(this.destroy$),
@@ -212,25 +253,6 @@ export class WebSocketService implements OnDestroy {
         .subscribe(message => {
           this.handleIncomingMessage(message);
         });
-
-      // Handle reconnection
-      this.socket$
-        .pipe(
-          retryWhen(errors =>
-            errors.pipe(
-              tap(error => {
-                this.updateConnectionStatus({
-                  connected: false,
-                  error
-                });
-              }),
-              delay(this.reconnectInterval),
-              takeUntil(this.destroy$)
-            )
-          ),
-          takeUntil(this.destroy$)
-        )
-        .subscribe();
 
     } catch (error) {
       this.updateConnectionStatus({
@@ -251,6 +273,8 @@ export class WebSocketService implements OnDestroy {
     }
 
     this.socket$ = null;
+    // Explicit disconnect clears the cooldown — caller is in control now
+    this.nextAllowedConnectAt = 0;
     this.updateConnectionStatus({
       connected: false,
       reconnecting: false,
@@ -504,12 +528,15 @@ export class WebSocketService implements OnDestroy {
   // ==================== Private Methods ====================
 
   /**
-   * Schedule reconnection attempt
+   * Schedule reconnection attempt with exponential backoff.
+   * After max attempts, sets a long cooldown so the 30s health-check timer
+   * doesn't immediately retry.
    */
   private scheduleReconnection(): void {
     const currentStatus = this.connectionStatus$.value;
 
     if (currentStatus.retryCount >= this.maxReconnectAttempts) {
+      this.nextAllowedConnectAt = Date.now() + RECONNECT_HARD_CAP_MS;
       this.updateConnectionStatus({
         reconnecting: false,
         error: { message: 'Max reconnection attempts reached' }
@@ -517,15 +544,23 @@ export class WebSocketService implements OnDestroy {
       return;
     }
 
-    if (!currentStatus.reconnecting) {
-      timer(this.reconnectInterval)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe(() => {
-          if (!this.isConnected()) {
-            this.connect();
-          }
-        });
-    }
+    if (currentStatus.reconnecting) return;
+
+    // 5s, 10s, 20s, capped at RECONNECT_HARD_CAP_MS
+    const backoffMs = Math.min(
+      this.reconnectInterval * Math.pow(2, currentStatus.retryCount),
+      RECONNECT_HARD_CAP_MS
+    );
+
+    this.updateConnectionStatus({ reconnecting: true });
+
+    timer(backoffMs)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (!this.isConnected()) {
+          this.connect();
+        }
+      });
   }
 
   /**

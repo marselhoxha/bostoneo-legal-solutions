@@ -318,11 +318,13 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
     // Close any open modals first to prevent multiple instances
     this.modalService.dismissAll();
     
-    const modalRef = this.modalService.open(EventModalComponent, { 
+    const modalRef = this.modalService.open(EventModalComponent, {
       size: 'lg',
       backdrop: 'static',
       keyboard: false,
-      centered: true
+      centered: true,
+      windowClass: 'modal-snappy',
+      backdropClass: 'modal-snappy'
     });
     
     modalRef.componentInstance.event = event;
@@ -345,11 +347,13 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
     // Close any open modals first to prevent multiple instances
     this.modalService.dismissAll();
     
-    const modalRef = this.modalService.open(EventModalComponent, { 
+    const modalRef = this.modalService.open(EventModalComponent, {
       size: 'lg',
       backdrop: 'static',
       keyboard: false,
-      centered: true
+      centered: true,
+      windowClass: 'modal-snappy',
+      backdropClass: 'modal-snappy'
     });
     
     modalRef.componentInstance.event = event;
@@ -372,11 +376,13 @@ export class CalendarViewComponent implements OnInit, AfterViewInit, OnDestroy {
     // Close any open modals first to prevent multiple instances
     this.modalService.dismissAll();
     
-    const modalRef = this.modalService.open(EventModalComponent, { 
+    const modalRef = this.modalService.open(EventModalComponent, {
       size: 'lg',
       backdrop: 'static',
       keyboard: false,
-      centered: true
+      centered: true,
+      windowClass: 'modal-snappy',
+      backdropClass: 'modal-snappy'
     });
     
     modalRef.componentInstance.title = 'Create New Event';

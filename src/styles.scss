@@ -849,6 +849,23 @@ body > div > .dropdown-menu.user-profile-dropdown {
 }
 
 // ==========================================
+// GLOBAL: Snappy modal animation
+// ==========================================
+// Bootstrap default is 0.3s ease-out for modal-dialog transform + opacity fade,
+// which feels sluggish on click. This shortens it to ~150ms with an asymmetric
+// easing curve (fast accelerate, gentle settle) so the modal feels instant
+// without losing the entry animation.
+.modal-snappy.fade .modal-dialog {
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+}
+.modal-snappy.fade {
+  transition: opacity 0.12s linear;
+}
+.modal-snappy.modal-backdrop.fade {
+  transition: opacity 0.12s linear;
+}
+
+// ==========================================
 // GLOBAL: Responsive Table Patterns
 // ==========================================
 

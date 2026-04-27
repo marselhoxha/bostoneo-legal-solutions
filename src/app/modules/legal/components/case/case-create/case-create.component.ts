@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ElementRef, ViewChildren, QueryList, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef, ViewChildren, QueryList, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CaseStatus, CasePriority } from '../../../models/case.model';
@@ -28,7 +28,13 @@ import { environment } from '../../../../../../environments/environment';
     FormsModule,
     ReactiveFormsModule,
     FlatpickrModule
-  ]
+  ],
+  // OnPush: skip change detection for unrelated zone events (WebSocket retries,
+  // timers in other components, etc.). The 8 existing cdr.markForCheck() calls
+  // were already in place — they just never did anything under default CD.
+  // Reactive form directives (formControlName, formGroup) auto-trigger CD on
+  // user input events, so typing/clicking in fields still updates as expected.
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -72,9 +78,14 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   private practiceAreaDatePickers: any[] = [];
 
   // Rows of paired sections — pairGroup-tagged sections render side-by-side in a Bootstrap row.
-  get practiceAreaSectionRows(): PracticeAreaSection[][] {
-    return groupPracticeAreaSections(this.currentPracticeAreaSections);
-  }
+  // CRITICAL: this MUST be a stable property, not a getter that calls
+  // groupPracticeAreaSections() on every access. Change detection runs the template
+  // expressions on every event tick, so a getter would return a brand-new array
+  // reference each cycle. Without `trackBy`, *ngFor would tear down and recreate the
+  // entire field DOM tree on every click — making form controls feel "uninteractive"
+  // because your click target is destroyed before the handler runs. Computed once
+  // in onPracticeAreaChange() when the underlying section list actually changes.
+  practiceAreaSectionRows: PracticeAreaSection[][] = [];
 
   billingTypes = [
     { value: 'HOURLY', label: 'Hourly' },
@@ -340,6 +351,10 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       if (this.caseForm.contains(fieldName)) this.caseForm.removeControl(fieldName);
     });
     this.currentPracticeAreaSections = this.practiceAreaFieldsConfig[practiceArea] || [];
+    // Memoize the row layout once per practice-area change. Done HERE — not in a
+    // template getter — so the *ngFor reference stays stable across change-detection
+    // cycles and the field DOM doesn't get torn down on every click.
+    this.practiceAreaSectionRows = groupPracticeAreaSections(this.currentPracticeAreaSections);
     this.currentPracticeAreaSections.forEach(section => {
       section.fields.forEach(field => {
         const validators = field.required ? [Validators.required] : [];
@@ -407,9 +422,17 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadAttorneys(): void {
-    this.userService.getAttorneys()
+    // Use the org-scoped stationery/attorneys endpoint instead of /user/list — the
+    // latter requires USER:VIEW authority (admins only) after recent security hardening,
+    // which 403s for attorneys creating cases. The stationery endpoint accepts any
+    // attorney/managing-partner/admin role and returns id/firstName/lastName which is
+    // exactly what the Lead Attorney dropdown needs.
+    this.http.get<any[]>(`${environment.apiUrl}/api/legal/stationery/attorneys`)
       .pipe(takeUntil(this.destroy$))
-      .subscribe({ next: (a) => { this.attorneys = a; }, error: (e) => console.error('Error loading attorneys:', e) });
+      .subscribe({
+        next: (a) => { this.attorneys = a || []; },
+        error: (e) => console.error('Error loading attorneys:', e)
+      });
   }
 
   generateUniqueCaseNumber(): string {

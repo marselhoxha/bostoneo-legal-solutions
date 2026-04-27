@@ -64,7 +64,8 @@ import { TemplateLibraryComponent } from '../templates/template-library.componen
 import { DraftWizardComponent, DraftWizardResult } from './draft-wizard/draft-wizard.component';
 import { DraftDashboardComponent } from './draft-dashboard/draft-dashboard.component';
 import { TemplatePickerInlineComponent } from './template-picker-inline/template-picker-inline.component';
-import { FillAndGenerateComponent, FillAndGenerateResult } from './fill-and-generate/fill-and-generate.component';
+// Template fill flow has moved to its own dedicated route:
+// /legal/ai-assistant/templates/fill/:id (TemplateFillerComponent).
 import { TemplateImportWizardComponent } from '../templates/template-import-wizard/template-import-wizard.component';
 import { ImportCommitResponse } from '../../../services/template-import.service';
 import { ConversationListComponent } from './conversation-list/conversation-list.component';
@@ -134,7 +135,6 @@ import { DocumentState } from '../../../models/document.model';
     DraftWizardComponent,
     DraftDashboardComponent,
     TemplatePickerInlineComponent,
-    FillAndGenerateComponent,
     TemplateImportWizardComponent
   ],
   templateUrl: './ai-workspace.component.html',
@@ -874,6 +874,14 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   @ViewChild('templateImportModal') templateImportModal!: TemplateRef<any>;
   @ViewChild('fileInput') fileInputRef!: ElementRef<HTMLInputElement>;
 
+  // The chat scroll viewport in LegiSearch. Used by the floating "back to top"
+  // affordance that appears once the user has scrolled meaningfully into a long
+  // conversation. The button must scroll *this* element (it has its own
+  // overflow:auto), not the window.
+  @ViewChild('chatScrollArea') chatScrollArea?: ElementRef<HTMLDivElement>;
+  showScrollTopBtn = false;
+  private readonly SCROLL_TOP_BTN_THRESHOLD_PX = 400;
+
   // Sprint 4c Phase 3 — Template import modal (launched from inline picker's
   // "Import" button). Rendered in-place as a <ng-template> at the bottom of
   // the workspace HTML; opened via NgbModal so the user stays inside the
@@ -1069,7 +1077,17 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(distinctUntilChanged(), skip(1), takeUntil(this.destroy$))
       .subscribe(() => this.scrollPageToTop());
     this.isGenerating$
-      .pipe(distinctUntilChanged(), filter(v => v === true), takeUntil(this.destroy$))
+      .pipe(
+        distinctUntilChanged(),
+        filter(v => v === true),
+        // Scope to LegiDraft only — generation in LegiSearch chat (e.g.,
+        // follow-up question clicks) must NOT scroll the page to top.
+        // Mode transitions in LegiDraft are already covered by draftMode$
+        // and draftingMode$ above; this branch is a safety net for entry
+        // points that flip isGenerating without changing mode.
+        filter(() => this.selectedTask === 'draft'),
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => this.scrollPageToTop());
     this.draftingMode$
       .pipe(distinctUntilChanged(), filter(v => v === true), takeUntil(this.destroy$))
@@ -1211,6 +1229,22 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         const caseId = parseInt(params['caseId'], 10);
         if (!isNaN(caseId)) {
           this.selectedCaseId = caseId;
+        }
+      }
+
+      // Handle documentId from the template-filler "Open in AI Workspace" handoff.
+      // Loads the existing draft into the editor without going through the AI flow.
+      if (params['documentId']) {
+        const docId = parseInt(params['documentId'], 10);
+        if (!isNaN(docId)) {
+          this.openDocumentFromQuery(docId);
+          // Strip the param from the URL so refresh doesn't re-trigger the load.
+          this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { documentId: null },
+            queryParamsHandling: 'merge',
+            replaceUrl: true
+          });
         }
       }
 
@@ -2838,6 +2872,53 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
    */
   private setModeForDrafting(): void {
     this.selectedResearchMode = ResearchMode.Thorough;
+  }
+
+  /**
+   * Hand-off from /legal/ai-assistant/templates/fill/:id (template-filler component):
+   * load the freshly-substituted draft into the workspace editor in drafting mode,
+   * mirroring the post-stream completion path used by the AI flow.
+   */
+  private openDocumentFromQuery(documentId: number): void {
+    this.documentGenerationService.getDocument(documentId, this.currentUser?.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (document: any) => {
+          this.currentDocumentId = document.id;
+          this.activeDocumentTitle = document.title || this.extractTitleFromMarkdown(document.content) || 'Untitled Document';
+          this.currentDocumentWordCount = document.wordCount || this.countWords(document.content);
+          this.currentDocumentPageCount = this.documentGenerationService.estimatePageCount(this.currentDocumentWordCount);
+          this.applyReviewMetadata(document);
+          this.documentMetadata = {
+            tokensUsed: document.tokensUsed || 0,
+            costEstimate: document.costEstimate || 0,
+            generatedAt: document.generatedAt ? new Date(document.generatedAt) : new Date(),
+            version: document.version || 1
+          };
+
+          this.loadVersionHistory();
+          this.loadDocumentStationery(document);
+
+          // Reset editor and enter drafting mode (same shape as the AI completion path).
+          this.pendingDocumentContent = document.content || '';
+          this.showEditor = false;
+          this.cdr.detectChanges();
+          setTimeout(() => {
+            this.editorInstance = null;
+            this.stateService.setDraftingMode(true);
+            this.stateService.setShowChat(false);
+            this.stateService.setShowBottomSearchBar(false);
+            this.cdr.detectChanges();
+            this.showEditor = true;
+            this.setModeForDrafting();
+            this.cdr.detectChanges();
+            if (document.id) this.loadDocumentExhibits(Number(document.id));
+          }, 0);
+        },
+        error: () => {
+          this.notificationService.error('Document not found', 'Could not load the requested draft.');
+        }
+      });
   }
 
   /**
@@ -6891,76 +6972,24 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Sprint 4c — Dashboard mini-card click. Skips the picker and jumps straight
-   * to fill mode with the selected template pre-set. Phase 4 will read
-   * `selectedTemplateForFill` and render the fill form; today we just transition
-   * and the placeholder fill view will pick it up.
+   * Dashboard mini-card click — navigate to the dedicated template-fill page.
+   * The fill page re-fetches the full template record + variables.
    */
   onDashboardPickTemplate(template: Template): void {
-    if (!template) return;
-    this.selectedTemplateForFill = template;
-    this.enterFillMode();
+    if (!template?.id) return;
+    const queryParams = this.selectedCaseId ? { caseId: this.selectedCaseId } : {};
+    this.router.navigate(['/legal/ai-assistant/templates/fill', template.id], { queryParams });
   }
 
   /**
-   * Sprint 4c — Inline picker card click. Same fill-mode transition as the
-   * dashboard mini-card, but sourced from the broader filtered list. The
-   * TemplateSearchResult shape is a subset of Template; Phase 4's fill form
-   * will re-fetch the full template record via `templateService.getTemplate(id)`
-   * when variables and body content are needed.
+   * Inline picker click — navigate to the dedicated template-fill page. The
+   * picker emits a lightweight TemplateSearchResult; the fill page re-fetches
+   * the full template record + variables.
    */
-  /**
-   * Sprint 4c Phase 4 — FillAndGenerate submit handler. Bridges the AILegalTemplate
-   * path into the existing SSE draft flow:
-   *   - `wizardDocumentType` picks the right DocumentTypeTemplate JSON via the
-   *     4-way cascade (documentType × practiceArea × jurisdiction).
-   *   - `customPrompt` carries the template body verbatim under a `TEMPLATE BODY:`
-   *     section so the AI honors the saved template's exact wording.
-   *   - `wizardDocumentOptions` passes the filled variable values so the backend's
-   *     buildDraftPrompt() surfaces them under its "DOCUMENT OPTIONS" section.
-   */
-  onFillAndGenerateSubmit(result: FillAndGenerateResult): void {
-    if (!result) return;
-
-    this.selectedCaseId = result.caseId;
-    if (result.templateJurisdiction) {
-      this.selectedJurisdiction = result.templateJurisdiction;
-    }
-    this.wizardPracticeArea = result.templatePracticeArea || null;
-    this.wizardDocumentType = result.templateDocumentType || null;
-
-    this.wizardDocumentOptions = {
-      templateId: result.templateId,
-      templateName: result.templateName,
-      templateVariables: result.variableValues
-    };
-
-    const parts: string[] = [
-      `Use the "${result.templateName}" template to produce a finished document. ` +
-      `Honor its structure and wording; weave the provided field values into the document naturally.`
-    ];
-    if (result.templateContent && result.templateContent.trim()) {
-      parts.push(`TEMPLATE BODY:\n${result.templateContent.trim()}`);
-    }
-    if (result.additionalInstructions && result.additionalInstructions.trim()) {
-      parts.push(`Extra instructions: ${result.additionalInstructions.trim()}`);
-    }
-    this.customPrompt = parts.join('\n\n');
-
-    this.startCustomDraft();
-  }
-
   onInlineTemplatePicked(result: any): void {
-    if (!result) return;
-    this.selectedTemplateForFill = {
-      id: result.id,
-      name: result.name,
-      description: result.description,
-      category: result.category,
-      practiceArea: result.practiceArea,
-      jurisdiction: result.jurisdiction
-    } as Template;
-    this.enterFillMode();
+    if (!result?.id) return;
+    const queryParams = this.selectedCaseId ? { caseId: this.selectedCaseId } : {};
+    this.router.navigate(['/legal/ai-assistant/templates/fill', result.id], { queryParams });
   }
 
   /**
@@ -8378,6 +8407,110 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     return html;
   }
 
+  // Inline-styles tables on the OS clipboard so they survive paste into Gmail/Outlook.
+  // CKEditor wraps tables in <figure class="table"> and styles via stylesheet classes;
+  // email clients strip <figure> and ignore class CSS, so pasted tables render borderless.
+  private installClipboardEmailFormatter(editor: any): void {
+    editor.editing.view.document.on(
+      'clipboardOutput',
+      (_evt: any, data: any) => {
+        if (data.method !== 'copy' && data.method !== 'cut') return;
+        const html = data.dataTransfer?.getData('text/html');
+        if (!html || !html.includes('<table')) return;
+        data.dataTransfer.setData('text/html', this.styleTablesForEmailClipboard(html));
+      },
+      { priority: 'low' }
+    );
+  }
+
+  private styleTablesForEmailClipboard(html: string): string {
+    const container = document.createElement('div');
+    container.innerHTML = html;
+
+    container.querySelectorAll('figure.table').forEach(fig => {
+      const table = fig.querySelector('table');
+      if (table && fig.parentNode) {
+        fig.parentNode.replaceChild(table, fig);
+      }
+    });
+
+    // Outlook/Word applies "Header Row" conditional formatting to <thead> rows,
+    // overriding cell-level color. Unwrap thead so Word can't target it.
+    container.querySelectorAll('thead').forEach(thead => {
+      const parent = thead.parentNode;
+      if (!parent) return;
+      while (thead.firstChild) {
+        parent.insertBefore(thead.firstChild, thead);
+      }
+      parent.removeChild(thead);
+    });
+
+    const setIfEmpty = (el: HTMLElement, prop: string, value: string) => {
+      if (!el.style.getPropertyValue(prop)) el.style.setProperty(prop, value);
+    };
+
+    container.querySelectorAll('table').forEach(node => {
+      const t = node as HTMLTableElement;
+      if (!t.getAttribute('cellpadding')) t.setAttribute('cellpadding', '12');
+      if (!t.getAttribute('cellspacing')) t.setAttribute('cellspacing', '0');
+      if (!t.getAttribute('border')) t.setAttribute('border', '1');
+      setIfEmpty(t, 'border-collapse', 'collapse');
+      setIfEmpty(t, 'border', '1px solid #d1d5db');
+      setIfEmpty(t, 'font-family', "'Times New Roman', Georgia, serif");
+    });
+
+    // Light gray-blue header with bold navy uppercase text and a 2px navy
+    // bottom border. One design that renders identically in Gmail and Outlook
+    // because there's no dark cell background for Outlook's auto-contrast
+    // engine to fight against. The navy underline carries the visual weight
+    // a dark header bg would have provided.
+    container.querySelectorAll('th').forEach(node => {
+      const th = node as HTMLElement;
+
+      const td = document.createElement('td');
+      td.setAttribute('bgcolor', '#f1f5f9');
+      td.style.cssText = [
+        'background-color:#f1f5f9',
+        'padding:14px 16px',
+        'border-top:1px solid #d1d5db',
+        'border-left:1px solid #d1d5db',
+        'border-right:1px solid #d1d5db',
+        'border-bottom:2px solid #1e3a8a',
+        'vertical-align:top',
+        'color:#1e3a8a',
+        'font-weight:bold',
+        'text-transform:uppercase',
+        'letter-spacing:0.04em'
+      ].join(';');
+
+      for (const attr of Array.from(th.attributes)) {
+        if (/^(colspan|rowspan|headers|scope|id)$/.test(attr.name)) {
+          td.setAttribute(attr.name, attr.value);
+        }
+      }
+
+      // Strip CKEditor-injected explicit colors so the cell-level navy
+      // cascades cleanly to all text.
+      const scratch = document.createElement('div');
+      scratch.innerHTML = th.innerHTML.trim();
+      scratch.querySelectorAll('[style]').forEach(el => {
+        (el as HTMLElement).style.removeProperty('color');
+      });
+      td.innerHTML = scratch.innerHTML;
+
+      th.parentNode?.replaceChild(td, th);
+    });
+
+    container.querySelectorAll('td').forEach(node => {
+      const td = node as HTMLElement;
+      setIfEmpty(td, 'border', '1px solid #d1d5db');
+      setIfEmpty(td, 'padding', '12px 14px');
+      setIfEmpty(td, 'vertical-align', 'top');
+    });
+
+    return container.innerHTML;
+  }
+
   commitInsertBelow(): void {
     if (!this.editorInstance || !this.aiPreviewResponse) return;
     const editor = this.editorInstance;
@@ -9007,6 +9140,8 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.editorInstance = editor;
 
     if (editor) {
+      this.installClipboardEmailFormatter(editor);
+
       // CRITICAL: Load content here if pending - this is the ONLY reliable place
       if (this.pendingDraftContent) {
         this.setCKEditorContentFromMarkdown(this.pendingDraftContent);
@@ -9961,6 +10096,12 @@ You can:
     };
     this.stateService.addConversationMessage(userMsg);
 
+    // Bring the new user message + AI loader into view. Replaces the prior
+    // implicit "scroll to top" behavior which was a side-effect of the
+    // isGenerating$ subscription — that fired window-level scroll-to-top
+    // and made follow-up clicks feel broken.
+    this.scrollToBottom();
+
     const userMessage = this.followUpMessage;
     this.followUpMessage = '';
     this.stateService.setShowBottomSearchBar(false);
@@ -10097,6 +10238,11 @@ You can:
             this.stateService.setIsGenerating(false);
             this.stateService.setShowBottomSearchBar(true);
             this.cdr.detectChanges();
+            // Bring the AI response into view — long responses overflow the
+            // viewport, and without this the user only sees the top edge of
+            // the answer (the loader disappears, but the bottom of the
+            // assistant message is below the fold).
+            this.scrollToBottom();
           } else {
             this.stateService.setIsGenerating(false);
           }
@@ -11414,6 +11560,48 @@ You can:
         }
       });
     }, 100);
+  }
+
+  /**
+   * Toggle the floating "back to top" button when scrolled past a threshold.
+   * Hybrid: listens to BOTH the chat-messages-area's internal scroll AND
+   * window scroll, because the actual scroll container depends on layout —
+   * if .chat-container-main's parent is viewport-fitted the chat scrolls
+   * internally; otherwise the window scrolls. We don't want to assume.
+   */
+  onChatScroll(event: Event): void {
+    this.updateScrollTopBtnVisibility((event.target as HTMLElement).scrollTop);
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    // Only relevant inside LegiSearch chat — skip the work otherwise.
+    if (this.selectedTask !== 'question') return;
+    const y = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    this.updateScrollTopBtnVisibility(y);
+  }
+
+  private updateScrollTopBtnVisibility(scrollTop: number): void {
+    const shouldShow = scrollTop > this.SCROLL_TOP_BTN_THRESHOLD_PX;
+    if (shouldShow !== this.showScrollTopBtn) {
+      this.showScrollTopBtn = shouldShow;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /**
+   * Smooth-scroll back to the first message of the conversation. Scrolls
+   * BOTH the chat element and the window — whichever is the active scroll
+   * container will respond, the other is a no-op.
+   */
+  scrollChatToTop(): void {
+    const el = this.chatScrollArea?.nativeElement;
+    if (el && el.scrollTop > 0) {
+      el.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    if ((window.scrollY || document.documentElement.scrollTop) > 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   /**

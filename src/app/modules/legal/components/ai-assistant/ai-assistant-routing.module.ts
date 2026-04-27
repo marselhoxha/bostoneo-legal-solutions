@@ -100,6 +100,12 @@ const routes: Routes = [
     data: { title: 'Edit Template' }
   },
   {
+    path: 'templates/fill/:id',
+    loadComponent: () => import('./templates/template-filler/template-filler.component').then(m => m.TemplateFillerComponent),
+    canActivate: [AuthenticationGuard],
+    data: { title: 'Fill Template' }
+  },
+  {
     path: 'analytics',
     loadComponent: () => import('./analytics/usage-analytics.component').then(m => m.UsageAnalyticsComponent),
     canActivate: [AuthenticationGuard],

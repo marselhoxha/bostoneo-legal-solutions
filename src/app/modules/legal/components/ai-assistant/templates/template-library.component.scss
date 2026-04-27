@@ -1329,3 +1329,32 @@
   display: inline-flex;
   position: relative;
 }
+
+/* ============================================================
+   Template-Preview modal — body rendering
+   The preview shows the AI-extracted body in HTML form so the
+   attorney can verify the document structure before clicking
+   "Use Template." Serif typography matches the actual fill-page
+   preview so the modal is a faithful "what you'll get" view.
+   ============================================================ */
+.template-content-preview {
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  background: white;
+  border: 1px solid var(--vz-border-color);
+  border-radius: 0.5rem;
+  font-family: "Times New Roman", "Liberation Serif", Georgia, serif;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--vz-body-color);
+
+  ::ng-deep p { margin: 0 0 0.7rem; }
+  ::ng-deep h1 { font-size: 1.4em; font-weight: 700; margin: 1rem 0 0.5rem; }
+  ::ng-deep h2 { font-size: 1.2em; font-weight: 700; margin: 1rem 0 0.5rem; }
+  ::ng-deep h3 { font-size: 1.08em; font-weight: 700; margin: 0.8rem 0 0.4rem; }
+  ::ng-deep ul, ::ng-deep ol { margin: 0 0 0.7rem; padding-left: 1.5rem; }
+  ::ng-deep li { margin-bottom: 0.25rem; }
+  ::ng-deep strong { font-weight: 700; }
+  ::ng-deep em { font-style: italic; }
+}

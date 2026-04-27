@@ -63,6 +63,12 @@ export class TemplateLibraryComponent implements OnInit, OnDestroy {
   recentlyUsedCount = 0;
   customTemplatesCount = 0;
   approvedTemplatesCount = 0;
+  // Distinct practice areas + jurisdictions actually present in the firm's
+  // template library (vs. the static catalog used for filter dropdowns).
+  // Used by the "Practice areas" stat card so the count reflects what the
+  // firm has, not the global list of supported areas.
+  representedPracticeAreasCount = 0;
+  representedJurisdictionsCount = 0;
 
   // Categories from backend
   availableCategories: string[] = [];
@@ -208,6 +214,16 @@ export class TemplateLibraryComponent implements OnInit, OnDestroy {
           this.totalTemplatesCount = templates.length;
           this.customTemplatesCount = templates.filter(t => !t.isPublic).length;
           this.approvedTemplatesCount = templates.filter(t => t.isApproved).length;
+          // Distinct practice areas / jurisdictions across the firm's templates.
+          // Lowercased to dedupe values that differ only in casing ("MA" vs "ma").
+          const paSet = new Set<string>();
+          const jurSet = new Set<string>();
+          templates.forEach(t => {
+            if (t.practiceArea && t.practiceArea.trim()) paSet.add(t.practiceArea.trim().toLowerCase());
+            if (t.jurisdiction && t.jurisdiction.trim()) jurSet.add(t.jurisdiction.trim().toLowerCase());
+          });
+          this.representedPracticeAreasCount = paSet.size;
+          this.representedJurisdictionsCount = jurSet.size;
           this.updateCategoryCounts();
           this.filterTemplates();
           this.isLoading = false;
@@ -656,21 +672,19 @@ export class TemplateLibraryComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Single navigation entry point for "use this template." Routes to the
+   * dedicated TemplateFillerComponent at /legal/ai-assistant/templates/fill/:id
+   * so the attorney gets the full document-preview-with-side-panel experience.
+   *
+   * Replaces the previous modal-based auto-fill wizard. Called by:
+   *   - the Use→ button on each row in the library
+   *   - "Use Template" button inside the preview modal (via useTemplateFromPreview)
+   *   - quickGenerate(), generateFromSelected()
+   */
   useTemplate(template: Template | TemplateSearchResult): void {
-    if ('id' in template && template.id) {
-      // Show auto-fill wizard for template generation
-      this.selectedTemplateForGeneration = template as Template;
-      this.showAutoFillWizard = true;
-
-      // Open modal with auto-fill wizard
-      if (this.autoFillModal) {
-        this.autoFillModalRef = this.modalService.open(this.autoFillModal, {
-          size: 'xl',
-          centered: true,
-          backdrop: 'static'
-        });
-      }
-    }
+    if (!('id' in template) || !template.id) return;
+    this.router.navigate(['/legal/ai-assistant/templates/fill', template.id]);
   }
 
   // Preview → Use Template handoff. Capture the template locally BEFORE dismissing

@@ -49,13 +49,13 @@
         <span class="stat-label">Practice areas</span>
         <i class="stat-icon ri-scales-3-line" aria-hidden="true"></i>
       </div>
-      <div class="stat-value">{{ practiceAreas.length }}</div>
+      <div class="stat-value">{{ representedPracticeAreasCount }}</div>
       <div class="stat-sub">
-        <ng-container *ngIf="practiceAreas.length === 0; else paFilled">
+        <ng-container *ngIf="representedPracticeAreasCount === 0; else paFilled">
           Tag a template to organize by area
         </ng-container>
         <ng-template #paFilled>
-          {{ jurisdictions.length }} jurisdiction{{ jurisdictions.length === 1 ? '' : 's' }} represented
+          {{ representedJurisdictionsCount }} jurisdiction{{ representedJurisdictionsCount === 1 ? '' : 's' }} represented
         </ng-template>
       </div>
     </div>
@@ -489,9 +489,12 @@
           </div>
         </div>
 
-        <div class="template-content-preview p-3 border rounded bg-light" style="max-height: 400px; overflow-y: auto;">
-          <pre class="mb-0" style="white-space: pre-wrap; font-size: 13px;">{{previewContent}}</pre>
-        </div>
+        <!-- Body comes from Claude as HTML (paragraphs, bold labels, inline structure).
+             Rendering with [innerHTML] so the markup displays as a formatted document
+             instead of literal <p> / <strong> tags. Angular's default sanitizer strips
+             <script> + event handlers; structural tags pass through. -->
+        <div class="template-content-preview"
+             [innerHTML]="previewContent"></div>
 
         <div class="mt-3" *ngIf="selectedPreviewTemplate.usageCount">
           <small class="text-muted">

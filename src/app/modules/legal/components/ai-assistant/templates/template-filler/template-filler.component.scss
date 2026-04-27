@@ -1,0 +1,492 @@
+:host {
+  display: block;
+  min-height: 100%;
+  background: var(--vz-body-bg);
+}
+
+.filler-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 32px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+// ============ Topbar / breadcrumb ============
+
+.filler-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--vz-secondary-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 10px;
+}
+
+.crumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.crumb-link {
+  color: var(--vz-secondary-color, #74788d);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  &:hover { color: var(--vz-primary); }
+}
+
+.crumb-current {
+  color: var(--vz-body-color);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crumb-sep {
+  color: var(--vz-secondary-color, #74788d);
+  opacity: 0.6;
+  font-size: 12px;
+}
+
+.crumb-step {
+  color: var(--vz-secondary-color, #74788d);
+  &.done { color: var(--vz-success); font-weight: 600; }
+}
+
+.filler-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+// ============ Loading / error ============
+
+.filler-state-card {
+  background: var(--vz-secondary-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 10px;
+  padding: 56px 24px;
+  text-align: center;
+  color: var(--vz-secondary-color, #74788d);
+
+  p { margin: 12px 0 0; }
+}
+
+.filler-error {
+  i {
+    display: block;
+    font-size: 32px;
+    color: var(--vz-danger);
+    margin-bottom: 8px;
+  }
+  h6 {
+    color: var(--vz-body-color);
+    margin: 0 0 16px;
+    font-weight: 500;
+  }
+}
+
+// ============ Grid ============
+
+.filler-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 991px) {
+  .filler-grid { grid-template-columns: 1fr; }
+}
+
+// ============ Preview pane ============
+
+.preview-pane {
+  background: var(--vz-secondary-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 10px;
+  padding: 14px;
+  min-height: 600px;
+}
+
+.preview-doc {
+  background: white;
+  border: 1px solid var(--vz-border-color);
+  border-radius: 6px;
+  // Fill the entire available pane — earlier max-width-centered iteration was
+  // a mistake. The user's actual concern is "text should fill the area," and
+  // constraining width re-introduced the empty side margins.
+  width: 100%;
+  // Comfortable letter-style padding without forcing a "page on desk" frame.
+  padding: 48px 56px;
+  min-height: 700px;
+  // 12pt Times New Roman ≈ 16px at 96 dpi — the size attorneys see when they
+  // print the same letter to paper. Anything smaller reads as "preview-only"
+  // rather than "this is the document I'm sending."
+  font-family: "Times New Roman", "Liberation Serif", Georgia, serif;
+  font-size: 16px;
+  line-height: 1.85;
+  color: #1f242b;
+
+  ::ng-deep p { margin: 0 0 14px; }
+  ::ng-deep h1 { font-size: 1.6em; margin: 24px 0 14px; }
+  ::ng-deep h2 { font-size: 1.35em; margin: 22px 0 12px; }
+  ::ng-deep h3 { font-size: 1.18em; margin: 20px 0 12px; }
+  ::ng-deep h4 { font-size: 1.05em; margin: 18px 0 10px; }
+  ::ng-deep h1, ::ng-deep h2, ::ng-deep h3, ::ng-deep h4 { font-weight: 700; }
+  ::ng-deep ul, ::ng-deep ol { margin: 0 0 14px; padding-left: 28px; }
+  ::ng-deep li { margin-bottom: 6px; }
+  ::ng-deep strong { font-weight: 700; }
+
+  // Variable chips — same visual language as the authoring page's
+  // detected-variables panel (light info-blue) but inline in the body.
+  ::ng-deep .tpl-chip {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    transition: background 0.12s;
+  }
+
+  ::ng-deep .tpl-chip.empty {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: rgba(var(--vz-info-rgb, 41, 156, 219), 0.10);
+    border: 1px solid rgba(var(--vz-info-rgb, 41, 156, 219), 0.25);
+    color: var(--vz-info, #299cdb);
+  }
+
+  ::ng-deep .tpl-chip.filled {
+    background: rgba(var(--vz-success-rgb, 10, 179, 156), 0.08);
+    color: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
+    &:hover { background: rgba(var(--vz-success-rgb, 10, 179, 156), 0.16); }
+  }
+}
+
+// ============ Side panel ============
+
+// Side panel is viewport-locked. When fields exceed the viewport height,
+// the sidebar scrolls INTERNALLY so the document preview on the left stays
+// in view at all times. Without this, long field lists push the preview
+// off-screen as the user scrolls — which makes filling fields feel
+// disconnected from the document they're filling into.
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  // Reserve a bit of inner padding so scrollbar doesn't crowd the right border
+  // and so focus rings on the rightmost inputs don't get clipped.
+  padding-right: 4px;
+}
+
+@media (max-width: 991px) {
+  // On narrow viewports the layout collapses to one column — sticky becomes
+  // a hindrance and full-page scroll is the right behavior.
+  .side-panel {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+}
+
+.panel-section {
+  background: var(--vz-secondary-bg);
+  border: 1px solid var(--vz-border-color);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+// Always a 2-row layout: heading on row 1, progress on row 2. Flex with
+// space-between was unsafe — when the progress text grew long ("0 / 13 ·
+// 13 required"), it overflowed past the section's right edge and got clipped
+// by the sticky sidebar's overflow context. Stacking with `display: block`
+// removes the overflow risk entirely; takes one extra line of vertical
+// space which is easily worth the visual reliability.
+.panel-head {
+  display: block;
+  margin: 0 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vz-secondary-color, #74788d);
+}
+
+// Renamed from `.progress` because Bootstrap defines that class as a styled
+// progress-bar component (height: 1rem; overflow: hidden), which silently
+// clipped our text vertically. `.fill-progress` is local to this component.
+.fill-progress {
+  display: block;
+  margin-top: 6px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+
+  &.complete { color: var(--vz-success); }
+  &.incomplete { color: var(--vz-danger); }
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.pill {
+  padding: 2px 9px;
+  font-size: 11px;
+  border-radius: 12px;
+  background: rgba(var(--vz-primary-rgb, 85, 110, 230), 0.08);
+  color: var(--vz-primary);
+  font-weight: 500;
+}
+
+.field-group-label {
+  margin: 14px 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vz-secondary-color, #74788d);
+  opacity: 0.85;
+
+  &:first-child { margin-top: 4px; }
+}
+
+.field {
+  margin-bottom: 12px;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--vz-body-color);
+  }
+
+  .required { color: var(--vz-danger); }
+
+  .opt {
+    color: var(--vz-secondary-color, #74788d);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  .auto-badge {
+    margin-left: auto;
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    padding: 1px 6px;
+    background: rgba(var(--vz-success-rgb, 10, 179, 156), 0.10);
+    color: var(--vz-success);
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  input,
+  textarea,
+  select {
+    width: 100%;
+    padding: 7px 10px;
+    font-size: 13px;
+    border: 1px solid var(--vz-border-color);
+    border-radius: 6px;
+    background: var(--vz-secondary-bg);
+    color: var(--vz-body-color);
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--vz-primary);
+    box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb, 85, 110, 230), 0.15);
+  }
+
+  &.has-value input,
+  &.has-value textarea {
+    background: rgba(var(--vz-success-rgb, 10, 179, 156), 0.04);
+  }
+
+  .hint {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--vz-secondary-color, #74788d);
+    line-height: 1.5;
+  }
+}
+
+.empty-group-hint {
+  padding: 10px 12px;
+  background: rgba(var(--vz-info-rgb, 41, 156, 219), 0.05);
+  border: 1px dashed rgba(var(--vz-info-rgb, 41, 156, 219), 0.25);
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--vz-secondary-color);
+  line-height: 1.5;
+}
+
+// ============ Done state ============
+
+.done-card {
+  text-align: center;
+  padding-top: 22px;
+  padding-bottom: 18px;
+}
+
+.done-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(var(--vz-success-rgb, 10, 179, 156), 0.12);
+  color: var(--vz-success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+  font-size: 28px;
+  font-weight: 700;
+
+  i { line-height: 1; }
+}
+
+.done-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--vz-body-color);
+  margin-bottom: 8px;
+}
+
+.done-summary {
+  font-size: 12.5px;
+  color: var(--vz-secondary-color);
+  line-height: 1.7;
+
+  strong { color: var(--vz-body-color); font-weight: 600; }
+}
+
+.done-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.btn-open {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btn-tertiary {
+  width: 100%;
+  padding: 8px;
+  font-size: 12px;
+  background: transparent;
+  color: var(--vz-secondary-color);
+  border: none;
+  cursor: pointer;
+
+  &:hover { color: var(--vz-body-color); }
+}
+
+// "What's next" card — visual list of follow-up actions available in the
+// workspace. Icon + title + sub-line per row, separated by faint dividers.
+// Designed to read as a "menu of capabilities," not a passive bullet list.
+.next-card {
+  padding: 16px;
+
+  .next-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--vz-secondary-color, #74788d);
+
+    i {
+      font-size: 14px;
+      color: var(--vz-primary);
+      line-height: 1;
+    }
+  }
+
+  .next-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+
+      & + li {
+        border-top: 1px solid var(--vz-border-color);
+      }
+    }
+  }
+
+  .next-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: rgba(var(--vz-primary-rgb, 85, 110, 230), 0.10);
+    color: var(--vz-primary);
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .next-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.35;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .next-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--vz-body-color);
+  }
+
+  .next-sub {
+    font-size: 11px;
+    color: var(--vz-secondary-color, #74788d);
+  }
+}

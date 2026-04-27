@@ -1,0 +1,228 @@
+<div class="filler-page" [class.state-done]="uiState === 'done'">
+
+  <!-- Topbar / breadcrumb -->
+  <div class="filler-topbar">
+    <div class="crumb">
+      <a class="crumb-link" routerLink="/legal/ai-assistant/templates" aria-label="Back to templates">
+        <i class="ri-arrow-left-line"></i>
+      </a>
+      <a class="crumb-link" routerLink="/legal/ai-assistant/templates">Templates</a>
+      <i class="ri-arrow-right-s-line crumb-sep"></i>
+      <span class="crumb-current">{{ template?.name || 'Fill template' }}</span>
+      <ng-container *ngIf="template">
+        <span class="crumb-sep">·</span>
+        <span class="crumb-step" *ngIf="uiState !== 'done'">Fill</span>
+        <span class="crumb-step done" *ngIf="uiState === 'done'">Draft created</span>
+      </ng-container>
+    </div>
+    <div class="filler-actions" *ngIf="uiState !== 'done' && !loading && !loadError">
+      <button type="button" class="btn btn-soft-secondary btn-sm" (click)="onCancel()">Cancel</button>
+      <button type="button" class="btn btn-primary btn-sm"
+              (click)="onGenerate()"
+              [disabled]="!form || form.invalid || uiState === 'submitting'">
+        <ng-container *ngIf="uiState !== 'submitting'">
+          <i class="ri-file-text-line me-1"></i>Generate draft
+        </ng-container>
+        <ng-container *ngIf="uiState === 'submitting'">
+          <span class="spinner-border spinner-border-sm me-1"></span>Generating…
+        </ng-container>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="filler-state-card">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p>Loading template…</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && loadError" class="filler-state-card filler-error">
+    <i class="ri-error-warning-line"></i>
+    <h6>{{ loadError }}</h6>
+    <button class="btn btn-light btn-sm" (click)="onBackToTemplates()">Back to templates</button>
+  </div>
+
+  <!-- Main grid -->
+  <div *ngIf="!loading && !loadError && template" class="filler-grid">
+
+    <!-- Preview pane -->
+    <div class="preview-pane">
+      <article class="preview-doc"
+               (click)="onPreviewClick($event)"
+               [innerHTML]="previewHtml"></article>
+    </div>
+
+    <!-- Side panel -->
+    <aside class="side-panel">
+
+      <!-- ========== Fill state ========== -->
+      <ng-container *ngIf="uiState !== 'done'">
+
+        <!-- Details -->
+        <section class="panel-section">
+          <div class="panel-head">Details</div>
+          <div class="pills" *ngIf="template?.practiceArea || template?.jurisdiction">
+            <span class="pill" *ngIf="template?.practiceArea">{{ practiceAreaLabel(template?.practiceArea) }}</span>
+            <span class="pill" *ngIf="template?.jurisdiction">{{ jurisdictionLabel(template?.jurisdiction) }}</span>
+          </div>
+          <div class="field">
+            <label for="tf-case">Linked case <span class="opt">(optional)</span></label>
+            <select id="tf-case"
+                    class="form-select form-select-sm"
+                    [ngModel]="selectedCaseId ?? ''"
+                    [ngModelOptions]="{standalone: true}"
+                    (ngModelChange)="onCaseChange($event)">
+              <option [ngValue]="''">— No case linked —</option>
+              <option *ngFor="let c of availableCases" [ngValue]="c.id">{{ caseLabel(c) }}</option>
+            </select>
+            <div class="hint">
+              <ng-container *ngIf="!selectedCaseId">Linking a case auto-fills variables from case data.</ng-container>
+              <ng-container *ngIf="selectedCaseId">
+                Auto-filling from <strong>{{ caseLabel(linkedCase) }}</strong>.
+                <span *ngIf="suggesting">Refreshing…</span>
+              </ng-container>
+            </div>
+          </div>
+        </section>
+
+        <!-- Fields to fill -->
+        <section class="panel-section" *ngIf="form">
+          <div class="panel-head">
+            Fields to fill
+            <span class="fill-progress"
+                  [class.complete]="form.valid"
+                  [class.incomplete]="form.invalid && totalVariables > 0">
+              {{ filledCount }} / {{ totalVariables }}
+              <ng-container *ngIf="form.invalid && requiredMissingCount > 0"> · {{ requiredMissingCount }} required</ng-container>
+            </span>
+          </div>
+
+          <div [formGroup]="form">
+
+            <!-- From the case -->
+            <ng-container *ngIf="groupedVariables.fromCase.length > 0">
+              <div class="field-group-label">From the case</div>
+              <div *ngIf="!selectedCaseId" class="field empty-group-hint">
+                Link a case above and these fields auto-fill.
+              </div>
+              <ng-container *ngIf="selectedCaseId">
+                <div *ngFor="let v of groupedVariables.fromCase; trackBy: trackByName"
+                     class="field"
+                     [class.has-value]="!!form.get(v.variableName)?.value">
+                  <label [attr.for]="'tf-' + v.variableName">
+                    <span>{{ v.description || prettifyName(v.variableName) }}</span>
+                    <span *ngIf="v.isRequired" class="required" aria-label="required">*</span>
+                    <span *ngIf="suggestions[v.variableName]" class="auto-badge">Auto</span>
+                  </label>
+                  <textarea *ngIf="isLongText(v.variableType); else fcInput"
+                            [id]="'tf-' + v.variableName"
+                            [formControlName]="v.variableName"
+                            rows="3"></textarea>
+                  <ng-template #fcInput>
+                    <input [id]="'tf-' + v.variableName"
+                           [type]="inputType(v.variableType)"
+                           [formControlName]="v.variableName">
+                  </ng-template>
+                </div>
+              </ng-container>
+            </ng-container>
+
+            <!-- Document fields (attorney-authored) -->
+            <ng-container *ngIf="groupedVariables.custom.length > 0">
+              <div class="field-group-label">Document fields</div>
+              <div *ngFor="let v of groupedVariables.custom; trackBy: trackByName"
+                   class="field"
+                   [class.has-value]="!!form.get(v.variableName)?.value">
+                <label [attr.for]="'tf-' + v.variableName">
+                  <span>{{ v.description || prettifyName(v.variableName) }}</span>
+                  <span *ngIf="v.isRequired" class="required" aria-label="required">*</span>
+                </label>
+                <textarea *ngIf="isLongText(v.variableType); else cstInput"
+                          [id]="'tf-' + v.variableName"
+                          [formControlName]="v.variableName"
+                          rows="3"></textarea>
+                <ng-template #cstInput>
+                  <input [id]="'tf-' + v.variableName"
+                         [type]="inputType(v.variableType)"
+                         [formControlName]="v.variableName">
+                </ng-template>
+              </div>
+            </ng-container>
+
+            <!-- No-vars template -->
+            <div *ngIf="totalVariables === 0" class="field empty-group-hint">
+              This template has no variable placeholders. Click <strong>Generate draft</strong> to create the document as-is.
+            </div>
+          </div>
+        </section>
+      </ng-container>
+
+      <!-- ========== Done state ========== -->
+      <ng-container *ngIf="uiState === 'done'">
+        <section class="panel-section done-card">
+          <div class="done-icon"><i class="ri-check-line"></i></div>
+          <div class="done-title">Draft created</div>
+          <div class="done-summary">
+            <strong>{{ filledCount }} of {{ totalVariables }} fields filled</strong><br>
+            <ng-container *ngIf="linkedCase">
+              Linked to <strong>{{ caseLabel(linkedCase) }}</strong><br>
+            </ng-container>
+            Saved {{ formatCreatedAt(generatedDocument?.createdAt) }}
+          </div>
+          <div class="done-actions">
+            <button type="button" class="btn btn-primary btn-open" (click)="onOpenInWorkspace()">
+              Open in AI Workspace<i class="ri-arrow-right-line ms-1"></i>
+            </button>
+            <button type="button" class="btn-tertiary" (click)="onBackToTemplates()">Back to templates</button>
+          </div>
+        </section>
+
+        <section class="panel-section next-card">
+          <div class="next-head">
+            <i class="ri-compass-3-line"></i>
+            <span>What's next in the AI Workspace</span>
+          </div>
+          <ul class="next-list">
+            <li>
+              <span class="next-icon"><i class="ri-magic-line"></i></span>
+              <span class="next-text">
+                <span class="next-title">Polish or refine with AI</span>
+                <span class="next-sub">Highlight any text → choose a tone</span>
+              </span>
+            </li>
+            <li>
+              <span class="next-icon"><i class="ri-file-paper-2-line"></i></span>
+              <span class="next-text">
+                <span class="next-title">Apply firm letterhead</span>
+                <span class="next-sub">Stationery overlays at draft time</span>
+              </span>
+            </li>
+            <li>
+              <span class="next-icon"><i class="ri-shield-check-line"></i></span>
+              <span class="next-text">
+                <span class="next-title">Request attorney review</span>
+                <span class="next-sub">Routes through ABA Op. 512 workflow</span>
+              </span>
+            </li>
+            <li>
+              <span class="next-icon"><i class="ri-download-cloud-2-line"></i></span>
+              <span class="next-text">
+                <span class="next-title">Export to PDF or Word</span>
+                <span class="next-sub">Formatting and citations preserved</span>
+              </span>
+            </li>
+            <li>
+              <span class="next-icon"><i class="ri-mail-send-line"></i></span>
+              <span class="next-text">
+                <span class="next-title">Send via email</span>
+                <span class="next-sub">Attach exhibits in one click</span>
+              </span>
+            </li>
+          </ul>
+        </section>
+      </ng-container>
+
+    </aside>
+  </div>
+</div>

@@ -46,8 +46,16 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class TemplateImportService {
 
-    /** Default Claude model for initial analysis — accuracy matters on first pass. */
-    private static final String MODEL_FIRST_PASS  = "claude-sonnet-4-6";
+    /**
+     * Default model for initial analysis — Opus for higher reliability on the
+     * multi-rule extraction prompt (classify + detect vars + strip letterhead +
+     * strip signature + emit HTML body). Templates are imported infrequently
+     * (per-firm onboarding, occasional new template additions), so the ~5x cost
+     * over Sonnet is acceptable for the consistency gain. Per-template estimate:
+     * ~$0.15–0.30 with Opus vs ~$0.03–0.06 with Sonnet, and the JSON output is
+     * persisted so re-analysis is rare.
+     */
+    private static final String MODEL_FIRST_PASS  = "claude-opus-4-6";
     /** Cheap re-analysis when the attorney edits + re-runs. */
     private static final String MODEL_REANALYSIS  = "claude-haiku-4-5";
     private static final int CLAUDE_TIMEOUT_SECONDS = 90;
@@ -504,7 +512,56 @@ public class TemplateImportService {
               specific dates). Set confidence < 0.7 for these so the attorney can reject.
             - Set isPreExistingPlaceholder=true only for tokens already using {{mustache}} syntax.
             - In suggestedBodyWithPlaceholders replace each rawText with {{suggestedKey}}.
-              Preserve the rest of the body verbatim.
+              Apply the structural rules and HTML-output rules described below.
+
+            LETTERHEAD, FOOTER, AND SIGNATURE-BLOCK REMOVAL (apply to suggestedBodyWithPlaceholders)
+            - STRIP the sender's firm letterhead from the TOP of the document. This is the
+              block that identifies the SENDING firm: firm name (often centered, ALL CAPS, or
+              large), firm street address, phone / fax / email / website lines. It typically
+              appears BEFORE the date or before any recipient (TO/addressee) information.
+            - STRIP the sender's signature block at the BOTTOM of the document. This includes
+              the closing salutation ("Sincerely,", "Very truly yours,", "Best regards,"),
+              the SPECIFIC sender's name (e.g., "David H. Altman"), title, bar number, and any
+              hardcoded sender contact info that follows the body proper. Cut from the closing
+              line through end-of-document.
+            - STRIP footer content: page numbers ("Page 1 of N", "1 of 2", standalone numerals
+              on their own line), repeating firm contact lines, copyright notices, and
+              disclaimers that aren't part of the substantive document.
+            - PRESERVE everything else verbatim: the date, the recipient (TO/addressee) block,
+              "VIA Email"/"VIA Hand Delivery" delivery lines, Re:/Subject lines, salutation
+              ("Dear ..."), and ALL body paragraphs.
+            - The recipient is part of the document content; ONLY the SENDER's identity (top
+              letterhead AND bottom signature) is firm/attorney-specific.
+            - Rationale: attorneys apply their own firm letterhead AND signature block via the
+              stationery system at draft time. Baking a specific firm or attorney's identity
+              into the saved template body would either get duplicated when stationery is
+              overlaid or pin the template to one attorney. Templates must be firm- and
+              attorney-agnostic.
+
+            HTML OUTPUT FORMATTING (apply to suggestedBodyWithPlaceholders)
+            - OUTPUT THE BODY AS HTML, not plain text. Preserve the document's visible
+              structure so it renders in a browser preview the way the source document looks.
+            - Use these tags:
+              * <p>...</p>            for prose paragraphs (one per logical paragraph)
+              * <br>                  for hard line breaks WITHIN a paragraph (e.g., between
+                                      lines of an address block — NOT between paragraphs)
+              * <strong>...</strong>  for bold text (ALL CAPS labels like "Re:" / "Claim
+                                      Number:" / section headings inline in prose)
+              * <em>...</em>          for italicized text (case names, statute references)
+              * <h2 style="text-align:center">  for centered titles or major section headers
+              * <h3>...</h3>          for sub-section headers
+              * <ol><li>...</li></ol> for numbered lists ("1. Confirmation of PIP benefits...")
+              * <ul><li>...</li></ul> for bulleted lists
+            - Address / contact blocks: a SINGLE <p> with <br> between lines. Do NOT use one
+              <p> per line — that creates awkward paragraph spacing that doesn't match the
+              source document's visual rhythm.
+            - Prose paragraphs: each blank-line-separated paragraph in the source becomes
+              ONE <p>. Hard wraps from PDF column-width (mid-paragraph \\n) collapse into
+              continuous text within the same <p>.
+            - Wrap {{variable_placeholders}} inline within whatever HTML element they sit in.
+              Do NOT introduce extra tags around them.
+            - Do NOT include <html>, <head>, <body>, or any document chrome — output only the
+              body fragment. The frontend renders it inside its own preview pane.
 
             CLASSIFICATION RULES
             - If multiple docTypes plausible, pick highest-confidence and set requiresManualClassification=true when confidence < 0.60.

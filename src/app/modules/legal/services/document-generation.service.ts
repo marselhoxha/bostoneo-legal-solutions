@@ -152,6 +152,26 @@ export interface DraftGenerationRequest {
   documentOptions?: { [key: string]: any };  // Doc-specific config (e.g. LOR recipientType + purposes)
 }
 
+/**
+ * Request payload for the deterministic "draft from template" endpoint.
+ * No AI runs in the core path — values are substituted into the template body
+ * literally. Missing required values 400 from the backend; missing optional ones
+ * surface as `[Missing: name]` in the rendered draft.
+ *
+ * If `additionalInstructions` is non-blank, a single AI tweak pass runs AFTER
+ * substitution using those instructions as guidance — strictly opt-in.
+ */
+export interface DraftFromTemplateRequest {
+  templateId: number;
+  /** Optional — drafts can be made without a linked case (generic / sample doc). */
+  caseId?: number | null;
+  variableValues: { [name: string]: string };
+  additionalInstructions?: string;
+  sessionName?: string;
+  /** Fallback used when @AuthenticationPrincipal returns null on the backend. */
+  userId?: number;
+}
+
 export interface DraftGenerationResponse {
   conversationId: number;
   documentId: number;
@@ -260,6 +280,24 @@ export class DocumentGenerationService {
     return this.http.post<DraftGenerationResponse>(
       `${environment.apiUrl}/api/legal/ai-workspace/drafts/generate`,
       request
+    );
+  }
+
+  /**
+   * Deterministic "draft from template" — backend substitutes the supplied variable values
+   * into the AILegalTemplate body literally. NO AI in the core path. Optional AI tweak pass
+   * runs only when `additionalInstructions` is non-blank.
+   */
+  draftFromTemplate(request: DraftFromTemplateRequest): Observable<DraftGenerationResponse> {
+    // Always include userId so the backend can fall back when @AuthenticationPrincipal is null
+    // (matches the existing /drafts/generate fallback chain).
+    const enriched: DraftFromTemplateRequest = {
+      ...request,
+      userId: request.userId ?? this.getUserId()
+    };
+    return this.http.post<DraftGenerationResponse>(
+      `${environment.apiUrl}/api/legal/ai-workspace/drafts/from-template`,
+      enriched
     );
   }
 

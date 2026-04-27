@@ -4,6 +4,7 @@ import com.bostoneo.bostoneosolutions.annotation.AuditLog;
 import com.bostoneo.bostoneosolutions.dto.DocumentChange;
 import com.bostoneo.bostoneosolutions.dto.DocumentTransformRequest;
 import com.bostoneo.bostoneosolutions.dto.DocumentTransformResponse;
+import com.bostoneo.bostoneosolutions.dto.ai.DraftFromTemplateRequest;
 import com.bostoneo.bostoneosolutions.dto.ai.DraftGenerationRequest;
 import com.bostoneo.bostoneosolutions.dto.ai.DraftGenerationResponse;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocument;
@@ -632,6 +633,48 @@ public class AiWorkspaceController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } catch (Exception e) {
             log.error("Error generating draft: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Deterministic "draft from template" — substitute the supplied {@code variableValues}
+     * into the AILegalTemplate's body literally. NO AI in the core path. Optional AI tweak
+     * pass runs only if {@code additionalInstructions} is non-blank.
+     *
+     * POST /api/legal/ai-workspace/drafts/from-template
+     */
+    @PostMapping("/drafts/from-template")
+    public ResponseEntity<?> draftFromTemplate(
+        @RequestBody DraftFromTemplateRequest request,
+        @AuthenticationPrincipal User user
+    ) {
+        try {
+            // Fall back to request.userId when @AuthenticationPrincipal returns null —
+            // same pattern as /drafts/generate (some auth filters surface UserDTO as
+            // the principal instead of User, in which case this resolves to null).
+            Long effectiveUserId = (user != null) ? user.getId() : request.getUserId();
+            if (effectiveUserId == null) {
+                log.error("No user ID available for draftFromTemplate");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            log.info("Drafting from template: userId={}, templateId={}, caseId={}, hasInstructions={}",
+                effectiveUserId, request.getTemplateId(), request.getCaseId(),
+                request.getAdditionalInstructions() != null && !request.getAdditionalInstructions().isBlank());
+
+            DraftGenerationResponse response = documentService.createDraftFromTemplate(effectiveUserId, request);
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            // Surface validation messages to the client so the UI can show "Missing required
+            // template variables: client_name, policy_number" verbatim instead of a generic toast.
+            log.warn("Invalid draftFromTemplate request: {}", e.getMessage());
+            Map<String, Object> body = new HashMap<>();
+            body.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+        } catch (Exception e) {
+            log.error("Error drafting from template: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

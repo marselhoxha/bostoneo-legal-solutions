@@ -8,13 +8,17 @@ import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.*;
 import com.bostoneo.bostoneosolutions.service.ai.AIService;
 import com.bostoneo.bostoneosolutions.service.ai.importing.BinaryTemplateRenderer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -22,6 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@Slf4j
 public class AITemplateService {
 
     @Autowired
@@ -44,6 +49,9 @@ public class AITemplateService {
 
     @Autowired
     private BinaryTemplateRenderer binaryTemplateRenderer;
+
+    @Autowired
+    private LegalCaseRepository legalCaseRepository;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -564,22 +572,68 @@ public class AITemplateService {
         suggestions.put("templateId", templateId);
         suggestions.put("templateName", template.getName());
 
-        List<Map<String, Object>> variableSuggestions = new ArrayList<>();
+        // Build the canonical case data map ONCE if a case is linked. This is the source of
+        // truth for variable auto-fill — real DB values, no AI hallucination.
+        Map<String, String> caseDataMap = Collections.emptyMap();
+        if (context != null && "CASE".equalsIgnoreCase(String.valueOf(context.get("contextType")))) {
+            Object caseIdObj = context.get("caseId");
+            if (caseIdObj != null) {
+                try {
+                    Long caseId = Long.valueOf(caseIdObj.toString());
+                    Long orgId = getRequiredOrganizationId();
+                    LegalCase legalCase = legalCaseRepository
+                            .findByIdAndOrganizationId(caseId, orgId)
+                            .orElse(null);
+                    if (legalCase != null) {
+                        caseDataMap = buildCaseVariableDataMap(legalCase);
+                    } else {
+                        log.warn("Case {} not found in org {} for variable suggestions", caseId, orgId);
+                    }
+                } catch (NumberFormatException e) {
+                    log.warn("Invalid caseId in suggestVariableValues context: {}", caseIdObj);
+                } catch (Exception e) {
+                    log.warn("Failed to load case data for variable suggestions: {}", e.getMessage());
+                }
+            }
+        }
 
+        List<Map<String, Object>> variableSuggestions = new ArrayList<>();
         for (AITemplateVariable variable : variables) {
             Map<String, Object> suggestion = new HashMap<>();
             suggestion.put("variableName", variable.getVariableName());
             suggestion.put("variableType", variable.getVariableType());
             suggestion.put("isRequired", variable.getIsRequired());
 
-            // Generate AI suggestion based on context
-            String suggestedValue = generateAiSuggestionWithContext(variable, context);
+            // Resolve via real data first; fall back to default value, then empty.
+            String matched = findValueForVariable(variable.getVariableName(), caseDataMap);
+            // Reformat for the variable's input type so HTML date/number inputs accept it.
+            // (Date inputs need yyyy-MM-dd; number inputs reject "$1,234.56".)
+            matched = reformatForVariableType(matched, variable.getVariableType());
+
+            String suggestedValue;
+            String source;
+            double confidence;
+
+            if (matched != null && !matched.isBlank()) {
+                suggestedValue = matched;
+                source = "Case data";
+                confidence = 1.0;
+            } else if (variable.getDefaultValue() != null && !variable.getDefaultValue().isBlank()) {
+                suggestedValue = variable.getDefaultValue();
+                source = "Template default";
+                confidence = 0.5;
+            } else {
+                // No real data + no default — leave empty so the attorney fills manually.
+                // We deliberately do NOT call AI here: it produces hallucinated values that
+                // mislead attorneys (e.g. fabricates a client name, policy number, or date).
+                suggestedValue = "";
+                source = "User input";
+                confidence = 0.0;
+            }
+
             suggestion.put("suggestedValue", suggestedValue);
-
-            // Add metadata about the suggestion
-            suggestion.put("source", determineSourceFromContext(variable, context));
-            suggestion.put("confidence", calculateConfidence(variable, context, suggestedValue));
-
+            suggestion.put("source", source);
+            suggestion.put("confidence", confidence);
             variableSuggestions.add(suggestion);
         }
 
@@ -592,22 +646,268 @@ public class AITemplateService {
 
     private Map<String, String> fetchClientData(Long clientId) {
         Map<String, String> data = new HashMap<>();
-        // Placeholder for fetching actual client data from repository
-        // In production, this would query the client repository
+        // Placeholder — real client-fetching is not used in the current draft path.
+        // The case-linked draft path goes through buildCaseVariableDataMap() instead.
         data.put("clientName", "Client " + clientId);
         data.put("clientAddress", "Address for Client " + clientId);
         data.put("clientEmail", "client" + clientId + "@example.com");
         return data;
     }
 
+    /**
+     * Fetch real case data as a canonical {@code Map<canonical_var_name, value>}.
+     * Replaces the prior stub that returned hardcoded placeholders. Used by both
+     * {@link #suggestVariableValues} (variable auto-fill) and {@link #generateWithContext}
+     * (legacy generate-with-context path).
+     */
     private Map<String, String> fetchCaseData(Long caseId) {
-        Map<String, String> data = new HashMap<>();
-        // Placeholder for fetching actual case data from repository
-        // In production, this would query the case repository
-        data.put("caseNumber", "CASE-" + caseId);
-        data.put("caseTitle", "Case Title " + caseId);
-        data.put("filingDate", LocalDateTime.now().toString());
+        try {
+            Long orgId = getRequiredOrganizationId();
+            return legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+                    .map(this::buildCaseVariableDataMap)
+                    .orElseGet(HashMap::new);
+        } catch (Exception e) {
+            log.warn("fetchCaseData failed for caseId={}: {}", caseId, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    /**
+     * Build a canonical variable→value map from a LegalCase. Keys are snake_case
+     * variable names that an attorney would naturally write in a template body
+     * (client_name, policy_number, accident_date, …). Null/blank fields are skipped.
+     *
+     * <p>Aliases are intentionally permissive (client_name + clientname + name) so the
+     * downstream {@link #findValueForVariable} heuristic can match templates authored
+     * with different naming conventions.</p>
+     */
+    private Map<String, String> buildCaseVariableDataMap(LegalCase c) {
+        Map<String, String> data = new LinkedHashMap<>();
+        if (c == null) return data;
+
+        // ------------ Identifiers / case ------------
+        putIfPresent(data, "case_id", c.getId() != null ? String.valueOf(c.getId()) : null);
+        putIfPresent(data, "case_number", c.getCaseNumber());
+        putIfPresent(data, "case_no", c.getCaseNumber());
+        putIfPresent(data, "docket_number", c.getDocketNumber() != null ? c.getDocketNumber() : c.getCaseNumber());
+        putIfPresent(data, "case_title", c.getTitle());
+        putIfPresent(data, "matter", c.getTitle());
+        putIfPresent(data, "case_type", c.getType());
+        putIfPresent(data, "practice_area", c.getEffectivePracticeArea());
+        putIfPresent(data, "case_description", c.getDescription());
+
+        // ------------ Client (plaintiff in PI / petitioner in family) ------------
+        putIfPresent(data, "client_name", c.getClientName());
+        putIfPresent(data, "client_full_name", c.getClientName());
+        putIfPresent(data, "plaintiff_name", c.getClientName());
+        putIfPresent(data, "client_email", c.getClientEmail());
+        putIfPresent(data, "client_phone", c.getClientPhone());
+        putIfPresent(data, "client_address", c.getClientAddress());
+
+        // ------------ Court ------------
+        putIfPresent(data, "jurisdiction", c.getJurisdiction());
+        putIfPresent(data, "state", c.getJurisdiction());
+        putIfPresent(data, "county", c.getCountyName());
+        putIfPresent(data, "county_name", c.getCountyName());
+        putIfPresent(data, "courtroom", c.getCourtroom());
+        putIfPresent(data, "judge_name", c.getJudgeName());
+        putIfPresent(data, "judge", c.getJudgeName());
+
+        // ------------ Dates ------------
+        putIfPresent(data, "filing_date", formatUtilDate(c.getFilingDate()));
+        putIfPresent(data, "next_hearing", formatUtilDate(c.getNextHearing()));
+        putIfPresent(data, "next_hearing_date", formatUtilDate(c.getNextHearing()));
+        putIfPresent(data, "trial_date", formatUtilDate(c.getTrialDate()));
+        putIfPresent(data, "closed_date", formatUtilDate(c.getClosedDate()));
+        // Common "today" aliases for letter dates
+        String todayStr = formatLocalDate(LocalDate.now());
+        data.put("today", todayStr);
+        data.put("today_date", todayStr);
+        data.put("date", todayStr);
+        data.put("current_date", todayStr);
+
+        // ------------ Personal Injury fields ------------
+        String injuryDate = formatLocalDate(c.getInjuryDate());
+        putIfPresent(data, "injury_date", injuryDate);
+        putIfPresent(data, "date_of_injury", injuryDate);
+        putIfPresent(data, "accident_date", injuryDate);
+        putIfPresent(data, "date_of_accident", injuryDate);
+        putIfPresent(data, "incident_date", injuryDate);
+        putIfPresent(data, "injury_type", c.getInjuryType());
+        putIfPresent(data, "injury_description", c.getInjuryDescription());
+        putIfPresent(data, "accident_location", c.getAccidentLocation());
+        putIfPresent(data, "incident_location", c.getAccidentLocation());
+
+        // ------------ PI financials ------------
+        putIfPresent(data, "medical_expenses", formatMoney(c.getMedicalExpensesTotal()));
+        putIfPresent(data, "medical_expenses_total", formatMoney(c.getMedicalExpensesTotal()));
+        putIfPresent(data, "lost_wages", formatMoney(c.getLostWages()));
+        putIfPresent(data, "future_medical", formatMoney(c.getFutureMedicalEstimate()));
+        putIfPresent(data, "future_medical_estimate", formatMoney(c.getFutureMedicalEstimate()));
+        putIfPresent(data, "settlement_demand", formatMoney(c.getSettlementDemandAmount()));
+        putIfPresent(data, "demand_amount", formatMoney(c.getSettlementDemandAmount()));
+
+        // ------------ Insurance (defendant carrier) ------------
+        putIfPresent(data, "insurance_company", c.getInsuranceCompany());
+        putIfPresent(data, "insurance_carrier", c.getInsuranceCompany());
+        putIfPresent(data, "carrier", c.getInsuranceCompany());
+        putIfPresent(data, "policy_number", c.getInsurancePolicyNumber());
+        putIfPresent(data, "insurance_policy_number", c.getInsurancePolicyNumber());
+        putIfPresent(data, "policy_limit", formatMoney(c.getInsurancePolicyLimit()));
+        putIfPresent(data, "policy_limits", formatMoney(c.getInsurancePolicyLimit()));
+        putIfPresent(data, "adjuster_name", c.getInsuranceAdjusterName());
+        putIfPresent(data, "insurance_adjuster_name", c.getInsuranceAdjusterName());
+        putIfPresent(data, "adjuster_email", c.getInsuranceAdjusterEmail());
+        putIfPresent(data, "adjuster_phone", c.getInsuranceAdjusterPhone());
+        putIfPresent(data, "insurance_adjuster_phone", c.getInsuranceAdjusterPhone());
+
+        // ------------ Client's own insurance (PIP/UIM) ------------
+        putIfPresent(data, "client_insurance_company", c.getClientInsuranceCompany());
+        putIfPresent(data, "pip_carrier", c.getClientInsuranceCompany());
+        putIfPresent(data, "client_policy_number", c.getClientInsurancePolicyNumber());
+
+        // ------------ Defendant ------------
+        putIfPresent(data, "defendant_name", c.getDefendantName());
+        putIfPresent(data, "defendant", c.getDefendantName());
+        putIfPresent(data, "respondent_name", c.getDefendantName());
+        putIfPresent(data, "defendant_address", c.getDefendantAddress());
+
+        // ------------ Employer (wage docs) ------------
+        putIfPresent(data, "employer_name", c.getEmployerName());
+        putIfPresent(data, "employer", c.getEmployerName());
+        putIfPresent(data, "employer_email", c.getEmployerEmail());
+        putIfPresent(data, "employer_phone", c.getEmployerPhone());
+
+        // ------------ Criminal ------------
+        putIfPresent(data, "primary_charge", c.getPrimaryCharge());
+        putIfPresent(data, "charge", c.getPrimaryCharge());
+        putIfPresent(data, "charge_level", c.getChargeLevel());
+        putIfPresent(data, "bail_amount", formatMoney(c.getBailAmount()));
+        putIfPresent(data, "arrest_date", formatUtilDate(c.getArrestDate()));
+        putIfPresent(data, "prosecutor_name", c.getProsecutorName());
+        putIfPresent(data, "prosecutor", c.getProsecutorName());
+
+        // ------------ Family law ------------
+        putIfPresent(data, "spouse_name", c.getSpouseName());
+        putIfPresent(data, "marriage_date", formatUtilDate(c.getMarriageDate()));
+        putIfPresent(data, "separation_date", formatUtilDate(c.getSeparationDate()));
+        putIfPresent(data, "children_count", c.getChildrenCount() != null ? String.valueOf(c.getChildrenCount()) : null);
+
+        // ------------ Immigration ------------
+        putIfPresent(data, "form_type", c.getFormType());
+        putIfPresent(data, "uscis_number", c.getUscisNumber());
+        putIfPresent(data, "petitioner_name", c.getPetitionerName());
+        putIfPresent(data, "beneficiary_name", c.getBeneficiaryName());
+        putIfPresent(data, "priority_date", formatUtilDate(c.getPriorityDate()));
+        putIfPresent(data, "visa_category", c.getVisaCategory());
+
+        // ------------ Real estate ------------
+        putIfPresent(data, "transaction_type", c.getTransactionType());
+        putIfPresent(data, "property_address", c.getPropertyAddress());
+        putIfPresent(data, "purchase_price", formatMoney(c.getPurchasePrice()));
+        putIfPresent(data, "closing_date", formatUtilDate(c.getClosingDate()));
+        putIfPresent(data, "buyer_name", c.getBuyerName());
+        putIfPresent(data, "seller_name", c.getSellerName());
+
         return data;
+    }
+
+    private void putIfPresent(Map<String, String> map, String key, String value) {
+        if (value != null && !value.isBlank()) {
+            map.put(key, value);
+        }
+    }
+
+    private String formatUtilDate(java.util.Date d) {
+        if (d == null) return null;
+        return new SimpleDateFormat("MMMM d, yyyy").format(d);
+    }
+
+    private String formatLocalDate(LocalDate d) {
+        if (d == null) return null;
+        return d.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"));
+    }
+
+    private String formatMoney(Double amount) {
+        if (amount == null) return null;
+        return String.format("$%,.2f", amount);
+    }
+
+    /**
+     * Heuristic match: given a template variable name and a canonical case data map,
+     * return the best-matching value or null. Tolerates naming-style differences
+     * ({@code client_name}, {@code clientName}, {@code ClientFullName}, {@code client name}).
+     */
+    private String findValueForVariable(String varName, Map<String, String> dataMap) {
+        if (varName == null || dataMap == null || dataMap.isEmpty()) return null;
+
+        // 1. Exact match (case-sensitive) — fastest path, attorney wrote canonical name.
+        String exact = dataMap.get(varName);
+        if (exact != null) return exact;
+
+        // 2. Case-insensitive direct match.
+        for (Map.Entry<String, String> e : dataMap.entrySet()) {
+            if (e.getKey().equalsIgnoreCase(varName)) return e.getValue();
+        }
+
+        // 3. Normalized match (strip non-alphanumerics, lowercase) — handles
+        //    snake_case ↔ camelCase ↔ "Client Full Name" naming drift.
+        String normVar = normalizeVarName(varName);
+        if (normVar.isEmpty()) return null;
+        for (Map.Entry<String, String> e : dataMap.entrySet()) {
+            if (normalizeVarName(e.getKey()).equals(normVar)) return e.getValue();
+        }
+        return null;
+    }
+
+    private String normalizeVarName(String s) {
+        return s == null ? "" : s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+    }
+
+    /**
+     * Reformat a human-readable case-data value so the form's input type accepts it.
+     *
+     * <p>The case data map produces letter-friendly strings ({@code "April 27, 2026"},
+     * {@code "$1,234.56"}). HTML's {@code <input type="date">} only accepts
+     * {@code yyyy-MM-dd}; {@code <input type="number">} rejects the {@code $} and commas.
+     * Without this post-processing, auto-fill would silently render those fields empty.</p>
+     */
+    private String reformatForVariableType(String value, com.bostoneo.bostoneosolutions.enumeration.VariableType type) {
+        if (value == null || value.isBlank() || type == null) return value;
+
+        switch (type) {
+            case DATE:
+                // Parse "April 27, 2026" or "yyyy-MM-dd" and emit yyyy-MM-dd for <input type="date">.
+                LocalDate parsed = tryParseDate(value);
+                return parsed != null ? parsed.format(DateTimeFormatter.ISO_LOCAL_DATE) : value;
+            case NUMBER:
+                // Strip currency symbols and grouping commas: "$1,234.56" → "1234.56".
+                String stripped = value.replaceAll("[$,\\s]", "");
+                try {
+                    Double.parseDouble(stripped);
+                    return stripped;
+                } catch (NumberFormatException nfe) {
+                    return value;
+                }
+            default:
+                return value;
+        }
+    }
+
+    /** Best-effort date parse — covers the formats this service emits in {@link #buildCaseVariableDataMap}. */
+    private LocalDate tryParseDate(String s) {
+        if (s == null || s.isBlank()) return null;
+        DateTimeFormatter[] formats = new DateTimeFormatter[]{
+                DateTimeFormatter.ISO_LOCAL_DATE,                       // 2026-04-27
+                DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH),  // April 27, 2026
+                DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH),   // Apr 27, 2026
+                DateTimeFormatter.ofPattern("M/d/yyyy", Locale.ENGLISH),      // 4/27/2026
+                DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.ENGLISH)     // 04/27/2026
+        };
+        for (DateTimeFormatter fmt : formats) {
+            try { return LocalDate.parse(s.trim(), fmt); } catch (Exception ignored) {}
+        }
+        return null;
     }
 
     private Map<String, String> aggregateMultiCaseData(List<Long> caseIds) {

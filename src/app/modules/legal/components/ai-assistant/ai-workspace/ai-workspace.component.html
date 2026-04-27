@@ -1148,16 +1148,9 @@
           (browseFullLibrary)="onBrowseFullLibrary()">
         </app-template-picker-inline>
 
-        <!-- Fill & generate: attorney reviews auto-filled variables, then triggers SSE draft. -->
-        <app-fill-and-generate
-          *ngIf="(draftMode$ | async) === 'fill' && !(isGenerating$ | async)"
-          [template]="selectedTemplateForFill"
-          [linkedCase]="selectedCaseForDraft"
-          [availableCases]="userCases"
-          (submit)="onFillAndGenerateSubmit($event)"
-          (backToDashboard)="enterDashboardMode()"
-          (changeTemplate)="enterTemplatePickerMode()">
-        </app-fill-and-generate>
+        <!-- Template fill flow has moved to its own dedicated route:
+             /legal/ai-assistant/templates/fill/:id (TemplateFillerComponent).
+             onDashboardPickTemplate / onInlineTemplatePicked navigate there directly. -->
 
         <!-- AI wizard: multi-step guided draft. -->
         <app-draft-wizard
@@ -2056,7 +2049,7 @@
         </button>
       </div>
       <app-ai-disclaimer></app-ai-disclaimer>
-      <div class="chat-messages-area">
+      <div class="chat-messages-area" #chatScrollArea (scroll)="onChatScroll($event)">
         <!-- Bookmarked-only banner -->
         <div class="bookmarked-only-banner" *ngIf="showBookmarkedOnly && (conversationMessages$ | async)?.length > 0">
           <i class="ri-bookmark-fill"></i>
@@ -2298,6 +2291,19 @@
           </div>
         </form>
       </div>
+
+      <!-- Floating "back to top" button — only appears once the user has
+           scrolled meaningfully into a long conversation. Scrolls the
+           chat-messages-area (its own overflow), not the window. -->
+      <button
+        type="button"
+        class="chat-scroll-top-btn"
+        [class.show]="showScrollTopBtn"
+        (click)="scrollChatToTop()"
+        aria-label="Scroll to top of conversation"
+        title="Back to top">
+        <i class="ri-arrow-up-line"></i>
+      </button>
     </div>
 
   </main>

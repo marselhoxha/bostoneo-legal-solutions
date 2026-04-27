@@ -62,7 +62,7 @@ export class DraftDashboardComponent {
 
   stateLabel(tpl: Template): string {
     const j = (tpl?.jurisdiction || '').trim();
-    return j || '';
+    return j.toUpperCase();
   }
 
   /**

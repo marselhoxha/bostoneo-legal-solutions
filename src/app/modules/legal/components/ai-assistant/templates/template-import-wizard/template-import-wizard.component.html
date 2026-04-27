@@ -341,9 +341,13 @@
                  class="docx-preview-container"
                  [class.is-empty]="!currentDocxRendered"></div>
 
-            <!-- Text fallback (no binary cached) -->
-            <pre *ngIf="!currentHasBinaryPreview && f.analysis?.suggestedBodyWithPlaceholders"
-                 class="body-preview">{{ f.analysis?.suggestedBodyWithPlaceholders }}</pre>
+            <!-- Text fallback (no binary cached). The AI emits the body as HTML so
+                 the preview renders with paragraphs / bold / inline structure intact;
+                 [innerHTML] applies Angular's default sanitizer so script tags + event
+                 handlers are stripped automatically. -->
+            <div *ngIf="!currentHasBinaryPreview && f.analysis?.suggestedBodyWithPlaceholders"
+                 class="body-preview body-preview--html"
+                 [innerHTML]="f.analysis.suggestedBodyWithPlaceholders"></div>
           </div>
         </div>
       </div>

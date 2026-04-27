@@ -6,9 +6,12 @@ import com.bostoneo.bostoneosolutions.dto.PIDamageCalculationDTO;
 import com.bostoneo.bostoneosolutions.dto.PIMedicalRecordDTO;
 import com.bostoneo.bostoneosolutions.dto.PIMedicalSummaryDTO;
 import com.bostoneo.bostoneosolutions.dto.ai.DocumentTypeTemplate;
+import com.bostoneo.bostoneosolutions.dto.ai.DraftFromTemplateRequest;
 import com.bostoneo.bostoneosolutions.dto.ai.DraftGenerationResponse;
 import com.bostoneo.bostoneosolutions.dto.ai.GatingContext;
 import com.bostoneo.bostoneosolutions.service.ai.DocumentGatingService;
+import com.bostoneo.bostoneosolutions.model.AILegalTemplate;
+import com.bostoneo.bostoneosolutions.model.AITemplateVariable;
 import com.bostoneo.bostoneosolutions.model.AiConversationSession;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocument;
 import com.bostoneo.bostoneosolutions.model.AiWorkspaceDocumentExhibit;
@@ -17,6 +20,8 @@ import com.bostoneo.bostoneosolutions.model.LegalCase;
 import com.bostoneo.bostoneosolutions.model.FileItem;
 import com.bostoneo.bostoneosolutions.model.LegalDocument;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
+import com.bostoneo.bostoneosolutions.repository.AILegalTemplateRepository;
+import com.bostoneo.bostoneosolutions.repository.AITemplateVariableRepository;
 import com.bostoneo.bostoneosolutions.repository.AiConversationSessionRepository;
 import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentExhibitRepository;
 import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentRepository;
@@ -34,6 +39,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.HtmlUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -133,6 +139,8 @@ public class AiWorkspaceDocumentService {
     private final JurisdictionPromptBuilder jurisdictionPromptBuilder;
     private final DocumentGatingService documentGatingService;
     private final AiAuditLogService aiAuditLogService;
+    private final AILegalTemplateRepository aiLegalTemplateRepository;
+    private final AITemplateVariableRepository aiTemplateVariableRepository;
 
     /** Holds system + user message for draft generation */
     record DraftPrompt(String systemMessage, String userMessage) {}
@@ -1239,6 +1247,294 @@ public class AiWorkspaceDocumentService {
                 .createdAt(conversation.getCreatedAt())
                 .build())
             .build();
+    }
+
+    /**
+     * Deterministic "draft from template" — fills the template's {@code {{var}}}
+     * placeholders with the supplied values. NO AI in the core path.
+     *
+     * <p>Behavior:</p>
+     * <ul>
+     *   <li>Required variables missing or blank → 400 {@link IllegalArgumentException} listing them.</li>
+     *   <li>Optional variables missing or blank → rendered as {@code [Missing: name]} so the
+     *       attorney can spot gaps during proofread.</li>
+     *   <li>Values are HTML-escaped before insertion so {@code Smith & Jones} doesn't break markup.</li>
+     *   <li>If {@code additionalInstructions} is non-blank, a single AI tweak pass runs AFTER
+     *       substitution using those instructions as guidance — strictly opt-in.</li>
+     * </ul>
+     *
+     * <p>Persisted as a workspace document with {@code status='DRAFT'} and
+     * {@code approval_status='draft'}, mirroring the AI-generated path so the
+     * UI behaves identically post-creation. The selection-toolbar AI transforms
+     * (Polish/Condense/Expand/Custom) work on this draft just like on any other.</p>
+     */
+    @Transactional
+    public DraftGenerationResponse createDraftFromTemplate(Long userId, DraftFromTemplateRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request body is required");
+        }
+        if (request.getTemplateId() == null) {
+            throw new IllegalArgumentException("templateId is required");
+        }
+        if (userId == null) {
+            throw new IllegalArgumentException("userId is required");
+        }
+
+        Long orgId = getRequiredOrganizationId();
+
+        // 1. Verify case access if a case is linked. caseId is optional — drafting from a
+        //    template doesn't strictly require a case (e.g. generic letter, sample doc).
+        LegalCase legalCase = null;
+        if (request.getCaseId() != null) {
+            legalCase = caseRepository.findByIdAndOrganizationId(request.getCaseId(), orgId)
+                    .orElseThrow(() -> new IllegalArgumentException("Case not found: " + request.getCaseId()));
+        }
+
+        // 2. Load template (org-scoped + privacy-aware — same rules as AITemplateService.getTemplateById)
+        AILegalTemplate template = aiLegalTemplateRepository
+                .findByIdAndAccessibleByOrganizationAndUser(request.getTemplateId(), orgId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Template not found or access denied: " + request.getTemplateId()));
+
+        if (template.getTemplateContent() == null || template.getTemplateContent().isBlank()) {
+            throw new IllegalArgumentException("Template " + template.getId() + " has no body content");
+        }
+
+        // 3. Load variable definitions (tenant safety inherited via the template ownership check above)
+        List<AITemplateVariable> definitions = aiTemplateVariableRepository.findByTemplateId(template.getId());
+
+        // 4. Validate required vars
+        Map<String, String> values = request.getVariableValues() != null
+                ? request.getVariableValues()
+                : Collections.emptyMap();
+        List<String> missingRequired = new ArrayList<>();
+        for (AITemplateVariable def : definitions) {
+            if (Boolean.TRUE.equals(def.getIsRequired())) {
+                String v = values.get(def.getVariableName());
+                if (v == null || v.trim().isEmpty()) {
+                    missingRequired.add(def.getVariableName());
+                }
+            }
+        }
+        if (!missingRequired.isEmpty()) {
+            throw new IllegalArgumentException("Missing required template variables: " + String.join(", ", missingRequired));
+        }
+
+        // 5. Deterministic substitution
+        String content = substituteTemplateVariables(template.getTemplateContent(), definitions, values);
+
+        // 6. Optional AI tweak (only when attorney supplied non-blank instructions)
+        boolean aiTweakApplied = false;
+        String additional = request.getAdditionalInstructions();
+        if (additional != null && !additional.trim().isEmpty()) {
+            content = applyTemplateAiTweak(content, additional.trim());
+            aiTweakApplied = true;
+        }
+
+        // 6b. Tag content as pre-rendered HTML so the AI workspace's content loader
+        //     (setCKEditorContentFromMarkdown) skips markdown conversion. Without this
+        //     marker the loader runs the body through a markdown→HTML converter, which
+        //     mangles paragraph structure and adds incorrect spacing. Same marker the
+        //     AI's HTML-template path uses, so PDF/Word export, version history, and
+        //     selection-toolbar transforms all already understand it.
+        if (!content.trim().startsWith("<!-- HTML_TEMPLATE -->")) {
+            content = "<!-- HTML_TEMPLATE -->\n" + content;
+        }
+
+        // 7. Resolve session name (default: "<Template Name> · Case #<num>" or just template name)
+        String sessionName = request.getSessionName();
+        if (sessionName == null || sessionName.trim().isEmpty()) {
+            if (legalCase != null && legalCase.getCaseNumber() != null) {
+                sessionName = template.getName() + " · Case #" + legalCase.getCaseNumber();
+            } else {
+                sessionName = template.getName();
+            }
+        }
+
+        // 8. Conversation session — even though no AI was used in the core path, the response
+        //    shape requires a conversationId; this also gives Polish/Refine etc. a session to attach to.
+        // taskType uses the same value as the AI draft flow ("GENERATE_DRAFT") so
+        // this conversation shows up in the LegiDraft "Recent drafts" sidebar.
+        // The audit log below records "DRAFT_FROM_TEMPLATE" for analytics — that's
+        // a different field and doesn't affect the conversation classifier on the
+        // frontend.
+        AiConversationSession conversation = AiConversationSession.builder()
+                .userId(userId)
+                .organizationId(orgId)
+                .caseId(request.getCaseId())
+                .sessionName(sessionName)
+                .sessionType("case-specific")
+                .taskType("GENERATE_DRAFT")
+                .researchMode("FAST")
+                .jurisdiction(template.getJurisdiction())
+                .isActive(true)
+                .build();
+        conversation = conversationRepository.save(conversation);
+
+        // 9. Document
+        int wordCount = countWords(content);
+        AiWorkspaceDocument document = AiWorkspaceDocument.builder()
+                .userId(userId)
+                .organizationId(orgId)
+                .caseId(request.getCaseId())
+                .sessionId(conversation.getId())
+                .title(sessionName)
+                .documentType(template.getDocumentType())
+                .jurisdiction(template.getJurisdiction())
+                .currentVersion(1)
+                .status("DRAFT")
+                .build();
+        document = documentRepository.save(document);
+
+        // 10. Initial version
+        AiWorkspaceDocumentVersion initialVersion = AiWorkspaceDocumentVersion.builder()
+                .document(document)
+                .organizationId(orgId)
+                .versionNumber(1)
+                .content(content)
+                .wordCount(wordCount)
+                .transformationType("INITIAL_GENERATION")
+                .transformationScope("FULL_DOCUMENT")
+                .createdByUser(false)
+                .build();
+        versionRepository.save(initialVersion);
+
+        // 11. Wire up conversation → draft pointer
+        conversation.setRelatedDraftId(document.getId().toString());
+        conversationRepository.save(conversation);
+
+        // 12. Auto-attach case documents as exhibits AFTER transaction commits — same as the AI path,
+        //     so the workspace is feature-parity regardless of how the draft was created.
+        //     Skip when no case is linked (nothing to attach from).
+        if (request.getCaseId() != null) {
+            final Long docId = document.getId();
+            final Long caseIdFinal = request.getCaseId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    autoAttachInProgress.put(docId, true);
+                    CompletableFuture.runAsync(() -> autoAttachCaseDocumentsAsExhibits(docId, caseIdFinal, orgId));
+                }
+            });
+        }
+
+        // 13. Audit log — best effort, never breaks the response
+        try {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("templateId", template.getId());
+            payload.put("templateName", template.getName());
+            payload.put("documentType", template.getDocumentType());
+            payload.put("jurisdiction", template.getJurisdiction());
+            payload.put("variableCount", definitions.size());
+            payload.put("aiTweakApplied", aiTweakApplied);
+            String summary = String.format("Drafted '%s' from template (aiTweak=%s)",
+                    template.getName(), aiTweakApplied);
+            aiAuditLogService.logGenerationEvent(
+                    userId, null, null, orgId, "DRAFT_FROM_TEMPLATE",
+                    "workspace_document", document.getId(),
+                    payload, summary, true, null);
+        } catch (Exception e) {
+            log.warn("Audit log for DRAFT_FROM_TEMPLATE failed: {}", e.getMessage());
+        }
+
+        log.info("✅ Drafted from template {} → document {} (aiTweak={}, vars={})",
+                template.getId(), document.getId(), aiTweakApplied, definitions.size());
+
+        // 14. Response — same shape as the AI path so the frontend handler stays unified
+        return DraftGenerationResponse.builder()
+                .conversationId(conversation.getId())
+                .documentId(document.getId())
+                .document(DraftGenerationResponse.DocumentDTO.builder()
+                        .id(document.getId())
+                        .caseId(request.getCaseId())
+                        .title(sessionName)
+                        .content(content)
+                        .wordCount(wordCount)
+                        .version(1)
+                        .generatedAt(document.getCreatedAt())
+                        .approvalStatus(document.getApprovalStatus())
+                        .build())
+                .conversation(DraftGenerationResponse.ConversationDTO.builder()
+                        .id(conversation.getId())
+                        .caseId(request.getCaseId())
+                        .sessionName(sessionName)
+                        // Same as conversation.taskType — keeps the front-end's draft
+                        // classifier (which keys off this field) consistent.
+                        .taskType("GENERATE_DRAFT")
+                        .relatedDraftId(document.getId().toString())
+                        .createdAt(conversation.getCreatedAt())
+                        .build())
+                .build();
+    }
+
+    /**
+     * Replace each declared {@code {{variableName}}} in the template body with the user's
+     * value (HTML-escaped) or {@code [Missing: name]} when blank. Tolerant of optional
+     * whitespace inside braces ({@code {{ name }}}) and replaces ALL occurrences.
+     *
+     * <p>Logs a warning if the body contains undeclared {@code {{...}}} placeholders after
+     * substitution — those slip through unchanged and indicate template/variable-definition
+     * drift (template body edited after variable extraction, or an import bug).</p>
+     */
+    private String substituteTemplateVariables(String body, List<AITemplateVariable> definitions,
+                                               Map<String, String> values) {
+        if (body == null) return "";
+        String result = body;
+        for (AITemplateVariable def : definitions) {
+            String name = def.getVariableName();
+            if (name == null || name.isBlank()) continue;
+            String value = values.get(name);
+            String replacement = (value == null || value.trim().isEmpty())
+                    ? "[Missing: " + name + "]"
+                    : HtmlUtils.htmlEscape(value);
+            // Pattern.quote escapes regex metachars in the variable name; \s* tolerates {{ name }}.
+            String regex = "\\{\\{\\s*" + Pattern.quote(name) + "\\s*\\}\\}";
+            result = result.replaceAll(regex, Matcher.quoteReplacement(replacement));
+        }
+
+        // Detect orphan placeholders — surfaces drift between the body and the declared
+        // variable rows. We do NOT touch them (preserving deterministic behavior); just log.
+        Matcher orphans = Pattern.compile("\\{\\{\\s*([^}\\s]+)\\s*\\}\\}").matcher(result);
+        Set<String> orphanNames = new LinkedHashSet<>();
+        while (orphans.find()) {
+            orphanNames.add(orphans.group(1));
+        }
+        if (!orphanNames.isEmpty()) {
+            log.warn("Template body contains undeclared placeholders left unsubstituted: {}", orphanNames);
+        }
+        return result;
+    }
+
+    /**
+     * Single-shot AI pass over already-substituted content using attorney-supplied guidance.
+     * Strict prompt that tells the model to preserve the document's structure and the literal
+     * field values that were just substituted in. On any AI error, return the substituted
+     * content unchanged so the draft still gets saved.
+     */
+    private String applyTemplateAiTweak(String substitutedContent, String instructions) {
+        String userPrompt = "Apply the following guidance to the document below.\n\n" +
+                "STRICT RULES:\n" +
+                "- Preserve the document's existing structure, headings, and the literal field values that are already filled in.\n" +
+                "- Do NOT remove or change factual data points (names, dates, amounts, addresses).\n" +
+                "- Apply ONLY the requested tweaks; leave everything else unchanged.\n" +
+                "- Return the same format as the input (HTML in → HTML out).\n\n" +
+                "GUIDANCE:\n" + instructions + "\n\n" +
+                "DOCUMENT:\n" + substitutedContent + "\n\n" +
+                "Return only the revised document — no commentary or explanation.";
+
+        String systemMessage = "You are a careful legal-document editor. Apply the user's tweak " +
+                "instructions to the supplied document while preserving all factual content " +
+                "and the document's structure. Return only the revised document.";
+
+        try {
+            String tweaked = aiRequestRouter.routeSimple(
+                    com.bostoneo.bostoneosolutions.enumeration.AIOperationType.DOCUMENT_ENHANCEMENT,
+                    userPrompt, systemMessage, false, null
+            ).join();
+            return (tweaked == null || tweaked.isBlank()) ? substitutedContent : tweaked;
+        } catch (Exception e) {
+            log.warn("AI tweak pass failed; returning substituted content unchanged: {}", e.getMessage());
+            return substitutedContent;
+        }
     }
 
     /**
@@ -4819,6 +5115,24 @@ public class AiWorkspaceDocumentService {
         String documentType = (String) data.get("documentType");
         String approvalStatus = (String) data.get("approvalStatus");
 
+        // For HTML content (AI HTML-template flow, from-template substitution, CKEditor-edited
+        // saves), route through the SAME styled-HTML pipeline that generatePdfDocumentFromContent
+        // uses for unsaved previews. Without this, the saved-document PDF download would render
+        // via the low-level iText markdown converter below — which doesn't honor the letterhead /
+        // body / line-height CSS in buildStyledHtmlDocument, so the PDF would look nothing like
+        // the in-editor preview the attorney just saw.
+        boolean isHtml = content != null && (
+            content.contains("<p") || content.contains("<div") ||
+            content.contains("<strong") || content.contains("<h1") ||
+            content.contains("<h2") || content.contains("<table")
+        );
+        if (isHtml) {
+            String watermark = resolveWatermarkText(approvalStatus);
+            return generateStyledHtmlPdf(content, title, documentType, watermark);
+        }
+
+        // Markdown / plain-text legacy path — kept for older AI-generated drafts that
+        // were saved as markdown before the HTML-template pipeline existed.
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfWriter writer = new PdfWriter(baos);
@@ -5059,9 +5373,19 @@ public class AiWorkspaceDocumentService {
             || (documentType == null && title != null && (title.toLowerCase().contains("demand") || title.toLowerCase().contains("letter")));
         return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/>"
              + "<style>"
-             // Body: court filing format — serif font, 12pt, double-spaced, 1-inch margins
+             // Body: serif font, 12pt.
+             // Court filings → 1" top + 1" sides (court rule requirement) + 2.0 line-height.
+             // Letters     → 1/3" top + 2/3" sides + 1.5 line-height + 12pt paragraph margin.
+             //               Modern compact letterhead density — keeps the body content
+             //               substantially closer to the page edges than the old 1" margins.
              + "body { font-family: 'Times New Roman', Georgia, serif; "
-             + "font-size: 12pt; line-height: 2.0; color: #212529; margin: 0; padding: 72px 72px " + bottomPadding + " 72px; }"
+             + "font-size: 12pt; "
+             + (isLetter ? "line-height: 1.5; " : "line-height: 2.0; ")
+             + "color: #212529; margin: 0; "
+             + (isLetter
+                ? "padding: 24px 48px " + bottomPadding + " 48px;"
+                : "padding: 72px 72px " + bottomPadding + " 72px;")
+             + " }"
              // Headings: uniform 12pt, no indent
              // Court filings: h1/h2 centered. Letters/demand letters: h1/h2 left-aligned.
              + (isLetter
@@ -5072,8 +5396,13 @@ public class AiWorkspaceDocumentService {
              )
              + "h3 { font-size: 12pt; font-weight: 700; margin: 16px 0 8px; color: #212529; text-indent: 0; }"
              + "h4 { font-size: 12pt; font-weight: 600; margin: 14px 0 6px; color: #212529; text-indent: 0; }"
-             // Paragraphs: no global indent — body paragraph indent applied via inline style in template
-             + "p { margin: 0 0 0; }"
+             // Paragraphs: no global indent — body paragraph indent applied via inline style in template.
+             // Court filings: zero margin (continuous flow, indentation is via text-indent).
+             // Letters: 12pt bottom margin so paragraphs are visually separated by an empty line —
+             // matches the CKEditor preview, where each <p> has its default block margin.
+             + (isLetter
+                ? "p { margin: 0 0 12pt 0; }"
+                : "p { margin: 0 0 0; }")
              // Tables: dark header matching CKEditor preview, clean body rows.
              // Bottom margin is a full double-spaced line (~36px at 12pt/line-height 2.0) so the
              // paragraph that follows a table has an unambiguous visual gap — body `p` margin is 0,
@@ -5110,10 +5439,30 @@ public class AiWorkspaceDocumentService {
              + "{ border: none !important; padding: 2px 4px; background: none !important; }"
              + ".stationery-letterhead img, .stationery-signature img, .stationery-footer img "
              + "{ max-width: 100%; height: auto; }"
-             + ".stationery-letterhead { margin-bottom: 72pt; padding-bottom: 2px; }" // 1 inch — US legal convention
+             // Letterhead spacing — modern compact density.
+             // 12pt bottom = ~1/6" between letterhead and date. The body's top padding
+             // already handles the page-top margin, so no margin-top here.
+             + ".stationery-letterhead { margin-top: 0; margin-bottom: 12pt; padding-bottom: 2px; }"
              + ".stationery-letterhead p, .stationery-letterhead td, .stationery-letterhead span, "
              + ".stationery-letterhead div, .stationery-letterhead th "
              + "{ font-family: 'Times New Roman', Georgia, serif !important; }"
+             // MIDDLE-align letterhead cells so the right-side info anchors against the
+             // vertical CENTER of the (typically taller) logo instead of its top edge.
+             // For a logo that's ~5 large lines tall and right info that's 4-6 small lines,
+             // top-align leaves the right block looking truncated against the logo. Center
+             // alignment makes them visually balance regardless of line counts.
+             + ".stationery-letterhead td, .stationery-letterhead th { vertical-align: middle !important; }"
+             // Right-side info (attorney name, address, phone, fax, email).
+             // 12pt + line-height 2.0 = 24pt per line. With 5 typical lines that's ~120pt
+             // of vertical extent, comparable to a 4-line large logo. This is the only
+             // honest way to make the right block "fill" the logo's height without
+             // truncating the visual against a much taller logo.
+             // !important defeats any inline font-size StationeryService injects via {{}}.
+             + ".stationery-letterhead td:last-child, "
+             + ".stationery-letterhead td:last-child p, "
+             + ".stationery-letterhead td:last-child div, "
+             + ".stationery-letterhead td:last-child span "
+             + "{ font-size: 12pt !important; line-height: 2.0 !important; text-align: right !important; }"
              // Signature: body-matching font size, color, and line-height
              + ".stationery-signature p, .stationery-signature span, .stationery-signature div "
              + "{ font-size: 12pt !important; font-family: 'Times New Roman', Georgia, serif !important; "
