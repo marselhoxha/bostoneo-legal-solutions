@@ -232,7 +232,9 @@ public class LegalCase {
     private String insuranceAdjusterEmail;
 
     @Convert(converter = EncryptedStringConverter.class)
-    @Column(name = "insurance_adjuster_phone", length = 50)
+    // length = 255 because EncryptedStringConverter expands the value (AES-GCM +
+    // base64 ≈ 3-4× plaintext). 50 chars overflowed for short phone-with-ext input.
+    @Column(name = "insurance_adjuster_phone", length = 255)
     private String insuranceAdjusterPhone;
 
     // ============================================
@@ -256,7 +258,7 @@ public class LegalCase {
     private String clientInsuranceAdjusterEmail;
 
     @Convert(converter = EncryptedStringConverter.class)
-    @Column(name = "client_insurance_adjuster_phone", length = 50)
+    @Column(name = "client_insurance_adjuster_phone", length = 255)
     private String clientInsuranceAdjusterPhone;
 
     // Employer Information (for wage documentation requests)
@@ -269,7 +271,7 @@ public class LegalCase {
     private String employerEmail;
 
     @Convert(converter = EncryptedStringConverter.class)
-    @Column(name = "employer_phone", length = 50)
+    @Column(name = "employer_phone", length = 255)
     private String employerPhone;
 
     @Convert(converter = EncryptedStringConverter.class)

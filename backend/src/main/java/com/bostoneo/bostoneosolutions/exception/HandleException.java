@@ -344,11 +344,37 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
             if (message.contains("(phone)")) {
                 return "A lead with this phone number already exists.";
             }
+            if (message.contains("(case_number)")) {
+                return "This case number already exists. Please try again — a new number will be generated.";
+            }
+            // Surface the column name when we can extract it — generic "Key (col)=(val)"
+            // pattern in the Postgres detail line. Beats the catch-all when the user
+            // hits a unique constraint we don't have a friendly message for.
+            String col = extractKeyColumn(message);
+            if (col != null) {
+                return "A record with this " + col.replace('_', ' ') + " already exists.";
+            }
             return "A record with these details already exists.";
         }
+        // PostgreSQL FK violation — usually means a referenced parent row is missing
+        // or a child row is preventing delete. Both surface here.
+        if (message.contains("violates foreign key constraint")) {
+            String table = extractFkRelatedTable(message);
+            if (table != null) {
+                return "Cannot complete this action because of a related record in " + table + ".";
+            }
+            return "Cannot complete this action — a related record is preventing it.";
+        }
         // PostgreSQL not-null / check constraint
-        if (message.contains("violates check constraint") || message.contains("violates not-null constraint")) {
+        if (message.contains("violates not-null constraint")) {
+            String col = extractNotNullColumn(message);
+            if (col != null) {
+                return "Required field missing: " + col.replace('_', ' ') + ".";
+            }
             return "Required information is missing. Please fill in all required fields.";
+        }
+        if (message.contains("violates check constraint")) {
+            return "One of the values doesn't meet validation rules. Please review the form.";
         }
         // MySQL-style (legacy)
         if (message.contains("Duplicate entry")) {
@@ -357,6 +383,33 @@ public class HandleException extends ResponseEntityExceptionHandler implements E
             return "Duplicate entry. Please try again.";
         }
         return "A data integrity error occurred. Please try again.";
+    }
+
+    /** Extract column name from a Postgres unique-violation DETAIL line: `Key (col)=(...)` */
+    private String extractKeyColumn(String message) {
+        int i = message.indexOf("Key (");
+        if (i < 0) return null;
+        int j = message.indexOf(')', i + 5);
+        if (j < 0) return null;
+        return message.substring(i + 5, j);
+    }
+
+    /** Extract the table name from a Postgres FK-violation message: `on table "child"`. */
+    private String extractFkRelatedTable(String message) {
+        int i = message.indexOf("on table \"");
+        if (i < 0) return null;
+        int j = message.indexOf('"', i + 10);
+        if (j < 0) return null;
+        return message.substring(i + 10, j);
+    }
+
+    /** Extract column from a Postgres not-null violation: `null value in column "col"`. */
+    private String extractNotNullColumn(String message) {
+        int i = message.indexOf("null value in column \"");
+        if (i < 0) return null;
+        int j = message.indexOf('"', i + 22);
+        if (j < 0) return null;
+        return message.substring(i + 22, j);
     }
 
     private String processErrorMessage(String errorMessage) {

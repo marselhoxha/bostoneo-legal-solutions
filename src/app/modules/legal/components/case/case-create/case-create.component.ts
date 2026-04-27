@@ -469,6 +469,12 @@ export class CaseCreateComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
+    // Regenerate the case number on every submit. If a prior attempt actually
+    // succeeded but the response was lost (network blip, timeout), retrying
+    // with the same number would 409 on the unique constraint and surface as
+    // "data integrity error." A fresh number sidesteps that whole class.
+    this.caseForm.patchValue({ caseNumber: this.generateUniqueCaseNumber() });
+
     this.isLoading = true;
     this.errorMessage = '';
 
