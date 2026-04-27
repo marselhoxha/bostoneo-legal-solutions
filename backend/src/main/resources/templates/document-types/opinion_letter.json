@@ -1,6 +1,6 @@
 {
   "type": "opinion_letter",
-  "aliases": [],
+  "aliases": ["opinion-letter"],
   "displayName": "Opinion Letter",
   "category": "letter",
   "citationLevel": "MINIMAL",

@@ -1,6 +1,6 @@
 {
   "type": "settlement_agreement",
-  "aliases": ["release"],
+  "aliases": ["release", "settlement-agreement"],
   "displayName": "Settlement Agreement and Release",
   "category": "contract",
   "citationLevel": "NONE",

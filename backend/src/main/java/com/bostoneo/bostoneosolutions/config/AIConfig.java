@@ -37,8 +37,13 @@ public class AIConfig {
         log.debug("Opus={}, Sonnet={}, Haiku={}", opusModelId, sonnetModelId, haikuModelId);
 
         try {
-            DefaultCredentialsProvider.create().resolveCredentials();
-            log.info("AWS credentials configured successfully");
+            var creds = DefaultCredentialsProvider.create().resolveCredentials();
+            String akid = creds.accessKeyId();
+            String masked = akid == null || akid.length() < 8
+                    ? "<malformed>"
+                    : akid.substring(0, 4) + "..." + akid.substring(akid.length() - 4);
+            log.info("AWS credentials resolved: accessKeyId={} providerClass={}",
+                    masked, creds.getClass().getSimpleName());
         } catch (Exception e) {
             log.error("AWS credentials not configured. AI features will be disabled: {}", e.getMessage());
         }

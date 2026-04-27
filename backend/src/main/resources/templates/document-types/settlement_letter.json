@@ -1,6 +1,6 @@
 {
   "type": "settlement_letter",
-  "aliases": ["settlement_offer"],
+  "aliases": ["settlement_offer", "settlement-letter"],
   "displayName": "Settlement Letter/Proposal",
   "category": "letter",
   "citationLevel": "MINIMAL",

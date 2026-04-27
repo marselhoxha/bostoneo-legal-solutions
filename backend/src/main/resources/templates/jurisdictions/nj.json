@@ -1,0 +1,31 @@
+{
+  "name": "New Jersey",
+  "stateCode": "nj",
+  "civilRules": "R.",
+  "criminalRules": "R. 3:",
+  "evidenceRules": "N.J.R.E.",
+  "reporterAbbrev": "N.J.",
+  "commonCitations": {
+    "statute_of_limitations_tort": "N.J.S.A. 2A:14-2 (2 years for personal injury)",
+    "wrongful_death": "N.J.S.A. 2A:31-1 et seq. (Wrongful Death Act); N.J.S.A. 2A:15-3 (Survival)",
+    "medical_records_fees_hospital": "N.J.S.A. 26:2H-5n ($1/p or $50/admission whichever less; $20 search fee)",
+    "medical_records_fees_physician": "N.J.A.C. 13:35-6.5 ($1/p or $100 max; $10 retrieval if < 10 pages); N.J.S.A. 45:9-22.27",
+    "hospital_lien": "No statutory hospital lien in NJ; common-law contractual subrogation; Medicaid recovery N.J.S.A. 30:4D-7.1 (Ahlborn allocation applies)",
+    "minor_settlement_approval": "R. 4:44 (friendly hearing); N.J.S.A. 3B:12-36 (guardianship of minor's funds)",
+    "tort_claims_act_notice": "N.J.S.A. 59:8-4 (contents); N.J.S.A. 59:8-8 (90-day presentment; 6-month moratorium; 2-yr SOL)",
+    "tort_claims_act_deadline_days": "90-day notice (§ 59:8-8); 1-year late-notice motion on extraordinary circumstances (§ 59:8-9)",
+    "contingency_fee_rule": "R. 1:21-7(c) (33-1/3% on first $750K; 30% next $750K; 25% next $750K; 20% next $750K; over $3M by court order; 25% max for minor/incapacitated settlement without trial)",
+    "certificate_of_merit_medmal": "N.J.S.A. 2A:53A-26 to -29 (Affidavit of Merit; 60 days + 60-day good-cause extension; equivalent specialty under § 2A:53A-41); Ferreira v. Rancocas Orthopedic Assocs., 178 N.J. 144 (2003)",
+    "damages_cap_medmal_noneconomic": "No general cap; punitive damages cap N.J.S.A. 2A:15-5.14 (greater of $350K or 5x compensatory)",
+    "comparative_negligence_standard": "N.J.S.A. 2A:15-5.1 (modified comparative; barred if more than 50%); allocation N.J.S.A. 2A:15-5.2",
+    "threshold_serious_injury": "N.J.S.A. 39:6A-8(a) (AICRA verbal threshold / Limitation on Lawsuit option: death, dismemberment, significant disfigurement or scarring, displaced fracture, loss of fetus, permanent injury within reasonable degree of medical probability)",
+    "verbal_threshold_certification": "N.J.S.A. 39:6A-8(a) (sworn physician certification of permanency, served within 60 days of answer)",
+    "mandatory_arbitration": "R. 4:21A (mandatory non-binding arbitration for auto-tort and most non-malpractice/non-products PI; 30-day trial de novo demand)",
+    "offer_of_judgment": "R. 4:58 (claimant or defense offer; fee-shifting and prejudgment interest if non-acceptor recovers less favorable result)",
+    "attorneys_lien": "N.J.S.A. 2A:13-5",
+    "workers_comp_lien": "N.J.S.A. 34:15-40 (employer/carrier third-party lien; statutory two-thirds reduction after fees + costs)",
+    "medicaid_lien": "N.J.S.A. 30:4D-7.1 (DMAHS third-party recovery; Ahlborn allocation)",
+    "pip_benefits": "N.J.S.A. 39:6A-4 (PIP medical-expense benefits)",
+    "uninsured_motorist": "N.J.S.A. 17:28-1.1 (mandatory UM/UIM); selection form N.J.S.A. 17:28-1.9"
+  }
+}

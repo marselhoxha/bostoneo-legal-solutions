@@ -1,6 +1,6 @@
 {
   "type": "opposing_counsel_letter",
-  "aliases": ["letter_to_counsel"],
+  "aliases": ["letter_to_counsel", "opposing-counsel-letter"],
   "displayName": "Letter to Opposing Counsel",
   "category": "letter",
   "citationLevel": "MINIMAL",

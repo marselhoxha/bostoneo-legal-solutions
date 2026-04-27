@@ -1,6 +1,6 @@
 {
   "type": "legal_memo",
-  "aliases": ["legal_memorandum", "memo", "brief"],
+  "aliases": ["legal_memorandum", "memo", "brief", "legal-memo"],
   "displayName": "Legal Memorandum/Brief",
   "category": "pleading",
   "citationLevel": "COMPREHENSIVE",

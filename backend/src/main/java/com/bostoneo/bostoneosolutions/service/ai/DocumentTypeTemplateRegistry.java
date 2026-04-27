@@ -319,7 +319,32 @@ public class DocumentTypeTemplateRegistry {
 
     public boolean isDemandLetterType(String documentType) {
         if (documentType == null) return false;
-        String norm = normalize(documentType);
-        return "demand_letter".equals(norm) || "demand".equals(norm);
+
+        // Resolve aliases up front via the registry so e.g. "pi_demand_letter" → "demand_letter_pi",
+        // "time_limited_demand_pi" → "policy_limits_demand_pi", "demand_package" → "demand_letter".
+        DocumentTypeTemplate t = getTemplate(documentType);
+        String canonical = (t != null && t.getType() != null) ? normalize(t.getType()) : normalize(documentType);
+
+        // Family covers the generic demand letter and its PI/state-specific siblings, plus the
+        // policy-limits demand cluster (Crisci-family generic + Stowers TX). All of these share
+        // the EvenUp data shape, medical-records prerequisite, and zero-placeholder rules.
+        return "demand".equals(canonical)
+            || canonical.startsWith("demand_letter")
+            || canonical.startsWith("policy_limits_demand")
+            || canonical.startsWith("policy_limit_demand");
+    }
+
+    /**
+     * Letter-category templates whose body is structured with markdown section headers
+     * (e.g., "### I. Introduction"). Without this check, the prompt-builder's
+     * "letters don't use markdown headers" hint contradicts the template body and
+     * the model strips the headings — see policy_limits_demand_pi, preservation_letter_pi,
+     * notice_of_claim_pi, and other multi-section letter templates.
+     */
+    public boolean templateExpectsSectionHeaders(String documentType, String practiceArea, String jurisdiction) {
+        DocumentTypeTemplate t = getResolvedTemplate(documentType, practiceArea, jurisdiction);
+        if (t == null) return false;
+        String body = t.getTemplate();
+        return body != null && body.contains("### ");
     }
 }

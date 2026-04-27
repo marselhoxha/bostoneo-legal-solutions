@@ -1,0 +1,27 @@
+{
+  "name": "Florida",
+  "stateCode": "fl",
+  "civilRules": "Fla. R. Civ. P.",
+  "criminalRules": "Fla. R. Crim. P.",
+  "evidenceRules": "Fla. R. Evid.",
+  "reporterAbbrev": "So.",
+  "commonCitations": {
+    "medical_records_fees_hospital": "Fla. Stat. § 395.3025 ($1/page; actual cost for imaging)",
+    "medical_records_fees_physician": "Fla. Stat. § 456.057(6)–(17) (actual cost + reasonable time)",
+    "hospital_lien": "No state hospital-lien statute; county home-rule charters control (e.g., Miami-Dade § 25.5; Hillsborough § 19)",
+    "minor_settlement_approval": "Fla. Stat. § 744.387; Fla. R. Civ. P. 1.730 (GAL required if net > $15K)",
+    "tort_claims_act_notice": "Fla. Stat. § 768.28(6)(a) (3-year written presentment to agency + DFS)",
+    "tort_claims_act_deadline_days": "3 years presentment; 6-month agency response (deemed denied if silent)",
+    "contingency_fee_rule": "R. Reg. Fla. Bar 4-1.5(f)(4)(B) (sliding-scale contingency); Art. I, § 26, Fla. Const. (Amendment 3 — medmal client share floor)",
+    "certificate_of_merit_medmal": "Fla. Stat. §§ 766.203, 766.104, 766.106(2) (90-day pre-suit + corroborating affidavit)",
+    "damages_cap_medmal_noneconomic": "Fla. Stat. § 766.118 — held unconstitutional in Estate of McCall v. United States, 134 So. 3d 894 (Fla. 2014) (wrongful death) and N. Broward Hosp. Dist. v. Kalitan, 219 So. 3d 49 (Fla. 2017) (personal injury); no current cap",
+    "comparative_negligence_standard": "Fla. Stat. § 768.81 — modified 51% bar (HB 837, eff. 3/24/2023); medmal under Ch. 766 remains pure comparative",
+    "threshold_serious_injury": "Fla. Stat. § 627.737(2) (PIP no-fault verbal threshold for non-economic damages in MVA cases)",
+    "proposal_for_settlement": "Fla. Stat. § 768.79; Fla. R. Civ. P. 1.442 (offer-of-settlement fee-shifting; 25% / 25% triggers)",
+    "civil_remedy_notice": "Fla. Stat. § 624.155(3) (Civil Remedy Notice to DFS — 60-day cure)",
+    "uninsured_motorist": "Fla. Stat. § 627.727 (mandatory UM offer; written rejection)",
+    "attorneys_lien": "Common-law charging lien (Sinclair v. Zwick, 113 So. 2d 856)",
+    "wrongful_death": "Fla. Stat. ch. 768.16-768.27 (Wrongful Death Act; 2-year SOL)",
+    "statute_of_limitations_tort": "Fla. Stat. § 95.11(3) — 2 years for negligence (HB 837, 3/24/2023, reduced from 4)"
+  }
+}

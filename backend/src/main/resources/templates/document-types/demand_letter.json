@@ -1,6 +1,6 @@
 {
   "type": "demand_letter",
-  "aliases": ["demand", "demand_package"],
+  "aliases": ["demand", "demand_package", "demand-letter"],
   "displayName": "Demand Letter",
   "category": "letter",
   "citationLevel": "MODERATE",

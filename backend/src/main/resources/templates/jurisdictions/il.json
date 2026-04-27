@@ -1,0 +1,28 @@
+{
+  "name": "Illinois",
+  "stateCode": "il",
+  "civilRules": "Ill. S. Ct. R.",
+  "criminalRules": "725 ILCS 5/",
+  "evidenceRules": "Ill. R. Evid.",
+  "reporterAbbrev": "N.E.3d",
+  "commonCitations": {
+    "statute_of_limitations_tort": "735 ILCS 5/13-202 (2-yr personal injury); 735 ILCS 5/13-212 (medmal: 2-yr discovery / 4-yr repose)",
+    "wrongful_death": "740 ILCS 180/1 et seq. (2-yr SOL; 5 yrs for violent intentional conduct)",
+    "medical_records_fees_hospital": "735 ILCS 5/8-2001 (handling charge + per-page schedule, IL Comptroller adjusts annually)",
+    "medical_records_fees_physician": "735 ILCS 5/8-2001 / 8-2001.5 (same fee schedule applies)",
+    "hospital_lien": "770 ILCS 23/ Health Care Services Lien Act (aggregate 40% cap; 1/3 per category; if 40% triggered, providers and professionals each capped at 20%)",
+    "minor_settlement_approval": "755 ILCS 5/19-8 (Probate Act; GAL appointment + court approval required regardless of amount)",
+    "tort_claims_act_notice": "745 ILCS 10/8-101 (Local Governmental Tort Immunity Act — 1-yr SOL against local public entities; 2-yr/4-yr discovery/repose for patient-care claims under (b))",
+    "tort_claims_act_deadline_days": "365 days (1 year) under 745 ILCS 10/8-101(a); state-government claims go to Illinois Court of Claims under 705 ILCS 505/",
+    "contingency_fee_rule": "Ill. R. Prof. C. 1.5(c) (writing required); medmal sliding scale: 33-1/3% of first $150K, 25% of next $850K, 20% over $1M (735 ILCS 5/2-1114)",
+    "certificate_of_merit_medmal": "735 ILCS 5/2-622 (attorney affidavit + qualified health-professional report finding 'reasonable and meritorious cause'; 90-day post-filing extension; dismissal under § 2-619 for non-compliance)",
+    "damages_cap_medmal_noneconomic": "None — 735 ILCS 5/2-1706.5 struck down by Lebron v. Gottlieb Mem'l Hosp., 237 Ill. 2d 217, 930 N.E.2d 895 (2010)",
+    "comparative_negligence_standard": "735 ILCS 5/2-1116 (modified comparative; barred only when fault MORE THAN 50%)",
+    "threshold_serious_injury": "Not applicable — Illinois is at-fault tort state with no PIP threshold; principal allocation gates are 735 ILCS 5/2-1117 (25% several-liability threshold) and 740 ILCS 14/ Dram Shop caps",
+    "several_liability_threshold": "735 ILCS 5/2-1117 (defendant <25% at fault: severally liable for non-medical damages; >=25%: joint+several; medical and medically-related damages always joint+several)",
+    "attorneys_lien": "770 ILCS 5/1 (Attorneys Lien Act; perfected by written notice)",
+    "workers_comp_lien": "820 ILCS 305/5(b) (employer/insurer subrogation lien)",
+    "dram_shop_liability": "235 ILCS 5/6-21 (statutory cause of action; capped damages, annually adjusted)",
+    "structured_settlement_protection": "215 ILCS 153/ (court approval for transfer of payment rights)"
+  }
+}

@@ -1,6 +1,20 @@
 import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
+import { RouterModule, Routes, UrlMatcher, UrlSegment } from '@angular/router';
 import { AuthenticationGuard } from '@app/guard/authentication.guard';
+
+// Consolidates /legispace/:tab, /legispace/:tab/:mode, and /legispace/:tab/:mode/:id
+// into ONE route definition so Angular preserves the AiWorkspaceComponent instance
+// when the user transitions between depths (e.g., dashboard → chat → editor).
+// Three sibling route entries pointing at the same component would each be a
+// distinct route definition and would cause destroy/recreate on every transition.
+export const legispaceWorkspaceMatcher: UrlMatcher = (segments: UrlSegment[]) => {
+  if (segments.length < 2 || segments[0].path !== 'legispace') return null;
+  if (segments.length > 4) return null; // too deep — let wildcard / 404 handle
+  const posParams: { [k: string]: UrlSegment } = { tab: segments[1] };
+  if (segments.length >= 3) posParams['mode'] = segments[2];
+  if (segments.length >= 4) posParams['id'] = segments[3];
+  return { consumed: segments, posParams };
+};
 
 const routes: Routes = [
   {
@@ -99,6 +113,11 @@ const routes: Routes = [
   },
   {
     path: 'legispace',
+    redirectTo: 'legispace/legisearch',
+    pathMatch: 'full'
+  },
+  {
+    matcher: legispaceWorkspaceMatcher,
     loadComponent: () => import('./ai-workspace/ai-workspace.component').then(m => m.AiWorkspaceComponent),
     canActivate: [AuthenticationGuard],
     data: { title: 'LegiSpace' }

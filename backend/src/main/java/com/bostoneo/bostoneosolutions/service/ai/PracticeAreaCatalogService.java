@@ -83,6 +83,8 @@ public class PracticeAreaCatalogService {
                                 "PHI release for medical records \u00b7 federally compliant"),
                         c("lor", "letter-of-representation", "Letter of Representation", "letter",
                                 "Notice of representation \u00b7 policy limits \u00b7 PIP \u00b7 UIM \u00b7 multi-purpose"),
+                        c("notice_of_claim", "notice-of-claim", "Notice of Claim", "letter",
+                                "First notice of loss \u00b7 carrier acknowledgment \u00b7 prompt-notice trigger"),
                         c("demand_letter", "demand-letter", "Demand Letter", "letter",
                                 "Settlement demand with damages breakdown"),
                         c("complaint", "complaint", "Complaint", "pleading",
@@ -90,9 +92,21 @@ public class PracticeAreaCatalogService {
                         c("medical_records_request", "medical-records-request", "Medical Records Request", "letter",
                                 "HIPAA-compliant records + authorization request"),
                         c("settlement_release", "settlement-release", "Settlement Release", "contract",
-                                "Final settlement + releases \u2014 post-demand resolution")
+                                "Final settlement + releases \u2014 post-demand resolution"),
+                        c("settlement_distribution_statement", "settlement-distribution-statement", "Settlement Distribution Statement", "other",
+                                "Closing statement \u00b7 fee \u00b7 costs \u00b7 lien payoffs \u00b7 net to client")
                 )),
                 tier("Common", 2, List.of(
+                        c("preservation_letter", "preservation-letter", "Preservation Letter", "letter",
+                                "Spoliation hold \u00b7 evidence categories \u00b7 ESI \u00b7 sanctions warning"),
+                        c("employment_records_auth", "employment-records-auth", "Employment Records Authorization", "other",
+                                "Client-signed authorization \u00b7 wage loss \u00b7 GINA-compliant"),
+                        c("physician_narrative_request", "physician-narrative-request", "Physician Narrative Request", "letter",
+                                "Treating provider narrative \u00b7 causation \u00b7 prognosis \u00b7 AMA Guides 6th"),
+                        c("letter_of_protection", "letter-of-protection", "Letter of Protection", "letter",
+                                "Provider treats on lien against settlement \u00b7 attorney-witnessed"),
+                        c("policy_limits_demand", "policy-limits-demand", "Policy Limits Demand", "letter",
+                                "Time-limited policy-limits demand \u00b7 bad-faith setup \u00b7 NAIC UCSPA"),
                         c("subpoena", "subpoena", "Subpoena", "discovery",
                                 "Compel medical / employment records"),
                         c("interrogatories", "interrogatories", "Interrogatories", "discovery",
@@ -103,6 +117,10 @@ public class PracticeAreaCatalogService {
                                 "Pre-mediation brief \u2014 facts, liability, damages")
                 )),
                 tier("Occasional", 3, List.of(
+                        c("vehicle_preservation_letter", "vehicle-preservation-letter", "Vehicle Preservation Letter", "letter",
+                                "Vehicle / EDR / ECM / dashcam preservation \u00b7 49 C.F.R. Part 563"),
+                        c("surveillance_preservation_letter", "surveillance-preservation-letter", "Surveillance Preservation Letter", "letter",
+                                "CCTV / body cam preservation \u00b7 audit trail \u00b7 incident-window scope"),
                         c("motion_to_dismiss", "motion-dismiss", "Motion to Dismiss", "motion",
                                 "12(b) grounds \u2014 jurisdiction, venue, failure to state a claim"),
                         c("motion_compel", "motion-compel", "Motion to Compel", "motion",
@@ -110,7 +128,9 @@ public class PracticeAreaCatalogService {
                         c("deposition_notice", "deposition-notice", "Deposition Notice", "discovery",
                                 "Notice of deposition \u2014 deponent, date, scope"),
                         c("appellate_brief", "appellate-brief", "Appellate Brief", "other",
-                                "Opening brief on appeal")
+                                "Opening brief on appeal"),
+                        c("tribunal_offer_of_proof", "tribunal-offer-of-proof", "Tribunal Offer of Proof (MA)", "other",
+                                "M.G.L. c. 231 \u00a7 60B med-mal tribunal \u00b7 SOC \u00b7 breach \u00b7 causation")
                 ))
         ));
 

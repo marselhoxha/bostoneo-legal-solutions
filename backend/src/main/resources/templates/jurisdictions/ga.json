@@ -1,0 +1,28 @@
+{
+  "name": "Georgia",
+  "stateCode": "ga",
+  "civilRules": "O.C.G.A. § 9-11 (Civil Practice Act)",
+  "criminalRules": "O.C.G.A. tit. 17",
+  "evidenceRules": "O.C.G.A. tit. 24",
+  "reporterAbbrev": "S.E.2d",
+  "commonCitations": {
+    "statute_of_limitations_tort": "O.C.G.A. § 9-3-33 (2-year SOL for personal injury)",
+    "wrongful_death": "O.C.G.A. § 51-4-1 et seq. (full value of life)",
+    "medical_records_fees_hospital": "O.C.G.A. § 31-33-3 (CPI-adjusted: ~$0.75/p pp.1-20, $0.65/p pp.21-100, $0.50/p thereafter; up to $20 retrieval + $7.50 certification + actual postage; statute adjusted annually each July 1 by DCH)",
+    "medical_records_fees_physician": "O.C.G.A. § 31-33-3 (unified fee schedule applies to physicians, hospitals, and other providers)",
+    "hospital_lien": "O.C.G.A. § 44-14-470 et seq. (hospital + nursing home + physician/chiro lien on PI cause of action; 2024 amendments require provider to first submit and have rejected an insurer claim; 15-day pre-filing notice; physician/chiro statements within 90 days of first treatment per § 44-14-471)",
+    "minor_settlement_approval": "O.C.G.A. § 29-3-3 (gross <= $25K may be settled by natural guardian; gross AND net > $25K require conservator + court approval; amended May 2022)",
+    "tort_claims_act_notice": "O.C.G.A. § 50-21-26 (Georgia Tort Claims Act ante litem notice; certified mail / statutory overnight delivery / personal delivery to DOAS Risk Management Division; strict-compliance state)",
+    "tort_claims_act_deadline_days": "365 days (12 months) under § 50-21-26(a); separately: 6 months for municipalities (§ 36-33-5); 12 months for counties (§ 36-11-1)",
+    "contingency_fee_rule": "Ga. R. Prof. C. 1.5 (no statutory percentage cap in PI; written agreement and closing statement required)",
+    "certificate_of_merit_medmal": "O.C.G.A. § 9-11-9.1 (expert affidavit filed contemporaneously with malpractice complaint; 45-day grace period under (b) when SOL within 10 days and counsel retained < 90 days before expiration)",
+    "damages_cap_medmal_noneconomic": "O.C.G.A. § 51-13-1 — STRUCK DOWN as unconstitutional jury-trial violation in Atlanta Oculoplastic Surgery, P.C. v. Nestlehutt, 286 Ga. 731, 691 S.E.2d 218 (2010); no current GA medmal noneconomic cap",
+    "comparative_negligence_standard": "O.C.G.A. § 51-12-33 (modified less-than-50% bar; apportionment among parties and named non-parties; abolished joint-and-several liability among defendants)",
+    "threshold_serious_injury": "Not applicable — Georgia is a pure tort/at-fault state with no PIP threshold; minimum auto liability $25K/$50K BI, $25K PD under O.C.G.A. § 33-7-11",
+    "holt_time_limited_demand": "O.C.G.A. § 9-11-67.1 (codifies Southern Gen. Ins. v. Holt, 262 Ga. 267, 416 S.E.2d 274 (1992); MVA bodily injury / death; minimum 30-day acceptance window; SB 83 (Apr. 22, 2024) overhaul created insurer safe-harbor)",
+    "uninsured_motorist": "O.C.G.A. § 33-7-11 (UM mandatory; written rejection; § 33-7-11(j) bad-faith demand procedure)",
+    "apportionment_nonparty": "O.C.G.A. § 51-12-33(c)-(d) (apportionment to named non-parties)",
+    "attorneys_lien": "O.C.G.A. § 15-19-14",
+    "workers_comp_lien_subrogation": "O.C.G.A. § 34-9-11.1 (employer/insurer subrogation; full made-whole rule)"
+  }
+}

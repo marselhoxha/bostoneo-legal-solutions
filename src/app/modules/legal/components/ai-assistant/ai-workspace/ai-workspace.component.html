@@ -1390,15 +1390,41 @@
             </app-document-review-toolbar>
           </div>
           <div class="toolbar-right">
-            <button class="toolbar-btn" (click)="toggleVersionHistory()" title="Version history" [class.active]="showVersionHistory$ | async"><i class="ri-history-line"></i></button>
+            <button class="toolbar-btn toolbar-btn--labeled"
+                    (click)="toggleVersionHistory()"
+                    title="View version history"
+                    [class.active]="showVersionHistory$ | async">
+              <i class="ri-history-line"></i>
+              <span class="toolbar-btn__label">Versions</span>
+            </button>
             <div class="toolbar-divider"></div>
-            <button class="toolbar-btn" (click)="openDocumentPreviewModal()" title="Preview as PDF"><i class="ri-file-pdf-line"></i></button>
+            <button class="toolbar-btn toolbar-btn--labeled"
+                    (click)="openDocumentPreviewModal()"
+                    title="Preview document as PDF">
+              <i class="ri-file-pdf-line"></i>
+              <span class="toolbar-btn__label">Preview</span>
+            </button>
             <div class="toolbar-divider"></div>
-            <!-- Stationery Dropdown -->
+            <!-- Stationery Dropdown — state-aware chip -->
             <div class="btn-group" ngbDropdown #stationeryDropdown="ngbDropdown">
-              <button class="toolbar-btn" ngbDropdownToggle title="Attorney Stationery"
+              <!-- Empty state: dashed CTA pill -->
+              <button *ngIf="!stationeryInserted"
+                      class="toolbar-chip toolbar-chip--add"
+                      ngbDropdownToggle
+                      title="Apply attorney letterhead"
                       (click)="onStationeryDropdownOpen()">
                 <i class="ri-stamp-line"></i>
+                <span class="toolbar-chip__label">Add Letterhead</span>
+              </button>
+              <!-- Applied state: green confirmation chip with attorney name -->
+              <button *ngIf="stationeryInserted"
+                      class="toolbar-chip toolbar-chip--applied"
+                      ngbDropdownToggle
+                      title="Letterhead applied — click to change or remove"
+                      (click)="onStationeryDropdownOpen()">
+                <i class="ri-checkbox-circle-fill"></i>
+                <span class="toolbar-chip__label">{{activeAttorneyName || 'Letterhead'}}</span>
+                <i class="ri-arrow-down-s-line toolbar-chip__caret"></i>
               </button>
               <div ngbDropdownMenu class="dropdown-menu dropdown-menu-end stationery-dropdown">
                 <div class="stationery-dropdown-header">

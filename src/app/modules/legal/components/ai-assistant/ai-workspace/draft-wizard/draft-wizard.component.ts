@@ -187,6 +187,17 @@ const DOC_TYPE_META: Record<string, { icon: string; desc: string }> = {
   'engagement-letter':        { icon: 'ri-quill-pen-line',       desc: 'Terms of representation · scope · client / firm duties' },
   'contingency-fee-agreement':{ icon: 'ri-money-dollar-circle-line', desc: 'Fee terms · costs handling · lien · settlement authority' },
   'hipaa-authorization':      { icon: 'ri-shield-user-line',     desc: 'PHI release for medical records · federally compliant' },
+  // PI-specific (Wave 1)
+  'notice-of-claim':                { icon: 'ri-megaphone-line',          desc: 'First notice of loss · carrier acknowledgment · prompt-notice trigger' },
+  'settlement-distribution-statement': { icon: 'ri-pie-chart-line',       desc: 'Closing statement · fee · costs · lien payoffs · net to client' },
+  'preservation-letter':            { icon: 'ri-shield-check-line',       desc: 'Spoliation hold · evidence categories · ESI · sanctions warning' },
+  'vehicle-preservation-letter':    { icon: 'ri-roadster-line',           desc: 'Vehicle / EDR / ECM / dashcam preservation · 49 C.F.R. Part 563' },
+  'surveillance-preservation-letter': { icon: 'ri-camera-lens-line',      desc: 'CCTV / body cam preservation · audit trail · incident-window scope' },
+  'employment-records-auth':        { icon: 'ri-briefcase-line',          desc: 'Client-signed authorization · wage loss · GINA-compliant' },
+  'physician-narrative-request':    { icon: 'ri-stethoscope-line',        desc: 'Treating provider narrative · causation · prognosis · AMA Guides 6th' },
+  'letter-of-protection':           { icon: 'ri-first-aid-kit-line',      desc: 'Provider treats on lien against settlement · attorney-witnessed' },
+  'policy-limits-demand':           { icon: 'ri-alarm-warning-line',      desc: 'Time-limited policy-limits demand · bad-faith setup · NAIC UCSPA' },
+  'tribunal-offer-of-proof':        { icon: 'ri-government-line',         desc: 'M.G.L. c. 231 § 60B med-mal tribunal · SOC · breach · causation' },
   // Family
   'divorce-petition':         { icon: 'ri-user-unfollow-line',   desc: 'Complaint for divorce with grounds + requested relief' },
   'custody-motion':           { icon: 'ri-parent-line',          desc: 'Motion for legal/physical custody determination' },

@@ -1,6 +1,6 @@
 {
   "type": "cover_letter",
-  "aliases": [],
+  "aliases": ["cover-letter"],
   "displayName": "Cover Letter",
   "category": "letter",
   "citationLevel": "MINIMAL",

@@ -22,6 +22,7 @@ import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentExhibitRepos
 import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentRepository;
 import com.bostoneo.bostoneosolutions.repository.AiWorkspaceDocumentVersionRepository;
 import com.bostoneo.bostoneosolutions.repository.FileItemRepository;
+import com.bostoneo.bostoneosolutions.repository.FileItemTextCacheRepository;
 import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.LegalDocumentRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
@@ -124,6 +125,8 @@ public class AiWorkspaceDocumentService {
     private final PIMedicalSummaryService medicalSummaryService;
     private final LegalDocumentRepository legalDocumentRepository;
     private final FileItemRepository fileItemRepository;
+    private final FileItemTextCacheRepository fileItemTextCacheRepository;
+    private final CaseDocumentService caseDocumentService;
     private final DocumentTypeTemplateRegistry templateRegistry;
     private final JurisdictionResolver jurisdictionResolver;
     private final DocumentTemplateEngine documentTemplateEngine;
@@ -1571,7 +1574,7 @@ public class AiWorkspaceDocumentService {
             // OCR call (~10s) to block the loop sequentially.
             int skippedPrivileged = 0;
             for (FileItem file : caseFiles) {
-                if (isPrivilegedDocument(file) || isNonExhibitDocument(file)) {
+                if (isPrivilegedDocument(file) || isNonExhibitDocument(file) || isContentMatchingNonExhibit(file, orgId)) {
                     skippedPrivileged++;
                     continue;
                 }
@@ -1683,6 +1686,61 @@ public class AiWorkspaceDocumentService {
             }
         }
         return false;
+    }
+
+    private static final String[] NON_EXHIBIT_CONTENT_PATTERNS = {
+        "AUTHORIZATION FOR USE OR DISCLOSURE",
+        "AUTHORIZATION FOR THE RELEASE OF",
+        "HIPAA AUTHORIZATION",
+        "HIPAA RELEASE",
+        "MEDICAL RECORDS RELEASE",
+        "AUTHORIZATION TO RELEASE PROTECTED HEALTH",
+        "LETTER OF REPRESENTATION",
+        "NOTICE OF REPRESENTATION",
+        "REPRESENTATION AGREEMENT",
+        "ATTORNEY-CLIENT FEE AGREEMENT",
+        "CONTINGENT FEE AGREEMENT",
+        "CONTINGENCY FEE AGREEMENT",
+        "RETAINER AGREEMENT",
+        "INTAKE QUESTIONNAIRE",
+        "CLIENT QUESTIONNAIRE",
+        "CERTIFIED MAIL RECEIPT",
+        "RETURN RECEIPT REQUESTED",
+        "PROOF OF MAILING"
+    };
+
+    private String lookupExtractedText(Long fileItemId, Long orgId) {
+        if (fileItemId == null) return null;
+        try {
+            return fileItemTextCacheRepository
+                .findByFileItemIdAndOrganizationId(fileItemId, orgId)
+                .filter(c -> "success".equalsIgnoreCase(c.getExtractionStatus()))
+                .map(com.bostoneo.bostoneosolutions.model.FileItemTextCache::getExtractedText)
+                .orElse(null);
+        } catch (Exception e) {
+            log.warn("FileItemTextCache lookup failed for fileItemId={}: {}", fileItemId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Content-based non-exhibit screen — complements the filename-based isNonExhibitDocument.
+     * Catches HIPAA forms / LORs / fee agreements that were uploaded with generic filenames.
+     */
+    private boolean isContentMatchingNonExhibit(FileItem file, Long orgId) {
+        String text = lookupExtractedText(file.getId(), orgId);
+        if (text == null || text.isBlank()) return false;
+        String head = text.substring(0, Math.min(2000, text.length())).toUpperCase();
+        for (String pattern : NON_EXHIBIT_CONTENT_PATTERNS) {
+            if (head.contains(pattern)) return true;
+        }
+        return false;
+    }
+
+    private String mimeFallbackLabel(String mime) {
+        if (mime == null) return "Supporting Document";
+        if (mime.startsWith("image/")) return "Photograph";
+        return "Supporting Document";
     }
 
     /**
@@ -2477,20 +2535,80 @@ public class AiWorkspaceDocumentService {
                 }
             }
 
-            // Fetch case file inventory for exhibit references (excluding privileged and deleted docs)
+            // Fetch case file inventory + extracted text content (single source of truth for exhibits)
             try {
                 List<FileItem> caseFiles = fileItemRepository.findByCaseIdAndDeletedFalseAndOrganizationId(caseId, orgId);
                 if (caseFiles != null && !caseFiles.isEmpty()) {
+                    // Pre-extract: ensure FileItemTextCache holds extracted text for every
+                    // exhibit-eligible file before we read it below. Without this, files
+                    // never read by the AI agent (NULL cache) and files where Tika threw
+                    // before Vision OCR fallback ("failed" cache) all surface as
+                    // "Supporting Document" in the AI's exhibit list.
+                    // Per-file timeout via completeOnTimeout — one slow OCR doesn't stall the batch.
+                    List<FileItem> exhibitCandidates = caseFiles.stream()
+                        .filter(f -> !isPrivilegedDocument(f) && !isNonExhibitDocument(f))
+                        .collect(java.util.stream.Collectors.toList());
+                    if (!exhibitCandidates.isEmpty()) {
+                        long t0 = System.currentTimeMillis();
+                        List<CompletableFuture<Boolean>> futures = exhibitCandidates.stream()
+                            .map(f -> CompletableFuture.supplyAsync(() -> {
+                                // Save-and-restore: ForkJoinPool work-stealing means this lambda
+                                // may run on the calling thread itself (when the parent .join()s),
+                                // so an unconditional clear() would clobber the caller's tenant.
+                                Long previousTenant = TenantContext.getCurrentTenant();
+                                TenantContext.setCurrentTenant(orgId);
+                                try {
+                                    return caseDocumentService.ensureExtracted(f.getId(), orgId);
+                                } catch (Exception e) {
+                                    log.warn("Pre-extract threw for file {}: {}", f.getId(), e.getMessage());
+                                    return false;
+                                } finally {
+                                    if (previousTenant != null) {
+                                        TenantContext.setCurrentTenant(previousTenant);
+                                    } else {
+                                        TenantContext.clear();
+                                    }
+                                }
+                            }).completeOnTimeout(false, 30, java.util.concurrent.TimeUnit.SECONDS))
+                            .collect(java.util.stream.Collectors.toList());
+                        try {
+                            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+                        } catch (Exception e) {
+                            log.warn("Pre-extract batch join failed: {}", e.getMessage());
+                        }
+                        long extracted = futures.stream().filter(fu -> {
+                            try { return Boolean.TRUE.equals(fu.getNow(false)); } catch (Exception e) { return false; }
+                        }).count();
+                        log.info("Pre-extracted {}/{} exhibit-eligible files in {} ms (caseId={})",
+                            extracted, exhibitCandidates.size(), System.currentTimeMillis() - t0, caseId);
+                    }
+
                     sb.append("\n\n=== CASE DOCUMENT INVENTORY ===\n");
-                    sb.append("The following case documents will be attached as exhibits. ");
-                    sb.append("You MUST include ALL of them in the Section 6 Exhibit List table — do not omit any exhibit. ");
-                    sb.append("Reference them using their exact exhibit labels (Exhibit A, Exhibit B, etc.) throughout the letter body.\n");
+                    sb.append("The following case documents will be attached as exhibits. Each entry shows the actual extracted content of the document.\n\n");
+                    sb.append("EXHIBIT LABELING RULES (apply when generating the Section 6 Exhibit List):\n");
+                    sb.append("- Derive each exhibit's description ONLY from the --- Content --- block shown for that exhibit\n");
+                    sb.append("- For exhibits marked [NO TEXT EXTRACTED — IMAGE OR UNREADABLE FILE]: label by MIME type only (image/* → \"Photograph\"; otherwise \"Supporting Document\"). DO NOT infer subject matter from the filename or position.\n");
+                    sb.append("- NEVER use the filename, file order, or sequence-number patterns (e.g., Marsel_001-9) as evidence of content\n");
+                    sb.append("- If the content is ambiguous, label it \"Supporting Document\" — DO NOT fabricate a description\n");
+                    sb.append("- Reference exhibits using their exact labels (Exhibit A, Exhibit B, etc.) throughout the letter body\n\n");
                     char label = 'A';
                     for (FileItem file : caseFiles) {
-                        if (isPrivilegedDocument(file) || isNonExhibitDocument(file)) continue;
-                        sb.append(String.format("- Exhibit %c: %s\n",
-                            label++,
-                            file.getOriginalName() != null ? file.getOriginalName() : file.getName()));
+                        if (isPrivilegedDocument(file) || isNonExhibitDocument(file) || isContentMatchingNonExhibit(file, orgId)) continue;
+                        String filename = file.getOriginalName() != null ? file.getOriginalName() : file.getName();
+                        String mime = file.getMimeType() != null ? file.getMimeType() : "unknown";
+                        sb.append("=== Exhibit ").append(label++).append(" ===\n");
+                        sb.append("File: ").append(filename).append("\n");
+                        sb.append("MIME: ").append(mime).append("\n");
+                        sb.append("--- Content ---\n");
+                        String text = lookupExtractedText(file.getId(), orgId);
+                        if (text == null || text.isBlank()) {
+                            sb.append("[NO TEXT EXTRACTED — IMAGE OR UNREADABLE FILE — label generically as \"")
+                              .append(mimeFallbackLabel(mime)).append("\"]\n");
+                        } else {
+                            if (text.length() > 15000) text = text.substring(0, 15000) + "\n[... truncated ...]";
+                            sb.append(text).append("\n");
+                        }
+                        sb.append("--- End Content ---\n\n");
                     }
                 }
             } catch (Exception e) {
@@ -2766,15 +2884,22 @@ public class AiWorkspaceDocumentService {
             ============================================================
             SECTION 6: EXHIBIT LIST
             ============================================================
-            Create a numbered exhibit list table (Exhibit No. and Description columns) referencing only the supporting documents that were actually cited or referenced in the letter body. Use actual provider names and document types — no brackets.
+            Create a numbered exhibit list table (Exhibit No. and Description columns) referencing the documents from CASE DOCUMENT INVENTORY that were cited or referenced in the letter body.
 
-            CRITICAL — NEVER include privileged or confidential attorney-client documents in the exhibit list. The following must NEVER appear as exhibits in a demand letter:
-            - Contingent fee agreements or retainer agreements
-            - Attorney-client communications or correspondence
-            - Attorney work product, internal memos, or case strategy notes
-            - Billing records, invoices, or fee schedules
-            - Settlement authority memos or internal valuations
-            Only include documents that support the CLAIM being presented to the insurance company: medical records, bills, police reports, photographs, employment records, expert reports, and similar evidence.
+            STRICT GROUNDING RULES (mandatory — violation = failed output):
+            - Each exhibit description MUST be derived ONLY from the --- Content --- block shown for that exhibit in CASE DOCUMENT INVENTORY
+            - For exhibits whose content is marked [NO TEXT EXTRACTED — IMAGE OR UNREADABLE FILE]: use ONLY the generic MIME-based label suggested in the marker (e.g., "Photograph", "Supporting Document"). DO NOT infer subject matter, provider, location, or content from the filename, file order, or sequence number.
+            - NEVER use filename, file ordering, or sequence-number patterns (e.g., Marsel_001-9, IMG_2847, scan_001) as evidence of what a document contains
+            - If the content is ambiguous or empty, label the exhibit "Supporting Document" — DO NOT fabricate a description
+            - Use actual provider/author names ONLY when they appear inside the extracted content — no brackets, no guessing
+
+            EXCLUSIONS — NEVER include privileged or confidential attorney-client documents in the exhibit list:
+            - Contingent fee / retainer / representation agreements
+            - Attorney-client communications, work product, internal memos, settlement authority memos
+            - Billing records, invoices, fee schedules
+            - HIPAA / medical authorization forms (these are administrative, not evidence)
+            - Letters of representation, certified-mail receipts, intake questionnaires
+            Only include documents that support the CLAIM: medical records, bills, police/incident reports, photographs, employment records, expert reports, and similar evidence.
 
             ============================================================
             FINAL SELF-CHECK BEFORE RESPONDING
@@ -3101,8 +3226,12 @@ public class AiWorkspaceDocumentService {
             prompt.append(caseContext).append("\n");
         }
 
-        // Append exhibit content if exhibits are attached to this document
-        if (exhibits != null && !exhibits.isEmpty()) {
+        // Append exhibit content if exhibits are attached to this document.
+        // Suppressed for demand-letter types: buildDemandLetterCaseData already injects
+        // the same extracted-text content into CASE DOCUMENT INVENTORY as the single
+        // source of truth, so emitting AVAILABLE EXHIBITS here would create a parallel
+        // labeled list that can drift on regen.
+        if (exhibits != null && !exhibits.isEmpty() && !isDemandLetterType(documentType)) {
             prompt.append("\n\nAVAILABLE EXHIBITS:\n");
             for (AiWorkspaceDocumentExhibit exhibit : exhibits) {
                 prompt.append("- Exhibit ").append(exhibit.getLabel())
@@ -3386,7 +3515,9 @@ public class AiWorkspaceDocumentService {
                 prompt.append("- MAXIMUM 1000-1500 words total across all fields. Be CONCISE.\n");
                 prompt.append("- Write like a practicing attorney, not a law professor.\n");
             }
-        } else if (isLetterType(documentType) && !isDemandLetterType(documentType)) {
+        } else if (isLetterType(documentType)
+                   && !isDemandLetterType(documentType)
+                   && !templateRegistry.templateExpectsSectionHeaders(documentType, practiceArea, jurisdiction)) {
             prompt.append("- This is a LETTER — do NOT use markdown headers (#, ##, ###) in the body\n");
             prompt.append("- Write as flowing prose paragraphs, not sections with headers\n");
         } else {

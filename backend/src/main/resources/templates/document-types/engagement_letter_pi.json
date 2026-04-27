@@ -32,7 +32,7 @@
   ],
   "reviewedBy": [],
   "approvalStatus": "draft",
-  "disclaimer": "DRAFT — generated from a template. Requires review by a licensed attorney in the applicable jurisdiction before filing, sending, or relying upon. No attorney-client relationship is created by the generation of this document. Not legal advice.",
+  "disclaimer": "",
   "knownLimitations": [
     "Does not account for state variations on ABA rule adoption — most states adopt Rule 1.5 with modifications, and state-specific variants should be built where significant variation exists (e.g., MA SJC Rule 3:05 contingent fee requirements are in the state-specific sibling template).",
     "Does not include limited-scope disclosures tailored to the specific task — attorney must specify what is and is NOT included when scope=limited_scope.",

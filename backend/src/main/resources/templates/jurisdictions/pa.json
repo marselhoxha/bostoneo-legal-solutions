@@ -1,0 +1,27 @@
+{
+  "name": "Pennsylvania",
+  "stateCode": "pa",
+  "civilRules": "Pa.R.C.P.",
+  "criminalRules": "Pa.R.Crim.P.",
+  "evidenceRules": "Pa.R.E.",
+  "reporterAbbrev": "A.3d",
+  "commonCitations": {
+    "statute_of_limitations_tort": "42 Pa.C.S. § 5524 (2-year SOL for personal injury)",
+    "wrongful_death": "42 Pa.C.S. § 8301 (Wrongful Death Act); 42 Pa.C.S. § 8302 (Survival Act)",
+    "medical_records_fees_hospital": "42 Pa.C.S. § 6152 (CPI-adjusted; ~$2.50/p pp.1-10, ~$0.75 pp.11-50, ~$0.50 pp.51+; ~$29.61 search fee — implementer should pull current Department of Health table at draft time)",
+    "medical_records_fees_physician": "42 Pa.C.S. § 6152 (uniform provider fee schedule; CPI-adjusted)",
+    "hospital_lien": "No statutory hospital lien; contractual subrogation; Medicaid third-party recovery 62 P.S. § 1409",
+    "minor_settlement_approval": "Pa.R.C.P. No. 2039 (guardian petition; ~$25K threshold; insured account / annuity / trust)",
+    "tort_claims_act_notice": "42 Pa.C.S. §§ 8521-8522 (Sovereign Immunity Act, 9 exceptions; $250K/$1M cap); §§ 8541-8542 (Political Subdivision Tort Claims Act)",
+    "tort_claims_act_deadline_days": "180 days (6 months) notice for both Sovereign and Political Subdivision Acts",
+    "contingency_fee_rule": "Pa. R. Prof. C. 1.5 (reasonableness standard; written agreement); MCARE 40 P.S. § 1303.506 framework for medmal-related fees",
+    "certificate_of_merit_medmal": "Pa.R.C.P. No. 1042.3 (60-day certificate of merit; ALL professional-liability actions, not just medmal)",
+    "damages_cap_medmal_noneconomic": "No statutory cap; punitive damages cap 2x compensatory under 40 P.S. § 1303.505(d)",
+    "comparative_negligence_standard": "42 Pa.C.S. § 7102 (modified 51% bar); Fair Share Act (2011) limits joint-and-several to specific scenarios",
+    "threshold_serious_injury": "75 Pa.C.S. § 1705 (limited-tort MVA option; 'serious injury' = death, serious impairment of body function, or permanent serious disfigurement)",
+    "uninsured_motorist": "75 Pa.C.S. § 1731 (mandatory UM offer; written rejection)",
+    "attorneys_lien": "Recupero v. Inverness Med. Innovations, Inc. — common-law charging lien",
+    "workers_comp_lien": "77 P.S. § 671 (employer/insurer subrogation)",
+    "mcare_pre_suit": "40 P.S. § 1303.711 et seq. (MCARE Act medmal framework — venue, expert qualifications, peer-review immunity)"
+  }
+}

@@ -1,6 +1,6 @@
 {
   "type": "client_email",
-  "aliases": [],
+  "aliases": ["client-email"],
   "displayName": "Client Communication",
   "category": "letter",
   "citationLevel": "MINIMAL",

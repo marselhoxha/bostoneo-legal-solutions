@@ -35,7 +35,7 @@
   ],
   "reviewedBy": [],
   "approvalStatus": "draft",
-  "disclaimer": "DRAFT — generated from a template. Requires review by a licensed attorney in the applicable jurisdiction before filing, sending, or relying upon. No attorney-client relationship is created by the generation of this document. Not legal advice.",
+  "disclaimer": "",
   "knownLimitations": [
     "This is the FEDERAL baseline form. Several states (CA, NY, MA, TX, IL) impose additional authorization requirements for mental-health, HIV, and genetic records that are stricter than federal law. Use a state-specific sibling template (e.g., `hipaa_authorization_pi_ma`) when operating in those jurisdictions.",
     "Psychotherapy-notes authorization combined with other categories is NOT compliant — when `psychotherapy_notes` appears with other categories, the template warns but users must separately issue a standalone psychotherapy-notes form.",

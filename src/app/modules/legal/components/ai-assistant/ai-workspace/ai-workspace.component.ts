@@ -2,8 +2,8 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, TemplateRef
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Subject, lastValueFrom, merge, forkJoin, Observable } from 'rxjs';
-import { takeUntil, switchMap, finalize, distinctUntilChanged, skip, filter } from 'rxjs/operators';
+import { Subject, lastValueFrom, merge, forkJoin, Observable, combineLatest } from 'rxjs';
+import { takeUntil, switchMap, finalize, distinctUntilChanged, skip, filter, debounceTime } from 'rxjs/operators';
 import { LegalResearchService } from '../../../services/legal-research.service';
 import { DocumentGenerationService } from '../../../services/document-generation.service';
 import { LegalCaseService } from '../../../services/legal-case.service';
@@ -199,6 +199,13 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   selectedWorkflowForDetails: any = null;
   showWorkflowDetailsModal = false; // Legacy - keeping for backwards compatibility
   showWorkflowDetailsPage = false; // New full-page view
+
+  // True while the URL→State handler is reconstituting state from a deep-link.
+  // Suppresses State→URL sync so the deep URL isn't flushed back to the bare tab
+  // while async restoration (conversation lookup / API fetch) is still in flight.
+  // Cleared via setTimeout(0) so it covers debounceTime(0) microtasks scheduled
+  // by `selectTask`'s state-service emissions.
+  private restoringFromUrl = false;
   expandedStepOutput: any = null;
   showStepOutputModal = false;
   expandedStepId: number | null = null;
@@ -1068,6 +1075,37 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       .pipe(distinctUntilChanged(), filter(v => v === true), takeUntil(this.destroy$))
       .subscribe(() => this.scrollPageToTop());
 
+    // ===== REACTIVE STATE → URL =====
+    // When sub-screen state changes, mirror it into the URL bar so refresh /
+    // share / back-forward stay coherent (e.g. opening a chat updates the URL
+    // to /legispace/legidraft/chat/<convId>; closing it reverts to bare tab).
+    //
+    // `skip(1)` drops the initial combined emission. On mount, all
+    // BehaviorSubjects replay their current values (mostly defaults — false /
+    // null), which would otherwise compute a bare-tab URL and clobber a
+    // deep-link the user just arrived at. The URL→State handler in the
+    // route.params subscription is responsible for restoring sub-screen state
+    // from a deep-link; the reactive sync only fires on subsequent changes.
+    //
+    // `debounceTime(0)` (microtask) coalesces burst updates from multi-state
+    // transitions (entering drafting mode often sets draftingMode + convId in
+    // the same tick — we want one navigate, not two).
+    //
+    // Workflow details (`showWorkflowDetailsPage` / `selectedWorkflowForDetails`)
+    // are component-local fields, not RxJS-backed; their setter sites call
+    // `syncUrlFromState()` explicitly — see `viewWorkflowDetails` and the
+    // background-task / pendingNav handlers.
+    combineLatest([
+      this.stateService.selectedTask$,
+      this.stateService.draftingMode$,
+      this.stateService.showChat$,
+      this.stateService.activeConversationId$,
+      this.stateService.documentViewerMode$,
+      this.stateService.activeDocumentId$
+    ])
+      .pipe(skip(1), debounceTime(0), takeUntil(this.destroy$))
+      .subscribe(() => this.syncUrlFromState());
+
     // Subscribe to UserService userData$ observable for reactive updates
     this.userService.userData$
       .pipe(takeUntil(this.destroy$))
@@ -1130,6 +1168,42 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.loadUserCases();
     }
 
+    // Drive the active workspace tab AND sub-screen from the URL so deep-links
+    // (/legispace/legidraft/chat/<convId>, /legispace/legilyze/document/<docId>,
+    // etc.) and browser back/forward restore the right tab + entity.
+    this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const slug = params['tab'];
+      if (!slug) return;
+
+      // Suppress State→URL pushes while we reconstitute state from the URL.
+      // The flag must outlive the synchronous handler AND the debounceTime(0)
+      // macrotask scheduled by `selectTask`'s state-service emissions, so it
+      // is cleared via setTimeout(0) — which the JS event loop runs strictly
+      // after any pending debounce timers queued in this tick.
+      this.restoringFromUrl = true;
+
+      const taskFromUrl = AiWorkspaceComponent.TAB_SLUG_TO_TASK[slug];
+      if (taskFromUrl && this.selectedTask !== taskFromUrl) {
+        this.selectTask(taskFromUrl);
+      }
+
+      const mode = params['mode'];
+      const id = params['id'];
+
+      if (mode) {
+        // Sub-screen URL — restore the deep view. Idempotent if state already matches.
+        this.applySubscreenFromUrl(slug, mode, id);
+      } else {
+        // Bare-tab URL — close any open non-destructive deep view for this tab
+        // (e.g., browser-back from /legilyze/document/<id> to /legilyze).
+        // Chat / drafting modes are intentionally NOT auto-closed because they
+        // may contain in-flight user typing or context the user expects to keep.
+        this.resetDeepViewForBareTab(slug);
+      }
+
+      setTimeout(() => { this.restoringFromUrl = false; }, 0);
+    });
+
     // Handle query params (caseId, openConversation, openWorkflow from notifications)
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
       // Handle caseId from Case Details page
@@ -1155,6 +1229,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         const workflowId = parseInt(params['openWorkflow'], 10);
         if (!isNaN(workflowId)) {
           this.selectedTask = ConversationType.Workflow;
+          this.syncUrlWithTask(ConversationType.Workflow);
 
           // Wait for workflows to load, then open details
           setTimeout(() => {
@@ -1169,6 +1244,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                   next: (executionWithSteps) => {
                     this.selectedWorkflowForDetails = executionWithSteps;
                     this.showWorkflowDetailsPage = true;
+                    this.syncUrlFromState();
                     this.cdr.detectChanges();
                   },
                   error: () => { /* Error handled silently */ }
@@ -1216,9 +1292,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       if (taskType === 'draft' || conversation.taskType === 'GENERATE_DRAFT') {
         this.selectedTask = ConversationType.Draft;
         this.activeTask = ConversationType.Draft;
+        this.syncUrlWithTask(ConversationType.Draft);
       } else {
         this.selectedTask = ConversationType.Question;
         this.activeTask = ConversationType.Question;
+        this.syncUrlWithTask(ConversationType.Question);
       }
 
       // Open the conversation
@@ -1231,7 +1309,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       }, RETRY_DELAY);
     } else {
       // Show the Question tab so user can see their conversations
-      this.selectedTask = taskType === 'draft' ? ConversationType.Draft : ConversationType.Question;
+      const fallbackTask = taskType === 'draft' ? ConversationType.Draft : ConversationType.Question;
+      this.selectedTask = fallbackTask;
+      this.syncUrlWithTask(fallbackTask);
       this.notificationService.warning('Conversation Not Found', 'The conversation may have been deleted or is still loading.');
     }
   }
@@ -1262,6 +1342,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       // Handle workflow navigation
       else if (pendingNav.workflowId) {
         this.selectedTask = ConversationType.Workflow;
+        this.syncUrlWithTask(ConversationType.Workflow);
 
         // Wait for workflows to load, then open details
         setTimeout(() => {
@@ -1276,6 +1357,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
                 next: (executionWithSteps) => {
                   this.selectedWorkflowForDetails = executionWithSteps;
                   this.showWorkflowDetailsPage = true;
+                  this.syncUrlFromState();
                   this.cdr.detectChanges();
                 },
                 error: () => { /* Error handled silently */ }
@@ -1286,6 +1368,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       // Handle analysis navigation
       else if (pendingNav.taskType === 'analysis' && pendingNav.analysisIds && pendingNav.analysisIds.length > 0) {
         this.selectedTask = ConversationType.Upload;
+        this.syncUrlWithTask(ConversationType.Upload);
 
         // Display the last analysis result - use databaseId for API call
         const lastResult = pendingNav.analysisIds[pendingNav.analysisIds.length - 1];
@@ -1831,6 +1914,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       this.closeQuickPreviewModal();
       // Switch to upload task and trigger file upload
       this.selectedTask = ConversationType.Upload;
+      this.syncUrlWithTask(ConversationType.Upload);
       // Small delay to let task switch complete
       setTimeout(() => {
         this.triggerFileUpload();
@@ -2051,6 +2135,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         next: (executionWithSteps) => {
           this.selectedWorkflowForDetails = executionWithSteps;
           this.showWorkflowDetailsPage = true;
+          this.syncUrlFromState();
           this.expandedStepIds.clear();
           this.allStepsExpanded = false;
 
@@ -2073,6 +2158,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   closeWorkflowDetailsPage(): void {
     this.showWorkflowDetailsPage = false;
     this.selectedWorkflowForDetails = null;
+    this.syncUrlFromState();
     this.expandedStepIds.clear();
     this.allStepsExpanded = false;
     this.cdr.detectChanges();
@@ -2481,6 +2567,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Make sure workflow task is selected
     this.selectedTask = ConversationType.Workflow;
+    this.syncUrlWithTask(ConversationType.Workflow);
 
     this.cdr.detectChanges();
   }
@@ -2572,6 +2659,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         // Switch to workflow tab so user can see the new workflow
         this.selectedTask = ConversationType.Workflow;
         this.activeTask = ConversationType.Workflow;
+        this.syncUrlWithTask(ConversationType.Workflow);
         this.workflowFilter = 'all'; // Reset filter to show all workflows
 
         // Load workflows sidebar
@@ -2667,6 +2755,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Switch to upload task
     this.selectedTask = ConversationType.Upload;
     this.activeTask = ConversationType.Upload;
+    this.syncUrlWithTask(ConversationType.Upload);
 
     // Pre-select the collection
     this.selectedUploadCollectionId = collectionId;
@@ -3759,6 +3848,16 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     this.activeStationeryAttorneyId = null;
     this.activeAttorneyName = '';
     this.selectedStationeryTemplateId = null;
+
+    // Back-from-editor: when the user was on the LegiDraft flow, return them to
+    // the LegiDraft dashboard instead of the half-filled wizard step. Mirrors
+    // onDraftWizardCancel() so subsequent re-entry feels like a fresh start.
+    if (this.selectedTask === ConversationType.Draft) {
+      this.clearWizardExtras();
+      this.selectedDocTypePill = null;
+      this.customPrompt = '';
+      this.enterDashboardMode();
+    }
   }
 
   // ========================================
@@ -4045,6 +4144,22 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   selectedTask: ConversationType = ConversationType.Question;
   activeTask: ConversationType = ConversationType.Question;
 
+  // URL ↔ task mapping. The :tab segment in /legal/ai-assistant/legispace/:tab
+  // surfaces the current top-level workspace tab in the address bar so deep-links
+  // and browser back/forward reflect where the user is.
+  private static readonly TAB_SLUG_TO_TASK: Record<string, ConversationType> = {
+    'legisearch': ConversationType.Question,
+    'legidraft':  ConversationType.Draft,
+    'legilyze':   ConversationType.Upload,
+    'legiflow':   ConversationType.Workflow
+  };
+  private static readonly TASK_TO_TAB_SLUG: Partial<Record<ConversationType, string>> = {
+    [ConversationType.Question]: 'legisearch',
+    [ConversationType.Draft]:    'legidraft',
+    [ConversationType.Upload]:   'legilyze',
+    [ConversationType.Workflow]: 'legiflow'
+  };
+
   /**
    * Switch task type from anywhere in the UI (including when inside a conversation).
    * Calls selectTask() to update the task type, then resets to the welcome screen
@@ -4074,6 +4189,9 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Persist task selection to state service for restoration on navigation
     this.stateService.setSelectedTask(task);
 
+    // Reflect the current tab in the URL so deep-links / browser history work.
+    this.syncUrlWithTask(task);
+
     this.stateService.setActiveConversationId(null);
     this.stateService.clearConversationMessages();
 
@@ -4088,6 +4206,229 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
 
     // Note: Don't reload conversations here - they're already loaded at init
     // Reloading causes flickering as state gets temporarily inconsistent
+  }
+
+  /**
+   * Push the active task into the URL. Thin delegate over `syncUrlFromState` —
+   * historical callers pass the task explicitly, but the canonical URL is always
+   * derived from current state (tab + sub-screen) so we don't have a separate
+   * tab-only path that drifts from the sub-screen builder.
+   */
+  private syncUrlWithTask(_task: ConversationType): void {
+    this.syncUrlFromState();
+  }
+
+  /**
+   * Build the canonical URL segments array reflecting current workspace state.
+   * Returns `[..., '<tab>']` for the bare tab, or
+   * `[..., '<tab>', '<mode>', '<id>']` for high-value sub-screens (chat, editor,
+   * document viewer, workflow details).
+   *
+   * Mid-flow modes (wizard, dashboard, fill, generating) intentionally stay at
+   * the bare tab — those states aren't server-persisted, so a deep link
+   * couldn't restore them anyway.
+   */
+  private buildSubscreenUrl(): any[] | null {
+    const tab = AiWorkspaceComponent.TASK_TO_TAB_SLUG[this.activeTask];
+    if (!tab) return null;
+    const base: any[] = ['/legal/ai-assistant/legispace', tab];
+
+    if (this.activeTask === ConversationType.Draft) {
+      // LegiDraft sub-screen: drafting an active conversation (chat + editor share this).
+      const convId = this.stateService.getActiveConversationId();
+      if (this.stateService.getDraftingMode() && convId) {
+        return [...base, 'chat', convId];
+      }
+      return base;
+    }
+
+    if (this.activeTask === ConversationType.Question) {
+      // LegiSearch sub-screen: an active Q&A conversation.
+      const convId = this.stateService.getActiveConversationId();
+      if (this.stateService.getShowChat() && convId) {
+        return [...base, 'chat', convId];
+      }
+      return base;
+    }
+
+    if (this.activeTask === ConversationType.Upload) {
+      // LegiLyze sub-screen: viewing an analyzed document.
+      const docId = this.stateService.getActiveDocumentId();
+      if (this.stateService.getDocumentViewerMode() && docId) {
+        return [...base, 'document', docId];
+      }
+      return base;
+    }
+
+    if (this.activeTask === ConversationType.Workflow) {
+      // LegiFlow sub-screen: open workflow details page.
+      const wfId = this.selectedWorkflowForDetails?.id;
+      if (this.showWorkflowDetailsPage && wfId) {
+        return [...base, 'workflow', wfId];
+      }
+      return base;
+    }
+
+    return base;
+  }
+
+  /**
+   * Reflect current state in the URL. No-ops when the URL already matches the
+   * computed segments — guards against feedback loops with the route.params
+   * URL→State handler. Query params (caseId, openConversation, etc.) are
+   * preserved so notification deep-link tokens survive sub-screen transitions.
+   */
+  private syncUrlFromState(): void {
+    // Suppressed during URL→State restoration to avoid flushing the deep URL
+    // before async state restoration completes.
+    if (this.restoringFromUrl) return;
+
+    const segments = this.buildSubscreenUrl();
+    if (!segments) return;
+
+    // Compare path-only (strip query string) against the computed target.
+    const currentPath = this.router.url.split('?')[0];
+    const targetPath = segments.join('/');
+    if (currentPath === targetPath) return;
+
+    this.router.navigate(segments, {
+      queryParamsHandling: 'preserve',
+      replaceUrl: false
+    });
+  }
+
+  /**
+   * Restore deep-screen state from URL segments. Called by the route.params
+   * subscriber when a `mode` segment is present (e.g. /legispace/legidraft/chat/<id>).
+   *
+   * Idempotent — if state already reflects the URL we no-op so the route.params
+   * handler can safely fire on every router.navigate without looping.
+   *
+   * Init-order: this can fire before conversations / workflows finish loading.
+   * For chat we delegate to `openConversationWithRetry` which already has 5×500ms
+   * retry semantics. For workflow / document we call the API directly — those
+   * fetches don't depend on the in-memory list being populated.
+   */
+  private applySubscreenFromUrl(slug: string, mode: string, id: string | undefined): void {
+    if (!mode) return;
+    // Mode segment present but missing id (e.g. /legispace/legidraft/chat) — malformed,
+    // strip back to bare tab so the URL reflects what's actually rendered.
+    if (!id) {
+      this.router.navigate(['/legal/ai-assistant/legispace', slug], { queryParamsHandling: 'preserve' });
+      return;
+    }
+
+    if (mode === 'chat' && (slug === 'legidraft' || slug === 'legisearch')) {
+      // Idempotent guard — conversation already active in the right mode.
+      const activeId = this.stateService.getActiveConversationId();
+      const inDraft = slug === 'legidraft' && this.stateService.getDraftingMode();
+      const inSearch = slug === 'legisearch' && this.stateService.getShowChat();
+      if (activeId === id && (inDraft || inSearch)) return;
+
+      const taskType = slug === 'legidraft' ? 'draft' : undefined;
+      this.openConversationWithRetry(id, taskType, 0);
+      return;
+    }
+
+    if (mode === 'document' && slug === 'legilyze') {
+      // Idempotent guard.
+      if (this.stateService.getActiveDocumentId() === id && this.stateService.getDocumentViewerMode()) return;
+
+      // Try cache first — covers in-SPA navigation. Delegate to openDocumentInViewer
+      // so the cached doc gets a fullAnalysis follow-up fetch if metadata-only.
+      const cached = this.stateService.getAnalyzedDocumentById(id);
+      if (cached) {
+        this.openDocumentInViewer(cached);
+        return;
+      }
+
+      // Otherwise fetch the analysis directly. URL-stored id is `analysis_<databaseId>`
+      // per openDocumentViewer convention, but tolerate bare numeric or UUID forms.
+      const numericMatch = id.match(/^(?:analysis_)?(\d+)$/);
+      const fetch$ = numericMatch
+        ? this.documentAnalyzerService.getAnalysisByDatabaseId(parseInt(numericMatch[1], 10))
+        : this.documentAnalyzerService.getAnalysisById(id);
+
+      fetch$.pipe(takeUntil(this.destroy$)).subscribe({
+        next: (analysisResult) => {
+          const analyzedDoc: AnalyzedDocument = {
+            id: `analysis_${analysisResult.databaseId}`,
+            databaseId: analysisResult.databaseId,
+            fileName: analysisResult.fileName || 'Document',
+            fileSize: analysisResult.fileSize || 0,
+            detectedType: analysisResult.detectedType || 'Document',
+            extractedMetadata: analysisResult.extractedMetadata,
+            analysis: analysisResult.analysis,
+            timestamp: analysisResult.timestamp || Date.now(),
+            status: 'completed'
+          };
+          if (!this.stateService.getAnalyzedDocumentById(analyzedDoc.id)) {
+            this.stateService.addAnalyzedDocument(analyzedDoc);
+          }
+          // Delegate to openDocumentInViewer — if the response shipped without
+          // fullAnalysis (rare but possible), it issues the follow-up fetch.
+          this.openDocumentInViewer(analyzedDoc);
+        },
+        error: () => {
+          // Entity gone — strip the deep segment and warn.
+          this.notificationService.warning('Document Not Found', 'This document may have been deleted.');
+          this.router.navigate(['/legal/ai-assistant/legispace', slug], { queryParamsHandling: 'preserve' });
+        }
+      });
+      return;
+    }
+
+    if (mode === 'workflow' && slug === 'legiflow') {
+      const wfId = parseInt(id, 10);
+      if (isNaN(wfId)) {
+        this.router.navigate(['/legal/ai-assistant/legispace', slug], { queryParamsHandling: 'preserve' });
+        return;
+      }
+      // Idempotent guard.
+      if (this.selectedWorkflowForDetails?.id === wfId && this.showWorkflowDetailsPage) return;
+
+      this.caseWorkflowService.getExecutionWithSteps(wfId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (executionWithSteps) => {
+            this.selectedWorkflowForDetails = executionWithSteps;
+            this.showWorkflowDetailsPage = true;
+            this.expandedStepIds.clear();
+            this.allStepsExpanded = false;
+            if (executionWithSteps?.status === 'RUNNING' || executionWithSteps?.status === 'WAITING_USER' || executionWithSteps?.status === 'PENDING') {
+              this.startWorkflowPolling();
+            }
+            this.syncUrlFromState();
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            this.notificationService.warning('Workflow Not Found', 'This workflow may have been deleted.');
+            this.router.navigate(['/legal/ai-assistant/legispace', slug], { queryParamsHandling: 'preserve' });
+          }
+        });
+      return;
+    }
+
+    // Unknown (slug, mode) combination — strip to bare tab.
+    this.router.navigate(['/legal/ai-assistant/legispace', slug], { queryParamsHandling: 'preserve' });
+  }
+
+  /**
+   * Close non-destructive deep views when the URL goes shallow (e.g. browser-back
+   * from /legispace/legilyze/document/<id> to /legispace/legilyze). Chat / draft
+   * modes are intentionally skipped — closing them mid-conversation could surprise
+   * users who didn't intend to discard the active conversation.
+   */
+  private resetDeepViewForBareTab(slug: string): void {
+    if (slug === 'legilyze' && this.stateService.getDocumentViewerMode()) {
+      this.stateService.closeDocumentViewer();
+    }
+    if (slug === 'legiflow' && this.showWorkflowDetailsPage) {
+      this.showWorkflowDetailsPage = false;
+      this.selectedWorkflowForDetails = null;
+      this.stopWorkflowPolling();
+      this.cdr.detectChanges();
+    }
   }
 
   // ========================================
@@ -4132,6 +4473,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     // Select upload task (shows welcome screen with upload taskcard active)
     this.selectedTask = ConversationType.Upload;
     this.activeTask = ConversationType.Upload;
+    this.syncUrlWithTask(ConversationType.Upload);
 
     // Expand sidebar if collapsed
     this.stateService.setViewerSidebarCollapsed(false);
@@ -12053,6 +12395,7 @@ You can:
       case 'question':
         // Switch to question mode and open the conversation
         this.selectedTask = ConversationType.Question;
+        this.syncUrlWithTask(ConversationType.Question);
         if (task.conversationId) {
           this.switchConversation(task.conversationId);
         }
@@ -12061,6 +12404,7 @@ You can:
       case 'draft':
         // Switch to draft mode and open the conversation
         this.selectedTask = ConversationType.Draft;
+        this.syncUrlWithTask(ConversationType.Draft);
         if (task.conversationId) {
           this.switchConversation(task.conversationId);
         }
@@ -12069,6 +12413,7 @@ You can:
       case 'analysis':
         // Switch to upload/analysis mode and display the result
         this.selectedTask = ConversationType.Upload;
+        this.syncUrlWithTask(ConversationType.Upload);
         if (task.result && task.result.results && task.result.results.length > 0) {
           const lastResult = task.result.results[task.result.results.length - 1];
           const analysisId = lastResult.databaseId ? lastResult.databaseId.toString() : lastResult.id;
@@ -12091,6 +12436,7 @@ You can:
       case 'workflow':
         // Switch to workflow mode and open the workflow details
         this.selectedTask = ConversationType.Workflow;
+        this.syncUrlWithTask(ConversationType.Workflow);
         if (task.workflowId) {
           const workflow = this.userWorkflows.find(w => w.id === task.workflowId);
           if (workflow) {
@@ -12103,6 +12449,7 @@ You can:
                 next: (executionWithSteps) => {
                   this.selectedWorkflowForDetails = executionWithSteps;
                   this.showWorkflowDetailsPage = true;
+                  this.syncUrlFromState();
                   this.cdr.detectChanges();
                 },
                 error: () => { /* Error handled silently */ }

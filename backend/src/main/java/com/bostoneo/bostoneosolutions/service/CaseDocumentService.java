@@ -167,9 +167,103 @@ public class CaseDocumentService {
             return extractedText;
 
         } catch (Exception e) {
+            // Tika threw — for PDFs, fall through to Vision OCR before giving up.
+            // (Some scanned/non-standard PDFs cause Tika to throw "No Archiver found
+            // for the stream signature" or similar; the file itself is still readable
+            // via image rendering + Vision OCR.)
+            if ("pdf".equalsIgnoreCase(ext)) {
+                log.info("Tika threw for file {} ({}), attempting Vision OCR fallback", fileItemId, e.getMessage());
+                try {
+                    Resource resource = fileStorageService.loadFileAsResource(fileItem.getFilePath());
+                    String visionText = extractTextWithVisionOCR(resource);
+                    if (visionText != null && !visionText.trim().isEmpty()) {
+                        String extractedText = visionText.trim();
+                        saveCache(fileItemId, orgId, extractedText, "success", null, extractedText.length());
+                        log.info("Vision OCR recovered {} chars from PDF {} after Tika exception", extractedText.length(), fileItemId);
+                        if (extractedText.length() > maxLength) {
+                            return extractedText.substring(0, maxLength) + "\n\n[... Document truncated at " + maxLength + " characters. Full document is " + extractedText.length() + " characters.]";
+                        }
+                        return extractedText;
+                    }
+                } catch (Exception ocrEx) {
+                    log.warn("Vision OCR fallback after Tika exception also failed for file {}: {}", fileItemId, ocrEx.getMessage());
+                }
+            }
             log.error("Text extraction failed for file {}: {}", fileItemId, e.getMessage());
             saveCache(fileItemId, orgId, null, "failed", e.getMessage(), 0);
             return "Error extracting text from document: " + e.getMessage();
+        }
+    }
+
+    /**
+     * Ensure text extraction has been attempted for this file using the full
+     * Tika → Vision-OCR pipeline. Unlike {@link #getDocumentText}, this method:
+     *   1. Always retries when cache status is anything other than "success"
+     *      (so previously-failed files get another chance via Vision OCR)
+     *   2. Returns a boolean instead of the text — the caller is expected to
+     *      read the freshly-cached text via the repository afterward
+     *
+     * Designed for the demand-letter pre-extraction pass where ALL exhibit text
+     * matters, not just the file the AI agent is reading right now. Safe to call
+     * in parallel across different file IDs.
+     *
+     * @return true if cache now holds successfully-extracted text; false otherwise
+     */
+    public boolean ensureExtracted(Long fileItemId, Long orgId) {
+        if (fileItemId == null || orgId == null) return false;
+
+        // Short-circuit on cache hit — only "success" counts; "failed"/"unsupported"/"pending" all retry
+        Optional<FileItemTextCache> cached = textCacheRepository.findByFileItemIdAndOrganizationId(fileItemId, orgId);
+        if (cached.isPresent() && "success".equalsIgnoreCase(cached.get().getExtractionStatus())) {
+            return true;
+        }
+
+        Optional<FileItem> fileOpt = fileItemRepository.findByIdAndOrganizationId(fileItemId, orgId);
+        if (fileOpt.isEmpty()) return false;
+
+        FileItem fileItem = fileOpt.get();
+        String mime = fileItem.getMimeType() != null ? fileItem.getMimeType() : "";
+        String ext = fileItem.getExtension() != null ? fileItem.getExtension().toLowerCase().replace(".", "") : "";
+
+        // Skip files we genuinely can't extract from (videos, audio, archives, raw images)
+        if (NON_EXTRACTABLE_EXTENSIONS.contains(ext)) {
+            saveCache(fileItemId, orgId, null, "unsupported", "File type '" + ext + "' is not supported for text extraction.", 0);
+            return false;
+        }
+
+        try {
+            Resource resource = fileStorageService.loadFileAsResource(fileItem.getFilePath());
+            String text = null;
+
+            // 1. Try Tika first
+            try (InputStream is = resource.getInputStream()) {
+                text = tika.parseToString(is);
+                if (text != null) text = text.trim();
+            } catch (Exception tikaEx) {
+                log.info("ensureExtracted: Tika threw for file {} ({}), will try Vision OCR for PDFs", fileItemId, tikaEx.getMessage());
+                text = null;
+            }
+
+            // 2. If Tika gave us nothing useful and it's a PDF, fall back to Vision OCR
+            if ((text == null || text.isEmpty()) && "pdf".equalsIgnoreCase(ext)) {
+                String visionText = extractTextWithVisionOCR(resource);
+                if (visionText != null && !visionText.isEmpty()) {
+                    text = visionText.trim();
+                }
+            }
+
+            if (text != null && !text.isEmpty()) {
+                saveCache(fileItemId, orgId, text, "success", null, text.length());
+                log.info("ensureExtracted: cached {} chars for file {} ({})", text.length(), fileItemId, fileItem.getOriginalName());
+                return true;
+            }
+
+            saveCache(fileItemId, orgId, null, "failed", "Tika and Vision OCR both returned empty", 0);
+            return false;
+        } catch (Exception e) {
+            log.warn("ensureExtracted failed for file {}: {}", fileItemId, e.getMessage());
+            saveCache(fileItemId, orgId, null, "failed", e.getMessage(), 0);
+            return false;
         }
     }
 
