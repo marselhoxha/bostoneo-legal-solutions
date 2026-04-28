@@ -356,8 +356,8 @@ module "ecs" {
   ]
 
   api_image         = var.api_image
-  api_cpu           = 512
-  api_memory        = 1024
+  api_cpu           = 1024
+  api_memory        = 2048
   api_desired_count = 1
   api_min_count     = 1
   api_max_count     = 3
