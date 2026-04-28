@@ -29,6 +29,8 @@ public class PIMedicalSummaryDTO {
 
     // Summary Content
     private String treatmentChronology;
+    // Tier 4: phase-organized chronology — array of {phase, phaseRationale, startDate, endDate, recordIds}
+    private List<Map<String, Object>> phasedChronology;
     private List<Map<String, Object>> providerSummary;
     private List<Map<String, Object>> diagnosisList;
     private List<Map<String, Object>> redFlags;

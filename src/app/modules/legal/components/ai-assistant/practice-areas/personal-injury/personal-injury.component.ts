@@ -3854,72 +3854,69 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   getTimelineBarSegments(): Array<{ type: 'active' | 'gap'; startPct: number; widthPct: number; label: string }> {
     if (this.medicalRecords.length === 0) return [];
 
-    const dates = this.medicalRecords
+    // Build [start, end] intervals from records — multi-DOS records (e.g. a Team Rehab
+    // billing summary covering 4+ months of visits) carry a treatmentEndDate that
+    // captures the actual span. Sorting only by treatmentDate would mis-flag visits
+    // that fall within such a span as fresh gaps.
+    const intervals = this.medicalRecords
       .filter(r => r.treatmentDate)
-      .map(r => new Date(r.treatmentDate).getTime())
-      .sort((a, b) => a - b);
+      .map(r => {
+        const start = new Date(r.treatmentDate).getTime();
+        const endRaw = r.treatmentEndDate ? new Date(r.treatmentEndDate).getTime() : start;
+        return { start, end: endRaw < start ? start : endRaw };
+      })
+      .sort((a, b) => a.start - b.start);
 
-    if (dates.length === 0) return [];
+    if (intervals.length === 0) return [];
 
-    // Group dates into clusters (within 7 days = same treatment period)
-    const clusters: Array<{ start: number; end: number }> = [];
-    let clusterStart = dates[0];
-    let clusterEnd = dates[0];
-
-    for (let i = 1; i < dates.length; i++) {
-      if (dates[i] - clusterEnd <= 7 * 86400000) {
-        clusterEnd = dates[i];
+    // Merge overlapping or near-adjacent intervals (within 7 days = same cluster)
+    const DAY_MS = 86400000;
+    const CLUSTER_THRESHOLD_MS = 7 * DAY_MS;
+    const merged: Array<{ start: number; end: number }> = [{ ...intervals[0] }];
+    for (let i = 1; i < intervals.length; i++) {
+      const last = merged[merged.length - 1];
+      if (intervals[i].start - last.end <= CLUSTER_THRESHOLD_MS) {
+        if (intervals[i].end > last.end) last.end = intervals[i].end;
       } else {
-        clusters.push({ start: clusterStart, end: clusterEnd });
-        clusterStart = dates[i];
-        clusterEnd = dates[i];
+        merged.push({ ...intervals[i] });
       }
     }
-    clusters.push({ start: clusterStart, end: clusterEnd });
 
     const segments: Array<{ type: 'active' | 'gap'; startPct: number; widthPct: number; label: string }> = [];
-    const DAY_MS = 86400000;
-
-    for (let i = 0; i < clusters.length; i++) {
-      const cluster = clusters[i];
-      // Active segment — minimum 5 days of visual weight so it's visible
+    for (let i = 0; i < merged.length; i++) {
+      const cluster = merged[i];
       const clusterDays = Math.max(Math.round((cluster.end - cluster.start) / DAY_MS) + 1, 5);
       const dateLabel = new Date(cluster.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      segments.push({
-        type: 'active',
-        startPct: 0, // not used with flexbox, kept for interface compat
-        widthPct: clusterDays, // flex-grow value
-        label: dateLabel
-      });
+      segments.push({ type: 'active', startPct: 0, widthPct: clusterDays, label: dateLabel });
 
-      // Gap between this cluster and next
-      if (i < clusters.length - 1) {
-        const nextCluster = clusters[i + 1];
-        const gapDays = Math.round((nextCluster.start - cluster.end) / DAY_MS);
+      if (i < merged.length - 1) {
+        const gapDays = Math.round((merged[i + 1].start - cluster.end) / DAY_MS);
         if (gapDays > 0) {
-          segments.push({
-            type: 'gap',
-            startPct: 0,
-            widthPct: gapDays, // flex-grow value — proportional to actual gap size
-            label: `${gapDays}-day gap`
-          });
+          segments.push({ type: 'gap', startPct: 0, widthPct: gapDays, label: `${gapDays}-day gap` });
         }
       }
     }
-
     return segments;
   }
 
   getTimelineDateRange(): { start: string; end: string; days: number } {
-    const dates = this.medicalRecords
-      .filter(r => r.treatmentDate)
-      .map(r => r.treatmentDate)
-      .sort();
-    if (dates.length === 0) return { start: '', end: '', days: 0 };
-    const start = dates[0];
-    const end = dates[dates.length - 1];
-    const days = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 86400000);
-    return { start, end, days };
+    const starts: number[] = [];
+    const ends: number[] = [];
+    for (const r of this.medicalRecords) {
+      if (!r.treatmentDate) continue;
+      const s = new Date(r.treatmentDate).getTime();
+      const e = r.treatmentEndDate ? new Date(r.treatmentEndDate).getTime() : s;
+      starts.push(s);
+      ends.push(e < s ? s : e);
+    }
+    if (starts.length === 0) return { start: '', end: '', days: 0 };
+    const startTs = Math.min(...starts);
+    const endTs = Math.max(...ends);
+    return {
+      start: new Date(startTs).toISOString().substring(0, 10),
+      end: new Date(endTs).toISOString().substring(0, 10),
+      days: Math.round((endTs - startTs) / 86400000),
+    };
   }
 
   scanCaseDocuments(): void {

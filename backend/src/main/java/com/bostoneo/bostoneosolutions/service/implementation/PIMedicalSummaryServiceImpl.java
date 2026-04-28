@@ -9,6 +9,8 @@ import com.bostoneo.bostoneosolutions.repository.PIMedicalRecordRepository;
 import com.bostoneo.bostoneosolutions.repository.PIMedicalSummaryRepository;
 import com.bostoneo.bostoneosolutions.service.PIMedicalSummaryService;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,7 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
     private final PIMedicalRecordRepository recordRepository;
     private final TenantService tenantService;
     private final ClaudeSonnet4Service claudeService;
+    private final ObjectMapper objectMapper;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -102,6 +105,7 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
         summary.setRedFlags(extractRedFlags(aiAnalysis));
         summary.setMissingRecords(detectMissingRecords(records));
         summary.setTreatmentChronology(buildChronology(records));
+        summary.setPhasedChronology(generatePhasedChronology(records));
         summary.setKeyHighlights((String) aiAnalysis.get("keyHighlights"));
         summary.setPrognosisAssessment((String) aiAnalysis.get("prognosis"));
 
@@ -399,37 +403,234 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
         return new ArrayList<>(uniqueDiagnoses.values());
     }
 
+    /**
+     * Detect treatment gaps using interval-merge over [treatmentDate, treatmentEndDate].
+     *
+     * The naive sequential approach (prev.endDate vs next.startDate ordered by startDate)
+     * mis-flags single-day records that fall WITHIN a long-running multi-DOS record's
+     * span as gaps. Example: Team Rehab record [11/11/2025, 03/26/2026] absorbs an
+     * imaging visit on 12/27/2025 and an ortho visit on 03/05/2026; the old algorithm
+     * would still flag a 68-day gap between the imaging and ortho records because it
+     * had already moved past Team Rehab in the sorted iteration.
+     *
+     * Interval merge solves this: build [start, end] per record (end defaults to start),
+     * sort by start, merge overlapping/adjacent intervals (within 1 day), then flag
+     * gaps > 30 days between the merged intervals.
+     */
     private List<Map<String, Object>> analyzeTreatmentGapsInternal(List<PIMedicalRecord> records) {
+        List<Interval> intervals = records.stream()
+                .filter(r -> !"INSURANCE_LEDGER".equals(r.getRecordType()))
+                .filter(r -> r.getTreatmentDate() != null)
+                .map(r -> {
+                    LocalDate start = r.getTreatmentDate();
+                    LocalDate end = (r.getTreatmentEndDate() != null && !r.getTreatmentEndDate().isBefore(start))
+                            ? r.getTreatmentEndDate() : start;
+                    String provider = r.getProviderName() == null ? "Unknown" : r.getProviderName();
+                    return new Interval(start, end, provider);
+                })
+                .sorted(Comparator.comparing(iv -> iv.start))
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        if (intervals.size() < 2) {
+            return new ArrayList<>();
+        }
+
+        List<Interval> merged = new ArrayList<>();
+        Interval current = intervals.get(0);
+        for (int i = 1; i < intervals.size(); i++) {
+            Interval next = intervals.get(i);
+            if (!next.start.isAfter(current.end.plusDays(1))) {
+                if (next.end.isAfter(current.end)) {
+                    current.end = next.end;
+                    current.endProvider = next.endProvider;
+                }
+            } else {
+                merged.add(current);
+                current = next;
+            }
+        }
+        merged.add(current);
+
         List<Map<String, Object>> gaps = new ArrayList<>();
-
-        for (int i = 1; i < records.size(); i++) {
-            LocalDate prevDate = records.get(i - 1).getTreatmentEndDate();
-            if (prevDate == null) {
-                prevDate = records.get(i - 1).getTreatmentDate();
-            }
-            LocalDate currDate = records.get(i).getTreatmentDate();
-
-            // Skip records where the AI couldn't extract a date — ChronoUnit.DAYS.between
-            // throws NullPointerException: temporal on a null arg, which would abort the
-            // entire medical summary generation.
-            if (prevDate == null || currDate == null) {
-                continue;
-            }
-
-            long daysBetween = ChronoUnit.DAYS.between(prevDate, currDate);
-            if (daysBetween > 30) { // Flag gaps > 30 days
+        for (int i = 1; i < merged.size(); i++) {
+            Interval prev = merged.get(i - 1);
+            Interval next = merged.get(i);
+            long gapDays = ChronoUnit.DAYS.between(prev.end, next.start);
+            if (gapDays > 30) {
                 Map<String, Object> gap = new HashMap<>();
-                gap.put("gapStart", prevDate);
-                gap.put("gapEnd", currDate);
-                gap.put("gapDays", (int) daysBetween);
-                gap.put("previousProvider", records.get(i - 1).getProviderName());
-                gap.put("nextProvider", records.get(i).getProviderName());
-                gap.put("severity", daysBetween > 60 ? "HIGH" : "MEDIUM");
+                gap.put("gapStart", prev.end);
+                gap.put("gapEnd", next.start);
+                gap.put("gapDays", (int) gapDays);
+                gap.put("previousProvider", prev.endProvider);
+                gap.put("nextProvider", next.startProvider);
+                gap.put("severity", gapDays > 60 ? "HIGH" : "MEDIUM");
                 gaps.add(gap);
             }
         }
-
         return gaps;
+    }
+
+    private static final class Interval {
+        LocalDate start;
+        LocalDate end;
+        final String startProvider;
+        String endProvider;
+
+        Interval(LocalDate start, LocalDate end, String provider) {
+            this.start = start;
+            this.end = end;
+            this.startProvider = provider;
+            this.endProvider = provider;
+        }
+    }
+
+    /**
+     * Tier 4 — derive a phase-organized chronology from the records.
+     * Sends the records (excluding INSURANCE_LEDGER) to the AI with instructions to
+     * group them into clinical phases (Acute, Initial follow-up, Conservative
+     * treatment, Specialist referral, etc.) with a rationale for each phase.
+     *
+     * Returns null on any failure — the rest of the summary regen still completes.
+     * Output shape: [{phase, phaseRationale, startDate, endDate, recordIds: [...]}]
+     */
+    private List<Map<String, Object>> generatePhasedChronology(List<PIMedicalRecord> records) {
+        List<PIMedicalRecord> clinicalRecords = records.stream()
+                .filter(r -> !"INSURANCE_LEDGER".equals(r.getRecordType()))
+                .filter(r -> r.getTreatmentDate() != null)
+                .sorted(Comparator.comparing(PIMedicalRecord::getTreatmentDate))
+                .toList();
+
+        if (clinicalRecords.size() < 2) {
+            // Phasing isn't meaningful with 0-1 records; skip silently
+            return null;
+        }
+
+        StringBuilder recordsBlock = new StringBuilder();
+        for (PIMedicalRecord r : clinicalRecords) {
+            String findings = r.getKeyFindings() == null ? "" : r.getKeyFindings();
+            if (findings.length() > 200) findings = findings.substring(0, 200);
+            recordsBlock.append(String.format("- id=%d | %s | %s (%s) | %s | %s%n",
+                    r.getId(),
+                    r.getTreatmentDate(),
+                    r.getProviderName(),
+                    r.getTreatingClinician() == null ? "" : r.getTreatingClinician(),
+                    r.getRecordType(),
+                    findings.replace("\n", " ").replace("|", "/")));
+        }
+
+        String prompt = String.format("""
+            You are a personal-injury case-strategy analyst writing for the attorney
+            handling this case. The phaseRationale text you produce will be displayed
+            verbatim on the demand-package summary the attorney shows to insurance
+            adjusters and (if needed) jurors. Write like a senior paralegal — clinical,
+            confident, and plainly readable. No internal database language.
+
+            Given the chronological list of medical records below, group them into
+            CLINICAL PHASES with rationale paragraphs.
+
+            Pick phase names that fit the actual treatment arc — common patterns include:
+              "Acute" — initial post-MVA encounter (ED visit, immediate evaluation)
+              "Initial follow-up" — first specialist evaluations / treatment plan setup
+              "Conservative treatment" — ongoing PT/chiro/routine visits, possibly with imaging
+              "Specialist referral" — orthopedic / neurology consults when conservative care plateaus
+              "MRI / imaging workup" — diagnostic phase if imaging clusters
+              "Post-treatment" / "Records compilation" — final visits + documentation finalization
+            But DON'T force a 5-phase structure if the records don't support it. A short
+            case may have just 2 phases. A long stalled case may have a "Pause / gap" phase.
+
+            For each phase return:
+              - phase: short name (e.g., "Acute", "Conservative treatment")
+              - phaseRationale: 2-3 sentences of ATTORNEY-FACING NARRATIVE PROSE explaining
+                what the encounters in this phase represent clinically, and the case-strategy
+                significance (causation, treatment necessity, plateau before imaging, etc.).
+                Refer to encounters by DATE and PROVIDER NAME. NEVER use phrasings like
+                "Record 95", "Records 95 and 96", "Record id=100", "record IDs", or any
+                reference to the internal id numbers shown in the RECORDS block below.
+                The attorney never sees those IDs; mentioning them looks like a system
+                glitch and undermines credibility.
+              - startDate: YYYY-MM-DD of earliest record in this phase
+              - endDate: YYYY-MM-DD of latest record in this phase
+              - recordIds: array of the id= numbers from the RECORDS block that belong to
+                this phase. This field is for internal grouping ONLY and is not shown to
+                the attorney. Always include it, but do NOT reference these numbers in
+                phaseRationale prose.
+
+            GOOD rationale (attorney-facing, no IDs):
+              "Initial emergency department evaluation at Cambridge Health Alliance on
+               11/06/2025, with cervical and lumbar strain documented after a high-speed
+               MVC. The ED course establishes the causal nexus to the accident and rules
+               out emergent pathology, anchoring the mechanism narrative for the demand."
+
+            BAD rationale (DO NOT WRITE THIS WAY):
+              "Records 95 and 96 document the initial ED presentation..."
+              "Record id=100 covers the conservative-treatment phase..."
+
+            RECORDS:
+            %s
+
+            Return ONLY a JSON array — no prose, no markdown fence. Example:
+            [
+              {"phase": "Acute", "phaseRationale": "...", "startDate": "2025-11-06",
+               "endDate": "2025-11-06", "recordIds": [12]},
+              {"phase": "Conservative treatment", "phaseRationale": "...",
+               "startDate": "2025-11-11", "endDate": "2025-12-22", "recordIds": [13,14,15]}
+            ]
+            """, recordsBlock);
+
+        try {
+            String response = claudeService.generateCompletionWithModel(
+                    prompt, null, false, null, null, "claude-sonnet-4-6").get();
+            // Strip code fences if AI added them despite instruction
+            String json = response.trim();
+            int firstBracket = json.indexOf('[');
+            int lastBracket = json.lastIndexOf(']');
+            if (firstBracket < 0 || lastBracket <= firstBracket) {
+                log.warn("Phased chronology AI response missing JSON array — skipping");
+                return null;
+            }
+            json = json.substring(firstBracket, lastBracket + 1);
+            List<Map<String, Object>> phases = objectMapper.readValue(json,
+                    new TypeReference<List<Map<String, Object>>>() {});
+            // Defensive: strip internal record-ID references that may have leaked into
+            // the attorney-facing rationale prose despite explicit prompt warnings.
+            phases.forEach(p -> {
+                Object r = p.get("phaseRationale");
+                if (r instanceof String s) {
+                    p.put("phaseRationale", sanitizePhaseRationale(s));
+                }
+            });
+            log.info("Generated {} treatment phases from {} clinical records",
+                    phases.size(), clinicalRecords.size());
+            return phases;
+        } catch (Exception e) {
+            log.warn("Failed to generate phased chronology — leaving null: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Strip internal record-ID phrasings that may have leaked into the AI's
+     * attorney-facing rationale prose. Patterns covered:
+     *   "Records 95 and 96"      "Record 97"
+     *   "record id=100"          "Record IDs 95, 96, 100"
+     *   "Records 95-100"
+     * Replacement is a neutral phrase ("the encounter(s)") so the surrounding
+     * sentence still reads naturally. If the AI followed the prompt this is a no-op.
+     */
+    private String sanitizePhaseRationale(String s) {
+        if (s == null || s.isBlank()) return s;
+        String out = s;
+        // "Record id=100" or "record id = 100"
+        out = out.replaceAll("(?i)\\brecord\\s+id\\s*=\\s*\\d+\\b", "the encounter");
+        // "Records 95 and 96" / "Records 95, 96, 100" / "Records 95-100"
+        out = out.replaceAll(
+                "(?i)\\brecords?\\s+\\d+(?:\\s*(?:,\\s*|\\s+and\\s+|\\s*[-–]\\s*)\\d+)+\\b",
+                "the encounters");
+        // Singular trailing pattern: "Record 97"
+        out = out.replaceAll("(?i)\\brecords?\\s+\\d+\\b", "the encounter");
+        // Collapse any double spaces / leading-comma artifacts
+        out = out.replaceAll("\\s{2,}", " ").replaceAll("\\s+,", ",").trim();
+        return out;
     }
 
     private Map<String, Object> generateAIAnalysis(List<PIMedicalRecord> records,
@@ -827,6 +1028,7 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
                 .caseId(entity.getCaseId())
                 .organizationId(entity.getOrganizationId())
                 .treatmentChronology(entity.getTreatmentChronology())
+                .phasedChronology(entity.getPhasedChronology())
                 .providerSummary(entity.getProviderSummary())
                 .diagnosisList(entity.getDiagnosisList())
                 .redFlags(entity.getRedFlags())
