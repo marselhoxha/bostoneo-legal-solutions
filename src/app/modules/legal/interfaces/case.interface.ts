@@ -144,6 +144,12 @@ export interface LegalCase {
   clientInsuranceAdjusterEmail?: string;
   clientInsuranceAdjusterPhone?: string;
 
+  // PIP coverage details (Tier 3 — populated from PIP_LOG documents during medical scan)
+  clientInsuranceClaimNumber?: string;
+  clientInsurancePipLimit?: number;
+  clientInsurancePipDeductible?: number;
+  clientInsurancePipDeductiblePaid?: number;
+
   // Practice Area Identifier
   practiceArea?: string;
 

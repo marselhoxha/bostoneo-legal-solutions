@@ -1858,6 +1858,18 @@
                               <span class="spinner-border spinner-border-sm me-1"></span>
                             </span>
                           </button>
+                          <!--
+                            Dev/staging only: re-runs persistence/merge against cached AI extractions
+                            (no Bedrock calls). Hidden on production via isReprocessAvailable() hostname check;
+                            backend endpoint is also gated via @Profile({"dev","staging"}) for defense in depth.
+                          -->
+                          <button *ngIf="isReprocessAvailable()"
+                                  class="btn btn-soft-warning"
+                                  (click)="reprocessFromCache()"
+                                  [disabled]="!linkedCase || isScanningDocuments"
+                                  title="Replay cached AI extractions through current logic. No token cost. Dev/staging only.">
+                            <i class="ri-refresh-line me-1"></i> Reprocess
+                          </button>
                           <button class="btn btn-sm" [class.btn-soft-secondary]="recordsViewMode === 'flat'" [class.btn-soft-primary]="recordsViewMode === 'grouped'"
                                   (click)="recordsViewMode = recordsViewMode === 'flat' ? 'grouped' : 'flat'"
                                   [disabled]="!linkedCase || !medicalRecords?.length"
@@ -2029,10 +2041,49 @@
                             <span class="stat-label">Total Paid</span>
                             <span class="stat-value amount text-success">{{ formatCurrency(getTotalMedicalPaid()) }}</span>
                           </div>
-                          <div class="stat-row">
+                          <div class="stat-row" title="Total billed minus what the PIP carrier has paid. Includes bills not yet submitted to PIP — represents the patient's outstanding balance.">
                             <span class="stat-label">Outstanding</span>
                             <span class="stat-value amount text-warning">{{ formatCurrency(getTotalMedicalOutstanding()) }}</span>
                           </div>
+
+                          <!--
+                            PIP coverage rows (Tier 3) — render only when the case has PIP data.
+                            "PIP Available" is forward-looking (carrier capacity left), distinct from
+                            "Outstanding" which is backward-looking (bills not yet paid).
+                          -->
+                          <!--
+                            PIP coverage rows. Claim number lives elsewhere on the case (it's
+                            metadata, not a financial figure). This panel keeps a consistent
+                            thematic flow: dollar amounts only.
+                          -->
+                          <ng-container *ngIf="linkedCase && linkedCase.clientInsurancePipLimit">
+                            <div class="stat-row">
+                              <span class="stat-label">PIP Limit</span>
+                              <span class="stat-value amount">{{ formatCurrency(linkedCase.clientInsurancePipLimit) }}</span>
+                            </div>
+                            <div class="stat-row"
+                                 title="PIP coverage limit minus carrier disbursements minus deductible already paid by client. The cap on what PIP can still pay going forward — distinct from 'Outstanding' which is bills not yet paid by anyone.">
+                              <span class="stat-label">PIP Available</span>
+                              <span class="stat-value amount"
+                                    [class.text-success]="getPipRemaining() >= 1500"
+                                    [class.text-warning]="getPipRemaining() < 1500 && getPipRemaining() > 0"
+                                    [class.text-danger]="getPipRemaining() === 0">
+                                {{ formatCurrency(getPipRemaining()) }}
+                              </span>
+                            </div>
+                            <div class="stat-row" *ngIf="linkedCase.clientInsurancePipDeductible">
+                              <span class="stat-label">Deductible</span>
+                              <!--
+                                formatDeductible() shows just "$500" when fully paid, or
+                                "$300 of $500" when partially paid. .amount provides the size
+                                + font-weight; text-body overrides the default green color
+                                that .amount inherits — deductible isn't a "good" green
+                                outcome, it's just an informational figure.
+                              -->
+                              <span class="stat-value amount text-body">{{ formatDeductible() }}</span>
+                            </div>
+                          </ng-container>
+
                           <div class="stat-row" *ngIf="getMedicalDateRange().start">
                             <span class="stat-label">Treatment Period</span>
                             <span class="stat-value small">{{ getMedicalDateRange().start | date:'MMM yyyy' }} - {{ getMedicalDateRange().end | date:'MMM yyyy' }}</span>

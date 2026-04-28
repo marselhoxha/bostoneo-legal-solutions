@@ -3998,6 +3998,141 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     });
   }
 
+  /**
+   * Tier 3 — Coverage Summary helpers.
+   * paidToDate is intentionally NOT stored on LegalCase (single source of truth = the
+   * INSURANCE_LEDGER record's paidAmount, populated by the PIP log scan). Computed
+   * here so the UI never goes stale relative to the underlying record.
+   */
+  getPipPaidToDate(): number {
+    if (!this.medicalRecords || this.medicalRecords.length === 0) return 0;
+    // Take the MAX paidAmount across INSURANCE_LEDGER records — handles the case where a case
+    // has multiple PIP logs uploaded over time (e.g., monthly updated statements). The most
+    // recent log carries the largest cumulative paid-to-date figure.
+    return this.medicalRecords
+      .filter(r => r.recordType === 'INSURANCE_LEDGER')
+      .reduce((max, r) => Math.max(max, r.paidAmount || 0), 0);
+  }
+
+  getPipRemaining(): number {
+    const limit = this.linkedCase?.clientInsurancePipLimit || 0;
+    const paid = this.getPipPaidToDate();
+    const deductiblePaid = this.linkedCase?.clientInsurancePipDeductiblePaid || 0;
+    // PIP "remaining" = limit minus what's already been disbursed AND minus the deductible
+    // the client has eaten (the deductible portion is the client's responsibility, not paid
+    // out of the PIP pool — but it does count against what the carrier actually pays).
+    return Math.max(0, limit - paid - deductiblePaid);
+  }
+
+  /**
+   * Format deductible for the Summary panel. Show just the amount when fully paid
+   * (paid == deductible), or "$paid of $total" when partially paid. Avoids the
+   * confusing "$500 / $500" redundancy when both numbers are equal.
+   */
+  formatDeductible(): string {
+    const ded = this.linkedCase?.clientInsurancePipDeductible || 0;
+    const paid = this.linkedCase?.clientInsurancePipDeductiblePaid || 0;
+    if (ded === 0) return '';
+    if (paid >= ded) return this.formatCurrency(ded);
+    return `${this.formatCurrency(paid)} of ${this.formatCurrency(ded)}`;
+  }
+
+  /**
+   * Whether the "Reprocess (no AI)" button is visible.
+   * Mirrors the backend's @Profile({"dev","staging"}) gate: shown on local dev
+   * (localhost) and any host containing "staging" in its name; hidden on the
+   * canonical production hostname (app.legience.com).
+   *
+   * Hostname-based detection rather than environment.ts flags so the gate stays
+   * single-source-of-truth (the URL the user is on) and doesn't drift with the
+   * CI-generated env files.
+   */
+  isReprocessAvailable(): boolean {
+    if (typeof window === 'undefined') return false;
+    const host = window.location.hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1') return true;
+    if (host.includes('staging')) return true;
+    return false;
+  }
+
+  /**
+   * Re-run persistence/merge logic against cached AI extractions WITHOUT
+   * calling Bedrock. Used during prompt/extraction-logic iteration to validate
+   * Java-side changes without paying token cost on every test.
+   *
+   * Confirms first because reprocess deletes existing PIMedicalRecord rows
+   * before replaying — the user shouldn't trigger this accidentally.
+   */
+  reprocessFromCache(): void {
+    if (!this.linkedCase?.id) return;
+    const caseId = Number(this.linkedCase.id);
+
+    Swal.fire({
+      title: 'Reprocess from cached AI extractions?',
+      html: `This will <strong>delete the current medical records</strong> and rebuild them
+             by replaying the cached AI responses through the current persistence/merge logic.<br><br>
+             <strong>No Bedrock calls — $0 token cost.</strong><br><br>
+             Useful when iterating on backend logic without re-scanning.
+             <br><br><em>Records that haven't been scanned yet (no cached extraction) will be skipped —
+             run a fresh scan first if needed.</em>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#0ab39c',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Reprocess',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+
+      // No background task / WebSocket — reprocess is synchronous and fast (no AI calls).
+      Swal.fire({
+        title: 'Reprocessing…',
+        text: 'Replaying cached extractions through current logic.',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      this.medicalRecordService.reprocessCaseDocuments(caseId).subscribe({
+        next: (data: any) => {
+          this.loadMedicalRecords();
+          this.cdr.detectChanges();
+
+          const replayed = data?.replayedDocuments ?? 0;
+          const created = data?.recordsCreated ?? 0;
+          const aiCallsAvoided = data?.aiCallsAvoided ?? 0;
+          const errors: string[] = data?.errors ?? [];
+
+          if (data?.success) {
+            Swal.fire({
+              icon: errors.length > 0 ? 'warning' : 'success',
+              title: errors.length > 0 ? 'Reprocess completed with warnings' : 'Reprocess complete',
+              html: `Replayed <strong>${replayed}</strong> cached extractions into <strong>${created}</strong> records.<br>
+                     <span class="text-success"><i class="ri-coin-line"></i> ${aiCallsAvoided} AI calls avoided.</span>` +
+                     (errors.length > 0 ? `<br><br><small class="text-muted">${errors.length} error(s): ${errors.slice(0, 3).join('; ')}</small>` : ''),
+              confirmButtonText: 'OK'
+            });
+          } else {
+            Swal.fire({
+              icon: 'info',
+              title: 'No cached extractions',
+              text: data?.message || 'No cached AI extractions found for this case. Run a fresh scan first to populate the cache.',
+              confirmButtonText: 'OK'
+            });
+          }
+        },
+        error: (err) => {
+          console.error('Reprocess failed:', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Reprocess failed',
+            text: err.error?.message || err.message || 'Failed to reprocess case. Check backend logs.',
+            confirmButtonText: 'OK'
+          });
+        }
+      });
+    });
+  }
+
   saveMedicalRecord(): void {
     if (!this.linkedCase?.id || this.medicalRecordForm.invalid) {
       this.markFormGroupTouched(this.medicalRecordForm);

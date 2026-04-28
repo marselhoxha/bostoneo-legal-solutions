@@ -732,13 +732,88 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                     existing.setRecordType(mappedRecordType);
                 }
                 PIMedicalRecord saved = repository.save(existing);
+                applyPipCoverageToCase(caseId, orgId, analysisResult);
                 return mapToDTO(saved);
             }
         }
 
         PIMedicalRecord record = createRecordFromAnalysis(caseId, orgId, fileId, analysisResult);
         PIMedicalRecord saved = repository.save(record);
+        applyPipCoverageToCase(caseId, orgId, analysisResult);
         return mapToDTO(saved);
+    }
+
+    /**
+     * For PIP_LOG documents, populate case-level PIP coverage fields (Tier 3).
+     * Pulls insurer name, claim number, PIP limit, deductible amount + paid from
+     * the AI extraction and updates LegalCase. No-op for non-PIP_LOG documents.
+     *
+     * Update strategy:
+     *   - Insurer name: only set if currently null/blank (don't overwrite manual entry)
+     *   - Claim number: only set if currently null/blank
+     *   - PIP limit / deductible / deductible-paid: ALWAYS overwrite — these are
+     *     numeric facts from the carrier's official log, more authoritative than
+     *     anything that could have been entered manually elsewhere.
+     */
+    private void applyPipCoverageToCase(Long caseId, Long orgId, Map<String, Object> analysis) {
+        if (analysis == null) return;
+        String docType = String.valueOf(analysis.getOrDefault("documentType", ""));
+        if (!"PIP_LOG".equalsIgnoreCase(docType)) return;
+
+        try {
+            Optional<LegalCase> caseOpt = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId);
+            if (caseOpt.isEmpty()) {
+                log.warn("PIP coverage extraction: case {} not found in org {}", caseId, orgId);
+                return;
+            }
+            LegalCase legalCase = caseOpt.get();
+            boolean updated = false;
+
+            // Insurer name: ALWAYS overwrite from PIP_LOG. The PIP log is issued BY the PIP
+            // carrier, so its letterhead is the authoritative source for "who is processing
+            // this PIP claim". Any pre-existing clientInsuranceCompany value (manual entry,
+            // earlier scan of a different doc) is less authoritative than the carrier's own
+            // claim correspondence.
+            String insurer = safeString(analysis.get("providerName"));
+            if (insurer != null && !insurer.isBlank()) {
+                legalCase.setClientInsuranceCompany(insurer);
+                updated = true;
+            }
+
+            // Claim number: ALWAYS overwrite for the same reason — the carrier's own log
+            // is the source of truth for the claim number it assigned.
+            String claimNumber = safeString(analysis.get("claimNumber"));
+            if (claimNumber != null && !claimNumber.isBlank()) {
+                legalCase.setClientInsuranceClaimNumber(claimNumber);
+                updated = true;
+            }
+
+            // Numeric coverage values: always overwrite from the PIP log (it's authoritative).
+            // Each only updates if AI returned a positive value (null/zero means "not in document").
+            Double pipLimit = parseDoubleValue(analysis.get("pipLimit"));
+            if (pipLimit != null && pipLimit > 0) {
+                legalCase.setClientInsurancePipLimit(pipLimit);
+                updated = true;
+            }
+            Double pipDeductible = parseDoubleValue(analysis.get("pipDeductible"));
+            if (pipDeductible != null && pipDeductible >= 0) {
+                legalCase.setClientInsurancePipDeductible(pipDeductible);
+                updated = true;
+            }
+            Double pipDeductiblePaid = parseDoubleValue(analysis.get("pipDeductiblePaid"));
+            if (pipDeductiblePaid != null && pipDeductiblePaid >= 0) {
+                legalCase.setClientInsurancePipDeductiblePaid(pipDeductiblePaid);
+                updated = true;
+            }
+
+            if (updated) {
+                legalCaseRepository.save(legalCase);
+                log.info("Applied PIP coverage to case {}: insurer={}, claim={}, limit={}, deductible={}/{}",
+                        caseId, insurer, claimNumber, pipLimit, pipDeductiblePaid, pipDeductible);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to apply PIP coverage to case {}: {}", caseId, e.getMessage());
+        }
     }
 
     private void sendProgress(Consumer<Map<String, Object>> onProgress, Long caseId,
@@ -919,6 +994,8 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         log.info("Created medical record {} from file {}", saved.getId(), file.getOriginalName());
         // Cache the AI extraction so /reprocess can re-create the record without re-calling Bedrock
         trackScannedDocument(caseId, orgId, fileId, "created", saved.getId(), null, analysisResult);
+        // For PIP_LOG documents, also populate case-level PIP coverage fields (Tier 3)
+        applyPipCoverageToCase(caseId, orgId, analysisResult);
         return mapToDTO(saved);
     }
 
@@ -1271,6 +1348,10 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 ],
                 "billedAmount": 0.00,
                 "paidAmount": 0.00,
+                "claimNumber": "AU10769451 (PIP_LOG only — null otherwise)",
+                "pipLimit": 8000.00,
+                "pipDeductible": 500.00,
+                "pipDeductiblePaid": 500.00,
                 "vitals": {
                     "bp": "129/80", "hr": 80, "weight_lbs": 133, "height": "5'5\\"",
                     "bmi": 22.13, "pain": "4/10", "temp_f": 98.0, "resp": 18, "spo2": 99
@@ -1333,6 +1414,12 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 * Set paidAmount to the TOTAL paid-to-date shown on the log (this is real data we want to capture)
                 * Set providerName to the INSURER name (e.g., "Commerce Insurance Company"), NOT the line-item provider names
                 * Set treatmentDate to null (the log spans many encounters)
+                * ALSO populate these PIP-coverage fields (set each to null if not visible in the document — NEVER guess):
+                  - "claimNumber": the carrier's claim number, exactly as printed (e.g., "AU10769451")
+                  - "pipLimit": the PIP coverage limit in dollars as a number (typically 8000 in MA)
+                  - "pipDeductible": the agreed deductible amount in dollars as a number
+                  - "pipDeductiblePaid": the deductible actually paid by the client to date (often equal to pipDeductible if fully paid)
+                For NON-PIP-LOG documents, omit claimNumber/pipLimit/pipDeductible/pipDeductiblePaid (or set to null).
             - For providerName, always use the OFFICIAL institution name exactly as it appears on the letterhead/header of the document. Do not combine or abbreviate differently across documents from the same facility. NEVER concatenate provider names from different facilities.
             - Extract the most accurate provider name from the letterhead or document header
             - Include all diagnoses with ICD codes if available

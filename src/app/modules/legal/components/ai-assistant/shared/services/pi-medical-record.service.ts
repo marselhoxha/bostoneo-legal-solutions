@@ -135,4 +135,22 @@ export class PIMedicalRecordService {
       map(response => response.data?.record || null)
     );
   }
+
+  /**
+   * Re-run persistence/merge logic against cached AI extractions stored on
+   * pi_scanned_documents.raw_extraction. Does NOT call Bedrock — eliminates
+   * token cost when iterating on createRecordFromAnalysis or merge logic.
+   *
+   * Backend endpoint is gated to dev+staging only via @Profile (see
+   * PIReprocessController) — production returns 404. Callers should hide
+   * the UI button on prod via {@code isReprocessAvailable()}.
+   *
+   * Returns: { success, replayedDocuments, recordsCreated, records, errors,
+   *           usedCache, aiCallsAvoided }
+   */
+  reprocessCaseDocuments(caseId: number): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/${caseId}/medical-records/reprocess`, {}).pipe(
+      map(response => response.data)
+    );
+  }
 }

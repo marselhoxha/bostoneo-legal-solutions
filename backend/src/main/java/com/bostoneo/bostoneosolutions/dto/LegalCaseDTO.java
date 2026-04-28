@@ -149,6 +149,12 @@ public class LegalCaseDTO {
     private String clientInsuranceAdjusterEmail;
     private String clientInsuranceAdjusterPhone;
 
+    // PIP coverage details (Tier 3 — populated from PIP_LOG documents during medical scan)
+    private String clientInsuranceClaimNumber;
+    private Double clientInsurancePipLimit;
+    private Double clientInsurancePipDeductible;
+    private Double clientInsurancePipDeductiblePaid;
+
     // Employer Information
     private String employerName;
     private String employerEmail;

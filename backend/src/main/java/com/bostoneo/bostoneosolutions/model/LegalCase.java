@@ -261,6 +261,25 @@ public class LegalCase {
     @Column(name = "client_insurance_adjuster_phone", length = 255)
     private String clientInsuranceAdjusterPhone;
 
+    // PIP claim number (e.g., "AU10769451"). Distinct from clientInsurancePolicyNumber —
+    // policy is the umbrella auto policy; claim is the specific PIP claim opened post-MVA.
+    // Encrypted because it links a specific person to a specific accident with the carrier.
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "client_insurance_claim_number", columnDefinition = "TEXT")
+    private String clientInsuranceClaimNumber;
+
+    // PIP coverage amount (typically $8,000 in MA, $10K in some other states).
+    @Column(name = "client_insurance_pip_limit")
+    private Double clientInsurancePipLimit;
+
+    // PIP deductible amount agreed to in the policy ($250-$2,000 typical range).
+    @Column(name = "client_insurance_pip_deductible")
+    private Double clientInsurancePipDeductible;
+
+    // PIP deductible actually paid by client to date.
+    @Column(name = "client_insurance_pip_deductible_paid")
+    private Double clientInsurancePipDeductiblePaid;
+
     // Employer Information (for wage documentation requests)
     @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "employer_name")
