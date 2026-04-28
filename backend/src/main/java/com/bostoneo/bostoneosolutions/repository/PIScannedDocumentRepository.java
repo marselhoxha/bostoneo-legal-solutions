@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -45,4 +46,18 @@ public interface PIScannedDocumentRepository extends JpaRepository<PIScannedDocu
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM PIScannedDocument s WHERE s.medicalRecordId = :medicalRecordId")
     void deleteByMedicalRecordId(@Param("medicalRecordId") Long medicalRecordId);
+
+    /**
+     * Find all scanned documents for a case that have a cached AI extraction.
+     * Used by the /reprocess endpoint to replay persistence/merge logic without
+     * re-calling Bedrock. Ordered by createdAt so reprocess preserves the original
+     * scan order — this matters because mergeAnalysisIntoRecord behavior depends on
+     * the order in which records arrive (e.g., clinical-vs-billing absorption).
+     */
+    @Query("SELECT s FROM PIScannedDocument s " +
+           "WHERE s.caseId = :caseId AND s.organizationId = :organizationId " +
+           "AND s.rawExtraction IS NOT NULL " +
+           "ORDER BY s.createdAt ASC")
+    List<PIScannedDocument> findCachedExtractionsByCase(
+            @Param("caseId") Long caseId, @Param("organizationId") Long organizationId);
 }

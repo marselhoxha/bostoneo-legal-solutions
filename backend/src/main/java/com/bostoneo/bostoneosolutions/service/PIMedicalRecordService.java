@@ -128,6 +128,22 @@ public interface PIMedicalRecordService {
     Map<String, Object> scanCaseDocuments(Long caseId, Consumer<Map<String, Object>> onProgress, boolean force);
 
     /**
+     * Re-run persistence + merge logic against the cached AI extractions stored on
+     * pi_scanned_documents.raw_extraction — does NOT call Bedrock. Eliminates token
+     * cost when iterating on createRecordFromAnalysis or mergeAnalysisIntoRecord
+     * behavior. Existing PIMedicalRecord rows for the case are deleted first; records
+     * are then recreated by replaying each cached extraction in original scan order.
+     *
+     * Only useful in dev/staging where the /reprocess endpoint is exposed; production
+     * doesn't gain anything since prompt iteration doesn't happen there. Returns a
+     * summary map mirroring scanCaseDocuments output.
+     *
+     * @param caseId The case ID
+     * @return Reprocess results: replayedDocuments, recordsCreated, errors, skipped
+     */
+    Map<String, Object> reprocessCaseDocuments(Long caseId);
+
+    /**
      * Analyze a specific file and extract medical record data using AI
      *
      * @param caseId The case ID

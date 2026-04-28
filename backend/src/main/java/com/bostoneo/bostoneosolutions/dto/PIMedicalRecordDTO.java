@@ -35,6 +35,10 @@ public class PIMedicalRecordDTO {
     private String providerPhone;
     private String providerFax;
 
+    // Treating clinician (the actual person who signed/co-signed) — distinct from provider_name (facility)
+    private String treatingClinician;
+    private String treatingRole;
+
     // Records Department Contact
     private String recordsEmail;
     private String recordsPhone;
@@ -57,6 +61,13 @@ public class PIMedicalRecordDTO {
     private List<Map<String, Object>> diagnoses;
     private List<Map<String, Object>> procedures;
 
+    // Tier 2 clinical detail
+    private Map<String, Object> vitals;
+    private Map<String, Object> rangeOfMotion;
+    private List<Map<String, Object>> specialTests;
+    private List<Map<String, Object>> medicationsAdministered;
+    private List<Map<String, Object>> medicationsPrescribed;
+
     // Billing Information
     private BigDecimal billedAmount;
     private BigDecimal adjustedAmount;
@@ -70,6 +81,10 @@ public class PIMedicalRecordDTO {
     private String prognosisNotes;
     private String workRestrictions;
     private String followUpRecommendations;
+
+    // Causation (Tier 2): verbatim MVA causation quote with attribution
+    private String causationStatement;
+    private String causationSource;
 
     // Completeness Tracking
     private Boolean isComplete;

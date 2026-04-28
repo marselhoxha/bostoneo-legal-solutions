@@ -54,6 +54,10 @@ export interface PIMedicalRecord {
   providerPhone?: string;
   providerFax?: string;
 
+  // Treating clinician (the actual person who signed the note) — distinct from providerName (facility)
+  treatingClinician?: string;
+  treatingRole?: string;
+
   // Record Type & Dates
   recordType: string;
   treatmentDate: string;
@@ -62,6 +66,17 @@ export interface PIMedicalRecord {
   // Clinical Information
   diagnoses?: Diagnosis[];
   procedures?: Procedure[];
+
+  // Tier 2 clinical detail
+  vitals?: {
+    bp?: string; hr?: number; weight_lbs?: number; height?: string;
+    bmi?: number; pain?: string; temp_f?: number; resp?: number; spo2?: number;
+    [key: string]: any;
+  };
+  rangeOfMotion?: { [region: string]: { [motion: string]: number } };
+  specialTests?: Array<{ name: string; side?: string; result?: string }>;
+  medicationsAdministered?: Array<{ name: string; dose?: string; route?: string; frequency?: string }>;
+  medicationsPrescribed?: Array<{ name: string; dose?: string; frequency?: string; duration?: string }>;
 
   // Billing Information
   billedAmount?: number;
@@ -76,6 +91,10 @@ export interface PIMedicalRecord {
   prognosisNotes?: string;
   workRestrictions?: string;
   followUpRecommendations?: string;
+
+  // Causation (Tier 2): verbatim MVA causation quote with attribution
+  causationStatement?: string;
+  causationSource?: string;
 
   // Completeness Tracking
   isComplete?: boolean;

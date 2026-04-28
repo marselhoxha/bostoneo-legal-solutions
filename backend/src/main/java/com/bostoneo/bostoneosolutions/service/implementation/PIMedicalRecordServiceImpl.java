@@ -341,11 +341,18 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 .providerAddress(entity.getProviderAddress())
                 .providerPhone(entity.getProviderPhone())
                 .providerFax(entity.getProviderFax())
+                .treatingClinician(entity.getTreatingClinician())
+                .treatingRole(entity.getTreatingRole())
                 .recordType(entity.getRecordType())
                 .treatmentDate(entity.getTreatmentDate())
                 .treatmentEndDate(entity.getTreatmentEndDate())
                 .diagnoses(entity.getDiagnoses())
                 .procedures(entity.getProcedures())
+                .vitals(entity.getVitals())
+                .rangeOfMotion(entity.getRangeOfMotion())
+                .specialTests(entity.getSpecialTests())
+                .medicationsAdministered(entity.getMedicationsAdministered())
+                .medicationsPrescribed(entity.getMedicationsPrescribed())
                 .billedAmount(entity.getBilledAmount())
                 .adjustedAmount(entity.getAdjustedAmount())
                 .paidAmount(entity.getPaidAmount())
@@ -356,6 +363,8 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 .prognosisNotes(entity.getPrognosisNotes())
                 .workRestrictions(entity.getWorkRestrictions())
                 .followUpRecommendations(entity.getFollowUpRecommendations())
+                .causationStatement(entity.getCausationStatement())
+                .causationSource(entity.getCausationSource())
                 .isComplete(entity.getIsComplete())
                 .missingElements(entity.getMissingElements())
                 .documentId(entity.getDocumentId())
@@ -519,7 +528,9 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                     continue;
                 }
 
-                // Analyze the file and create record
+                // Analyze the file and create record. Tracking (created/merged status + raw AI
+                // extraction caching) happens INSIDE analyzeFileAndCreateRecord — the scan loop
+                // only handles the non-medical/insurance/failed branches below.
                 PIMedicalRecordDTO record = analyzeFileAndCreateRecord(caseId, file.getId());
                 if (record != null && countedRecordIds.add(record.getId())) {
                     createdRecords.add(record);
@@ -527,16 +538,12 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                     fileResult.put("recordId", record.getId());
                     fileResult.put("provider", record.getProviderName());
                     fileResult.put("recordType", record.getRecordType());
-                    // Track: new record created from this file
-                    trackScannedDocument(caseId, orgId, file.getId(), "created", record.getId(), null);
                 } else if (record != null) {
                     // Merged into an existing record — mark as success but don't double-count
                     fileResult.put("status", "merged");
                     fileResult.put("recordId", record.getId());
                     fileResult.put("provider", record.getProviderName());
                     fileResult.put("recordType", record.getRecordType());
-                    // Track: merged into existing record
-                    trackScannedDocument(caseId, orgId, file.getId(), "merged", record.getId(), null);
                 } else {
                     // Not a medical document — check if it's an insurance document
                     boolean extractedInsurance = tryExtractInsuranceInfo(caseId, orgId, file);
@@ -597,6 +604,143 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         return result;
     }
 
+    @Override
+    @Transactional
+    public Map<String, Object> reprocessCaseDocuments(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        log.info("Reprocessing case {} from cached extractions (no AI calls) in org {}", caseId, orgId);
+
+        // Pull cached extractions in original scan order. The order matters: mergeAnalysisIntoRecord
+        // can produce different end-states depending on which doc lands first (e.g., a clinical doc
+        // arriving before its bill upgrades the recordType differently than the reverse).
+        List<PIScannedDocument> cached = scannedDocumentRepository.findCachedExtractionsByCase(caseId, orgId);
+        Map<String, Object> result = new HashMap<>();
+
+        if (cached.isEmpty()) {
+            log.warn("Reprocess called for case {} but no cached extractions found — has the case been scanned with V55+?", caseId);
+            result.put("success", false);
+            result.put("message", "No cached AI extractions found for this case. Run a fresh scan first to populate the cache.");
+            result.put("replayedDocuments", 0);
+            result.put("recordsCreated", 0);
+            return result;
+        }
+
+        // Wipe existing records + summary so we replay onto a clean slate.
+        // We deliberately KEEP the pi_scanned_documents rows (cache survives) — only clear the
+        // medical-records side. Without this, mergeAnalysisIntoRecord would compose with whatever
+        // stale state the previous reprocess/scan left behind.
+        log.info("Reprocess: clearing {} existing medical records for case {} before replay",
+                repository.countByCaseIdAndOrganizationId(caseId, orgId), caseId);
+        repository.deleteByCaseIdAndOrganizationId(caseId, orgId);
+        summaryRepository.deleteByCaseIdAndOrganizationId(caseId, orgId);
+        // Reset case-level medical-expenses total so the dashboard reflects the cleared state.
+        legalCaseRepository.resetMedicalExpensesTotal(caseId, orgId);
+
+        List<PIMedicalRecordDTO> replayedRecords = new ArrayList<>();
+        Set<Long> countedRecordIds = new HashSet<>();
+        List<String> errors = new ArrayList<>();
+
+        for (PIScannedDocument scan : cached) {
+            try {
+                Map<String, Object> analysis = scan.getRawExtraction();
+                if (analysis == null) continue;  // defensive — query already filters but belt-and-suspenders
+
+                // Replay the full creation/merge flow against the cached analysis.
+                // We bypass extractTextFromFile + analyzeDocumentWithAI entirely — those are the
+                // expensive steps. The cheap deterministic part (provider normalization, date
+                // validation, find-or-merge, persist) runs fresh against the current Java code.
+                PIMedicalRecordDTO record = replayAnalysisAsRecord(caseId, orgId, scan.getDocumentId(), analysis);
+                if (record == null) continue;
+
+                if (countedRecordIds.add(record.getId())) {
+                    replayedRecords.add(record);
+                }
+            } catch (Exception e) {
+                log.error("Failed to replay scan {} for case {}: {}", scan.getId(), caseId, e.getMessage(), e);
+                errors.add(String.format("scanId=%d documentId=%d: %s", scan.getId(), scan.getDocumentId(), e.getMessage()));
+            }
+        }
+
+        // Mark summary stale so next /medical-summary call regenerates it from the new records
+        summaryRepository.markAsStale(caseId, orgId);
+
+        result.put("success", true);
+        result.put("replayedDocuments", cached.size());
+        result.put("recordsCreated", replayedRecords.size());
+        result.put("records", replayedRecords);
+        result.put("errors", errors);
+        result.put("usedCache", true);
+        result.put("aiCallsAvoided", cached.size());
+
+        log.info("Reprocess complete for case {}: {} records from {} cached extractions ({} errors). " +
+                "AI calls avoided: {}", caseId, replayedRecords.size(), cached.size(), errors.size(), cached.size());
+        return result;
+    }
+
+    /**
+     * Replay a single cached AI extraction through the create/merge pipeline. Mirrors the body
+     * of analyzeFileAndCreateRecord but skips text extraction + AI call — the analysis Map is
+     * already in hand. Does NOT update the cache (the cache is the source).
+     */
+    private PIMedicalRecordDTO replayAnalysisAsRecord(Long caseId, Long orgId, Long fileId,
+                                                       Map<String, Object> analysisResult) {
+        if (analysisResult == null || !Boolean.TRUE.equals(analysisResult.get("isMedicalDocument"))) {
+            return null;
+        }
+
+        // Same provider normalization that the live scan path uses
+        String rawProviderName = (String) analysisResult.getOrDefault("providerName", "Unknown Provider");
+        String normalizedProvider = normalizeProviderName(rawProviderName);
+        analysisResult.put("providerName", normalizedProvider);
+
+        // Same date parsing + future-date guard as the live scan path
+        String dateStr = (String) analysisResult.get("treatmentDate");
+        LocalDate treatmentDate = null;
+        if (dateStr != null && !dateStr.isEmpty()) {
+            try {
+                treatmentDate = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
+            } catch (Exception ignore) {}
+        }
+        if (treatmentDate != null && treatmentDate.isAfter(LocalDate.now())) {
+            treatmentDate = null;
+        }
+
+        String newDocType = (String) analysisResult.getOrDefault("documentType", "OTHER");
+        String mappedRecordType = mapDocumentTypeToRecordType(newDocType);
+        boolean isBillingDoc = "BILLING".equals(mappedRecordType);
+        boolean isInsuranceLedger = "INSURANCE_LEDGER".equals(mappedRecordType);
+
+        if (treatmentDate != null && !isInsuranceLedger) {
+            Optional<PIMedicalRecord> existingOpt;
+            if (isBillingDoc) {
+                existingOpt = repository.findByCaseAndProviderAndDate(caseId, orgId, normalizedProvider, treatmentDate);
+            } else {
+                existingOpt = repository.findByCaseAndProviderAndDateAndRecordType(
+                        caseId, orgId, normalizedProvider, treatmentDate, mappedRecordType);
+                if (existingOpt.isEmpty()) {
+                    Optional<PIMedicalRecord> billingOnly = repository.findByCaseAndProviderAndDate(
+                            caseId, orgId, normalizedProvider, treatmentDate);
+                    if (billingOnly.isPresent() && "BILLING".equals(billingOnly.get().getRecordType())) {
+                        existingOpt = billingOnly;
+                    }
+                }
+            }
+            if (existingOpt.isPresent()) {
+                PIMedicalRecord existing = existingOpt.get();
+                mergeAnalysisIntoRecord(existing, fileId, analysisResult);
+                if (!isBillingDoc && "BILLING".equals(existing.getRecordType())) {
+                    existing.setRecordType(mappedRecordType);
+                }
+                PIMedicalRecord saved = repository.save(existing);
+                return mapToDTO(saved);
+            }
+        }
+
+        PIMedicalRecord record = createRecordFromAnalysis(caseId, orgId, fileId, analysisResult);
+        PIMedicalRecord saved = repository.save(record);
+        return mapToDTO(saved);
+    }
+
     private void sendProgress(Consumer<Map<String, Object>> onProgress, Long caseId,
                                int current, int total, String currentFile) {
         if (onProgress == null) return;
@@ -617,9 +761,22 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
     /**
      * Track the processing outcome of a file in the pi_scanned_documents table.
      * Prevents re-processing on subsequent scans. Uses upsert semantics via unique constraint.
+     * Backward-compat overload — calls the variant that accepts rawExtraction with null.
      */
     private void trackScannedDocument(Long caseId, Long orgId, Long documentId,
                                        String status, Long medicalRecordId, String errorMessage) {
+        trackScannedDocument(caseId, orgId, documentId, status, medicalRecordId, errorMessage, null);
+    }
+
+    /**
+     * Track the processing outcome of a file, including the raw AI response for caching.
+     * The cached rawExtraction lets the /reprocess endpoint (dev/staging only) re-run
+     * persistence/merge logic without re-calling Bedrock. NULL is fine for outcomes that
+     * didn't produce AI output (non_medical via insurance fallback, no_text, failed).
+     */
+    private void trackScannedDocument(Long caseId, Long orgId, Long documentId,
+                                       String status, Long medicalRecordId, String errorMessage,
+                                       Map<String, Object> rawExtraction) {
         try {
             PIScannedDocument tracked = PIScannedDocument.builder()
                     .caseId(caseId)
@@ -628,6 +785,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                     .status(status)
                     .medicalRecordId(medicalRecordId)
                     .errorMessage(errorMessage)
+                    .rawExtraction(rawExtraction)
                     .build();
             scannedDocumentRepository.save(tracked);
         } catch (Exception e) {
@@ -661,8 +819,10 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         }
 
         // Limit text length for API
-        String textForAnalysis = extractedText.length() > 15000
-                ? extractedText.substring(0, 15000)
+        // 30K char cap — large enough to capture vitals/ROM/special tests across multi-page
+        // clinical notes (Tier 2 extraction needs more context than the legacy 15K cap allowed).
+        String textForAnalysis = extractedText.length() > 30000
+                ? extractedText.substring(0, 30000)
                 : extractedText;
 
         // Use AI to analyze the document
@@ -746,6 +906,8 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 PIMedicalRecord saved = repository.save(existing);
                 log.info("Merged file {} into existing record {} (provider '{}', date {}, billing={})",
                         fileId, saved.getId(), normalizedProvider, treatmentDate, isBillingDoc);
+                // Cache the AI extraction so /reprocess can replay merge logic without re-calling Bedrock
+                trackScannedDocument(caseId, orgId, fileId, "merged", saved.getId(), null, analysisResult);
                 return mapToDTO(saved);
             }
         }
@@ -755,6 +917,8 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         PIMedicalRecord saved = repository.save(record);
 
         log.info("Created medical record {} from file {}", saved.getId(), file.getOriginalName());
+        // Cache the AI extraction so /reprocess can re-create the record without re-calling Bedrock
+        trackScannedDocument(caseId, orgId, fileId, "created", saved.getId(), null, analysisResult);
         return mapToDTO(saved);
     }
 
@@ -809,10 +973,277 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         return null;
     }
 
+    // Chunking config: when extracted text > 100K, split into 90K chunks with 10K overlap.
+    // Caps total processed text at 5 chunks (450K chars / ~150 pages) to bound token cost
+    // on pathologically large attachments. For Marsel's 59-page Team Rehab bundle (~180K chars),
+    // this produces 3 chunks instead of silently dropping the back half of the document.
+    private static final int SINGLE_PASS_MAX_CHARS = 100_000;
+    private static final int CHUNK_SIZE_CHARS = 90_000;
+    private static final int CHUNK_OVERLAP_CHARS = 10_000;
+    private static final int MAX_CHUNKS = 5;
+
     private Map<String, Object> analyzeDocumentWithAI(String fileName, String documentText) {
+        if (documentText.length() <= SINGLE_PASS_MAX_CHARS) {
+            return analyzeChunkWithAI(fileName, documentText, null);
+        }
+
+        // Document too large for a single AI call — chunk with overlap and merge results.
+        List<String> chunks = chunkText(documentText);
+        log.info("Document '{}' ({} chars) split into {} chunks for AI analysis",
+                fileName, documentText.length(), chunks.size());
+
+        List<Map<String, Object>> chunkResults = new ArrayList<>();
+        for (int i = 0; i < chunks.size(); i++) {
+            String label = String.format("part %d of %d", i + 1, chunks.size());
+            Map<String, Object> result = analyzeChunkWithAI(fileName, chunks.get(i), label);
+            if (result != null) {
+                chunkResults.add(result);
+            } else {
+                log.warn("Chunk {} of {} returned null for '{}'", i + 1, chunks.size(), fileName);
+            }
+        }
+
+        if (chunkResults.isEmpty()) {
+            log.error("All {} chunks failed analysis for '{}'", chunks.size(), fileName);
+            return null;
+        }
+        return mergeChunkResults(chunkResults);
+    }
+
+    /**
+     * Split text into overlapping chunks. Each chunk is up to CHUNK_SIZE_CHARS;
+     * adjacent chunks share CHUNK_OVERLAP_CHARS so context isn't lost at boundaries
+     * (e.g., a visit note that straddles chunks is visible to both AI calls).
+     * Hard cap of MAX_CHUNKS bounds token cost; the tail of the document past that
+     * is silently dropped — Tier 6 (visit-aware splitting) is the correct long-term fix.
+     */
+    private List<String> chunkText(String text) {
+        List<String> chunks = new ArrayList<>();
+        int start = 0;
+        while (start < text.length() && chunks.size() < MAX_CHUNKS) {
+            int end = Math.min(start + CHUNK_SIZE_CHARS, text.length());
+            chunks.add(text.substring(start, end));
+            if (end == text.length()) break;
+            start = end - CHUNK_OVERLAP_CHARS;
+        }
+        return chunks;
+    }
+
+    /**
+     * Merge per-chunk extraction results into a single record-shaped Map.
+     * Per-field merge rules are tuned to how clinical-doc data actually distributes
+     * across chunks of a long records bundle:
+     *   - providerName / providerType: longest non-empty (consistent across chunks)
+     *   - treatmentDate: earliest non-null (anchor on first encounter date)
+     *   - treatmentEndDate: latest non-null (captures the document's full span)
+     *   - diagnoses / procedures: union by code (ICD / CPT)
+     *   - specialTests / medications*: union all (each chunk may surface different ones)
+     *   - billedAmount / paidAmount: max (totals usually appear in only one chunk)
+     *   - vitals / rangeOfMotion: from first chunk that has data (vitals are per-encounter,
+     *     and the first chunk is most likely to contain the initial-eval vitals)
+     *   - keyFindings / treatmentProvided: concatenate all non-empty (each chunk has different findings)
+     *   - prognosisNotes / workRestrictions / causationStatement: longest non-empty (one strong quote beats fragments)
+     *   - treatingClinician / treatingRole / causationSource: first non-empty
+     *   - citationMetadata: from chunk with the most populated fields (best single citation set)
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> mergeChunkResults(List<Map<String, Object>> chunks) {
+        if (chunks.size() == 1) return chunks.get(0);
+
+        Map<String, Object> merged = new java.util.LinkedHashMap<>();
+
+        // Boolean: any chunk saying yes wins
+        merged.put("isMedicalDocument", chunks.stream()
+                .anyMatch(c -> Boolean.TRUE.equals(c.get("isMedicalDocument"))));
+
+        // documentType: take from first chunk that returned a non-OTHER value
+        String docType = chunks.stream()
+                .map(c -> (String) c.get("documentType"))
+                .filter(t -> t != null && !t.isBlank() && !"OTHER".equalsIgnoreCase(t))
+                .findFirst()
+                .orElseGet(() -> chunks.stream()
+                        .map(c -> (String) c.get("documentType"))
+                        .filter(t -> t != null && !t.isBlank())
+                        .findFirst().orElse("OTHER"));
+        merged.put("documentType", docType);
+
+        // Strings — first / longest non-empty
+        putLongestNonEmptyString(merged, chunks, "providerName");
+        putLongestNonEmptyString(merged, chunks, "providerType");
+        putFirstNonEmptyString(merged, chunks, "treatingClinician");
+        putFirstNonEmptyString(merged, chunks, "treatingRole");
+        putFirstNonEmptyString(merged, chunks, "causationSource");
+        putLongestNonEmptyString(merged, chunks, "prognosisNotes");
+        putLongestNonEmptyString(merged, chunks, "workRestrictions");
+        putLongestNonEmptyString(merged, chunks, "causationStatement");
+
+        // Concatenated findings (each chunk has unique findings)
+        putConcatenatedString(merged, chunks, "keyFindings");
+        putConcatenatedString(merged, chunks, "treatmentProvided");
+
+        // Dates — earliest start, latest end
+        putEarliestDateString(merged, chunks, "treatmentDate");
+        putLatestDateString(merged, chunks, "treatmentEndDate");
+
+        // Numeric — max (totals usually appear once)
+        putMaxNumber(merged, chunks, "billedAmount");
+        putMaxNumber(merged, chunks, "paidAmount");
+
+        // List<Map> unions — by ICD/CPT for diagnoses/procedures, by structural identity otherwise
+        putUnionByKey(merged, chunks, "diagnoses", "icd_code");
+        putUnionByKey(merged, chunks, "procedures", "cpt_code");
+        putUnionAll(merged, chunks, "specialTests");
+        putUnionAll(merged, chunks, "medicationsAdministered");
+        putUnionAll(merged, chunks, "medicationsPrescribed");
+
+        // Map<String,Object> — first non-empty (vitals/ROM are per-encounter, take first observation)
+        putFirstNonEmptyMap(merged, chunks, "vitals");
+        putFirstNonEmptyMap(merged, chunks, "rangeOfMotion");
+
+        // Citation metadata — take from chunk with the most populated fields (best single source)
+        Map<String, Object> bestCitations = chunks.stream()
+                .map(c -> (Map<String, Object>) c.get("citationMetadata"))
+                .filter(m -> m != null && !m.isEmpty())
+                .max(Comparator.comparingInt(Map::size))
+                .orElse(null);
+        if (bestCitations != null) merged.put("citationMetadata", bestCitations);
+
+        return merged;
+    }
+
+    // --- mergeChunkResults helpers -------------------------------------------------
+
+    private void putFirstNonEmptyString(Map<String, Object> merged, List<Map<String, Object>> chunks, String key) {
+        chunks.stream()
+                .map(c -> (String) c.get(key))
+                .filter(s -> s != null && !s.isBlank())
+                .findFirst()
+                .ifPresent(s -> merged.put(key, s));
+    }
+
+    private void putLongestNonEmptyString(Map<String, Object> merged, List<Map<String, Object>> chunks, String key) {
+        chunks.stream()
+                .map(c -> (String) c.get(key))
+                .filter(s -> s != null && !s.isBlank())
+                .max(Comparator.comparingInt(String::length))
+                .ifPresent(s -> merged.put(key, s));
+    }
+
+    private void putConcatenatedString(Map<String, Object> merged, List<Map<String, Object>> chunks, String key) {
+        // Deduplicate near-identical findings (chunk overlap can produce them)
+        java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
+        for (Map<String, Object> c : chunks) {
+            String s = (String) c.get(key);
+            if (s != null && !s.isBlank()) {
+                String trimmed = s.trim();
+                // Skip if a longer version of this content is already present
+                boolean isDup = seen.stream().anyMatch(existing ->
+                        existing.toLowerCase().contains(trimmed.toLowerCase()) ||
+                                trimmed.toLowerCase().contains(existing.toLowerCase()));
+                if (!isDup) seen.add(trimmed);
+            }
+        }
+        if (!seen.isEmpty()) merged.put(key, String.join(" | ", seen));
+    }
+
+    private void putEarliestDateString(Map<String, Object> merged, List<Map<String, Object>> chunks, String key) {
+        chunks.stream()
+                .map(c -> (String) c.get(key))
+                .filter(s -> s != null && !s.isBlank())
+                .min(Comparator.naturalOrder())  // ISO YYYY-MM-DD strings sort lexicographically
+                .ifPresent(s -> merged.put(key, s));
+    }
+
+    private void putLatestDateString(Map<String, Object> merged, List<Map<String, Object>> chunks, String key) {
+        chunks.stream()
+                .map(c -> (String) c.get(key))
+                .filter(s -> s != null && !s.isBlank())
+                .max(Comparator.naturalOrder())
+                .ifPresent(s -> merged.put(key, s));
+    }
+
+    private void putMaxNumber(Map<String, Object> merged, List<Map<String, Object>> chunks, String key) {
+        chunks.stream()
+                .map(c -> c.get(key))
+                .filter(Objects::nonNull)
+                .mapToDouble(o -> {
+                    if (o instanceof Number) return ((Number) o).doubleValue();
+                    if (o instanceof String) {
+                        String s = ((String) o).replaceAll("[^\\d.]", "");
+                        try { return s.isEmpty() ? 0.0 : Double.parseDouble(s); }
+                        catch (Exception e) { return 0.0; }
+                    }
+                    return 0.0;
+                })
+                .max()
+                .ifPresent(max -> { if (max > 0) merged.put(key, max); });
+    }
+
+    @SuppressWarnings("unchecked")
+    private void putUnionByKey(Map<String, Object> merged, List<Map<String, Object>> chunks, String key, String dedupKey) {
+        java.util.LinkedHashMap<String, Map<String, Object>> byKey = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> c : chunks) {
+            List<Map<String, Object>> list = (List<Map<String, Object>>) c.get(key);
+            if (list == null) continue;
+            for (Map<String, Object> item : list) {
+                String code = String.valueOf(item.getOrDefault(dedupKey, ""));
+                if (code.isEmpty()) {
+                    byKey.put("__no_key_" + byKey.size(), item);  // keep items lacking the dedup key
+                } else if (!byKey.containsKey(code)) {
+                    byKey.put(code, item);
+                }
+            }
+        }
+        if (!byKey.isEmpty()) merged.put(key, new ArrayList<>(byKey.values()));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void putUnionAll(Map<String, Object> merged, List<Map<String, Object>> chunks, String key) {
+        // Dedup by structural equality: stringify each Map and check the set
+        java.util.LinkedHashMap<String, Map<String, Object>> seen = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> c : chunks) {
+            List<Map<String, Object>> list = (List<Map<String, Object>>) c.get(key);
+            if (list == null) continue;
+            for (Map<String, Object> item : list) {
+                String sig = item.toString();  // good enough for small flat maps; identical objects produce identical strings
+                seen.putIfAbsent(sig, item);
+            }
+        }
+        if (!seen.isEmpty()) merged.put(key, new ArrayList<>(seen.values()));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void putFirstNonEmptyMap(Map<String, Object> merged, List<Map<String, Object>> chunks, String key) {
+        chunks.stream()
+                .map(c -> (Map<String, Object>) c.get(key))
+                .filter(m -> m != null && !m.isEmpty())
+                .findFirst()
+                .ifPresent(m -> merged.put(key, m));
+    }
+
+    // --- AI call (single chunk) ---------------------------------------------------
+
+    private Map<String, Object> analyzeChunkWithAI(String fileName, String documentText, String chunkLabel) {
+        // When chunkLabel is non-null, this text is part of a multi-chunk document.
+        // Inform the AI so it doesn't hallucinate "missing" fields and keeps citation metadata
+        // page numbers relative to this chunk.
+        String chunkContext = chunkLabel != null
+                ? String.format("""
+
+                IMPORTANT — DOCUMENT IS CHUNKED:
+                This text is %s of a longer document split for analysis.
+                - Extract fields visible in THIS section.
+                - For fields requiring information that may be in OTHER chunks (e.g., total billed amount
+                  if the bill summary isn't in this section, or a provider name if this section lacks the
+                  letterhead), return null/empty rather than guessing.
+                - Page numbers in citationMetadata are relative to THIS chunk only.
+
+                """, chunkLabel)
+                : "";
+
         String prompt = String.format("""
             Analyze this medical document and extract structured information WITH CITATION METADATA.
-
+            %s
             DOCUMENT NAME: %s
 
             DOCUMENT CONTENT:
@@ -831,6 +1262,8 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 "documentType": "ER|PT|IMAGING|CHIROPRACTIC|SURGERY|CONSULTATION|LAB|PRIMARY_CARE|BILLING|PIP_LOG|OTHER",
                 "providerName": "Name of the medical provider/facility",
                 "providerType": "HOSPITAL|PHYSICAL_THERAPY|CHIROPRACTIC|RADIOLOGY|ORTHOPEDICS|NEUROLOGY|PRIMARY_CARE|OTHER",
+                "treatingClinician": "Person who signed/co-signed (e.g., 'Willy Moy, PA-C') or null",
+                "treatingRole": "Credential: PA-C | DPT | DC | MD | DO | NP | PTA | RN | OTHER, or null",
                 "treatmentDate": "YYYY-MM-DD format if found",
                 "treatmentEndDate": "YYYY-MM-DD format if found (for PT, chiro, etc.)",
                 "diagnoses": [
@@ -838,23 +1271,44 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 ],
                 "billedAmount": 0.00,
                 "paidAmount": 0.00,
+                "vitals": {
+                    "bp": "129/80", "hr": 80, "weight_lbs": 133, "height": "5'5\\"",
+                    "bmi": 22.13, "pain": "4/10", "temp_f": 98.0, "resp": 18, "spo2": 99
+                },
+                "rangeOfMotion": {
+                    "cervical": {"flex": 60, "ext": 75, "lat_flex_R": 25, "lat_flex_L": 25, "rot": 80},
+                    "lumbar":   {"flex": 45, "ext": 10, "lat_flex": 15, "rot": 45}
+                },
+                "specialTests": [
+                    {"name": "Lasègue's", "side": "L", "result": "positive"},
+                    {"name": "Kemp's",    "side": "bilateral", "result": "positive"}
+                ],
+                "medicationsAdministered": [
+                    {"name": "Motrin", "dose": "600 mg", "route": "PO", "frequency": "once"}
+                ],
+                "medicationsPrescribed": [
+                    {"name": "Ibuprofen", "dose": "600 mg", "frequency": "q8h", "duration": "10 days"}
+                ],
+                "causationStatement": "Verbatim quote about MVA causation, or null",
+                "causationSource": "Clinician + date attribution (e.g., 'PA Moy 11/11/2025'), or null",
                 "keyFindings": "Brief summary of key clinical findings",
                 "treatmentProvided": "Summary of treatment/procedures performed",
                 "prognosisNotes": "Any prognosis or outcome information",
                 "workRestrictions": "Any work restrictions mentioned",
                 "citationMetadata": {
-                    "treatmentDate": {"page": 1, "excerpt": "Date of Service: 01/15/2024", "charOffset": 150},
-                    "providerName": {"page": 1, "excerpt": "Boston Medical Center", "charOffset": 50},
-                    "recordType": {"page": 1, "excerpt": "Emergency Department Visit", "charOffset": 200},
-                    "keyFindings": {"page": 2, "excerpt": "Patient presents with acute low back pain...", "charOffset": 1500},
+                    "treatmentDate":    {"page": 1, "excerpt": "Date of Service: 01/15/2024", "charOffset": 150},
+                    "providerName":     {"page": 1, "excerpt": "Boston Medical Center", "charOffset": 50},
+                    "treatingClinician":{"page": 1, "excerpt": "Electronically signed by: Willy Moy, PA-C", "charOffset": 75},
+                    "vitals":           {"page": 1, "excerpt": "BP 129/80 HR 80 BMI 22.13", "charOffset": 220},
+                    "specialTests":     {"page": 2, "excerpt": "(+) L Lasègue's, (+) bilateral Kemp's", "charOffset": 1100},
                     "diagnoses": [
                         {"icd_code": "M54.5", "page": 3, "excerpt": "Diagnosis: Lumbar strain (M54.5)", "charOffset": 2800}
                     ],
                     "procedures": [
                         {"cpt_code": "99283", "page": 3, "excerpt": "ED Visit Level III (99283)", "charOffset": 3200}
                     ],
-                    "billedAmount": {"page": 4, "excerpt": "Total Charges: $2,450.00", "charOffset": 4100},
-                    "treatmentProvided": {"page": 2, "excerpt": "Treatment: NSAIDs, muscle relaxants prescribed", "charOffset": 1800}
+                    "billedAmount":    {"page": 4, "excerpt": "Total Charges: $2,450.00", "charOffset": 4100},
+                    "causationStatement": {"page": 3, "excerpt": "to a reasonable degree of medical certainty", "charOffset": 2950}
                 }
             }
 
@@ -883,6 +1337,16 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             - Extract the most accurate provider name from the letterhead or document header
             - Include all diagnoses with ICD codes if available
             - BILLING AMOUNTS MUST BE EXACT — NEVER round, estimate, or approximate dollar amounts. Copy the exact amount from the document to the cent. An incorrect billing amount could have serious legal consequences. If the document shows $2,399.50, report exactly $2,399.50, NOT $2,400. If you cannot determine the exact amount, set billedAmount to 0 rather than guessing.
+            - treatingClinician: extract from "Electronically signed by:" / signature line. Include the credential suffix (e.g., "Willy Moy, PA-C", "Ian Giuttari, DC", "Vivian Bui, DPT"). If absent, return null — DO NOT guess.
+            - treatingRole: clinician's PRIMARY credential. PA-C = Physician Assistant, DPT = Doctor of Physical Therapy, DC = Doctor of Chiropractic, MD = Medical Doctor, DO = Doctor of Osteopathy, NP = Nurse Practitioner, PTA = Physical Therapy Assistant, RN = Registered Nurse. If uncertain, return null.
+            - vitals: ONLY if a vitals strip / vital signs section is present. Use the EXACT NUMBERS from the document. Use null for any field not documented (do not invent).
+            - rangeOfMotion: ONLY measured ROM values, grouped by region (cervical / thoracic / lumbar / shoulder / hip / knee / ankle / wrist). Copy the EXACT degrees. Use null when not measured.
+            - specialTests: orthopedic special tests with side ("L" / "R" / "bilateral") and result ("positive" / "negative"). Common tests: Lasègue's / SLR, Kemp's, Milgram's, Soto Hall, Patrick's / FABER, Hoffmann's, Hawkins, Neer's, Jobe's, MNCT. Empty array if none performed.
+            - medicationsAdministered: meds GIVEN during the encounter (e.g., ED gave Motrin 600mg PO). Empty array if none.
+            - medicationsPrescribed: meds prescribed for HOME USE (e.g., "Rx Ibuprofen 600mg q8h x 10 days"). Empty array if none.
+            - causationStatement: extract VERBATIM any statement explicitly tying findings to the MVA "to a reasonable degree of medical certainty" or "directly related to the accident on..." or "are a direct result of the accident". Copy the exact words. null if no such statement.
+            - causationSource: clinician name + date format like "PA Moy 11/11/2025" or "DC Giuttari 12/04/2025". Pulls from the clinician who issued the causation statement.
+            - For ANY field whose data is not in the document text: set null (string fields), [] (array fields), or omit (object fields). NEVER hallucinate clinical content.
             - Be thorough with key findings
             - ALWAYS include citationMetadata with page numbers and excerpts for traceability
             - Page numbers should be 1-indexed
@@ -895,7 +1359,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             - The excerpt must be searchable in the original document - if you search for it, it must match exactly
 
             Return ONLY the JSON, no additional text.
-            """, fileName, documentText);
+            """, chunkContext, fileName, documentText);
 
         try {
             // Use Sonnet for structured data extraction — 3-5x faster than Opus, equally capable for JSON extraction
@@ -977,20 +1441,28 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             record.setDiagnoses(diagnoses);
         }
 
-        // Billing
-        Object billedObj = analysis.get("billedAmount");
-        if (billedObj != null) {
-            try {
-                if (billedObj instanceof Number) {
-                    record.setBilledAmount(BigDecimal.valueOf(((Number) billedObj).doubleValue()));
-                } else if (billedObj instanceof String) {
-                    String billedStr = ((String) billedObj).replaceAll("[^\\d.]", "");
-                    if (!billedStr.isEmpty()) {
-                        record.setBilledAmount(new BigDecimal(billedStr));
+        // Billing — ONLY persist billedAmount on BILLING-type records.
+        // Clinical documents (ER, PT, etc.) sometimes incidentally contain a "Total Charges" line
+        // (e.g., a discharge summary appended to clinical records). The AI extracts that as
+        // billedAmount, and we'd then double-count it against the actual bill document. The bill
+        // is the single source of truth for charges; clinical records contribute clinical content
+        // only. If a clinical doc is later merged with a billing doc (Tier 1 logic), the merge
+        // path applies the bill's amount via mergeAnalysisIntoRecord.
+        if ("BILLING".equals(record.getRecordType())) {
+            Object billedObj = analysis.get("billedAmount");
+            if (billedObj != null) {
+                try {
+                    if (billedObj instanceof Number) {
+                        record.setBilledAmount(BigDecimal.valueOf(((Number) billedObj).doubleValue()));
+                    } else if (billedObj instanceof String) {
+                        String billedStr = ((String) billedObj).replaceAll("[^\\d.]", "");
+                        if (!billedStr.isEmpty()) {
+                            record.setBilledAmount(new BigDecimal(billedStr));
+                        }
                     }
+                } catch (Exception e) {
+                    log.warn("Could not parse billed amount: {}", billedObj);
                 }
-            } catch (Exception e) {
-                log.warn("Could not parse billed amount: {}", billedObj);
             }
         }
 
@@ -1023,6 +1495,34 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         record.setPrognosisNotes((String) analysis.get("prognosisNotes"));
         record.setWorkRestrictions((String) analysis.get("workRestrictions"));
 
+        // Tier 2: clinician + clinical detail fields
+        record.setTreatingClinician(emptyToNull((String) analysis.get("treatingClinician")));
+        record.setTreatingRole(emptyToNull((String) analysis.get("treatingRole")));
+        record.setCausationStatement(emptyToNull((String) analysis.get("causationStatement")));
+        record.setCausationSource(emptyToNull((String) analysis.get("causationSource")));
+
+        // Vitals & ROM (Map<String,Object> — Hibernate handles JSONB via @JdbcTypeCode)
+        @SuppressWarnings("unchecked")
+        Map<String, Object> vitals = (Map<String, Object>) analysis.get("vitals");
+        if (vitals != null && !vitals.isEmpty()) record.setVitals(vitals);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> rom = (Map<String, Object>) analysis.get("rangeOfMotion");
+        if (rom != null && !rom.isEmpty()) record.setRangeOfMotion(rom);
+
+        // Special tests + medications (List<Map> — same pattern as diagnoses)
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> specialTests = (List<Map<String, Object>>) analysis.get("specialTests");
+        if (specialTests != null && !specialTests.isEmpty()) record.setSpecialTests(specialTests);
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> medsAdmin = (List<Map<String, Object>>) analysis.get("medicationsAdministered");
+        if (medsAdmin != null && !medsAdmin.isEmpty()) record.setMedicationsAdministered(medsAdmin);
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> medsRx = (List<Map<String, Object>>) analysis.get("medicationsPrescribed");
+        if (medsRx != null && !medsRx.isEmpty()) record.setMedicationsPrescribed(medsRx);
+
         // Citation metadata for smart citations feature
         @SuppressWarnings("unchecked")
         Map<String, Object> citationMetadata = (Map<String, Object>) analysis.get("citationMetadata");
@@ -1035,6 +1535,11 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         record.setIsComplete(determineCompleteness(record));
 
         return record;
+    }
+
+    /** Treats the empty string as null. Useful for AI responses where "" and null are both "no data". */
+    private static String emptyToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
     }
 
     private String mapDocumentTypeToRecordType(String docType) {
@@ -1115,24 +1620,33 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             }
         }
 
-        // Add billing amount (accumulate)
-        Object billedObj = analysis.get("billedAmount");
-        if (billedObj != null) {
-            BigDecimal newAmount = null;
-            try {
-                if (billedObj instanceof Number) {
-                    newAmount = BigDecimal.valueOf(((Number) billedObj).doubleValue());
-                } else if (billedObj instanceof String) {
-                    String billedStr = ((String) billedObj).replaceAll("[^\\d.]", "");
-                    if (!billedStr.isEmpty()) newAmount = new BigDecimal(billedStr);
+        // Add billing amount — ONLY when the new doc is a BILLING document.
+        // Clinical notes that incidentally mention a charge are not authoritative; we never want
+        // their billedAmount to influence the record's stored value, even during merge.
+        String newDocTypeForBilling = (String) analysis.getOrDefault("documentType", "OTHER");
+        boolean newIsBilling = "BILLING".equalsIgnoreCase(newDocTypeForBilling)
+                || "INVOICE".equalsIgnoreCase(newDocTypeForBilling);
+        if (newIsBilling) {
+            Object billedObj = analysis.get("billedAmount");
+            if (billedObj != null) {
+                BigDecimal newAmount = null;
+                try {
+                    if (billedObj instanceof Number) {
+                        newAmount = BigDecimal.valueOf(((Number) billedObj).doubleValue());
+                    } else if (billedObj instanceof String) {
+                        String billedStr = ((String) billedObj).replaceAll("[^\\d.]", "");
+                        if (!billedStr.isEmpty()) newAmount = new BigDecimal(billedStr);
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not parse billed amount during merge: {}", billedObj);
                 }
-            } catch (Exception e) {
-                log.warn("Could not parse billed amount during merge: {}", billedObj);
-            }
-            if (newAmount != null && newAmount.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal existingAmount = existing.getBilledAmount() != null ? existing.getBilledAmount() : BigDecimal.ZERO;
-                // Sum billing amounts — two docs from same visit should accumulate, not take the higher value
-                existing.setBilledAmount(existingAmount.add(newAmount));
+                if (newAmount != null && newAmount.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal existingAmount = existing.getBilledAmount() != null ? existing.getBilledAmount() : BigDecimal.ZERO;
+                    // MAX rather than SUM — two billing docs for the same encounter typically reference
+                    // the same total (e.g., a statement and an itemized bill). Max preserves the
+                    // authoritative figure without inflating totals.
+                    existing.setBilledAmount(newAmount.max(existingAmount));
+                }
             }
         }
 
@@ -1179,7 +1693,69 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             }
         }
 
+        // Tier 2: merge clinical detail fields. Strategy: fill if empty (don't overwrite existing data).
+        // Two docs for the same encounter typically agree on these — when they disagree, the first
+        // doc to populate the field wins, which preserves provenance from the most-complete source.
+        if (existing.getTreatingClinician() == null || existing.getTreatingClinician().isBlank()) {
+            String newClinician = (String) analysis.get("treatingClinician");
+            if (newClinician != null && !newClinician.isBlank()) existing.setTreatingClinician(newClinician);
+        }
+        if (existing.getTreatingRole() == null || existing.getTreatingRole().isBlank()) {
+            String newRole = (String) analysis.get("treatingRole");
+            if (newRole != null && !newRole.isBlank()) existing.setTreatingRole(newRole);
+        }
+        if (existing.getCausationStatement() == null || existing.getCausationStatement().isBlank()) {
+            String newCausation = (String) analysis.get("causationStatement");
+            if (newCausation != null && !newCausation.isBlank()) {
+                existing.setCausationStatement(newCausation);
+                String src = (String) analysis.get("causationSource");
+                if (src != null && !src.isBlank()) existing.setCausationSource(src);
+            }
+        }
+
+        // Vitals/ROM: take first populated set (encounter snapshot)
+        @SuppressWarnings("unchecked")
+        Map<String, Object> newVitals = (Map<String, Object>) analysis.get("vitals");
+        if (newVitals != null && !newVitals.isEmpty()
+                && (existing.getVitals() == null || existing.getVitals().isEmpty())) {
+            existing.setVitals(newVitals);
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> newRom = (Map<String, Object>) analysis.get("rangeOfMotion");
+        if (newRom != null && !newRom.isEmpty()
+                && (existing.getRangeOfMotion() == null || existing.getRangeOfMotion().isEmpty())) {
+            existing.setRangeOfMotion(newRom);
+        }
+
+        // Special tests / medications: union (each doc may surface different ones for same encounter)
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> newTests = (List<Map<String, Object>>) analysis.get("specialTests");
+        if (newTests != null && !newTests.isEmpty()) {
+            existing.setSpecialTests(unionLists(existing.getSpecialTests(), newTests));
+        }
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> newMedsAdmin = (List<Map<String, Object>>) analysis.get("medicationsAdministered");
+        if (newMedsAdmin != null && !newMedsAdmin.isEmpty()) {
+            existing.setMedicationsAdministered(unionLists(existing.getMedicationsAdministered(), newMedsAdmin));
+        }
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> newMedsRx = (List<Map<String, Object>>) analysis.get("medicationsPrescribed");
+        if (newMedsRx != null && !newMedsRx.isEmpty()) {
+            existing.setMedicationsPrescribed(unionLists(existing.getMedicationsPrescribed(), newMedsRx));
+        }
+
         existing.setIsComplete(determineCompleteness(existing));
+    }
+
+    /**
+     * Union two List<Map> using stringified equality for dedup.
+     * Used when merging specialTests / medications across multiple documents for the same encounter.
+     */
+    private List<Map<String, Object>> unionLists(List<Map<String, Object>> a, List<Map<String, Object>> b) {
+        java.util.LinkedHashMap<String, Map<String, Object>> seen = new java.util.LinkedHashMap<>();
+        if (a != null) for (Map<String, Object> m : a) seen.putIfAbsent(m.toString(), m);
+        if (b != null) for (Map<String, Object> m : b) seen.putIfAbsent(m.toString(), m);
+        return new ArrayList<>(seen.values());
     }
 
     // ==========================================
@@ -1371,8 +1947,10 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         }
 
         // Limit text length for API
-        String textForAnalysis = extractedText.length() > 15000
-                ? extractedText.substring(0, 15000)
+        // 30K char cap — large enough to capture vitals/ROM/special tests across multi-page
+        // clinical notes (Tier 2 extraction needs more context than the legacy 15K cap allowed).
+        String textForAnalysis = extractedText.length() > 30000
+                ? extractedText.substring(0, 30000)
                 : extractedText;
 
         // Use AI to extract citation metadata only

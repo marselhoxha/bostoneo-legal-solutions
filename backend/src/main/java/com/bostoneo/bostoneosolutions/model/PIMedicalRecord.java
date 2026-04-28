@@ -61,6 +61,14 @@ public class PIMedicalRecord {
     @Column(name = "provider_fax", length = 50)
     private String providerFax;
 
+    // Treating clinician (the person who signed/co-signed) — distinct from provider_name (facility)
+    @Column(name = "treating_clinician", length = 255)
+    private String treatingClinician;
+
+    // Clinician's credential/role — "PA-C", "DPT", "DC", "MD", "DO", etc.
+    @Column(name = "treating_role", length = 100)
+    private String treatingRole;
+
     // Records Department Contact
     @Column(name = "records_email")
     private String recordsEmail;
@@ -96,6 +104,31 @@ public class PIMedicalRecord {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "procedures", columnDefinition = "jsonb")
     private List<Map<String, Object>> procedures; // [{cpt_code, description, units}]
+
+    // Encounter vitals: {"bp":"129/80","hr":80,"weight_lbs":133,"height":"5'5\"","bmi":22.13,"pain":"4/10",...}
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "vitals", columnDefinition = "jsonb")
+    private Map<String, Object> vitals;
+
+    // Range of motion grouped by region: {"cervical":{"flex":60,...},"lumbar":{"flex":45,...}}
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "range_of_motion", columnDefinition = "jsonb")
+    private Map<String, Object> rangeOfMotion;
+
+    // Orthopedic special tests: [{"name":"Lasègue's","side":"L","result":"positive"},...]
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "special_tests", columnDefinition = "jsonb")
+    private List<Map<String, Object>> specialTests;
+
+    // Meds given during the encounter (e.g., ED administered Motrin 600mg PO)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "medications_administered", columnDefinition = "jsonb")
+    private List<Map<String, Object>> medicationsAdministered;
+
+    // Meds prescribed for home use (separate from administered)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "medications_prescribed", columnDefinition = "jsonb")
+    private List<Map<String, Object>> medicationsPrescribed;
 
     // Billing Information
     @Column(name = "billed_amount", precision = 12, scale = 2)
@@ -133,6 +166,15 @@ public class PIMedicalRecord {
     @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "follow_up_recommendations", columnDefinition = "TEXT")
     private String followUpRecommendations;
+
+    // Verbatim causation quote (PHI — encrypted at app layer, same as key_findings/prognosis)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "causation_statement", columnDefinition = "TEXT")
+    private String causationStatement;
+
+    // Attribution for causation_statement: clinician + date (e.g., "PA Moy 11/11/2025"). Plain text.
+    @Column(name = "causation_source", length = 255)
+    private String causationSource;
 
     // Completeness Tracking
     @Column(name = "is_complete")

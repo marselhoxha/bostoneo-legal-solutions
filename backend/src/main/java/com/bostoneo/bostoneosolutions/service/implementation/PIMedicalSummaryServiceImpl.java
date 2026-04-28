@@ -635,8 +635,8 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
 
     private String buildChronology(List<PIMedicalRecord> records) {
         StringBuilder chronology = new StringBuilder();
-        chronology.append("| Date | Provider | Type | Key Finding |\n");
-        chronology.append("|------|----------|------|-------------|\n");
+        chronology.append("| Date | Provider / Clinician | Type | Key Detail |\n");
+        chronology.append("|------|----------------------|------|-----------|\n");
 
         // Exclude insurance ledgers (PIP logs / EOBs) — they're not clinical encounters and
         // their treatmentDate is null by design, which would render as "null" in the chronology.
@@ -645,25 +645,111 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
                 .toList();
 
         for (PIMedicalRecord record : chronicleRecords) {
-            String keyFindings = record.getKeyFindings();
-            String displayFindings = "-";
-            if (keyFindings != null && !keyFindings.trim().isEmpty()) {
-                // Truncate to 80 chars for readability, add ellipsis if needed
-                displayFindings = keyFindings.length() > 80
-                    ? keyFindings.substring(0, 77) + "..."
-                    : keyFindings;
-                // Replace pipe characters to avoid breaking table
-                displayFindings = displayFindings.replace("|", "/");
-            }
+            String providerCell = formatProviderCell(record);
+            String detailCell = formatDetailCell(record);
 
             chronology.append(String.format("| %s | %s | %s | %s |\n",
                     record.getTreatmentDate(),
-                    record.getProviderName().replace("|", "/"),
+                    providerCell,
                     record.getRecordType(),
-                    displayFindings));
+                    detailCell));
         }
 
         return chronology.toString();
+    }
+
+    /** Provider cell: facility name + clinician name when available (e.g., "Team Rehab — DC Ian Giuttari"). */
+    private String formatProviderCell(PIMedicalRecord record) {
+        String facility = record.getProviderName() == null ? "" : record.getProviderName().replace("|", "/");
+        String clinician = record.getTreatingClinician();
+        if (clinician != null && !clinician.isBlank()) {
+            return facility + " — " + clinician.replace("|", "/");
+        }
+        return facility;
+    }
+
+    /**
+     * Compact inline rendering of clinical detail for the chronology row.
+     * Combines key findings + vitals + ROM + special tests + medications into a single
+     * pipe-safe cell, capped at 400 chars to keep the table renderable. Full detail
+     * available on the record's API response for the future detail-pane UI.
+     */
+    private String formatDetailCell(PIMedicalRecord record) {
+        List<String> parts = new ArrayList<>();
+
+        if (record.getVitals() != null && !record.getVitals().isEmpty()) {
+            parts.add("Vitals " + formatVitals(record.getVitals()));
+        }
+        if (record.getRangeOfMotion() != null && !record.getRangeOfMotion().isEmpty()) {
+            parts.add("ROM " + formatRangeOfMotion(record.getRangeOfMotion()));
+        }
+        if (record.getSpecialTests() != null && !record.getSpecialTests().isEmpty()) {
+            parts.add(formatSpecialTests(record.getSpecialTests()));
+        }
+        if (record.getKeyFindings() != null && !record.getKeyFindings().isBlank()) {
+            parts.add(record.getKeyFindings().trim());
+        }
+        if (record.getMedicationsAdministered() != null && !record.getMedicationsAdministered().isEmpty()) {
+            parts.add("Meds given: " + formatMedications(record.getMedicationsAdministered()));
+        }
+        if (record.getMedicationsPrescribed() != null && !record.getMedicationsPrescribed().isEmpty()) {
+            parts.add("Rx: " + formatMedications(record.getMedicationsPrescribed()));
+        }
+
+        if (parts.isEmpty()) return "-";
+
+        String combined = String.join("; ", parts).replace("|", "/").replace("\n", " ");
+        // Cap at 400 chars so rendered tables stay manageable; long detail lives on the record itself
+        return combined.length() > 400 ? combined.substring(0, 397) + "..." : combined;
+    }
+
+    private String formatVitals(Map<String, Object> v) {
+        List<String> bits = new ArrayList<>();
+        if (v.get("bp") != null) bits.add("BP " + v.get("bp"));
+        if (v.get("hr") != null) bits.add("HR " + v.get("hr"));
+        if (v.get("pain") != null) bits.add("pain " + v.get("pain"));
+        if (v.get("bmi") != null) bits.add("BMI " + v.get("bmi"));
+        if (v.get("temp_f") != null) bits.add("T " + v.get("temp_f") + "°F");
+        if (v.get("spo2") != null) bits.add("SpO2 " + v.get("spo2") + "%");
+        return String.join(" ", bits);
+    }
+
+    @SuppressWarnings("unchecked")
+    private String formatRangeOfMotion(Map<String, Object> rom) {
+        List<String> bits = new ArrayList<>();
+        for (Map.Entry<String, Object> region : rom.entrySet()) {
+            if (region.getValue() instanceof Map<?, ?> measurements && !measurements.isEmpty()) {
+                List<String> motionBits = new ArrayList<>();
+                ((Map<String, Object>) measurements).forEach((motion, deg) -> motionBits.add(motion + " " + deg));
+                bits.add(region.getKey() + " " + String.join("/", motionBits) + "°");
+            }
+        }
+        return String.join("; ", bits);
+    }
+
+    private String formatSpecialTests(List<Map<String, Object>> tests) {
+        return tests.stream()
+                .map(t -> {
+                    String result = String.valueOf(t.getOrDefault("result", "")).toLowerCase();
+                    String prefix = result.startsWith("pos") ? "(+)" : result.startsWith("neg") ? "(−)" : "";
+                    String side = String.valueOf(t.getOrDefault("side", ""));
+                    String name = String.valueOf(t.getOrDefault("name", ""));
+                    StringBuilder s = new StringBuilder(prefix);
+                    if (!side.isBlank() && !"null".equals(side)) s.append(" ").append(side);
+                    if (!name.isBlank() && !"null".equals(name)) s.append(" ").append(name);
+                    return s.toString().trim();
+                })
+                .collect(Collectors.joining(", "));
+    }
+
+    private String formatMedications(List<Map<String, Object>> meds) {
+        return meds.stream()
+                .map(m -> {
+                    String name = String.valueOf(m.getOrDefault("name", ""));
+                    String dose = String.valueOf(m.getOrDefault("dose", ""));
+                    return (dose.isBlank() || "null".equals(dose)) ? name : name + " " + dose;
+                })
+                .collect(Collectors.joining(", "));
     }
 
     private int calculateCompletenessScore(List<PIMedicalRecord> records, List<Map<String, Object>> providers) {
