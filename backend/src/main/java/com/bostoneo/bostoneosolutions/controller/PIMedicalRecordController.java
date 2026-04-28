@@ -352,9 +352,11 @@ public class PIMedicalRecordController {
      */
     @PostMapping("/scan-documents")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<HttpResponse> scanCaseDocuments(@PathVariable("caseId") Long caseId) {
+    public ResponseEntity<HttpResponse> scanCaseDocuments(
+            @PathVariable("caseId") Long caseId,
+            @RequestParam(value = "force", defaultValue = "false") boolean force) {
 
-        log.info("Scanning documents for case: {}", caseId);
+        log.info("Scanning documents for case: {} (force={})", caseId, force);
 
         // Prevent concurrent scans of the same case
         if (!activeScanCases.add(caseId)) {
@@ -390,7 +392,7 @@ public class PIMedicalRecordController {
                     }
                 };
 
-                Map<String, Object> scanResult = medicalRecordService.scanCaseDocuments(caseId, onProgress);
+                Map<String, Object> scanResult = medicalRecordService.scanCaseDocuments(caseId, onProgress, force);
 
                 // Send completion via data channel (NOT notification bell).
                 // The frontend BackgroundTaskService handles the toast notification.

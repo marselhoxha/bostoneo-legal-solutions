@@ -114,6 +114,20 @@ public interface PIMedicalRecordService {
     Map<String, Object> scanCaseDocuments(Long caseId, Consumer<Map<String, Object>> onProgress);
 
     /**
+     * Scan all documents with optional full reset.
+     * When force=true, all existing PIMedicalRecord rows, summary, and scan-tracking
+     * entries for this case are deleted before scanning — this ensures every uploaded
+     * file is re-extracted by the current AI prompt. Used after prompt/extraction-logic
+     * upgrades when stale records would otherwise persist.
+     *
+     * @param caseId The case ID
+     * @param onProgress Progress callback (may be null)
+     * @param force If true, wipe existing records/summary/tracking before scanning
+     * @return Scan results
+     */
+    Map<String, Object> scanCaseDocuments(Long caseId, Consumer<Map<String, Object>> onProgress, boolean force);
+
+    /**
      * Analyze a specific file and extract medical record data using AI
      *
      * @param caseId The case ID

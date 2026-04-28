@@ -66,33 +66,43 @@ public interface PIMedicalRecordRepository extends JpaRepository<PIMedicalRecord
     List<String> findDistinctProviderNames(@Param("caseId") Long caseId, @Param("orgId") Long organizationId);
 
     /**
-     * Sum total billed amount for a case
+     * Sum total billed amount for a case.
+     * Excludes INSURANCE_LEDGER (PIP logs / EOBs) — those summarize amounts already
+     * present on individual provider bills and would double-count.
      */
     @Query("SELECT COALESCE(SUM(m.billedAmount), 0) FROM PIMedicalRecord m " +
-           "WHERE m.caseId = :caseId AND m.organizationId = :orgId")
+           "WHERE m.caseId = :caseId AND m.organizationId = :orgId " +
+           "AND m.recordType <> 'INSURANCE_LEDGER'")
     BigDecimal sumBilledAmountByCaseId(@Param("caseId") Long caseId, @Param("orgId") Long organizationId);
 
     /**
-     * Get earliest treatment date for a case
+     * Get earliest treatment date for a case.
+     * Excludes INSURANCE_LEDGER — those have null treatmentDate by design,
+     * but defensive filter prevents future ledger-with-date variants from skewing the range.
      */
     @Query("SELECT MIN(m.treatmentDate) FROM PIMedicalRecord m " +
-           "WHERE m.caseId = :caseId AND m.organizationId = :orgId")
+           "WHERE m.caseId = :caseId AND m.organizationId = :orgId " +
+           "AND m.recordType <> 'INSURANCE_LEDGER'")
     LocalDate findEarliestTreatmentDate(@Param("caseId") Long caseId, @Param("orgId") Long organizationId);
 
     /**
-     * Get latest treatment date for a case
+     * Get latest treatment date for a case.
+     * Excludes INSURANCE_LEDGER — same reason as findEarliestTreatmentDate.
      */
     @Query("SELECT MAX(COALESCE(m.treatmentEndDate, m.treatmentDate)) FROM PIMedicalRecord m " +
-           "WHERE m.caseId = :caseId AND m.organizationId = :orgId")
+           "WHERE m.caseId = :caseId AND m.organizationId = :orgId " +
+           "AND m.recordType <> 'INSURANCE_LEDGER'")
     LocalDate findLatestTreatmentDate(@Param("caseId") Long caseId, @Param("orgId") Long organizationId);
 
     /**
-     * Count visits by provider for summary
+     * Count visits by provider for summary.
+     * Excludes INSURANCE_LEDGER — the insurer is not a treatment provider.
      */
     @Query("SELECT m.providerName, m.providerType, COUNT(m), COALESCE(SUM(m.billedAmount), 0), " +
            "MIN(m.treatmentDate), MAX(COALESCE(m.treatmentEndDate, m.treatmentDate)) " +
            "FROM PIMedicalRecord m " +
            "WHERE m.caseId = :caseId AND m.organizationId = :orgId " +
+           "AND m.recordType <> 'INSURANCE_LEDGER' " +
            "GROUP BY m.providerName, m.providerType ORDER BY MIN(m.treatmentDate)")
     List<Object[]> getProviderSummary(@Param("caseId") Long caseId, @Param("orgId") Long organizationId);
 

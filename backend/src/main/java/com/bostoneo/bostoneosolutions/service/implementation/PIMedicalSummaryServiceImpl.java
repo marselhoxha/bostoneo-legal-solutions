@@ -638,7 +638,13 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
         chronology.append("| Date | Provider | Type | Key Finding |\n");
         chronology.append("|------|----------|------|-------------|\n");
 
-        for (PIMedicalRecord record : records) {
+        // Exclude insurance ledgers (PIP logs / EOBs) — they're not clinical encounters and
+        // their treatmentDate is null by design, which would render as "null" in the chronology.
+        List<PIMedicalRecord> chronicleRecords = records.stream()
+                .filter(r -> !"INSURANCE_LEDGER".equals(r.getRecordType()))
+                .toList();
+
+        for (PIMedicalRecord record : chronicleRecords) {
             String keyFindings = record.getKeyFindings();
             String displayFindings = "-";
             if (keyFindings != null && !keyFindings.trim().isEmpty()) {

@@ -447,13 +447,26 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
 
     @Override
     public Map<String, Object> scanCaseDocuments(Long caseId) {
-        return scanCaseDocuments(caseId, null);
+        return scanCaseDocuments(caseId, null, false);
     }
 
     @Override
     public Map<String, Object> scanCaseDocuments(Long caseId, Consumer<Map<String, Object>> onProgress) {
+        return scanCaseDocuments(caseId, onProgress, false);
+    }
+
+    @Override
+    public Map<String, Object> scanCaseDocuments(Long caseId, Consumer<Map<String, Object>> onProgress, boolean force) {
         Long orgId = getRequiredOrganizationId();
-        log.info("Scanning documents for case: {} in org: {}", caseId, orgId);
+        log.info("Scanning documents for case: {} in org: {} (force={})", caseId, orgId, force);
+
+        // Force-rescan: wipe existing records/summary/tracking before scanning so every
+        // file is re-analyzed by the current AI prompt. Reuses deleteAllRecordsByCase
+        // which also resets the case-level medical-expenses total on LegalCase.
+        if (force) {
+            log.info("Force flag set — clearing existing medical records, summary, and scan tracking for case {}", caseId);
+            deleteAllRecordsByCase(caseId);
+        }
 
         Map<String, Object> result = new HashMap<>();
         List<PIMedicalRecordDTO> createdRecords = new ArrayList<>();
@@ -677,23 +690,62 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 treatmentDate = null;
             }
         }
+        // Reject future dates — almost always a hallucination from page-footer "Print Date"
+        // bleeding into the service-date field. A null treatment date is recoverable; a wrong
+        // one corrupts the timeline silently.
+        if (treatmentDate != null && treatmentDate.isAfter(LocalDate.now())) {
+            log.warn("AI returned future treatment date '{}' for file {} — likely page-footer " +
+                    "bleed-through, setting to null for manual review", treatmentDate, fileId);
+            treatmentDate = null;
+        }
 
-        // Check for existing record from same provider + same date + same record type — merge instead of duplicating.
-        // Three-key merge: provider + date + recordType prevents ER records from absorbing PT records
-        // that share a provider name (after normalization) and date.
-        // BILLING documents are always separate records — never merged.
+        // Check for existing record from same provider + same date — merge instead of duplicating.
+        //
+        // Merge semantics:
+        //   * BILLING docs absorb into ANY clinical record from same provider+date.
+        //     A "PT visit" clinical note + "PT visit" bill = one encounter, not two rows.
+        //   * Non-billing clinical docs require exact recordType match (provider+date+recordType)
+        //     so an ER record never absorbs a PT record that happens to share provider+date.
+        //   * INSURANCE_LEDGER (PIP logs / EOBs) NEVER merge — they're meta-documents and
+        //     always live as their own row, but excluded from totals/chronology by recordType filter.
         String newDocType = (String) analysisResult.getOrDefault("documentType", "OTHER");
         String mappedRecordType = mapDocumentTypeToRecordType(newDocType);
         boolean isBillingDoc = "BILLING".equals(mappedRecordType);
-        if (treatmentDate != null && !isBillingDoc) {
-            Optional<PIMedicalRecord> existingOpt = repository.findByCaseAndProviderAndDateAndRecordType(
-                    caseId, orgId, normalizedProvider, treatmentDate, mappedRecordType);
+        boolean isInsuranceLedger = "INSURANCE_LEDGER".equals(mappedRecordType);
+        if (treatmentDate != null && !isInsuranceLedger) {
+            Optional<PIMedicalRecord> existingOpt;
+            if (isBillingDoc) {
+                // Billing docs collapse into any same-day, same-provider clinical encounter
+                existingOpt = repository.findByCaseAndProviderAndDate(
+                        caseId, orgId, normalizedProvider, treatmentDate);
+            } else {
+                // Non-billing clinical docs: try exact-recordType match first
+                existingOpt = repository.findByCaseAndProviderAndDateAndRecordType(
+                        caseId, orgId, normalizedProvider, treatmentDate, mappedRecordType);
+                // Fallback: if no clinical record exists yet but a BILLING-only record was
+                // created earlier (bill processed before clinical note), absorb that BILLING.
+                // We only accept BILLING here — never absorb across different clinical types
+                // (e.g., would never merge ER into PT, even at same provider+date).
+                if (existingOpt.isEmpty()) {
+                    Optional<PIMedicalRecord> billingOnly = repository.findByCaseAndProviderAndDate(
+                            caseId, orgId, normalizedProvider, treatmentDate);
+                    if (billingOnly.isPresent() && "BILLING".equals(billingOnly.get().getRecordType())) {
+                        existingOpt = billingOnly;
+                    }
+                }
+            }
             if (existingOpt.isPresent()) {
                 PIMedicalRecord existing = existingOpt.get();
                 mergeAnalysisIntoRecord(existing, fileId, analysisResult);
+                // If a clinical doc is absorbing an existing BILLING-only record, upgrade
+                // the recordType to the clinical type (PT/ER/etc.) so the chronology shows
+                // a meaningful encounter type instead of "BILLING".
+                if (!isBillingDoc && "BILLING".equals(existing.getRecordType())) {
+                    existing.setRecordType(mappedRecordType);
+                }
                 PIMedicalRecord saved = repository.save(existing);
-                log.info("Merged file {} into existing record {} (provider '{}', date {}, type {})",
-                        fileId, saved.getId(), normalizedProvider, treatmentDate, mappedRecordType);
+                log.info("Merged file {} into existing record {} (provider '{}', date {}, billing={})",
+                        fileId, saved.getId(), normalizedProvider, treatmentDate, isBillingDoc);
                 return mapToDTO(saved);
             }
         }
@@ -776,7 +828,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             Provide a JSON response with the following structure:
             {
                 "isMedicalDocument": true/false,
-                "documentType": "ER|PT|IMAGING|CHIROPRACTIC|SURGERY|CONSULTATION|LAB|PRIMARY_CARE|BILLING|OTHER",
+                "documentType": "ER|PT|IMAGING|CHIROPRACTIC|SURGERY|CONSULTATION|LAB|PRIMARY_CARE|BILLING|PIP_LOG|OTHER",
                 "providerName": "Name of the medical provider/facility",
                 "providerType": "HOSPITAL|PHYSICAL_THERAPY|CHIROPRACTIC|RADIOLOGY|ORTHOPEDICS|NEUROLOGY|PRIMARY_CARE|OTHER",
                 "treatmentDate": "YYYY-MM-DD format if found",
@@ -785,6 +837,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                     {"icd_code": "M54.5", "description": "Low back pain", "primary": true}
                 ],
                 "billedAmount": 0.00,
+                "paidAmount": 0.00,
                 "keyFindings": "Brief summary of key clinical findings",
                 "treatmentProvided": "Summary of treatment/procedures performed",
                 "prognosisNotes": "Any prognosis or outcome information",
@@ -808,8 +861,25 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             Important:
             - If this is NOT a medical document (e.g., insurance form, legal document), set isMedicalDocument to false
             - Work excuse letters, work excuse notes, return-to-work letters, administrative correspondence, attorney letters, and authorizations are NOT medical documents — set isMedicalDocument to false
-            - BILLING documents (invoices, billing statements, itemized charges) ARE medical documents — always set isMedicalDocument to true for them. They track costs tied to treatment. Set documentType to BILLING
-            - For providerName, always use the OFFICIAL institution name exactly as it appears on the letterhead/header of the document. Do not combine or abbreviate differently across documents from the same facility.
+            - ORIGINAL provider BILLING documents (invoices, billing statements, itemized charges from a SINGLE provider) ARE medical documents — always set isMedicalDocument to true for them. They track costs tied to treatment. Set documentType to BILLING.
+            - SPECIAL CASE — PIP LOGS / INSURANCE PAYMENT LEDGERS / EOB SUMMARIES:
+              A PIP Log, Insurance Payment Activity Log, Explanation of Benefits, or any aggregate payment
+              ledger lists payments made by an INSURER across MULTIPLE provider visits. These are NOT a
+              single bill — they SUMMARIZE amounts already billed by individual provider documents that
+              are uploaded separately. Treating them as a regular BILLING doc causes DOUBLE-COUNTING.
+              Detection signs (any one is enough):
+                * Insurer letterhead (e.g., "Commerce Insurance", "Liberty Mutual", "Geico")
+                * Phrases like "PIP Payment Log", "Payment Activity", "Claim Number", "Claim #"
+                * Multiple rows showing (date, provider, amount paid, payee)
+                * References to "PIP limit", "deductible paid", "PIP remaining", "amount paid"
+              When you detect any of these:
+                * Set documentType to "PIP_LOG"
+                * Set isMedicalDocument to true (still useful — provides paid-amounts and coverage state)
+                * Set billedAmount to 0 (the same line-item amounts appear on individual provider bills uploaded separately)
+                * Set paidAmount to the TOTAL paid-to-date shown on the log (this is real data we want to capture)
+                * Set providerName to the INSURER name (e.g., "Commerce Insurance Company"), NOT the line-item provider names
+                * Set treatmentDate to null (the log spans many encounters)
+            - For providerName, always use the OFFICIAL institution name exactly as it appears on the letterhead/header of the document. Do not combine or abbreviate differently across documents from the same facility. NEVER concatenate provider names from different facilities.
             - Extract the most accurate provider name from the letterhead or document header
             - Include all diagnoses with ICD codes if available
             - BILLING AMOUNTS MUST BE EXACT — NEVER round, estimate, or approximate dollar amounts. Copy the exact amount from the document to the cent. An incorrect billing amount could have serious legal consequences. If the document shows $2,399.50, report exactly $2,399.50, NOT $2,400. If you cannot determine the exact amount, set billedAmount to 0 rather than guessing.
@@ -870,7 +940,14 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         String dateStr = (String) analysis.get("treatmentDate");
         if (dateStr != null && !dateStr.isEmpty()) {
             try {
-                record.setTreatmentDate(LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE));
+                LocalDate parsed = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
+                // Reject future dates (page-footer bleed-through hallucination)
+                if (parsed.isAfter(LocalDate.now())) {
+                    log.warn("AI returned future treatment date '{}' for file {} — setting null", parsed, fileId);
+                    record.setTreatmentDate(null);
+                } else {
+                    record.setTreatmentDate(parsed);
+                }
             } catch (Exception e) {
                 log.warn("Could not parse treatment date '{}' — storing null", dateStr);
                 record.setTreatmentDate(null);
@@ -882,7 +959,12 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         String endDateStr = (String) analysis.get("treatmentEndDate");
         if (endDateStr != null && !endDateStr.isEmpty()) {
             try {
-                record.setTreatmentEndDate(LocalDate.parse(endDateStr, DateTimeFormatter.ISO_LOCAL_DATE));
+                LocalDate parsedEnd = LocalDate.parse(endDateStr, DateTimeFormatter.ISO_LOCAL_DATE);
+                if (parsedEnd.isAfter(LocalDate.now())) {
+                    log.warn("AI returned future treatment-end date '{}' for file {} — ignoring", parsedEnd, fileId);
+                } else {
+                    record.setTreatmentEndDate(parsedEnd);
+                }
             } catch (Exception e) {
                 // Ignore
             }
@@ -909,6 +991,29 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 }
             } catch (Exception e) {
                 log.warn("Could not parse billed amount: {}", billedObj);
+            }
+        }
+
+        // Paid amount: ONLY persist for INSURANCE_LEDGER records (PIP logs / EOBs).
+        // Individual provider bills often show "Amount Paid" line items that reflect the SAME
+        // payments already counted in the PIP log's running total — persisting them here would
+        // double-count when the frontend sums paidAmount across all records. The PIP log is the
+        // single source of truth for paid-to-date.
+        if ("INSURANCE_LEDGER".equals(record.getRecordType())) {
+            Object paidObj = analysis.get("paidAmount");
+            if (paidObj != null) {
+                try {
+                    if (paidObj instanceof Number) {
+                        record.setPaidAmount(BigDecimal.valueOf(((Number) paidObj).doubleValue()));
+                    } else if (paidObj instanceof String) {
+                        String paidStr = ((String) paidObj).replaceAll("[^\\d.]", "");
+                        if (!paidStr.isEmpty()) {
+                            record.setPaidAmount(new BigDecimal(paidStr));
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not parse paid amount: {}", paidObj);
+                }
             }
         }
 
@@ -943,6 +1048,9 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             case "LAB" -> "LAB";
             case "PRIMARY_CARE" -> "PRIMARY_CARE";
             case "BILLING", "INVOICE" -> "BILLING";
+            // Insurance summary docs (PIP logs, EOBs) — never sum into billing totals;
+            // their billedAmount is set to 0 by the AI prompt to prevent double-counting.
+            case "PIP_LOG", "INSURANCE_LEDGER", "EOB" -> "INSURANCE_LEDGER";
             default -> "FOLLOW_UP";
         };
     }
@@ -950,10 +1058,17 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
     /**
      * Normalize provider name to title case for consistent matching.
      * "NORTHEAST IMAGING" and "Northeast Imaging" both become "Northeast Imaging".
+     * Strips trailing punctuation per word so "IPS, LLC" and "IPS LLC" canonicalize identically —
+     * different document letterheads often vary in punctuation, and these variations would
+     * otherwise prevent the merge logic from recognizing same-provider records.
      */
     private String normalizeProviderName(String name) {
         if (name == null || name.isBlank()) return "Unknown Provider";
-        String[] words = name.trim().split("\\s+");
+        // Strip non-alphanumeric chars except spaces, hyphens, and apostrophes — punctuation
+        // (commas, periods) varies across documents from the same provider; legitimate
+        // distinguishers like apostrophes ("St. Mary's") and hyphens ("Cedars-Sinai") are kept.
+        String cleaned = name.trim().replaceAll("[^\\p{Alnum}\\s\\-']+", "");
+        String[] words = cleaned.split("\\s+");
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < words.length; i++) {
             String word = words[i];
@@ -1020,6 +1135,12 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 existing.setBilledAmount(existingAmount.add(newAmount));
             }
         }
+
+        // Note: paidAmount intentionally NOT merged here. Merge is only invoked for
+        // non-INSURANCE_LEDGER records (see analyzeFileAndCreateRecord), and individual
+        // provider bills' "Amount Paid" fields would double-count payments already
+        // captured by the PIP log's running total. The PIP log (INSURANCE_LEDGER) is
+        // the single source of truth for paid-to-date.
 
         // Fill in prognosis if empty
         String newPrognosis = (String) analysis.get("prognosisNotes");
