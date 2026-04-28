@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import lombok.experimental.SuperBuilder;
@@ -139,6 +140,7 @@ public class LegalCase {
 
     @OneToMany(mappedBy = "legalCase", fetch = FetchType.LAZY)
     @JsonIgnoreProperties("legalCase")
+    @BatchSize(size = 50)
     private Collection<Expense> expenses;
 
     // Timeline fields

@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -53,6 +54,7 @@ public class LegalDocument {
     @ElementCollection
     @CollectionTable(name = "LegalDocument_tags", joinColumns = @JoinColumn(name = "legal_document_id"))
     @Column(name = "tags")
+    @BatchSize(size = 200)
     private List<String> tags = new ArrayList<>();
 
     @CreationTimestamp
