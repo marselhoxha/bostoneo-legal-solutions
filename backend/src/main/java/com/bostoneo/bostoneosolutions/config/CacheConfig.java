@@ -47,14 +47,20 @@ public class CacheConfig {
 
             // Draft-wizard doc-type catalog - 1 day TTL. Registry is immutable at runtime
             // so cache lives as long as the process; 1d bound is just a safety net.
-            buildCache("documentCatalog", 1, TimeUnit.DAYS, 256)
+            buildCache("documentCatalog", 1, TimeUnit.DAYS, 256),
+
+            // Organization status check (per-request auth filter lookup) - 60s TTL
+            // 60s caps suspension propagation lag; admin write-paths use @CacheEvict
+            // for instant invalidation on the writing instance.
+            buildCache("org_status", 60, TimeUnit.SECONDS, 500)
         ));
 
-        log.info("✅ Initialized Caffeine cache manager with 4 caches");
+        log.info("✅ Initialized Caffeine cache manager with 5 caches");
         log.info("   - constitution: 7 day TTL, max 500 entries");
         log.info("   - statutes: 7 day TTL, max 500 entries");
         log.info("   - case_searches: 48 hour TTL, max 1000 entries");
         log.info("   - documentCatalog: 1 day TTL, max 256 entries");
+        log.info("   - org_status: 60 second TTL, max 500 entries");
 
         return cacheManager;
     }

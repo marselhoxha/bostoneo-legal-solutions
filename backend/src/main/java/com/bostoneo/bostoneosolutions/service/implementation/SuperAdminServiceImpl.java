@@ -18,6 +18,7 @@ import com.bostoneo.bostoneosolutions.service.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -280,6 +281,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "org_status", key = "#organizationId")
     public void suspendOrganization(Long organizationId) {
         log.info("SUPERADMIN: Suspending organization ID: {}", organizationId);
 
@@ -294,6 +296,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "org_status", key = "#organizationId")
     public void activateOrganization(Long organizationId) {
         log.info("SUPERADMIN: Activating organization ID: {}", organizationId);
 
@@ -308,6 +311,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "org_status", key = "#organizationId")
     public void deleteOrganization(Long organizationId) {
         log.info("SUPERADMIN: Deleting (soft) organization ID: {}", organizationId);
 
@@ -338,6 +342,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "org_status", key = "#organizationId")
     public void hardDeleteOrganization(Long organizationId) {
         log.info("SUPERADMIN: PERMANENTLY DELETING organization ID: {}", organizationId);
 

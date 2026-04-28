@@ -13,6 +13,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,10 +39,14 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 @Slf4j
 public class CustomAuthorizationFilter extends OncePerRequestFilter {
 
+    private static final String ORG_STATUS_CACHE = "org_status";
+    private static final String ORG_NOT_FOUND_SENTINEL = "NOT_FOUND";
+
     private final TokenProvider tokenProvider;
     private final com.bostoneo.bostoneosolutions.service.TokenBlacklistService tokenBlacklistService;
     private final OnlineUserService onlineUserService;
-    private final org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate jdbc;
+    private final NamedParameterJdbcTemplate jdbc;
+    private final CacheManager cacheManager;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -88,12 +97,15 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
                     }
                     log.debug("REQUEST: {} {} - SUPERADMIN User: {}", request.getMethod(), request.getRequestURI(), userId);
                 } else {
-                    // Check if organization is suspended or deleted
+                    // Check if organization is suspended or deleted (Caffeine-cached, 60s TTL)
                     try {
-                        String orgStatus = jdbc.queryForObject(
-                            "SELECT status FROM organizations WHERE id = :orgId",
-                            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource("orgId", organizationId),
-                            String.class);
+                        Cache cache = cacheManager.getCache(ORG_STATUS_CACHE);
+                        String orgStatus = (cache != null)
+                            ? cache.get(organizationId, () -> loadOrgStatus(organizationId))
+                            : loadOrgStatus(organizationId);
+                        if (cache == null) {
+                            log.warn("{} cache not registered — bypassing cache for org-status lookup", ORG_STATUS_CACHE);
+                        }
                         if ("SUSPENDED".equals(orgStatus) || "DELETED".equals(orgStatus)) {
                             log.warn("User {} denied: organization {} is {}", userId, organizationId, orgStatus);
                             response.setStatus(403);
@@ -102,6 +114,7 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
                             return;
                         }
                     } catch (Exception e) {
+                        // Preserve fail-open behavior — never block users on cache/DB hiccups
                         log.debug("Could not check org status for org {}: {}", organizationId, e.getMessage());
                     }
                     TenantContext.setCurrentTenant(organizationId);
@@ -134,6 +147,21 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
         } finally {
             // Always clear tenant context after request to prevent memory leaks
             TenantContext.clear();
+        }
+    }
+
+    /**
+     * Load org status from DB. Negative-caches missing orgs as NOT_FOUND so stale
+     * tokens referencing deleted orgs don't repeatedly hammer the DB.
+     */
+    private String loadOrgStatus(Long orgId) {
+        try {
+            return jdbc.queryForObject(
+                "SELECT status FROM organizations WHERE id = :orgId",
+                new MapSqlParameterSource("orgId", orgId),
+                String.class);
+        } catch (EmptyResultDataAccessException ex) {
+            return ORG_NOT_FOUND_SENTINEL;
         }
     }
 
