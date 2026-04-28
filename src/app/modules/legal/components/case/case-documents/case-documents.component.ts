@@ -1441,11 +1441,13 @@ export class CaseDocumentsComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.fileManagerFiles = response.content || [];
         this.combineCaseDocuments();
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error loading file manager files:', error);
         this.fileManagerFiles = [];
         this.combineCaseDocuments();
+        this.cdr.detectChanges();
       }
     });
   }
