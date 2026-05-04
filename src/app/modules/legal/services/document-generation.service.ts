@@ -601,7 +601,19 @@ export class DocumentGenerationService {
   /**
    * Clean HTML content - remove inline styles but preserve semantic structure
    * This is what the backend needs to convert HTML to Word/PDF properly
+   *
+   * Allowlisted CSS classes survive the strip — these are the classes the backend
+   * renderer (and CKEditor display CSS) target to apply structural styling that the
+   * editor would otherwise lose. New entries here must have matching CSS rules in
+   * AiWorkspaceDocumentService.generateStyledHtmlPdf AND in the editor stylesheet.
    */
+  private static readonly EXPORT_PRESERVED_CLASSES = new Set<string>([
+    'signature-line',   // imported-template signatory paragraph (border-top renders the rule)
+    'callout-box',      // imported-template bordered disclaimer (notary, sworn statement, notice)
+    'document-title',   // imported-instrument top-of-document title (centered, larger font)
+    'exhibit-ref',      // legal exhibit cross-reference link styling (color + dotted underline)
+  ]);
+
   cleanHtmlForExport(html: string): string {
     if (!html) return '';
 
@@ -611,7 +623,18 @@ export class DocumentGenerationService {
     // Recursively clean all elements
     const cleanElement = (element: Element) => {
       element.removeAttribute('style');
-      element.removeAttribute('class');
+      const rawClass = element.getAttribute('class');
+      if (rawClass) {
+        // Keep only classes the renderer depends on; drop the rest (CKEditor cruft, Word
+        // paste-in noise, theme classes that mean nothing server-side).
+        const kept = rawClass.split(/\s+/)
+          .filter(c => DocumentGenerationService.EXPORT_PRESERVED_CLASSES.has(c));
+        if (kept.length > 0) {
+          element.setAttribute('class', kept.join(' '));
+        } else {
+          element.removeAttribute('class');
+        }
+      }
       Array.from(element.attributes).forEach(attr => {
         if (attr.name.startsWith('data-')) {
           element.removeAttribute(attr.name);

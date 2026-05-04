@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.service.ai.importing;
 
+import com.bostoneo.bostoneosolutions.dto.ai.ImportSessionResponse;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +64,12 @@ public class ImportSessionStore {
         ImportSession s = sessions.get(sessionId);
         if (s == null) return Optional.empty();
         if (s.isExpired(LocalDateTime.now())) {
+            // Same invariant as the sweeper: never remove a session whose files are still being
+            // processed. The async analysis lambda would otherwise find no session and silently
+            // discard the in-flight Claude result.
+            if (hasNonTerminalFile(s)) {
+                return Optional.of(s);
+            }
             sessions.remove(sessionId);
             return Optional.empty();
         }
@@ -83,11 +90,25 @@ public class ImportSessionStore {
     private void sweepExpired() {
         LocalDateTime now = LocalDateTime.now();
         sessions.entrySet().removeIf(entry -> {
-            boolean expired = entry.getValue().isExpired(now);
-            if (expired) {
-                log.debug("Sweeping expired import session {}", entry.getKey());
+            ImportSession s = entry.getValue();
+            if (!s.isExpired(now)) return false;
+            // Don't sweep a session whose files are still being processed — analysis can legitimately
+            // run past the 5-min TTL (Claude calls for big templates take 7–10 min). The DB-backed
+            // ai_template_import_jobs row is the durable record once analysis terminates.
+            if (hasNonTerminalFile(s)) {
+                log.debug("Skipping sweep of session {} — still has non-terminal files", entry.getKey());
+                return false;
             }
-            return expired;
+            log.debug("Sweeping expired import session {}", entry.getKey());
+            return true;
         });
+    }
+
+    private boolean hasNonTerminalFile(ImportSession s) {
+        if (s.getFiles() == null) return false;
+        return s.getFiles().values().stream().anyMatch(f ->
+            f.getStatus() == ImportSessionResponse.FileStatus.Status.QUEUED
+            || f.getStatus() == ImportSessionResponse.FileStatus.Status.EXTRACTING
+            || f.getStatus() == ImportSessionResponse.FileStatus.Status.ANALYZING);
     }
 }

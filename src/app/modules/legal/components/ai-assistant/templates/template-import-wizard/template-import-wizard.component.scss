@@ -423,6 +423,22 @@
     ::ng-deep li { margin-bottom: 0.25rem; }
     ::ng-deep strong { font-weight: 700; }
     ::ng-deep em { font-style: italic; }
+
+    // Imported-template structural elements (kept in sync with the PDF renderer's stylesheet
+    // in AiWorkspaceDocumentService.generateStyledHtmlPdf — the wizard preview, CKEditor, and
+    // exported PDF must all render these classes the same way).
+    ::ng-deep .signature-line {
+      border-top: 1px solid #000;
+      margin-top: 1.6rem;
+      padding-top: 0.3rem;
+    }
+    ::ng-deep .callout-box {
+      border: 1px solid #000;
+      padding: 0.5rem 0.8rem;
+      margin: 0.75rem 0;
+      border-radius: 2px;
+    }
+    ::ng-deep .callout-box > p { margin: 0.25rem 0; }
   }
 
   // ---------- PDF preview (original upload, rendered by the browser) ----------

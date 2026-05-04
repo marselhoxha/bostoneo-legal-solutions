@@ -7,7 +7,7 @@ import Swal from 'sweetalert2';
 /**
  * Task types supported by the background task service
  */
-export type BackgroundTaskType = 'question' | 'draft' | 'analysis' | 'workflow' | 'medical_scan';
+export type BackgroundTaskType = 'question' | 'draft' | 'analysis' | 'workflow' | 'medical_scan' | 'template_import';
 
 /**
  * Task status
@@ -78,6 +78,12 @@ export class BackgroundTaskService {
   // Track if user is currently on AI workspace
   private isOnAiWorkspace = false;
 
+  // Sessions actively being watched by an open modal/wizard. While watched, completion + failure
+  // toasts are suppressed for those tasks because the watching component is already showing the
+  // result in real time (the wizard auto-advances to Review on allFinalized) — a separate toast
+  // would be redundant noise on top of the in-modal transition.
+  private watchedSessionIds = new Set<string>();
+
   // Store pending navigation for when user clicks View Result
   private pendingNavigation: { conversationId?: string; backendConversationId?: number; workflowId?: number; taskType?: string; analysisIds?: Array<{id: string; databaseId: number; fileName: string}> } | null = null;
 
@@ -90,8 +96,17 @@ export class BackgroundTaskService {
    */
   setCurrentUserId(userId: number | null): void {
     this.currentUserId = userId;
-    // Re-emit so subscribers get the filtered list for the new user
-    this.tasksSubject.next(this.tasksSubject.value);
+    // Retroactively claim any orphan tasks (registered before the user context was set — happens
+    // when an action like "Analyze" fires before topbar has loaded the user). Without this the
+    // tasks stay invisible because `tasks$` filters by userId and orphans never match.
+    if (userId != null) {
+      const claimed = this.tasksSubject.value.map(t =>
+        t.userId == null ? { ...t, userId } : t
+      );
+      this.tasksSubject.next(claimed);
+    } else {
+      this.tasksSubject.next(this.tasksSubject.value);
+    }
   }
 
   /**
@@ -100,6 +115,26 @@ export class BackgroundTaskService {
    */
   setIsOnAiWorkspace(isOn: boolean): void {
     this.isOnAiWorkspace = isOn;
+  }
+
+  /**
+   * Tell the service that a UI surface (e.g., the template-import wizard modal) is currently
+   * watching this session. While watched, completion / failure toasts for tasks correlated with
+   * this session are suppressed — the modal itself is showing live state and a toast on top would
+   * be visual noise.
+   */
+  watchSession(sessionId: string): void {
+    if (sessionId) this.watchedSessionIds.add(sessionId);
+  }
+
+  unwatchSession(sessionId: string): void {
+    if (sessionId) this.watchedSessionIds.delete(sessionId);
+  }
+
+  private isTaskWatched(task: BackgroundTask): boolean {
+    // template_import tasks store sessionId in conversationId; result.sessionId is set on completion
+    const sessionId = task.result?.sessionId || task.conversationId;
+    return !!sessionId && this.watchedSessionIds.has(sessionId);
   }
 
   /**
@@ -197,9 +232,11 @@ export class BackgroundTaskService {
       // Emit to completedTask$ for AI Workspace to consume
       this.completedTaskSubject.next(completedTask);
 
-      // Show toast notification if user is NOT on AI workspace
-      // This notifies users when AI responses complete while they're on another page
-      if (!this.isOnAiWorkspace) {
+      // Show toast notification when (a) the user is NOT on AI Workspace AND (b) no UI surface
+      // is actively watching this task's session. The watch check covers the import wizard:
+      // when it's open, it auto-advances to the Review step on completion, so a toast would
+      // duplicate the in-modal transition and clutter the screen.
+      if (!this.isOnAiWorkspace && !this.isTaskWatched(completedTask)) {
         this.showCompletionNotification(completedTask);
       }
     }
@@ -220,9 +257,12 @@ export class BackgroundTaskService {
       error
     });
 
-    // Show error notification if user is NOT on AI workspace
-    if (!this.isOnAiWorkspace) {
-      this.showFailureNotification(this.getTask(taskId)!);
+    const failedTask = this.getTask(taskId);
+    // Same suppression rule as completeTask: skip the toast when the user is on AI Workspace
+    // (already visible) OR when an open modal is watching this session (it will surface the
+    // failure inline).
+    if (failedTask && !this.isOnAiWorkspace && !this.isTaskWatched(failedTask)) {
+      this.showFailureNotification(failedTask);
     }
   }
 
@@ -338,6 +378,7 @@ export class BackgroundTaskService {
     // Clear pending navigation and workspace tracking
     this.pendingNavigation = null;
     this.isOnAiWorkspace = false;
+    this.watchedSessionIds.clear();
   }
 
   /**
@@ -555,6 +596,17 @@ export class BackgroundTaskService {
       return;
     }
 
+    // Template-import tasks deep-link the user back to the Template Library with the sessionId
+    // so the library page can re-open the wizard at the Review/Commit step.
+    if (task.type === 'template_import') {
+      const sessionId = task.result?.sessionId || task.conversationId;
+      this.removeTask(task.id);
+      this.router.navigate(['/legal/ai-assistant/templates'], sessionId
+        ? { queryParams: { resumeImport: sessionId } }
+        : {});
+      return;
+    }
+
     // Extract analysis IDs if this is an analysis task
     const analysisIds = task.type === 'analysis' && task.result?.results
       ? task.result.results
@@ -588,6 +640,8 @@ export class BackgroundTaskService {
         return 'ri-flow-chart';
       case 'medical_scan':
         return 'ri-scan-line';
+      case 'template_import':
+        return 'ri-file-add-line';
       default:
         return 'ri-robot-line';
     }
@@ -605,6 +659,8 @@ export class BackgroundTaskService {
         return 'linear-gradient(135deg, #299cdb 0%, #42a5f5 100%)';
       case 'medical_scan':
         return 'linear-gradient(135deg, #0ab39c 0%, #26c6da 100%)';
+      case 'template_import':
+        return 'linear-gradient(135deg, #405189 0%, #6a7fc1 100%)';
       default:
         return 'linear-gradient(135deg, #405189 0%, #5c6bc0 100%)';
     }
@@ -622,6 +678,8 @@ export class BackgroundTaskService {
         return 'Workflow Completed';
       case 'medical_scan':
         return 'Medical Documents Scanned';
+      case 'template_import':
+        return 'Template Import Complete';
       default:
         return 'AI Task Completed';
     }
@@ -643,6 +701,14 @@ export class BackgroundTaskService {
           return `${result.recordsCreated} medical records created from ${result.documentsScanned} documents. Click to review.`;
         }
         return result?.title || 'Medical documents scanned. Click to review.';
+      }
+      case 'template_import': {
+        const result = task.result;
+        const ready = result?.readyCount ?? 0;
+        const total = result?.fileCount ?? 0;
+        return total > 0
+          ? `${ready} of ${total} template(s) ready to review. Click to open.`
+          : 'Template import finished. Click to review.';
       }
       default:
         return `${task.title} is ready. Click to view.`;

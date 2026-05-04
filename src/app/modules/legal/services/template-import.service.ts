@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, Subscription, interval, of } from 'rxjs';
+import { catchError, filter, switchMap, takeWhile } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { BackgroundTaskService } from './background-task.service';
 
 // --------------------------- DTOs ---------------------------
 // Shape mirrors backend DTOs in com.bostoneo.bostoneosolutions.dto.ai.*
@@ -116,11 +118,31 @@ export interface ImportCommitResponse {
   failures?: string[];
 }
 
+/**
+ * Snapshot of a persisted import job — what GET /jobs and /jobs/active return. Used by the
+ * BackgroundTasksIndicator to render in-flight + recent imports across pod restarts and TTL.
+ */
+export interface ImportJobSummary {
+  sessionId: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'PARTIAL' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  fileCount: number;
+  readyCount: number;
+  failedCount: number;
+  duplicateCount: number;
+  startedAt: string;
+  updatedAt?: string;
+  completedAt?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TemplateImportService {
   private readonly apiUrl = `${environment.apiUrl}/api/ai/templates/import`;
 
-  constructor(private http: HttpClient) {}
+  // Service-owned background polling subscriptions keyed by sessionId. They live in this singleton
+  // service so closing the import wizard does NOT cancel polling — only the user logging out does.
+  private backgroundPollers = new Map<string, Subscription>();
+
+  constructor(private http: HttpClient, private backgroundTasks: BackgroundTaskService) {}
 
   /** POST /analyze — multipart upload, returns session id + file ids. */
   analyze(files: File[]): Observable<AnalyzeResponse> {
@@ -209,5 +231,103 @@ export class TemplateImportService {
       request ?? {},
       { withCredentials: true }
     );
+  }
+
+  /** GET /jobs — list user's last 20 import jobs (durable across pod restart and TTL). */
+  listJobs(): Observable<ImportJobSummary[]> {
+    return this.http.get<ImportJobSummary[]>(`${this.apiUrl}/jobs`, { withCredentials: true });
+  }
+
+  /** GET /jobs/active — only PENDING / IN_PROGRESS jobs. Used to seed the indicator on app boot. */
+  listActiveJobs(): Observable<ImportJobSummary[]> {
+    return this.http.get<ImportJobSummary[]>(`${this.apiUrl}/jobs/active`, { withCredentials: true });
+  }
+
+  /**
+   * Register a long-lived BackgroundTask for an import session and start a service-owned polling
+   * stream against {@code /session/{id}}. The stream lives in this service (singleton), so closing
+   * the import wizard does NOT cancel it — the indicator chip continues to update and the user is
+   * notified when analysis completes.
+   *
+   * Idempotent: calling twice for the same sessionId is a no-op.
+   */
+  startBackgroundPolling(sessionId: string, fileCount: number, label?: string): void {
+    if (this.backgroundPollers.has(sessionId)) return;
+
+    const taskId = this.backgroundTasks.registerTask(
+      'template_import',
+      label || `Importing ${fileCount} template${fileCount === 1 ? '' : 's'}`,
+      'Analyzing files…',
+      { conversationId: sessionId } // re-used as a generic correlation id
+    );
+    this.backgroundTasks.startTask(taskId);
+
+    const sub = interval(2000)
+      .pipe(
+        switchMap(() => this.getSession(sessionId).pipe(
+          catchError(err => of(null as unknown as ImportSessionResponse))
+        )),
+        filter((resp): resp is ImportSessionResponse => !!resp),
+        takeWhile(resp => !resp.allFinalized, true)
+      )
+      .subscribe({
+        next: resp => {
+          const ready    = resp.files.filter(f => f.status === 'READY').length;
+          const failed   = resp.files.filter(f => f.status === 'ERROR').length;
+          const duped    = resp.files.filter(f => f.status === 'DUPLICATE').length;
+          const total    = resp.files.length;
+          const finished = ready + failed + duped;
+          const progress = total === 0 ? 0 : Math.round((finished / total) * 100);
+          const description = total === 0
+            ? 'Waiting for upload…'
+            : `${finished} of ${total} processed${ready > 0 ? ` · ${ready} ready` : ''}${failed > 0 ? ` · ${failed} failed` : ''}`;
+          this.backgroundTasks.updateTaskProgress(taskId, progress, description);
+
+          if (resp.allFinalized) {
+            const summary = { sessionId, fileCount: total, readyCount: ready, failedCount: failed };
+            if (failed === total && total > 0) {
+              this.backgroundTasks.failTask(taskId, `All ${failed} file(s) failed.`);
+            } else {
+              this.backgroundTasks.completeTask(taskId, summary);
+            }
+            this.stopBackgroundPolling(sessionId);
+          }
+        },
+        error: err => {
+          this.backgroundTasks.failTask(taskId, err?.message || 'Polling failed');
+          this.stopBackgroundPolling(sessionId);
+        }
+      });
+
+    this.backgroundPollers.set(sessionId, sub);
+    this.backgroundTasks.storeSubscription(taskId, sub);
+  }
+
+  /** Cancel and remove a background poller. Called on logout (via clearAllTasks). */
+  stopBackgroundPolling(sessionId: string): void {
+    const sub = this.backgroundPollers.get(sessionId);
+    if (sub) {
+      sub.unsubscribe();
+      this.backgroundPollers.delete(sessionId);
+    }
+  }
+
+  /**
+   * On app boot or AI-Workspace navigation, seed the BackgroundTaskService from the persisted
+   * /jobs/active list so users see in-flight imports started in a previous session, on a different
+   * device, or before a backend redeploy.
+   */
+  seedActiveJobsOnBoot(): void {
+    this.listActiveJobs().subscribe({
+      next: jobs => {
+        for (const j of jobs) {
+          if (!this.backgroundPollers.has(j.sessionId)) {
+            this.startBackgroundPolling(j.sessionId, j.fileCount,
+              `Importing ${j.fileCount} template${j.fileCount === 1 ? '' : 's'}`);
+          }
+        }
+      },
+      error: () => { /* best-effort seed; don't break app boot */ }
+    });
   }
 }

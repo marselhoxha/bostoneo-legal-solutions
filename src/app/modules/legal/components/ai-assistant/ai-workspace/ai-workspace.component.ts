@@ -93,6 +93,7 @@ import { ExhibitPanelService, Exhibit } from '../../../services/exhibit-panel.se
 import { StationeryService, StationeryTemplate, AttorneyInfo, StationeryRenderResponse } from '../../../services/stationery.service';
 import { CaseDocumentsService } from '../../../services/case-documents.service';
 import { TemplateService, Template } from '../../../services/template.service';
+import { TemplateImportService } from '../../../services/template-import.service';
 import { NavigationHistoryService } from '../../../services/navigation-history.service';
 import { PRACTICE_AREAS } from '../../../shared/legal-constants';
 
@@ -944,6 +945,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
     private stationeryService: StationeryService,
     private organizationService: OrganizationService,
     private templateService: TemplateService,
+    private templateImportService: TemplateImportService,
     private navigationHistory: NavigationHistoryService
   ) {}
 
@@ -975,6 +977,11 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   };
 
   ngOnInit(): void {
+    // Seed any persisted in-flight template-import jobs into the BackgroundTaskService so the
+    // indicator chip shows imports started in a previous browser session, on another device,
+    // or before a backend redeploy. Best-effort — never blocks app boot.
+    this.templateImportService.seedActiveJobsOnBoot();
+
     // Set default jurisdiction from organization state
     const orgId = this.organizationService.getCurrentOrganizationId();
     if (orgId) {

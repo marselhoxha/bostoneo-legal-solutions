@@ -92,6 +92,10 @@
                 <ng-container *ngIf="task.type === 'analysis'">
                   Analyzing... {{ task.elapsedTime }}
                 </ng-container>
+                <!-- Template Import: Show per-file progress -->
+                <ng-container *ngIf="task.type === 'template_import'">
+                  {{ task.description || 'Analyzing templates…' }} • {{ task.elapsedTime }}
+                </ng-container>
               </ng-container>
               <!-- Waiting for Input Status -->
               <ng-container *ngIf="task.status === 'waiting'">

@@ -1388,6 +1388,21 @@ export class TopbarComponent implements OnInit, OnDestroy {
   onBackgroundTaskView(task: BackgroundTask): void {
     const queryParams: any = {};
 
+    // Template-import tasks live on the Template Library page, not LegiSpace. Route here so
+    // the library reads ?resumeImport=<sessionId> and re-opens the wizard at the appropriate
+    // step (Processing if still running, Review if all files finalized).
+    if (task.type === 'template_import') {
+      const sessionId = task.result?.sessionId || task.conversationId;
+      if (sessionId) {
+        this.router.navigate(['/legal/ai-assistant/templates'], {
+          queryParams: { resumeImport: sessionId }
+        });
+      } else {
+        this.router.navigate(['/legal/ai-assistant/templates']);
+      }
+      return;
+    }
+
     // Route based on task type
     switch (task.type) {
       case 'workflow':
@@ -1418,7 +1433,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
         break;
     }
 
-    // Navigate to LegiSpace
+    // Default: navigate to LegiSpace
     this.router.navigate(['/legal/ai-assistant/legispace'], { queryParams });
   }
 

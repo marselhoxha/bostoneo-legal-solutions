@@ -24,6 +24,23 @@
     </div>
   </div>
 
+  <!-- Active-import banner: surfaces in-flight template imports so the user can resume the wizard
+       without leaving this page. Driven by BackgroundTaskService so it stays in sync with the
+       global indicator chip in AI Workspace. -->
+  <div class="alert alert-info d-flex align-items-center gap-3 mb-3"
+       *ngFor="let task of activeImportTasks"
+       style="border-left: 4px solid #405189;">
+    <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+    <div class="flex-grow-1">
+      <strong>{{ task.title }}</strong>
+      <div class="small text-muted">{{ task.description || 'Analyzing templates…' }}</div>
+    </div>
+    <button class="btn btn-sm btn-primary"
+            (click)="importTemplate(task.conversationId)">
+      <i class="ri-eye-line me-1"></i> Resume
+    </button>
+  </div>
+
   <!-- Statistics Cards (redesign §2 — honest sub-context, no fake deltas) -->
   <div class="tmpl-stats">
     <div class="tmpl-stat-card" data-accent="primary">
@@ -534,6 +551,7 @@
   <ng-template #importModal>
     <app-template-import-wizard
       *ngIf="showImportWizard"
+      [resumeSessionId]="importWizardResumeSessionId"
       (importCompleted)="onImportCompleted($event)"
       (closed)="onImportWizardClosed()">
     </app-template-import-wizard>

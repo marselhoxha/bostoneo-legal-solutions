@@ -81,6 +81,15 @@ public class ClaudeSonnet4Service implements AIService {
      * If model is null, defaults to Opus 4.5 (via createRequest).
      */
     public CompletableFuture<String> generateCompletionWithModel(String prompt, String systemMessage, boolean useDeepThinking, Long sessionId, Double temperature, String model) {
+        return generateCompletionWithModel(prompt, systemMessage, useDeepThinking, sessionId, temperature, model, null);
+    }
+
+    /**
+     * Same as the 6-arg overload, but lets the caller force an explicit max_tokens cap that bypasses
+     * the keyword heuristic in {@link #createRequest}. Used by callers (e.g. template-import classification)
+     * whose output size doesn't match any of the keyword paths and would otherwise default to 4000 and truncate.
+     */
+    public CompletableFuture<String> generateCompletionWithModel(String prompt, String systemMessage, boolean useDeepThinking, Long sessionId, Double temperature, String model, Integer maxTokensOverride) {
         // Check if generation has been cancelled BEFORE making expensive API call
         if (sessionId != null && cancellationService.isCancelled(sessionId)) {
             log.warn("AI generation cancelled before API call for session {}", sessionId);
@@ -95,7 +104,7 @@ public class ClaudeSonnet4Service implements AIService {
         String redactedPrompt = PiiDetector.redact(prompt);
         String redactedSystemMessage = PiiDetector.redact(systemMessage);
 
-        AIRequest request = createRequest(redactedPrompt, redactedSystemMessage, useDeepThinking, temperature, model);
+        AIRequest request = createRequest(redactedPrompt, redactedSystemMessage, useDeepThinking, temperature, model, maxTokensOverride);
 
         // Resolve model to Bedrock model ID
         String bedrockModelId = aiConfig.resolveBedrockModelId(request.getModel());
@@ -1375,6 +1384,19 @@ public class ClaudeSonnet4Service implements AIService {
 
     private AIRequest createRequest(String prompt, String systemMessage, boolean useDeepThinking, Double temperature) {
         return createRequest(prompt, systemMessage, useDeepThinking, temperature, null);
+    }
+
+    /**
+     * Same as the 5-arg createRequest, but lets the caller bypass the keyword-driven max_tokens heuristic
+     * with an explicit cap. Pass {@code null} for {@code maxTokensOverride} to keep the heuristic.
+     */
+    private AIRequest createRequest(String prompt, String systemMessage, boolean useDeepThinking, Double temperature, String model, Integer maxTokensOverride) {
+        AIRequest request = createRequest(prompt, systemMessage, useDeepThinking, temperature, model);
+        if (maxTokensOverride != null) {
+            log.info("📐 Caller-supplied max_tokens override: {} (heuristic was {})", maxTokensOverride, request.getMax_tokens());
+            request.setMax_tokens(maxTokensOverride);
+        }
+        return request;
     }
 
     /**

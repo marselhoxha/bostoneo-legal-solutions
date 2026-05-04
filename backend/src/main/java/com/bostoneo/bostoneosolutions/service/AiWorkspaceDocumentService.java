@@ -3989,6 +3989,93 @@ public class AiWorkspaceDocumentService {
     }
 
     /**
+     * Rewrite the imported-template structural classes into native HTML markup that iText html2pdf
+     * renders reliably. The class-based markup ({@code <p class="signature-line">...} and
+     * {@code <div class="callout-box">...}) is what the import wizard saves so we can keep the
+     * editor preview semantic, but iText's CSS class-selector engine doesn't honor {@code border}
+     * properties on {@code <p>} consistently. Native {@code <hr>} and single-cell {@code <table>}
+     * are the lowest-common-denominator markup both iText and CKEditor render with visible borders.
+     *
+     * <p>Idempotent — applies the rewrite once per render call. Backwards compatible — existing
+     * imported templates need no re-import to get visible borders in the export.
+     */
+    private String rewriteImportStructuralMarkup(String html) {
+        if (html == null || html.isEmpty()) return html;
+        String out = html;
+
+        // Promote the FIRST top-of-document <h2> to <h2 class="document-title">, regardless of
+        // whether the inline {@code text-align:center} style survived the editor's sanitization
+        // pass. Convention: the very first heading in an imported instrument is the document
+        // title (e.g., "The Smith Family Trust"), and should render bigger + centered. Subsequent
+        // <h2>s are ARTICLE / SECTION headings and stay left-aligned at body size. Use a regex
+        // that allows leading whitespace + an optional inline style attribute on the first <h2>.
+        out = out.replaceFirst(
+            "(?is)\\A(\\s*)<h2(\\s[^>]*)?>(.*?)</h2>",
+            "$1<h2 class=\"document-title\">$3</h2>"
+        );
+
+        // <p class="signature-line">CONTENT</p> → underscore rule + name paragraph.
+        //
+        // We tried <hr> with inline styles, <table> with cell borders, <table> with table-level
+        // borders, and per-side border declarations — every approach failed in iText html2pdf
+        // for one of three reasons: (a) iText skips border rendering on empty/small cells,
+        // (b) `border:none` shorthand cancels subsequent `border-top` overrides, (c) the global
+        // {@code td/hr} CSS rules interact unpredictably with our overrides.
+        //
+        // Solution: literal underscore characters in a serif font render as a solid horizontal
+        // line in EVERY PDF/Word/HTML renderer with zero special handling. Visually identical
+        // to a CSS-rule-based signature line; bulletproof across the matrix of renderers we
+        // care about (iText, browser preview, CKEditor, MS Word import).
+        //
+        // 40 underscores at 12pt serif ≈ 3 inches ≈ 50% of letter-page content width.
+        out = out.replaceAll(
+            "(?is)<p\\s+class=\"signature-line\"\\s*>(.*?)</p>",
+            "<p style=\"margin:28pt 0 0 0;font-family:'Times New Roman',Georgia,serif;letter-spacing:0;\">"
+            + "________________________________________</p>"
+            + "<p style=\"margin:0;\">$1</p>"
+        );
+
+        // <div class="callout-box"><p>CONTENT</p></div> → bordered single-cell table
+        // iText renders <table> borders reliably (the existing th/td CSS already proves it),
+        // and CKEditor renders tables with visible borders by default.
+        out = out.replaceAll(
+            "(?is)<div\\s+class=\"callout-box\"\\s*>(.*?)</div>",
+            "<table style=\"border-collapse:collapse;width:100%;margin:12pt 0;\">" +
+            "<tbody><tr><td style=\"border:1px solid #000;padding:8pt 12pt;\">$1</td></tr></tbody>" +
+            "</table>"
+        );
+
+        // Safety net: if the body contains raw <hr/> elements (e.g., from earlier-prompt-version
+        // imports that emitted <hr> directly instead of class-based markup), convert each to the
+        // same underscore-rule that the .signature-line class produces. This makes the visible
+        // result identical regardless of which prompt version generated the markup.
+        out = out.replaceAll(
+            "(?is)<hr\\s*/?\\s*>",
+            "<p style=\"margin:24pt 0 0 0;font-family:'Times New Roman',Georgia,serif;\">"
+            + "________________________________________</p>"
+        );
+
+        return out;
+    }
+
+    /**
+     * Instruments (trusts, wills, contracts, settlements, deeds, operating agreements, etc.) are
+     * the legal artifact itself — their ARTICLE/SECTION headings are body content and should read
+     * left-aligned like prose, NOT centered like a court-filing case caption. Falls back to a
+     * keyword scan when documentType is null/empty so freshly-imported templates without a
+     * registered type still get the right styling.
+     */
+    private boolean isInstrumentType(String documentType) {
+        if (documentType == null || documentType.isBlank()) return false;
+        String t = documentType.toLowerCase();
+        return t.contains("trust") || t.contains("will") || t.contains("contract")
+            || t.contains("agreement") || t.contains("settlement") || t.contains("deed")
+            || t.contains("operating") || t.contains("articles_of_incorporation")
+            || t.contains("bylaws") || t.contains("power_of_attorney") || t.contains("retainer")
+            || t.contains("engagement_letter");
+    }
+
+    /**
      * Get professional filename for document export
      * Extracts title from markdown content and sanitizes it
      */
@@ -5326,6 +5413,13 @@ public class AiWorkspaceDocumentService {
                 addDraftWatermarkHandler(pdfDoc, watermarkText);
             }
 
+            // Preprocess: rewrite imported-template structural classes into native HTML markup
+            // that iText html2pdf renders reliably. iText's CSS class-selector engine has a soft
+            // spot for `border` properties on <p> elements — `<hr>` and `<table>` borders, by
+            // contrast, are rock-solid in iText AND in CKEditor's default rendering. Doing the
+            // rewrite here means existing imported templates work without re-import.
+            htmlContent = rewriteImportStructuralMarkup(htmlContent);
+
             // Preprocess: wrap heading+content groups in keep-together divs for page breaks
             htmlContent = wrapSectionsForPageBreaks(htmlContent);
 
@@ -5371,6 +5465,17 @@ public class AiWorkspaceDocumentService {
         // Detect letter type from documentType or title fallback
         boolean isLetter = isLetterType(documentType)
             || (documentType == null && title != null && (title.toLowerCase().contains("demand") || title.toLowerCase().contains("letter")));
+        // Trusts, wills, contracts, agreements: their ARTICLE/SECTION headings are body content
+        // and should read left-aligned like prose, not centered like a court-filing caption.
+        boolean isInstrument = isInstrumentType(documentType)
+            || (title != null && (title.toLowerCase().contains("trust")
+                || title.toLowerCase().contains("will")
+                || title.toLowerCase().contains("agreement")
+                || title.toLowerCase().contains("contract")));
+        // Use the same left-aligned headings as letters for instruments so ARTICLE-N section
+        // headings don't render centered. The document title (Claude marks it with inline
+        // text-align:center) still centers because inline style beats stylesheet.
+        boolean leftAlignHeadings = isLetter || isInstrument;
         return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/>"
              + "<style>"
              // Body: serif font, 12pt.
@@ -5387,8 +5492,10 @@ public class AiWorkspaceDocumentService {
                 : "padding: 72px 72px " + bottomPadding + " 72px;")
              + " }"
              // Headings: uniform 12pt, no indent
-             // Court filings: h1/h2 centered. Letters/demand letters: h1/h2 left-aligned.
-             + (isLetter
+             // Court filings: h1/h2 centered. Letters AND instruments (trusts/wills/contracts):
+             // h1/h2 left-aligned — instrument ARTICLE/SECTION headings are body content, not
+             // case captions.
+             + (leftAlignHeadings
                 ? "h1 { font-size: 12pt; font-weight: 700; margin: 20px 0 10px; color: #212529; text-indent: 0; }"
                   + "h2 { font-size: 12pt; font-weight: 700; margin: 18px 0 8px; color: #212529; text-indent: 0; }"
                 : "h1 { font-size: 12pt; font-weight: 700; margin: 20px 0 10px; color: #212529; text-align: center; text-indent: 0; text-decoration: underline; }"
@@ -5430,6 +5537,17 @@ public class AiWorkspaceDocumentService {
              + "figure { margin: 16px 0 36px 0; }"
              // Legal document specific
              + ".exhibit-ref { color: #405189; text-decoration: underline; text-decoration-style: dotted; }"
+             // Imported-template structural elements (preserved across CKEditor sanitization via class attributes,
+             // not inline styles — CKEditor's default config strips style="" but keeps class="").
+             // .signature-line: paragraph rendered with a top border so the signatory's name reads as if it sits
+             // on a "sign here" rule. .callout-box: black-bordered div around notary disclaimers / sworn-statement
+             // preambles / important-notice blocks the original PDF rendered in a bordered rectangle.
+             // .document-title: centered, larger title at the top of an instrument (trust name, will title, etc.).
+             + ".signature-line { border-top: 1px solid #000; margin-top: 24pt; padding-top: 4pt; }"
+             + ".callout-box { border: 1px solid #000; padding: 8pt 12pt; margin: 12pt 0; border-radius: 2pt; }"
+             + ".callout-box > p { margin: 4pt 0; }"
+             + ".document-title { font-size: 18pt !important; font-weight: 700 !important; "
+             +   "text-align: center !important; margin: 24pt 0 18pt 0 !important; text-decoration: none !important; }"
              // Stationery frames: borderless tables, serif font (must match CKEditor frame CSS)
              + ".stationery-letterhead table, .stationery-signature table, .stationery-footer table "
              + "{ border: none !important; border-collapse: collapse !important; margin: 0; }"
@@ -5498,7 +5616,7 @@ public class AiWorkspaceDocumentService {
              + "blockquote { page-break-inside: avoid; }"
              + "</style>"
              + "</head><body>"
-             + preprocessForPdf(bodyHtml, isLetter)
+             + preprocessForPdf(bodyHtml, leftAlignHeadings)
              + "</body></html>";
     }
 
@@ -5509,11 +5627,14 @@ public class AiWorkspaceDocumentService {
      * (mapped from {@code <p>}) and heading elements handle text-align correctly.
      * Convert centered {@code <div>} to {@code <p>} so iText renders the alignment.
      *
-     * Letters (demand/settlement/general correspondence) skip the court-caption centering
-     * entirely — their date, address block, RE: line, and salutation are left-aligned.
+     * <p>Letters AND instruments (trusts/wills/contracts) skip the court-caption centering
+     * pass — neither has a court caption to center, AND instruments may legitimately contain
+     * mid-document tables (notary callout boxes, fee schedules) that would otherwise be
+     * mistaken for a caption boundary, accidentally centering every paragraph above them.
+     * Only court filings (motions, briefs, complaints) need the caption-area treatment.
      */
-    private String preprocessForPdf(String html, boolean isLetter) {
-        if (isLetter) return html;
+    private String preprocessForPdf(String html, boolean skipCaptionCentering) {
+        if (skipCaptionCentering) return html;
 
         // CKEditor strips ALL alignment styles from both <div> and <p> elements.
         // Re-add centering based on document structure:

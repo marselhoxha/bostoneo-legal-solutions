@@ -87,6 +87,28 @@ public class TemplateImportController {
     }
 
     /**
+     * List the current user's last 20 template-import jobs (durable across pod restarts and TTL).
+     * Used by the global background-tasks indicator and a future "Recent Imports" history view.
+     */
+    @GetMapping("/jobs")
+    public ResponseEntity<List<Map<String, Object>>> listJobs() {
+        return ResponseEntity.ok()
+            .header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+            .body(importService.listJobsForCurrentUser());
+    }
+
+    /**
+     * Just the in-flight (PENDING / IN_PROGRESS) jobs — small payload, suitable for the
+     * once-on-app-boot seed of the BackgroundTaskService.
+     */
+    @GetMapping("/jobs/active")
+    public ResponseEntity<List<Map<String, Object>>> listActiveJobs() {
+        return ResponseEntity.ok()
+            .header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+            .body(importService.listActiveJobsForCurrentUser());
+    }
+
+    /**
      * Return the current state of an import session for UI polling.
      *
      * <p><b>Cache-Control:</b> polling relies on seeing fresh state every 2s. Without explicit

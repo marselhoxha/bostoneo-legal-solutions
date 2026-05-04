@@ -12,6 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Extracts text from PDF templates using PDFBox directly (not Tika).
@@ -84,13 +86,22 @@ public class PdfExtractor {
 
             int wordCount = trimmed.split("\\s+").length;
 
+            // Collect graphics primitives (signature lines + bordered callouts) so Claude can
+            // reconstruct the visual treatment that pure text extraction discards. OCR'd PDFs
+            // have no useful graphics primitives in the text layer — skip the second pass for
+            // those to save time.
+            List<String> structureHints = usedOcr
+                ? List.of()
+                : buildStructureHints(PdfStructureCollector.collect(doc));
+
             return new ExtractedDocument(
                 trimmed,
                 pageCount,
                 wordCount,
                 ExtractorUtils.sha256(trimmed),
                 usedOcr ? "IMPORTED_PDF_OCR" : "IMPORTED_PDF",
-                warnings
+                warnings,
+                structureHints
             );
 
         } catch (InvalidPasswordException ipe) {
@@ -107,5 +118,38 @@ public class PdfExtractor {
                 ioe
             );
         }
+    }
+
+    /**
+     * Translate raw graphics detections into compact, natural-language cues. Claude is good at
+     * matching "1 bordered rectangle on page 12" with "the notary disclaimer paragraph" — much
+     * better than reasoning over coordinates. Per-page grouping keeps the cue list short even
+     * for long documents.
+     */
+    private List<String> buildStructureHints(PdfStructureCollector.Result r) {
+        if (r.lines().isEmpty() && r.rects().isEmpty()) return List.of();
+
+        // Group by page using TreeMap so the output is page-sorted.
+        Map<Integer, int[]> perPage = new TreeMap<>();      // pageIndex -> {lines, rects}
+        for (var l : r.lines()) perPage.computeIfAbsent(l.pageIndex(), k -> new int[2])[0]++;
+        for (var rect : r.rects()) perPage.computeIfAbsent(rect.pageIndex(), k -> new int[2])[1]++;
+
+        List<String> hints = new ArrayList<>();
+        for (Map.Entry<Integer, int[]> e : perPage.entrySet()) {
+            int page = e.getKey() + 1;  // human-readable page numbers (1-based)
+            int lineCount = e.getValue()[0];
+            int rectCount = e.getValue()[1];
+            if (lineCount > 0) {
+                hints.add(String.format("PAGE %d: %d horizontal rule line%s detected (likely signature lines or fill-in blanks)",
+                    page, lineCount, lineCount == 1 ? "" : "s"));
+            }
+            if (rectCount > 0) {
+                hints.add(String.format("PAGE %d: %d bordered rectangle%s detected (likely callout box around an important notice or disclaimer)",
+                    page, rectCount, rectCount == 1 ? "" : "s"));
+            }
+        }
+        log.info("PDF structure: {} signature lines, {} bordered rectangles across {} pages",
+            r.lines().size(), r.rects().size(), perPage.size());
+        return hints;
     }
 }

@@ -317,6 +317,22 @@
 // area, toolbar, and sticky panel to use Velzon tokens so the editor flips cleanly
 // when [data-bs-theme="dark"] is set on <html>.
 
+// Imported-template structural classes — keeps signature lines + bordered callouts visible
+// inside CKEditor (where inline styles get sanitized away). The PDF renderer's stylesheet has
+// the matching rules so the export looks identical to the editor.
+::ng-deep .ck-content .signature-line {
+  border-top: 1px solid #000;
+  margin-top: 28px;
+  padding-top: 6px;
+}
+::ng-deep .ck-content .callout-box {
+  border: 1px solid #000;
+  padding: 10px 14px;
+  margin: 14px 0;
+  border-radius: 2px;
+}
+::ng-deep .ck-content .callout-box > p { margin: 4px 0; }
+
 :host-context([data-bs-theme="dark"]) {
   .editor-main {
     ::ng-deep .ck.ck-editor__main > .ck-editor__editable,

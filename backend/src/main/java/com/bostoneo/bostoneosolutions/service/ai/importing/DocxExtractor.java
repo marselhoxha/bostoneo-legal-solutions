@@ -76,7 +76,8 @@ public class DocxExtractor {
                 wordCount,
                 ExtractorUtils.sha256(trimmed),
                 "IMPORTED_DOCX",
-                warnings
+                warnings,
+                List.of()           // structureHints: DOCX-derived layout cues are out-of-scope for this round
             );
 
         } catch (EncryptedDocumentException ede) {
@@ -116,7 +117,8 @@ public class DocxExtractor {
                 wordCount,
                 ExtractorUtils.sha256(trimmed),
                 "IMPORTED_DOC",
-                new ArrayList<>()
+                new ArrayList<>(),
+                List.of()
             );
 
         } catch (EncryptedDocumentException ede) {

@@ -1,14 +1,15 @@
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, OnDestroy, Output, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NgbModal, NgbModalRef, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { Subject, forkJoin } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { TemplateService, Template, TemplateSearchResult } from '../../../services/template.service';
 import { AutoFillWizardComponent } from './auto-fill-wizard/auto-fill-wizard.component';
 import { TemplateImportWizardComponent } from './template-import-wizard/template-import-wizard.component';
-import { ImportCommitResponse } from '../../../services/template-import.service';
+import { ImportCommitResponse, TemplateImportService } from '../../../services/template-import.service';
+import { BackgroundTask, BackgroundTaskService } from '../../../services/background-task.service';
 import { PRACTICE_AREAS, getPracticeArea, getPracticeAreaName, getJurisdictionByName, getJurisdictionName } from '../../../shared/legal-constants';
 import Swal from 'sweetalert2';
 
@@ -42,6 +43,11 @@ export class TemplateLibraryComponent implements OnInit, OnDestroy {
 
   // Import wizard state (Sprint 1.5)
   showImportWizard = false;
+  /** When set, the import wizard rehydrates from this existing session instead of starting fresh. */
+  importWizardResumeSessionId?: string;
+
+  /** In-flight template-import tasks for the current user. Drives the page-level status banner. */
+  activeImportTasks: BackgroundTask[] = [];
 
   // Sprint 2 — emits generated doc when library is embedded in another component (e.g., LegiSpace modal).
   @Output() templateGenerated = new EventEmitter<any>();
@@ -110,8 +116,11 @@ export class TemplateLibraryComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private modalService: NgbModal,
     private templateService: TemplateService,
+    private templateImportService: TemplateImportService,
+    private backgroundTaskService: BackgroundTaskService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -122,6 +131,34 @@ export class TemplateLibraryComponent implements OnInit, OnDestroy {
     this.loadCategories();
     this.loadStatistics();
     this.cdr.detectChanges();
+
+    // Honor a deep-link from the BackgroundTasksIndicator chip: ?resumeImport=<sessionId> opens
+    // the import wizard preloaded with that session so the user can see live progress / the
+    // review step without losing context.
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const resumeId = params['resumeImport'];
+      if (resumeId && !this.importModalRef) {
+        this.importTemplate(resumeId);
+        // Strip the query param so a future navigation back to /templates doesn't re-open the wizard.
+        this.router.navigate([], { queryParams: { resumeImport: null }, queryParamsHandling: 'merge', replaceUrl: true });
+      }
+    });
+
+    // Seed any persisted in-flight import jobs so the page banner shows imports started in another
+    // tab / session / before a backend redeploy. Best-effort.
+    this.templateImportService.seedActiveJobsOnBoot();
+
+    // Drive the in-page banner from BackgroundTaskService — the same source the global
+    // indicator uses, so the two never diverge.
+    this.backgroundTaskService.tasks$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(all => {
+        this.activeImportTasks = all.filter(t =>
+          t.type === 'template_import' &&
+          (t.status === 'running' || t.status === 'pending')
+        );
+        this.cdr.markForCheck();
+      });
   }
 
   ngOnDestroy(): void {
@@ -744,9 +781,10 @@ export class TemplateLibraryComponent implements OnInit, OnDestroy {
     return this.paginatedTemplates.some((t: any) => t.selected);
   }
 
-  importTemplate(): void {
+  importTemplate(resumeSessionId?: string): void {
     // Guard against rapid double-clicks opening multiple modal instances.
     if (this.importModalRef) return;
+    this.importWizardResumeSessionId = resumeSessionId;
     this.showImportWizard = true;
     if (this.importModal) {
       this.importModalRef = this.modalService.open(this.importModal, {
@@ -759,6 +797,7 @@ export class TemplateLibraryComponent implements OnInit, OnDestroy {
       this.importModalRef.result.finally(() => {
         this.importModalRef = undefined;
         this.showImportWizard = false;
+        this.importWizardResumeSessionId = undefined;
       });
     }
   }
@@ -766,6 +805,15 @@ export class TemplateLibraryComponent implements OnInit, OnDestroy {
   onImportCompleted(_result: ImportCommitResponse): void {
     // Refresh library so new imports show up
     this.loadTemplates();
+    // Close the wizard modal automatically — the wizard fires this event AFTER the
+    // success-confirmation dialog has been dismissed, so the user only clicks "OK" once
+    // and the modal goes away in the same gesture.
+    if (this.importModalRef) {
+      this.importModalRef.close();
+      this.importModalRef = undefined;
+      this.showImportWizard = false;
+      this.importWizardResumeSessionId = undefined;
+    }
     this.cdr.detectChanges();
   }
 

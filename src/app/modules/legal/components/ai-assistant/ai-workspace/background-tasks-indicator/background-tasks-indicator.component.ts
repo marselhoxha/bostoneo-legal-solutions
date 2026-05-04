@@ -163,6 +163,8 @@ export class BackgroundTasksIndicatorComponent implements OnInit, OnDestroy {
         return 'ri-file-search-line';
       case 'workflow':
         return 'ri-flow-chart';
+      case 'template_import':
+        return 'ri-file-add-line';
       default:
         return 'ri-robot-line';
     }
@@ -178,6 +180,8 @@ export class BackgroundTasksIndicatorComponent implements OnInit, OnDestroy {
         return 'Analysis';
       case 'workflow':
         return 'Workflow';
+      case 'template_import':
+        return 'Template Import';
       default:
         return 'Task';
     }

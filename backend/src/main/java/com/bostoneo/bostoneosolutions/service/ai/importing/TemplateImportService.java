@@ -9,9 +9,11 @@ import com.bostoneo.bostoneosolutions.enumeration.DataSource;
 import com.bostoneo.bostoneosolutions.enumeration.TemplateCategory;
 import com.bostoneo.bostoneosolutions.enumeration.VariableType;
 import com.bostoneo.bostoneosolutions.model.AILegalTemplate;
+import com.bostoneo.bostoneosolutions.model.AITemplateImportJob;
 import com.bostoneo.bostoneosolutions.model.AITemplateVariable;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AILegalTemplateRepository;
+import com.bostoneo.bostoneosolutions.repository.AITemplateImportJobRepository;
 import com.bostoneo.bostoneosolutions.repository.AITemplateVariableRepository;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import com.bostoneo.bostoneosolutions.util.ByteArrayMultipartFile;
@@ -58,7 +60,13 @@ public class TemplateImportService {
     private static final String MODEL_FIRST_PASS  = "claude-opus-4-6";
     /** Cheap re-analysis when the attorney edits + re-runs. */
     private static final String MODEL_REANALYSIS  = "claude-haiku-4-5";
-    private static final int CLAUDE_TIMEOUT_SECONDS = 90;
+    // 600 s ceiling for Claude classification. A 32 k-token output streams ~7–10 minutes from Sonnet 4.6;
+    // anything larger is rejected up front by the doc-too-large guard, so this is safely the ceiling.
+    private static final int CLAUDE_TIMEOUT_SECONDS = 600;
+    // Sized to fit estate-planning trusts up to ~40 pages without truncating the suggestedBodyWithPlaceholders
+    // HTML. Claude bills per token actually generated, so small docs (typical case) still finish quickly and
+    // cheaply — the cap is an upper bound, not a target.
+    private static final int CLAUDE_MAX_TOKENS = 32_000;
     private static final BigDecimal LOW_CONFIDENCE_THRESHOLD = new BigDecimal("0.60");
 
     private final TemplateImportExtractor extractor;
@@ -70,6 +78,8 @@ public class TemplateImportService {
     private final TenantService tenantService;
     private final DocxTemplateTransformer docxTemplateTransformer;
     private final PdfTemplateTransformer pdfTemplateTransformer;
+    private final ImportJobPersister jobPersister;
+    private final AITemplateImportJobRepository jobRepository;
 
     // ==================== Session Lifecycle ====================
 
@@ -80,11 +90,20 @@ public class TemplateImportService {
                 .orElseThrow(() -> new IllegalStateException("User context required"));
         ImportSession session = sessionStore.create(orgId, userId);
         log.info("Created template import session {} for org {}, user {}", session.getSessionId(), orgId, userId);
+        jobPersister.onCreate(session);
         return session.getSessionId();
     }
 
     public ImportSessionResponse getSessionResponse(UUID sessionId) {
-        ImportSession session = requireSession(sessionId);
+        // In-memory session is the primary source of truth while analysis is running. If it has been
+        // swept (terminated session past TTL, or pod restart), fall back to the durable DB row so the
+        // wizard can hydrate a "view results / dismiss" snapshot when the user returns later.
+        ImportSession session = sessionStore.get(sessionId).orElse(null);
+        if (session == null) {
+            return jobRepository.findBySessionId(sessionId)
+                .map(this::synthesizeFromJob)
+                .orElseThrow(() -> new IllegalArgumentException("Import session not found: " + sessionId));
+        }
         sessionStore.touch(sessionId);
         ImportSessionResponse resp = session.toResponse();
         // DIAGNOSTIC: correlate frontend polls with actual session state
@@ -96,6 +115,92 @@ public class TemplateImportService {
                 .reduce((a, b) -> a + ", " + b)
                 .orElse(""));
         return resp;
+    }
+
+    /** List the user's most recent import jobs (active + recently terminated) for the indicator UI. */
+    public List<Map<String, Object>> listJobsForCurrentUser() {
+        Long userId = tenantService.getCurrentUserId()
+            .orElseThrow(() -> new IllegalStateException("User context required"));
+        Long orgId  = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new IllegalStateException("Organization context required"));
+        return jobRepository.findTop20ByUserIdOrderByStartedAtDesc(userId).stream()
+            .filter(j -> orgId.equals(j.getOrganizationId()))
+            .map(this::toJobSummary)
+            .collect(java.util.stream.Collectors.toList());
+    }
+
+    /** Just the in-flight jobs (PENDING / IN_PROGRESS) — used to seed the indicator on app boot. */
+    public List<Map<String, Object>> listActiveJobsForCurrentUser() {
+        Long userId = tenantService.getCurrentUserId()
+            .orElseThrow(() -> new IllegalStateException("User context required"));
+        Long orgId  = tenantService.getCurrentOrganizationId()
+            .orElseThrow(() -> new IllegalStateException("Organization context required"));
+        return jobRepository.findByUserIdAndStatusInOrderByStartedAtDesc(
+                userId, java.util.List.of(AITemplateImportJob.Status.PENDING, AITemplateImportJob.Status.IN_PROGRESS))
+            .stream()
+            .filter(j -> orgId.equals(j.getOrganizationId()))
+            .map(this::toJobSummary)
+            .collect(java.util.stream.Collectors.toList());
+    }
+
+    private Map<String, Object> toJobSummary(AITemplateImportJob j) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("sessionId", j.getSessionId());
+        m.put("status", j.getStatus() == null ? null : j.getStatus().name());
+        m.put("fileCount", j.getFileCount());
+        m.put("readyCount", j.getReadyCount());
+        m.put("failedCount", j.getFailedCount());
+        m.put("duplicateCount", j.getDuplicateCount());
+        m.put("startedAt", j.getStartedAt());
+        m.put("updatedAt", j.getUpdatedAt());
+        m.put("completedAt", j.getCompletedAt());
+        return m;
+    }
+
+    /**
+     * Build a read-only {@link ImportSessionResponse} from the persisted job row when the in-memory
+     * session is gone. The wizard can show terminal status and per-file outcomes; the commit path is
+     * a no-op for this read-only view (the in-memory analysis state is required for commit).
+     */
+    private ImportSessionResponse synthesizeFromJob(AITemplateImportJob j) {
+        // Tenant guard: never expose another user's session via the read-only fallback.
+        Long currentUserId = tenantService.getCurrentUserId().orElse(null);
+        Long currentOrgId  = tenantService.getCurrentOrganizationId().orElse(null);
+        if (currentUserId == null || !currentUserId.equals(j.getUserId())
+            || currentOrgId == null || !currentOrgId.equals(j.getOrganizationId())) {
+            throw new SecurityException("Import session belongs to a different user.");
+        }
+        List<ImportSessionResponse.FileStatus> files = new java.util.ArrayList<>();
+        if (j.getFilesSummary() != null) {
+            for (Map<String, Object> row : j.getFilesSummary()) {
+                ImportSessionResponse.FileStatus.Status st = parseStatus((String) row.get("status"));
+                files.add(ImportSessionResponse.FileStatus.builder()
+                    .fileId((String) row.get("fileId"))
+                    .filename((String) row.get("filename"))
+                    .status(st)
+                    .errorCode((String) row.get("errorCode"))
+                    .errorMessage((String) row.get("errorMessage"))
+                    .contentHash((String) row.get("contentHash"))
+                    .build());
+            }
+        }
+        boolean allFinalized = j.getStatus() == AITemplateImportJob.Status.COMPLETED
+            || j.getStatus() == AITemplateImportJob.Status.PARTIAL
+            || j.getStatus() == AITemplateImportJob.Status.FAILED
+            || j.getStatus() == AITemplateImportJob.Status.CANCELLED;
+        return ImportSessionResponse.builder()
+            .sessionId(j.getSessionId())
+            .createdAt(j.getStartedAt() == null ? null : j.getStartedAt().toLocalDateTime())
+            .expiresAt(null)
+            .files(files)
+            .allFinalized(allFinalized)
+            .build();
+    }
+
+    private ImportSessionResponse.FileStatus.Status parseStatus(String s) {
+        if (s == null) return null;
+        try { return ImportSessionResponse.FileStatus.Status.valueOf(s); }
+        catch (IllegalArgumentException ex) { return null; }
     }
 
     // ==================== Upload + Analysis ====================
@@ -115,6 +220,7 @@ public class TemplateImportService {
             .build();
         session.getFiles().put(fileId, sf);
         sessionStore.touch(sessionId);
+        jobPersister.onFileCountChanged(session);
         return fileId;
     }
 
@@ -178,6 +284,7 @@ public class TemplateImportService {
                         + ". Please retry.");
                 }
                 log.info("Analysis pipeline finished for {}: final status={}", sf.getFilename(), sf.getStatus());
+                jobPersister.onSnapshot(session);
             }
         });
     }
@@ -462,9 +569,63 @@ public class TemplateImportService {
         }
     }
 
+    /**
+     * Reorder {@code detectedVariables} to follow first-occurrence reading order in the rendered
+     * body. Claude returns variables grouped by category or detection order, which doesn't match
+     * how an attorney reads the form left-to-right top-to-bottom. {@link #persistVariables} uses
+     * the resulting list-index as {@code displayOrder} so the "Fields to fill" sidebar lines up
+     * with the document.
+     *
+     * <p>Variables not found in the body (e.g., key was renamed mid-flight) keep their original
+     * ordering at the END of the list — they're still persisted, just deprioritized.
+     */
+    private void sortVariablesByBodyOrder(TemplateAnalysisResult result) {
+        if (result == null) return;
+        List<TemplateAnalysisResult.DetectedVariable> vars = result.getDetectedVariables();
+        if (vars == null || vars.size() <= 1) return;
+        String body = result.getSuggestedBodyWithPlaceholders();
+        if (body == null || body.isBlank()) return;
+
+        vars.sort(java.util.Comparator.comparingInt(v -> {
+            String key = v == null ? null : v.getSuggestedKey();
+            if (key == null || key.isBlank()) return Integer.MAX_VALUE;
+            int idx = body.indexOf("{{" + key + "}}");
+            return idx < 0 ? Integer.MAX_VALUE : idx;
+        }));
+    }
+
+    /**
+     * Render the PDF graphics-primitive cues (signature lines, bordered callouts) as a prompt
+     * section Claude can act on. Empty list → empty section (no token cost). The "STRUCTURAL
+     * CUES" header signals to Claude that visual structure was detected and should be reflected
+     * in the HTML output via the rules in the STRUCTURAL ELEMENTS section above.
+     */
+    private String formatStructuralCues(List<String> hints) {
+        if (hints == null || hints.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder("\n            STRUCTURAL CUES (graphics primitives detected in the source PDF — apply the\n");
+        sb.append("            STRUCTURAL ELEMENTS rules above when emitting suggestedBodyWithPlaceholders):\n");
+        for (String h : hints) {
+            sb.append("            - ").append(h).append("\n");
+        }
+        return sb.toString();
+    }
+
     // ==================== Claude Prompt ====================
 
     private TemplateAnalysisResult runClaudeAnalysis(ExtractedDocument doc, boolean reanalysis) throws Exception {
+        // Reject documents whose echoed-body output would blow past Claude's 32 k-token cap. ~4 chars/token
+        // for English legal prose, so >480 k chars is a useful proxy for "Claude can't return this in one
+        // call." Limit is set generously above the typical 40-page ceiling so we only fail on truly oversized
+        // docs (60+ pages), not on borderline 40-pagers.
+        int rawLen = doc.rawText() == null ? 0 : doc.rawText().length();
+        if (rawLen > 480_000) {
+            throw new TemplateImportException(
+                TemplateImportException.Code.FILE_TOO_LARGE,
+                "Template exceeds the size limit (~40 pages). Please split the document into multiple"
+                + " templates and import each separately."
+            );
+        }
+
         String systemMessage = """
             You are a legal-document classification assistant for a template-management system.
             You analyze uploaded law-firm templates and return ONLY a JSON object matching the schema below.
@@ -514,29 +675,51 @@ public class TemplateImportService {
             - In suggestedBodyWithPlaceholders replace each rawText with {{suggestedKey}}.
               Apply the structural rules and HTML-output rules described below.
 
-            LETTERHEAD, FOOTER, AND SIGNATURE-BLOCK REMOVAL (apply to suggestedBodyWithPlaceholders)
-            - STRIP the sender's firm letterhead from the TOP of the document. This is the
-              block that identifies the SENDING firm: firm name (often centered, ALL CAPS, or
-              large), firm street address, phone / fax / email / website lines. It typically
-              appears BEFORE the date or before any recipient (TO/addressee) information.
-            - STRIP the sender's signature block at the BOTTOM of the document. This includes
-              the closing salutation ("Sincerely,", "Very truly yours,", "Best regards,"),
-              the SPECIFIC sender's name (e.g., "David H. Altman"), title, bar number, and any
-              hardcoded sender contact info that follows the body proper. Cut from the closing
-              line through end-of-document.
-            - STRIP footer content: page numbers ("Page 1 of N", "1 of 2", standalone numerals
-              on their own line), repeating firm contact lines, copyright notices, and
-              disclaimers that aren't part of the substantive document.
-            - PRESERVE everything else verbatim: the date, the recipient (TO/addressee) block,
-              "VIA Email"/"VIA Hand Delivery" delivery lines, Re:/Subject lines, salutation
-              ("Dear ..."), and ALL body paragraphs.
-            - The recipient is part of the document content; ONLY the SENDER's identity (top
-              letterhead AND bottom signature) is firm/attorney-specific.
-            - Rationale: attorneys apply their own firm letterhead AND signature block via the
-              stationery system at draft time. Baking a specific firm or attorney's identity
-              into the saved template body would either get duplicated when stationery is
-              overlaid or pin the template to one attorney. Templates must be firm- and
-              attorney-agnostic.
+            LETTERHEAD, FOOTER, AND SIGNATURE-BLOCK RULES (apply to suggestedBodyWithPlaceholders)
+
+            ALL DOCUMENTS — strip the following:
+            - The sender's firm letterhead at the TOP: firm name (often centered, ALL CAPS, or
+              large), firm street address, phone / fax / email / website lines. Typically
+              appears BEFORE the date or any recipient information.
+            - Footer content: page numbers ("Page 1 of N", "1 of 2", standalone numerals on
+              their own line), repeating firm contact lines, copyright notices, and disclaimers
+              that aren't part of the substantive document.
+
+            SIGNATURE BLOCKS — handle by document class. This is critical:
+
+            CORRESPONDENCE (letter-style documents — documentType in: lor, demand_letter,
+            opinion_letter, internal_memo, sentencing_memo; OR category=CORRESPONDENCE,
+            INTERNAL_MEMO, CLIENT_ADVICE, OPINION_LETTER):
+            - STRIP the sender attorney's closing signature block: closing salutation
+              ("Sincerely,", "Very truly yours,", "Best regards,"), the specific sender's name
+              (e.g., "David H. Altman"), title, bar number, and any hardcoded sender contact
+              info. Cut from the closing salutation through end-of-document.
+            - PRESERVE the recipient/addressee block, "VIA Email"/"VIA Hand Delivery" delivery
+              lines, Re:/Subject lines, "Dear ..." salutation, and ALL body paragraphs.
+
+            INSTRUMENTS (documents that are themselves the legal artifact — documentType in:
+            retainer_agreement, engagement_letter, settlement_agreement, divorce_petition,
+            custody_motion, financial_statement, plea_agreement, or contains words like
+            "Trust", "Will", "Power of Attorney", "Deed", "Operating Agreement", "Articles of
+            Incorporation", "Bylaws"; OR category in: CONTRACT, SETTLEMENT, REAL_ESTATE_DOC,
+            FAMILY_LAW_FORM, IMMIGRATION_FORM, COURT_FILING, PLEADING, MOTION, BRIEF,
+            CRIMINAL_MOTION, PATENT_APPLICATION):
+            - PRESERVE all party signature blocks. Settlors, Trustees, Testators, Grantors,
+              Principals, Parties, Plaintiffs, Defendants, Petitioners, Respondents, Witnesses,
+              Notaries — these are the substantive legal content of the instrument and MUST
+              appear in suggestedBodyWithPlaceholders. Names that look like generic placeholders
+              (e.g., "John Smith, Settlor and Trustee") are part of the template structure;
+              parameterize them via {{variable_placeholders}} but DO NOT delete the block.
+            - PRESERVE notary acknowledgement blocks, witness attestation blocks, and any
+              "STATE OF __ / COUNTY OF __" jurat blocks. These are part of the instrument's
+              legal validity and must appear in the body.
+            - The "PRESERVE" rule overrides any other "strip" instinct. When in doubt, KEEP
+              the content rather than removing it.
+
+            Rationale: correspondence templates are stationery-overlaid at draft time so the
+            sending attorney's identity must NOT be baked in. Instruments are the legal artifact
+            itself — their signatory blocks ARE the document; deleting them produces an invalid
+            template that can never be used.
 
             HTML OUTPUT FORMATTING (apply to suggestedBodyWithPlaceholders)
             - OUTPUT THE BODY AS HTML, not plain text. Preserve the document's visible
@@ -548,10 +731,26 @@ public class TemplateImportService {
               * <strong>...</strong>  for bold text (ALL CAPS labels like "Re:" / "Claim
                                       Number:" / section headings inline in prose)
               * <em>...</em>          for italicized text (case names, statute references)
-              * <h2 style="text-align:center">  for centered titles or major section headers
+              * <h2 class="document-title">  for the document's top-of-page title (the trust name,
+                                              will title, contract title, etc.) — renders bigger
+                                              and centered. Use this ONLY for the very first
+                                              heading at the start of the document body.
+              * <h2>...</h2>          for major section headers (see HEADING PATTERNS below)
               * <h3>...</h3>          for sub-section headers
+              * <h4>...</h4>          for sub-sub-section headers
               * <ol><li>...</li></ol> for numbered lists ("1. Confirmation of PIP benefits...")
               * <ul><li>...</li></ul> for bulleted lists
+
+            HEADING PATTERNS — apply these strictly so headings render bold in the editor:
+              * Lines matching ^(ARTICLE|SECTION|PART|CHAPTER)\\s+\\w+ (e.g., "ARTICLE 1 - OUR
+                TRUST", "SECTION III: REPRESENTATIONS", "PART A — DEFINITIONS") MUST be wrapped
+                in <h2>...</h2>. Never use <p> or <strong> for these — only <h2>.
+              * Lines matching ^\\d+\\.\\d+\\b\\s+\\S+ (e.g., "1.1 TRUST CERTIFICATION",
+                "5.2 RIGHT TO AMEND", "6.1 PERSONAL PROPERTY") MUST be wrapped in <h3>...</h3>.
+              * Lines matching ^\\d+\\.\\d+\\.\\d+\\b\\s+\\S+ (e.g., "1.1.1 NOMINEE TRUSTEE")
+                MUST be wrapped in <h4>...</h4>.
+              * "Re:" / "Subject:" / "Claim Number:" inline labels inside paragraphs stay as
+                <strong>...</strong> — do NOT promote those to headings.
             - Address / contact blocks: a SINGLE <p> with <br> between lines. Do NOT use one
               <p> per line — that creates awkward paragraph spacing that doesn't match the
               source document's visual rhythm.
@@ -563,20 +762,55 @@ public class TemplateImportService {
             - Do NOT include <html>, <head>, <body>, or any document chrome — output only the
               body fragment. The frontend renders it inside its own preview pane.
 
+            STRUCTURAL ELEMENTS — apply when the document contains these patterns OR when
+            the STRUCTURAL CUES block below indicates them:
+
+            - SIGNATURE LINES — when the source has a signatory block (a personal name followed
+              by a comma and a role like "Settlor", "Trustee", "Testator", "Grantor", "Witness",
+              "Notary Public", "Plaintiff", "Defendant", "Party", "Buyer", "Seller", "Lessor",
+              "Lessee"), emit each signatory as a <p class="signature-line"> paragraph:
+                <p class="signature-line">{{settlor_1_name}}, Settlor and Trustee</p>
+                <p class="signature-line">{{settlor_2_name}}, Settlor and Trustee</p>
+              One <p class="signature-line"> per signatory. The renderer expands this to a real
+              horizontal rule above each name in the exported PDF and Word file. Do NOT use
+              <hr/>, inline {@code style="border-top:..."}, or any other custom markup — only
+              the {@code class="signature-line"} attribute on a <p> element survives the editor's
+              sanitization layer all the way to the export pipeline.
+
+            - BORDERED CALLOUT BOXES — when the source contains a notary acknowledgement
+              disclaimer, sworn-statement preamble, important-notice block, or similar callout
+              that visually appears in a bordered box (e.g., the standard California notary
+              disclaimer "A notary public or other officer completing this certificate verifies
+              only the identity..."), wrap that block in a div with the callout-box class:
+                <div class="callout-box">
+                  <p>...callout content...</p>
+                </div>
+              The renderer expands this to a single-cell bordered table for the PDF export.
+              Apply this whenever the STRUCTURAL CUES indicate a bordered rectangle on a page
+              AND there is semantically a callout-style block (disclaimer, notice, sworn
+              statement). Do NOT box ordinary prose paragraphs. Do NOT use a raw <table> with
+              inline border styles — only the {@code class="callout-box"} marker survives.
+
+            - JURAT / ACKNOWLEDGEMENT BLOCKS — for "STATE OF ___ / COUNTY OF ___ / On ___
+              before me ___ a Notary Public, personally appeared ___" style blocks, preserve
+              the line-by-line layout via <p>STATE OF CALIFORNIA</p><p>COUNTY OF {{county}}</p>
+              etc., NOT collapsed into a single paragraph. The structured layout is part of
+              the form's legal meaning.
+
             CLASSIFICATION RULES
             - If multiple docTypes plausible, pick highest-confidence and set requiresManualClassification=true when confidence < 0.60.
             - For unknown practice areas use "other" rather than guessing.
             - jurisdiction: prefer ISO 2-letter for state law; use "federal" for FRCP/USC; "null" if unclear.
-
+            %s
             DOCUMENT BODY:
             ---
             %s
             ---
-            """, doc.rawText());
+            """, formatStructuralCues(doc.structureHints()), doc.rawText());
 
         String model = reanalysis ? MODEL_REANALYSIS : MODEL_FIRST_PASS;
         String raw = claudeService.generateCompletionWithModel(
-                prompt, systemMessage, false, null, 0.0, model)
+                prompt, systemMessage, false, null, 0.0, model, CLAUDE_MAX_TOKENS)
             .get(CLAUDE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
         String jsonStr = extractJson(raw);
@@ -586,6 +820,7 @@ public class TemplateImportService {
 
         TemplateAnalysisResult result = objectMapper.readValue(jsonStr, TemplateAnalysisResult.class);
         result.setWarnings(combineWarnings(result.getWarnings(), doc.warnings()));
+        sortVariablesByBodyOrder(result);
 
         // Surface low-confidence as a warning so the UI can prompt the attorney.
         if (result.getClassification() != null
@@ -671,6 +906,7 @@ public class TemplateImportService {
             }
         }
 
+        jobPersister.onCommitted(session);
         sessionStore.remove(sessionId);
         return ImportCommitResponse.builder()
             .importBatchId(batchId)

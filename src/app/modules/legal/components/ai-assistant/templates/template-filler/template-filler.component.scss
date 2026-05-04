@@ -147,6 +147,21 @@
   ::ng-deep li { margin-bottom: 6px; }
   ::ng-deep strong { font-weight: 700; }
 
+  // Imported-template structural classes (kept in sync with the PDF renderer's stylesheet
+  // and the import-wizard preview — same class names render the same way everywhere).
+  ::ng-deep .signature-line {
+    border-top: 1px solid #000;
+    margin-top: 28px;
+    padding-top: 6px;
+  }
+  ::ng-deep .callout-box {
+    border: 1px solid #000;
+    padding: 10px 14px;
+    margin: 14px 0;
+    border-radius: 2px;
+  }
+  ::ng-deep .callout-box > p { margin: 4px 0; }
+
   // Variable chips — same visual language as the authoring page's
   // detected-variables panel (light info-blue) but inline in the body.
   ::ng-deep .tpl-chip {

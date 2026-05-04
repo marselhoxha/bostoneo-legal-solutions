@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -19,6 +19,7 @@ import {
   RetokenizeRequest,
   TemplateImportService
 } from '../../../../services/template-import.service';
+import { BackgroundTaskService } from '../../../../services/background-task.service';
 import { JURISDICTIONS, PRACTICE_AREAS } from '../../../../shared/legal-constants';
 
 /**
@@ -66,6 +67,9 @@ export class TemplateImportWizardComponent implements OnInit, OnDestroy {
 
   @Output() closed = new EventEmitter<void>();
   @Output() importCompleted = new EventEmitter<ImportCommitResponse>();
+
+  /** When set, the wizard skips Step 1 and rehydrates from an existing in-flight or completed session. */
+  @Input() resumeSessionId?: string;
 
   // ------------------ wizard state ------------------
   currentStep = 1;
@@ -120,13 +124,76 @@ export class TemplateImportWizardComponent implements OnInit, OnDestroy {
 
   constructor(
     private importService: TemplateImportService,
+    private backgroundTaskService: BackgroundTaskService,
     private sanitizer: DomSanitizer
   ) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    if (this.resumeSessionId) {
+      this.resumeFromSession(this.resumeSessionId);
+    }
+  }
+
+  /**
+   * Hydrate the wizard from an already-running or already-finished session. Pulls /session/{id},
+   * rebuilds sessionFiles, jumps to step 2 (Processing) if any file is still running or step 3
+   * (Review) if all are terminal. Used when the user clicks the indicator chip or lands on the
+   * library with a `?resumeImport=<sessionId>` query param.
+   */
+  private resumeFromSession(sessionId: string): void {
+    this.sessionId = sessionId;
+    // Tell the BackgroundTaskService we're now watching this session so it suppresses the
+    // completion / failure toast (the wizard itself will surface the result inline).
+    this.backgroundTaskService.watchSession(sessionId);
+    this.currentStep = 2;
+    this.importService.getSession(sessionId).subscribe({
+      next: (resp: ImportSessionResponse) => {
+        this.sessionFiles = resp.files;
+        // Initialize per-file review state so Step 3 has something to render. We don't have the
+        // original File handle on resume (the user re-opened the wizard later), so reanalyze /
+        // retokenize that need bytes will be unavailable for resumed sessions — that's acceptable
+        // since the typical resume use-case is "see the result" not "re-tokenize."
+        for (const f of resp.files) {
+          if (this.reviewState[f.fileId]) continue;
+          this.reviewState[f.fileId] = {
+            fileId: f.fileId,
+            file: undefined as unknown as File,
+            action: 'IMPORT',
+            name: (f.filename || 'Template').replace(/\.[^.]+$/, ''),
+            description: '',
+            category: 'CORRESPONDENCE',
+            practiceArea: '',
+            jurisdiction: '',
+            isPrivate: false,
+            rejectedKeys: new Set(),
+            renames: {}
+          };
+          if (f.analysis) {
+            this.applyAnalysisToReview(f);
+          }
+        }
+        if (resp.allFinalized) {
+          // Jump straight to Review when nothing's still running.
+          this.currentStep = 3;
+        } else {
+          this.startPolling();
+        }
+      },
+      error: (err) => {
+        this.uploadError = err?.error?.message
+          || 'Could not resume this import session. It may have expired.';
+        this.isSessionExpired = true;
+      }
+    });
+  }
 
   ngOnDestroy(): void {
     this.pollSub?.unsubscribe();
+    if (this.sessionId) {
+      // Stop suppressing toasts for this session — the modal is gone and any future completion
+      // (still-running service polling) should surface as a normal toast.
+      this.backgroundTaskService.unwatchSession(this.sessionId);
+    }
     this.clearBinaryPreview();
   }
 
@@ -240,6 +307,13 @@ export class TemplateImportWizardComponent implements OnInit, OnDestroy {
         });
         this.isUploading = false;
         this.currentStep = 2;
+        // Hand off polling to the singleton service so closing this wizard does NOT cancel it.
+        // The component's local poll (startPolling) drives the wizard UI in real time when open;
+        // the service's poll keeps the indicator chip + DB-backed BackgroundTask state fresh
+        // even after the wizard is closed.
+        this.importService.startBackgroundPolling(res.sessionId, res.files.length);
+        // While this modal is open it's actively showing the result — suppress duplicate toasts.
+        this.backgroundTaskService.watchSession(res.sessionId);
         this.startPolling();
       },
       error: (err) => {
@@ -702,14 +776,18 @@ export class TemplateImportWizardComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.commitResult = res;
         this.isCommitting = false;
+        // Show success confirmation, then emit importCompleted AFTER the user dismisses the
+        // dialog. The library component listens for the emit and closes the modal — so the
+        // user clicks once on the OK button and everything dismisses together.
         Swal.fire({
           title: 'Import Complete',
           html: `<strong>${res.created}</strong> created, <strong>${res.overwritten}</strong> overwritten,`
                + ` <strong>${res.skipped}</strong> skipped`
                + (res.failed ? `, <strong>${res.failed}</strong> failed` : ''),
           icon: res.failed ? 'warning' : 'success'
+        }).then(() => {
+          this.importCompleted.emit(res);
         });
-        this.importCompleted.emit(res);
       },
       error: (err) => {
         this.isCommitting = false;
