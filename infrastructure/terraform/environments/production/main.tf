@@ -178,7 +178,12 @@ resource "aws_db_instance" "main" {
   identifier     = "legience-${local.environment}"
   engine         = "postgres"
   engine_version = "15.10"
-  instance_class = "db.t3.micro"
+  # db.t3.small: 2 GB RAM (was 1 GB on micro), ~200 max_connections (was ~85),
+  # 2x burst credits, 2x baseline CPU. Headroom for 6-task autoscale + AI workload.
+  instance_class = "db.t3.small"
+  # Apply the instance-class change on the next terraform apply (~3-5 min reboot)
+  # instead of waiting for the next Sunday 04:00 UTC maintenance window.
+  apply_immediately = true
 
   allocated_storage     = 20
   max_allocated_storage = 100
@@ -352,8 +357,12 @@ resource "aws_secretsmanager_secret" "app_secrets" {
 # aws secretsmanager put-secret-value --secret-id legience/production/app-secrets --secret-string '{...}'
 
 # -----------------------------------------------------------------------------
-# ECS Cluster and Services (Demo phase: same sizing as staging)
-# To scale up: change api_cpu to 1024, api_memory to 2048, desired to 3, min to 2
+# ECS Cluster and Services
+#
+# Sized for AI-heavy workloads: long Bedrock calls (template imports up to 32k
+# output tokens, ~7-10 min) hold connections, so a single task would block other
+# users. Three tasks let UI requests stay responsive while one task is busy with
+# a Claude streaming call.
 # -----------------------------------------------------------------------------
 module "ecs" {
   source = "../../modules/ecs"
@@ -373,11 +382,11 @@ module "ecs" {
   ]
 
   api_image         = var.api_image
-  api_cpu           = 1024   # Upgraded: 1 vCPU for AI workloads
-  api_memory        = 2048   # Upgraded: 2 GB to prevent OOM crashes (was 1 GB)
-  api_desired_count = 1      # Demo phase (upgrade to 3 for full production)
-  api_min_count     = 1      # Demo phase (upgrade to 2 for full production)
-  api_max_count     = 2      # Demo phase (upgrade to 10 for full production)
+  api_cpu           = 2048   # 2 vCPU — Bedrock streaming + PDFBox + iText concurrency
+  api_memory        = 4096   # 4 GB — JVM heap ~2.4 GB headroom for AI workloads
+  api_desired_count = 3      # 3 tasks — AI work on one task can't block other users
+  api_min_count     = 2      # Always keep 2 tasks for redundancy
+  api_max_count     = 6      # Auto-scale up to 6 under load
 
   container_environment = [
     {
@@ -419,6 +428,17 @@ module "ecs" {
     {
       name  = "AWS_REGION"
       value = var.region
+    },
+    # HikariCP pool sized for 6-task autoscale on db.t3.small (~200 max_connections).
+    # 6 × 10 = 60 connections at peak, leaves ~140 headroom for replication, monitoring, and
+    # short-lived connections from REQUIRES_NEW transactions in the import-job persister.
+    {
+      name  = "HIKARI_MAX_POOL_SIZE"
+      value = "10"
+    },
+    {
+      name  = "HIKARI_MIN_IDLE"
+      value = "5"
     },
     {
       name  = "SPRING_MAIL_HOST"
