@@ -1158,7 +1158,6 @@
           *ngIf="(draftMode$ | async) === 'ai-wizard' && !(isGenerating$ | async)"
           [availableCases]="userCases"
           [initialCaseId]="selectedCaseId"
-          [initialDocType]="initialDocType"
           [initialPrompt]="customPrompt"
           (wizardSubmit)="onDraftWizardSubmit($event)"
           (wizardCancel)="onDraftWizardCancel()"
