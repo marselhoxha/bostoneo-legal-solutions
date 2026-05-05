@@ -170,4 +170,34 @@ public class AILegalTemplate {
 
     @Column(name = "binary_size_bytes")
     private Integer binarySizeBytes;
+
+    /**
+     * Pristine source as the user uploaded it (PDF or DOCX). Kept alongside the canonical
+     * tokenized DOCX so we can re-derive (re-render preview, re-tokenize after attorney
+     * renames variables) without going back to the user. Path-C import pipeline always
+     * populates this; legacy templates pre-Path-C have null and are treated as legacy.
+     */
+    @JdbcTypeCode(SqlTypes.VARBINARY)
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "original_document_binary", columnDefinition = "bytea")
+    @JsonIgnore
+    private byte[] originalDocumentBinary;
+
+    @Column(name = "original_document_format", length = 16)
+    private String originalDocumentFormat;  // PDF | DOCX | DOC
+
+    /**
+     * Cached DOCX→PDF render of {@link #templateBinary}, served for both the wizard
+     * preview and the "Download as PDF" endpoint. Marked stale on CKEditor save and
+     * regenerated lazily on next access.
+     */
+    @JdbcTypeCode(SqlTypes.VARBINARY)
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "rendered_pdf_binary", columnDefinition = "bytea")
+    @JsonIgnore
+    private byte[] renderedPdfBinary;
+
+    @Builder.Default
+    @Column(name = "rendered_pdf_stale", nullable = false)
+    private Boolean renderedPdfStale = false;
 }

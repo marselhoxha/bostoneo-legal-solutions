@@ -11,7 +11,9 @@ import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient;
+import software.amazon.awssdk.services.s3.S3Client;
 
+import com.bostoneo.bostoneosolutions.configuration.FileStorageConfiguration;
 import java.time.Duration;
 
 @Configuration
@@ -76,6 +78,24 @@ public class AIConfig {
                         .apiCallAttemptTimeout(Duration.ofMinutes(5)))
                 .build();
     }
+
+    /**
+     * S3 client used by AI/Textract code paths. {@link com.bostoneo.bostoneosolutions.service.implementation.S3FileStorageServiceImpl}
+     * builds its own S3Client internally (and only registers when {@code file.storage.type=s3}),
+     * so this bean is unconditional — needed for the Textract path to upload temp PDFs even
+     * when local dev is using {@code file.storage.type=local} for everything else.
+     * The two clients can coexist; the cost is one extra connection pool (~negligible).
+     */
+    @Bean
+    public S3Client awsS3Client(FileStorageConfiguration storageConfig) {
+        String region = storageConfig.getS3Region();
+        log.info("Creating S3 client (region: {})", region);
+        return S3Client.builder()
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .region(Region.of(region))
+                .build();
+    }
+
 
     /**
      * Resolve the Bedrock model ID from a short model name (e.g., "claude-opus-4-6" -> full Bedrock ARN).

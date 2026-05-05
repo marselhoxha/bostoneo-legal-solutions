@@ -55,6 +55,67 @@ public class DocxTemplateTransformer {
      * @param replacements {rawText, token} pairs — "John Smith" -> "{{client_name}}" — longest rawText first
      * @return transformed .docx bytes, or the original bytes unchanged if no replacements matched
      */
+    /**
+     * Same as {@link #transform(byte[], List)} but additionally applies a yellow highlight
+     * to every run that ends up containing a {@code {{token}}} marker, so the wizard PDF
+     * preview shows attorneys exactly where placeholders sit in the document. Used by the
+     * Path-C canonical pipeline at import time.
+     */
+    public byte[] transformWithHighlights(byte[] docxBytes, List<Replacement> replacements) throws Exception {
+        byte[] tokenizedBytes = transform(docxBytes, replacements);
+        if (replacements == null || replacements.isEmpty()) return tokenizedBytes;
+        try (XWPFDocument doc = new XWPFDocument(new ByteArrayInputStream(tokenizedBytes));
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            // Walk every run in body, headers, footers, tables. Highlight any run whose text
+            // contains a {{token}} marker. Mammoth/Word render the highlight as a yellow
+            // background, which is exactly the "clearly artificial" placeholder style the
+            // attorney UX expects.
+            for (IBodyElement el : doc.getBodyElements()) {
+                applyHighlightsTo(el);
+            }
+            for (XWPFHeader h : doc.getHeaderList()) {
+                for (IBodyElement el : h.getBodyElements()) applyHighlightsTo(el);
+            }
+            for (XWPFFooter f : doc.getFooterList()) {
+                for (IBodyElement el : f.getBodyElements()) applyHighlightsTo(el);
+            }
+            doc.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    private static final java.util.regex.Pattern TOKEN_PATTERN = java.util.regex.Pattern.compile("\\{\\{[^}]+\\}\\}");
+
+    private void applyHighlightsTo(IBodyElement el) {
+        if (el instanceof XWPFParagraph p) {
+            for (XWPFRun r : p.getRuns()) highlightIfTokenBearing(r);
+        } else if (el instanceof XWPFTable t) {
+            for (XWPFTableRow row : t.getRows()) {
+                for (XWPFTableCell cell : row.getTableCells()) {
+                    for (IBodyElement cellEl : cell.getBodyElements()) applyHighlightsTo(cellEl);
+                }
+            }
+        }
+    }
+
+    private void highlightIfTokenBearing(XWPFRun run) {
+        String text = run.text();
+        if (text == null || text.isEmpty()) return;
+        if (!TOKEN_PATTERN.matcher(text).find()) return;
+        try {
+            CTR ctr = run.getCTR();
+            var rpr = ctr.getRPr() != null ? ctr.getRPr() : ctr.addNewRPr();
+            // Remove any existing highlight to avoid duplicates on repeated runs.
+            while (rpr.sizeOfHighlightArray() > 0) rpr.removeHighlight(0);
+            rpr.addNewHighlight().setVal(
+                org.openxmlformats.schemas.wordprocessingml.x2006.main.STHighlightColor.YELLOW
+            );
+        } catch (Exception e) {
+            // Highlighting is cosmetic — never break the pipeline if a single run resists styling.
+            log.debug("Could not highlight token-bearing run: {}", e.getMessage());
+        }
+    }
+
     public byte[] transform(byte[] docxBytes, List<Replacement> replacements) throws Exception {
         if (docxBytes == null || docxBytes.length == 0) {
             throw new IllegalArgumentException("docxBytes is empty");

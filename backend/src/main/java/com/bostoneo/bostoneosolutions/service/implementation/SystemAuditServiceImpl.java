@@ -20,6 +20,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -149,7 +150,19 @@ public class SystemAuditServiceImpl implements SystemAuditService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AuditLogDTO logActivity(CreateAuditLogRequest request) {
+        // Synchronous variant — caller awaits the returned DTO. Unlike the two
+        // @Async overloads above (line 71, 98) which escape the caller's tx via
+        // thread switching, this runs on the caller's thread and shares its
+        // ThreadLocal Hibernate session. REQUIRES_NEW gives the audit INSERT its
+        // own JDBC connection so a SQL failure here (FK / NOT NULL / constraint)
+        // can't poison an outer business transaction. AuditLog.id uses
+        // GenerationType.IDENTITY (line 36 of AuditLog.java), so the INSERT fires
+        // immediately on save() — no batching window where the failure might be
+        // safely caught after the fact. Same fix shape as P9b auto-log on case
+        // status changes; see CaseActivityServiceImpl.logStatusChanged for the
+        // full rationale.
         try {
             // Create a proper current timestamp with timezone handling
             LocalDateTime currentTime = createProperTimestamp();

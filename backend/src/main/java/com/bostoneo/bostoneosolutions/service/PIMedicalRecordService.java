@@ -173,4 +173,20 @@ public interface PIMedicalRecordService {
      * Get scan status — how many case documents are unscanned
      */
     Map<String, Object> getScanStatus(Long caseId);
+
+    /**
+     * P15.a — Per-document scan tracking. Returns ONE row per case document,
+     * joining the FileItem (uploaded document) with its PIScannedDocument
+     * tracking row (if any). Frontend uses this to show per-record badges
+     * in the Case File → Records list (Analyzed / Failed / Skipped / Not scanned).
+     *
+     * Each map contains:
+     *   - documentId   (Long)   — FK to FileItem
+     *   - documentName (String) — original filename
+     *   - status       (String) — created / merged / non_medical / insurance / no_text / failed / null (= unscanned)
+     *   - errorMessage (String) — populated for failed scans
+     *   - medicalRecordId (Long) — FK if status produced a record (created/merged)
+     *   - createdAt    (Instant) — scan timestamp; null for unscanned docs
+     */
+    List<Map<String, Object>> getScanTracking(Long caseId);
 }

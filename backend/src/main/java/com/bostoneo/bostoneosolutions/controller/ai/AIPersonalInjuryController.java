@@ -454,6 +454,13 @@ public class AIPersonalInjuryController {
         }
     }
 
+    // The /generate-brief endpoint that briefly lived here (P9d) was removed
+    // when the Negotiation tab cards switched to redirecting attorneys to
+    // LegiDraft (the AI Workspace's drafting feature). LegiDraft owns the
+    // legal_memo template that drives strategy briefs — see
+    // backend/src/main/resources/templates/document-types/legal_memo.json.
+    // No callers need a PI-specific wrapper anymore.
+
     // Helper methods for token/cost estimation (simplified)
     private int estimateTokens(String text) {
         if (text == null) return 0;

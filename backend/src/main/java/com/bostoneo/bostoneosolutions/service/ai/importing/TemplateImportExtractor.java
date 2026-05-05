@@ -37,6 +37,14 @@ public class TemplateImportExtractor {
 
     private final PdfExtractor pdfExtractor;
     private final DocxExtractor docxExtractor;
+    /**
+     * Optional LibreOffice converter. When present and enabled, PDF and DOC files are
+     * converted to DOCX so the rest of the pipeline can use the high-fidelity DOCX path
+     * (Mammoth → HTML, POI → tokenized DOCX, LibreOffice render → preview PDF).
+     * When LibreOffice is unavailable or conversion fails, falls back to the legacy
+     * PDFBox / POI-HWPF text-extraction path.
+     */
+    private final LibreOfficeConverterService libreOfficeConverter;
 
     public ExtractedDocument extract(MultipartFile file) throws IOException {
         if (file == null || file.isEmpty()) {
@@ -53,9 +61,9 @@ public class TemplateImportExtractor {
         }
 
         ExtractedDocument doc = switch (classify(file)) {
-            case PDF  -> pdfExtractor.extract(file);
+            case PDF  -> extractPdf(file);
+            case DOC  -> extractDoc(file);
             case DOCX -> docxExtractor.extractDocx(file);
-            case DOC  -> docxExtractor.extractDoc(file);
             case UNSUPPORTED -> throw new TemplateImportException(
                 TemplateImportException.Code.UNSUPPORTED_FORMAT,
                 "Unsupported file type. Please upload PDF, DOCX, or DOC."
@@ -63,6 +71,68 @@ public class TemplateImportExtractor {
         };
 
         return maybeAddLanguageWarning(doc);
+    }
+
+    /**
+     * PDF → DOCX via LibreOffice when available, else legacy PDFBox text extraction.
+     * The DOCX path is the canonical Path-C flow; the PDFBox fallback exists for
+     * environments without LibreOffice (local dev) and for OCR-only scanned PDFs
+     * where LibreOffice produces nothing useful.
+     */
+    private ExtractedDocument extractPdf(MultipartFile file) throws IOException {
+        if (libreOfficeConverter != null && libreOfficeConverter.isEnabled()) {
+            try {
+                log.debug("Converting PDF {} to DOCX via LibreOffice", file.getOriginalFilename());
+                byte[] docxBytes = libreOfficeConverter.convertToDocx(
+                    file.getBytes(),
+                    LibreOfficeConverterService.SourceFormat.PDF
+                );
+                return docxExtractor.extractDocxBytes(
+                    docxBytes,
+                    file.getOriginalFilename(),
+                    "IMPORTED_PDF",
+                    file.getBytes()
+                );
+            } catch (Exception e) {
+                log.warn("LibreOffice PDF→DOCX failed for {} — falling back to PDFBox: {}",
+                    file.getOriginalFilename(), e.getMessage());
+                ExtractedDocument fallback = pdfExtractor.extract(file);
+                fallback.warnings().add(ImportWarning.warning(
+                    "low_fidelity_extraction",
+                    "Could not produce a high-fidelity DOCX from this PDF. Imported as text only — "
+                        + "tables, fonts, and formatting may not match the source document."
+                ));
+                return fallback;
+            }
+        }
+        log.debug("Routing PDF {} through PDFBox (LibreOffice unavailable)", file.getOriginalFilename());
+        return pdfExtractor.extract(file);
+    }
+
+    /**
+     * DOC → DOCX via LibreOffice when available, else legacy POI HWPF text extraction.
+     */
+    private ExtractedDocument extractDoc(MultipartFile file) throws IOException {
+        if (libreOfficeConverter != null && libreOfficeConverter.isEnabled()) {
+            try {
+                log.debug("Converting DOC {} to DOCX via LibreOffice", file.getOriginalFilename());
+                byte[] docxBytes = libreOfficeConverter.convertToDocx(
+                    file.getBytes(),
+                    LibreOfficeConverterService.SourceFormat.DOC
+                );
+                return docxExtractor.extractDocxBytes(
+                    docxBytes,
+                    file.getOriginalFilename(),
+                    "IMPORTED_DOC",
+                    file.getBytes()
+                );
+            } catch (Exception e) {
+                log.warn("LibreOffice DOC→DOCX failed for {} — falling back to POI HWPF: {}",
+                    file.getOriginalFilename(), e.getMessage());
+                return docxExtractor.extractDoc(file);
+            }
+        }
+        return docxExtractor.extractDoc(file);
     }
 
     private enum FileKind { PDF, DOCX, DOC, UNSUPPORTED }

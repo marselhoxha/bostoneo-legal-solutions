@@ -125,6 +125,12 @@ public interface SuperAdminService {
     void toggleUserMfa(Long userId, boolean enabled);
 
     /**
+     * V63 — set the per-user opt-in for the new attorney-facing PI view (P4+).
+     * Superadmin curates the beta cohort; users see no UI to flip this on themselves.
+     */
+    void setUserBetaAttorneyView(Long userId, boolean enabled);
+
+    /**
      * Resend verification email to user
      */
     void resendVerificationEmail(Long userId);

@@ -40,6 +40,7 @@ public class UserRowMapper implements RowMapper<User> {
                 .lockedUntil(lockedUntilTimestamp != null ? lockedUntilTimestamp.toLocalDateTime() : null)
                 .forcePasswordChange(resultSet.getBoolean("force_password_change"))
                 .termsAcceptedAt(termsAcceptedTimestamp != null ? termsAcceptedTimestamp.toLocalDateTime() : null)
+                .betaAttorneyView(resultSet.getBoolean("beta_attorney_view"))
                 .build();
 
     }

@@ -13,6 +13,7 @@ import com.bostoneo.bostoneosolutions.repository.PIScannedDocumentRepository;
 import com.bostoneo.bostoneosolutions.repository.PIMedicalRecordRepository;
 import com.bostoneo.bostoneosolutions.repository.PIMedicalSummaryRepository;
 import com.bostoneo.bostoneosolutions.service.CaseDocumentService;
+import com.bostoneo.bostoneosolutions.service.CaseStageService;
 import com.bostoneo.bostoneosolutions.service.PIMedicalRecordService;
 import com.bostoneo.bostoneosolutions.service.PIDocumentChecklistService;
 import com.bostoneo.bostoneosolutions.service.FileStorageService;
@@ -58,6 +59,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
     private final ObjectMapper objectMapper;
     private final FileStorageService fileStorageService;
     private final CaseDocumentService caseDocumentService;
+    private final CaseStageService caseStageService;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -105,6 +107,9 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         // Mark any existing summary as stale
         summaryRepository.markAsStale(caseId, orgId);
 
+        // V62 — first record on a case may flip stage INTAKE → INVESTIGATION/TREATMENT.
+        caseStageService.recomputeAndPersist(caseId);
+
         log.info("Medical record created with ID: {}", saved.getId());
         return mapToDTO(saved);
     }
@@ -124,6 +129,9 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
 
         // Mark summary as stale
         summaryRepository.markAsStale(existing.getCaseId(), orgId);
+
+        // V62 — treatment_date edits can flip TREATMENT ↔ PRE_DEMAND
+        caseStageService.recomputeAndPersist(existing.getCaseId());
 
         return mapToDTO(saved);
     }
@@ -146,6 +154,9 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         // Mark summary as stale
         summaryRepository.markAsStale(caseId, orgId);
 
+        // V62 — deleting last record can flip back to INTAKE
+        caseStageService.recomputeAndPersist(caseId);
+
         log.info("Medical record deleted successfully");
     }
 
@@ -159,6 +170,8 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         scannedDocumentRepository.deleteByCaseIdAndOrganizationId(caseId, orgId);
         // Zero out the case-level medical total so the dashboard reflects the cleared state immediately
         legalCaseRepository.resetMedicalExpensesTotal(caseId, orgId);
+        // V62 — bulk delete can revert TREATMENT/INVESTIGATION → INTAKE
+        caseStageService.recomputeAndPersist(caseId);
         log.info("All medical records, summary, scan tracking, and medical total cleared for case {}", caseId);
         // Return count is best-effort; JPA deleteBy returns void so we return 0 to signal success
         return 0;
@@ -353,6 +366,7 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 .specialTests(entity.getSpecialTests())
                 .medicationsAdministered(entity.getMedicationsAdministered())
                 .medicationsPrescribed(entity.getMedicationsPrescribed())
+                .visits(entity.getVisits())
                 .billedAmount(entity.getBilledAmount())
                 .adjustedAmount(entity.getAdjustedAmount())
                 .paidAmount(entity.getPaidAmount())
@@ -452,6 +466,51 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         status.put("unscannedDocuments", unscanned);
         status.put("hasUnscannedDocuments", unscanned > 0);
         return status;
+    }
+
+    /**
+     * P15.a — Per-document scan tracking. Returns one row per uploaded scannable
+     * document, joining FileItem with the corresponding PIScannedDocument
+     * tracking row (or null status for unscanned files).
+     *
+     * Single DB pass per side; small N (typical case has < 20 documents) so
+     * the in-memory join is cheaper than a custom JPQL query.
+     */
+    @Override
+    public List<Map<String, Object>> getScanTracking(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        List<FileItem> files = fileItemRepository.findByCaseIdAndDeletedFalseAndOrganizationId(caseId, orgId);
+        List<PIScannedDocument> scanned = scannedDocumentRepository.findByCaseIdAndOrganizationId(caseId, orgId);
+
+        // Index scan tracking by documentId for O(1) lookup.
+        Map<Long, PIScannedDocument> byDocId = new HashMap<>();
+        for (PIScannedDocument s : scanned) {
+            if (s.getDocumentId() != null) byDocId.put(s.getDocumentId(), s);
+        }
+
+        List<Map<String, Object>> rows = new ArrayList<>(files.size());
+        for (FileItem f : files) {
+            if (!isScannable(f)) continue; // Skip non-scannable types (folders, etc.)
+            Map<String, Object> row = new HashMap<>();
+            row.put("documentId", f.getId());
+            row.put("documentName", f.getOriginalName() != null ? f.getOriginalName() : f.getName());
+            row.put("mimeType", f.getMimeType());
+
+            PIScannedDocument s = byDocId.get(f.getId());
+            if (s == null) {
+                row.put("status", null); // = unscanned
+                row.put("errorMessage", null);
+                row.put("medicalRecordId", null);
+                row.put("createdAt", null);
+            } else {
+                row.put("status", s.getStatus());
+                row.put("errorMessage", s.getErrorMessage());
+                row.put("medicalRecordId", s.getMedicalRecordId());
+                row.put("createdAt", s.getCreatedAt());
+            }
+            rows.add(row);
+        }
+        return rows;
     }
 
     @Override
@@ -582,6 +641,19 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             summaryRepository.markAsStale(caseId, orgId);
         }
 
+        // V62 — single recompute after batch scan completes. Per-record recompute would
+        // run the derivation N times for the same final outcome.
+        if (!createdRecords.isEmpty()) {
+            caseStageService.recomputeAndPersist(caseId);
+        }
+
+        // P15.c.A — Auto-fill mechanism from the earliest ED record if the field
+        // is currently empty. Runs after records persist so we have a clean view
+        // of what the case knows about the incident.
+        if (!createdRecords.isEmpty()) {
+            autoFillMechanismFromEarliestEd(caseId, orgId);
+        }
+
         // Sync document checklist with case files
         try {
             Map<String, Object> checklistSync = documentChecklistService.syncWithCaseDocuments(caseId);
@@ -602,6 +674,62 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 caseId, createdRecords.size(), totalFiles);
 
         return result;
+    }
+
+    /**
+     * P15.c.A — Auto-fill mechanism description from the earliest ED-type record
+     * if the field on LegalCase is currently empty. Runs after every scan + every
+     * reprocess so a freshly-uploaded ED note immediately backfills the case
+     * intake without forcing the attorney to copy/paste.
+     *
+     * Idempotent — once mechanismDescription has any value, subsequent calls are
+     * no-ops. The user can always overwrite it manually.
+     *
+     * "ED record" = recordType "ER" — the canonical value produced by
+     * mapDocumentTypeToRecordType (line 1796) when the AI tags a document as
+     * an emergency-department record. The AI prompt (line 1480) constrains
+     * documentType to {ER, PT, IMAGING, ...}; the mapper passes "ER" through
+     * verbatim, so that's the only string that ever lands on a saved record.
+     */
+    private void autoFillMechanismFromEarliestEd(Long caseId, Long orgId) {
+        try {
+            LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId).orElse(null);
+            if (legalCase == null) return;
+
+            String existing = legalCase.getMechanismDescription();
+            if (existing != null && !existing.trim().isEmpty()) {
+                // User already filled it (or a prior scan did) — don't overwrite.
+                return;
+            }
+
+            // Earliest ED-type record (sorted by treatmentDate ASC at fetch time).
+            PIMedicalRecord earliestEd = repository
+                    .findByCaseIdAndOrganizationIdOrderByTreatmentDateAsc(caseId, orgId).stream()
+                    .filter(r -> "ER".equalsIgnoreCase(r.getRecordType()))
+                    .filter(r -> r.getKeyFindings() != null && !r.getKeyFindings().trim().isEmpty())
+                    .findFirst()
+                    .orElse(null);
+
+            if (earliestEd == null) {
+                log.debug("auto-fill mechanism skipped — no ED record with keyFindings for case {}", caseId);
+                return;
+            }
+
+            String findings = earliestEd.getKeyFindings().trim();
+            // Cap length so we don't stuff a giant clinical note into the field —
+            // mechanismDescription is a short attorney-facing summary.
+            if (findings.length() > 1000) {
+                findings = findings.substring(0, 997) + "...";
+            }
+
+            legalCase.setMechanismDescription(findings);
+            legalCaseRepository.save(legalCase);
+            log.info("Auto-filled mechanismDescription for case {} from {} record (date {})",
+                    caseId, earliestEd.getRecordType(), earliestEd.getTreatmentDate());
+        } catch (Exception e) {
+            // Non-fatal — failure to auto-fill should never block scan completion.
+            log.warn("auto-fill mechanism failed for case {}: {}", caseId, e.getMessage());
+        }
     }
 
     @Override
@@ -663,6 +791,13 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
 
         // Mark summary stale so next /medical-summary call regenerates it from the new records
         summaryRepository.markAsStale(caseId, orgId);
+
+        // V62 — reprocess wipes + recreates records, so re-derive stage from the new state
+        caseStageService.recomputeAndPersist(caseId);
+
+        // P15.c.A — Reprocess wipes + recreates records, so the auto-fill condition
+        // (mechanism currently empty) might newly hold. Re-run after the new records land.
+        autoFillMechanismFromEarliestEd(caseId, orgId);
 
         result.put("success", true);
         result.put("replayedDocuments", cached.size());
@@ -1172,6 +1307,9 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         putUnionAll(merged, chunks, "specialTests");
         putUnionAll(merged, chunks, "medicationsAdministered");
         putUnionAll(merged, chunks, "medicationsPrescribed");
+        // Tier 6 — visits union by (date,code) so a 22-line itemized procedure summary
+        // split across multiple chunks reassembles cleanly without duplicates.
+        putUnionByKey(merged, chunks, "visits", "date");
 
         // Map<String,Object> — first non-empty (vitals/ROM are per-encounter, take first observation)
         putFirstNonEmptyMap(merged, chunks, "vitals");
@@ -1348,6 +1486,10 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
                 ],
                 "billedAmount": 0.00,
                 "paidAmount": 0.00,
+                "visits": [
+                    {"date": "2025-11-11", "code": "97110", "provider": "PA Moy",      "charge": 250.00},
+                    {"date": "2025-11-13", "code": "97140", "provider": "DPT Bui",     "charge": 200.00}
+                ],
                 "claimNumber": "AU10769451 (PIP_LOG only — null otherwise)",
                 "pipLimit": 8000.00,
                 "pipDeductible": 500.00,
@@ -1431,6 +1573,20 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             - specialTests: orthopedic special tests with side ("L" / "R" / "bilateral") and result ("positive" / "negative"). Common tests: Lasègue's / SLR, Kemp's, Milgram's, Soto Hall, Patrick's / FABER, Hoffmann's, Hawkins, Neer's, Jobe's, MNCT. Empty array if none performed.
             - medicationsAdministered: meds GIVEN during the encounter (e.g., ED gave Motrin 600mg PO). Empty array if none.
             - medicationsPrescribed: meds prescribed for HOME USE (e.g., "Rx Ibuprofen 600mg q8h x 10 days"). Empty array if none.
+            - visits: ONE ENTRY PER LINE ITEM on a MULTI-DOS itemized procedure summary or
+              patient-procedure log (e.g., a Team Rehab "Patient Procedure Summary" listing
+              22 visits over 5 months). Each visit: date (YYYY-MM-DD), CPT code if shown,
+              treating provider/clinician for that line, and charge for that line.
+              CRITICAL — when to populate vs skip:
+                * POPULATE for itemized billing summaries that list ≥ 2 distinct dates of
+                  service in a tabular layout (date | code | provider | charge columns).
+                * SKIP (empty array or omit) for single-encounter records — a single ED
+                  visit, a single clinical note, a one-day bill — even if the document
+                  has multiple CPT codes for that one day.
+                * SKIP for the PIP_LOG document (already excluded from totals upstream).
+              DO NOT invent visits — only emit entries that are explicitly present as
+              individual rows in the source document. Leave fields null if a row's
+              column is blank rather than guessing.
             - causationStatement: extract VERBATIM any statement explicitly tying findings to the MVA "to a reasonable degree of medical certainty" or "directly related to the accident on..." or "are a direct result of the accident". Copy the exact words. null if no such statement.
             - causationSource: clinician name + date format like "PA Moy 11/11/2025" or "DC Giuttari 12/04/2025". Pulls from the clinician who issued the causation statement.
             - For ANY field whose data is not in the document text: set null (string fields), [] (array fields), or omit (object fields). NEVER hallucinate clinical content.
@@ -1609,6 +1765,11 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> medsRx = (List<Map<String, Object>>) analysis.get("medicationsPrescribed");
         if (medsRx != null && !medsRx.isEmpty()) record.setMedicationsPrescribed(medsRx);
+
+        // Tier 6 — itemized visits from multi-DOS billing summaries
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> visits = (List<Map<String, Object>>) analysis.get("visits");
+        if (visits != null && !visits.isEmpty()) record.setVisits(visits);
 
         // Citation metadata for smart citations feature
         @SuppressWarnings("unchecked")
@@ -1831,7 +1992,34 @@ public class PIMedicalRecordServiceImpl implements PIMedicalRecordService {
             existing.setMedicationsPrescribed(unionLists(existing.getMedicationsPrescribed(), newMedsRx));
         }
 
+        // Tier 6 — visits (itemized line items from multi-DOS billing summaries).
+        // Union by (date,code) so a billing doc and a clinical doc covering the same
+        // encounter span don't duplicate visit rows.
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> newVisits = (List<Map<String, Object>>) analysis.get("visits");
+        if (newVisits != null && !newVisits.isEmpty()) {
+            existing.setVisits(unionVisits(existing.getVisits(), newVisits));
+        }
+
         existing.setIsComplete(determineCompleteness(existing));
+    }
+
+    /**
+     * Union two visit lists by composite key (date + code). Falls back to plain
+     * stringified equality when one of the keys is missing. Order-preserving.
+     */
+    private List<Map<String, Object>> unionVisits(List<Map<String, Object>> a, List<Map<String, Object>> b) {
+        java.util.LinkedHashMap<String, Map<String, Object>> seen = new java.util.LinkedHashMap<>();
+        if (a != null) for (Map<String, Object> v : a) seen.putIfAbsent(visitKey(v), v);
+        if (b != null) for (Map<String, Object> v : b) seen.putIfAbsent(visitKey(v), v);
+        return new ArrayList<>(seen.values());
+    }
+
+    private String visitKey(Map<String, Object> v) {
+        Object date = v.get("date");
+        Object code = v.get("code");
+        if (date == null && code == null) return v.toString();
+        return String.valueOf(date) + "|" + String.valueOf(code);
     }
 
     /**

@@ -125,11 +125,26 @@ public class AITemplateService {
         existingTemplate.setTemplateContent(templateUpdate.getTemplateContent());
         existingTemplate.setIsApproved(templateUpdate.getIsApproved());
         existingTemplate.setUpdatedAt(LocalDateTime.now());
-        
+
+        // Path-C round-trip: when the controller regenerated templateBinary from edited HTML,
+        // adopt the new bytes here AND mark the rendered PDF cache stale so the next preview
+        // regenerates. Otherwise leave templateBinary untouched (controller decided not to /
+        // could not regenerate; previous binary is still the best available).
+        if (templateUpdate.getTemplateBinary() != null && templateUpdate.getTemplateBinary().length > 0) {
+            existingTemplate.setTemplateBinary(templateUpdate.getTemplateBinary());
+            existingTemplate.setTemplateBinaryFormat(
+                templateUpdate.getTemplateBinaryFormat() != null
+                    ? templateUpdate.getTemplateBinaryFormat()
+                    : "DOCX"
+            );
+            existingTemplate.setHasBinaryTemplate(true);
+            existingTemplate.setRenderedPdfStale(true);
+        }
+
         if (templateUpdate.getStyleGuideId() != null) {
             existingTemplate.setStyleGuideId(templateUpdate.getStyleGuideId());
         }
-        
+
         AILegalTemplate savedTemplate = templateRepository.save(existingTemplate);
         
         // variableRepository.deleteByTemplateId(id);
@@ -138,6 +153,30 @@ public class AITemplateService {
         }
         
         return savedTemplate;
+    }
+
+    /**
+     * Path-C: tenant-scoped template lookup used by the download endpoints. Same security
+     * semantics as {@link #getTemplateById}, but takes the org id explicitly so the
+     * controller can pass it without re-resolving from the security context.
+     */
+    public AILegalTemplate getTemplate(Long id, Long organizationId) {
+        Long userId = getCurrentUserIdOrSentinel();
+        return templateRepository.findByIdAndAccessibleByOrganizationAndUser(id, organizationId, userId)
+            .orElse(null);
+    }
+
+    /**
+     * Path-C: persist a freshly-rendered PDF after a cache miss / staleness regeneration.
+     * Used by the {@code /download/pdf} endpoint so subsequent calls hit the cache.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void persistRenderedPdf(Long id, byte[] pdfBytes) {
+        templateRepository.findById(id).ifPresent(t -> {
+            t.setRenderedPdfBinary(pdfBytes);
+            t.setRenderedPdfStale(false);
+            templateRepository.save(t);
+        });
     }
 
     public void deleteTemplate(Long id) {

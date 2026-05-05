@@ -95,4 +95,29 @@ public class ExpenseController {
             @PathVariable Long receiptId) {
         return ResponseEntity.ok(expenseService.attachReceiptToExpense(expenseId, receiptId));
     }
-} 
+
+    // ========== P3 / Case Costs (Damages tab) ==========
+
+    /**
+     * Returns all expenses linked to a case, with relationships hydrated for
+     * the Damages-tab Case Costs table. Tenant-isolated server-side.
+     */
+    @GetMapping("/case/{caseId}")
+    @PreAuthorize("hasAuthority('EXPENSE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
+    public ResponseEntity<CustomHttpResponse<java.util.List<Expense>>> getCaseExpenses(
+            @PathVariable Long caseId) {
+        return ResponseEntity.ok(expenseService.getCaseExpenses(caseId));
+    }
+
+    /**
+     * Running total of expenses for a case, drives the "Costs &amp; expenses"
+     * line on the Damages-tab Net-to-Client breakdown. Returns {@code total: 0}
+     * when no expenses have been logged.
+     */
+    @GetMapping("/case/{caseId}/total")
+    @PreAuthorize("hasAuthority('EXPENSE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
+    public ResponseEntity<CustomHttpResponse<java.util.Map<String, java.math.BigDecimal>>> getCaseExpenseTotal(
+            @PathVariable Long caseId) {
+        return ResponseEntity.ok(expenseService.getCaseExpenseTotal(caseId));
+    }
+}

@@ -13,7 +13,9 @@ public class TemplateImportException extends RuntimeException {
         UNSUPPORTED_FORMAT,
         FILE_TOO_LARGE,
         CORRUPT_FILE,
-        EMPTY_DOCUMENT
+        EMPTY_DOCUMENT,
+        /** Unrecoverable infra-side error (S3 upload failure, Textract job failure, polling timeout, etc.). */
+        INTERNAL_ERROR
     }
 
     private final Code code;

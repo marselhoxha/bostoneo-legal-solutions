@@ -9,7 +9,11 @@ import com.bostoneo.bostoneosolutions.model.AITemplateVariable;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.AITemplateVariableRepository;
 import com.bostoneo.bostoneosolutions.service.AITemplateService;
+import com.bostoneo.bostoneosolutions.service.ai.importing.HtmlToDocxConverter;
+import com.bostoneo.bostoneosolutions.service.ai.importing.LibreOfficeConverterService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,11 +31,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @RestController
 @RequestMapping("/api/ai/templates")
 @RequiredArgsConstructor
+@Slf4j
 public class AITemplateController {
 
     private final AITemplateService templateService;
     private final AITemplateVariableRepository variableRepository;
     private final TenantService tenantService;
+    private final HtmlToDocxConverter htmlToDocxConverter;
+    private final LibreOfficeConverterService libreOfficeConverter;
 
     /**
      * Helper method to get the current organization ID (required for tenant isolation)
@@ -354,13 +361,35 @@ public class AITemplateController {
     }
 
     /**
-     * PUT /api/ai/templates/{id} - Update existing template
+     * PUT /api/ai/templates/{id} - Update existing template.
+     *
+     * <p>Path-C round-trip: when the attorney edits in CKEditor and saves, we
+     * (a) update {@code templateContent} (the HTML body — used for editing + draft fill),
+     * (b) regenerate {@code templateBinary} via docx4j HTML→DOCX so "Download as DOCX"
+     *     stays in sync with the edited HTML,
+     * (c) mark {@code renderedPdfStale=true} so the next preview / PDF download
+     *     re-renders via LibreOffice.
+     *
+     * <p>If docx4j round-trip fails, we keep the previous {@code templateBinary}
+     * untouched and let the request succeed — the edited HTML is preserved either way.
      */
     @PutMapping("/{id}")
     public ResponseEntity<AILegalTemplate> updateTemplate(
             @PathVariable Long id,
             @RequestBody AILegalTemplate template) {
         try {
+            // If the body content changed, try to regenerate the canonical DOCX bytes.
+            // We don't compare to the existing record's content here (the service does that);
+            // a best-effort regeneration is fine — failure leaves prior binary in place.
+            if (template.getTemplateContent() != null && !template.getTemplateContent().isBlank()) {
+                byte[] regenerated = htmlToDocxConverter.convert(template.getTemplateContent());
+                if (regenerated != null && regenerated.length > 0) {
+                    template.setTemplateBinary(regenerated);
+                    template.setTemplateBinaryFormat("DOCX");
+                    template.setHasBinaryTemplate(true);
+                    template.setRenderedPdfStale(true);  // invalidate PDF cache
+                }
+            }
             AILegalTemplate updated = templateService.updateTemplate(id, template);
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
@@ -368,6 +397,73 @@ public class AITemplateController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    /**
+     * GET /api/ai/templates/{id}/download/docx - Stream the canonical tokenized DOCX
+     * to the browser as a download. Always available because Path-C templates always
+     * have {@code templateBinary} populated (DOCX format).
+     */
+    @GetMapping("/{id}/download/docx")
+    public ResponseEntity<byte[]> downloadDocx(@PathVariable Long id) {
+        try {
+            AILegalTemplate t = templateService.getTemplate(id, getRequiredOrganizationId());
+            if (t == null || t.getTemplateBinary() == null || t.getTemplateBinary().length == 0) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+            String filename = sanitizeFilename(t.getName()) + ".docx";
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"" + filename + "\"")
+                .body(t.getTemplateBinary());
+        } catch (Exception e) {
+            log.error("Download DOCX failed for template {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * GET /api/ai/templates/{id}/download/pdf - Stream the rendered PDF (DOCX→PDF via
+     * LibreOffice). Regenerates from {@code templateBinary} if the cache is stale or empty.
+     */
+    @GetMapping("/{id}/download/pdf")
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id) {
+        try {
+            AILegalTemplate t = templateService.getTemplate(id, getRequiredOrganizationId());
+            if (t == null || t.getTemplateBinary() == null || t.getTemplateBinary().length == 0) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+            byte[] pdf = t.getRenderedPdfBinary();
+            boolean stale = Boolean.TRUE.equals(t.getRenderedPdfStale());
+            if (pdf == null || pdf.length == 0 || stale) {
+                if (!libreOfficeConverter.isEnabled()) {
+                    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body(("PDF rendering is unavailable on this server "
+                            + "(LibreOffice not configured)").getBytes(StandardCharsets.UTF_8));
+                }
+                pdf = libreOfficeConverter.renderToPdf(t.getTemplateBinary());
+                // Persist the freshly-rendered PDF back so subsequent calls hit the cache.
+                t.setRenderedPdfBinary(pdf);
+                t.setRenderedPdfStale(false);
+                templateService.persistRenderedPdf(t.getId(), pdf);
+            }
+            String filename = sanitizeFilename(t.getName()) + ".pdf";
+            return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"" + filename + "\"")
+                .body(pdf);
+        } catch (Exception e) {
+            log.error("Download PDF failed for template {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    private String sanitizeFilename(String name) {
+        if (name == null || name.isBlank()) return "template";
+        return name.replaceAll("[^A-Za-z0-9._-]+", "_");
     }
 
     /**

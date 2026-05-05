@@ -5,8 +5,12 @@ import com.bostoneo.bostoneosolutions.exception.ResourceNotFoundException;
 import com.bostoneo.bostoneosolutions.model.PIMedicalRecord;
 import com.bostoneo.bostoneosolutions.model.PIMedicalSummary;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
+import com.bostoneo.bostoneosolutions.repository.LegalCaseRepository;
 import com.bostoneo.bostoneosolutions.repository.PIMedicalRecordRepository;
 import com.bostoneo.bostoneosolutions.repository.PIMedicalSummaryRepository;
+import com.bostoneo.bostoneosolutions.repository.PIScannedDocumentRepository;
+import com.bostoneo.bostoneosolutions.model.LegalCase;
+import com.bostoneo.bostoneosolutions.model.PIScannedDocument;
 import com.bostoneo.bostoneosolutions.service.PIMedicalSummaryService;
 import com.bostoneo.bostoneosolutions.service.ai.ClaudeSonnet4Service;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -34,6 +38,8 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
 
     private final PIMedicalSummaryRepository summaryRepository;
     private final PIMedicalRecordRepository recordRepository;
+    private final PIScannedDocumentRepository scannedDocumentRepository;
+    private final LegalCaseRepository legalCaseRepository;
     private final TenantService tenantService;
     private final ClaudeSonnet4Service claudeService;
     private final ObjectMapper objectMapper;
@@ -106,12 +112,33 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
         summary.setMissingRecords(detectMissingRecords(records));
         summary.setTreatmentChronology(buildChronology(records));
         summary.setPhasedChronology(generatePhasedChronology(records));
+        summary.setCausationSummary(buildCausationSummary(records));
+        // P15.c.B + C — Open items merge AI-flagged missing docs (existing) with
+        // rule-based detections: treatment-gap entries from the gap analyzer +
+        // plateau signals (97164 PT re-eval CPT or "no improvement" phrasing).
+        // Rule-based items append to the AI list; idempotent across regens.
+        List<Map<String, Object>> aiOpenItems = generateOpenItems(records);
+        List<Map<String, Object>> gapOpenItems = buildGapOpenItems(treatmentGaps);
+        List<Map<String, Object>> plateauOpenItems = detectPlateauItems(records);
+        summary.setOpenItems(mergeOpenItems(aiOpenItems, gapOpenItems, plateauOpenItems));
         summary.setKeyHighlights((String) aiAnalysis.get("keyHighlights"));
         summary.setPrognosisAssessment((String) aiAnalysis.get("prognosis"));
 
         // Metrics
         summary.setTotalProviders(providerSummary.size());
-        summary.setTotalVisits(records.size());
+        // Tier 6 — visit count reflects clinical reality, not PDF count. Records that
+        // came from a multi-DOS itemized billing summary carry a `visits` array; each
+        // entry counts as one visit. Records without an itemized list (single-encounter
+        // ED/PT/ortho notes) count as 1. INSURANCE_LEDGER records are excluded — they
+        // aggregate payments across many encounters and are not visits themselves.
+        int totalVisits = records.stream()
+                .filter(r -> !"INSURANCE_LEDGER".equals(r.getRecordType()))
+                .mapToInt(r -> {
+                    List<Map<String, Object>> v = r.getVisits();
+                    return (v != null && !v.isEmpty()) ? v.size() : 1;
+                })
+                .sum();
+        summary.setTotalVisits(totalVisits);
         summary.setTotalBilled(totalBilled);
         summary.setTreatmentDurationDays(treatmentDuration);
         summary.setTreatmentGapDays(totalGapDays);
@@ -365,6 +392,26 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
         Long orgId = getRequiredOrganizationId();
         log.info("Deleting medical summary for case: {}", caseId);
         summaryRepository.deleteByCaseIdAndOrganizationId(caseId, orgId);
+    }
+
+    @Override
+    @Transactional
+    public PIMedicalSummaryDTO updateDemandScenario(Long caseId, Map<String, Object> scenario) {
+        Long orgId = getRequiredOrganizationId();
+        PIMedicalSummary summary = summaryRepository.findByCaseIdAndOrganizationId(caseId, orgId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No medical summary on file for case " + caseId
+                                + ". Generate the summary before saving a demand scenario."));
+
+        // Stamp savedAt server-side so the client can't lie about timing.
+        Map<String, Object> persisted = scenario != null ? new HashMap<>(scenario) : new HashMap<>();
+        persisted.put("savedAt", LocalDateTime.now().toString());
+        summary.setDemandScenario(persisted);
+
+        PIMedicalSummary saved = summaryRepository.save(summary);
+        log.info("Saved demand scenario for case {} (multiplier={})", caseId,
+                persisted.get("multiplier"));
+        return mapToDTO(saved);
     }
 
     // Helper methods
@@ -631,6 +678,265 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
         // Collapse any double spaces / leading-comma artifacts
         out = out.replaceAll("\\s{2,}", " ").replaceAll("\\s+,", ",").trim();
         return out;
+    }
+
+    /**
+     * Tier 5a — Build a causation block by collating verbatim causation_statement
+     * fields from each medical record, with provider+date attribution. No AI call;
+     * pure aggregation of structured data already extracted in Tier 2.
+     *
+     * Returns null if no records have causation statements (avoids empty card on UI).
+     */
+    private String buildCausationSummary(List<PIMedicalRecord> records) {
+        List<String> blocks = records.stream()
+                .filter(r -> r.getCausationStatement() != null && !r.getCausationStatement().isBlank())
+                .sorted(Comparator.comparing(
+                        PIMedicalRecord::getTreatmentDate,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(r -> {
+                    String quote = r.getCausationStatement().trim();
+                    if (quote.length() > 600) quote = quote.substring(0, 600) + "...";
+                    String source = (r.getCausationSource() != null && !r.getCausationSource().isBlank())
+                            ? r.getCausationSource()
+                            : (r.getProviderName() == null ? "Unknown provider" : r.getProviderName())
+                                    + (r.getTreatmentDate() != null ? " (" + r.getTreatmentDate() + ")" : "");
+                    return "\"" + quote + "\"\n— " + source;
+                })
+                .toList();
+        if (blocks.isEmpty()) return null;
+        return String.join("\n\n", blocks);
+    }
+
+    /**
+     * Tier 5c — Detect open follow-up items the attorney should chase. Sends
+     * a compact records summary to the AI asking it to identify common gaps:
+     * imaging mentioned but not uploaded, specialist referrals without consults,
+     * procedures without notes, expected discharges missing.
+     *
+     * Returns null on failure — the rest of summary regen still completes.
+     * Output shape: [{type, description, referencedIn, priority}].
+     */
+    private List<Map<String, Object>> generateOpenItems(List<PIMedicalRecord> records) {
+        List<PIMedicalRecord> clinicalRecords = records.stream()
+                .filter(r -> !"INSURANCE_LEDGER".equals(r.getRecordType()))
+                .filter(r -> r.getTreatmentDate() != null)
+                .sorted(Comparator.comparing(PIMedicalRecord::getTreatmentDate))
+                .toList();
+        if (clinicalRecords.isEmpty()) return null;
+
+        StringBuilder block = new StringBuilder();
+        for (PIMedicalRecord r : clinicalRecords) {
+            String findings = r.getKeyFindings() == null ? "" : r.getKeyFindings();
+            if (findings.length() > 400) findings = findings.substring(0, 400);
+            block.append(String.format("- %s | %s | %s | billed=%s | %s%n",
+                    r.getTreatmentDate(),
+                    r.getProviderName() == null ? "?" : r.getProviderName(),
+                    r.getRecordType() == null ? "?" : r.getRecordType(),
+                    r.getBilledAmount() == null ? "?" : r.getBilledAmount(),
+                    findings.replace("\n", " ").replace("|", "/")));
+        }
+
+        String prompt = String.format("""
+            You are a personal-injury case-prep analyst. The attorney is reviewing
+            this case file and needs a list of OPEN ITEMS — things mentioned in the
+            records that have not yet been received or uploaded, and which the
+            attorney should follow up on. Common patterns:
+
+              - "MRI of cervical spine ordered" but no MRI report uploaded
+              - "X-rays taken in ED" but no radiology report on file
+              - "Referred to orthopedic specialist" but no consult note
+              - "Trigger-point injection performed" but no procedure note
+              - "Patient discharged at MMI" but no formal discharge summary
+              - Bills present (BILLING records) but no matching clinical note from
+                that provider on the same date
+
+            Be precise. Only flag an item if the records actually mention it AND
+            the corresponding document is missing from the record set below. Do NOT
+            invent missing items.
+
+            For each open item, return:
+              - type: one of "MISSING_IMAGING", "MISSING_CONSULT", "MISSING_PROCEDURE_NOTE",
+                "MISSING_DISCHARGE", "MISSING_LAB", "MISSING_CLINICAL_NOTE", "OTHER"
+              - description: 1-2 sentence attorney-facing description of what's missing
+                and why it matters. Refer to encounters by date and provider name —
+                NEVER mention internal record IDs or "Record N" phrasings.
+              - referencedIn: which encounter mentioned the missing item
+                (e.g. "PA Moy, 11/11/2025")
+              - priority: "HIGH", "MEDIUM", or "LOW" — HIGH if the missing doc is
+                load-bearing for damages or causation; LOW if minor
+
+            RECORDS:
+            %s
+
+            Return ONLY a JSON array — no prose, no markdown fence. Empty array `[]`
+            if nothing is genuinely missing. Example:
+            [
+              {"type": "MISSING_IMAGING", "description": "MRI of cervical spine was ordered on 12/04/2025 but no MRI report has been uploaded. The MRI findings would anchor causation for the cervical strain claim.", "referencedIn": "PA Moy, 12/04/2025", "priority": "HIGH"}
+            ]
+            """, block);
+
+        try {
+            String response = claudeService.generateCompletionWithModel(
+                    prompt, null, false, null, null, "claude-sonnet-4-6").get();
+            String json = response.trim();
+            int firstBracket = json.indexOf('[');
+            int lastBracket = json.lastIndexOf(']');
+            if (firstBracket < 0 || lastBracket <= firstBracket) {
+                log.warn("Open-items AI response missing JSON array — skipping");
+                return null;
+            }
+            json = json.substring(firstBracket, lastBracket + 1);
+            List<Map<String, Object>> items = objectMapper.readValue(json,
+                    new TypeReference<List<Map<String, Object>>>() {});
+            // Defensive: strip internal record-ID phrasing from descriptions
+            items.forEach(item -> {
+                Object d = item.get("description");
+                if (d instanceof String s) {
+                    item.put("description", sanitizePhaseRationale(s));
+                }
+            });
+            log.info("Generated {} open follow-up items from {} clinical records",
+                    items.size(), clinicalRecords.size());
+            return items;
+        } catch (Exception e) {
+            log.warn("Failed to generate open items — leaving null: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * P15.c.C — Convert treatment-gap entries into OpenItem-shaped entries so the
+     * Critical Path / Open Items checklist surfaces continuity-of-care concerns
+     * automatically on summary regen — no separate "Refresh Gaps" click needed.
+     *
+     * Severity → priority: HIGH (>60d) → HIGH; MEDIUM (>30d) → MEDIUM.
+     */
+    private List<Map<String, Object>> buildGapOpenItems(List<Map<String, Object>> treatmentGaps) {
+        List<Map<String, Object>> items = new ArrayList<>();
+        if (treatmentGaps == null || treatmentGaps.isEmpty()) return items;
+
+        for (Map<String, Object> gap : treatmentGaps) {
+            Object daysObj = gap.get("gapDays");
+            int days = daysObj instanceof Integer ? (Integer) daysObj : 0;
+            Object startObj = gap.get("gapStart");
+            Object endObj = gap.get("gapEnd");
+            String prevProvider = String.valueOf(gap.getOrDefault("previousProvider", "?"));
+            String nextProvider = String.valueOf(gap.getOrDefault("nextProvider", "?"));
+            String severity = String.valueOf(gap.getOrDefault("severity", "MEDIUM"));
+
+            Map<String, Object> item = new HashMap<>();
+            item.put("type", "TREATMENT_GAP");
+            item.put("description", String.format(
+                    "%d-day treatment gap from %s to %s. Continuity-of-care concern; defense will use it to argue intervening cause or self-resolution.",
+                    days, prevProvider, nextProvider));
+            item.put("referencedIn", String.format("%s → %s", startObj, endObj));
+            item.put("priority", "HIGH".equals(severity) ? "HIGH" : "MEDIUM");
+            items.add(item);
+        }
+        return items;
+    }
+
+    /**
+     * P15.c.B — Pure-rules plateau detection. Two signals (independent):
+     *   1. CPT 97164 (PT re-evaluation) appearing on ≥2 distinct dates — a
+     *      single re-eval is part of normal PT workflow (initial / mid-course /
+     *      discharge), so flagging on one occurrence over-fires. Repeated
+     *      re-evals across a treatment course is the actual plateau signal:
+     *      the provider keeps re-measuring because progress isn't there.
+     *   2. Free-text plateau phrases in keyFindings or prognosisNotes:
+     *      "no improvement", "plateau", "no significant change", "not progressing".
+     *      ("reached mmi" deliberately NOT included — MMI is a treatment
+     *      milestone the plaintiff actually wants on the record, not a
+     *      defensive attack vector. If we ever want to surface it, it should
+     *      be its own MMI_REACHED open-item type with positive framing.)
+     *
+     * Only flag the FIRST plateau-suspicious record per signal — duplicating per
+     * record creates noise. Caller dedups by `referencedIn` if needed.
+     */
+    private List<Map<String, Object>> detectPlateauItems(List<PIMedicalRecord> records) {
+        List<Map<String, Object>> items = new ArrayList<>();
+        if (records == null || records.isEmpty()) return items;
+
+        // Signal 1 — PT re-eval CPT (97164) on ≥2 distinct dates.
+        List<PIMedicalRecord> ptReevals = records.stream()
+                .filter(r -> {
+                    List<Map<String, Object>> procs = r.getProcedures();
+                    if (procs == null) return false;
+                    return procs.stream().anyMatch(p -> {
+                        Object cpt = p.get("cpt_code");
+                        return cpt != null && "97164".equals(cpt.toString().trim());
+                    });
+                })
+                .sorted(Comparator.comparing(
+                        r -> r.getTreatmentDate() != null ? r.getTreatmentDate() : LocalDate.MAX))
+                .toList();
+
+        long distinctReevalDates = ptReevals.stream()
+                .map(PIMedicalRecord::getTreatmentDate)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
+
+        if (distinctReevalDates >= 2) {
+            PIMedicalRecord earliestReeval = ptReevals.get(0);
+            Map<String, Object> item = new HashMap<>();
+            item.put("type", "PLATEAU_DETECTED");
+            item.put("description", String.format(
+                    "Multiple physical-therapy re-evaluations (CPT 97164 on %d distinct dates) — repeated re-evals across a course typically signal the patient isn't progressing as expected. Worth a follow-up note from the provider on plateau status to address defense's 'self-resolved' framing.",
+                    distinctReevalDates));
+            item.put("referencedIn", String.format("%s, %s",
+                    earliestReeval.getProviderName() == null ? "PT provider" : earliestReeval.getProviderName(),
+                    earliestReeval.getTreatmentDate() == null ? "?" : earliestReeval.getTreatmentDate()));
+            item.put("priority", "MEDIUM");
+            items.add(item);
+        }
+
+        // Signal 2 — plateau phrasing in narrative fields. Pre-compile the regex.
+        java.util.regex.Pattern plateauRegex = java.util.regex.Pattern.compile(
+                "(?i)\\b(no\\s+improvement|plateau|no\\s+significant\\s+change|not\\s+progressing)\\b");
+
+        PIMedicalRecord plateauNote = records.stream()
+                .filter(r -> {
+                    String findings = r.getKeyFindings();
+                    String prognosis = r.getPrognosisNotes();
+                    String haystack = (findings == null ? "" : findings) + " "
+                            + (prognosis == null ? "" : prognosis);
+                    return plateauRegex.matcher(haystack).find();
+                })
+                .min(Comparator.comparing(
+                        r -> r.getTreatmentDate() != null ? r.getTreatmentDate() : LocalDate.MAX))
+                .orElse(null);
+
+        if (plateauNote != null) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("type", "PLATEAU_DETECTED");
+            item.put("description",
+                    "Plateau / no-improvement phrasing detected in treatment notes. Confirm whether the provider intends an MMI declaration; defense will lean on this to cap pain-and-suffering.");
+            item.put("referencedIn", String.format("%s, %s",
+                    plateauNote.getProviderName() == null ? "Provider" : plateauNote.getProviderName(),
+                    plateauNote.getTreatmentDate() == null ? "?" : plateauNote.getTreatmentDate()));
+            item.put("priority", "MEDIUM");
+            items.add(item);
+        }
+        return items;
+    }
+
+    /**
+     * P15.c — Combine AI-generated open items with rule-based items into a
+     * single list. Never returns null (callers expect a list); empty list when
+     * no items from any source.
+     *
+     * Idempotent shape — regenerating a summary produces the same merged list
+     * given the same records. AI list goes first so it stays at the top of
+     * the Critical Path UI; rule-based items append.
+     */
+    @SafeVarargs
+    private final List<Map<String, Object>> mergeOpenItems(List<Map<String, Object>>... lists) {
+        List<Map<String, Object>> merged = new ArrayList<>();
+        for (List<Map<String, Object>> list : lists) {
+            if (list != null) merged.addAll(list);
+        }
+        return merged;
     }
 
     private Map<String, Object> generateAIAnalysis(List<PIMedicalRecord> records,
@@ -1035,6 +1341,11 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
                 .missingRecords(entity.getMissingRecords())
                 .keyHighlights(entity.getKeyHighlights())
                 .prognosisAssessment(entity.getPrognosisAssessment())
+                .causationSummary(entity.getCausationSummary())
+                .openItems(entity.getOpenItems())
+                .demandScenario(entity.getDemandScenario())
+                .riskRegister(entity.getRiskRegister())
+                .riskRegisterGeneratedAt(entity.getRiskRegisterGeneratedAt())
                 .totalProviders(entity.getTotalProviders())
                 .totalVisits(entity.getTotalVisits())
                 .totalBilled(entity.getTotalBilled())
@@ -1049,5 +1360,346 @@ public class PIMedicalSummaryServiceImpl implements PIMedicalSummaryService {
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
+    }
+
+    // =========================================================================
+    // P11.a — Cross-document anomaly detection
+    // =========================================================================
+
+    /**
+     * Pure rules-based pass over the case's intake fields, medical records,
+     * and scanned-document tracking rows to surface inconsistencies an
+     * attorney needs to know about before demand. Runs cheaply (no AI),
+     * deterministic, no schema change.
+     *
+     * Each anomaly returned is a map of:
+     *   - id          : stable identifier within this run (used by the UI for *ngFor trackBy)
+     *   - type        : enum-like code (PRE_DOL_TREATMENT, FAILED_SCAN, NON_MEDICAL_DOC, ...)
+     *   - severity    : HIGH | MEDIUM | LOW
+     *   - title       : short headline for the UI card header
+     *   - message     : 1–2 sentence description naming the specific record/doc
+     *   - source      : "record:123" / "doc:456" / "case" — drives click-through
+     *   - recommendation : suggested next action ("Confirm with provider…", etc.)
+     */
+    @Override
+    public List<Map<String, Object>> detectDocumentAnomalies(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        log.info("Detecting cross-doc anomalies for case: {} in org: {}", caseId, orgId);
+
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+                .orElseThrow(() -> new ResourceNotFoundException("Case not found: " + caseId));
+
+        List<PIMedicalRecord> records = recordRepository
+                .findByCaseIdAndOrganizationIdOrderByTreatmentDateAsc(caseId, orgId);
+        List<PIScannedDocument> scannedDocs = scannedDocumentRepository
+                .findByCaseIdAndOrganizationId(caseId, orgId);
+
+        List<Map<String, Object>> anomalies = new ArrayList<>();
+        LocalDate dol = legalCase.getInjuryDate();
+        LocalDate today = LocalDate.now();
+        int counter = 0;
+
+        // ── Rule 1: medical records dated BEFORE the date of loss ──────────
+        // High severity — looks like pre-existing condition or fabricated record.
+        // Skip when no DOL is on file (rule 2 catches that case).
+        if (dol != null) {
+            for (PIMedicalRecord r : records) {
+                if (r.getTreatmentDate() != null && r.getTreatmentDate().isBefore(dol)) {
+                    long days = ChronoUnit.DAYS.between(r.getTreatmentDate(), dol);
+                    Map<String, Object> a = new LinkedHashMap<>();
+                    a.put("id", "anomaly-" + (++counter));
+                    a.put("type", "PRE_DOL_TREATMENT");
+                    a.put("severity", "HIGH");
+                    a.put("title", "Pre-DOL treatment record");
+                    a.put("message", String.format(
+                            "%s · %s · treated %d day%s before the date of loss (DOL %s)",
+                            safe(r.getProviderName(), "Unknown provider"),
+                            safe(r.getRecordType(), "record"),
+                            days, days == 1 ? "" : "s",
+                            dol.toString()));
+                    a.put("source", "record:" + r.getId());
+                    a.put("recommendation",
+                            "Confirm whether this represents a pre-existing condition the defense will exploit, " +
+                            "or a record that was misdated. Address proactively in the demand letter.");
+                    anomalies.add(a);
+                }
+            }
+        }
+
+        // ── Rule 2: case has medical records but no DOL on file ─────────────
+        if (dol == null && !records.isEmpty()) {
+            Map<String, Object> a = new LinkedHashMap<>();
+            a.put("id", "anomaly-" + (++counter));
+            a.put("type", "MISSING_DOL");
+            a.put("severity", "HIGH");
+            a.put("title", "Missing date of loss");
+            a.put("message", String.format(
+                    "%d medical record%s on file but no injury_date set on the case. SOL clock can't be computed.",
+                    records.size(), records.size() == 1 ? "" : "s"));
+            a.put("source", "case");
+            a.put("recommendation",
+                    "Capture the date of loss in case intake — drives statute of limitations + pre-DOL anomaly checks.");
+            anomalies.add(a);
+        }
+
+        // ── Rule 3: treatment_end_date earlier than treatment_date (data quality) ─
+        for (PIMedicalRecord r : records) {
+            if (r.getTreatmentDate() != null && r.getTreatmentEndDate() != null
+                    && r.getTreatmentEndDate().isBefore(r.getTreatmentDate())) {
+                Map<String, Object> a = new LinkedHashMap<>();
+                a.put("id", "anomaly-" + (++counter));
+                a.put("type", "INVERTED_DATES");
+                a.put("severity", "MEDIUM");
+                a.put("title", "Treatment end-date before start-date");
+                a.put("message", String.format(
+                        "%s · ends %s (start %s) — likely a transcription or AI-extraction error.",
+                        safe(r.getProviderName(), "Unknown provider"),
+                        r.getTreatmentEndDate(), r.getTreatmentDate()));
+                a.put("source", "record:" + r.getId());
+                a.put("recommendation", "Verify against the source document and correct the record.");
+                anomalies.add(a);
+            }
+        }
+
+        // ── Rule 4: future-dated medical records ─────────────────────────────
+        for (PIMedicalRecord r : records) {
+            if (r.getTreatmentDate() != null && r.getTreatmentDate().isAfter(today)) {
+                Map<String, Object> a = new LinkedHashMap<>();
+                a.put("id", "anomaly-" + (++counter));
+                a.put("type", "FUTURE_DATED");
+                a.put("severity", "MEDIUM");
+                a.put("title", "Future-dated record");
+                a.put("message", String.format(
+                        "%s · treatment_date %s is in the future.",
+                        safe(r.getProviderName(), "Unknown provider"),
+                        r.getTreatmentDate()));
+                a.put("source", "record:" + r.getId());
+                a.put("recommendation", "Verify date — may be a year typo (e.g. 2027 vs. 2026).");
+                anomalies.add(a);
+            }
+        }
+
+        // ── Rule 5: failed AI scans (uploaded but couldn't extract) ──────────
+        long failed = scannedDocs.stream()
+                .filter(d -> "failed".equalsIgnoreCase(d.getStatus()))
+                .count();
+        if (failed > 0) {
+            Map<String, Object> a = new LinkedHashMap<>();
+            a.put("id", "anomaly-" + (++counter));
+            a.put("type", "FAILED_SCAN");
+            a.put("severity", "MEDIUM");
+            a.put("title", failed + " document" + (failed == 1 ? "" : "s") + " failed AI analysis");
+            a.put("message",
+                    "These documents are uploaded to the case but the AI couldn't extract structured data — " +
+                    "they won't appear in the medical chronology or factor into damage totals.");
+            a.put("source", "scans");
+            a.put("recommendation",
+                    "Open the Documents tab, review failed entries, and re-run scan or update manually.");
+            anomalies.add(a);
+        }
+
+        // ── Rule 6: incomplete medical records (AI flagged missing fields) ──
+        long incomplete = records.stream()
+                .filter(r -> Boolean.FALSE.equals(r.getIsComplete()))
+                .count();
+        if (incomplete > 0) {
+            Map<String, Object> a = new LinkedHashMap<>();
+            a.put("id", "anomaly-" + (++counter));
+            a.put("type", "INCOMPLETE_RECORDS");
+            a.put("severity", "LOW");
+            a.put("title", incomplete + " incomplete record" + (incomplete == 1 ? "" : "s"));
+            a.put("message", "Medical records flagged as incomplete by the AI extractor — typically missing " +
+                    "diagnosis codes, billing totals, or provider details.");
+            a.put("source", "records");
+            a.put("recommendation",
+                    "Open the Case File tab, expand each record, and request the missing pieces from providers.");
+            anomalies.add(a);
+        }
+
+        // ── Rule 7: significant treatment gap (>30 days mid-course) ─────────
+        // Only fires once treatment is actually underway; piggybacks on the summary's
+        // already-computed treatmentGapDays so we don't re-walk all records here.
+        Optional<PIMedicalSummary> summaryOpt = summaryRepository.findByCaseIdAndOrganizationId(caseId, orgId);
+        summaryOpt.ifPresent(summary -> {
+            Integer gap = summary.getTreatmentGapDays();
+            if (gap != null && gap > 30) {
+                Map<String, Object> a = new LinkedHashMap<>();
+                int idx = anomalies.size() + 1;
+                a.put("id", "anomaly-" + idx);
+                a.put("type", "TREATMENT_GAP");
+                a.put("severity", gap > 60 ? "HIGH" : "MEDIUM");
+                a.put("title", String.format("%d-day treatment gap", gap));
+                a.put("message",
+                        "A treatment gap >30 days is a defense favorite — adjusters argue treatment wasn't " +
+                        "necessary or the injury resolved.");
+                a.put("source", "summary");
+                a.put("recommendation",
+                        "Address gap proactively in the demand: cite reasons (insurance preauth, scheduling, " +
+                        "client cost barriers) backed by a provider letter when possible.");
+                anomalies.add(a);
+            }
+        });
+
+        // ── Rule 8: scanned doc with status=non_medical sitting in PI case ──
+        long nonMedical = scannedDocs.stream()
+                .filter(d -> "non_medical".equalsIgnoreCase(d.getStatus()))
+                .count();
+        if (nonMedical >= 3) {
+            // Threshold of 3 because LOR/retainer/intake-questionnaire are all
+            // legitimately non-medical and routinely uploaded to PI cases. Past
+            // three, we're seeing case clutter / wrong-case uploads.
+            Map<String, Object> a = new LinkedHashMap<>();
+            a.put("id", "anomaly-" + (++counter));
+            a.put("type", "NON_MEDICAL_VOLUME");
+            a.put("severity", "LOW");
+            a.put("title", nonMedical + " non-medical documents");
+            a.put("message", "Several documents in this case were classified as non-medical by the AI scan. " +
+                    "Common: retainer + LOR + intake form. More than that suggests misfiled uploads.");
+            a.put("source", "scans");
+            a.put("recommendation", "Skim the Documents tab to confirm none belong on a different case.");
+            anomalies.add(a);
+        }
+
+        log.info("Detected {} cross-doc anomalies for case {}", anomalies.size(), caseId);
+        return anomalies;
+    }
+
+    /** Null-safe value accessor with a fallback label. */
+    private String safe(String value, String fallback) {
+        return (value == null || value.isBlank()) ? fallback : value;
+    }
+
+    // =========================================================================
+    // P11.d — Risk Register (AI-generated 3-tier risk scoring)
+    // =========================================================================
+
+    @Override
+    public Map<String, Object> generateRiskRegister(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        log.info("Generating risk register for case: {} in org: {}", caseId, orgId);
+
+        LegalCase legalCase = legalCaseRepository.findByIdAndOrganizationId(caseId, orgId)
+                .orElseThrow(() -> new ResourceNotFoundException("Case not found: " + caseId));
+
+        List<PIMedicalRecord> records = recordRepository
+                .findByCaseIdAndOrganizationIdOrderByTreatmentDateAsc(caseId, orgId);
+
+        if (records.isEmpty()) {
+            throw new IllegalStateException(
+                "No medical records on file. Generate the medical summary first so the risk register has clinical context.");
+        }
+
+        Optional<PIMedicalSummary> summaryOpt = summaryRepository.findByCaseIdAndOrganizationId(caseId, orgId);
+        PIMedicalSummary summary = summaryOpt.orElseThrow(() -> new IllegalStateException(
+            "Medical summary not yet generated. Generate the summary so the risk register can build on the chronology + causation."));
+
+        // Build the records summary lite — just enough for the AI to weigh
+        // factors. Avoid sending the full chart (token cost) since we already
+        // have the AI-generated summary fields.
+        StringBuilder recordsSummary = new StringBuilder();
+        for (PIMedicalRecord r : records) {
+            recordsSummary.append(String.format("- %s | %s | %s | $%s\n",
+                    r.getTreatmentDate() != null ? r.getTreatmentDate().toString() : "?",
+                    safe(r.getProviderName(), "?"),
+                    safe(r.getRecordType(), "?"),
+                    r.getBilledAmount() != null ? r.getBilledAmount().toString() : "0"));
+        }
+
+        // Pull the existing strategic context if available — adjuster analysis
+        // and causation summary materially shape the risk scoring.
+        String causation = safe(summary.getCausationSummary(), "(not yet generated)");
+        String adjusterContext = "";
+        if (summary.getAdjusterDefenseAnalysis() != null) {
+            try {
+                adjusterContext = "\nADJUSTER DEFENSE VECTORS:\n"
+                    + objectMapper.writeValueAsString(summary.getAdjusterDefenseAnalysis().get("attackVectors"));
+            } catch (Exception ignored) { /* skip on serialization issue */ }
+        }
+
+        String prompt = String.format("""
+            You are an expert personal injury risk analyst. Score this case's risk profile across
+            three forum tiers and return a structured JSON response.
+
+            CASE CONTEXT:
+            - Title: %s
+            - Jurisdiction: %s
+            - Injury date: %s
+            - Injury type: %s
+            - Treatment days: %d
+            - Treatment gap days: %d
+            - Total billed: $%s
+            - Settlement demand on file: $%s
+            - At-fault insurance limit: %s
+
+            CAUSATION (verbatim from medical records):
+            %s
+            %s
+
+            MEDICAL RECORDS SUMMARY:
+            %s
+
+            For EACH tier (preSuit, suit, trial), produce:
+              - likelihood (preSuit) OR risk (suit/trial): integer 0-100
+                  preSuit "likelihood": probability of an acceptable settlement before suit (higher = better for plaintiff)
+                  suit "risk": probability of unfavorable outcome if forced to file suit (higher = worse)
+                  trial "risk": probability of unfavorable verdict at trial (higher = worse)
+              - label: FAVORABLE | MIXED | CHALLENGING (consistent with the score)
+              - summary: 1-2 sentence executive read of the tier
+              - factors: array of 4-7 objects { factor: string, impact: "+" or "-", weight: HIGH | MEDIUM | LOW }
+                  "+" means the factor helps the plaintiff in that tier
+                  "-" means the factor hurts the plaintiff in that tier
+
+            Return ONLY valid JSON in this exact shape:
+            {
+              "preSuit": { "likelihood": int, "label": str, "summary": str, "factors": [...] },
+              "suit":    { "risk": int,       "label": str, "summary": str, "factors": [...] },
+              "trial":   { "risk": int,       "label": str, "summary": str, "factors": [...] }
+            }
+            """,
+                safe(legalCase.getTitle(), "(no title)"),
+                safe(legalCase.getJurisdiction(), "?"),
+                legalCase.getInjuryDate() != null ? legalCase.getInjuryDate().toString() : "?",
+                safe(legalCase.getInjuryType(), "?"),
+                summary.getTreatmentDurationDays() != null ? summary.getTreatmentDurationDays() : 0,
+                summary.getTreatmentGapDays() != null ? summary.getTreatmentGapDays() : 0,
+                summary.getTotalBilled() != null ? summary.getTotalBilled().toString() : "0",
+                legalCase.getSettlementDemandAmount() != null ? legalCase.getSettlementDemandAmount().toString() : "(none)",
+                legalCase.getInsurancePolicyLimit() != null ? "$" + legalCase.getInsurancePolicyLimit() : "(unknown)",
+                causation,
+                adjusterContext,
+                recordsSummary.toString());
+
+        try {
+            String response = claudeService.generateCompletion(prompt, false).get();
+            int start = response.indexOf('{');
+            int end = response.lastIndexOf('}');
+            if (start < 0 || end <= start) {
+                throw new RuntimeException("AI did not return parseable JSON");
+            }
+            String json = response.substring(start, end + 1);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = objectMapper.readValue(json, Map.class);
+            result.put("generatedAt", LocalDateTime.now().toString());
+            result.put("generatedByModel", "claude-sonnet-4");
+
+            // Persist
+            summary.setRiskRegister(result);
+            summary.setRiskRegisterGeneratedAt(LocalDateTime.now());
+            summaryRepository.save(summary);
+            log.info("Risk register persisted for case {}", caseId);
+
+            return result;
+        } catch (Exception e) {
+            log.error("Error generating risk register: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to generate risk register: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Map<String, Object> getSavedRiskRegister(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        return summaryRepository.findByCaseIdAndOrganizationId(caseId, orgId)
+                .map(PIMedicalSummary::getRiskRegister)
+                .orElse(null);
     }
 }

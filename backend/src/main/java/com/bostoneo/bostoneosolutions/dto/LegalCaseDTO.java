@@ -1,8 +1,10 @@
 package com.bostoneo.bostoneosolutions.dto;
 
 import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
+import com.bostoneo.bostoneosolutions.enumeration.CaseStage;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
+import com.bostoneo.bostoneosolutions.enumeration.PlaintiffRole;
 import com.bostoneo.bostoneosolutions.validation.ValidEnum;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -171,6 +173,25 @@ public class LegalCaseDTO {
     private String practiceArea;
 
     // ============================================
+    // Attorney Workflow (V61) — primarily for PI cases.
+    // ============================================
+    private CaseStage stage;
+    // V62: surfaces auto-vs-manual state to the UI ("Reset to auto" toggle).
+    // Set automatically by patchCaseFields when client PATCHes the `stage` field.
+    private Boolean stageManuallySet;
+    private String mechanismDescription;
+    private PlaintiffRole plaintiffRole;
+    private Boolean erVisitDol;
+    private Boolean policeReportObtained;
+    private String policeReportNumber;
+    private Double clientInsuranceUmLimit;
+    private Double clientInsuranceUimLimit;
+    private Double clientInsuranceMedPayLimit;
+    private Integer daysMissedWork;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
+    private Date statuteOfLimitations;
+
+    // ============================================
     // Criminal Defense Fields
     // ============================================
     private String primaryCharge;
@@ -225,6 +246,14 @@ public class LegalCaseDTO {
     private Date ipFilingDate;
     private String inventorName;
     private String technologyArea;
+
+    // ============================================
+    // Field Provenance (P1 / V69)
+    // Per-field source map keyed by dotted field path; values are
+    // ProvenanceSource enum names. Surfaces the i/c/A/m markers on the
+    // case-detail UI.
+    // ============================================
+    private Map<String, String> fieldProvenance;
 
     // ============================================
     // PI Computed Fields (for Case Value Calculator)

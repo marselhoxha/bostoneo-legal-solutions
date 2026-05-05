@@ -27,6 +27,8 @@ public class UserDTO {
     private boolean notLocked;
     private boolean usingMFA;
     private boolean forcePasswordChange;
+    // V63 — per-user opt-in for new attorney-facing PI view (BeanUtils.copyProperties auto-maps from User entity)
+    private boolean betaAttorneyView;
     private LocalDateTime createdAt;
     private LocalDateTime termsAcceptedAt;
     

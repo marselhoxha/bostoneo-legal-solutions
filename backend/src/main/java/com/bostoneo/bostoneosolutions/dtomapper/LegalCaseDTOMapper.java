@@ -81,6 +81,19 @@ public class LegalCaseDTOMapper {
             .defendantAddress(entity.getDefendantAddress())
             // Practice Area
             .practiceArea(entity.getPracticeArea())
+            // Attorney Workflow (V61) — primarily PI cases
+            .stage(entity.getStage())
+            .stageManuallySet(entity.getStageManuallySet())
+            .mechanismDescription(entity.getMechanismDescription())
+            .plaintiffRole(entity.getPlaintiffRole())
+            .erVisitDol(entity.getErVisitDol())
+            .policeReportObtained(entity.getPoliceReportObtained())
+            .policeReportNumber(entity.getPoliceReportNumber())
+            .clientInsuranceUmLimit(entity.getClientInsuranceUmLimit())
+            .clientInsuranceUimLimit(entity.getClientInsuranceUimLimit())
+            .clientInsuranceMedPayLimit(entity.getClientInsuranceMedPayLimit())
+            .daysMissedWork(entity.getDaysMissedWork())
+            .statuteOfLimitations(entity.getStatuteOfLimitations())
             // Criminal Defense fields
             .primaryCharge(entity.getPrimaryCharge())
             .chargeLevel(entity.getChargeLevel())
@@ -116,9 +129,11 @@ public class LegalCaseDTOMapper {
             .ipFilingDate(entity.getIpFilingDate())
             .inventorName(entity.getInventorName())
             .technologyArea(entity.getTechnologyArea())
+            // V69 — surface field provenance map for the case-detail UI
+            .fieldProvenance(entity.getFieldProvenance())
             .build();
     }
-    
+
     public LegalCase toEntity(LegalCaseDTO dto) {
         if (dto == null) {
             return null;
@@ -185,6 +200,19 @@ public class LegalCaseDTOMapper {
         entity.setDefendantAddress(dto.getDefendantAddress());
         // Practice Area
         entity.setPracticeArea(dto.getPracticeArea());
+        // Attorney Workflow (V61) — primarily PI cases
+        entity.setStage(dto.getStage());
+        entity.setStageManuallySet(dto.getStageManuallySet());
+        entity.setMechanismDescription(dto.getMechanismDescription());
+        entity.setPlaintiffRole(dto.getPlaintiffRole());
+        entity.setErVisitDol(dto.getErVisitDol());
+        entity.setPoliceReportObtained(dto.getPoliceReportObtained());
+        entity.setPoliceReportNumber(dto.getPoliceReportNumber());
+        entity.setClientInsuranceUmLimit(dto.getClientInsuranceUmLimit());
+        entity.setClientInsuranceUimLimit(dto.getClientInsuranceUimLimit());
+        entity.setClientInsuranceMedPayLimit(dto.getClientInsuranceMedPayLimit());
+        entity.setDaysMissedWork(dto.getDaysMissedWork());
+        entity.setStatuteOfLimitations(dto.getStatuteOfLimitations());
         // Criminal Defense fields
         entity.setPrimaryCharge(dto.getPrimaryCharge());
         entity.setChargeLevel(dto.getChargeLevel());
@@ -220,6 +248,15 @@ public class LegalCaseDTOMapper {
         entity.setIpFilingDate(dto.getIpFilingDate());
         entity.setInventorName(dto.getInventorName());
         entity.setTechnologyArea(dto.getTechnologyArea());
+        // V69 — propagate provenance map round-trip (writes are usually via
+        // ProvenanceService directly, but this keeps DTO->entity symmetric).
+        // Null-guard: column is NOT NULL with DB default '{}'::jsonb, but
+        // Hibernate INSERTs all mapped columns explicitly so a Java null would
+        // bypass the default and trip the constraint. New cases come through
+        // here with no fieldProvenance on the DTO.
+        if (dto.getFieldProvenance() != null) {
+            entity.setFieldProvenance(dto.getFieldProvenance());
+        }
 
         return entity;
     }

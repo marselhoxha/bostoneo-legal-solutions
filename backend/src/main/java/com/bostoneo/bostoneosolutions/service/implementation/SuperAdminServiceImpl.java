@@ -1266,6 +1266,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             .enabled(user.isEnabled())
             .accountNonLocked(user.isNotLocked())
             .usingMfa(user.isUsingMFA())
+            .betaAttorneyView(user.isBetaAttorneyView())
             .createdAt(user.getCreatedAt())
             .casesAssigned(casesAssigned != null ? casesAssigned : 0)
             .recentActivity(recentActivity)
@@ -1502,6 +1503,23 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                 "DELETE FROM two_factor_verifications WHERE user_id = :userId",
                 new MapSqlParameterSource().addValue("userId", userId)
             );
+        }
+    }
+
+    @Override
+    @Transactional
+    public void setUserBetaAttorneyView(Long userId, boolean enabled) {
+        log.info("SUPERADMIN: Setting user {} beta_attorney_view to: {}", userId, enabled);
+
+        int updated = jdbc.update(
+            "UPDATE users SET beta_attorney_view = :enabled WHERE id = :userId",
+            new MapSqlParameterSource()
+                .addValue("enabled", enabled)
+                .addValue("userId", userId)
+        );
+
+        if (updated == 0) {
+            throw new ApiException("User not found with ID: " + userId);
         }
     }
 

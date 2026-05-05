@@ -121,6 +121,35 @@ public class PIMedicalSummary {
     @Column(name = "adjuster_analysis_generated_at")
     private LocalDateTime adjusterAnalysisGeneratedAt;
 
+    // Tier 5a — Causation block: collated verbatim causation_statement quotes
+    // from medical records, formatted with attribution. Demand-letter ready.
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "causation_summary", columnDefinition = "TEXT")
+    private String causationSummary;
+
+    // Tier 5c — AI-detected follow-up items the attorney should chase
+    // (e.g. "MRI ordered but no report uploaded"). Array of
+    // {type, description, referencedIn, priority}.
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "open_items", columnDefinition = "jsonb")
+    private List<Map<String, Object>> openItems;
+
+    // P5.4 — Attorney-saved demand calculator scenario.
+    // { multiplier, wageLoss, feeMode, costs, liens, savedAt }.
+    // Powers the Damages tab so user inputs persist across page reloads.
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "demand_scenario", columnDefinition = "jsonb")
+    private Map<String, Object> demandScenario;
+
+    // P11.d — AI-generated risk register (3 tiers: pre-suit settlement,
+    // litigation, trial). See V67 migration for shape details.
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "risk_register", columnDefinition = "jsonb")
+    private Map<String, Object> riskRegister;
+
+    @Column(name = "risk_register_generated_at")
+    private LocalDateTime riskRegisterGeneratedAt;
+
     // Metadata
     @CreationTimestamp
     @Column(name = "created_at")

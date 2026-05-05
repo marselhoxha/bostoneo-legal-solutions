@@ -489,6 +489,31 @@ public class SuperAdminController {
     }
 
     /**
+     * V63 — set the per-user opt-in for the new attorney-facing PI view (P4+).
+     * Superadmin curates the beta cohort. Affected users pick up the new flag
+     * on next session refresh; until then their currentUser cache still says false.
+     */
+    @PutMapping("/users/{id}/toggle-beta-attorney-view")
+    @AuditLog(action = "UPDATE", entityType = "USER", description = "Toggled user beta attorney view")
+    public ResponseEntity<HttpResponse> toggleUserBetaAttorneyView(
+            @PathVariable Long id,
+            @RequestBody Map<String, Boolean> body) {
+        boolean enabled = Boolean.TRUE.equals(body.get("enabled"));
+        log.info("SUPERADMIN: Setting user {} beta_attorney_view to: {}", id, enabled);
+
+        superAdminService.setUserBetaAttorneyView(id, enabled);
+
+        return ResponseEntity.ok(
+            HttpResponse.builder()
+                .timeStamp(now().toString())
+                .message("User beta attorney view updated successfully")
+                .status(OK)
+                .statusCode(OK.value())
+                .build()
+        );
+    }
+
+    /**
      * Resend verification email
      */
     @PostMapping("/users/{id}/resend-verification")

@@ -5,6 +5,7 @@ import com.bostoneo.bostoneosolutions.exception.ResourceNotFoundException;
 import com.bostoneo.bostoneosolutions.model.PISettlementEvent;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.repository.PISettlementEventRepository;
+import com.bostoneo.bostoneosolutions.service.CaseStageService;
 import com.bostoneo.bostoneosolutions.service.PISettlementEventService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ public class PISettlementEventServiceImpl implements PISettlementEventService {
 
     private final PISettlementEventRepository eventRepository;
     private final TenantService tenantService;
+    private final CaseStageService caseStageService;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -66,6 +68,11 @@ public class PISettlementEventServiceImpl implements PISettlementEventService {
         }
 
         PISettlementEvent saved = eventRepository.save(event);
+
+        // V62 — first event flips PRE_DEMAND/TREATMENT → DEMAND_SENT;
+        // adding offer/counter to an existing event flips DEMAND_SENT → NEGOTIATION.
+        caseStageService.recomputeAndPersist(caseId);
+
         log.info("Settlement event created with ID: {}", saved.getId());
         return mapToDTO(saved);
     }
@@ -78,7 +85,13 @@ public class PISettlementEventServiceImpl implements PISettlementEventService {
         PISettlementEvent event = eventRepository.findByIdAndOrganizationId(id, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Settlement event not found with ID: " + id));
 
+        Long caseId = event.getCaseId();
         eventRepository.delete(event);
+
+        // V62 — deleting last carrier-response event can flip NEGOTIATION → DEMAND_SENT;
+        // deleting last event entirely can flip DEMAND_SENT → PRE_DEMAND/TREATMENT.
+        caseStageService.recomputeAndPersist(caseId);
+
         log.info("Settlement event deleted: {}", id);
     }
 
@@ -88,6 +101,10 @@ public class PISettlementEventServiceImpl implements PISettlementEventService {
         log.info("Deleting all settlement events for case: {} in org: {}", caseId, orgId);
 
         eventRepository.deleteByCaseIdAndOrganizationId(caseId, orgId);
+
+        // V62 — clearing all events drops out of NEGOTIATION/DEMAND_SENT
+        caseStageService.recomputeAndPersist(caseId);
+
         log.info("All settlement events deleted for case: {}", caseId);
     }
 

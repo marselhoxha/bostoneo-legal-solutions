@@ -7,8 +7,10 @@
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-# Install curl for health checks, tesseract for PDF OCR (scanned medical documents)
-RUN apk add --no-cache curl tesseract-ocr tesseract-ocr-data-eng
+# Install curl for health checks, tesseract for PDF OCR (scanned medical documents),
+# and LibreOffice for PDF↔DOCX↔PDF conversions used by the Path-C template import pipeline.
+# ttf-dejavu provides decent font fallbacks so DOCX→PDF rendering doesn't get blank glyphs.
+RUN apk add --no-cache curl tesseract-ocr tesseract-ocr-data-eng libreoffice ttf-dejavu
 
 # Create non-root user for security
 RUN addgroup -g 1000 -S legience && \

@@ -78,7 +78,15 @@ public class User {
 
     @Column(name = "terms_accepted_at")
     private LocalDateTime termsAcceptedAt;
-    
+
+    // V63 — per-user opt-in for the new attorney-facing PI case view (P4+).
+    // Resolves OR'd with `environment.features.attorneyFacingPiView` on the frontend.
+    // Java field initialized to `false` because Hibernate INSERTs all columns
+    // explicitly, bypassing the DB DEFAULT (same gotcha as V61's stage / V62's
+    // stage_manually_set).
+    @Column(name = "beta_attorney_view", nullable = false)
+    private boolean betaAttorneyView = false;
+
     // RBAC fields - This will be handled by the custom repository, not JPA
     @Transient
     private Set<Role> roles;

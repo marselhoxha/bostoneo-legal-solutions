@@ -13,9 +13,12 @@ import java.util.List;
 /**
  * Claude's structured analysis of an uploaded template.
  *
- * <p>Claude returns classification + detected variables + a rewritten body with {@code {{key}}}
- * placeholders substituted in place of the raw placeholders it found. The attorney then
- * accepts / rejects / edits each variable in the review step before committing.
+ * <p>Claude returns classification + detected variables + body boundary anchors (short
+ * verbatim line markers identifying letterhead/signature edges and the document title).
+ * The Java side then slices the body out of the original extracted text, substitutes
+ * {@code {{key}}} placeholders, and HTML-formats the result — populating
+ * {@link #suggestedBodyWithPlaceholders} post-Claude. The attorney accepts / rejects /
+ * edits each variable in the review step before committing.
  */
 @Data
 @Builder
@@ -29,6 +32,12 @@ public class TemplateAnalysisResult {
     private List<ImportWarning> warnings;
     private String suggestedName;
     private String suggestedDescription;
+    /**
+     * Final HTML body shown in the review preview and persisted to the DB.
+     * NOT returned by Claude — populated by Java after slicing + substituting + formatting
+     * against the original extracted text. Field is kept on the DTO so the existing
+     * persistence and frontend code paths remain unchanged.
+     */
     private String suggestedBodyWithPlaceholders;
     private Boolean requiresManualClassification;
 

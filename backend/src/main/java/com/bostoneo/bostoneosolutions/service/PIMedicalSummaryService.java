@@ -77,7 +77,34 @@ public interface PIMedicalSummaryService {
     Map<String, Object> getSavedAdjusterAnalysis(Long caseId);
 
     /**
+     * P5.4 — Persist the attorney's demand calculator scenario.
+     * Replaces the entire scenario blob each call (PUT semantics).
+     * Returns the updated DTO so the caller can use the saved-at timestamp.
+     */
+    PIMedicalSummaryDTO updateDemandScenario(Long caseId, Map<String, Object> scenario);
+
+    /**
      * Delete medical summary for a case
      */
     void deleteMedicalSummary(Long caseId);
+
+    /**
+     * P11.a — Detect cross-document anomalies for a case. Pure rules-based
+     * pass over medical records + scanned documents + the linked case's
+     * intake fields. Returns a list of anomaly maps:
+     * { id, type, severity (HIGH|MEDIUM|LOW), title, message, source, recommendation }.
+     */
+    java.util.List<java.util.Map<String, Object>> detectDocumentAnomalies(Long caseId);
+
+    /**
+     * P11.d — AI-generated 3-tier risk register: pre-suit settlement
+     * likelihood, suit (post-filing) risk, trial verdict risk. Persisted
+     * to pi_medical_summaries.risk_register so it survives page navigation.
+     */
+    java.util.Map<String, Object> generateRiskRegister(Long caseId);
+
+    /**
+     * P11.d — Retrieve persisted risk register for a case (no AI call).
+     */
+    java.util.Map<String, Object> getSavedRiskRegister(Long caseId);
 }

@@ -345,6 +345,27 @@ public class PIMedicalRecordController {
     }
 
     /**
+     * P15.a — Per-document scan tracking. One row per scannable case document,
+     * with status (created/merged/non_medical/insurance/no_text/failed/null=unscanned)
+     * and the FK to the resulting PIMedicalRecord if any. The frontend uses this
+     * to render status badges in the Case File → Records list and to populate
+     * the failed-analysis retry queue in the AI Settings modal (P15.b).
+     */
+    @GetMapping("/scan-tracking")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> getScanTracking(@PathVariable("caseId") Long caseId) {
+        List<Map<String, Object>> tracking = medicalRecordService.getScanTracking(caseId);
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("tracking", tracking))
+                        .message("Scan tracking retrieved")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
      * Scan all case documents and auto-populate medical records.
      * Returns immediately (HTTP 202) and processes in background via async thread.
      * Sends WebSocket notification when scan completes.

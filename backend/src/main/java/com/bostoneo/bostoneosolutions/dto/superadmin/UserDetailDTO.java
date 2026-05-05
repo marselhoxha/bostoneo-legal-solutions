@@ -34,6 +34,8 @@ public class UserDetailDTO {
     private boolean enabled;
     private boolean accountNonLocked;
     private boolean usingMfa;
+    // V63 — opted into the new attorney-facing PI case view (P4+)
+    private boolean betaAttorneyView;
 
     // Timestamps
     private LocalDateTime createdAt;

@@ -314,6 +314,31 @@ public class PIMedicalSummaryController {
     }
 
     /**
+     * P5.4 — Persist the attorney's demand calculator scenario.
+     * Replaces the entire scenario blob (PUT semantics).
+     * Body: { multiplier, wageLoss, feeMode, costs, liens }
+     */
+    @PutMapping("/demand-scenario")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> updateDemandScenario(
+            @PathVariable("caseId") Long caseId,
+            @RequestBody Map<String, Object> scenario) {
+
+        log.info("Updating demand scenario for case: {}", caseId);
+
+        PIMedicalSummaryDTO updated = summaryService.updateDemandScenario(caseId, scenario);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("summary", updated))
+                        .message("Demand scenario saved")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
      * Delete medical summary
      */
     @DeleteMapping
@@ -328,6 +353,67 @@ public class PIMedicalSummaryController {
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .message("Medical summary deleted successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
+     * P11.a — Cross-document anomaly detection. Pure rules-based scan over the
+     * case's records + scanned-doc tracking + intake fields. Cheap (no AI),
+     * deterministic, runs every page load.
+     */
+    @GetMapping("/anomalies")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> getDocumentAnomalies(@PathVariable("caseId") Long caseId) {
+
+        log.info("Detecting cross-doc anomalies for case: {}", caseId);
+
+        java.util.List<java.util.Map<String, Object>> anomalies =
+                summaryService.detectDocumentAnomalies(caseId);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("anomalies", anomalies, "count", anomalies.size()))
+                        .message("Anomaly detection completed")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
+     * P11.d — Retrieve persisted risk register (no AI call).
+     */
+    @GetMapping("/risk-register")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> getSavedRiskRegister(@PathVariable("caseId") Long caseId) {
+        java.util.Map<String, Object> register = summaryService.getSavedRiskRegister(caseId);
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(register != null
+                                ? of("register", register, "exists", true)
+                                : of("exists", false))
+                        .message(register != null ? "Risk register retrieved" : "No risk register on file")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
+     * P11.d — Generate AI risk register (preSuit / suit / trial scoring).
+     */
+    @PostMapping("/risk-register")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HttpResponse> generateRiskRegister(@PathVariable("caseId") Long caseId) {
+        log.info("Generating risk register for case: {}", caseId);
+        java.util.Map<String, Object> register = summaryService.generateRiskRegister(caseId);
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("register", register))
+                        .message("Risk register generated")
                         .status(OK)
                         .statusCode(OK.value())
                         .build());

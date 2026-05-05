@@ -9,6 +9,7 @@ import com.bostoneo.bostoneosolutions.dto.LegalCaseDTO;
 import com.bostoneo.bostoneosolutions.dto.LegalDocumentDTO;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.dto.CreateActivityRequest;
+import com.bostoneo.bostoneosolutions.enumeration.CaseStage;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.enumeration.DocumentStatus;
 import com.bostoneo.bostoneosolutions.enumeration.DocumentType;
@@ -79,6 +80,7 @@ public class LegalCaseServiceImpl implements LegalCaseService {
     private final CaseAssignmentRepository caseAssignmentRepository;
     private final TenantService tenantService;
     private final com.bostoneo.bostoneosolutions.service.ConflictCheckService conflictCheckService;
+    private final com.bostoneo.bostoneosolutions.service.CaseStageService caseStageService;
 
     private Long getRequiredOrganizationId() {
         return tenantService.getCurrentOrganizationId()
@@ -123,6 +125,18 @@ public class LegalCaseServiceImpl implements LegalCaseService {
 
         LegalCase legalCase = legalCaseDTOMapper.toEntity(caseDTO);
         legalCase.setOrganizationId(orgId);
+
+        // V61 — default stage=INTAKE for new PI cases. The DB DEFAULT 'INTAKE' is bypassed
+        // because Hibernate INSERTs all mapped columns explicitly (no @DynamicInsert), so
+        // a null Java field becomes an explicit NULL in SQL. Set it here for PI cases only;
+        // non-PI cases keep stage=NULL (the field is meaningless outside PI).
+        if ("Personal Injury".equalsIgnoreCase(legalCase.getPracticeArea()) && legalCase.getStage() == null) {
+            legalCase.setStage(CaseStage.INTAKE);
+        }
+
+        // V61 — auto-fill statute_of_limitations on intake when injuryDate is provided.
+        // Old value is null for a new case; helper handles the (null → set, statute null) case.
+        applyStatuteAutoFill(legalCase, null);
 
         // Auto-create or link client from case data
         String clientAction = null;
@@ -180,6 +194,11 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         // Capture old values for notification comparison
         String oldStatus = existingCase.getStatus() != null ? existingCase.getStatus().toString() : null;
         String oldPriority = existingCase.getPriority() != null ? existingCase.getPriority().toString() : null;
+
+        // V61/V62 — capture pre-save signals that drive stage recompute + statute auto-fill
+        Double oldSettlementFinal = existingCase.getSettlementFinalAmount();
+        java.time.LocalDate oldInjuryDate = existingCase.getInjuryDate();
+        boolean wasManuallySet = Boolean.TRUE.equals(existingCase.getStageManuallySet());
         
         // Update fields from DTO
         log.info("📋 updateCase DTO - clientAddress: '{}', defendantAddress: '{}'",
@@ -243,6 +262,25 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         // Practice Area
         if (caseDTO.getPracticeArea() != null) existingCase.setPracticeArea(caseDTO.getPracticeArea());
 
+        // Attorney Workflow (V61/V62) — explicit `stage` set marks manual override.
+        if (caseDTO.getStage() != null) {
+            existingCase.setStage(caseDTO.getStage());
+            existingCase.setStageManuallySet(true);
+        }
+        if (caseDTO.getStageManuallySet() != null) {
+            existingCase.setStageManuallySet(caseDTO.getStageManuallySet());
+        }
+        if (caseDTO.getMechanismDescription() != null) existingCase.setMechanismDescription(caseDTO.getMechanismDescription());
+        if (caseDTO.getPlaintiffRole() != null) existingCase.setPlaintiffRole(caseDTO.getPlaintiffRole());
+        if (caseDTO.getErVisitDol() != null) existingCase.setErVisitDol(caseDTO.getErVisitDol());
+        if (caseDTO.getPoliceReportObtained() != null) existingCase.setPoliceReportObtained(caseDTO.getPoliceReportObtained());
+        if (caseDTO.getPoliceReportNumber() != null) existingCase.setPoliceReportNumber(caseDTO.getPoliceReportNumber());
+        if (caseDTO.getClientInsuranceUmLimit() != null) existingCase.setClientInsuranceUmLimit(caseDTO.getClientInsuranceUmLimit());
+        if (caseDTO.getClientInsuranceUimLimit() != null) existingCase.setClientInsuranceUimLimit(caseDTO.getClientInsuranceUimLimit());
+        if (caseDTO.getClientInsuranceMedPayLimit() != null) existingCase.setClientInsuranceMedPayLimit(caseDTO.getClientInsuranceMedPayLimit());
+        if (caseDTO.getDaysMissedWork() != null) existingCase.setDaysMissedWork(caseDTO.getDaysMissedWork());
+        if (caseDTO.getStatuteOfLimitations() != null) existingCase.setStatuteOfLimitations(caseDTO.getStatuteOfLimitations());
+
         // Criminal Defense fields
         if (caseDTO.getPrimaryCharge() != null) existingCase.setPrimaryCharge(caseDTO.getPrimaryCharge());
         if (caseDTO.getChargeLevel() != null) existingCase.setChargeLevel(caseDTO.getChargeLevel());
@@ -283,7 +321,18 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         if (caseDTO.getInventorName() != null) existingCase.setInventorName(caseDTO.getInventorName());
         if (caseDTO.getTechnologyArea() != null) existingCase.setTechnologyArea(caseDTO.getTechnologyArea());
 
+        // V61 — auto-fill statute on first injuryDate set (mirrors patchCaseFields)
+        applyStatuteAutoFill(existingCase, oldInjuryDate);
+
         existingCase = legalCaseRepository.save(existingCase);
+
+        // V62 — recompute stage if a relevant signal changed (settlement_final_amount or
+        // unstuck from manual override). Service short-circuits for non-PI / sticky cases.
+        boolean settlementChanged = !java.util.Objects.equals(oldSettlementFinal, existingCase.getSettlementFinalAmount());
+        boolean unstuck = wasManuallySet && !Boolean.TRUE.equals(existingCase.getStageManuallySet());
+        if (settlementChanged || unstuck) {
+            caseStageService.recomputeAndPersist(existingCase.getId());
+        }
 
         // Check for status changes and trigger notifications
         String newStatus = existingCase.getStatus() != null ? existingCase.getStatus().toString() : null;
@@ -291,6 +340,10 @@ public class LegalCaseServiceImpl implements LegalCaseService {
 
         // Get the current user's ID to exclude from notifications (don't notify yourself)
         Long currentUserId = getCurrentUserId();
+
+        // Audit trail: log every status transition (including null↔value), independent of
+        // the notification block below which intentionally only fires on value→value changes.
+        caseActivityService.logStatusChanged(existingCase.getId(), oldStatus, newStatus, currentUserId);
 
         // Trigger notifications for case status changes
         if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
@@ -375,6 +428,15 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         LegalCase c = legalCaseRepository.findByIdAndOrganizationId(id, orgId)
                 .orElseThrow(() -> new LegalCaseException("Case not found or access denied: " + id));
 
+        // Capture pre-save values for change detection (drives stage recompute + statute fill +
+        // status-change audit log). Status is captured here because patchCaseFields is the entry
+        // point for ⋮ More → Archive, P9b Final Disposition, and the case-settings inline editor —
+        // none of which currently auto-log to the activity feed.
+        Double oldSettlementFinal = c.getSettlementFinalAmount();
+        java.time.LocalDate oldInjuryDate = c.getInjuryDate();
+        String oldStatusForActivity = c.getStatus() != null ? c.getStatus().toString() : null;
+        boolean wasManuallySet = Boolean.TRUE.equals(c.getStageManuallySet());
+
         // Only set fields that are explicitly provided (non-null)
         if (dto.getTitle() != null) c.setTitle(dto.getTitle());
         if (dto.getClientName() != null) c.setClientName(dto.getClientName());
@@ -423,6 +485,29 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         if (dto.getDefendantAddress() != null) c.setDefendantAddress(dto.getDefendantAddress());
         if (dto.getPracticeArea() != null) c.setPracticeArea(dto.getPracticeArea());
 
+        // Attorney Workflow (V61) — primarily PI cases.
+        // Setting `stage` explicitly = manual override → flip stageManuallySet=true so the
+        // CaseStageService stops auto-deriving. A separate `stageManuallySet=false` in the
+        // payload (e.g., from a future "Reset to auto" button) clears the flag and lets the
+        // post-save recompute take over.
+        if (dto.getStage() != null) {
+            c.setStage(dto.getStage());
+            c.setStageManuallySet(true);
+        }
+        if (dto.getStageManuallySet() != null) {
+            c.setStageManuallySet(dto.getStageManuallySet());
+        }
+        if (dto.getMechanismDescription() != null) c.setMechanismDescription(dto.getMechanismDescription());
+        if (dto.getPlaintiffRole() != null) c.setPlaintiffRole(dto.getPlaintiffRole());
+        if (dto.getErVisitDol() != null) c.setErVisitDol(dto.getErVisitDol());
+        if (dto.getPoliceReportObtained() != null) c.setPoliceReportObtained(dto.getPoliceReportObtained());
+        if (dto.getPoliceReportNumber() != null) c.setPoliceReportNumber(dto.getPoliceReportNumber());
+        if (dto.getClientInsuranceUmLimit() != null) c.setClientInsuranceUmLimit(dto.getClientInsuranceUmLimit());
+        if (dto.getClientInsuranceUimLimit() != null) c.setClientInsuranceUimLimit(dto.getClientInsuranceUimLimit());
+        if (dto.getClientInsuranceMedPayLimit() != null) c.setClientInsuranceMedPayLimit(dto.getClientInsuranceMedPayLimit());
+        if (dto.getDaysMissedWork() != null) c.setDaysMissedWork(dto.getDaysMissedWork());
+        if (dto.getStatuteOfLimitations() != null) c.setStatuteOfLimitations(dto.getStatuteOfLimitations());
+
         // Court information
         if (dto.getCountyName() != null) c.setCountyName(dto.getCountyName());
         if (dto.getJudgeName() != null) c.setJudgeName(dto.getJudgeName());
@@ -439,8 +524,57 @@ public class LegalCaseServiceImpl implements LegalCaseService {
         if (dto.getTotalHours() != null) c.setTotalHours(dto.getTotalHours());
         if (dto.getTotalAmount() != null) c.setTotalAmount(dto.getTotalAmount());
 
+        // V61 — auto-fill statute of limitations on first injuryDate set (MA PI = DOL + 3y).
+        // Manual overrides preserved: only fills when statute is currently null.
+        applyStatuteAutoFill(c, oldInjuryDate);
+
         c = legalCaseRepository.save(c);
+
+        // V62 — recompute stage if a relevant signal changed. The service short-circuits
+        // for non-PI and manually-set cases, so it's safe to call unconditionally.
+        boolean settlementChanged = !java.util.Objects.equals(oldSettlementFinal, c.getSettlementFinalAmount());
+        boolean unstuck = wasManuallySet && !Boolean.TRUE.equals(c.getStageManuallySet());
+        if (settlementChanged || unstuck) {
+            caseStageService.recomputeAndPersist(c.getId());
+        }
+
+        // Audit trail: log status change to the activity feed. Replaces best-effort
+        // frontend createActivity() calls in P8 archive + P9b disposition + case-settings.
+        // Delegates to CaseActivityService.logStatusChanged which has the no-op guard
+        // and an internal try/catch (the catch must live INSIDE the called @Transactional
+        // method body to keep Spring's tx interceptor from poisoning our outer tx).
+        String newStatusForActivity = c.getStatus() != null ? c.getStatus().toString() : null;
+        caseActivityService.logStatusChanged(c.getId(), oldStatusForActivity, newStatusForActivity, getCurrentUserId());
+
         return legalCaseDTOMapper.toDTO(c);
+    }
+
+    /**
+     * Compute statute of limitations from injury_date when:
+     *   (a) the case is Personal Injury,
+     *   (b) injury_date is now set (and changed from the prior value or was newly set),
+     *   (c) statute_of_limitations is currently null (don't overwrite manual entry).
+     *
+     * Default = injuryDate + 3 years (Massachusetts M.G.L. c. 260, § 2A). This is a
+     * conservative default for the current jurisdiction; future multi-state work
+     * will look up the per-state statute period.
+     */
+    private void applyStatuteAutoFill(LegalCase c, java.time.LocalDate oldInjuryDate) {
+        if (!"Personal Injury".equalsIgnoreCase(c.getPracticeArea())
+                && !"PERSONAL_INJURY".equalsIgnoreCase(c.getType())) {
+            return;
+        }
+        java.time.LocalDate newInjuryDate = c.getInjuryDate();
+        if (newInjuryDate == null || java.util.Objects.equals(oldInjuryDate, newInjuryDate)) {
+            return;
+        }
+        if (c.getStatuteOfLimitations() != null) {
+            return;
+        }
+        java.time.LocalDate computed = newInjuryDate.plusYears(3);
+        c.setStatuteOfLimitations(java.sql.Date.valueOf(computed));
+        log.info("Auto-filled statuteOfLimitations={} for case {} (injuryDate={} + 3y)",
+                computed, c.getId(), newInjuryDate);
     }
 
     @Override

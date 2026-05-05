@@ -40,6 +40,7 @@ import static org.springframework.http.HttpStatus.FORBIDDEN;
 public class LegalCaseResource {
     private final LegalCaseService legalCaseService;
     private final UserService userService;
+    private final com.bostoneo.bostoneosolutions.service.ProvenanceService provenanceService;
 
     @GetMapping("/list")
     @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
@@ -574,4 +575,28 @@ public class LegalCaseResource {
                         .statusCode(OK.value())
                         .build());
     }
-} 
+
+    /**
+     * Returns the per-field provenance map for a case (P1 / V69).
+     * Map keys are dotted field paths; values are
+     * {@link com.bostoneo.bostoneosolutions.enumeration.ProvenanceSource} enum
+     * names. The frontend hydrates {@code <app-provenance-marker>} from this
+     * payload to render i/c/A/m glyphs next to facts on the case-detail UI.
+     * Empty map is the normal cold-start state — callers must treat empty as
+     * "no source known" rather than as an error.
+     */
+    @GetMapping("/{id}/provenance")
+    @PreAuthorize("hasAuthority('CASE:VIEW') or hasRole('ROLE_ADMIN') or hasRole('ROLE_USER')")
+    public ResponseEntity<HttpResponse> getCaseProvenance(
+            @AuthenticationPrincipal UserDTO user,
+            @PathVariable("id") Long id) {
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("provenance", provenanceService.getProvenance(id)))
+                        .message("Case provenance retrieved successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+}

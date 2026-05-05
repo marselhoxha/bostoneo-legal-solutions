@@ -60,4 +60,11 @@ public interface PIScannedDocumentRepository extends JpaRepository<PIScannedDocu
            "ORDER BY s.createdAt ASC")
     List<PIScannedDocument> findCachedExtractionsByCase(
             @Param("caseId") Long caseId, @Param("organizationId") Long organizationId);
+
+    /**
+     * P11.a — All scanned-doc tracking rows for a case (any status). Used by
+     * the cross-doc anomaly detector to flag failed analyses + non-medical
+     * uploads sitting in a PI case.
+     */
+    List<PIScannedDocument> findByCaseIdAndOrganizationId(Long caseId, Long organizationId);
 }

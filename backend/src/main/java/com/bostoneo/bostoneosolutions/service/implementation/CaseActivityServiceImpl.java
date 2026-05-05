@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -144,6 +145,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logNoteAdded(Long caseId, Long noteId, String noteTitle, Long userId) {
         log.info("Logging note added activity for case ID: {}, note ID: {}", caseId, noteId);
 
@@ -197,6 +199,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logNoteUpdated(Long caseId, Long noteId, String noteTitle, Long userId) {
         log.info("Logging note updated activity for case ID: {}, note ID: {}", caseId, noteId);
 
@@ -231,6 +234,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logNoteDeleted(Long caseId, Long noteId, String noteTitle, Long userId) {
         log.info("Logging note deleted activity for case ID: {}, note ID: {}", caseId, noteId);
 
@@ -265,6 +269,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logReminderCreated(Long caseId, Long reminderId, String reminderTitle, Long userId) {
         log.info("Logging reminder created activity for case ID: {}, reminder ID: {}", caseId, reminderId);
         Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
@@ -293,6 +298,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logReminderUpdated(Long caseId, Long reminderId, String reminderTitle, Long userId) {
         log.info("Logging reminder updated activity for case ID: {}, reminder ID: {}", caseId, reminderId);
         Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
@@ -321,6 +327,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logReminderCompleted(Long caseId, Long reminderId, String reminderTitle, Long userId) {
         log.info("Logging reminder completed activity for case ID: {}, reminder ID: {}", caseId, reminderId);
         Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
@@ -349,6 +356,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logReminderDeleted(Long caseId, Long reminderId, String reminderTitle, Long userId) {
         log.info("Logging reminder deleted activity for case ID: {}, reminder ID: {}", caseId, reminderId);
         Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
@@ -378,21 +386,25 @@ public class CaseActivityServiceImpl implements CaseActivityService {
 
     // Legacy methods for backward compatibility
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logReminderCreated(Long caseId, Long reminderId, String reminderTitle) {
         logReminderCreated(caseId, reminderId, reminderTitle, null);
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logReminderUpdated(Long caseId, Long reminderId, String reminderTitle) {
         logReminderUpdated(caseId, reminderId, reminderTitle, null);
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logReminderCompleted(Long caseId, Long reminderId, String reminderTitle) {
         logReminderCompleted(caseId, reminderId, reminderTitle, null);
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logReminderDeleted(Long caseId, Long reminderId, String reminderTitle) {
         logReminderDeleted(caseId, reminderId, reminderTitle, null);
     }
@@ -402,18 +414,48 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     // =====================================================
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logStatusChanged(Long caseId, String oldStatus, String newStatus, Long userId) {
-        log.info("Logging status change for case ID: {} from {} to {}", caseId, oldStatus, newStatus);
+        // Skip no-op transitions: equal values (Objects.equals handles both-null too,
+        // so an explicit both-null guard would be unreachable). Important so callers
+        // can wire this in unconditionally after every patch without flooding the feed.
+        if (java.util.Objects.equals(oldStatus, newStatus)) return;
 
+        // REQUIRES_NEW gives this audit INSERT its own JDBC connection. With
+        // CaseActivity.id using GenerationType.IDENTITY, the INSERT fires immediately
+        // inside save() to obtain the generated ID — a SQL failure (FK / NOT NULL /
+        // constraint) would abort the underlying PostgreSQL connection at the wire
+        // level. If we shared the caller's connection (default REQUIRED), the abort
+        // would poison the outer patchCaseFields/updateCase transaction and the user's
+        // status change would silently roll back. With REQUIRES_NEW, a failure here
+        // rolls back only this sub-transaction; the caller's tx is unaffected.
+        //
+        // Tradeoff: an audit row CAN persist even if the parent caller later rolls
+        // back (a "ghost" log entry). For STATUS_CHANGED we accept this — losing
+        // audit reliability to keep tx coupling is the worse failure mode.
         try {
+            // orgId=null tolerance: if the security context is missing tenant info
+            // (e.g., system-initiated patch), we still log the activity rather than
+            // throw. An orphan audit row is preferable to an exception that aborts
+            // the user's case-status save.
             Long orgId = tenantService.getCurrentOrganizationId().orElse(null);
             CaseActivity activity = new CaseActivity();
-            activity.setOrganizationId(orgId); // SECURITY: Set organization ID
+            activity.setOrganizationId(orgId);
             activity.setCaseId(caseId);
             activity.setUserId(userId);
             activity.setActivityType("STATUS_CHANGED");
             activity.setReferenceType("case");
-            activity.setDescription("Case status changed from " + oldStatus + " to " + newStatus);
+            // Smart description for the three transition cases — null↔value reads as
+            // "set" or "cleared" instead of the literal "null" string.
+            String description;
+            if (oldStatus == null) {
+                description = "Case status set to " + newStatus;
+            } else if (newStatus == null) {
+                description = "Case status cleared (was " + oldStatus + ")";
+            } else {
+                description = "Case status changed from " + oldStatus + " to " + newStatus;
+            }
+            activity.setDescription(description);
             activity.setCreatedAt(LocalDateTime.now());
 
             Map<String, Object> metadata = new HashMap<>();
@@ -435,6 +477,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logPriorityChanged(Long caseId, String oldPriority, String newPriority, Long userId) {
         log.info("Logging priority change for case ID: {} from {} to {}", caseId, oldPriority, newPriority);
 
@@ -467,6 +510,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logCaseCreated(Long caseId, String caseTitle, String clientName, Long userId) {
         log.info("Logging case creation for case ID: {}", caseId);
 
@@ -503,6 +547,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     // =====================================================
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logDocumentUploaded(Long caseId, Long documentId, String documentName, Long userId) {
         log.info("Logging document upload for case ID: {}, document: {}", caseId, documentName);
 
@@ -536,6 +581,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logDocumentDownloaded(Long caseId, Long documentId, String documentName, Long userId) {
         log.info("Logging document download for case ID: {}, document: {}", caseId, documentName);
 
@@ -569,6 +615,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logDocumentVersionAdded(Long caseId, Long documentId, String documentName, int versionNumber, Long userId) {
         log.info("Logging document version for case ID: {}, document: {}, version: {}", caseId, documentName, versionNumber);
 
@@ -607,6 +654,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     // =====================================================
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logHearingScheduled(Long caseId, Long eventId, String eventTitle, String eventType, Long userId) {
         log.info("Logging hearing scheduled for case ID: {}, event: {}", caseId, eventTitle);
 
@@ -641,6 +689,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logHearingUpdated(Long caseId, Long eventId, String eventTitle, Long userId) {
         log.info("Logging hearing update for case ID: {}, event: {}", caseId, eventTitle);
 
@@ -674,6 +723,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logHearingCancelled(Long caseId, Long eventId, String eventTitle, Long userId) {
         log.info("Logging hearing cancellation for case ID: {}, event: {}", caseId, eventTitle);
 
@@ -711,6 +761,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     // =====================================================
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logAssignmentAdded(Long caseId, Long assigneeId, String assigneeName, String roleType, Long userId) {
         log.info("Logging assignment for case ID: {}, assignee: {}", caseId, assigneeName);
 
@@ -745,6 +796,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logAssignmentRemoved(Long caseId, Long assigneeId, String assigneeName, Long userId) {
         log.info("Logging unassignment for case ID: {}, assignee: {}", caseId, assigneeName);
 
@@ -778,6 +830,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logAssignmentTransferred(Long caseId, Long fromUserId, String fromUserName, Long toUserId, String toUserName, String roleType, Long userId) {
         log.info("Logging assignment transfer for case ID: {}, from: {} to: {}", caseId, fromUserName, toUserName);
 
@@ -818,6 +871,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     // =====================================================
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logTaskCreated(Long caseId, Long taskId, String taskTitle, Long assigneeId, String assigneeName, Long userId) {
         log.info("Logging task created for case ID: {}, task: {}", caseId, taskTitle);
 
@@ -859,6 +913,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logTaskAssigned(Long caseId, Long taskId, String taskTitle, Long assigneeId, String assigneeName, Long userId) {
         log.info("Logging task assignment for case ID: {}, task: {}, assignee: {}", caseId, taskTitle, assigneeName);
 
@@ -894,6 +949,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logTaskReassigned(Long caseId, Long taskId, String taskTitle, Long fromUserId, String fromUserName, Long toUserId, String toUserName, Long userId) {
         log.info("Logging task reassignment for case ID: {}, task: {}, from: {} to: {}", caseId, taskTitle, fromUserName, toUserName);
 
@@ -931,6 +987,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logTaskCompleted(Long caseId, Long taskId, String taskTitle, Long userId) {
         log.info("Logging task completed for case ID: {}, task: {}", caseId, taskTitle);
 
@@ -964,6 +1021,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logTaskStatusChanged(Long caseId, Long taskId, String taskTitle, String oldStatus, String newStatus, Long userId) {
         log.info("Logging task status change for case ID: {}, task: {}, {} -> {}", caseId, taskTitle, oldStatus, newStatus);
 
@@ -1003,6 +1061,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     // =====================================================
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logClientContacted(Long caseId, String contactMethod, String subject, Long userId) {
         log.info("Logging client contact for case ID: {}, method: {}", caseId, contactMethod);
 
@@ -1035,6 +1094,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logEmailSent(Long caseId, String recipient, String subject, Long userId) {
         log.info("Logging email sent for case ID: {}, to: {}", caseId, recipient);
 
@@ -1071,6 +1131,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     // =====================================================
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logPaymentReceived(Long caseId, Long paymentId, Double amount, Long userId) {
         log.info("Logging payment received for case ID: {}, amount: ${}", caseId, amount);
 
@@ -1104,6 +1165,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logTimeEntryAdded(Long caseId, Long timeEntryId, Double hours, String description, Long userId) {
         log.info("Logging time entry for case ID: {}, hours: {}", caseId, hours);
 
@@ -1138,6 +1200,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logInvoiceCreated(Long caseId, Long invoiceId, Double amount, Long userId) {
         log.info("Logging invoice created for case ID: {}, amount: ${}", caseId, amount);
 
@@ -1175,6 +1238,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     // =====================================================
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logWorkflowStarted(Long caseId, Long workflowId, String workflowName, String templateType, Long userId) {
         log.info("Logging workflow started for case ID: {}, workflow: {}", caseId, workflowName);
 
@@ -1209,6 +1273,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logWorkflowCompleted(Long caseId, Long workflowId, String workflowName, String templateType, Long userId) {
         log.info("Logging workflow completed for case ID: {}, workflow: {}", caseId, workflowName);
 
@@ -1243,6 +1308,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logWorkflowTasksCreated(Long caseId, Long workflowId, String workflowName, int taskCount, Long userId) {
         log.info("Logging workflow tasks created for case ID: {}, workflow: {}, tasks: {}", caseId, workflowName, taskCount);
 
@@ -1277,6 +1343,7 @@ public class CaseActivityServiceImpl implements CaseActivityService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logWorkflowActivity(Long caseId, Long workflowId, String workflowName, String activityType, String description, Long userId) {
         log.info("Logging workflow activity for case ID: {}, workflow: {}, type: {}", caseId, workflowName, activityType);
 

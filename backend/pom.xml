@@ -381,6 +381,27 @@
 			<version>2.25.16</version>
 		</dependency>
 
+		<!-- Mammoth Java: DOCX → semantic HTML preserving original styles for CKEditor.
+		     Path-C canonical pipeline replaces the regex-based HTML reconstruction. -->
+		<dependency>
+			<groupId>org.zwobble.mammoth</groupId>
+			<artifactId>mammoth</artifactId>
+			<version>1.8.0</version>
+		</dependency>
+
+		<!-- docx4j: HTML → DOCX round-trip when CKEditor saves edits, so the persisted
+		     templateBinary stays in sync with the editable HTML body. -->
+		<dependency>
+			<groupId>org.docx4j</groupId>
+			<artifactId>docx4j-JAXB-ReferenceImpl</artifactId>
+			<version>11.5.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.docx4j</groupId>
+			<artifactId>docx4j-ImportXHTML-core</artifactId>
+			<version>11.5.3</version>
+		</dependency>
+
 		<!-- Fix macOS DNS resolution warning for Netty (used by WebClient) -->
 		<dependency>
 			<groupId>io.netty</groupId>

@@ -38,6 +38,22 @@ public class PIMedicalSummaryDTO {
     private String keyHighlights;
     private String prognosisAssessment;
 
+    // Tier 5a — Collated causation block
+    private String causationSummary;
+
+    // Tier 5c — AI-detected open follow-up items
+    private List<Map<String, Object>> openItems;
+
+    // P5.4 — Attorney-saved demand calculator scenario.
+    // { multiplier, wageLoss, feeMode, costs, liens, savedAt }.
+    private Map<String, Object> demandScenario;
+
+    // P11.d — AI-generated risk register (preSuit/suit/trial tiers).
+    private Map<String, Object> riskRegister;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime riskRegisterGeneratedAt;
+
     // Metrics
     private Integer totalProviders;
     private Integer totalVisits;

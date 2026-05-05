@@ -68,6 +68,10 @@ public class PIMedicalRecordDTO {
     private List<Map<String, Object>> medicationsAdministered;
     private List<Map<String, Object>> medicationsPrescribed;
 
+    // Tier 6 — itemized visits from a multi-DOS billing summary.
+    // [{date, code, provider, charge}, ...]. Empty/null for single-encounter records.
+    private List<Map<String, Object>> visits;
+
     // Billing Information
     private BigDecimal billedAmount;
     private BigDecimal adjustedAmount;

@@ -52,9 +52,14 @@ public class ImportSession {
         private ExtractedDocument extracted; // keep raw text until commit so variable substitutions can re-run
 
         // Sprint 1.6 — visual-fidelity template cache. Populated after Claude analysis; committed to the binary columns.
-        private byte[] originalBytes;       // pristine uploaded bytes (DOCX/PDF)
-        private byte[] transformedBytes;    // same bytes with raw values swapped for {{tokens}} — null if transform was skipped
-        private String binaryFormat;        // "DOCX" | "PDF" (null when no binary path was taken)
+        private byte[] originalBytes;       // pristine uploaded bytes (PDF or DOCX as user gave them)
+        private byte[] transformedBytes;    // canonical tokenized DOCX (with yellow-highlighted runs)
+        private String binaryFormat;        // always "DOCX" under the Path-C pipeline
+
+        // Path-C additions: the original format the user uploaded (preserved separately from
+        // the canonical DOCX), and the cached DOCX→PDF render for wizard preview / PDF download.
+        private String originalFormat;      // "PDF" | "DOCX" | "DOC"
+        private byte[] renderedPdfBytes;    // DOCX→PDF render via LibreOffice (null when render unavailable)
     }
 
     public boolean isExpired(LocalDateTime now) {

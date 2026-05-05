@@ -2,8 +2,10 @@ package com.bostoneo.bostoneosolutions.model;
 
 import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
 import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
+import com.bostoneo.bostoneosolutions.enumeration.CaseStage;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
 import com.bostoneo.bostoneosolutions.enumeration.PaymentStatus;
+import com.bostoneo.bostoneosolutions.enumeration.PlaintiffRole;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -315,6 +317,60 @@ public class LegalCase {
     private String practiceArea;
 
     // ============================================
+    // Attorney Workflow (V61) — applies to PI cases primarily.
+    // Auto-derived from data signals by CaseStageService; manual overrides sticky.
+    // ============================================
+    @Enumerated(EnumType.STRING)
+    @Column(name = "stage", length = 32)
+    private CaseStage stage;
+
+    // V62: when true, CaseStageService.recomputeAndPersist short-circuits.
+    // Set by inline-edit PATCH whenever the user sets `stage` explicitly.
+    // Default false (matches DB DEFAULT) — Hibernate INSERTs all columns explicitly
+    // so the DB default is bypassed; initialize the Java field to keep API responses
+    // and downstream null-checks consistent.
+    @Column(name = "stage_manually_set")
+    private Boolean stageManuallySet = false;
+
+    @Column(name = "mechanism_description", columnDefinition = "TEXT")
+    private String mechanismDescription;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "plaintiff_role", length = 32)
+    private PlaintiffRole plaintiffRole;
+
+    @Column(name = "er_visit_dol")
+    private Boolean erVisitDol;
+
+    @Column(name = "police_report_obtained")
+    private Boolean policeReportObtained;
+
+    @Column(name = "police_report_number", length = 100)
+    private String policeReportNumber;
+
+    // Plaintiff's UM/UIM/Med-Pay coverage (extends existing client_insurance_* PIP fields).
+    // Critical for stacking analysis when at-fault BI is exhausted or insufficient.
+    // NOTE: precision/scale would be valid for BigDecimal but Hibernate rejects them on
+    // floating-point types (Double). DB column stays NUMERIC(12,2); JDBC handles the
+    // narrowing to Double on read. Existing PIP fields above use Double the same way.
+    @Column(name = "client_insurance_um_limit")
+    private Double clientInsuranceUmLimit;
+
+    @Column(name = "client_insurance_uim_limit")
+    private Double clientInsuranceUimLimit;
+
+    @Column(name = "client_insurance_med_pay_limit")
+    private Double clientInsuranceMedPayLimit;
+
+    @Column(name = "days_missed_work")
+    private Integer daysMissedWork;
+
+    @Column(name = "statute_of_limitations")
+    @Temporal(TemporalType.DATE)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
+    private Date statuteOfLimitations;
+
+    // ============================================
     // Criminal Defense Fields
     // ============================================
     @Column(name = "primary_charge")
@@ -434,6 +490,21 @@ public class LegalCase {
 
     @Column(name = "technology_area")
     private String technologyArea;
+
+    // V69 — per-field provenance map for the case-detail UI (P1 / PI redesign).
+    // Keys are dotted field paths (e.g. "parties.plaintiff_dob"); values are
+    // ProvenanceSource enum names. Populated by intake/AI/portal/manual write
+    // paths; read by ProvenanceService and rendered by <app-provenance-marker>.
+    //
+    // Initialized to an empty HashMap because Hibernate INSERTs all mapped
+    // columns explicitly (no @DynamicInsert) and field_provenance is NOT NULL
+    // — a Java null would generate "INSERT ... NULL ..." and trip the DB
+    // constraint on every new case. The DB column also has DEFAULT '{}'::jsonb
+    // for safety, but that default is bypassed by Hibernate's explicit INSERT.
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "field_provenance", columnDefinition = "jsonb")
+    @Builder.Default
+    private java.util.Map<String, String> fieldProvenance = new java.util.HashMap<>();
 
     /**
      * Returns practiceArea if set, otherwise falls back to type for old data.

@@ -130,6 +130,14 @@ public class PIMedicalRecord {
     @Column(name = "medications_prescribed", columnDefinition = "jsonb")
     private List<Map<String, Object>> medicationsPrescribed;
 
+    // Tier 6 — itemized visits from a multi-DOS billing summary.
+    // Each entry: {"date":"YYYY-MM-DD","code":"CPT","provider":"...","charge":250.00}
+    // Total visit count = sum of visits.size() across records, fallback to 1
+    // for records without an itemized list (single-encounter records).
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "visits", columnDefinition = "jsonb")
+    private List<Map<String, Object>> visits;
+
     // Billing Information
     @Column(name = "billed_amount", precision = 12, scale = 2)
     private BigDecimal billedAmount;

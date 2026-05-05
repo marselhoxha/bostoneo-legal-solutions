@@ -237,4 +237,38 @@ public class ExpenseService {
         }
         return "Someone";
     }
+
+    // ========== P3 / Case Costs (Damages tab) ==========
+
+    /**
+     * Returns all expenses logged against a single case, fully hydrated for
+     * the Damages-tab Case Costs table. Tenant-isolated via the current
+     * org context — a case in another org returns an empty list rather than
+     * leaking row data.
+     */
+    public CustomHttpResponse<List<Expense>> getCaseExpenses(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        List<Expense> expenses =
+                expenseRepository.findByLegalCaseIdAndOrganizationIdWithRelationships(caseId, orgId);
+        return new CustomHttpResponse<>(200, "Case expenses retrieved successfully", expenses);
+    }
+
+    /**
+     * Running total of case costs for the Damages-tab Net-to-Client
+     * breakdown. Wraps the Map in a {@link CustomHttpResponse} consistent
+     * with the rest of the controller. Always returns {@code total = 0}
+     * (never null) when the case has no expenses, so the frontend can render
+     * "$0.00" instead of empty state.
+     */
+    public CustomHttpResponse<Map<String, java.math.BigDecimal>> getCaseExpenseTotal(Long caseId) {
+        Long orgId = getRequiredOrganizationId();
+        java.math.BigDecimal total =
+                expenseRepository.sumByLegalCaseIdAndOrganizationId(caseId, orgId);
+        if (total == null) {
+            total = java.math.BigDecimal.ZERO;
+        }
+        Map<String, java.math.BigDecimal> body = new HashMap<>();
+        body.put("total", total);
+        return new CustomHttpResponse<>(200, "Case expense total retrieved successfully", body);
+    }
 }
