@@ -32,6 +32,9 @@ import { ClientPortalService, ClientMessageThread } from 'src/app/modules/client
 import { TimerService, ActiveTimer } from 'src/app/modules/time-tracking/services/timer.service';
 import { LegalCaseService } from 'src/app/modules/legal/services/legal-case.service';
 import { BackgroundTask, BackgroundTaskService } from 'src/app/modules/legal/services/background-task.service';
+import { ActiveCaseContextService, ActiveCaseContext } from 'src/app/core/services/active-case-context.service';
+import { AiDrawerService } from 'src/app/core/services/ai-drawer.service';
+import { firstValueFrom } from 'rxjs';
 import Swal from 'sweetalert2';
 import { decodeJwtPayload } from '../../../core/utils/jwt.util';
 
@@ -108,6 +111,11 @@ export class TopbarComponent implements OnInit, OnDestroy {
   filteredCases: any[] = [];
   recentCases: any[] = [];
 
+  // Active case pill (Bar 1) — populated by ActiveCaseContextService
+  activeCase$!: Observable<ActiveCaseContext | null>;
+  // First active timer (Bar 1) — populated by TimerService
+  firstActiveTimer$!: Observable<ActiveTimer | null>;
+
   constructor(@Inject(DOCUMENT) private document: any,   private modalService: NgbModal,
     public _cookiesService: CookieService, private userService: UserService, private notificationService: NotificationService,
     private router: Router, private cdr: ChangeDetectorRef, private pushNotificationService: PushNotificationService,
@@ -116,9 +124,90 @@ export class TopbarComponent implements OnInit, OnDestroy {
     private messagingService: MessagingService, private messagingStateService: MessagingStateService,
     private webSocketService: WebSocketService,
     private clientPortalService: ClientPortalService, private timerService: TimerService,
-    private legalCaseService: LegalCaseService, private backgroundTaskService: BackgroundTaskService) {
-
+    private legalCaseService: LegalCaseService, private backgroundTaskService: BackgroundTaskService,
+    private activeCaseContext: ActiveCaseContextService,
+    private aiDrawer: AiDrawerService) {
+      this.activeCase$ = this.activeCaseContext.activeCase$;
+      this.firstActiveTimer$ = this.timerService.activeTimers$.pipe(
+        map(timers => timers?.[0] ?? null)
+      );
      }
+
+  // ============================================================
+  // Bar 1 — new helpers for the redesigned topbar
+  // ============================================================
+  get totalNotificationCount(): number {
+    return (this.unreadNotificationCount ?? 0) + (this.pendingAssignments ?? 0);
+  }
+
+  get isDarkMode(): boolean {
+    return document.documentElement.getAttribute('data-bs-theme') === 'dark';
+  }
+
+  // Note: toggleTheme() is defined further down in this file (the original
+  // component method, line ~1023). It already calls changeMode() and is
+  // bound from the new icon cluster in the template — don't redefine here.
+
+  /**
+   * Initials for a user (used by the avatar circle). Takes the user object
+   * directly so the template can pass `user$ | async`.
+   */
+  getInitialsFor(user: any): string {
+    const f = user?.firstName?.[0] ?? '';
+    const l = user?.lastName?.[0] ?? '';
+    return (f + l).toUpperCase() || 'U';
+  }
+
+  /**
+   * Stable per-user gradient (same hash approach as the dashboard's
+   * getClientAvatarBg). Same person → same colour every session.
+   */
+  getAvatarBgFor(user: any): string {
+    const seed = `${user?.firstName ?? ''}${user?.lastName ?? ''}`;
+    const hue = [...seed].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
+    return `linear-gradient(135deg, hsl(${hue}, 65%, 70%), hsl(${(hue + 30) % 360}, 60%, 45%))`;
+  }
+
+  /**
+   * Pretty-print role labels for the user block. Strips "ROLE_" prefix and
+   * title-cases. e.g. "ROLE_ATTORNEY" → "Attorney", "MANAGING_PARTNER" →
+   * "Managing Partner".
+   */
+  formatRole(raw: string | undefined | null): string {
+    if (!raw) return '';
+    const cleaned = raw.replace(/^ROLE_/, '').replace(/_/g, ' ').toLowerCase();
+    return cleaned.replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  formatTimer(t: ActiveTimer | null): string {
+    if (!t) return '00:00';
+    const total = t.currentDurationSeconds ?? 0;
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  }
+
+  openSearch(): void {
+    // Phase 1 — trigger the existing mobile-style search dropdown.
+    // ⌘K command palette is a separate spec.
+    const trigger = document.getElementById('page-header-search-dropdown');
+    trigger?.click();
+  }
+
+  openMessages(): void {
+    this.router.navigate(['/messages']);
+  }
+
+  async onAskLegience(): Promise<void> {
+    const activeCase = await firstValueFrom(this.activeCase$);
+    this.aiDrawer.open({ activeCase });
+  }
+
+  get hasUnreadMessages(): boolean {
+    return (this.unreadMessageCount ?? 0) > 0;
+  }
 
   ngOnInit(): void {
     // Initialize user data

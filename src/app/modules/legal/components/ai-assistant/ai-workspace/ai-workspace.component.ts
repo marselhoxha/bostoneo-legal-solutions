@@ -248,6 +248,15 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
   }
   @ViewChild('draftWizardRef') private draftWizardRef?: DraftWizardComponent;
 
+  /**
+   * Set from `?docType=demand_letter|legal_memo|...` on /legispace/legidraft
+   * deep-links (e.g. from the PI case-detail "Open in LegiDraft" buttons).
+   * Forwarded into <app-draft-wizard [initialDocType]="..."> so the wizard
+   * pre-selects the matching catalog entry and jumps to Review when all
+   * other prereqs (case, PA, jurisdiction) are satisfied.
+   */
+  initialDocType: string | null = null;
+
   // Workflow steps (migrated to observable from StateService)
   workflowSteps$ = this.stateService.workflowSteps$;
 
@@ -1237,6 +1246,37 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
         if (!isNaN(caseId)) {
           this.selectedCaseId = caseId;
         }
+      }
+
+      // P9 LegiDraft handoff — pi-case-detail's "Open in LegiDraft" buttons
+      // pass `docType` (the doc-type slug) so the draft wizard auto-picks it,
+      // and `autoStart=1` so we skip the dashboard and land in the wizard
+      // directly. Both query params are forwarded by the queryParamsHandling:
+      // 'preserve' deep-link logic, but we strip them after consuming so refresh
+      // doesn't re-trigger the auto-start (mirrors the documentId behavior).
+      if (params['docType']) {
+        this.initialDocType = String(params['docType']);
+      } else {
+        // Clear on emissions without docType so stale value from a prior
+        // deeplink doesn't accidentally drive a future wizard mount. The
+        // wizard's autoAdvanceConsumed flag already guards against repeat
+        // auto-advance, but this keeps the input contract clean.
+        this.initialDocType = null;
+      }
+      if (params['autoStart'] === '1' || params['autoStart'] === 'true') {
+        // Defer wizard entry until the tab/draft mode handler has settled —
+        // selectTask('draft') runs synchronously above (line ~1205) but its
+        // initial enterDashboardMode() has to commit first or our setDraftMode
+        // call gets squashed. setTimeout(0) sequences us after the current
+        // microtask queue.
+        setTimeout(() => this.enterAiWizardMode(), 0);
+        // Strip the autoStart flag so refresh doesn't re-trigger.
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { autoStart: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
       }
 
       // Handle documentId from the template-filler "Open in AI Workspace" handoff.
