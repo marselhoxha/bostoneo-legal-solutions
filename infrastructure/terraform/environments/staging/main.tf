@@ -356,8 +356,10 @@ module "ecs" {
   ]
 
   api_image         = var.api_image
-  api_cpu           = 1024
-  api_memory        = 2048
+  # Sized to handle AI workloads (Bedrock chunked extractions, OCR via tesseract).
+  # Live state was already 2 vCPU / 4 GB before this commit aligned the IaC.
+  api_cpu           = 2048
+  api_memory        = 4096
   api_desired_count = 1
   api_min_count     = 1
   api_max_count     = 3
